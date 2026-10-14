@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  DEFAULT_BUSY_ENTER,
   terminalLabel,
   type ConversationSummary,
   type TerminalRemoteView,
 } from '@spark-outpost/contracts';
+import { setupApi, setupKey } from '../../api/setup.ts';
 import { useStickToBottom } from '../../chat/use-stick-to-bottom.ts';
 import { PHONE_SWITCH_OFF, useRemoteClient } from '../../phone/use-remote-client.ts';
+import { LiveElapsed } from '../../ui/LiveElapsed.tsx';
 import { QueryWait } from '../../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 import { terminalAgentName } from '../terminal-agents.ts';
@@ -16,8 +19,8 @@ import { RemoteTerminalComposer } from './RemoteTerminalComposer.tsx';
 import { RemoteTerminalItems } from './RemoteTerminalItems.tsx';
 import './remote-terminal.css';
 
-const LIVE_REFRESH_MS = 2_000;
-const STOPPED_REFRESH_MS = 20_000;
+const LIVE_REFRESH_MS = 10_000;
+const STOPPED_REFRESH_MS = 30_000;
 
 function failure(error: unknown): string {
   return error instanceof Error ? error.message : 'That did not reach the session. Try again.';
@@ -56,6 +59,7 @@ function RemoteTerminalSession({ chat, approve }: { chat: ConversationSummary; a
     refetchInterval: (query) =>
       query.state.data?.running === false ? STOPPED_REFRESH_MS : LIVE_REFRESH_MS,
   });
+  const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const { scrollerRef } = useStickToBottom();
   const [problem, setProblem] = useState<string | null>(null);
   const run = async (action: () => Promise<unknown>): Promise<boolean> => {
@@ -82,8 +86,16 @@ function RemoteTerminalSession({ chat, approve }: { chat: ConversationSummary; a
   const approval = data.approval;
   return (
     <section className="native-workspace remote rt" aria-label="Terminal session">
-      <p className="rt-status" role="status">
-        {terminalAgentName(data.provider)} · {terminalLabel(data.state)}
+      <p className="rt-status">
+        <span role="status">
+          {terminalAgentName(data.provider)} · {terminalLabel(data.state)}
+        </span>
+        {data.workingSince && (
+          <span className="rt-since">
+            {' '}
+            for <LiveElapsed since={Date.parse(data.workingSince)} />
+          </span>
+        )}
       </p>
       <div className="rt-scroll" ref={scrollerRef}>
         <RemoteTerminalItems items={data.items} truncated={data.truncated} />
@@ -92,16 +104,17 @@ function RemoteTerminalSession({ chat, approve }: { chat: ConversationSummary; a
         <RemoteTerminalApproval
           approval={approval}
           allowed={approve}
-          onDecide={(decision) =>
-            run(() => terminalRemoteApi.decide(chat.id, { id: approval.id, decision }))
+          onDecide={(answer) =>
+            run(() => terminalRemoteApi.decide(chat.id, { id: approval.id, ...answer }))
           }
         />
       )}
       <RemoteTerminalComposer
         blocked={blockedReason(data)}
         working={data.running && data.state === 'working'}
+        preferred={setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER}
         error={problem}
-        onSend={(text) => run(() => terminalRemoteApi.message(chat.id, text))}
+        onSend={(text, now) => run(() => terminalRemoteApi.message(chat.id, text, now))}
         onStop={() => run(() => terminalRemoteApi.interrupt(chat.id))}
       />
     </section>

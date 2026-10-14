@@ -35,6 +35,12 @@ const CHANGED = 'This approval has changed. Check the session again.';
 const WAITING = 'The agent is waiting for an answer. Answer it first, then send your message.';
 const NOT_SUBMITTED =
   'The agent asked something before your message was sent. Answer it on your Mac; your message is typed there, not sent.';
+const COMMAND = 'Messages that start with / or ! run CLI commands. Type them on your Mac.';
+const REASON_NOT_SENT =
+  'Denied. Your reason wasn’t sent because the agent still shows a menu. Type it on your Mac.';
+const STOPPED_NOT_SENT =
+  'The turn stopped, but the agent then asked something. Answer it on your Mac; your message wasn’t sent.';
+const MENU_GONE_TRIES = 10;
 
 export interface NativeRemoteDeps {
   db: Db;
@@ -89,6 +95,14 @@ export function codexMenuShows(screen: string, detail: string): boolean {
   return key.length === 0 || squashed(screen).includes(key);
 }
 
+async function runStartedAt(db: Db, runId: string): Promise<string | null> {
+  const { rows } = await db.query<{ at: Date | null }>(
+    'SELECT COALESCE(started_at, created_at) AS at FROM runs WHERE id = $1',
+    [runId],
+  );
+  return rows[0]?.at?.toISOString() ?? null;
+}
+
 export function nativeRemote(deps: NativeRemoteDeps) {
   const delay = deps.delay ?? ((ms: number) => new Promise((done) => setTimeout(done, ms)));
   const parsed = new Map<string, ParsedTail>();
@@ -141,6 +155,35 @@ export function nativeRemote(deps: NativeRemoteDeps) {
     );
   };
 
+  const sendable = async (conversationId: string, session: LiveSession, text: string) => {
+    if (COMMAND_PREFIX.test(text)) throw new NativeRuntimeError(COMMAND, 409);
+    if (await answerOpen(conversationId, session)) throw new NativeRuntimeError(WAITING, 409);
+  };
+  const submit = async (conversationId: string, session: LiveSession, text: string) => {
+    write(session, pastedMessage(text));
+    await delay(SUBMIT_DELAY_MS);
+    if (await answerOpen(conversationId, session)) throw new NativeRuntimeError(NOT_SUBMITTED, 409);
+    write(session, '\r');
+  };
+  const settled = async (conversationId: string, session: LiveSession): Promise<boolean> => {
+    for (let tries = 0; tries < MENU_GONE_TRIES; tries++) {
+      await delay(SUBMIT_DELAY_MS);
+      if (!(await answerOpen(conversationId, session))) return true;
+    }
+    return false;
+  };
+  const sendReason = async (conversationId: string, session: LiveSession, reason: string) => {
+    if (!(await settled(conversationId, session)))
+      throw new NativeRuntimeError(REASON_NOT_SENT, 409);
+    try {
+      await submit(conversationId, session, reason);
+    } catch (error) {
+      if (error instanceof NativeRuntimeError)
+        throw new NativeRuntimeError(`Denied. ${error.message}`, error.status);
+      throw error;
+    }
+  };
+
   return {
     async view(conversationId: string): Promise<TerminalRemoteView> {
       await deps.owned(conversationId);
@@ -150,10 +193,13 @@ export function nativeRemote(deps: NativeRemoteDeps) {
       const path = session?.transcript?.path ?? row.usage_file ?? null;
       const tail = path ? await items(conversationId, row.provider, path) : null;
       const pending = session ? deps.approvals.current(conversationId) : null;
+      const working = session !== undefined && row.state === 'working';
       return {
         provider: row.provider,
         state: row.state,
         running: session !== undefined,
+        workingSince:
+          working && row.active_run_id ? await runStartedAt(deps.db, row.active_run_id) : null,
         items: tail?.items ?? [],
         truncated: tail?.truncated ?? false,
         approval: pending
@@ -167,19 +213,16 @@ export function nativeRemote(deps: NativeRemoteDeps) {
       };
     },
 
-    async message(conversationId: string, text: string): Promise<void> {
+    async message(conversationId: string, text: string, now = false): Promise<void> {
       const session = running(conversationId);
-      if (COMMAND_PREFIX.test(text))
-        throw new NativeRuntimeError(
-          'Messages that start with / or ! run CLI commands. Type them on your Mac.',
-          409,
-        );
-      if (await answerOpen(conversationId, session)) throw new NativeRuntimeError(WAITING, 409);
-      write(session, pastedMessage(text));
-      await delay(SUBMIT_DELAY_MS);
-      if (await answerOpen(conversationId, session))
-        throw new NativeRuntimeError(NOT_SUBMITTED, 409);
-      write(session, '\r');
+      await sendable(conversationId, session, text);
+      const row = now ? await nativeTerminalRow(deps.db, conversationId) : null;
+      if (row?.state === 'working') {
+        write(session, ESCAPE);
+        if (!(await settled(conversationId, session)))
+          throw new NativeRuntimeError(STOPPED_NOT_SENT, 409);
+      }
+      await submit(conversationId, session, text);
     },
 
     async interrupt(conversationId: string): Promise<void> {
@@ -194,16 +237,20 @@ export function nativeRemote(deps: NativeRemoteDeps) {
       const session = running(conversationId);
       const current = deps.approvals.current(conversationId);
       if (!current || current.id !== decision.id) throw new NativeRuntimeError(CHANGED, 409);
+      const reason = decision.decision === 'deny' ? decision.reason?.trim() || null : null;
       const byKey = current.provider === 'codex';
       if (byKey) {
+        if (reason && COMMAND_PREFIX.test(reason)) throw new NativeRuntimeError(COMMAND, 409);
         const screen = await deps.terminals.screen(session.row.id);
         if (screen === null) throw new NativeRuntimeError('Answer this on your Mac.', 409);
         if (!codexMenuShows(screen, current.detail)) throw new NativeRuntimeError(CHANGED, 409);
       }
       const taken = deps.approvals.take(conversationId, decision.id);
       if (!taken) throw new NativeRuntimeError(CHANGED, 409);
-      taken.settle(decision.decision);
-      if (byKey) write(session, decision.decision === 'allow' ? 'y' : ESCAPE);
+      taken.settle({ behavior: decision.decision, ...(reason ? { message: reason } : {}) });
+      if (!byKey) return;
+      write(session, decision.decision === 'allow' ? 'y' : ESCAPE);
+      if (reason) await sendReason(conversationId, session, reason);
     },
 
     async permission(
