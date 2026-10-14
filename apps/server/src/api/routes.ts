@@ -1,3 +1,4 @@
+import { remoteDeviceOf } from '../remote/principal.ts';
 import { Router } from 'express';
 import {
   CONVERSATION_SEARCH_MAX_LENGTH,
@@ -19,6 +20,7 @@ import { reasoningText } from '../persistence/run-events.ts';
 import { countActiveRuns, getRun } from '../persistence/runs.ts';
 import { commandOutput } from '../persistence/run-commands.ts';
 import { stopRun } from '../workflow/stop-run.ts';
+import { isTerminalRun } from '../persistence/native-terminal-turns.ts';
 import { loadOrchestration } from '../persistence/orchestrations.ts';
 import { advisorUsageSummary } from '../persistence/advice.ts';
 import { usageSummary } from '../persistence/usage.ts';
@@ -149,6 +151,10 @@ export function apiRoutes(deps: RouteDeps): Router {
   });
 
   router.post('/runs/:id/cancel', async (req, res) => {
+    if (remoteDeviceOf(res) && (await isTerminalRun(db, paramId(req)))) {
+      res.status(409).json({ error: 'Use Stop in the Terminal session to interrupt the agent.' });
+      return;
+    }
     let stopped = await stopRun(db, paramId(req));
     if (stopped && (await deps.nativeTerminals?.stopRun(paramId(req))))
       stopped = await stopRun(db, paramId(req));

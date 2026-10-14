@@ -1,13 +1,20 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
+export type PermissionHandler = (
+  token: string,
+  body: unknown,
+  signal: AbortSignal,
+) => Promise<'allow' | 'deny' | null>;
+
 export async function nativeHookHost(
   authorised: (token: string) => boolean,
   observe: (token: string, body: unknown) => Promise<boolean>,
+  permission: PermissionHandler,
 ) {
   let host = '';
   const handle = async (req: IncomingMessage, res: ServerResponse) => {
-    if (req.url !== '/events') return res.writeHead(404).end();
+    if (req.url !== '/events' && req.url !== '/permission') return res.writeHead(404).end();
     if (req.headers.host !== host || req.headers.origin !== undefined)
       return res.writeHead(403).end();
     const token = /^Bearer (\S+)$/.exec(req.headers.authorization ?? '')?.[1];
@@ -25,6 +32,15 @@ export async function nativeHookHost(
       body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
     } catch {
       return res.writeHead(400).end();
+    }
+    if (req.url === '/permission') {
+      const gone = new AbortController();
+      res.once('close', () => gone.abort());
+      const answer = await permission(token, body, gone.signal);
+      if (!answer || gone.signal.aborted) return res.writeHead(204).end();
+      return res
+        .writeHead(200, { 'Content-Type': 'application/json' })
+        .end(JSON.stringify({ behavior: answer }));
     }
     const accepted = await observe(token, body);
     return res.writeHead(accepted ? 204 : 400).end();
@@ -44,6 +60,7 @@ export async function nativeHookHost(
   return {
     port,
     url: `http://${host}/events`,
+    permissionUrl: `http://${host}/permission`,
     close: async () => {
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));

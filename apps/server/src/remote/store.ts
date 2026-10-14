@@ -20,6 +20,8 @@ const SWITCH_COLUMNS: Record<RemoteSwitch, string> = {
   reset: 'can_reset',
   devices: 'can_devices',
   passkeys: 'can_passkeys',
+  terminal: 'can_terminal',
+  terminalApprove: 'can_terminal_approve',
 };
 
 const SWITCH_IDS = Object.keys(SWITCH_COLUMNS) as RemoteSwitch[];

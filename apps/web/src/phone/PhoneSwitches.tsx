@@ -15,7 +15,8 @@ const SHOWN = (Object.keys(REMOTE_SWITCH_LABELS) as RemoteSwitch[]).filter(
   (id) => !REMOTE_MAC_ONLY_SWITCHES.includes(id) && !REMOTE_SIGN_IN_SWITCHES.includes(id),
 );
 
-export const MAC_ONLY_LINE = 'The Browser pane, preview and terminal stay on the Mac.';
+export const MAC_ONLY_LINE =
+  'The Browser pane, preview, shell tabs and starting a Terminal session stay on the Mac.';
 
 interface SwitchRowProps {
   id: RemoteSwitch;

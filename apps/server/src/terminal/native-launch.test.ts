@@ -82,6 +82,30 @@ describe('native terminal launch', () => {
     });
   });
 
+  it.each(['claude', 'codex'] as const)(
+    'lets %s ask a paired device about a permission without slowing its other hooks',
+    async (provider) => {
+      const request = await input(provider);
+      const launch = await prepareNativeLaunch({
+        ...request,
+        hooks: { ...request.hooks, permissionUrl: 'http://127.0.0.1:3000/permission' },
+      });
+      const observer = JSON.parse(await readFile(join(launch.directory!, 'observer.json'), 'utf8'));
+      expect(observer).toMatchObject({ permissionUrl: 'http://127.0.0.1:3000/permission' });
+      if (provider === 'claude') {
+        const settingsPath = launch.args[launch.args.indexOf('--settings') + 1]!;
+        const { hooks } = JSON.parse(await readFile(settingsPath, 'utf8'));
+        expect(hooks.PermissionRequest[0].hooks[0].timeout).toBe(600);
+        expect(hooks.Stop[0].hooks[0].timeout).toBe(3);
+      } else {
+        expect(launch.args.filter((arg) => arg.startsWith('hooks.')).join(' ')).not.toContain(
+          'timeout=600',
+        );
+      }
+      await launch.dispose();
+    },
+  );
+
   it('keeps unsupported versions usable without claiming lifecycle observation', async () => {
     const request = await input();
     const launch = await prepareNativeLaunch({

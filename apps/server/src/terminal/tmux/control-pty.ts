@@ -155,5 +155,11 @@ export function controlPty(
       ended = true;
       client.close();
     },
+    screen: () =>
+      new Promise((resolve) => {
+        client.command(`capture-pane -p -J -t ${pane.paneId}`, (lines) =>
+          resolve(lines ? lines.join('\n') : null),
+        );
+      }),
   };
 }

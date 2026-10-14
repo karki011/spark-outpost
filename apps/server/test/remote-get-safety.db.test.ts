@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { ROUTE_RULES } from '../src/remote/route-rules.ts';
 import { createTestApp } from './app-support.ts';
-import { pairDevice, remoteClient, turnRemoteOn } from './remote-support.ts';
+import { pairDevice, remoteClient, setSwitches, turnRemoteOn } from './remote-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 const STREAMS = new Set(['GET /api/events']);
@@ -20,6 +20,7 @@ beforeEach(async () => {
   t = await createTestDb();
   app = createTestApp(t);
   await turnRemoteOn(app);
+  await setSwitches(app, { terminal: true, terminalApprove: true });
 });
 
 afterEach(async () => {

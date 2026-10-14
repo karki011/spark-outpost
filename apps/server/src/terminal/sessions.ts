@@ -296,6 +296,20 @@ export class TerminalSessions {
     return true;
   }
 
+  send(id: string, data: string): boolean {
+    const session = this.sessions.get(id);
+    if (!session?.pty || !isAgent(session.kind)) return false;
+    session.pty.write(data);
+    session.lastInputAt = Date.now();
+    return true;
+  }
+
+  async screen(id: string): Promise<string | null> {
+    const session = this.sessions.get(id);
+    if (!session?.pty?.screen || !isAgent(session.kind)) return null;
+    return session.pty.screen();
+  }
+
   detach(id: string): boolean {
     const session = this.sessions.get(id);
     if (!session?.pty?.detach) return false;

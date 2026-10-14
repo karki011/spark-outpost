@@ -17,6 +17,7 @@ import { shownSession, terminalEnded, terminalRelaunch } from './native-state.ts
 import { TerminalBar, type TerminalLink } from './TerminalBar.tsx';
 import { TerminalMenu } from './TerminalMenu.tsx';
 import { TerminalScreen } from './TerminalScreen.tsx';
+import { RemoteTerminalView } from './remote/RemoteTerminalView.tsx';
 import { useTerminalFocus, type FocusPanel } from './use-terminal-focus.ts';
 import './native-terminal.css';
 
@@ -122,12 +123,7 @@ export function NativeTerminalWorkspace({
       () => setCopied(PATH_COPIED),
       () => setCopied(PATH_NOT_COPIED),
     );
-  if (remote)
-    return (
-      <section className="native-workspace remote">
-        <p>Open this Terminal session on your Mac.</p>
-      </section>
-    );
+  if (remote) return <RemoteTerminalView chat={chat} />;
   const reason = native?.reason && native.observation !== 'unsupported' ? native.reason : null;
   return (
     <section

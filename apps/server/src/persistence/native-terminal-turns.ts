@@ -304,6 +304,15 @@ export async function failNativeLaunchRun(db: Db, runId: string, reason: string)
   await withTransaction(db, (client) => failUnstartedRuns(client, reason, runId));
 }
 
+export async function isTerminalRun(db: Db, runId: string): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `SELECT 1 FROM runs r JOIN conversations c ON c.id = r.conversation_id
+     WHERE r.id = $1 AND c.session_type = 'terminal'`,
+    [runId],
+  );
+  return rowCount === 1;
+}
+
 export async function requeueNativeLaunchRun(db: Db, runId: string): Promise<boolean> {
   const requeued = await db.query(
     `UPDATE runs r SET status = 'queued', error = NULL, started_at = NULL, finished_at = NULL

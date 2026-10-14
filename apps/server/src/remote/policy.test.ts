@@ -56,8 +56,8 @@ describe('remote policy', () => {
       ['POST', '/api/terminal/sessions'],
       ['POST', '/api/terminal/shells'],
       ['POST', `/api/terminal/sessions/${ID}/attach`],
-      ['GET', `/api/conversations/${ID}/terminal`],
       ['POST', `/api/conversations/${ID}/terminal`],
+      ['GET', `/api/conversations/${ID}/terminal/usage`],
       ['DELETE', `/api/conversations/${ID}/terminal`],
       ['DELETE', `/api/terminal/sessions/${ID}`],
       ['GET', `/api/terminal/sessions/${ID}/stream`],
@@ -78,6 +78,27 @@ describe('remote policy', () => {
       expect([path, remoteDecision(method, path, ALL_ON).kind]).toEqual([path, 'refuse']);
     }
     expect(remoteDecision('POST', '/api/reset', ALL_OFF).kind).toBe('refuse');
+  });
+
+  it('lets a phone use a Terminal session only behind its two switches, both off by default', () => {
+    const follow: [string, string][] = [
+      ['GET', `/api/conversations/${ID}/terminal`],
+      ['GET', `/api/conversations/${ID}/terminal/transcript`],
+      ['POST', `/api/conversations/${ID}/terminal/message`],
+      ['POST', `/api/conversations/${ID}/terminal/interrupt`],
+    ];
+    const approve = ['POST', `/api/conversations/${ID}/terminal/approval`] as const;
+    for (const [method, path] of [...follow, approve]) {
+      expect([path, remoteDecision(method, path, REMOTE_SWITCH_DEFAULTS).kind]).toEqual([
+        path,
+        'refuse',
+      ]);
+      expect([path, remoteDecision(method, path, ALL_ON).kind]).toEqual([path, 'allow']);
+    }
+    const followOnly = { ...ALL_OFF, terminal: true };
+    for (const [method, path] of follow)
+      expect(remoteDecision(method, path, followOnly).kind).toBe('allow');
+    expect(remoteDecision(...approve, followOnly).kind).toBe('refuse');
   });
 
   it('allows everything else by default, and opening a pull request always', () => {

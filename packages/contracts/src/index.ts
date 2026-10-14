@@ -42,6 +42,7 @@ export * from './spark.ts';
 export * from './tasks.ts';
 export * from './terminal.ts';
 export * from './native-terminal.ts';
+export * from './native-terminal-remote.ts';
 export * from './service-stop.ts';
 export * from './usage.ts';
 export * from './native-terminal-usage.ts';

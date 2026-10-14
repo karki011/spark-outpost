@@ -8,6 +8,7 @@ import type { TurnAttachment } from '../providers/provider.ts';
 import { NativeRuntimeError } from './native-control.ts';
 import { nativeHookScript } from './native-hook-script.ts';
 import { verifyNativeHooks, verifyNativeOption } from './native-capabilities.ts';
+import { CLAUDE_PERMISSION_HOOK_SECONDS } from './remote/approvals.ts';
 import { isNativeSessionId, nativeHookNames, type NativeProvider } from './native-hooks.ts';
 
 export interface NativeLaunchInput {
@@ -28,7 +29,7 @@ export interface NativeLaunchInput {
   env?: NodeJS.ProcessEnv;
   attachments?: readonly TurnAttachment[];
   mcp: { url: string; token: string };
-  hooks: { url: string; token: string };
+  hooks: { url: string; token: string; permissionUrl?: string };
 }
 
 export interface NativeLaunch {
@@ -244,9 +245,19 @@ async function providerConfiguration(
   if (input.provider === 'claude') {
     const settingsPath = join(directory, 'settings.json');
     const mcpPath = join(directory, 'mcp.json');
+    const waiting = [
+      {
+        hooks: [{ type: 'command', command: hookCommand, timeout: CLAUDE_PERMISSION_HOOK_SECONDS }],
+      },
+    ];
     await privateJson(settingsPath, {
       theme: CLAUDE_THEME_FOLLOWS_TERMINAL,
-      hooks: Object.fromEntries(names.map((name) => [name, groups])),
+      hooks: Object.fromEntries(
+        names.map((name) => [
+          name,
+          name === 'PermissionRequest' && input.hooks.permissionUrl ? waiting : groups,
+        ]),
+      ),
     });
     await privateJson(mcpPath, {
       mcpServers: {

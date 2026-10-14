@@ -13,6 +13,7 @@ export interface PtyProcess {
   onExit(listener: (exit: { exitCode: number; signal?: number | undefined }) => void): void;
   kill?(): void;
   detach?(): void;
+  screen?(): Promise<string | null>;
 }
 
 export interface PtyOptions {

@@ -41,6 +41,8 @@ import { startPhases } from './start-phases.ts';
 import { assertTerminalChat, providerToLaunch } from './native-launch-checks.ts';
 import { writeAdoptRecord } from './tmux/adopt-record.ts';
 import { readoptTmuxSessions } from './tmux/readopt.ts';
+import { terminalApprovals } from './remote/approvals.ts';
+import { nativeRemote, remoteHookHandlers } from './remote/native-remote.ts';
 
 export type { NativeRuntime, NativeRuntimeDeps } from './native-runtime-types.ts';
 import type { NativeRuntime, NativeRuntimeDeps, LiveSession } from './native-runtime-types.ts';
@@ -89,9 +91,23 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     control,
     usage,
   });
-  const host = await nativeHookHost((token) => tokens.has(digest(token)), hook);
+  const remote = nativeRemote({
+    db: deps.db,
+    workspaceId: deps.workspaceId,
+    live,
+    terminals: deps.terminals,
+    approvals: terminalApprovals(),
+    owned,
+  });
+  const handlers = remoteHookHandlers(remote, (token) => tokens.get(digest(token)), hook);
+  const host = await nativeHookHost(
+    (token) => tokens.has(digest(token)),
+    handlers.observe,
+    handlers.permission,
+  );
   const exited = (running: LiveSession) => (exit: { exitCode: number }) => {
     const state = exit.exitCode === 0 ? 'exited' : 'error';
+    remote.ended(running.row.conversation_id);
     void enqueue(running, async () => {
       await finish(running, state, false, `Native agent exited (${exit.exitCode}).`).finally(() =>
         usage.last(running).catch(() => undefined),
@@ -206,7 +222,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
           channel: deps.channel,
           command,
           mcp: granted,
-          hooks: { url: host.url, token },
+          hooks: { url: host.url, token, permissionUrl: host.permissionUrl },
         }),
       );
       row.observation = launch.observation;
@@ -314,6 +330,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
   const stop = async (conversationId: string) => {
     stoppedLaunches.add(conversationId);
     await owned(conversationId);
+    remote.ended(conversationId);
     await dependencies.stop(conversationId);
     const queued = await deps.db.query<{ id: string }>(
       `SELECT r.id FROM runs r JOIN conversations c ON c.id = r.conversation_id
@@ -339,6 +356,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
   };
   return {
     port: host.port,
+    remote,
     async get(conversationId) {
       await owned(conversationId);
       const row = await nativeTerminalRow(deps.db, conversationId);
@@ -417,6 +435,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
             terminals: deps.terminals,
             waiters,
             hookUrl: host.url,
+            permissionUrl: host.permissionUrl,
             live,
             tokens,
             now: deps.now ?? (() => new Date()),

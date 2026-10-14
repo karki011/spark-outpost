@@ -1,5 +1,8 @@
 import { randomBytes } from 'node:crypto';
-import { rm } from 'node:fs/promises';
+import { readFile, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { isRecord } from '../../agent-config/records.ts';
+import { parseLine } from '../native-transcript.ts';
 import { expirePendingApprovals } from '../../persistence/approvals.ts';
 import type { Db } from '../../persistence/db.ts';
 import type { NativeTerminalRow } from '../../persistence/native-terminals.ts';
@@ -30,6 +33,7 @@ export interface ReadoptInput {
   terminals: TerminalSessions;
   waiters: ApprovalWaiters;
   hookUrl: string;
+  permissionUrl?: string;
   live: Map<string, LiveSession>;
   tokens: Map<string, LiveSession>;
   now(): Date;
@@ -65,18 +69,32 @@ async function openRunInput(db: Db, runId: string | null) {
   return loadRunInput(db, runId);
 }
 
+async function askedBefore(directory: string): Promise<boolean> {
+  const observer = await readFile(join(directory, 'observer.json'), 'utf8').then(
+    (text) => parseLine(text),
+    () => null,
+  );
+  return isRecord(observer) && typeof observer.permissionUrl === 'string';
+}
+
 async function readoptOne(input: ReadoptInput, row: NativeTerminalRow): Promise<void> {
   const { db } = input;
   const root = sessionRoot(input.dataDir, input.channel, row.id);
   const stored = await readStoredLaunch(root);
   const hookToken = randomBytes(32).toString('base64url');
   const observed = stored?.observed === true && row.observation === 'hooks';
+  const approvals =
+    stored !== null &&
+    observed &&
+    input.permissionUrl !== undefined &&
+    (await askedBefore(stored.directory));
   if (stored && observed)
     await writeObserver(stored.directory, {
       url: input.hookUrl,
       token: hookToken,
       sessionId: row.id,
       provider: row.provider,
+      ...(approvals ? { permissionUrl: input.permissionUrl } : {}),
     });
   const scope: SparkScope = {
     workspaceId: input.workspaceId,

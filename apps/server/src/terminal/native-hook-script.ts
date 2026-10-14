@@ -1,3 +1,7 @@
+import { CLAUDE_PERMISSION_WAIT_MS } from './remote/approvals.ts';
+
+const CODEX_PERMISSION_WAIT_MS = 2_000;
+
 export function nativeHookScript(): string {
   return String.raw`
 import { readFile } from 'node:fs/promises';
@@ -49,14 +53,38 @@ async function bridgeMain() {
           body,
           signal: AbortSignal.timeout(1000),
         });
-        if (response.status < 500) return;
+        if (response.status < 500) break;
       } catch {
-        if (attempt === 1) return;
+        if (attempt === 1) break;
       }
     }
+    if (raw.hook_event_name === 'PermissionRequest' && typeof config.permissionUrl === 'string')
+      await askPermission(config, raw);
   } catch {
     return;
   }
+}
+async function askPermission(config, raw) {
+  if (typeof raw.tool_name !== 'string' || raw.tool_name.length > 200) return;
+  const full = JSON.stringify({ tool: raw.tool_name, input: raw.tool_input ?? null });
+  const response = await fetch(config.permissionUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + config.token },
+    body: full.length <= 20_000 ? full : JSON.stringify({ tool: raw.tool_name, input: null }),
+    signal: AbortSignal.timeout(
+      config.provider === 'claude' ? ${CLAUDE_PERMISSION_WAIT_MS} : ${CODEX_PERMISSION_WAIT_MS},
+    ),
+  });
+  if (response.status !== 200) return;
+  const answer = await response.json();
+  if (answer?.behavior !== 'allow' && answer?.behavior !== 'deny') return;
+  const decision =
+    answer.behavior === 'allow'
+      ? { behavior: 'allow' }
+      : { behavior: 'deny', message: 'Denied from a paired device.' };
+  process.stdout.write(
+    JSON.stringify({ hookSpecificOutput: { hookEventName: 'PermissionRequest', decision } }),
+  );
 }
 await bridgeMain();
 `;
