@@ -6,6 +6,8 @@ import {
   createTerminalResponseSchema,
   shellBusyResponseSchema,
   terminalStartSchema,
+  terminalRemoteViewSchema,
+  type TerminalApprovalDecision,
   type CreateShellResponse,
   type CreateTerminalResponse,
   type ProviderId,
@@ -64,6 +66,26 @@ export const nativeTerminalKey = (conversationId: string) =>
 
 export const terminalStartKey = (conversationId: string) =>
   ['terminal-start', conversationId] as const;
+
+export const terminalRemoteKey = (conversationId: string) =>
+  ['terminal-remote', conversationId] as const;
+
+export const terminalRemoteApi = {
+  view: (conversationId: string) =>
+    request(terminalRemoteViewSchema, `/conversations/${conversationId}/terminal/transcript`),
+  message: (conversationId: string, text: string) =>
+    request(z.null(), `/conversations/${conversationId}/terminal/message`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    }),
+  interrupt: (conversationId: string) =>
+    request(z.null(), `/conversations/${conversationId}/terminal/interrupt`, { method: 'POST' }),
+  decide: (conversationId: string, decision: TerminalApprovalDecision) =>
+    request(z.null(), `/conversations/${conversationId}/terminal/approval`, {
+      method: 'POST',
+      body: JSON.stringify(decision),
+    }),
+};
 
 export const nativeTerminalApi = {
   startPhase: (conversationId: string) =>

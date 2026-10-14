@@ -146,7 +146,7 @@ Any browser on the tailnet can already pair with a Mac's Spark.
 
 - The host Mac turns on Tailscale Serve. Its address is `https://<mac>.<tailnet>.ts.net`.
 - A browser opens the address, types the code, and the host Mac confirms.
-- The browser gets the host's own web build and a device cookie. Only routes in `route-rules.ts` answer. Terminal, Browser pane, preview and access management stay on the host Mac.
+- The browser gets the host's own web build and a device cookie. Only routes in `route-rules.ts` answer. Starting a Terminal session, shell tabs, Browser pane, preview and access management stay on the host Mac; a running Terminal session follows its two switches ([PHONE_REMOTE.md](PHONE_REMOTE.md#terminal-sessions-from-a-paired-device-built)).
 
 So a second Mac can control the first one today, from Safari. Spark to Spark is mostly about doing that inside the app, safely, with the credential in the keychain.
 

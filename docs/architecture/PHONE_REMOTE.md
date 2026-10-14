@@ -16,7 +16,7 @@ Use Spark Outpost from a phone while the work stays on the Mac.
 ## Not in scope
 
 - Running agents anywhere but the Mac. No cloud runner, no hosted database.
-- The Browser pane, preview and terminal on the phone.
+- The Browser pane, preview, shell tabs and starting a Terminal session on the phone. A running Terminal session is the exception: see [Terminal sessions from a paired device](#terminal-sessions-from-a-paired-device-built).
 - Sharing a Mac with another person. One owner, their own devices.
 - A native iPhone or Android app. It is a later step (phase 6) and reuses everything before it.
 
@@ -133,12 +133,12 @@ Decisions the plan left open:
 - **Pair another device and manage devices** is stored but opens no route: changing switches, starting or confirming pairing, device management, the hostname, Tailscale Serve and the phone audit are Mac-only, so a lost phone cannot widen its own access. It stays off and the Phone page does not show it.
 - Deleting a chat and unlinking a project sit behind **Reset or delete data**. Listing folders on the Mac sits behind **Link a new folder or clone a repo**.
 
-Decided by the owner on 2026-10-06: a phone does everything the Mac app does except the Browser pane, preview and terminal.
+Decided by the owner on 2026-10-06: a phone does everything the Mac app does except the Browser pane, preview and terminal. Changed by the owner on 2026-10-14: a running Terminal session may be followed, typed into, stopped and approved from a paired device behind two switches.
 
 - Always allowed, added: `POST /api/tasks/:id/ship`.
 - Behind **Change settings**, added: trusting a folder's hooks and MCP servers (`PUT /api/projects/:id/agent-config/trust` and `/trust/redirects`) and reading that folder's agent setup.
 - Behind **Add or change providers and connections**, added: the saved MCP server list and the pending GitHub and Slack sign-in state.
-- Never from a phone: terminal, preview routes, opening a folder in Finder, the diagnostics export, the git installer, updates and native dialogs, and `GET /api/instructions-file`. That last one reads any `.md`, `.markdown`, `.mdc` or `.txt` file on the Mac by absolute path with no project confinement, so it stays on the Mac.
+- Never from a phone: starting a Terminal session, shell tabs, preview routes, opening a folder in Finder, the diagnostics export, the git installer, updates and native dialogs, and `GET /api/instructions-file`. That last one reads any `.md`, `.markdown`, `.mdc` or `.txt` file on the Mac by absolute path with no project confinement, so it stays on the Mac.
 - Every switch but the Mac-only one defaults on, saved sign-ins and reset included (migration `0137_phone_defaults.sql`).
 
 Added with outposts ([A2A_CHATS.md](A2A_CHATS.md), October 9, 2026), with no new switch:
@@ -259,7 +259,7 @@ A left-bar entry named Phone, directly above Settings, opening a full page (`app
 - **Status**: the Tailscale state with one next step, the switch, the address, and "Phone connected".
 - **Pair a phone**: a staged scene carried by Blob Scout. Asleep until phone access is on; ready; the QR (`https://<hostname>/#code=<code>`), the code and a two-minute ring, nudging in the last twenty seconds; the waiting phone with its name and matching code and Confirm and Deny; a short paired moment, after which the new device is highlighted once in the list; denied, expired and failed with one retry. Each stage is announced in a live region and focus moves to its main button. With reduced motion the poses are static.
 - **Devices**: name, added, last seen, connected, passkeys (count, manager, newest date, synced); rename, revoke, remove passkeys, disconnect all; the **Allow passkey sign-in** switch.
-- **What the phone can do**: the switches, and the line that the Browser pane, preview and terminal stay on the Mac.
+- **What the phone can do**: the switches, and the line that the Browser pane, preview, shell tabs and starting a Terminal session stay on the Mac.
 - **Recent phone activity**: from `GET /api/remote/audit`.
 - Opened on a paired phone, the page is read-only apart from **Passkey** (saved passkeys and "Save a passkey for this phone"): connected, this device, what it can do, "Change these on your Mac". The app also offers the passkey once in a dismissible notice.
 
@@ -285,6 +285,19 @@ Done on `feat/phone-ready`. The rules live in `docs/design/RESPONSIVE.md`.
 - **Touch.** 44px hit areas for the shared controls and 16px inputs under `(pointer: coarse)`.
 
 Not verified: any real iPhone or iPad. The keyboard handling, safe areas, zoom-on-focus and Add to Home Screen ran only in Chromium with touch emulation.
+
+### Terminal sessions from a paired device (built)
+
+Decided by the owner on 2026-10-14. Two switches, both off by default and changed only on the Mac: **Follow, type in and stop Terminal sessions** (`terminal`, `can_terminal`, migration 0172) and **Approve in Terminal sessions** (`terminalApprove`, `can_terminal_approve`).
+
+- **Follow.** `GET /api/conversations/:id/terminal` and `GET …/terminal/transcript`. The transcript route reads the last 768 KB of the CLI's own session file on each request (`terminal/remote/read-tail.ts`) and returns the last 150 items: typed messages, replies, tool calls with their command or file, and interrupts (`transcript-items.ts`). Thinking, tool results and sub-agents are left out. Nothing is stored and nothing is logged; the phone polls every two seconds.
+- **Type.** `POST …/terminal/message` writes the message into the pane as one bracketed paste with control characters removed, then Enter 400 ms later, through the same `send-keys -H` path the Mac view uses. It is refused while the agent waits for permission or an answer, and while an approval is open. A message typed on the Mac and not yet sent would be sent with it.
+- **Stop.** `POST …/terminal/interrupt` sends Esc. A remote `POST /api/runs/:id/cancel` of a Terminal run is refused, so a phone cannot end the session.
+- **Approve.** `POST …/terminal/approval` with the open approval's id; a different or answered id is `409`. Claude's `PermissionRequest` hook (its own group, timeout 600 s) asks the hook host at `/permission` and waits up to 590 s while Claude shows its own menu on the Mac; the first answer wins, and an answer on the Mac ends the hook, which drops the request. Codex hides its menu while a hook runs, so its hook asks with a 2 s limit, the host answers at once, and a phone's answer is Codex's own key (`y`, or Esc, which also stops the turn), sent only after a capture of the pane shows the approval footer and that request's command or file. Without tmux there is no capture, and the answer is refused. The request's tool input goes to the hook host only and is kept in memory while the approval is open.
+- **Older sessions.** A session started before this, or a re-adopted one whose `observe.mjs` differs from the current script, has no permission address and shows "Answer on your Mac".
+- Each message, Stop and approval is in the remote audit by method and path, never its body; reading the transcript is not audited.
+
+Verified against Claude Code 2.1.294 and Codex CLI 0.153.4: multi-line pastes and messages sent during a turn submit in both; Claude's hook allow, deny, timeout and Mac-first answers behave as above; Codex `y` approves and Esc denies.
 
 ### What is left for the phone app
 
@@ -366,7 +379,7 @@ Default deny. A route is reachable from a phone only if it is on the remote allo
 
 Always allowed: read chats, plans, diffs, Work panel, Links, tickets, Docs; answer ordinary cards; send, queue and stop; Continue from here; start a chat in a linked project; open a pull request.
 
-Never from a phone: terminal, Browser pane, preview, updates, island settings, native dialogs, Finder actions, the diagnostics export, the git installer, reading an instructions file by absolute path, and everything that manages phone access: Tailscale Serve, pairing, devices, the phone audit and the switches themselves.
+Never from a phone: starting a Terminal session, shell tabs, Browser pane, preview, updates, island settings, native dialogs, Finder actions, the diagnostics export, the git installer, reading an instructions file by absolute path, and everything that manages phone access: Tailscale Serve, pairing, devices, the phone audit and the switches themselves.
 
 Switches on the Phone page, changeable only on the Mac:
 

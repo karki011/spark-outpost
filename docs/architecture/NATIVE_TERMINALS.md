@@ -108,7 +108,7 @@ Spark tool permissions never exceed the mode selected at launch, even if a hook 
 
 The terminal view and Island share a session identity and activity state. The terminal companion stays outside PTY output, does not intercept typing, and honors reduced motion.
 
-The Browser bridge is forwarded independently for the API and worker while a desktop is attached. Pending and new Browser requests fail explicitly when the desktop disconnects; background non-Browser work can continue. Reopening restores the bridge. Terminal and native-terminal routes are refused by the phone gateway, including Terminal creation through otherwise-shared conversation and ticket endpoints.
+The Browser bridge is forwarded independently for the API and worker while a desktop is attached. Pending and new Browser requests fail explicitly when the desktop disconnects; background non-Browser work can continue. Reopening restores the bridge. Starting a Terminal session and shell tabs are refused by the phone gateway, including Terminal creation through otherwise-shared conversation and ticket endpoints. A running session's view, message, Stop and approval routes follow two remote control switches ([PHONE_REMOTE.md](PHONE_REMOTE.md#terminal-sessions-from-a-paired-device-built)).
 
 ## Validation boundaries
 

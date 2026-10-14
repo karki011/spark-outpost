@@ -153,7 +153,7 @@ describe('never from a phone', () => {
 });
 
 describe('switches', () => {
-  it('start with everything on except managing devices', () => {
+  it('start with everything on except managing devices and using Terminal sessions', () => {
     expect(REMOTE_SWITCH_DEFAULTS).toEqual({
       settings: true,
       connections: true,
@@ -164,6 +164,8 @@ describe('switches', () => {
       reset: true,
       devices: false,
       passkeys: true,
+      terminal: false,
+      terminalApprove: false,
     });
   });
 
