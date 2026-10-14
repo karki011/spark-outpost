@@ -1,4 +1,4 @@
-import type { TerminalTranscriptItem } from '@spark-outpost/contracts';
+import { friendlyStep, type TerminalTranscriptItem } from '@spark-outpost/contracts';
 import { Markdown } from '../../chat/markdown/Markdown.tsx';
 
 export function RemoteTerminalItems({
@@ -30,7 +30,7 @@ function RemoteTerminalItem({ item }: { item: TerminalTranscriptItem }) {
     case 'tool':
       return (
         <p className="rt-tool-line">
-          <span className="rt-tool-name">{item.tool}</span>
+          <span className="rt-tool-name">{friendlyStep(item.tool ?? '')}</span>
           {item.text && <code>{item.text}</code>}
         </p>
       );

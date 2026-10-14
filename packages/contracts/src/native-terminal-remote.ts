@@ -27,7 +27,6 @@ export const terminalRemoteViewSchema = z.object({
   items: z.array(terminalTranscriptItemSchema),
   truncated: z.boolean(),
   approval: terminalApprovalSchema.nullable(),
-  approvalsHere: z.boolean(),
 });
 export type TerminalRemoteView = z.infer<typeof terminalRemoteViewSchema>;
 

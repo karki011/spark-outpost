@@ -107,20 +107,17 @@ describe('a permission request from a Terminal session', () => {
           resolve(null);
         });
       });
-    const { child } = start(
-      await config({ permissionUrl: host.permissionUrl, permissionWaitMs: 60_000 }),
-      request,
-    );
+    const { child } = start(await config({ permissionUrl: host.permissionUrl }), request);
     await waitFor(() => asked.length === 1);
     (child as ChildProcess).kill('SIGTERM');
     await gone;
   });
 
-  it('gives up after its own wait and leaves the CLI to ask', async () => {
+  it('waits only briefly for Codex, which hides its menu while a hook runs', async () => {
     answer = () => new Promise(() => undefined);
     const started = Date.now();
     const output = await start(
-      await config({ permissionUrl: host.permissionUrl, permissionWaitMs: 300 }),
+      await config({ permissionUrl: host.permissionUrl, provider: 'codex' }),
       request,
     ).done;
     expect(output).toBe('');

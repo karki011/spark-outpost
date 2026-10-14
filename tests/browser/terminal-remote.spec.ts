@@ -82,7 +82,6 @@ test('an approval shows the request, sends the answer and holds back a message u
       ],
       truncated: false,
       approval: answered ? null : { ...approval, denyStopsTurn: true },
-      approvalsHere: true,
     };
     await route.fulfill({ json: view });
   });
@@ -93,7 +92,7 @@ test('an approval shows the request, sends the answer and holds back a message u
   await asPairedPhone(page, { terminal: true, terminalApprove: true });
 
   const phone = page.getByRole('region', { name: 'Terminal session', exact: true });
-  const card = phone.getByRole('region', { name: 'The agent wants to use Bash' });
+  const card = phone.getByRole('region', { name: 'Permission needed: Running a command' });
   await expect(card).toContainText('pnpm test');
   await expect(phone.getByText('Answer the agent first, then send your message.')).toBeVisible();
   await expect(phone.getByRole('button', { name: 'Send' })).toBeDisabled();
@@ -129,12 +128,11 @@ test('without the approve switch the card says to answer on the Mac', async ({ p
           detail: 'src/app.ts',
           denyStopsTurn: false,
         },
-        approvalsHere: true,
       } satisfies TerminalRemoteView,
     });
   });
   await asPairedPhone(page, { terminal: true, terminalApprove: false });
-  const card = page.getByRole('region', { name: 'The agent wants to use Edit' });
+  const card = page.getByRole('region', { name: 'Permission needed: Editing a file' });
   await expect(card).toContainText('approving in Terminal sessions. Answer on your Mac.');
   await expect(card.getByRole('button')).toHaveCount(0);
 });

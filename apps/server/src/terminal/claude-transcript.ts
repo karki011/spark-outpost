@@ -12,7 +12,7 @@ const INTERRUPT_TEXTS = [
   '[Request interrupted by user for tool use]',
 ];
 
-function interruptText(message: Record<string, unknown>): boolean {
+export function interruptText(message: Record<string, unknown>): boolean {
   const content = message.content;
   if (!Array.isArray(content) || content.length !== 1) return false;
   const block: unknown = content[0];

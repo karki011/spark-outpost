@@ -86,8 +86,7 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.rt-approval-actions,
-.rt-composer-actions {
+.rt-approval-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -97,26 +96,4 @@
   margin: 0 0 8px;
   color: var(--muted);
   font-size: 13px;
-}
-.rt-composer {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--line);
-}
-.rt-composer textarea {
-  width: 100%;
-  min-height: 44px;
-  padding: 8px 10px;
-  border: 1px solid var(--composer-line);
-  border-radius: var(--r-sm);
-  background: var(--panel);
-  color: var(--text);
-  font: inherit;
-  resize: vertical;
-}
-.rt-composer textarea:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
 }

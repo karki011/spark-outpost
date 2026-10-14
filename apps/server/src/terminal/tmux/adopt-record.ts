@@ -65,7 +65,6 @@ export async function writeObserver(
     sessionId: string;
     provider: string;
     permissionUrl?: string;
-    permissionWaitMs?: number;
   },
 ): Promise<void> {
   await writeFile(join(directory, OBSERVER), JSON.stringify(observer), { mode: 0o600 });

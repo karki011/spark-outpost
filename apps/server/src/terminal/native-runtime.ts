@@ -97,6 +97,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     live,
     terminals: deps.terminals,
     approvals: terminalApprovals(),
+    owned,
   });
   const handlers = remoteHookHandlers(remote, (token) => tokens.get(digest(token)), hook);
   const host = await nativeHookHost(
@@ -106,7 +107,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
   );
   const exited = (running: LiveSession) => (exit: { exitCode: number }) => {
     const state = exit.exitCode === 0 ? 'exited' : 'error';
-    remote.clear(running.row.conversation_id);
+    remote.ended(running.row.conversation_id);
     void enqueue(running, async () => {
       await finish(running, state, false, `Native agent exited (${exit.exitCode}).`).finally(() =>
         usage.last(running).catch(() => undefined),
@@ -257,7 +258,6 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         currentPromptEventId: null,
         completedEvents: new Map(),
         transcript: null,
-        remoteApprovals: launch.observation === 'hooks',
       };
       const running = session;
       scope.beforeToolCall = async () => {
@@ -330,7 +330,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
   const stop = async (conversationId: string) => {
     stoppedLaunches.add(conversationId);
     await owned(conversationId);
-    remote.clear(conversationId);
+    remote.ended(conversationId);
     await dependencies.stop(conversationId);
     const queued = await deps.db.query<{ id: string }>(
       `SELECT r.id FROM runs r JOIN conversations c ON c.id = r.conversation_id

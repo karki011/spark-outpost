@@ -3,7 +3,6 @@ import { terminalApprovals } from './approvals.ts';
 
 const request = {
   conversationId: 'c1',
-  sessionId: 's1',
   provider: 'claude' as const,
   tool: 'Bash',
   detail: 'npm test',
@@ -17,7 +16,7 @@ describe('terminal approvals', () => {
       timeoutMs: 10_000,
     });
     const shown = approvals.current('c1')!;
-    expect(shown).toMatchObject({ tool: 'Bash', detail: 'npm test', denyStopsTurn: false });
+    expect(shown).toMatchObject({ tool: 'Bash', detail: 'npm test' });
     approvals.take('c1', shown.id)!.settle('allow');
     await expect(waiting).resolves.toBe('allow');
     expect(approvals.current('c1')).toBeNull();
@@ -53,13 +52,11 @@ describe('terminal approvals', () => {
     expect(approvals.current('c1')).toBeNull();
   });
 
-  it('keeps a Codex approval open for keys and says a denial stops the turn', () => {
+  it('keeps a Codex approval open until it is taken or cleared', () => {
     const approvals = terminalApprovals();
-    const entry = approvals.noteKeys({ ...request, provider: 'codex' });
-    expect(approvals.current('c1')).toMatchObject({
-      id: entry.id,
-      via: 'keys',
-      denyStopsTurn: true,
-    });
+    const entry = approvals.note({ ...request, provider: 'codex' });
+    expect(approvals.current('c1')?.id).toBe(entry.id);
+    approvals.clear('c1');
+    expect(approvals.current('c1')).toBeNull();
   });
 });

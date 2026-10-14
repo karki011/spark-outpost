@@ -16,7 +16,6 @@ const VIEW: TerminalRemoteView = {
   items: [],
   truncated: false,
   approval: null,
-  approvalsHere: true,
 };
 
 let t: TestDb;

@@ -1,23 +1,36 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { terminalLabel, type ConversationSummary } from '@spark-outpost/contracts';
+import {
+  terminalLabel,
+  type ConversationSummary,
+  type TerminalRemoteView,
+} from '@spark-outpost/contracts';
 import { useStickToBottom } from '../../chat/use-stick-to-bottom.ts';
 import { PHONE_SWITCH_OFF, useRemoteClient } from '../../phone/use-remote-client.ts';
 import { QueryWait } from '../../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
+import { terminalAgentName } from '../terminal-agents.ts';
 import { terminalRemoteApi, terminalRemoteKey } from '../terminal-api.ts';
 import { RemoteTerminalApproval } from './RemoteTerminalApproval.tsx';
 import { RemoteTerminalComposer } from './RemoteTerminalComposer.tsx';
 import { RemoteTerminalItems } from './RemoteTerminalItems.tsx';
 import './remote-terminal.css';
 
-const REFRESH_MS = 2000;
-const AGENTS = { claude: 'Claude Code', codex: 'Codex' } as const;
-const ASKING = 'The agent is asking a question. Answer it on your Mac.';
-const ANSWER_FIRST = 'Answer the agent first, then send your message.';
+const LIVE_REFRESH_MS = 2_000;
+const STOPPED_REFRESH_MS = 20_000;
 
 function failure(error: unknown): string {
   return error instanceof Error ? error.message : 'That did not reach the session. Try again.';
+}
+
+function blockedReason(view: TerminalRemoteView): string | null {
+  if (!view.running) return 'This session isn’t running. Start it again on your Mac.';
+  if (view.approval) return 'Answer the agent first, then send your message.';
+  if (view.state === 'waiting_for_permission')
+    return 'The agent is waiting for permission. Answer it on your Mac.';
+  if (view.state === 'waiting_for_input')
+    return 'The agent is asking a question. Answer it on your Mac.';
+  return null;
 }
 
 export function RemoteTerminalView({ chat }: { chat: ConversationSummary }) {
@@ -40,7 +53,8 @@ function RemoteTerminalSession({ chat, approve }: { chat: ConversationSummary; a
   const view = useQuery({
     queryKey: key,
     queryFn: () => terminalRemoteApi.view(chat.id),
-    refetchInterval: REFRESH_MS,
+    refetchInterval: (query) =>
+      query.state.data?.running === false ? STOPPED_REFRESH_MS : LIVE_REFRESH_MS,
   });
   const { scrollerRef } = useStickToBottom();
   const [problem, setProblem] = useState<string | null>(null);
@@ -65,44 +79,30 @@ function RemoteTerminalSession({ chat, approve }: { chat: ConversationSummary; a
         </QueryWait>
       </section>
     );
-  const asking = data.state === 'waiting_for_input' && !data.approval;
-  const blocked = !data.running
-    ? 'This session isn’t running. Start it again on your Mac.'
-    : data.approval
-      ? ANSWER_FIRST
-      : asking
-        ? ASKING
-        : null;
+  const approval = data.approval;
   return (
     <section className="native-workspace remote rt" aria-label="Terminal session">
       <p className="rt-status" role="status">
-        {AGENTS[data.provider]} · {terminalLabel(data.state)}
+        {terminalAgentName(data.provider)} · {terminalLabel(data.state)}
       </p>
       <div className="rt-scroll" ref={scrollerRef}>
         <RemoteTerminalItems items={data.items} truncated={data.truncated} />
       </div>
-      {data.approval && (
+      {approval && (
         <RemoteTerminalApproval
-          approval={data.approval}
-          here={data.approvalsHere}
+          approval={approval}
           allowed={approve}
-          onDecide={async (decision) => {
-            await run(() => terminalRemoteApi.decide(chat.id, { id: data.approval!.id, decision }));
-          }}
+          onDecide={(decision) =>
+            run(() => terminalRemoteApi.decide(chat.id, { id: approval.id, decision }))
+          }
         />
       )}
-      {problem && (
-        <p className="error-line" role="alert">
-          {problem}
-        </p>
-      )}
       <RemoteTerminalComposer
-        blocked={blocked}
+        blocked={blockedReason(data)}
         working={data.running && data.state === 'working'}
+        error={problem}
         onSend={(text) => run(() => terminalRemoteApi.message(chat.id, text))}
-        onStop={async () => {
-          await run(() => terminalRemoteApi.interrupt(chat.id));
-        }}
+        onStop={() => run(() => terminalRemoteApi.interrupt(chat.id))}
       />
     </section>
   );

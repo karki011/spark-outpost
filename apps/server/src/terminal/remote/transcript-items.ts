@@ -1,9 +1,11 @@
 import type { NativeTerminalProvider, TerminalTranscriptItem } from '@spark-outpost/contracts';
 import { isRecord } from '../../agent-config/records.ts';
+import { interruptText } from '../claude-transcript.ts';
+import { parseLine } from '../native-transcript.ts';
 
 const TEXT_MAX = 8_000;
 const DETAIL_MAX = 300;
-const INTERRUPTS = ['[Request interrupted by user]', '[Request interrupted by user for tool use]'];
+const DETAIL_KEYS = ['command', 'cmd', 'file_path', 'path', 'pattern', 'url', 'description'];
 const COMMAND_WRAPPER = /^<(command-|local-command-|bash-|system-reminder)/;
 
 type Item = TerminalTranscriptItem;
@@ -17,12 +19,12 @@ function stringAt(record: Record<string, unknown>, key: string): string | null {
   return typeof value === 'string' ? value : null;
 }
 
-function toolDetail(input: unknown): string {
-  if (typeof input === 'string') return clip(input, DETAIL_MAX);
+export function inputDetail(input: unknown, max = DETAIL_MAX): string {
+  if (typeof input === 'string') return clip(input.trim(), max);
   if (!isRecord(input)) return '';
-  for (const key of ['command', 'cmd', 'file_path', 'path', 'pattern', 'url', 'description']) {
+  for (const key of DETAIL_KEYS) {
     const value = input[key];
-    if (typeof value === 'string' && value.trim()) return clip(value, DETAIL_MAX);
+    if (typeof value === 'string' && value.trim()) return clip(value.trim(), max);
   }
   return '';
 }
@@ -44,21 +46,11 @@ function claudeRecord(record: Record<string, unknown>, items: Item[]): void {
   if (!message) return;
   const content = message.content;
   if (record.type === 'user') {
-    if (typeof content === 'string') {
-      const text = content.trim();
-      if (text && !COMMAND_WRAPPER.test(text))
-        items.push({ id: uuid, kind: 'user', text: clip(text, TEXT_MAX), tool: null, at });
-      return;
-    }
-    if (!Array.isArray(content)) return;
-    for (const block of content.filter(isRecord)) {
-      if (
-        block.type === 'text' &&
-        typeof block.text === 'string' &&
-        INTERRUPTS.includes(block.text)
-      )
-        items.push({ id: uuid, kind: 'interrupt', text: 'Interrupted', tool: null, at });
-    }
+    const text = typeof content === 'string' ? content.trim() : '';
+    if (text && !COMMAND_WRAPPER.test(text))
+      items.push({ id: uuid, kind: 'user', text: clip(text, TEXT_MAX), tool: null, at });
+    else if (interruptText(message))
+      items.push({ id: uuid, kind: 'interrupt', text: 'Interrupted', tool: null, at });
     return;
   }
   if (record.type !== 'assistant' || !Array.isArray(content)) return;
@@ -70,7 +62,7 @@ function claudeRecord(record: Record<string, unknown>, items: Item[]): void {
       items.push({
         id: stringAt(block, 'id') ?? `${uuid}-${items.length}`,
         kind: 'tool',
-        text: toolDetail(block.input),
+        text: inputDetail(block.input),
         tool: block.name,
         at,
       });
@@ -93,8 +85,7 @@ function codexRecord(record: Record<string, unknown>, items: Item[]): void {
   const at = stringAt(record, 'timestamp');
   if (record.type === 'event_msg' && payload.type === 'item_completed' && isRecord(payload.item)) {
     const item = payload.item;
-    if (item.type !== 'UserMessage') return;
-    const text = contentText(item.content, 'text');
+    const text = item.type === 'UserMessage' ? contentText(item.content, 'text') : '';
     if (text)
       items.push({
         id: stringAt(item, 'id') ?? `${items.length}`,
@@ -127,16 +118,8 @@ function codexRecord(record: Record<string, unknown>, items: Item[]): void {
     typeof payload.name === 'string'
   ) {
     const input = payload.type === 'custom_tool_call' ? payload.input : payload.arguments;
-    items.push({ id, kind: 'tool', text: toolDetail(parsedInput(input)), tool: payload.name, at });
-  }
-}
-
-function parsedInput(input: unknown): unknown {
-  if (typeof input !== 'string') return input;
-  try {
-    return JSON.parse(input) as unknown;
-  } catch {
-    return input;
+    const parsed = typeof input === 'string' ? (parseLine(input) ?? input) : input;
+    items.push({ id, kind: 'tool', text: inputDetail(parsed), tool: payload.name, at });
   }
 }
 
@@ -147,12 +130,7 @@ export function transcriptItems(
   const items: Item[] = [];
   const read = provider === 'claude' ? claudeRecord : codexRecord;
   for (const line of lines) {
-    let record: unknown;
-    try {
-      record = JSON.parse(line);
-    } catch {
-      continue;
-    }
+    const record = parseLine(line);
     if (isRecord(record)) read(record, items);
   }
   return items;

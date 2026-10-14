@@ -1,4 +1,9 @@
-import type { TerminalApprovalDecision, TerminalRemoteView } from '@spark-outpost/contracts';
+import { stat } from 'node:fs/promises';
+import type {
+  TerminalApprovalDecision,
+  TerminalRemoteView,
+  TerminalTranscriptItem,
+} from '@spark-outpost/contracts';
 import { isRecord } from '../../agent-config/records.ts';
 import type { Db } from '../../persistence/db.ts';
 import { nativeTerminalRow } from '../../persistence/native-terminals.ts';
@@ -12,10 +17,11 @@ import {
   type TerminalApprovals,
 } from './approvals.ts';
 import { readTail } from './read-tail.ts';
-import { transcriptItems } from './transcript-items.ts';
+import { inputDetail, transcriptItems } from './transcript-items.ts';
 
 export const SHOWN_ITEMS = 150;
 export const SUBMIT_DELAY_MS = 400;
+const APPROVAL_DETAIL_MAX = 2_000;
 const PASTE_START = '\u001b[200~';
 const PASTE_END = '\u001b[201~';
 const ESCAPE = '\u001b';
@@ -26,7 +32,7 @@ const COMMAND_PREFIX = /^\s*[/!]/;
 const PATCH_FILE = /^\*\*\* (?:Add|Update|Delete) File: (.+)$/m;
 const NOT_RUNNING = 'This Terminal session isn’t running. Start it again on your Mac.';
 const CHANGED = 'This approval has changed. Check the session again.';
-const ON_THE_MAC = 'Answer this on your Mac.';
+const WAITING = 'The agent is waiting for an answer. Answer it first, then send your message.';
 
 export interface NativeRemoteDeps {
   db: Db;
@@ -34,7 +40,16 @@ export interface NativeRemoteDeps {
   live: Map<string, LiveSession>;
   terminals: Pick<TerminalSessions, 'send' | 'screen'>;
   approvals: TerminalApprovals;
+  owned: (conversationId: string) => Promise<unknown>;
   delay?: (ms: number) => Promise<void>;
+}
+
+interface ParsedTail {
+  path: string;
+  size: number;
+  modified: number;
+  items: TerminalTranscriptItem[];
+  truncated: boolean;
 }
 
 export function pastedMessage(text: string): string {
@@ -49,16 +64,8 @@ export function pastedMessage(text: string): string {
 
 export function approvalDetail(tool: string, input: unknown): string {
   const patch = typeof input === 'string' ? input : isRecord(input) ? input.command : null;
-  if (tool === 'apply_patch' && typeof patch === 'string') {
-    const file = PATCH_FILE.exec(patch)?.[1];
-    if (file) return file.trim();
-  }
-  if (!isRecord(input)) return typeof input === 'string' ? input.slice(0, 2_000) : '';
-  for (const key of ['command', 'cmd', 'file_path', 'path', 'url', 'description']) {
-    const value = input[key];
-    if (typeof value === 'string' && value.trim()) return value.trim().slice(0, 2_000);
-  }
-  return '';
+  const file = tool === 'apply_patch' && typeof patch === 'string' ? PATCH_FILE.exec(patch) : null;
+  return file?.[1]?.trim() ?? inputDetail(input, APPROVAL_DETAIL_MAX);
 }
 
 function squashed(text: string): string {
@@ -82,6 +89,7 @@ export function codexMenuShows(screen: string, detail: string): boolean {
 
 export function nativeRemote(deps: NativeRemoteDeps) {
   const delay = deps.delay ?? ((ms: number) => new Promise((done) => setTimeout(done, ms)));
+  const parsed = new Map<string, ParsedTail>();
   const running = (conversationId: string) => {
     const session = deps.live.get(conversationId);
     if (!session) throw new NativeRuntimeError(NOT_RUNNING, 409);
@@ -94,35 +102,53 @@ export function nativeRemote(deps: NativeRemoteDeps) {
         409,
       );
   };
-  const approvalsOn = async () =>
-    (await remoteAccess(deps.db, deps.workspaceId)).switches.terminalApprove;
+  const items = async (
+    conversationId: string,
+    provider: LiveSession['row']['provider'],
+    path: string,
+  ): Promise<ParsedTail | null> => {
+    const file = await stat(path).catch(() => null);
+    if (!file) return null;
+    const cached = parsed.get(conversationId);
+    if (cached?.path === path && cached.size === file.size && cached.modified === file.mtimeMs)
+      return cached;
+    const tail = await readTail(path).catch(() => null);
+    if (!tail) return null;
+    const all = transcriptItems(provider, tail.lines);
+    const fresh = {
+      path,
+      size: tail.size,
+      modified: tail.modified,
+      items: all.slice(-SHOWN_ITEMS),
+      truncated: tail.truncated || all.length > SHOWN_ITEMS,
+    };
+    parsed.set(conversationId, fresh);
+    return fresh;
+  };
 
   return {
     async view(conversationId: string): Promise<TerminalRemoteView> {
+      await deps.owned(conversationId);
       const row = await nativeTerminalRow(deps.db, conversationId);
       if (!row) throw new NativeRuntimeError('This chat has no Terminal session.', 404);
       const session = deps.live.get(conversationId);
       const path = session?.transcript?.path ?? row.usage_file ?? null;
-      const tail = path
-        ? await readTail(path).catch(() => ({ lines: [], truncated: false }))
-        : { lines: [], truncated: false };
-      const items = transcriptItems(row.provider, tail.lines);
+      const tail = path ? await items(conversationId, row.provider, path) : null;
       const pending = session ? deps.approvals.current(conversationId) : null;
       return {
         provider: row.provider,
         state: row.state,
         running: session !== undefined,
-        items: items.slice(-SHOWN_ITEMS),
-        truncated: tail.truncated || items.length > SHOWN_ITEMS,
+        items: tail?.items ?? [],
+        truncated: tail?.truncated ?? false,
         approval: pending
           ? {
               id: pending.id,
               tool: pending.tool,
               detail: pending.detail,
-              denyStopsTurn: pending.denyStopsTurn,
+              denyStopsTurn: pending.provider === 'codex',
             }
           : null,
-        approvalsHere: session?.remoteApprovals === true,
       };
     },
 
@@ -133,18 +159,17 @@ export function nativeRemote(deps: NativeRemoteDeps) {
           'Messages that start with / or ! run CLI commands. Type them on your Mac.',
           409,
         );
-      const row = await nativeTerminalRow(deps.db, conversationId);
-      const screen = await deps.terminals.screen(session.row.id);
+      if (deps.approvals.current(conversationId)) throw new NativeRuntimeError(WAITING, 409);
+      const [row, screen] = await Promise.all([
+        nativeTerminalRow(deps.db, conversationId),
+        deps.terminals.screen(session.row.id),
+      ]);
       if (
-        deps.approvals.current(conversationId) ||
         row?.state === 'waiting_for_permission' ||
         row?.state === 'waiting_for_input' ||
         (screen !== null && menuOpen(screen))
       )
-        throw new NativeRuntimeError(
-          'The agent is waiting for an answer. Answer it first, then send your message.',
-          409,
-        );
+        throw new NativeRuntimeError(WAITING, 409);
       write(session, pastedMessage(text));
       await delay(SUBMIT_DELAY_MS);
       write(session, '\r');
@@ -162,16 +187,16 @@ export function nativeRemote(deps: NativeRemoteDeps) {
       const session = running(conversationId);
       const current = deps.approvals.current(conversationId);
       if (!current || current.id !== decision.id) throw new NativeRuntimeError(CHANGED, 409);
-      if (current.via === 'hook') {
-        deps.approvals.take(conversationId, decision.id)?.settle(decision.decision);
-        return;
+      const byKey = current.provider === 'codex';
+      if (byKey) {
+        const screen = await deps.terminals.screen(session.row.id);
+        if (screen === null) throw new NativeRuntimeError('Answer this on your Mac.', 409);
+        if (!codexMenuShows(screen, current.detail)) throw new NativeRuntimeError(CHANGED, 409);
       }
-      const screen = await deps.terminals.screen(session.row.id);
-      if (screen === null) throw new NativeRuntimeError(ON_THE_MAC, 409);
-      if (!codexMenuShows(screen, current.detail)) throw new NativeRuntimeError(CHANGED, 409);
-      if (!deps.approvals.take(conversationId, decision.id))
-        throw new NativeRuntimeError(CHANGED, 409);
-      write(session, decision.decision === 'allow' ? 'y' : ESCAPE);
+      const taken = deps.approvals.take(conversationId, decision.id);
+      if (!taken) throw new NativeRuntimeError(CHANGED, 409);
+      taken.settle(decision.decision);
+      if (byKey) write(session, decision.decision === 'allow' ? 'y' : ESCAPE);
     },
 
     async permission(
@@ -180,16 +205,15 @@ export function nativeRemote(deps: NativeRemoteDeps) {
       signal: AbortSignal,
     ): Promise<ApprovalAnswer | null> {
       if (!isRecord(body) || typeof body.tool !== 'string' || body.tool.length > 200) return null;
-      if (!session.remoteApprovals || !(await approvalsOn())) return null;
+      if (!(await remoteAccess(deps.db, deps.workspaceId)).switches.terminalApprove) return null;
       const request = {
         conversationId: session.row.conversation_id,
-        sessionId: session.row.id,
         provider: session.row.provider,
         tool: body.tool,
         detail: approvalDetail(body.tool, body.input),
       };
-      if (session.row.provider === 'codex') {
-        deps.approvals.noteKeys(request);
+      if (request.provider === 'codex') {
+        deps.approvals.note(request);
         return null;
       }
       return deps.approvals.wait(request, { signal, timeoutMs: CLAUDE_PERMISSION_WAIT_MS });
@@ -200,8 +224,9 @@ export function nativeRemote(deps: NativeRemoteDeps) {
         deps.approvals.clear(session.row.conversation_id);
     },
 
-    clear(conversationId: string): void {
+    ended(conversationId: string): void {
       deps.approvals.clear(conversationId);
+      parsed.delete(conversationId);
     },
   };
 }

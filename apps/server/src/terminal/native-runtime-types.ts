@@ -89,5 +89,4 @@ export interface LiveSession {
   completedEvents: Map<string, string | null>;
   transcript: SessionTranscript | null;
   readopted?: { at: string; stepsComplete: boolean };
-  remoteApprovals?: boolean;
 }

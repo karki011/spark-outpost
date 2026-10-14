@@ -28,7 +28,7 @@ function setup(provider: 'claude' | 'codex', options: { state?: string; approve?
         : [row],
     }),
   } as unknown as Db;
-  const session = { row, transcript: null, remoteApprovals: true } as unknown as LiveSession;
+  const session = { row, transcript: null } as unknown as LiveSession;
   const sent: string[] = [];
   let screen: string | null = IDLE;
   const approvals = terminalApprovals();
@@ -44,6 +44,7 @@ function setup(provider: 'claude' | 'codex', options: { state?: string; approve?
       screen: async () => screen,
     },
     approvals,
+    owned: async () => undefined,
     delay: async () => undefined,
   });
   return { remote, session, sent, approvals, setScreen: (text: string | null) => (screen = text) };

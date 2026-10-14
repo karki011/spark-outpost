@@ -10,7 +10,7 @@ export type PermissionHandler = (
 export async function nativeHookHost(
   authorised: (token: string) => boolean,
   observe: (token: string, body: unknown) => Promise<boolean>,
-  permission: PermissionHandler = async () => null,
+  permission: PermissionHandler,
 ) {
   let host = '';
   const handle = async (req: IncomingMessage, res: ServerResponse) => {

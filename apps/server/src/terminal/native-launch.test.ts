@@ -91,10 +91,7 @@ describe('native terminal launch', () => {
         hooks: { ...request.hooks, permissionUrl: 'http://127.0.0.1:3000/permission' },
       });
       const observer = JSON.parse(await readFile(join(launch.directory!, 'observer.json'), 'utf8'));
-      expect(observer).toMatchObject({
-        permissionUrl: 'http://127.0.0.1:3000/permission',
-        permissionWaitMs: provider === 'claude' ? 590_000 : 2_000,
-      });
+      expect(observer).toMatchObject({ permissionUrl: 'http://127.0.0.1:3000/permission' });
       if (provider === 'claude') {
         const settingsPath = launch.args[launch.args.indexOf('--settings') + 1]!;
         const { hooks } = JSON.parse(await readFile(settingsPath, 'utf8'));

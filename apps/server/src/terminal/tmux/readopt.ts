@@ -1,6 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { isRecord } from '../../agent-config/records.ts';
+import { parseLine } from '../native-transcript.ts';
 import { expirePendingApprovals } from '../../persistence/approvals.ts';
 import type { Db } from '../../persistence/db.ts';
 import type { NativeTerminalRow } from '../../persistence/native-terminals.ts';
@@ -10,8 +12,6 @@ import type { SparkMcpHost } from '../../spark-mcp/host.ts';
 import type { ApprovalWaiters } from '../../workflow/approval-waiters.ts';
 import { loadRunInput } from '../../workflow/run-input.ts';
 import { nativeTurnContext } from '../native-context.ts';
-import { nativeHookScript } from '../native-hook-script.ts';
-import { permissionWaitMs } from '../native-launch.ts';
 import { hookTokenDigest } from '../native-observe.ts';
 import type { LiveSession } from '../native-runtime-types.ts';
 import type { AgentRequest, TerminalSessions } from '../sessions.ts';
@@ -69,6 +69,14 @@ async function openRunInput(db: Db, runId: string | null) {
   return loadRunInput(db, runId);
 }
 
+async function askedBefore(directory: string): Promise<boolean> {
+  const observer = await readFile(join(directory, 'observer.json'), 'utf8').then(
+    (text) => parseLine(text),
+    () => null,
+  );
+  return isRecord(observer) && typeof observer.permissionUrl === 'string';
+}
+
 async function readoptOne(input: ReadoptInput, row: NativeTerminalRow): Promise<void> {
   const { db } = input;
   const root = sessionRoot(input.dataDir, input.channel, row.id);
@@ -79,19 +87,14 @@ async function readoptOne(input: ReadoptInput, row: NativeTerminalRow): Promise<
     stored !== null &&
     observed &&
     input.permissionUrl !== undefined &&
-    (await readFile(join(stored.directory, 'observe.mjs'), 'utf8').then(
-      (script) => script === nativeHookScript(),
-      () => false,
-    ));
+    (await askedBefore(stored.directory));
   if (stored && observed)
     await writeObserver(stored.directory, {
       url: input.hookUrl,
       token: hookToken,
       sessionId: row.id,
       provider: row.provider,
-      ...(approvals && input.permissionUrl
-        ? { permissionUrl: input.permissionUrl, permissionWaitMs: permissionWaitMs(row.provider) }
-        : {}),
+      ...(approvals ? { permissionUrl: input.permissionUrl } : {}),
     });
   const scope: SparkScope = {
     workspaceId: input.workspaceId,
@@ -135,7 +138,6 @@ async function readoptOne(input: ReadoptInput, row: NativeTerminalRow): Promise<
     completedEvents: new Map(),
     transcript: null,
     readopted: { at: input.now().toISOString(), stepsComplete: false },
-    remoteApprovals: approvals,
   };
   scope.beforeToolCall = async () => {
     await session.chain;

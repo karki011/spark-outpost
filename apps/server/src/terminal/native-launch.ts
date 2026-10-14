@@ -8,11 +8,7 @@ import type { TurnAttachment } from '../providers/provider.ts';
 import { NativeRuntimeError } from './native-control.ts';
 import { nativeHookScript } from './native-hook-script.ts';
 import { verifyNativeHooks, verifyNativeOption } from './native-capabilities.ts';
-import {
-  CLAUDE_PERMISSION_HOOK_SECONDS,
-  CLAUDE_PERMISSION_WAIT_MS,
-  CODEX_PERMISSION_WAIT_MS,
-} from './remote/approvals.ts';
+import { CLAUDE_PERMISSION_HOOK_SECONDS } from './remote/approvals.ts';
 import { isNativeSessionId, nativeHookNames, type NativeProvider } from './native-hooks.ts';
 
 export interface NativeLaunchInput {
@@ -65,10 +61,6 @@ function loopbackUrl(value: string): void {
 
 function shellQuote(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;
-}
-
-export function permissionWaitMs(provider: NativeProvider): number {
-  return provider === 'claude' ? CLAUDE_PERMISSION_WAIT_MS : CODEX_PERMISSION_WAIT_MS;
 }
 
 function tomlValue(value: unknown): string {
@@ -170,7 +162,6 @@ export async function prepareNativeLaunch(input: NativeLaunchInput): Promise<Nat
       ...input.hooks,
       sessionId: input.sessionId,
       provider: input.provider,
-      ...(input.hooks.permissionUrl ? { permissionWaitMs: permissionWaitMs(input.provider) } : {}),
     });
     const hookCommand = [
       '/usr/bin/env',
