@@ -283,14 +283,16 @@ test('native terminal keeps its process across reconnects, fills the pane in foc
       return Math.abs(inner.x - outer.x);
     };
     await expect.poll(leftGap).toBeLessThanOrEqual(1);
-    const stage = (await workspace.locator('.native-stage').boundingBox())!;
-    const rows = (await workspace.locator('.xterm-screen').boundingBox())!;
-    const pane = (await page.locator('main.main').boundingBox())!;
-    expect(Math.abs(stage.x - pane.x)).toBeLessThanOrEqual(1);
-    expect(Math.abs(stage.x + stage.width - pane.x - pane.width)).toBeLessThanOrEqual(1);
-    expect(Math.abs(stage.y + stage.height - pane.y - pane.height)).toBeLessThanOrEqual(1);
-    expect(rows.x + rows.width).toBeLessThanOrEqual(stage.x + stage.width);
-    expect(stage.width - rows.width).toBeLessThan(40);
+    await expect(async () => {
+      const stage = (await workspace.locator('.native-stage').boundingBox())!;
+      const rows = (await workspace.locator('.xterm-screen').boundingBox())!;
+      const pane = (await page.locator('main.main').boundingBox())!;
+      expect(Math.abs(stage.x - pane.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(stage.x + stage.width - pane.x - pane.width)).toBeLessThanOrEqual(1);
+      expect(Math.abs(stage.y + stage.height - pane.y - pane.height)).toBeLessThanOrEqual(1);
+      expect(rows.x + rows.width).toBeLessThanOrEqual(stage.x + stage.width);
+      expect(stage.width - rows.width).toBeLessThan(40);
+    }).toPass();
     await page.keyboard.press('Escape');
     await expect(workspace.getByRole('button', { name: 'Exit focus' })).toBeVisible();
     await page.reload();
