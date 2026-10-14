@@ -12,25 +12,25 @@ Ticket, Slack and pull request tools need their connector; pull request and map 
 
 ## Tools that read
 
-| You ask about                                              | Tool                                                                                                                  |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| What needs you, failed chats, flagged tickets              | `spark_attention`                                                                                                     |
-| Chats, a chat you shared, its runs, queue, earlier turns   | `spark_chats`, `spark_chat`, `spark_chat_history`                                                                     |
-| A run or task: plan, files changed, cost                   | `spark_run`, `spark_task`                                                                                             |
-| Spend, activity, analytics, the morning brief              | `spark_spend`, `spark_activity`, `spark_analytics`, `spark_brief`                                                     |
-| Pull requests, their checks and reviews                    | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                                               |
-| Providers, models, connectors, settings, projects          | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects`                             |
-| The Map, and what breaks if a file changes                 | `spark_map`                                                                                                           |
-| Where something lives in the code                          | `spark_find`                                                                                                          |
-| Your MCP servers and where each is on                      | `spark_mcp_servers`                                                                                                   |
-| Open terminals                                             | `spark_terminals`                                                                                                     |
-| The Browser pane's tabs, pages, screenshots, logs, preview | `spark_browser_tabs`, `spark_browser_read`, `spark_browser_screenshot`, `spark_browser_logs`, `spark_browser_preview` |
-| Saved sign-ins, without their values                       | `spark_browser_signins`                                                                                               |
-| Tickets, one in full, or a search of every ticket          | `spark_tickets`                                                                                                       |
-| A Slack thread by link, or a search of what you allowed    | `spark_slack`                                                                                                         |
-| Your Sparks, and the jobs and replies from an `@` mention  | `spark_sparks`, `spark_chat`                                                                                          |
-| The audit log, including actions that ran without review   | `spark_audit`                                                                                                         |
-| How Spark works, and this guide                            | `spark_guide`, `spark_docs`                                                                                           |
+| You ask about                                                | Tool                                                                                                                  |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| What needs you, failed chats, flagged tickets                | `spark_attention`                                                                                                     |
+| Chats and matching lines, a shared chat, runs, earlier turns | `spark_chats`, `spark_chat`, `spark_chat_history`                                                                     |
+| A run or task: plan, files changed, cost                     | `spark_run`, `spark_task`                                                                                             |
+| Spend, activity, analytics, the morning brief                | `spark_spend`, `spark_activity`, `spark_analytics`, `spark_brief`                                                     |
+| Pull requests, their checks and reviews                      | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                                               |
+| Providers, models, connectors, settings, projects            | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects`                             |
+| The Map, and what breaks if a file changes                   | `spark_map`                                                                                                           |
+| Where something lives in the code                            | `spark_find`                                                                                                          |
+| Your MCP servers and where each is on                        | `spark_mcp_servers`                                                                                                   |
+| Open terminals                                               | `spark_terminals`                                                                                                     |
+| The Browser pane's tabs, pages, screenshots, logs, preview   | `spark_browser_tabs`, `spark_browser_read`, `spark_browser_screenshot`, `spark_browser_logs`, `spark_browser_preview` |
+| Saved sign-ins, without their values                         | `spark_browser_signins`                                                                                               |
+| Tickets, one in full, or a search of every ticket            | `spark_tickets`                                                                                                       |
+| A Slack thread by link, or a search of what you allowed      | `spark_slack`                                                                                                         |
+| Your Sparks, and the jobs and replies from an `@` mention    | `spark_sparks`, `spark_chat`                                                                                          |
+| The audit log, including actions that ran without review     | `spark_audit`                                                                                                         |
+| How Spark works, and this guide                              | `spark_guide`, `spark_docs`                                                                                           |
 
 ## Tools that act
 

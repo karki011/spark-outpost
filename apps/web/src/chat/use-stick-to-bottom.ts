@@ -82,6 +82,12 @@ export function useStickToBottom() {
     setAway(!following.current);
   }, []);
 
+  const release = useCallback(() => {
+    following.current = false;
+    gliding.current = false;
+    setAway(true);
+  }, []);
+
   const jumpToLatest = useCallback(() => {
     following.current = true;
     gliding.current = !prefersReducedMotion();
@@ -89,5 +95,5 @@ export function useStickToBottom() {
     toBottom(gliding.current);
   }, [toBottom]);
 
-  return { scrollerRef, scroller: element, away, follow, unfollow, jumpToLatest };
+  return { scrollerRef, scroller: element, away, follow, unfollow, release, jumpToLatest };
 }

@@ -1,5 +1,6 @@
 import { memo, useRef } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
+import { MatchSnippet } from '../conversations/MatchSnippet.tsx';
 import { isTerminalSession, lineText, noBreakParts, type LinePart } from './session-line.ts';
 import type { PaletteEntry } from './palette-model.ts';
 import { useInView } from './use-in-view.ts';
@@ -42,6 +43,7 @@ export const PaletteRow = memo(function PaletteRow({
       <span className="sp-dot" aria-hidden="true" />
       <span className="sp-main">
         <span className="sp-title">{entry.chat.title}</span>
+        {entry.chat.match && <MatchSnippet match={entry.chat.match} />}
         <span className="sp-where">{where}</span>
       </span>
       <span className="sp-side">

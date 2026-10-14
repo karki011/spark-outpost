@@ -71,6 +71,16 @@ export const planProgressSchema = z.object({
 });
 export type PlanProgress = z.infer<typeof planProgressSchema>;
 
+export const snippetPartSchema = z.object({ text: z.string(), match: z.boolean() });
+export type SnippetPart = z.infer<typeof snippetPartSchema>;
+
+export const searchMatchSchema = z.object({
+  messageId: z.uuid(),
+  runId: z.uuid().nullable(),
+  parts: z.array(snippetPartSchema),
+});
+export type SearchMatch = z.infer<typeof searchMatchSchema>;
+
 export const conversationSummarySchema = z.object({
   id: z.uuid(),
   sessionType: sessionTypeSchema.optional(),
@@ -104,6 +114,7 @@ export const conversationSummarySchema = z.object({
   teammate: teammateTagSchema.nullable().optional(),
   pullRequestMerged: z.boolean().optional(),
   outpost: z.object({ id: z.uuid(), name: z.string(), handle: z.string() }).optional(),
+  match: searchMatchSchema.optional(),
 });
 export type ConversationSummary = z.infer<typeof conversationSummarySchema>;
 
