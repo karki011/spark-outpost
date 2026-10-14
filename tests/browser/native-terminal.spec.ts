@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
+import { startFixtureTerminal } from './native-terminal-fixture.ts';
 import { pickTerminalAgent } from './native-terminal-support.ts';
 import { openChats } from './navigation.ts';
 
@@ -363,5 +364,25 @@ test('an exited terminal session starts again in the same chat @packaged', async
     );
   } finally {
     await page.request.delete(`/api/conversations/${session.conversationId}/terminal`);
+  }
+});
+
+test('no terminal row is cut off at the bottom or the right edge as the window gets shorter', async ({
+  page,
+}) => {
+  const workspace = await startFixtureTerminal(page);
+  const overflow = async () => {
+    const frame = (await workspace.locator('.native-screen').boundingBox())!;
+    const rows = (await workspace.locator('.xterm-screen').boundingBox())!;
+    return Math.max(
+      rows.y + rows.height - (frame.y + frame.height),
+      rows.x + rows.width - (frame.x + frame.width),
+    );
+  };
+  for (const height of [925, 920, 915, 910, 905, 900, 895]) {
+    await page.setViewportSize({ width: 1440, height });
+    const frame = workspace.locator('.native-screen');
+    await expect.poll(async () => (await frame.boundingBox())!.height).toBeGreaterThan(height / 2);
+    await expect.poll(overflow, { message: `window height ${height}` }).toBeLessThanOrEqual(0);
   }
 });
