@@ -17,11 +17,11 @@ Open an AI terminal. About 1 minute.
 3. Beside **Start terminal**, pick **Claude Code** or **Codex** and permissions.
 4. Describe the work; press **Enter**.
 
-A line says while dependencies still copy. Pull requests aren't automatic.
+A line shows while dependencies copy. Pull requests aren't automatic.
 
 **Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events. Esc before Claude replies stays **Running** until you send. **Open**: no tracking. Dropped files insert paths.
 
-Selection copies, with **Add to terminal**, **Ask about this**, **Comment** and **New chat with this**. You press Enter. Hold Option to select when the agent uses the mouse.
+Selection copies, with **Add to terminal**, **Ask about this**, **Comment** and **New chat with this**. You press Enter. Hold Option to select when the agent uses the mouse. [Browser pane](use-the-browser.md#point-at-something) picks land there too.
 
 **Focus terminal** (**⌘⇧F**) hides the chat list and Work panel. **⋯** has **Copy folder path**, **Reconnect** and **Stop session** (hold). [Paired devices](use-your-phone.md) can follow.
 
@@ -39,13 +39,13 @@ It starts in the chat's worktree, checkout or home. A busy tab asks **Hold to st
 
 ## Watch an agent's command
 
-1. On a command in a reply, select **Open in terminal**.
+1. On a reply's command, select **Open in terminal**.
 
 The read-only tab is **Claude · pnpm dev**. **Stop turn** stops it. Claude and Z.ai output shows when it ends.
 
 ## Close and recover
 
-Switching chats, closing windows or disconnecting keeps agents running; a Terminal session survives Spark restarting, updating or crashing. **Quit** stops Spark-owned agents.
+Switching chats, closing windows or disconnecting keeps agents running; Terminal sessions survive restarts, updates and crashes. **Quit** stops Spark-owned agents.
 
 After reboot or exit, **Resume session** restores history, not running commands; else **Start again** resends your first message unless stopped.
 

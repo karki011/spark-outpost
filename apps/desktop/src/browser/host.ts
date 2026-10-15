@@ -1,4 +1,11 @@
-import { ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from 'electron';
+import {
+  Menu,
+  ipcMain,
+  type BrowserWindow,
+  type ContextMenuParams,
+  type IpcMainInvokeEvent,
+  type MenuItemConstructorOptions,
+} from 'electron';
 import {
   addressToUrl,
   browserCommandSchema,
@@ -7,6 +14,7 @@ import {
   browserPlacementSchema,
   type BrowserCommand,
   type BrowserPick,
+  type BrowserSelectedText,
 } from '@spark-outpost/contracts';
 import { IPC } from '../ipc-channels.ts';
 import { runBrowserOp } from './agent-ops.ts';
@@ -14,6 +22,13 @@ import { connectWorkerBridge, type BridgePort, type WorkerBridge } from './bridg
 import { BrowserPanes } from './panes.ts';
 import { startPick, type PickSession } from './picker.ts';
 import { loadRecentOrigins } from './recent-origins.ts';
+import {
+  readPageSelection,
+  selectedPageText,
+  selectionMenuItems,
+  type SelectionIntent,
+  type SelectionMenuItem,
+} from './selection-menu.ts';
 import { signOut, signedInSites } from './sessions.ts';
 import type { PaneTab } from './tab.ts';
 
@@ -40,6 +55,18 @@ const CHANNELS = [
   IPC.browserSignOut,
 ];
 
+function menuTemplate(
+  items: readonly SelectionMenuItem[],
+  sendText: (intent: SelectionIntent) => void,
+  copy: () => void,
+): MenuItemConstructorOptions[] {
+  return items.map((item) => {
+    if (item.kind === 'separator') return { type: 'separator' };
+    if (item.kind === 'copy') return { label: item.label, click: copy };
+    return { label: item.label, click: () => sendText(item.intent) };
+  });
+}
+
 export async function startBrowserHost(options: BrowserHostOptions): Promise<DesktopBrowserHost> {
   const blocked = new Set<number>(options.blockedPorts);
   const origins = await loadRecentOrigins(options.userData, options.log);
@@ -54,8 +81,46 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     stateChanged: (state) => send(IPC.browserStateChanged, state),
     snapshot: (chatId, image) => send(IPC.browserSnapshot, { chatId, image }),
     localOriginSeen: (projectId, origin) => origins.note(projectId, origin),
+    contextMenu: (tab, params) => showSelectionMenu(tab, params),
+    addShortcut: (tab) => void addSelection(tab),
     log: options.log,
   });
+
+  const sendSelection = (tab: PaneTab, raw: string, intent: SelectionIntent) => {
+    const text = selectedPageText(raw);
+    if (!text) return;
+    const selected: BrowserSelectedText = {
+      chatId: tab.chatId,
+      url: tab.currentUrl().slice(0, 4096),
+      title: tab.currentTitle().slice(0, 300),
+      text,
+      intent,
+    };
+    send(IPC.browserSelectedText, selected);
+    options.window()?.webContents.focus();
+  };
+
+  const showSelectionMenu = (tab: PaneTab, params: ContextMenuParams) => {
+    const items = selectionMenuItems(params, tab.picking, panes.sendsTo(tab.chatId));
+    const window = options.window();
+    if (items.length === 0 || !window) return;
+    const template = menuTemplate(
+      items,
+      (intent) => sendSelection(tab, params.selectionText, intent),
+      () => tab.view()?.webContents.copy(),
+    );
+    Menu.buildFromTemplate(template).popup({ window });
+  };
+
+  const addSelection = async (tab: PaneTab) => {
+    if (tab.picking) return;
+    try {
+      const { cdp } = await tab.ensure();
+      sendSelection(tab, await readPageSelection(cdp), 'add');
+    } catch (error) {
+      options.log(`Could not read the page selection: ${(error as Error).message}`);
+    }
+  };
 
   const stopPick = async (tab: PaneTab) => {
     const session = picks.get(tab.id);
@@ -166,7 +231,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     IPC.browserStart,
     guarded(async (_event, raw) => {
       const placement = browserPlacementSchema.parse(raw);
-      panes.touch(placement.chatId, placement);
+      panes.touch(placement.chatId, placement, placement.sendsTo);
       if (panes.tabsOf(placement.chatId).length > 0) return panes.state(placement.chatId);
       const recent = placement.projectId ? origins.get(placement.projectId) : null;
       await command(placement.chatId, { command: 'new_tab', url: recent });

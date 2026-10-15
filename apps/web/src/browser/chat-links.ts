@@ -8,7 +8,7 @@ import {
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 import { knownTabs, sendBrowserCommand } from './browser-store.ts';
 import { setBrowserPaneOpen } from './pane-open.ts';
-import type { BrowserHome } from './use-view-placement.ts';
+import { hiddenPlacement, type BrowserHome } from './use-view-placement.ts';
 
 const CHAT_LINKS_ATTRIBUTE = 'data-chat-links';
 
@@ -98,14 +98,7 @@ export function anchorOf(target: EventTarget | null): HTMLAnchorElement | null {
 async function tabsOf(home: BrowserHome): Promise<readonly BrowserPaneTab[]> {
   const known = knownTabs(home.chatId);
   if (known.length > 0) return known;
-  const started = await desktopBrowser()?.start({
-    chatId: home.chatId,
-    projectId: home.projectId,
-    keepSignIns: home.keepSignIns,
-    roots: [...home.roots].slice(0, 16),
-    bounds: null,
-    covered: false,
-  });
+  const started = await desktopBrowser()?.start(hiddenPlacement(home));
   return started?.tabs ?? [];
 }
 

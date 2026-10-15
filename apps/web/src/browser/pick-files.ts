@@ -2,6 +2,7 @@ import {
   UNTRUSTED_PAGE_NOTE,
   originAndPath,
   type BrowserPick,
+  type BrowserSelectedText,
   type PickedElement,
 } from '@spark-outpost/contracts';
 
@@ -23,24 +24,49 @@ function describe(element: PickedElement, index: number, many: boolean): string 
   ].join('\n');
 }
 
+export function pickHeading(pick: BrowserPick): string {
+  return pick.kind === 'element'
+    ? 'The user selected this element in the browser pane.'
+    : `The user selected a region in the browser pane (${box(pick)}).`;
+}
+
+export function pageLines(page: { url: string; title: string }): string[] {
+  return [`Page: ${originAndPath(page.url)}`, `Title: ${page.title}`, UNTRUSTED_PAGE_NOTE];
+}
+
+export function evidence(parts: readonly string[]): string[] {
+  return [
+    '<page_evidence>',
+    ...parts.map((text) => text.replace(/<(\/?)page_evidence/gi, '<$1page-evidence')),
+    '</page_evidence>',
+  ];
+}
+
 export function pickText(pick: BrowserPick): string {
-  const heading =
-    pick.kind === 'element'
-      ? 'The user selected this element in the browser pane.'
-      : `The user selected a region in the browser pane (${box(pick)}).`;
   const elements = pick.elements.map((element, index) =>
     describe(element, index, pick.elements.length > 1),
   );
+  return [pickHeading(pick), ...pageLines(pick), '', ...evidence(elements)].join('\n');
+}
+
+const TEXT_HEADING = 'The user selected this text in the browser pane';
+
+export function selectedTextHeading(selected: BrowserSelectedText): string {
+  return selected.intent === 'ask' ? `${TEXT_HEADING} to ask about it.` : `${TEXT_HEADING}.`;
+}
+
+export function selectedTextNote(selected: BrowserSelectedText): string {
   return [
-    heading,
-    `Page: ${originAndPath(pick.url)}`,
-    `Title: ${pick.title}`,
-    UNTRUSTED_PAGE_NOTE,
+    selectedTextHeading(selected),
+    ...pageLines(selected),
     '',
-    '<page_evidence>',
-    ...elements.map((text) => text.replace(/<(\/?)page_evidence/gi, '<$1page-evidence')),
-    '</page_evidence>',
+    ...evidence([selected.text]),
   ].join('\n');
+}
+
+export function selectedTextFiles(selected: BrowserSelectedText): File[] {
+  const note = selectedTextNote(selected);
+  return [new File([note], 'selected-text.txt', { type: 'text/plain' })];
 }
 
 function slug(pick: BrowserPick): string {
@@ -73,6 +99,7 @@ const PICK_TEXT_NAME = /^(selected-[a-z0-9-]+)\.txt$/;
 
 export function pickLabel(text: string): string | null {
   if (!text.startsWith(PICK_HEADING)) return null;
+  if (text.startsWith(TEXT_HEADING)) return 'Selected text';
   if (text.startsWith(`${PICK_HEADING}a region`)) return 'Selected region';
   const element = /^Role: (.+?)(?: "(.*)")?$/m.exec(text);
   if (!element) return 'Selected element';

@@ -179,6 +179,7 @@ POST /api/terminal/sessions/:id/attach
 GET /api/conversations/:id/terminal/usage
 GET /api/conversations/:id/terminal/start
 POST /api/conversations/:id/terminal
+POST /api/conversations/:id/terminal/images
 DELETE /api/conversations/:id/terminal
 POST /api/terminal/shells
 POST /api/terminal/previews

@@ -30,6 +30,8 @@ beforeEach(() => {
     stateChanged: () => undefined,
     snapshot: () => undefined,
     localOriginSeen: () => undefined,
+    contextMenu: () => undefined,
+    addShortcut: () => undefined,
     log: () => undefined,
   });
 });

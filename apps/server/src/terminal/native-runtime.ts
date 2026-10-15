@@ -32,6 +32,7 @@ import { nativeHookHost } from './native-hook-host.ts';
 import { nativeTurnContext } from './native-context.ts';
 import { watchTranscript } from './native-tail.ts';
 import { nativeUsage } from './native-usage.ts';
+import { saveSessionImage } from './native-images.ts';
 import { prepareNativeLaunch, type NativeLaunch } from './native-launch.ts';
 import { prepareNativeSession } from './native-prepare.ts';
 import { placeChat } from '../orchestration/chat-place.ts';
@@ -432,6 +433,8 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       await stop(session.row.conversation_id);
       return true;
     },
+    saveImage: (conversationId, attachmentId) =>
+      saveSessionImage(deps.db, deps.workspaceId, live.get(conversationId), attachmentId),
     async attachSession(id) {
       return attachNativeSession(deps.db, deps.workspaceId, deps.terminals, live, launches, id);
     },

@@ -10,6 +10,7 @@ import { MAC } from '../ui/shortcuts.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 import type { BrowserHome } from '../browser/use-view-placement.ts';
 import { DependenciesNotice } from './DependenciesNotice.tsx';
+import { TERMINAL_NOT_RUNNING, TERMINAL_WAITING } from './draft-target.ts';
 import { RestartNotice } from './RestartNotice.tsx';
 import { useTerminalLinks } from './use-terminal-links.tsx';
 import { nativeTerminalApi, nativeTerminalKey } from './terminal-api.ts';
@@ -70,6 +71,9 @@ export function NativeTerminalWorkspace({
   });
   const focus = useTerminalFocus(chat.id, panel, !remote);
   const pending = detail.approvals.filter((approval) => approval.status === 'pending');
+  const waiting =
+    native?.state === 'waiting_for_permission' || native?.state === 'waiting_for_input';
+  const draftRefusal = ended ? TERMINAL_NOT_RUNNING : waiting ? TERMINAL_WAITING : null;
   useEffect(() => {
     if (confirm) stopGroup.current?.querySelector<HTMLElement>('button')?.focus();
   }, [confirm]);
@@ -197,6 +201,7 @@ export function NativeTerminalWorkspace({
             }}
             onMouseReporting={setMouseReporting}
             links={links.opener}
+            draftRefusal={draftRefusal}
             onEnded={() => {
               setExited(true);
               setLink('disconnected');

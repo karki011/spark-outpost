@@ -88,6 +88,8 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     onState: (callback: (state: unknown) => void) => listen(IPC.browserStateChanged, callback),
     onSnapshot: (callback: (snapshot: unknown) => void) => listen(IPC.browserSnapshot, callback),
     onPicked: (callback: (pick: unknown) => void) => listen(IPC.browserPicked, callback),
+    onSelectedText: (callback: (selected: unknown) => void) =>
+      listen(IPC.browserSelectedText, callback),
   },
   help: {
     info: () => ipcRenderer.invoke(IPC.helpInfo),

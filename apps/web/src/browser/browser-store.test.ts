@@ -26,6 +26,7 @@ const chat = (tabs: BrowserPaneTab[], agentOpened: string | null = null): ChatBr
   tabs,
   snapshot: null,
   agentOpened,
+  notice: null,
 });
 
 describe('noticing that the agent opened a page', () => {

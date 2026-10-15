@@ -17,13 +17,14 @@ import {
   activeTab,
   dismissAgentOpened,
   sendBrowserCommand,
+  setPaneNotice,
   useChatBrowser,
 } from './browser-store.ts';
 import { BrowserTabs } from './BrowserTabs.tsx';
 import { defaultBrowserUrl, openInDefaultBrowser } from './chat-links.ts';
 import { PreviewBadge, PreviewStart } from './PreviewControls.tsx';
 import { tabLabel } from './tab-label.ts';
-import { useViewPlacement, type BrowserHome } from './use-view-placement.ts';
+import { hiddenPlacement, useViewPlacement, type BrowserHome } from './use-view-placement.ts';
 
 interface BrowserPaneProps {
   home: BrowserHome;
@@ -155,17 +156,8 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
   useEffect(() => {
     if (!shown || started.current) return;
     started.current = true;
-    void desktopBrowser()
-      ?.start({
-        chatId,
-        projectId: home.projectId,
-        keepSignIns: home.keepSignIns,
-        roots: [...home.roots].slice(0, 16),
-        bounds: null,
-        covered: false,
-      })
-      .then(acceptBrowserState);
-  }, [shown, chatId, home.projectId, home.keepSignIns, home.roots]);
+    void desktopBrowser()?.start(hiddenPlacement(home)).then(acceptBrowserState);
+  }, [shown, home]);
 
   const act = (command: 'back' | 'forward' | 'reload' | 'stop') => {
     if (tab) sendBrowserCommand(chatId, { command, tabId: tab.id });
@@ -181,6 +173,7 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
   const blank = !tab || tab.url === '' || tab.error !== null;
   const outside = defaultBrowserUrl(tab?.url ?? null, window.location.origin);
   const agentTab = browser.tabs.find((candidate) => candidate.id === browser.agentOpened) ?? null;
+  const destination = home.sendsTo === 'terminal' ? 'the terminal' : 'the chat';
 
   return (
     <section className="bp" aria-label="Browser">
@@ -216,7 +209,7 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
           <AddressBar key={`${tab?.id ?? ''}:${tab?.url ?? ''}`} chatId={chatId} tab={tab} />
         )}
         <ToolButton
-          label={tab?.picking ? 'Stop selecting' : 'Select an element for the chat'}
+          label={tab?.picking ? 'Stop selecting' : `Select an element for ${destination}`}
           disabled={blank}
           pressed={tab?.picking ?? false}
           onClick={() => pick('element')}
@@ -224,7 +217,7 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
           <PickElementIcon />
         </ToolButton>
         <ToolButton
-          label="Select a region for the chat"
+          label={`Select a region for ${destination}`}
           disabled={blank || (tab?.picking ?? false)}
           onClick={() => pick('region')}
         >
@@ -239,6 +232,14 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
         </ToolButton>
       </div>
       <div className="bp-status" aria-live="polite">
+        {browser.notice && (
+          <span className="bp-notice" role="alert">
+            <span>{browser.notice}</span>
+            <button type="button" className="bp-link" onClick={() => setPaneNotice(chatId, null)}>
+              Dismiss
+            </button>
+          </span>
+        )}
         {agentTab && (
           <span className="bp-agent-opened" role="group" aria-label="Opened by the agent">
             <span className="bp-badge drive">The agent opened {tabLabel(agentTab)}</span>
