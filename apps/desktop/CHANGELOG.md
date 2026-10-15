@@ -2,6 +2,12 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.18
+
+- Mac control: an agent can read another Mac app and press its buttons and menus, in one app per chat. Turn on Let agents control other Mac apps under Settings → Mac control, then allow Spark Outpost under Privacy & Security → Accessibility.
+- Mac control: the first use of an app in a chat asks, and so does a send or delete press, in every mode. Purchases, transfers, account sign-ups, System Settings, password apps, web browsers and Spark itself are refused. A panel names the app the agent is using; move the mouse to take over, or press ⌃⌥⌘. to stop it.
+- Agents: in a chat without a project, Spark actions follow the mode you picked, so Auto runs them without asking. When you allow an action on a card, the agent is told so.
+
 ## 0.1.0-beta.17
 
 - Chats: the chat list shows only each chat's title. A dot at the end shows what it's doing: a ring while it works, then amber when it waits for you, green when it's done and red when it couldn't finish. Opening the chat clears the dot, and your phone and Mac agree on what you've seen.
