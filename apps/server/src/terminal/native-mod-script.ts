@@ -72,6 +72,7 @@ export function register(on) {
     return next(e);
   });
   on('turn.step', async function* ($, e, next) {
+    if (fromEngine(next.origin)) facts.stepping(e);
     const result = yield* next(e);
     if (result.usage && fromEngine(next.origin)) facts.stepped(e, result.usage, await costed($, ledger));
     return result;

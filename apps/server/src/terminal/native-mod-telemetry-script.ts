@@ -58,7 +58,10 @@ export function telemetry() {
       const turn = label(e.turnId);
       if (!owner || !turn) return;
       remember(turns, turn, owner);
-      if (!agent) working = true;
+      if (!agent) {
+        working = true;
+        lastMain = { prompt: owner, turn, model: lastMain ? lastMain.model : null, side: 0 };
+      }
       push({ kind: 'turn_start', prompt: owner, agent, turn, at });
     },
     stepped(e, usage, costUsd) {
@@ -66,7 +69,7 @@ export function telemetry() {
       const owner = turn ? turns.get(turn) : null;
       const model = label(usage && usage.model);
       if (!owner || !model || !Number.isSafeInteger(e.index) || e.index < 0) return;
-      if (!label(e.agentId)) lastMain = { prompt: owner, turn, model, side: 0 };
+      if (lastMain && !label(e.agentId) && lastMain.turn === turn) lastMain.model = model;
       push({
         kind: 'request',
         prompt: owner,
@@ -104,7 +107,11 @@ export function telemetry() {
       if (!owner || !id || !name) return;
       push({ kind: 'tool', prompt: owner, agent, id, name, phase, failed, at });
     },
-    idle: () => !working && lastMain !== null,
+    stepping(e) {
+      const model = label(e.model);
+      if (lastMain && !label(e.agentId) && e.turnId === lastMain.turn && model) lastMain.model = model;
+    },
+    idle: () => !working && lastMain !== null && lastMain.model !== null,
     between(costUsd) {
       if (!lastMain || typeof costUsd !== 'number' || costUsd <= 0) return;
       push({

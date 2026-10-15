@@ -97,4 +97,27 @@ describe('the cost the Spark mod reads from Claude Code', () => {
       expect.objectContaining({ turn: 'first', index: MOD_SIDE_INDEX, output: 0, costUsd: 0.02 }),
     ]);
   });
+
+  it('spent by a turn stopped before any step finished goes to that turn, not the one before', async () => {
+    await mod.hook('classic.UserPromptSubmit')(mod.engine, { prompt_id: 'p1' }, fromEngine());
+    await started('first');
+    mod.spend(0.25);
+    await mod.step({ turnId: 'first', index: 0, model: 'claude-opus-5-5' }, usage);
+    await mod.hook('turn.complete')(mod.engine, { turnId: 'first', durationMs: 5 }, fromEngine());
+    await mod.hook('classic.UserPromptSubmit')(mod.engine, { prompt_id: 'p2' }, fromEngine());
+    await started('second');
+    mod.spend(0.3);
+    await mod.step({ turnId: 'second', index: 0, model: 'claude-opus-5-5' }, null);
+    await mod.hook('turn.complete')(
+      mod.engine,
+      { turnId: 'second', durationMs: 5, isAborted: true },
+      fromEngine(),
+    );
+    await pollOnce();
+    const filed = mod.sentItems(1).items.filter((item) => item.kind === 'request');
+    expect(filed.map((item) => [item.turn, item.index, item.costUsd])).toEqual([
+      ['first', 0, 0.25],
+      ['second', MOD_SIDE_INDEX, 0.05],
+    ]);
+  });
 });
