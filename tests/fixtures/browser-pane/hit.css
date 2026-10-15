@@ -55,6 +55,39 @@ body {
   opacity: 0;
 }
 
+#honeypot {
+  position: absolute;
+  top: 320px;
+  left: -9999px;
+}
+
+#agree-control {
+  position: absolute;
+  top: 380px;
+  left: 260px;
+  width: 24px;
+  height: 24px;
+}
+
+#agree-box,
+#agree {
+  position: absolute;
+  inset: 0;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+}
+
+#agree-box {
+  border: 2px solid #36d;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+#agree {
+  opacity: 0;
+}
+
 #open-host {
   top: 400px;
 }

@@ -106,10 +106,12 @@ export const HIT_PROBE = `function (points, mode) {
   }
   const own = styleOf(target);
   if (own.visibility !== 'visible') return { state: 'hidden' };
-  for (let node = target; node; node = up(node)) {
-    if (node.nodeType === 1 && Number(styleOf(node).opacity) === 0) return { state: 'hidden' };
+  if (mode === 'see') {
+    for (let node = target; node; node = up(node)) {
+      if (node.nodeType === 1 && Number(styleOf(node).opacity) === 0) return { state: 'hidden' };
+    }
+    return { state: 'clear', index: -1 };
   }
-  if (mode === 'see') return { state: 'clear', index: -1 };
   if (own.pointerEvents === 'none') return { state: 'inert' };
   let covered = -1;
   for (let index = 0; index < points.length; index += 1) {
@@ -279,9 +281,14 @@ async function refusal(
   return new PageToolError('no_ref', ACT_NOT_VISIBLE);
 }
 
-export async function aimAt(cdp: Cdp, node: number, context: AimContext): Promise<Point> {
+async function visiblePoints(cdp: Cdp, node: number): Promise<Point[]> {
   const points = candidatePoints(await contentQuads(cdp, node), await visibleView(cdp));
   if (points.length === 0) throw new PageToolError('no_ref', ACT_NOT_VISIBLE);
+  return points;
+}
+
+export async function aimAt(cdp: Cdp, node: number, context: AimContext): Promise<Point> {
+  const points = await visiblePoints(cdp, node);
   return withHandle(cdp, node, async (handle) => {
     const found = await probe(cdp, handle, points, 'aim');
     if (found.state === 'clear') return points[found.index]!;
@@ -302,6 +309,7 @@ export async function stillClear(
 }
 
 export async function mustBeSeen(cdp: Cdp, node: number, context: AimContext): Promise<void> {
+  await visiblePoints(cdp, node);
   await withHandle(cdp, node, async (handle) => {
     const found = await probe(cdp, handle, [], 'see');
     if (found.state !== 'clear') throw await refusal(cdp, handle, found, [], context);

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { actOnPage } from '../../apps/desktop/src/browser/agent-act.ts';
+import { actOnPage, type ActRequest } from '../../apps/desktop/src/browser/agent-act.ts';
 import type { Cdp } from '../../apps/desktop/src/browser/cdp.ts';
 import { cdpOf } from './playwright-cdp.ts';
 
@@ -54,10 +54,10 @@ async function shadowRootOf(cdp: Cdp, rootId: number, host: string): Promise<num
   return node.shadowRoots[0]!.nodeId;
 }
 
-function click(cdp: Cdp, node: number, ref: string) {
+function act(cdp: Cdp, request: Omit<ActRequest, 'node'>, node: number) {
   return actOnPage(
     cdp,
-    { action: 'click', node, ref },
+    { ...request, node },
     {
       filled: new Set(),
       history: () => true,
@@ -66,6 +66,10 @@ function click(cdp: Cdp, node: number, ref: string) {
       highlightMs: 1,
     },
   );
+}
+
+function click(cdp: Cdp, node: number, ref: string) {
+  return act(cdp, { action: 'click', ref }, node);
 }
 
 test('a click on a button under a cookie banner names the banner and lands after it is closed', async ({
@@ -94,10 +98,27 @@ test('elements that take no clicks or cannot be seen are refused', async ({ page
   await expect(click(cdp, await nodeAt(cdp, '#ghost'), 'ref_3')).rejects.toThrow(
     'ref_3 does not take clicks (pointer-events: none).',
   );
-  await expect(click(cdp, await nodeAt(cdp, '#invisible'), 'ref_4')).rejects.toThrow(
+  await expect(page.getByRole('status')).toHaveText('Nothing clicked yet');
+});
+
+test('nothing is typed into a transparent or off-screen field', async ({ page }) => {
+  const cdp = await open(page, 'hit-banner.html');
+  const typing = { action: 'type', ref: 'ref_4', text: 'spam' } as const;
+  await expect(act(cdp, typing, await nodeAt(cdp, '#hidden-note'))).rejects.toThrow(
     'ref_4 is hidden or fully transparent',
   );
-  await expect(page.getByRole('status')).toHaveText('Nothing clicked yet');
+  await expect(act(cdp, typing, await nodeAt(cdp, '#honeypot'))).rejects.toThrow(
+    'That element is not visible on the page.',
+  );
+  await expect(page.locator('#hidden-note')).toHaveValue('');
+  await expect(page.locator('#honeypot')).toHaveValue('');
+});
+
+test('a transparent checkbox on top of its styled box is clicked', async ({ page }) => {
+  const cdp = await open(page, 'hit-banner.html');
+  await click(cdp, await nodeAt(cdp, '#agree'), 'ref_9');
+  await expect(page.locator('#agree')).toBeChecked();
+  await expect(page.getByRole('status')).toHaveText('Clicked Agree');
 });
 
 test('buttons inside open and closed shadow roots are clicked', async ({ page }) => {

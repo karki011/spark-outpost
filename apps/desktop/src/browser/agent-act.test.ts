@@ -321,6 +321,38 @@ describe('an agent acting on a page', () => {
     expect(fake.methods('DOM.focus')).toEqual([]);
   });
 
+  it('clicks a transparent checkbox that sits on top of its styled box', async () => {
+    const fake = page();
+    fake.dom.add('SPAN', fake.body, { box: box(500, 20, 520, 40) });
+    fake.add(9, { role: 'checkbox', name: 'Agree' }, 'INPUT', {
+      box: box(500, 20, 520, 40),
+      style: { opacity: '0' },
+    });
+    await actOnPage(fake.cdp, { action: 'click', node: 9, ref: 'ref_9' }, fake.options());
+    expect(fake.methods('Input.dispatchMouseEvent')[1]!.params).toMatchObject({ x: 510, y: 30 });
+  });
+
+  const HIDDEN_FIELD =
+    'ref_10 is hidden or fully transparent, so a person could not see it. Spark does not act on it.';
+
+  it.each([
+    [
+      'a transparent text field',
+      { box: box(300, 80, 400, 110), style: { opacity: '0' } },
+      HIDDEN_FIELD,
+    ],
+    ['a field with no size', { box: box(300, 80, 300, 80) }, ACT_NOT_VISIBLE],
+    ['a field placed off the screen', { box: box(-9999, 80, -9800, 110) }, ACT_NOT_VISIBLE],
+  ])('types nothing into %s', async (_what, options, message) => {
+    const fake = page();
+    fake.add(10, { role: 'textbox', name: 'Website' }, 'INPUT', options);
+    await expect(
+      actOnPage(fake.cdp, { action: 'type', node: 10, ref: 'ref_10', text: 'x' }, fake.options()),
+    ).rejects.toMatchObject({ message });
+    expect(fake.methods('DOM.focus')).toEqual([]);
+    expect(fake.methods('Input.')).toEqual([]);
+  });
+
   it('clicks an element inside a shadow root and refuses one covered inside it', async () => {
     const fake = page();
     const host = fake.dom.add('MY-PICKER', fake.body, { box: box(300, 200, 500, 300) });

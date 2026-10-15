@@ -7,6 +7,7 @@ function clicked(name) {
 }
 
 document.getElementById('buy').addEventListener('click', clicked('Buy now'));
+document.getElementById('agree').addEventListener('change', clicked('Agree'));
 document.getElementById('partial').addEventListener('click', clicked('Half hidden'));
 document.getElementById('banner').addEventListener('click', clicked('the cookie banner'));
 document.getElementById('accept').addEventListener('click', (event) => {
