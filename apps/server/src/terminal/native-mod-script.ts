@@ -38,6 +38,15 @@ export function readInbox(text) {
   };
 }
 
+async function readCost($) {
+  try {
+    const usage = await $.session.usage();
+    return usage.cost ? usage.cost.usd : null;
+  } catch {
+    return null;
+  }
+}
+
 function sent(response) {
   return response.ok || (response.status >= 400 && response.status < 500 && response.status !== 401);
 }
@@ -45,6 +54,12 @@ function sent(response) {
 export function register(on) {
   let line = null;
   const facts = telemetry();
+  let costs = Promise.resolve();
+  const costed = ($) => {
+    const read = costs.then(async () => facts.cost(await readCost($)));
+    costs = read.then(() => undefined);
+    return read;
+  };
   on('classic.UserPromptSubmit', async ($, e, next) => {
     facts.prompted(e.prompt_id);
     return next(e);
@@ -55,16 +70,7 @@ export function register(on) {
   });
   on('turn.step', async function* ($, e, next) {
     const result = yield* next(e);
-    if (result.usage && fromEngine(next.origin)) {
-      let usd = null;
-      try {
-        const usage = await $.session.usage();
-        usd = usage.cost ? usage.cost.usd : null;
-      } catch {
-        usd = null;
-      }
-      facts.stepped(e, result.usage, facts.cost(usd));
-    }
+    if (result.usage && fromEngine(next.origin)) facts.stepped(e, result.usage, await costed($));
     return result;
   });
   on('turn.complete', async ($, e, next) => {
@@ -85,12 +91,7 @@ export function register(on) {
     return h(Text, { dimColor: true, wrap: 'truncate-end' }, line);
   });
   on('session.start', async ($, e, next) => {
-    try {
-      const usage = await $.session.usage();
-      facts.cost(usage.cost ? usage.cost.usd : null);
-    } catch {
-      facts.cost(null);
-    }
+    await costed($);
     let config = null;
     let busy = false;
     const show = (text) => {
@@ -121,12 +122,14 @@ export function register(on) {
       for (let round = 0; round < SEND_ROUNDS; round++) {
         const items = facts.take();
         if (items.length === 0) return;
-        const answer = await $.http.fetch(new URL('/mod/telemetry', config.url).href, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + config.token },
-          body: JSON.stringify({ items }),
-        });
-        if (sent(answer)) continue;
+        const answer = await $.http
+          .fetch(new URL('/mod/telemetry', config.url).href, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + config.token },
+            body: JSON.stringify({ items }),
+          })
+          .catch(() => null);
+        if (answer && sent(answer)) continue;
         facts.putBack(items);
         throw new Error('Spark refused the telemetry request.');
       }
