@@ -24,4 +24,5 @@ export const NEW_PROFILE = {
   heartbeat: true,
   wideWindow: 'rail',
   busyEnter: 'queue',
+  terminalRecordLikeChat: false,
 };
