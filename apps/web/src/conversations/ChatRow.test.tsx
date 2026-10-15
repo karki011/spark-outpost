@@ -3,6 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { ChatRow } from './ChatRow.tsx';
+import { OnScreenChat } from './on-screen.ts';
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -37,25 +38,32 @@ const chat: ConversationSummary = {
   category: null,
 };
 
-function renderRow(handle?: string, row: ConversationSummary = chat, selected = false) {
+function renderRow(
+  handle?: string,
+  row: ConversationSummary = chat,
+  selected = false,
+  onScreenId: string | null = null,
+) {
   render(
-    <ul>
-      <ChatRow
-        chat={row}
-        selected={selected}
-        renaming={false}
-        sortable={false}
-        settling={false}
-        flash={false}
-        index={0}
-        handle={handle}
-        onOpen={vi.fn()}
-        onMenu={vi.fn()}
-        onRename={vi.fn()}
-        onRestore={vi.fn()}
-        onDelete={vi.fn()}
-      />
-    </ul>,
+    <OnScreenChat.Provider value={onScreenId}>
+      <ul>
+        <ChatRow
+          chat={row}
+          selected={selected}
+          renaming={false}
+          sortable={false}
+          settling={false}
+          flash={false}
+          index={0}
+          handle={handle}
+          onOpen={vi.fn()}
+          onMenu={vi.fn()}
+          onRename={vi.fn()}
+          onRestore={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      </ul>
+    </OnScreenChat.Provider>,
   );
 }
 
@@ -91,11 +99,16 @@ describe('ChatRow', () => {
     expect(screen.getByRole('button', { name: /^Orders API.*Done$/ })).toBeTruthy();
   });
 
-  it('shows no blob on the open chat or a quiet one', () => {
-    renderRow(undefined, finished, true);
+  it('shows no blob on the chat that is on screen, or on a quiet one', () => {
+    renderRow(undefined, finished, true, finished.id);
     expect(screen.queryByRole('img', { name: 'Done' })).toBeNull();
     cleanup();
     renderRow();
     expect(document.querySelector('.rblob')).toBeNull();
+  });
+
+  it('shows the blob on the selected chat while Settings or an outpost covers it', () => {
+    renderRow(undefined, finished, true, null);
+    expect(screen.getByRole('img', { name: 'Done' })).toBeTruthy();
   });
 });

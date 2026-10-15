@@ -25,6 +25,7 @@ import { ConversationList } from '../conversations/ConversationList.tsx';
 import { attention, isRunning, rowState } from '../conversations/row-state.ts';
 import { SidebarLayoutProvider, useSidebarLayoutState } from '../conversations/sidebar-layout.tsx';
 import { useMarkSeen } from '../conversations/use-mark-seen.ts';
+import { OnScreenChat, onScreenChatId } from '../conversations/on-screen.ts';
 import { isDocLinkOpen, leaveDocs, useDocLinks } from '../docs/doc-route.ts';
 import { DocsSkeleton } from '../docs/DocsSkeleton.tsx';
 import { Home } from '../home/Home.tsx';
@@ -233,7 +234,12 @@ function ChatShell({ entering }: { entering: boolean }) {
     selectedId ??
     chats.find((chat) => !chat.archivedAt)?.id ??
     (conversations.data ? draftId : null);
-  const onScreenId = view === 'chats' && !openOutpostId && !settings ? activeId : null;
+  const onScreenId = onScreenChatId({
+    chatsView: view === 'chats',
+    outpostOpen: openOutpostId !== null,
+    settingsOpen: settings !== null,
+    activeId,
+  });
   useShareOnScreenChat(onScreenId);
   useMarkSeen(onScreenId, chats);
 
@@ -267,12 +273,14 @@ function ChatShell({ entering }: { entering: boolean }) {
           />
           <div className={openOutpostId ? 'view in-outpost' : 'view'} hidden={view !== 'chats'}>
             <FreezeWhileHidden hidden={view !== 'chats'}>
-              <ConversationList
-                selectedId={openOutpostId ? null : activeId}
-                onSelect={selectChat}
-                onNew={startDraft}
-                onNewInProject={startDraftInProject}
-              />
+              <OnScreenChat.Provider value={onScreenId}>
+                <ConversationList
+                  selectedId={openOutpostId ? null : activeId}
+                  onSelect={selectChat}
+                  onNew={startDraft}
+                  onNewInProject={startDraftInProject}
+                />
+              </OnScreenChat.Provider>
               <div className="scrim" aria-hidden="true" onClick={layout.closeDrawer} />
               <FreezeWhileHidden hidden={openOutpostId !== null}>
                 {activeId ? (

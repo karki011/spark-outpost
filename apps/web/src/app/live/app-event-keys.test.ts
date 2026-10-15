@@ -155,8 +155,8 @@ describe('app event invalidation', () => {
     ]);
   });
 
-  it('a chat marked seen refreshes only the chat list', async () => {
-    expect(await invalidatedBy(event('seen'))).toEqual(['list']);
+  it('a chat marked seen refreshes the chat list and search results, nothing else', async () => {
+    expect(await invalidatedBy(event('seen'))).toEqual(['list', 'search']);
   });
 
   it('task changes without a chat leave every chat detail alone', async () => {

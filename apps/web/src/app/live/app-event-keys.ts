@@ -94,7 +94,7 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
         ...terminalRemote(event),
       ];
     case 'seen':
-      return [list];
+      return [list, search];
     case 'run':
       return [
         list,

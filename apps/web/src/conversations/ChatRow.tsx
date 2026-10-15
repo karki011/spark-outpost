@@ -11,6 +11,7 @@ import { recencyLabel } from './recency.ts';
 import { rowFaceState, rowState } from './row-state.ts';
 import { chatBlob } from './chat-blob.ts';
 import { ChatBlob } from './ChatBlob.tsx';
+import { useChatOnScreen } from './on-screen.ts';
 import { RowTitle, useMarquee } from './RowTitle.tsx';
 import { useSortableMotion } from './use-sortable-motion.ts';
 import { RowFace } from './RowFace.tsx';
@@ -141,7 +142,8 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   });
   const marquee = useMarquee(chat.title);
   const state = rowState(chat, selected);
-  const blob = chatBlob(chat, selected);
+  const onScreen = useChatOnScreen(chat.id);
+  const blob = chatBlob(chat, onScreen);
   const face = <RowFace chat={chat} state={rowFaceState(chat, state.tone)} />;
   const classes = [
     'row',
