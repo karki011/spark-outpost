@@ -1,4 +1,5 @@
 import type { NativeTerminalLaunchRequest, NativeTerminalProvider } from '@spark-outpost/contracts';
+import type { Queryable } from '../persistence/db.ts';
 import type { NativeTerminalRow } from '../persistence/native-terminals.ts';
 import { NativeTerminalConflictError } from '../persistence/native-terminal-turns.ts';
 import { NativeRuntimeError } from './native-control.ts';
@@ -35,4 +36,18 @@ export function providerToLaunch(
       'This terminal has no native session to resume. Start a new Terminal session.',
     );
   return provider;
+}
+
+export function ownedTerminalChat(db: Queryable, workspaceId: string) {
+  return async (conversationId: string) => {
+    const { rows } = await db.query<{
+      session_type: string;
+      terminal_provider: NativeTerminalProvider | null;
+    }>(
+      'SELECT session_type, terminal_provider FROM conversations WHERE id = $1 AND workspace_id = $2',
+      [conversationId, workspaceId],
+    );
+    if (!rows[0]) throw new NativeRuntimeError('Conversation not found.', 404);
+    return rows[0];
+  };
 }

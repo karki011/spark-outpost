@@ -13,6 +13,7 @@ Select **Settings** at the bottom of the rail. A row's book icon opens the guide
 | Row                                                    | Default                | Read more                                                                               |
 | ------------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------- |
 | **What should Spark call you?**, **Personality**       | **Friendly**           | [Set up](getting-started.md#meet-spark-and-pick-a-theme)                                |
+| **Record Terminal sessions like chats**                | Off                    | [Record Terminal sessions](#record-terminal-sessions)                                   |
 | **How much Spark does alone**                          | **Full auto → PR**     | [Spark autonomy](spark-autonomy.md)                                                     |
 | **Wait before going on without your answer**           | **60s**                | [If you don't answer](approvals.md#if-you-dont-answer)                                  |
 | **Warn when context is**                               | 60%                    | [Manage a long chat](compaction.md#change-when-spark-compacts)                          |
@@ -31,6 +32,12 @@ Select **Settings** at the bottom of the rail. A row's book icon opens the guide
 Under **Spark**, **Workflow options** holds autonomy, compaction and PR controls.
 
 **Custom instructions** accepts text or a UTF-8 file on your Mac, up to 16 KB. Select **Save instructions**. New sessions send both and skip an unreadable file with a note.
+
+## Record Terminal sessions
+
+With **Record Terminal sessions like chats** on, new Claude turns in a [Terminal session](terminals.md) keep each tool call with its input and output, the replies, the changed files and an audit, as a chat does. Secret-file values are hidden.
+
+A push of another branch, a force push, a protected file or a write outside the project gets a flag; nothing is stopped. Codex sessions don't change.
 
 ## Other sections
 

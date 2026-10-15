@@ -35,3 +35,15 @@ export async function nativeTerminalTarget(
     level: saved?.level ?? rows[0]?.default_level ?? DEFAULT_INVOLVEMENT_LEVEL,
   };
 }
+
+export async function recordsTerminalLikeChat(
+  db: Queryable,
+  conversationId: string,
+): Promise<boolean> {
+  const { rows } = await db.query<{ recording: boolean }>(
+    `SELECT p.terminal_record_like_chat AS recording FROM conversations c
+      JOIN profiles p ON p.workspace_id = c.workspace_id WHERE c.id = $1`,
+    [conversationId],
+  );
+  return rows[0]?.recording === true;
+}

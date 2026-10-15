@@ -114,6 +114,48 @@ A Claude Terminal session on Claude Code 2.1.287 or newer, with its hooks verifi
 
 Spark counts the mod as active while it checked in within the last 5 s (`remote/mod-inbox.ts`, in memory). A message has control characters removed as for a paste (`withoutControls`). A poll hands the queued messages over and removes them; the device's request waits up to 3 s for that, then withdraws the message and pastes it as before. Just before handing out, the poll checks again for an open approval, `waiting_for_permission` or `waiting_for_input`; if one appeared since the message was queued, the queued messages are dropped and the device is told its message wasn't sent. Without a check-in (an older Claude, hooks off with `disableAllHooks`, `--safe-mode` or `--bare`, an organization that allows managed mods only, a session started before this) everything goes the paste path and the Mac shows nothing. A failed request makes the mod read `observer.json` again, so after a Spark restart re-adoption's new address and token are picked up within a second.
 
+### Recording a Claude session like a chat
+
+**Record Terminal sessions like chats** (Settings → Spark, `profiles.terminal_record_like_chat`, migration 0178, off by default) lets the owner keep what a chat keeps for Claude Terminal sessions. It changes nothing for Codex, for a session whose mod is not loaded, or while it is off.
+
+**How the mod learns the setting.** It reads it from `observer.json`, which is written at launch and again at re-adoption. After that, the inbox reply's `record` field updates it.
+
+**What the mod sends while recording is on.** On top of the facts in [Terminal usage](TERMINAL_USAGE.md#from-the-spark-mod-claude), it adds:
+
+- each tool call's input, as at most 20,000 characters of JSON; longer string fields are cut to 2,000 characters, and when that is still too long the input is left out;
+- the tool's output text, up to 16,000 characters;
+- whether Claude showed a permission prompt for the call. The mod matches `classic.PermissionRequest` to the in-flight call by tool name and input.
+- every main-loop step's visible reply text, up to 100,000 characters.
+
+**When the mod delivers.** A post is capped at 400,000 characters, and a 413 keeps the batch for the next poll. The mod also delivers, waiting at most 2 s, at two moments:
+
+- at a main-loop `turn.start`, so Spark can take the git snapshot before any tool runs;
+- in `classic.Stop` before Claude's own Stop hooks run, so the turn's facts arrive before Spark closes the run.
+
+**How the server checks the facts.** It accepts these fields only on the tool and reply facts, and uses them only for the open run of a session whose setting is on. Otherwise it drops them and keeps the facts recorded by default.
+
+**The recorder.** `chat-record.ts` starts on the first detailed fact of the open run and reuses the chat pipeline. `chat-record-updates.ts` turns each tool call into the session updates Claude's ACP adapter would send, using the adapter's own `toolInfoFromToolUse` and `toolUpdateFromToolResult`. The updates then go through:
+
+- the chat mapper and command tracker, giving the run's steps, tool-call events and `run_commands` rows;
+- an audit recorder wrapped with `withoutSecretValues`, `scannedObserver` and `watchedSends`, giving audit entries with `unreviewed` set by the review tracker, plus the sent-data, stacked-push and other-branch-push flags;
+- `createRailWatch`, giving the force-push, protected-path and outside-write flags of calls Claude did not ask about;
+- `startRailFlags`, giving the git-control and protected-file changes found at the end;
+- the reply text, with the redaction filter, becoming the assistant message;
+- a git snapshot, from which the turn's end writes the Kept record (`writeKeptRecord`) and the outcome capture.
+
+Every run event is passed through `withoutSecretValues` before it is stored.
+
+**When the recorder finishes.** It finishes in `closeTurn` before the run is finished. A retracted handback run's recorder is dropped. Flags are cards, island notices and audit entries; nothing is refused or stopped.
+
+**Its roots.** The recorder's root is the session's own folder. Other linked roots count only when the run's first root is that folder.
+
+**Not covered:**
+
+- a folder that is not a git repository (no snapshot, so no Kept record);
+- calls from a background sub-agent that finish after Stop;
+- a turn that is open across a Spark restart;
+- sub-agent tool calls, which are recorded as steps of the turn without the sub-agent grouping chats show.
+
 Spark tool permissions never exceed the mode selected at launch, even if a hook reports a broader native mode. Until a recognized permission observation arrives, Spark tools remain read-only. Widening Spark tool permissions requires a new session with the intended launch mode.
 
 The terminal view and Island share a session identity and activity state. The terminal companion stays outside PTY output, does not intercept typing, and honors reduced motion.
@@ -170,7 +212,7 @@ The build preserves currently running services and terminals. The updated API, r
 
 ### Review follow-up
 
-Terminal sessions have no Spark safety floor: the provider's CLI runs under the agent's own permission mode, and Spark's approval cards, protected-path rules and ran-without-review audit do not apply inside the PTY. Spark records that the session started, its mode and its observed state, and, since the Terminal usage change, the tool names and times of its steps, token counts, model and cost per turn read from the CLI's own session file (or, for Claude Code with the Spark mod loaded, sent by the mod as each request finishes), and the CLI's own session total; never commands, paths, prompts, replies or tool output (see [Terminal usage](TERMINAL_USAGE.md)). The owner chose to document this rather than build a floor; AGENTS.md and the guide say so.
+Terminal sessions have no Spark safety floor: the provider's CLI runs under the agent's own permission mode, and Spark's approval cards and protected-path rules do not apply inside the PTY; the ran-without-review audit and observed-rail flags apply only when the session is [recorded like a chat](#recording-a-claude-session-like-a-chat). Spark records that the session started, its mode and its observed state, and, since the Terminal usage change, the tool names and times of its steps, token counts, model and cost per turn read from the CLI's own session file (or, for Claude Code with the Spark mod loaded, sent by the mod as each request finishes), and the CLI's own session total; never commands, paths, prompts, replies or tool output (see [Terminal usage](TERMINAL_USAGE.md)). The owner chose to document this rather than build a floor; AGENTS.md and the guide say so.
 
 Runs of a Terminal session are recorded at the non-publishing level (`hands-off`) whatever the profile default is, so the Spark MCP scope has publish authority only when the user's message asks for it or the agent's mode would run it. A Terminal conversation with no terminal row and no messages is a draft: the app shows the new-session picker again, and the chat list and pruning treat it like an empty chat.
 

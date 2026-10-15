@@ -144,6 +144,7 @@ export const SPEC_GROUPS = {
     'reset',
     'settings',
     'settings-lists',
+    'terminal-record-setting',
     'zai',
   ],
   home: ['companion', 'digest', 'home', 'live-updates', 'today'],

@@ -2,7 +2,6 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import type {
   NativeTerminalLaunchRequest,
   NativeTerminalLaunchResponse,
-  NativeTerminalProvider,
 } from '@spark-outpost/contracts';
 import { loginShellLocator } from '../agents/acp/agent-cli.ts';
 import {
@@ -39,11 +38,12 @@ import { placeChat } from '../orchestration/chat-place.ts';
 import { dependenciesLine, startTimer, type StartTimer } from './start-timing.ts';
 import { sessionDeps } from './session-deps.ts';
 import { startPhases } from './start-phases.ts';
-import { assertTerminalChat, providerToLaunch } from './native-launch-checks.ts';
+import { assertTerminalChat, ownedTerminalChat, providerToLaunch } from './native-launch-checks.ts';
 import { writeAdoptRecord } from './tmux/adopt-record.ts';
 import { readoptTmuxSessions } from './tmux/readopt.ts';
 import { terminalApprovals } from './remote/approvals.ts';
 import { modInbox } from './remote/mod-inbox.ts';
+import { recordsTerminalLikeChat } from '../persistence/native-terminal-settings.ts';
 import { answerWaits, withMod } from './remote/mod-routing.ts';
 import { nativeRemote, remoteHookHandlers } from './remote/native-remote.ts';
 
@@ -72,17 +72,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     session.chain = next.catch(() => undefined);
     return next;
   };
-  const owned = async (conversationId: string) => {
-    const { rows } = await deps.db.query<{
-      session_type: string;
-      terminal_provider: NativeTerminalProvider | null;
-    }>(
-      'SELECT session_type, terminal_provider FROM conversations WHERE id = $1 AND workspace_id = $2',
-      [conversationId, deps.workspaceId],
-    );
-    if (!rows[0]) throw new NativeRuntimeError('Conversation not found.', 404);
-    return rows[0];
-  };
+  const owned = ownedTerminalChat(deps.db, deps.workspaceId);
   const usage = nativeUsage(deps.db, deps.watchTranscript ?? watchTranscript, enqueue);
   const control = nativeControl(deps.db, live, tokens, usage);
   const { syncScope, finish } = control;
@@ -221,6 +211,8 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       const granted = await timer.time('grant', () => deps.mcp.grant(scope));
       grant = granted;
       const prepareLaunch = deps.prepareLaunch ?? prepareNativeLaunch;
+      const record =
+        provider === 'claude' && (await recordsTerminalLikeChat(deps.db, conversationId));
       launch = await timer.time('prepare_launch', () =>
         prepareLaunch({
           provider,
@@ -237,7 +229,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
           channel: deps.channel,
           command,
           mcp: granted,
-          hooks: { url: host.url, token, permissionUrl: host.permissionUrl },
+          hooks: { url: host.url, token, permissionUrl: host.permissionUrl, record },
         }),
       );
       row.observation = launch.observation;

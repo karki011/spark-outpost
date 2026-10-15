@@ -75,6 +75,7 @@ export async function nativeRuntimeFixture(
   const watchers: FixtureWatcher[] = [];
   const fixture = {
     t,
+    folder,
     watchers,
     conversationId,
     inputs,

@@ -32,7 +32,7 @@ See [Keep keys out of chats](sparkignore.md#keep-keys-out-of-chats).
 
 ## How Spark redacts secrets
 
-In replies, the audit log, tool results, provider errors and Jev requests, Spark replaces anything secret-looking with `[redacted:…]`: keys, tokens, URL passwords, `KEY=value` lines and secret-file values.
+In replies, audit logs, tool results, errors, Jev and [recorded Terminal sessions](settings.md#record-terminal-sessions), Spark replaces anything secret-looking with `[redacted:…]`: keys, tokens, URL passwords, `KEY=value` lines and secret-file values.
 
 ## What agents can't reach
 

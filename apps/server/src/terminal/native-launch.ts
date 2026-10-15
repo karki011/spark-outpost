@@ -30,7 +30,7 @@ export interface NativeLaunchInput {
   env?: NodeJS.ProcessEnv;
   attachments?: readonly TurnAttachment[];
   mcp: { url: string; token: string };
-  hooks: { url: string; token: string; permissionUrl?: string };
+  hooks: { url: string; token: string; permissionUrl?: string; record?: boolean };
 }
 
 export interface NativeLaunch {

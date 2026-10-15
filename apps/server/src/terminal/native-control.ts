@@ -5,6 +5,7 @@ import {
   setNativeTerminalState,
 } from '../persistence/native-terminal-turns.ts';
 import { SparkToolError } from '../spark-mcp/tool.ts';
+import { takeChatRecord } from './chat-record.ts';
 import { saveModUsage } from './mod-telemetry.ts';
 import type { LiveSession } from './native-runtime-types.ts';
 import type { NativeUsage } from './native-usage.ts';
@@ -62,9 +63,14 @@ export function nativeControl(
         session.completedTurns.delete(session.completedTurns.values().next().value!);
     }
     await usage.settle(session);
+    const chat = takeChatRecord(session);
+    await chat
+      ?.finish()
+      .catch((error: unknown) => console.error('Could not record the turn', error));
     await session.context?.close();
     await finishNativeRun(db, session.row, status, reason);
     clearTurn(session);
+    await chat?.kept();
   };
   const retractTurn = async (session: LiveSession, promptId: string) => {
     const moved = usage.moveToOwner(session, promptId);
@@ -72,6 +78,7 @@ export function nativeControl(
     const open = session.context?.input.identity.runId === moved.runId;
     if (open) {
       session.completedTurns.add(promptId);
+      takeChatRecord(session)?.discard();
       await session.context?.close();
     }
     const removed = await retractNativeRun(db, session.row, moved.runId, moved.ownerRunId).catch(

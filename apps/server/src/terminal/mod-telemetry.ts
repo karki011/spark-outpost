@@ -10,6 +10,12 @@ import {
 } from '../persistence/native-terminal-mod-usage.ts';
 import { recordNativeStep } from '../persistence/native-terminal-steps.ts';
 import { cardPriceFor, type ModelPrice } from '../usage/prices.ts';
+import type { ChatRecord } from './chat-record.ts';
+import {
+  MOD_INPUT_CHARS,
+  MOD_OUTPUT_CHARS,
+  MOD_REPLY_CHARS,
+} from './native-mod-telemetry-script.ts';
 import { estimatedCost } from './turn-usage.ts';
 
 export const MOD_BATCH_MAX = 500;
@@ -18,9 +24,19 @@ const label = z.string().min(1).max(200);
 const count = z.number().int().nonnegative().max(1_000_000_000);
 const at = z.number().int().positive().max(8_640_000_000_000);
 const owned = { prompt: label, agent: label.nullable() };
+const toolInput = z
+  .record(z.string(), z.unknown())
+  .nullable()
+  .refine((input) => JSON.stringify(input).length <= MOD_INPUT_CHARS);
 
 const itemSchema = z.discriminatedUnion('kind', [
-  z.strictObject({ kind: z.literal('turn_start'), ...owned, turn: label, at }),
+  z.strictObject({
+    kind: z.literal('turn_start'),
+    ...owned,
+    turn: label,
+    at,
+    record: z.literal(true).optional(),
+  }),
   z.strictObject({
     kind: z.literal('turn_end'),
     ...owned,
@@ -49,6 +65,16 @@ const itemSchema = z.discriminatedUnion('kind', [
     phase: z.enum(['start', 'end']),
     failed: z.boolean(),
     at,
+    input: toolInput.optional(),
+    output: z.string().max(MOD_OUTPUT_CHARS).optional(),
+    asked: z.boolean().optional(),
+  }),
+  z.strictObject({
+    kind: z.literal('reply'),
+    prompt: label,
+    agent: z.null(),
+    turn: label,
+    text: z.string().min(1).max(MOD_REPLY_CHARS),
   }),
 ]);
 
@@ -120,7 +146,30 @@ export async function saveModUsage(
   );
 }
 
+export type ChatRecordFor = (runId: string) => Promise<ChatRecord | null>;
+
+async function recordDetail(record: ChatRecord | null, item: ModItem): Promise<void> {
+  if (!record) return;
+  if (item.kind === 'reply') return record.replied(item.text);
+  if (item.kind !== 'tool') return;
+  if (item.phase === 'start' && item.input !== undefined)
+    return record.toolStarted({ id: item.id, name: item.name, input: item.input });
+  if (item.phase === 'end' && item.output !== undefined)
+    return record.toolEnded({
+      id: item.id,
+      output: item.output,
+      failed: item.failed,
+      asked: item.asked === true,
+    });
+}
+
+function detailed(item: ModItem): boolean {
+  if (item.kind === 'turn_start') return item.record === true && item.agent === null;
+  return item.kind === 'reply' || (item.kind === 'tool' && ('input' in item || 'output' in item));
+}
+
 async function recordItem(db: Db, runId: string, item: ModItem): Promise<void> {
+  if (item.kind === 'reply') return;
   const agentId = item.agent;
   if (item.kind === 'turn_start' || item.kind === 'turn_end') {
     await recordModTurn(db, runId, {
@@ -160,6 +209,7 @@ export async function recordModTelemetry(
   db: Db,
   runOf: (promptId: string) => string | null,
   items: readonly ModItem[],
+  chatRecordFor: ChatRecordFor = async () => null,
 ): Promise<string[]> {
   const touched = new Set<string>();
   const aborted: string[] = [];
@@ -167,7 +217,8 @@ export async function recordModTelemetry(
     const runId = runOf(item.prompt);
     if (!runId) continue;
     await recordItem(db, runId, item);
-    if (item.kind !== 'tool') touched.add(runId);
+    if (detailed(item)) await recordDetail(await chatRecordFor(runId), item);
+    if (item.kind !== 'tool' && item.kind !== 'reply') touched.add(runId);
     if (item.kind === 'turn_end' && item.aborted && item.agent === null) aborted.push(item.prompt);
   }
   for (const runId of touched) await saveModUsage(db, runId);

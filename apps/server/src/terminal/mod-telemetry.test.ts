@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MOD_BATCH_MAX, readModTelemetry } from './mod-telemetry.ts';
+import { MOD_INPUT_CHARS } from './native-mod-telemetry-script.ts';
 
 const request = {
   kind: 'request',
@@ -30,15 +31,26 @@ describe('turn facts from the Spark mod', () => {
     expect(readModTelemetry({ items: [request, tool] })).toEqual([request, tool]);
   });
 
-  it('drops an item that carries anything more, such as a command, a path, a reply or output', () => {
+  it('drops an item that carries a field outside its kind, such as a command or a reply', () => {
     const items = [
       { ...tool, command: 'git push origin main' },
-      { ...tool, input: { file_path: '/Users/me/.env' } },
+      { ...tool, cwd: '/Users/me/project' },
       { ...request, answer: 'Done.' },
-      { ...tool, output: 'secret' },
+      { ...request, input: { file_path: '/Users/me/.env' } },
+      { kind: 'reply', prompt: 'prompt-1', agent: 'agent-a', turn: 'turn-1', text: 'Done.' },
       request,
     ];
     expect(readModTelemetry({ items })).toEqual([request]);
+  });
+
+  it('reads a tool’s input and output and a reply, which Spark stores only while recording', () => {
+    const started = { ...tool, input: { command: 'npm test' } };
+    const ended = { ...tool, phase: 'end', output: 'ok', asked: true };
+    const reply = { kind: 'reply', prompt: 'prompt-1', agent: null, turn: 'turn-1', text: 'Done.' };
+    expect(readModTelemetry({ items: [started, ended, reply] })).toEqual([started, ended, reply]);
+    const tooLong = { ...tool, input: { command: 'x'.repeat(MOD_INPUT_CHARS) } };
+    const listed = { ...tool, input: ['npm', 'test'] };
+    expect(readModTelemetry({ items: [tooLong, listed] })).toEqual([]);
   });
 
   it('drops items with the wrong shape and refuses a batch that is not one', () => {
