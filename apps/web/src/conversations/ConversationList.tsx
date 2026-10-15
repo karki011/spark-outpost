@@ -57,6 +57,7 @@ import { useSidebarShortcuts } from './use-sidebar-shortcuts.ts';
 import { useMarkRead } from './use-mark-read.ts';
 import { useToast } from './use-toast.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
+import { requestMessageJump } from '../chat/message-jump.ts';
 
 const HOVER_OPEN_MS = 550;
 const NO_OUTPOSTS: readonly Outpost[] = [];
@@ -202,7 +203,13 @@ export const ConversationList = memo(function ConversationList({
     setRenamingId(null);
   };
 
-  const handleOpen = useStableCallback((id: string) => openChat(id));
+  const handleOpen = useStableCallback((id: string) => {
+    const chat = byId.get(id);
+    if (query !== '' && chat?.match && chat.sessionType !== 'terminal') {
+      requestMessageJump(id, chat.match);
+    }
+    openChat(id);
+  });
   const handleMenu = useStableCallback(
     (chatId: string, element: HTMLElement, point: Point | null) =>
       setMenu({ chatId, anchor: anchorFor(element, point) }),

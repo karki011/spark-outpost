@@ -6,6 +6,7 @@ export type TicketSecretId = `ticket:${TicketSourceId}`;
 export type SlackSecretId = 'slack:bot' | 'slack:user' | 'slack:app';
 export const SLACK_SECRET_IDS: readonly SlackSecretId[] = ['slack:bot', 'slack:user', 'slack:app'];
 export const SLACK_SIGN_IN_SECRET = 'slack:sign-in';
+export const PUSH_KEYS_SECRET = 'remote:push';
 export type SecretId =
   | ConnectableId
   | 'github'
@@ -13,6 +14,7 @@ export type SecretId =
   | TicketSecretId
   | SlackSecretId
   | typeof SLACK_SIGN_IN_SECRET
+  | typeof PUSH_KEYS_SECRET
   | `mcp:${string}`
   | `signin:${string}`;
 
@@ -30,6 +32,7 @@ function account(provider: SecretId): string {
   if (provider.startsWith('mcp:') || provider.startsWith('signin:')) return provider;
   if (provider === 'github') return 'github:token';
   if (provider === 'github-app') return 'github:app';
+  if (provider === PUSH_KEYS_SECRET) return 'remote:push:vapid';
   if (provider.startsWith('ticket:') || provider.startsWith('slack:')) return `${provider}:token`;
   return `${provider}:api_key`;
 }

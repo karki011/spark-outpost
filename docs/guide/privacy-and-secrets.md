@@ -16,6 +16,7 @@ Your chats, settings and code stay on your computer; keys live in your keychain.
 | **Jev**, if connected                 | Redacted pull request comments, short facts about a chat's turn, Map file contents.  | See [what Jev reads](jev.md#what-jev-reads)                      |
 | **GitHub, Jira, Linear, MCP servers** | What you or an agent sends; a clone talks to its host.                               | Disconnect them                                                  |
 | **Sites agents open**                 | Addresses, typed text; never your sign-ins.                                          | [Agent mode](agent-mode.md)                                      |
+| **Apple or Google push**              | Encrypted notifications; sender contact.                                             | **Notify this device**                                           |
 | **Slack**                             | Notifications, confirmed posts (as you after sign-in). Never direct message text.    | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
 | **Spark Outpost team**                | Anonymous heartbeat.                                                                 | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
 
@@ -24,16 +25,14 @@ Without Jev, nothing goes to TypeSafe.
 ## Where your keys live
 
 - Keys and tokens are in your Keychain, under **Spark Outpost**: provider, Jev, connector and MCP keys, saved sign-ins.
-- Spark's database keeps a masked hint. Logs never hold keys.
+- Spark stores only a masked hint; logs never hold keys.
 - A **Local CLI** sign-in stays in that CLI, unread by Spark.
 
 See [Keep keys out of chats](sparkignore.md#keep-keys-out-of-chats).
 
 ## How Spark redacts secrets
 
-Before storing or showing agent output, Spark replaces anything secret-looking with `[redacted:…]`: keys, tokens, passwords in URLs, `KEY=value` lines and values from your secret files.
-
-This covers replies, the audit log, tool results, provider errors and Jev requests.
+In replies, the audit log, tool results, provider errors and Jev requests, Spark replaces anything secret-looking with `[redacted:…]`: keys, tokens, URL passwords, `KEY=value` lines and secret-file values.
 
 ## What agents can't reach
 

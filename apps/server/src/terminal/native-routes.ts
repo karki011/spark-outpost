@@ -39,8 +39,8 @@ export function nativeTerminalRoutes(runtime?: NativeRuntime): Router {
     res.json(await runtime!.remote.view(paramId(req), remoteDeviceOf(res) !== null));
   });
   router.post('/conversations/:id/terminal/message', available, async (req, res) => {
-    const { text } = parseBody(terminalMessageRequestSchema, req);
-    await runtime!.remote.message(paramId(req), text);
+    const { text, now } = parseBody(terminalMessageRequestSchema, req);
+    await runtime!.remote.message(paramId(req), text, now);
     res.status(204).end();
   });
   router.post('/conversations/:id/terminal/interrupt', available, async (req, res) => {

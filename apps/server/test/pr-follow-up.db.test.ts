@@ -13,7 +13,8 @@ import { sendRoundMessage } from '../src/pr-follow-up/deps.ts';
 import { SPARK_REPLY_MARKER } from '../src/pr-follow-up/gather.ts';
 import { pollDue, pollWatch } from '../src/pr-follow-up/poller.ts';
 import { PR_REPLY_METHOD } from '../src/pr-follow-up/round.ts';
-import { CHAT_BUSY_LINE, LIMIT_LINE } from '../src/pr-follow-up/rounds.ts';
+import { CHAT_BUSY_LINE, LIMIT_LINE, PAUSED_LINE } from '../src/pr-follow-up/rounds.ts';
+import { setSparkPaused } from '../src/persistence/spark-pause.ts';
 import { snapshotRun } from '../src/projects/run-changes.ts';
 import type { Worker } from '../src/workflow/worker.ts';
 import { linkedConversation } from './approval-support.ts';
@@ -293,6 +294,17 @@ describe('PR follow-up', { timeout: 60_000 }, () => {
     expect(rounds).toHaveLength(1);
     expect(rounds[0]!.content).toContain('Please handle the empty list here.');
     expect(rounds[0]!.content).toContain('Why is the cache needed?');
+  });
+
+  it('keeps feedback waiting while Spark is paused, and starts the round once it is resumed', async () => {
+    await setSparkPaused(t.db, t.workspaceId, true);
+    fake.pull.reviewComments = [emptyListComment];
+    expect(await poll()).toMatchObject({ phase: 'watching', doing: PAUSED_LINE, rounds: 0 });
+    expect(rounds).toEqual([]);
+
+    await setSparkPaused(t.db, t.workspaceId, false);
+    expect(await poll()).toMatchObject({ phase: 'fixing', rounds: 1 });
+    expect(rounds[0]!.content).toContain('Please handle the empty list here.');
   });
 
   it('stops when CI fails the same way after the fix, and tries again when it fails differently', async () => {

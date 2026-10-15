@@ -1,11 +1,12 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import type { ApprovalAnswer } from './remote/approvals.ts';
 
 export type PermissionHandler = (
   token: string,
   body: unknown,
   signal: AbortSignal,
-) => Promise<'allow' | 'deny' | null>;
+) => Promise<ApprovalAnswer | null>;
 
 export type InboxHandler = (token: string) => Promise<unknown>;
 
@@ -48,9 +49,7 @@ export async function nativeHookHost(
       res.once('close', () => gone.abort());
       const answer = await permission(token, body, gone.signal);
       if (!answer || gone.signal.aborted) return res.writeHead(204).end();
-      return res
-        .writeHead(200, { 'Content-Type': 'application/json' })
-        .end(JSON.stringify({ behavior: answer }));
+      return res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(answer));
     }
     const accepted = await observe(token, body);
     return res.writeHead(accepted ? 204 : 400).end();

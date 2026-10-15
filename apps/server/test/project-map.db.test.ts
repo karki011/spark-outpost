@@ -4,6 +4,7 @@ import { stopParseWorker } from '../src/codescan/parse-pool.ts';
 import { MAP_RULES_VERSION } from '../src/map/policy.ts';
 import { queueRepo, syncRepos } from '../src/map/store.ts';
 import { listen } from '../src/persistence/notifications.ts';
+import { setSparkPaused } from '../src/persistence/spark-pause.ts';
 import { createTestApp, localClient } from './app-support.ts';
 import {
   addProject,
@@ -245,6 +246,17 @@ describe('project map builder', () => {
     } finally {
       await listener.close();
     }
+  });
+
+  it('starts no build while Spark is paused, and builds once it is resumed', async () => {
+    const { builder, scanner } = mapBuilder(t, fakeJev().fetch);
+    await setSparkPaused(t.db, t.workspaceId, true);
+    expect(await builder.runOnce()).toBe(false);
+    expect((await repo()).status).toBe('queued');
+
+    await setSparkPaused(t.db, t.workspaceId, false);
+    expect(await builder.runOnce()).toBe(true);
+    await scanner.idle();
   });
 
   it('records that no areas go to Jev when Jev is not connected', async () => {

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { usePanelAnchor } from '../app/connection/use-panel-anchor.ts';
+import { useSparkPaused } from '../app/pause/use-spark-pause.ts';
 import { XIcon } from '../ui/icons.tsx';
 import './default-level-notice.css';
 
@@ -12,7 +13,8 @@ export function DefaultLevelNotice({ onSettings }: { onSettings: () => void }) {
     onSuccess: (state) => queryClient.setQueryData(setupKey, state),
   });
   const anchor = usePanelAnchor();
-  if (!setup.data?.profile.defaultLevelNotice || dismiss.isPending) return null;
+  const sparkPaused = useSparkPaused();
+  if (!setup.data?.profile.defaultLevelNotice || dismiss.isPending || sparkPaused) return null;
   return (
     <aside className="level-notice" aria-label="Default for new chats changed" style={anchor}>
       <p>

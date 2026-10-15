@@ -3,8 +3,11 @@ import type { Db } from '../persistence/db.ts';
 import { remoteGateway } from './gateway.ts';
 import { Pairings } from './pairing.ts';
 import { PasskeyChallenges } from './passkey-challenges.ts';
+import { pushKeys, type PushKeys } from './push-keys.ts';
+import { generateVapidKeys } from './push-send.ts';
 import { remoteRoutes } from './routes.ts';
 import type { RunCommand } from '../setup/command.ts';
+import type { SecretStore } from '../setup/secrets.ts';
 import { DeviceStreams } from './streams.ts';
 import { tailscaleServe } from './tailscale.ts';
 import { tailscaleCli } from './tailscale-cli.ts';
@@ -16,6 +19,8 @@ export interface RemoteAccessDeps {
   webRoot?: string | undefined;
   runCommand: RunCommand;
   loginShell: string | null;
+  secrets: SecretStore;
+  pushKeys?: PushKeys;
 }
 
 export interface RemoteAccessParts {
@@ -45,6 +50,7 @@ export function remoteAccessParts(deps: RemoteAccessDeps): RemoteAccessParts {
       challenges: new PasskeyChallenges(),
       streams,
       tailscale,
+      pushKeys: deps.pushKeys ?? pushKeys(deps.secrets, generateVapidKeys),
     }),
     reconcile: tailscale.reconcile,
   };

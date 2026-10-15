@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { Db } from '../../persistence/db.ts';
 import type { LiveSession } from '../native-runtime-types.ts';
 import { terminalApprovals } from './approvals.ts';
-import { approvalDetail, codexMenuShows, nativeRemote, pastedMessage } from './native-remote.ts';
+import {
+  approvalDetail,
+  codexMenuShows,
+  menuOpen,
+  nativeRemote,
+  pastedMessage,
+} from './native-remote.ts';
 
 const CODEX_MENU = [
   '  Would you like to run the following command?',
@@ -12,23 +18,52 @@ const CODEX_MENU = [
   '  Press enter to confirm or esc to cancel',
 ].join('\n');
 const IDLE = '› Ask Codex to do anything\n  gpt · /work';
+const CODEX_0162_MENU = [
+  '• Running date > ../outside.txt',
+  '  Would you like to run the following command?',
+  '  Environment: local',
+  '  Reason: Allow running date outside the sandbox and writing its output to ../outside.txt?',
+  '  $ date > ../outside.txt',
+  '› 1. Yes, proceed (y)',
+  "  2. Yes, and don't ask again for commands that start with `date > ../outside.txt` (p)",
+  '  3. No, and tell Codex what to do differently (esc)',
+  '  Press enter to confirm or esc to cancel',
+].join('\n');
+const CODEX_0162_AFTER_ESC = [
+  '✗ You canceled the request to run date > ../outside.txt',
+  '• Failed (exit 1) date > ../outside.txt',
+  '  └ (no output)',
+  '■ Conversation interrupted - use /feedback if something went wrong',
+  '› Ask Codex to do anything',
+  '  GPT-6-Astra default · /work',
+  '  ? for shortcuts                                    ⚠ 1 warning · f2 to view',
+].join('\n');
 
 function setup(
   provider: 'claude' | 'codex',
-  options: { state?: string; approve?: boolean; whilePasting?: () => void } = {},
+  options: { state?: string; approve?: boolean; type?: boolean; whilePasting?: () => void } = {},
 ) {
   const row = {
     id: 's1',
     conversation_id: 'c1',
     provider,
     state: options.state ?? 'ready',
+    active_run_id: 'r1' as string | null,
     usage_file: null,
   };
   const db = {
     query: async (sql: string) => ({
       rows: sql.includes('remote_access_settings')
-        ? [{ hostname: null, can_terminal: true, can_terminal_approve: options.approve ?? true }]
-        : [row],
+        ? [
+            {
+              hostname: null,
+              can_terminal: options.type ?? true,
+              can_terminal_approve: options.approve ?? true,
+            },
+          ]
+        : sql.includes('FROM runs')
+          ? [{ at: new Date('2026-10-14T10:00:00Z') }]
+          : [row],
     }),
   } as unknown as Db;
   const session = { row, transcript: null } as unknown as LiveSession;
@@ -50,7 +85,24 @@ function setup(
     owned: async () => undefined,
     delay: async () => options.whilePasting?.(),
   });
-  return { remote, session, sent, approvals, setScreen: (text: string | null) => (screen = text) };
+  return {
+    remote,
+    session,
+    row,
+    sent,
+    approvals,
+    setScreen: (text: string | null) => (screen = text),
+  };
+}
+
+async function askCodex(codex: ReturnType<typeof setup>) {
+  await codex.remote.permission(
+    codex.session,
+    { tool: 'Bash', input: { command: 'touch notes.txt' } },
+    new AbortController().signal,
+  );
+  codex.setScreen(CODEX_MENU);
+  return (await codex.remote.view('c1')).approval!;
 }
 
 describe('typing from a paired device', () => {
@@ -104,6 +156,39 @@ describe('typing from a paired device', () => {
   });
 });
 
+describe('the view a paired device reads', () => {
+  it('says since when the agent has been working, and nothing while it is idle', async () => {
+    const working = setup('claude', { state: 'working' });
+    expect((await working.remote.view('c1')).workingSince).toBe('2026-10-14T10:00:00.000Z');
+    working.row.active_run_id = null;
+    expect((await working.remote.view('c1')).workingSince).toBeNull();
+    const idle = setup('claude', { state: 'ready' });
+    expect((await idle.remote.view('c1')).workingSince).toBeNull();
+  });
+});
+
+describe('sending now from a paired device', () => {
+  it('stops the turn with Esc, then sends the message', async () => {
+    const { remote, sent } = setup('claude', { state: 'working' });
+    await remote.message('c1', 'Use the other file', true);
+    expect(sent).toEqual(['\u001b', '\u001b[200~Use the other file\u001b[201~', '\r']);
+  });
+
+  it('sends no Esc when the agent is not working', async () => {
+    const { remote, sent } = setup('codex', { state: 'ready' });
+    await remote.message('c1', 'Next step', true);
+    expect(sent).toEqual(['\u001b[200~Next step\u001b[201~', '\r']);
+  });
+
+  it('sends nothing, not even Esc, while a menu shows or for a CLI command', async () => {
+    const { remote, sent, setScreen } = setup('codex', { state: 'working' });
+    await expect(remote.message('c1', '/model', true)).rejects.toMatchObject({ status: 409 });
+    setScreen(CODEX_MENU);
+    await expect(remote.message('c1', 'go on', true)).rejects.toMatchObject({ status: 409 });
+    expect(sent).toEqual([]);
+  });
+});
+
 describe('approving from a paired device', () => {
   it('answers a Claude request through its waiting hook', async () => {
     const { remote, session } = setup('claude');
@@ -119,8 +204,8 @@ describe('approving from a paired device', () => {
       detail: 'pnpm test',
       denyStopsTurn: false,
     });
-    await remote.decide('c1', { id: view.approval!.id, decision: 'deny' });
-    await expect(waiting).resolves.toBe('deny');
+    await remote.decide('c1', { id: view.approval!.id, decision: 'deny', reason: ' Use pnpm ' });
+    await expect(waiting).resolves.toEqual({ behavior: 'deny', message: 'Use pnpm' });
     await expect(
       remote.decide('c1', { id: view.approval!.id, decision: 'allow' }),
     ).rejects.toMatchObject({ status: 409 });
@@ -170,6 +255,71 @@ describe('approving from a paired device', () => {
     setScreen(CODEX_MENU);
     await remote.decide('c1', { id: first.id, decision: 'deny' });
     expect(sent).toEqual(['\u001b']);
+  });
+
+  it('denies in Codex, then sends the reason once its menu is gone', async () => {
+    const codex = setup('codex', {
+      state: 'waiting_for_permission',
+      whilePasting: () => {
+        codex.row.state = 'ready';
+        codex.setScreen(IDLE);
+      },
+    });
+    const approval = await askCodex(codex);
+    await codex.remote.decide('c1', { id: approval.id, decision: 'deny', reason: 'Use pnpm' });
+    expect(codex.sent).toEqual(['\u001b', '\u001b[200~Use pnpm\u001b[201~', '\r']);
+  });
+
+  it('sends the reason to Codex 0.162.1 once Esc has closed its real menu', async () => {
+    const codex = setup('codex', {
+      state: 'waiting_for_permission',
+      whilePasting: () => {
+        codex.row.state = 'ready';
+        codex.setScreen(CODEX_0162_AFTER_ESC);
+      },
+    });
+    await codex.remote.permission(
+      codex.session,
+      { tool: 'Bash', input: { command: 'date > ../outside.txt', description: 'Allow date' } },
+      new AbortController().signal,
+    );
+    codex.setScreen(CODEX_0162_MENU);
+    expect(menuOpen(CODEX_0162_MENU)).toBe(true);
+    expect(menuOpen(CODEX_0162_AFTER_ESC)).toBe(false);
+    const approval = (await codex.remote.view('c1')).approval!;
+    await codex.remote.decide('c1', { id: approval.id, decision: 'deny', reason: 'Stay inside' });
+    expect(codex.sent).toEqual(['\u001b', '\u001b[200~Stay inside\u001b[201~', '\r']);
+  });
+
+  it('says the denial went through when the reason cannot be sent', async () => {
+    const codex = setup('codex', { state: 'waiting_for_permission' });
+    const approval = await askCodex(codex);
+    await expect(
+      codex.remote.decide('c1', { id: approval.id, decision: 'deny', reason: 'Use pnpm' }),
+    ).rejects.toMatchObject({ status: 409, message: expect.stringMatching(/^Denied\. /) });
+    expect(codex.sent).toEqual(['\u001b']);
+    expect(codex.approvals.current('c1')).toBeNull();
+  });
+
+  it('refuses a Codex reason that would run a CLI command before answering', async () => {
+    const codex = setup('codex', { state: 'waiting_for_permission' });
+    const approval = await askCodex(codex);
+    await expect(
+      codex.remote.decide('c1', { id: approval.id, decision: 'deny', reason: '/model' }),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(codex.sent).toEqual([]);
+    expect(codex.approvals.current('c1')?.id).toBe(approval.id);
+  });
+
+  it('refuses a Codex reason when typing is switched off, before answering', async () => {
+    const codex = setup('codex', { state: 'waiting_for_permission', type: false });
+    const approval = await askCodex(codex);
+    await expect(
+      codex.remote.decide('c1', { id: approval.id, decision: 'deny', reason: 'Use pnpm' }),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(codex.sent).toEqual([]);
+    await codex.remote.decide('c1', { id: approval.id, decision: 'deny' });
+    expect(codex.sent).toEqual(['\u001b']);
   });
 
   it('keeps a waiting Claude approval when another tool finishes, until the turn ends', async () => {

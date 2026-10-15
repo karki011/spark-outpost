@@ -1,3 +1,4 @@
+import { TERMINAL_DENY_REASON_MAX_LENGTH } from '@spark-outpost/contracts';
 import { CLAUDE_PERMISSION_WAIT_MS } from './remote/approvals.ts';
 
 const CODEX_PERMISSION_WAIT_MS = 2_000;
@@ -78,10 +79,12 @@ async function askPermission(config, raw) {
   if (response.status !== 200) return;
   const answer = await response.json();
   if (answer?.behavior !== 'allow' && answer?.behavior !== 'deny') return;
+  const reason =
+    typeof answer.message === 'string' && answer.message.trim() && answer.message.length <= ${TERMINAL_DENY_REASON_MAX_LENGTH}
+      ? answer.message
+      : 'Denied from a paired device.';
   const decision =
-    answer.behavior === 'allow'
-      ? { behavior: 'allow' }
-      : { behavior: 'deny', message: 'Denied from a paired device.' };
+    answer.behavior === 'allow' ? { behavior: 'allow' } : { behavior: 'deny', message: reason };
   process.stdout.write(
     JSON.stringify({ hookSpecificOutput: { hookEventName: 'PermissionRequest', decision } }),
   );

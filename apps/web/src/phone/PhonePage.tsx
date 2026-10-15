@@ -10,9 +10,11 @@ import { PairPhone } from './PairPhone.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 import { PhoneActivity } from './PhoneActivity.tsx';
 import { PhoneDevices } from './PhoneDevices.tsx';
+import { PhoneNotifications } from './PhoneNotifications.tsx';
 import { PhonePasskey } from './PhonePasskey.tsx';
 import { PhoneStatus } from './PhoneStatus.tsx';
 import { PhoneSwitches, PhoneSwitchesReadOnly } from './PhoneSwitches.tsx';
+import { PushContact } from './PushContact.tsx';
 
 const STATE_POLL_MS = 10_000;
 const LIST_POLL_MS = 5000;
@@ -97,7 +99,9 @@ function MacPhonePage({ session }: { session: RemoteSession }) {
           </QueryWait>
         }
       />
-      <PhoneSwitches switches={session.switches} />
+      <PhoneSwitches switches={session.switches}>
+        {session.switches.notifications && <PushContact poll={hidden ? false : LIST_POLL_MS} />}
+      </PhoneSwitches>
       <PhoneActivity
         entries={audit.data}
         wait={
@@ -132,6 +136,7 @@ function RemotePhonePage({ session }: { session: RemoteSession }) {
           remove it, open Remote control on your Mac.
         </p>
       </section>
+      <PhoneNotifications session={session} />
       <PhonePasskey session={session} />
       <PhoneSwitchesReadOnly switches={session.switches} />
     </>

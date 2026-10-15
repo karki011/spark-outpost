@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   REMOTE_MAC_ONLY_SWITCHES,
@@ -56,7 +56,12 @@ export function SwitchRow({ id, checked, label = REMOTE_SWITCH_LABELS[id] }: Swi
   );
 }
 
-export function PhoneSwitches({ switches }: { switches: RemoteSwitches }) {
+interface PhoneSwitchesProps {
+  switches: RemoteSwitches;
+  children?: ReactNode;
+}
+
+export function PhoneSwitches({ switches, children }: PhoneSwitchesProps) {
   return (
     <section className="ph-card" aria-labelledby="ph-switches-title">
       <h2 id="ph-switches-title">What paired devices can do</h2>
@@ -69,6 +74,7 @@ export function PhoneSwitches({ switches }: { switches: RemoteSwitches }) {
           <SwitchRow key={id} id={id} checked={switches[id]} />
         ))}
       </ul>
+      {children}
     </section>
   );
 }

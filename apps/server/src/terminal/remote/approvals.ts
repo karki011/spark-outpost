@@ -4,7 +4,10 @@ import type { NativeTerminalProvider, TerminalApprovalDecision } from '@spark-ou
 export const CLAUDE_PERMISSION_HOOK_SECONDS = 600;
 export const CLAUDE_PERMISSION_WAIT_MS = 590_000;
 
-export type ApprovalAnswer = TerminalApprovalDecision['decision'];
+export interface ApprovalAnswer {
+  behavior: TerminalApprovalDecision['decision'];
+  message?: string;
+}
 
 export interface ApprovalRequest {
   conversationId: string;

@@ -51,6 +51,7 @@ import { useTicketRequests } from '../tickets/ticket-request.ts';
 import { BackOnlineToast } from './connection/BackOnlineToast.tsx';
 import { markConnectionRestored, useConnection } from './connection/connection-store.ts';
 import { OfflineScreen } from './connection/OfflineScreen.tsx';
+import { PauseBanner } from './pause/PauseBanner.tsx';
 import { ReconnectBanner } from './connection/ReconnectBanner.tsx';
 import { LivePausedHint } from './live/LivePausedHint.tsx';
 import { useAppEvents } from './live/use-app-events.ts';
@@ -67,6 +68,8 @@ import { useAttentionTitle } from './use-attention-title.ts';
 import { useAttentionReport } from '../desktop/use-attention-report.ts';
 import { useChatRequests } from './chat-request.ts';
 import { useSlackPresence } from '../slack/use-slack-presence.ts';
+import { useNotificationChats } from '../phone/use-notification-chats.ts';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { useShareOnScreenChat } from '../island/on-screen-chat.ts';
 import { startIdleMotion } from './idle-motion.ts';
 import '../ui/controls.css';
@@ -191,7 +194,9 @@ function ChatShell({ entering }: { entering: boolean }) {
     [],
   );
   useChatRequests(openChat);
-  useSlackPresence();
+  const { remote } = useRemoteClient();
+  useSlackPresence(remote);
+  useNotificationChats(remote, openChat);
   useEffect(() => sparkDesktop()?.help?.onOpenFeedback(requestFeedback), []);
   useEffect(
     () =>
@@ -423,6 +428,7 @@ export function App() {
         <Onboarding onFinished={handleOnboardingFinished} />
       )}
       {connection.lost && <ReconnectBanner />}
+      {!connection.lost && setup.data.profile.onboardingCompleted && <PauseBanner />}
       {connection.recoveries > 0 && <BackOnlineToast key={connection.recoveries} />}
       <ResetHost />
     </>

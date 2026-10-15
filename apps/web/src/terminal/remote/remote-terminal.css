@@ -64,6 +64,9 @@
   overflow-wrap: anywhere;
 }
 .rt-approval {
+  flex: none;
+  max-height: 60%;
+  overflow-y: auto;
   margin: 0 16px 8px;
   padding: 12px;
   border: 1px solid var(--line-strong);
@@ -90,7 +93,44 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: flex-end;
+  justify-content: space-between;
+}
+.rt-deny {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rt-deny label {
+  font-size: 13px;
+}
+.rt-deny .inp {
+  margin-bottom: 4px;
+}
+.rt-user .rt-continues {
+  color: inherit;
+}
+.rt-since {
+  color: var(--muted);
+}
+.rt-steps .steps {
+  margin: 0;
+}
+.rt-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0 0 0 20px;
+  list-style: none;
+}
+.rt-step-list[hidden] {
+  display: none;
+}
+.rt-continues {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-style: italic;
 }
 .rt-note {
   margin: 0 0 8px;

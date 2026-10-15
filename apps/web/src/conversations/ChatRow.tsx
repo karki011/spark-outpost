@@ -6,6 +6,7 @@ import { categoryLabel, type ConversationSummary } from '@spark-outpost/contract
 import { DotsIcon, GripIcon, MergedIcon, PinIcon, RestoreIcon, TrashIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { reveal } from '../ui/transitions.tsx';
+import { MatchSnippet } from './MatchSnippet.tsx';
 import { recencyLabel } from './recency.ts';
 import { rowFaceState, rowState, type RowTone } from './row-state.ts';
 import { RowTitle, useMarquee } from './RowTitle.tsx';
@@ -276,6 +277,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
             ) : (
               <RowSub terminal={terminal} sub={state.sub} />
             )}
+            {chat.match && <MatchSnippet match={chat.match} />}
             {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}
           </span>
         </button>

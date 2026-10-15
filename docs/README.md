@@ -16,6 +16,7 @@ What each document is for. Each one describes what runs today plus its open item
 - [SIMPLE_ORCHESTRATION.md](architecture/SIMPLE_ORCHESTRATION.md): what runs around an agent turn: one agent session per chat, the approval gate, the publish step, and how Spark's own harness was removed. [SIMPLE_ORCHESTRATION_TESTS.md](architecture/SIMPLE_ORCHESTRATION_TESTS.md) lists what happened to each test.
 - History, superseded by the file above: [HARNESS_PLAN.md](architecture/HARNESS_PLAN.md) and [HARNESS_SIMPLE.md](architecture/HARNESS_SIMPLE.md) (the harness; still the record of autonomy levels, provider permission modes and the safety floor decisions), [COORDINATOR_PLAN.md](architecture/COORDINATOR_PLAN.md) (pieces), [ROUTING_PLAN.md](architecture/ROUTING_PLAN.md) (per-role model routing), [UNIVERSAL_LAWS.md](architecture/UNIVERSAL_LAWS.md) (estimates and findings).
 - [JEV.md](architecture/JEV.md): the Jev decision service, used for the Map, pull request feedback sorting and the companion; data sent, rules for new uses.
+- [LESSONS.md](architecture/LESSONS.md): proposal for skill drafts from finished chats, accepted by the user, and a curator for agent-made skills.
 - [MODEL_CARDS.md](architecture/MODEL_CARDS.md): vendor facts and measured numbers per model, and how tiers are picked.
 - [ANALYTICS_PLAN.md](architecture/ANALYTICS_PLAN.md): the Analytics page and workflow optimizer; phases 4–6 are open.
 - [PROJECT_MAP.md](architecture/PROJECT_MAP.md): the Project Map builder, storage, API and page.

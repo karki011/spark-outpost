@@ -37,6 +37,11 @@ describe('remote policy', () => {
     }
   });
 
+  it('lets a paired device pause and resume Spark whatever the switches say', () => {
+    expect(remoteDecision('GET', '/api/spark-pause', ALL_OFF).kind).toBe('allow');
+    expect(remoteDecision('PUT', '/api/spark-pause', ALL_OFF).kind).toBe('allow');
+  });
+
   it('refuses the never list whatever the switches say', () => {
     for (const [route, rule] of ROUTE_RULES) {
       if (rule === 'never') expect([route, kindOf(route, ALL_ON)]).toEqual([route, 'refuse']);
@@ -65,6 +70,8 @@ describe('remote policy', () => {
       ['POST', '/api/remote/pairings'],
       ['GET', '/api/remote/devices'],
       ['PATCH', '/api/remote/switches'],
+      ['GET', '/api/remote/push/contact'],
+      ['PUT', '/api/remote/push/contact'],
       ['PUT', '/api/remote/access'],
       ['GET', '/api/diagnostics/export'],
       ['GET', '/api/remote/tailscale'],
@@ -144,6 +151,14 @@ describe('remote policy', () => {
     expect(kindOf('GET /api/remote/passkeys', ALL_ON)).toBe('allow');
     expect(kindOf('POST /api/remote/passkeys', { ...ALL_ON, passkeys: false })).toBe('refuse');
     expect(kindOf('DELETE /api/remote/devices/:id/passkeys', ALL_ON)).toBe('refuse');
+  });
+
+  it('lets a device turn notifications on only while its switch is on, and off at any time', () => {
+    const on = 'PUT /api/remote/push/subscription';
+    expect(kindOf(on, ALL_ON)).toBe('allow');
+    expect(kindOf(on, { ...ALL_ON, notifications: false })).toBe('refuse');
+    expect(kindOf('DELETE /api/remote/push/subscription', ALL_OFF)).toBe('allow');
+    expect(kindOf('GET /api/remote/push', ALL_OFF)).toBe('allow');
   });
 
   it('blocks mode and autonomy fields only when that switch is off', () => {
