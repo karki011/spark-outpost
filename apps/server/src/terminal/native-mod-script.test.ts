@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -471,5 +472,17 @@ describe('mod support', () => {
     expect(supportsMods('2.1.286 (Claude Code)')).toBe(false);
     expect(supportsMods('2.0.999')).toBe(false);
     expect(supportsMods('')).toBe(false);
+  });
+});
+
+const claudeCli = spawnSync('claude', ['--version'], { encoding: 'utf8' }).status === 0;
+
+describe.skipIf(!claudeCli)('the Spark mod against the installed Claude Code', () => {
+  it('passes claude plugin validate, so Claude Code loads it', async () => {
+    const checked = spawnSync('claude', ['plugin', 'validate', join(folder, 'mod')], {
+      encoding: 'utf8',
+      timeout: 60_000,
+    });
+    expect(checked.stdout + checked.stderr).toContain('Validation passed');
   });
 });
