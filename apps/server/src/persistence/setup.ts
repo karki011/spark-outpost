@@ -56,6 +56,7 @@ interface ProfileRow {
   wide_window: WideWindowLayout;
   busy_enter: BusyEnterAction;
   terminal_record_like_chat: boolean;
+  mac_control: boolean;
 }
 
 export interface ConnectionRow {
@@ -100,7 +101,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
        pr_follow_up_reviews, pr_follow_up_replies, pr_follow_up_ask, personality, agent_instructions, agent_instructions_file, default_level,
        default_level_notice,
        morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
-       heartbeat, wide_window, busy_enter, terminal_record_like_chat,
+       heartbeat, wide_window, busy_enter, terminal_record_like_chat, mac_control,
        to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
@@ -197,6 +198,7 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     wideWindow: profile.wide_window,
     busyEnter: profile.busy_enter,
     terminalRecordLikeChat: profile.terminal_record_like_chat,
+    macControl: profile.mac_control,
   };
   return { profile: result, providers, advisors };
 }
@@ -254,6 +256,7 @@ export async function updateProfile(
        agent_instructions = COALESCE($24, agent_instructions),
        agent_instructions_file = COALESCE($25, agent_instructions_file),
        terminal_record_like_chat = COALESCE($26, terminal_record_like_chat),
+       mac_control = COALESCE($27, mac_control),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -283,6 +286,7 @@ export async function updateProfile(
       update.agentInstructions?.trim() ?? null,
       update.agentInstructionsFile?.trim() ?? null,
       update.terminalRecordLikeChat ?? null,
+      update.macControl ?? null,
     ],
   );
 }

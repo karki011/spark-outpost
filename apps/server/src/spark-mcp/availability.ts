@@ -1,4 +1,5 @@
 import { conversationProjectIds } from '../agent-config/store.ts';
+import { macRunRefusal } from '../mac-control/offered.ts';
 import { outpostNeeds } from '../outposts/outpost-availability.ts';
 import { gitHubStatus } from '../ship/github/access.ts';
 import { openSlack } from '../slack/connection.ts';
@@ -22,6 +23,7 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   publish: true,
   pull_request_create: true,
   browser: true,
+  mac: true,
   outpost: true,
   outpost_draft: true,
 };
@@ -42,11 +44,12 @@ export async function sparkAvailability(
   deps: SparkToolDeps,
   scope: SparkScope,
 ): Promise<SparkAvailability> {
-  const [sources, slack, project, outposts] = await Promise.all([
+  const [sources, slack, project, outposts, macRefused] = await Promise.all([
     connectedSources(ticketDepsFor(deps, scope)),
     openSlack(slackDepsFor(deps, scope)),
     chatHasProject(deps, scope),
     outpostNeeds(deps.db, scope),
+    deps.mac ? macRunRefusal(deps.db, scope) : Promise.resolve('off' as const),
   ]);
   const gitHub = project ? await gitHubReach(deps, scope) : { connected: false, ownLogin: false };
   return {
@@ -57,6 +60,7 @@ export async function sparkAvailability(
     publish: project,
     pull_request_create: gitHub.ownLogin,
     browser: deps.browser !== undefined,
+    mac: macRefused === null,
     ...outposts,
   };
 }
@@ -64,7 +68,7 @@ export async function sparkAvailability(
 const HOW_TO_GET: Record<
   Exclude<
     SparkToolNeed,
-    'browser' | 'publish' | 'pull_request_create' | 'outpost' | 'outpost_draft'
+    'browser' | 'mac' | 'publish' | 'pull_request_create' | 'outpost' | 'outpost_draft'
   >,
   string
 > = {

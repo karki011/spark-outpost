@@ -62,7 +62,14 @@ async function quietly(work: Promise<unknown>): Promise<void> {
 
 function cardTitle(action: SparkAction): string {
   const question = sparkActionQuestion(action);
-  if (action.action === 'browser_sign_in') return question;
+  if (
+    action.action === 'browser_sign_in' ||
+    action.action === 'mac_use_app' ||
+    action.action === 'mac_act' ||
+    action.action === 'mac_press'
+  ) {
+    return question;
+  }
   if (action.action === 'create_ticket') return `${question} ${action.title}`;
   if (action.action === 'open_pr') return `${question} ${action.title}`;
   if (action.action === 'post_slack') return `${question} #${action.channel.name}`;

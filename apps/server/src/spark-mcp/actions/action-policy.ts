@@ -52,6 +52,12 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     'page|site|website|web|form|button|browser|online',
   ),
   browser_sign_in: null,
+  mac_use_app: null,
+  mac_act: asked(
+    'press|click|use|operate|control|calculate|choose|select|scroll|open',
+    'apps?|calculator|notes|textedit|mail|buttons?|menus?|mac|windows?',
+  ),
+  mac_press: null,
   post_slack: asked(
     'post|send|share|reply|tell|message|notify|announce|update',
     'slack|channel|thread',

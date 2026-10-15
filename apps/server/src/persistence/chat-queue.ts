@@ -1,4 +1,5 @@
 import { QUEUE_LIMIT, type QueuedMessage } from '@spark-outpost/contracts';
+import { rememberRemoteMessage } from '../remote/run-mark.ts';
 import type { Queryable } from './db.ts';
 
 export class QueueError extends Error {
@@ -95,6 +96,7 @@ export async function addToQueue(
      ON CONFLICT (id) DO NOTHING`,
     [item.id, conversationId, item.content, item.continueRunId ?? null],
   );
+  await rememberRemoteMessage(db, item.id);
 }
 
 export async function editQueued(

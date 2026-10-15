@@ -7,6 +7,7 @@ import {
   type RunStatus,
 } from '@spark-outpost/contracts';
 import { redactText, storableText } from '../audit/redact.ts';
+import { rememberRemoteMessage } from '../remote/run-mark.ts';
 import { alreadySent } from './chat-queue.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
@@ -203,6 +204,7 @@ async function queuePost(db: Queryable, post: PostRow, chatId: string): Promise<
      ON CONFLICT (id) DO NOTHING`,
     [post.id, chatId, post.body],
   );
+  await rememberRemoteMessage(db, post.id);
 }
 
 async function deliver(

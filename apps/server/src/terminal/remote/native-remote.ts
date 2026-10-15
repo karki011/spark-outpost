@@ -6,6 +6,7 @@ import type {
 } from '@spark-outpost/contracts';
 import { isRecord } from '../../agent-config/records.ts';
 import type { Db } from '../../persistence/db.ts';
+import { rememberRemoteTyping } from '../../remote/run-mark.ts';
 import { nativeTerminalRow } from '../../persistence/native-terminals.ts';
 import { switchRefusal } from '../../remote/policy.ts';
 import { remoteAccess } from '../../remote/store.ts';
@@ -235,6 +236,7 @@ export function nativeRemote(deps: NativeRemoteDeps) {
         if (!(await settled(conversationId, session)))
           throw new NativeRuntimeError(STOPPED_NOT_SENT, 409);
       }
+      await rememberRemoteTyping(deps.db, conversationId);
       await submit(conversationId, session, text);
     },
 

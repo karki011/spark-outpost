@@ -180,6 +180,36 @@ export const browserSignInActionSchema = z.object({
   origin: z.string().max(300),
 });
 export type BrowserSignInAction = z.infer<typeof browserSignInActionSchema>;
+const macApp = {
+  app: z.string().max(200),
+  bundleId: z.string().max(200),
+};
+export const macUseAppActionSchema = z.object({
+  action: z.literal('mac_use_app'),
+  ...macApp,
+  first: z.string().max(300),
+});
+export type MacUseAppAction = z.infer<typeof macUseAppActionSchema>;
+export const macActActionSchema = z.object({
+  action: z.literal('mac_act'),
+  ...macApp,
+  did: z.string().max(300),
+});
+export type MacActAction = z.infer<typeof macActActionSchema>;
+export const macPressActionSchema = z.object({
+  action: z.literal('mac_press'),
+  ...macApp,
+  what: z.string().max(300),
+  window: z.string().max(300).nullable(),
+});
+export type MacPressAction = z.infer<typeof macPressActionSchema>;
+export type MacAction = MacUseAppAction | MacActAction | MacPressAction;
+
+const MAC_ACTIONS: ReadonlySet<string> = new Set(['mac_use_app', 'mac_act', 'mac_press']);
+
+export function isMacAction(action: string): action is MacAction['action'] {
+  return MAC_ACTIONS.has(action);
+}
 export const postSlackActionSchema = z.object({
   action: z.literal('post_slack'),
   asYou: z.boolean().optional(),
@@ -207,6 +237,9 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   openPageActionSchema,
   actPageActionSchema,
   browserSignInActionSchema,
+  macUseAppActionSchema,
+  macActActionSchema,
+  macPressActionSchema,
   postSlackActionSchema,
 ]);
 export type SparkAction = z.infer<typeof sparkActionSchema>;
@@ -246,6 +279,9 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   open_page: [],
   act_page: [],
   browser_sign_in: [],
+  mac_use_app: [],
+  mac_act: [],
+  mac_press: [],
   post_slack: ['body'],
 };
 
@@ -354,6 +390,21 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
     confirm: 'Allow for this chat',
     doing: 'Allowing the sign-in…',
   },
+  mac_use_app: {
+    question: 'Let the agent use this app in this chat?',
+    confirm: 'Allow for this chat',
+    doing: 'Allowing the app…',
+  },
+  mac_act: {
+    question: 'Let the agent press buttons and menus in this app?',
+    confirm: 'Allow for this chat',
+    doing: 'Allowing the app…',
+  },
+  mac_press: {
+    question: 'Press this in another app?',
+    confirm: 'Press it',
+    doing: 'Allowing the press…',
+  },
   post_slack: {
     question: 'Post this to Slack?',
     confirm: 'Post to Slack',
@@ -368,6 +419,9 @@ export function sparkActionQuestion(action: SparkAction): string {
     return `Sign in to ${action.origin} as ${action.label}?`;
   }
   if (action.action === 'post_slack' && action.asYou) return SLACK_POST_AS_YOU_QUESTION;
+  if (action.action === 'mac_use_app') return `Let the agent use ${action.app} in this chat?`;
+  if (action.action === 'mac_act') return `Let the agent press buttons and menus in ${action.app}?`;
+  if (action.action === 'mac_press') return `Press ${action.what} in ${action.app}?`;
   return sparkActionLabels[action.action].question;
 }
 
@@ -398,6 +452,9 @@ const REPEATABLE: ReadonlySet<SparkActionName> = new Set([
   'open_page',
   'act_page',
   'browser_sign_in',
+  'mac_use_app',
+  'mac_act',
+  'mac_press',
 ]);
 
 export function sparkRetryAllowed(action: SparkAction, result: SparkResult | undefined): boolean {

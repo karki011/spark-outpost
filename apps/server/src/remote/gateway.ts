@@ -5,7 +5,14 @@ import { MUTATING_METHODS, loopbackHosts, refusedForShape } from '../api/securit
 import type { Db } from '../persistence/db.ts';
 import { entryTarget, isEntryReturn, mayHaveLostCookie, sendEntryBounce } from './entry-bounce.ts';
 import { sendPairingPage } from './pairing-page.ts';
-import { blockedFieldIn, cardSwitch, remoteDecision, switchRefusal } from './policy.ts';
+import {
+  MAC_CARD_REFUSAL,
+  blockedFieldIn,
+  cardSwitch,
+  macOnlyCard,
+  remoteDecision,
+  switchRefusal,
+} from './policy.ts';
 import {
   admitDevice,
   blockedFieldsOf,
@@ -13,6 +20,7 @@ import {
   remoteDeviceOf,
   type RemoteDevicePrincipal,
 } from './principal.ts';
+import { asDevice } from './run-mark.ts';
 import { deviceTokenOf, secretHash } from './session.ts';
 import {
   approvalPayload,
@@ -149,6 +157,7 @@ export function remoteGateway(deps: GatewayDeps) {
     if (!id.success) return null;
     const payload = await approvalPayload(db, workspaceId, id.data);
     if (payload === null) return null;
+    if (macOnlyCard(payload)) return 'mac';
     const needed = cardSwitch(payload);
     return needed && !switches[needed] ? needed : null;
   };
@@ -210,6 +219,10 @@ export function remoteGateway(deps: GatewayDeps) {
       return;
     }
     const cardNeeds = decision.card ? await cardRefusal(req, access.switches) : null;
+    if (cardNeeds === 'mac') {
+      await refuseDevice(req, res, device, 403, 'policy', MAC_CARD_REFUSAL);
+      return;
+    }
     if (cardNeeds) {
       await refuseDevice(req, res, device, 403, `switch:${cardNeeds}`, switchRefusal(cardNeeds));
       return;
@@ -244,8 +257,12 @@ export function remoteGateway(deps: GatewayDeps) {
         return;
       }
       const field = blockedFieldIn(req.body, blockedFieldsOf(res));
-      if (!device || !field) {
+      if (!device) {
         next();
+        return;
+      }
+      if (!field) {
+        asDevice(device.id, () => next());
         return;
       }
       await refuseDevice(req, res, device, 403, 'switch:agentMode', switchRefusal('agentMode'));
