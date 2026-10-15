@@ -1,10 +1,10 @@
 # Mac control
 
-> **Status: designed, not built (2026-10-15).** Agents operate other macOS apps for the user through the Accessibility tree. Mac app only, off until the user turns it on. It mirrors the [Browser pane](BROWSER.md); the owner's decisions are in [Decided](#decided).
+> **Status: Phase 1 built (2026-10-15): reading and pressing, one app per chat; see [Built in Phase 1](#built-in-phase-1). Phases 2 and 3 are designed, not built.** Agents operate other macOS apps for the user through the Accessibility tree. Mac app only, off until the user turns it on. It mirrors the [Browser pane](BROWSER.md); the owner's decisions are in [Decided](#decided).
 
 ## Pieces
 
-| Piece     | Where (planned)                                 | Does                                                                      |
+| Piece     | Where                                           | Does                                                                      |
 | --------- | ----------------------------------------------- | ------------------------------------------------------------------------- |
 | Helper    | `apps/desktop/mac-control/` (Swift package)     | `spark-mac-control`: walks the AX tree, holds refs, acts, captures, fills |
 | Host      | `apps/desktop/src/mac-control/`                 | Starts the helper, validates its messages, builds outlines, the indicator |
@@ -114,6 +114,32 @@ Every result is redacted, scrubbed and wrapped like a page: `<page_evidence … 
 ### Audit
 
 A `spark/mac` entry per call: tool, run, app and bundle id, window title (redacted), the action line (`Pressed button "Send"`), the decision and who made it, a character count for `type`, a screenshot's hash. A call no card approved is marked ran without review. Typed text and sign-in values are never recorded.
+
+## Built in Phase 1
+
+| Piece          | Where                                                                                                                                                 |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Helper         | `apps/desktop/mac-control/`: `MacControlCore` (refs, walk, targeting, ops over an `AXSource`), `spark-mac-control` (real AX, signatures, status)      |
+| Protocol       | `packages/contracts/src/mac-control-helper.ts` (helper), `mac-control-bridge.ts` (worker to main), `mac-control.ts` (hard limits, press floor, lines) |
+| Host           | `apps/desktop/src/mac-control/`: `helper-process.ts`, `control.ts` (lock, takeover, Stop, refusals), `outline.ts`, `indicator-window.ts`, `host.ts`   |
+| Worker client  | `apps/server/src/mac-control/host-client.ts` over the shared `parentPort` (`browser/bridge-client.ts`), in the worker and the API (Terminal sessions) |
+| Tools          | `apps/server/src/spark-mcp/tools/mac/`: `spark_mac_apps`, `spark_mac_read`, `spark_mac_act` (`press`, `menu`, `key`, `scroll`, `open`)                |
+| Who gets it    | `apps/server/src/mac-control/offered.ts`: the `profiles.mac_control` switch, no paired-device run, no child run, no read-only session                 |
+| Device marking | `apps/server/src/remote/run-mark.ts` (migration 0179)                                                                                                 |
+| UI             | Settings → **Mac control** (`MacControlSection.tsx`), the `/mac-indicator` page, the three card kinds (`MacFacts.tsx`)                                |
+
+How Phase 1 settles what the design left open:
+
+- **Cards.** `mac_use_app` (**Let the agent use <App> in this chat?**, every mode, remembered per chat by bundle id; reading counts), `mac_act` (the mode's card when the mode asks, remembered per chat and app), `mac_press` (**Press <what> in <App>?**, every mode, every time, never remembered; it waits the full approval timeout). A session with no turn to show a card on refuses instead.
+- **One app per chat.** An app another `mac_use_app` card in the chat allowed, or still waits on, makes a second app a plain refusal.
+- **Keys.** `key` takes only `space`, `return` and `enter`, on the focused element: Spark reads it first and classifies it like a press (a focused Buy is refused, a focused Send asks); Return and Enter always ask; Space on a secure field is refused. The helper presses with AXPress where it can; Return and Enter otherwise post the key to the app's process.
+- **Refind.** A ref that died is looked for again only when its stored identity is not a send, delete or money control.
+- **Hard limits.** Bundle ids in `mac-control.ts` (prefixes for browser and password-manager families), Spark by bundle id and by every process of the running app and its helper, an invalid signature, a `com.apple.` id without an Apple signature, and an app named like a refused app under another id. `open` refuses a listed id before launching and checks the signature right after.
+- **Takeover.** Main asks the helper for `status` before every call: not trusted, locked (console, lock flag, screen saver, display asleep) and hardware input since Spark's last call while the controlled app is frontmost all stop the call. A pause lasts until **Resume** or a call from another run (the user's next message).
+- **Stop.** The panel's **Stop**, or ⌃⌥⌘. (registered only while the panel shows), kills the helper and refuses the rest of that run; `end_run` at the turn's end hides the panel.
+- **Paired devices.** The gateway runs every admitted device request inside an `AsyncLocalStorage` scope, and a run inserted there gets `runs.remote_device_id`. A message a device queues is remembered by id (`remote_messages`) and marks the run that later sends it; a message a device types into a Terminal session marks the next Terminal turn within two minutes. The check runs at grant and again at every call. The gateway refuses any Mac control card to a device, behind no switch, and a device can't change `macControl`.
+- **Audit.** `spark/mac` entries carry tool, run, app, bundle id, action line and decision; `decision: mode` entries are marked `ranWithoutReview`. A read records a `mac_app` observation.
+- **Not built in Phase 1.** The island line, an Electron-level 2 s grace before killing the helper on Stop (it is killed at once), and `IsSecureEventInputEnabled` checks (no typing yet).
 
 ## Saved app sign-ins
 
