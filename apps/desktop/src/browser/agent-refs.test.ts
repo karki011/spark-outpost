@@ -47,13 +47,26 @@ function list(shift: number, names: string[]): FakeDocument {
 let shown = list(0, ['Write', 'Test']);
 let panes: BrowserPanes;
 
+const BOX = [0, 0, 20, 0, 20, 10, 0, 10];
+const UNDER_THE_POINTER: Record<string, unknown> = {
+  'DOM.getBoxModel': { model: { border: BOX } },
+  'DOM.getContentQuads': { quads: [BOX] },
+  'Page.getFrameTree': { frameTree: { frame: { id: 'main' } } },
+  'Page.createIsolatedWorld': { executionContextId: 9 },
+  'DOM.resolveNode': { object: { objectId: 'handle' } },
+  'Runtime.callFunctionOn': { result: { value: { state: 'clear', index: 0 } } },
+};
+
 function answer(method: string, params: Record<string, unknown>): unknown {
   const node = axOf(shown).find((each) => each.backendDOMNodeId === params.backendNodeId);
-  if (method === 'Accessibility.getPartialAXTree') return { nodes: node ? [node] : [] };
-  if (method === 'DOM.describeNode')
+  if (method === 'Accessibility.getPartialAXTree') {
+    const focused = [{ name: 'focused', value: { value: true } }];
+    return { nodes: node ? [{ ...node, properties: focused }] : [] };
+  }
+  if (method === 'DOM.describeNode') {
     return { node: { backendNodeId: params.backendNodeId, nodeName: 'BUTTON' } };
-  if (method === 'DOM.getBoxModel') return { model: { border: [0, 0, 20, 0, 20, 10, 0, 10] } };
-  return answerFor(() => shown)(method);
+  }
+  return UNDER_THE_POINTER[method] ?? answerFor(() => shown)(method);
 }
 
 beforeEach(() => {
@@ -99,15 +112,16 @@ describe('acting with a ref after the page re-rendered', () => {
     const read = await openAndRead();
     const done = refBeside(read.text, 'Test', 'button "Done"');
     shown = list(500, ['Test', 'Write']);
-    const checked = await op<PageAnswer>({ op: 'page', ...where, ref: done, action: 'scroll' });
+    const checked = await op<PageAnswer>({ op: 'page', ...where, ref: done, action: 'type' });
     expect(checked).toMatchObject({ target: { role: 'button', name: 'Done' }, refound: true });
     expect(checked.node).toBe(602);
     const acted = await op<{ target: { name: string } }>({
       op: 'act',
       ...where,
       tab: read.tabId,
-      action: 'scroll',
+      action: 'type',
       ref: done,
+      text: 'x',
       origin: 'http://localhost:5173',
       node: checked.node,
       epoch: checked.epoch,

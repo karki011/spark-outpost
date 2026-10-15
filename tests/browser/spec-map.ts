@@ -102,6 +102,7 @@ export const SPEC_GROUPS = {
     'preview',
     'shot-order',
     'sign-in-fill',
+    'act-hit',
     'sign-ins',
   ],
   'sidebar-projects': [

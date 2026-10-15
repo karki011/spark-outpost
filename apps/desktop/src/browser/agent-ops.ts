@@ -212,7 +212,14 @@ async function act(panes: BrowserPanes, request: Request<'act'>, signal: AbortSi
     }
     const target = await actOnPage(
       cdp,
-      { action, node, text: request.text, key, direction },
+      {
+        action,
+        node,
+        ref: request.ref,
+        text: request.text,
+        key,
+        direction,
+      },
       { filled: tab.filled, history: (step) => tab.history(step), signal },
     );
     const did = browserActLine({ action, target, key, direction });
