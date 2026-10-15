@@ -12,6 +12,7 @@ import { buildTurns } from './turns.ts';
 import { TurnSection } from './TurnSection.tsx';
 import { TodaySoFar } from './today/TodaySoFar.tsx';
 import { useStickToBottom } from './use-stick-to-bottom.ts';
+import { useMessageJump } from './message-jump.ts';
 import { QuoteMarks } from './quotes/QuoteMarks.tsx';
 import { QuoteToolbar } from './quotes/QuoteToolbar.tsx';
 import { PendingSends } from './send/PendingSends.tsx';
@@ -52,7 +53,8 @@ export const Thread = memo(function Thread({
   const voice = useVoice();
   const { remote } = useRemoteClient();
   useRestoredAgentTabs(remote ? null : detail.conversation.id);
-  const { scrollerRef, scroller, away, follow, jumpToLatest } = useStickToBottom();
+  const { scrollerRef, scroller, away, follow, release, jumpToLatest } = useStickToBottom();
+  useMessageJump(detail.conversation.id, scroller, release, detail.messages.length);
   const turns = buildTurns(detail);
   const parentOf = new Map(detail.runs.map((run) => [run.id, run.parentRunId ?? run.id]));
   const taskAfterRun = new Map(

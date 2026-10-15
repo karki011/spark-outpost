@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { requestMessageJump } from '../chat/message-jump.ts';
 import { focusOpenedSession } from './focus-session.ts';
 import { isPaletteShortcut } from './palette-model.ts';
 import { usePaletteRequests } from './palette-request.ts';
@@ -42,8 +43,10 @@ export function SessionPaletteHost({ onOpenChat }: { onOpenChat: (chatId: string
         onOpenChat={(chat) => {
           setOpen(false);
           returnTo.current = null;
+          const terminal = isTerminalSession(chat);
+          if (chat.match && !terminal) requestMessageJump(chat.id, chat.match);
           onOpenChat(chat.id);
-          focusOpenedSession(isTerminalSession(chat));
+          focusOpenedSession(terminal);
         }}
         onClose={close}
       />

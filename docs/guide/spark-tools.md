@@ -15,7 +15,7 @@ Ticket, Slack and pull request tools need their connector; pull request and map 
 | You ask about                                              | Tool                                                                                                                  |
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | What needs you, failed chats, flagged tickets              | `spark_attention`                                                                                                     |
-| Chats, a chat you shared, its runs, queue, earlier turns   | `spark_chats`, `spark_chat`, `spark_chat_history`                                                                     |
+| Chats, matching lines, a shared chat, runs, queue, turns   | `spark_chats`, `spark_chat`, `spark_chat_history`                                                                     |
 | A run or task: plan, files changed, cost                   | `spark_run`, `spark_task`                                                                                             |
 | Spend, activity, analytics, the morning brief              | `spark_spend`, `spark_activity`, `spark_analytics`, `spark_brief`                                                     |
 | Pull requests, their checks and reviews                    | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                                               |
