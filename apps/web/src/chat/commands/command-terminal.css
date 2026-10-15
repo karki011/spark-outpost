@@ -180,7 +180,7 @@
   margin: 0;
   height: 100%;
   overflow: auto;
-  font-family: var(--font-mono);
+  font-family: var(--font-terminal);
   font-size: 12.5px;
   line-height: 1.25;
   color: var(--text);
