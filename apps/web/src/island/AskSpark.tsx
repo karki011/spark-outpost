@@ -97,7 +97,7 @@ export function AskSpark({ fast, voice, focusDelay, onOpenChat }: AskSparkProps)
   useEffect(() => {
     const conversation = assistant.detail?.conversation;
     if (conversation?.unread && !thinking)
-      void api.markConversationRead(conversation.id).catch(() => null);
+      void api.markConversationSeen(conversation.id).catch(() => null);
   }, [assistant.detail, thinking]);
 
   const ask = useMutation({

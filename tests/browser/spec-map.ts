@@ -118,6 +118,7 @@ export const SPEC_GROUPS = {
     'sidebar-layout',
     'sidebar-projects',
     'sidebar-sections',
+    'sidebar-seen-blobs',
   ],
   tasks: ['tasks'],
   tickets: [

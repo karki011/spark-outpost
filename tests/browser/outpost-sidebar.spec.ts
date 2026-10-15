@@ -120,7 +120,8 @@ test('member chats are listed under their outpost and not under their project', 
   await seeded(page);
   await expect(fold(page)).toHaveAttribute('aria-expanded', 'true');
   await expect(memberRows(page).locator('.tt')).toHaveText(['Frontend', 'Orders API']);
-  await expect(memberRows(page).locator('.row-handle')).toHaveText(['@fe', '@api']);
+  await expect(memberRow(page, 'Frontend').locator('.row-open')).toHaveAccessibleName(/, @fe/);
+  await expect(memberRow(page, 'Orders API').locator('.row-open')).toHaveAccessibleName(/, @api/);
   await expect(memberRow(page, 'Frontend').locator('.chat-face')).toBeVisible();
   await expect(outpostRow(page, NAME)).toHaveAccessibleName(NAME);
   await expect(fold(page)).toHaveAccessibleName(`2 chats in ${NAME}`);
@@ -172,7 +173,7 @@ test('a chat that leaves its outpost returns to its project', async ({ page }) =
   await expect(project(page).locator('.row .tt')).toHaveText(['Frontend', 'Docs site'], {
     ignoreCase: true,
   });
-  await expect(project(page).locator('.row-handle')).toHaveCount(0);
+  await expect(project(page).locator('.row-open[title*="@"]')).toHaveCount(0);
   await expect(project(page).getByLabel('2 chats', { exact: true })).toHaveText('2');
 });
 
@@ -241,9 +242,8 @@ test('a member that needs you shows it on its row and on the collapsed outpost',
   await seeded(page, true);
   const frontend = memberRow(page, 'Frontend');
   await expect(frontend).toHaveClass(/st-asking/);
-  await expect(frontend.getByRole('img', { name: 'Needs your input' })).toBeVisible();
-  await expect(frontend.locator('.row-handle')).toHaveText('@fe');
-  await expect(frontend.locator('.sub')).toHaveText('Jev has a question');
+  await expect(frontend.getByRole('img', { name: 'Waiting for you' })).toBeVisible();
+  await expect(frontend.locator('.row-open')).toHaveAttribute('title', /@fe/);
 
   await openOutpost(page);
   await say(page, '@api Deploy the orders service\n\nNeeds you: which region?\n\nThanks');

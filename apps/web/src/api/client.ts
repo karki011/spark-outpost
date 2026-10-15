@@ -114,8 +114,8 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(update),
     }),
-  markConversationRead: (id: string): Promise<null> =>
-    request(z.null(), `/conversations/${id}/read`, { method: 'POST', body: '{}' }),
+  markConversationSeen: (id: string): Promise<null> =>
+    request(z.null(), `/conversations/${id}/seen`, { method: 'POST', body: '{}' }),
   resetSessionDraft: (id: string): Promise<ConversationSummary> =>
     request(conversationSummarySchema, '/conversations', {
       method: 'POST',

@@ -72,7 +72,7 @@ export async function seedTrackedPulls(
     const runId = randomUUID();
     const taskId = randomUUID();
     await db.query(
-      `INSERT INTO conversations (id, workspace_id, title, last_read_at)
+      `INSERT INTO conversations (id, workspace_id, title, seen_at)
        VALUES ($1, $2, $3, now())`,
       [conversationId, workspaceId, SEED_TITLE],
     );

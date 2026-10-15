@@ -93,6 +93,8 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
         ...chatPreview(event),
         ...terminalRemote(event),
       ];
+    case 'seen':
+      return [list];
     case 'run':
       return [
         list,

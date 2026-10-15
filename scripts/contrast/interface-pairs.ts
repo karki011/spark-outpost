@@ -235,6 +235,22 @@ export const DROP_TARGET: Pair[] = Object.entries(DROP_BASES).flatMap(([surface,
   })),
 );
 
+const BLOB_FILLS = {
+  working: 'var(--accent)',
+  waiting: 'var(--warn)',
+  done: 'var(--success)',
+  failed: 'var(--danger)',
+};
+
+export const SIDEBAR_BLOBS: Pair[] = Object.entries(BLOB_FILLS).map(([state, fg]) => ({
+  id: `sidebar.blob-${state}`,
+  group: 'Chat list blobs',
+  label: `${state} blob on a chat row, resting or hovered`,
+  fg,
+  bg: ['var(--bg)', 'var(--raise)'],
+  kind: 'ui' as const,
+}));
+
 const PROVIDER_IDS = ['claude', 'codex', 'zai', 'jev'] as const;
 
 export const PROVIDERS: Pair[] = [

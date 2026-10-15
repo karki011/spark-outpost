@@ -117,7 +117,7 @@ test('create a Spark, open its home thread and see its face in the chat', async 
   const row = sidebar(page).getByRole('button', { name: 'Ada with Ada' });
   await expect(row).toBeVisible();
   await expect(sidebar(page).locator('.rface')).toHaveCount(1);
-  await expect(sidebar(page).locator('.row:has(.rface) .st > *:not(.st-mark)')).toHaveCount(1);
+  await expect(sidebar(page).locator('.row:has(.rface) .st > *')).toHaveCount(1);
   await expect(sidebar(page).locator('.row:has(.rface) .chat-face')).toHaveCount(0);
   await sidebar(page)
     .getByRole('group', { name: 'Filter chats by Spark' })

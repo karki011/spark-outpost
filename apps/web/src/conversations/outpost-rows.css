@@ -34,27 +34,6 @@
   padding-left: 4px;
 }
 
-.row-member {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: 6px;
-  min-width: 0;
-}
-
-.row-handle {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  font-size: 12px;
-  line-height: 1.35;
-  color: var(--faint);
-}
-
-.row-member .sub {
-  flex: 1 1 4ch;
-  min-width: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .op-fold .chev {
     transition: none;

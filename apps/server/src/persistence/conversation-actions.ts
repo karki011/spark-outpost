@@ -52,16 +52,19 @@ export async function orderPinned(
   );
 }
 
-export async function markConversationRead(
+export async function markConversationSeen(
   db: Queryable,
   workspaceId: string,
   id: string,
 ): Promise<void> {
   const { rowCount } = await db.query(
-    'UPDATE conversations SET last_read_at = now() WHERE id = $1 AND workspace_id = $2',
+    'UPDATE conversations SET seen_at = now() WHERE id = $1 AND workspace_id = $2',
     [id, workspaceId],
   );
   if (!rowCount) throw new ConversationNotFoundError(id);
+  await db.query(`SELECT pg_notify('changes', $1)`, [
+    JSON.stringify({ kind: 'seen', conversationId: id, runId: null }),
+  ]);
 }
 
 export async function deleteConversation(db: Db, workspaceId: string, id: string): Promise<void> {

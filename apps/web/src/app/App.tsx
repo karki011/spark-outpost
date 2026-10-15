@@ -24,6 +24,7 @@ import { turnAnchor } from '../chat/outline/outline-model.ts';
 import { ConversationList } from '../conversations/ConversationList.tsx';
 import { attention, isRunning, rowState } from '../conversations/row-state.ts';
 import { SidebarLayoutProvider, useSidebarLayoutState } from '../conversations/sidebar-layout.tsx';
+import { useMarkSeen } from '../conversations/use-mark-seen.ts';
 import { isDocLinkOpen, leaveDocs, useDocLinks } from '../docs/doc-route.ts';
 import { DocsSkeleton } from '../docs/DocsSkeleton.tsx';
 import { Home } from '../home/Home.tsx';
@@ -232,7 +233,9 @@ function ChatShell({ entering }: { entering: boolean }) {
     selectedId ??
     chats.find((chat) => !chat.archivedAt)?.id ??
     (conversations.data ? draftId : null);
-  useShareOnScreenChat(view === 'chats' && !openOutpostId && !settings ? activeId : null);
+  const onScreenId = view === 'chats' && !openOutpostId && !settings ? activeId : null;
+  useShareOnScreenChat(onScreenId);
+  useMarkSeen(onScreenId, chats);
 
   const classes = [
     'app',

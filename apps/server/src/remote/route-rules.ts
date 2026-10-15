@@ -50,7 +50,7 @@ GET /api/conversations/:id/agent-commands
 GET /api/conversations/:id/agent-terminals
 PATCH /api/conversations/:id
 POST /api/conversations/:id/fresh-session
-POST /api/conversations/:id/read
+POST /api/conversations/:id/seen
 PUT /api/conversations/pinned-order
 GET /api/home/digest
 GET /api/home/today

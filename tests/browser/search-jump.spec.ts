@@ -15,7 +15,7 @@ async function seedLongChat(): Promise<void> {
     const workspaceId = await ensureLocalWorkspace(db);
     const long = randomUUID();
     await db.query(
-      `INSERT INTO conversations (id, workspace_id, title, updated_at, last_read_at)
+      `INSERT INTO conversations (id, workspace_id, title, updated_at, seen_at)
        VALUES ($1, $2, 'Database moves', now() - interval '1 hour', now())`,
       [long, workspaceId],
     );
@@ -42,7 +42,7 @@ async function seedLongChat(): Promise<void> {
     }
     const other = randomUUID();
     await db.query(
-      `INSERT INTO conversations (id, workspace_id, title, last_read_at)
+      `INSERT INTO conversations (id, workspace_id, title, seen_at)
        VALUES ($1, $2, 'Newest chat', now())`,
       [other, workspaceId],
     );

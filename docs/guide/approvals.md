@@ -31,7 +31,7 @@ In **Bypass permissions**, **Approve for me** or **Full access**, Spark doesn't 
 
 - Each such tool call is marked **Ran without review** in the audit log.
 - An action that crosses a protected path, or pushes a branch that isn't the chat's own, gets a card, such as "Bolt wrote outside the project: ~/x.txt", with **Revert** and **Dismiss**.
-- The chat shows **Flagged by Spark** in the chat list and on Spark Island until you answer.
+- The chat shows **Waiting for you** in the chat list and **Flagged by Spark** on the island until you answer.
 
 ## Sending data out after reading secrets
 

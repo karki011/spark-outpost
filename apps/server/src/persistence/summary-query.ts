@@ -43,9 +43,11 @@ export const summaryQuery = `
       FROM (${workReply('r.id', 'm.content')}) work
     ) END AS latest_run_asking_reply,
     COALESCE(
-      r.status = 'succeeded' AND r.finished_at > COALESCE(c.last_read_at, '-infinity'::timestamptz),
+      r.status = 'succeeded' AND r.finished_at > COALESCE(c.seen_at, '-infinity'::timestamptz),
       false
     ) AS unread,
+    c.seen_at, r.finished_at AS latest_run_finished_at,
+    COALESCE(p.pending_created_at, fl.flag_created_at) AS waiting_since,
     COALESCE(
       r.status = 'awaiting_approval' OR p.pending_id IS NOT NULL OR fl.flag_id IS NOT NULL, false
     ) AS needs_input,
@@ -74,7 +76,8 @@ export const summaryQuery = `
     WHERE conversation_id = c.id AND parent_run_id IS NULL ORDER BY created_at DESC LIMIT 1
   ) r ON true
   LEFT JOIN LATERAL (
-    SELECT a.id AS pending_id, a.kind AS pending_kind, a.title AS pending_title,
+    SELECT a.id AS pending_id, a.created_at AS pending_created_at, a.kind AS pending_kind,
+      a.title AS pending_title,
       a.payload->>'command' AS pending_command, a.payload->'paths' AS pending_paths,
       CASE WHEN ar.parent_run_id IS NOT NULL THEN ar.route->>'name' END AS pending_agent,
       m.name AS pending_member, a.payload->'checkpoint'->>'agent' AS pending_asker,
@@ -95,7 +98,8 @@ export const summaryQuery = `
     ORDER BY a.created_at, a.id LIMIT 1
   ) p ON true
   LEFT JOIN LATERAL (
-    SELECT f.id AS flag_id, f.title AS flag_title FROM rail_flags f
+    SELECT f.id AS flag_id, f.title AS flag_title, f.created_at AS flag_created_at
+    FROM rail_flags f
     WHERE f.conversation_id = c.id AND f.status = 'open'
     ORDER BY f.created_at DESC LIMIT 1
   ) fl ON true`;

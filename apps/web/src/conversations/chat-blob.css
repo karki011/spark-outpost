@@ -1,0 +1,45 @@
+.rblob-slot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  display: grid;
+  place-items: center;
+}
+
+.rblob {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: sb-popin 0.2s var(--out);
+}
+
+.rblob.working {
+  border: 2px solid var(--accent);
+  animation:
+    sb-popin 0.2s var(--out),
+    rblob-pulse 1.6s ease-in-out 0.2s infinite;
+}
+
+.rblob.waiting {
+  background: var(--warn);
+}
+
+.rblob.done {
+  background: var(--success);
+}
+
+.rblob.failed {
+  background: var(--danger);
+}
+
+@keyframes rblob-pulse {
+  50% {
+    transform: scale(0.7);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rblob.working {
+    animation: none;
+  }
+}

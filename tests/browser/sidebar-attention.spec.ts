@@ -59,26 +59,23 @@ test('rows say whether a chat wants permission, input, or a review', async ({ pa
   await expect(page.locator('.chat-title')).toHaveText('Current chat');
 
   await expect(row(page, 'Run the suite')).toHaveClass(/st-permission/);
-  await expect(row(page, 'Run the suite').locator('.st .dia')).toBeVisible();
-  await expect(row(page, 'Run the suite').locator('.sub')).toHaveText(
-    'Fake provider wants to run pnpm test',
-  );
-  await expect(row(page, 'Tidy the formatter').locator('.sub')).toHaveText(
-    'Fake provider wants to edit format.ts',
+  await expect(row(page, 'Run the suite').locator('.row-open')).toHaveAttribute(
+    'title',
+    /Asking permission/,
   );
   await expect(row(page, 'Pick a heading')).toHaveClass(/st-asking/);
-  await expect(row(page, 'Pick a heading').locator('.st .ask')).toBeVisible();
-  await expect(row(page, 'Pick a heading').locator('.sub')).toHaveText('Jev has a question');
-  await expect(
-    row(page, 'Run the suite').getByRole('img', { name: 'Asking permission' }),
-  ).toBeVisible();
-  await expect(
-    row(page, 'Pick a heading').getByRole('img', { name: 'Needs your input' }),
-  ).toBeVisible();
+  await expect(row(page, 'Pick a heading').locator('.row-open')).toHaveAttribute(
+    'title',
+    /Needs your input/,
+  );
+  for (const title of ['Run the suite', 'Tidy the formatter', 'Pick a heading']) {
+    await expect(row(page, title).getByRole('img', { name: 'Waiting for you' })).toBeVisible();
+  }
 
   await expect(row(page, 'Ship the notes')).toHaveClass(/st-done/);
-  await expect(row(page, 'Ship the notes').locator('.sub')).toHaveText('Finished · open to review');
-  await expect(row(page, 'Mock fetch').locator('.sub')).toHaveText('Stopped: rate limit reached');
+  await expect(row(page, 'Ship the notes').getByRole('img', { name: 'Done' })).toBeVisible();
+  await expect(row(page, 'Mock fetch')).toHaveClass(/st-error/);
+  await expect(sidebar(page).locator('.sub')).toHaveCount(0);
 
   await expect(
     page.getByRole('navigation', { name: 'Main' }).getByLabel('3 chats need your input'),

@@ -16,16 +16,25 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 | **Connected · Local CLI** / **API key** | Ready.                                     |
 | **Error**                               | Open the tile; **Test** says what's wrong. |
 
+## Chat list
+
+Rows show only the title. A dot says what happened since you last opened the chat; opening it clears the dot, and a paired device agrees. Point at the row for detail, such as **Asking permission**.
+
+| Dot                         | Means                                                                      |
+| --------------------------- | -------------------------------------------------------------------------- |
+| **Working**: a pulsing ring | A turn or Terminal session is running.                                     |
+| **Waiting for you**: amber  | A card, a question, or a Terminal session waiting for input or permission. |
+| **Done**: green             | A turn finished.                                                           |
+| **Couldn't finish**: red    | A turn failed or was interrupted.                                          |
+
 ## Chats and Sparks
 
-| Status                | Where             | Means                                                                  |
-| --------------------- | ----------------- | ---------------------------------------------------------------------- |
-| **Asking permission** | Chat list         | An approval card waits.                                                |
-| **PR feedback**       | Chat list         | PR follow-up needs you.                                                |
-| **Flagged by Spark**  | Chat list, island | An unreviewed action crossed a protected path.                         |
-| **Working**           | Spark card        | A request in one of its chats is running.                              |
-| **Needs you**         | Spark card        | A card in one of its chats waits.                                      |
-| **Done** / **Failed** | Spark card        | Its latest request finished in the last hour / failed in the last day. |
+| Status                | Where      | Means                                                                  |
+| --------------------- | ---------- | ---------------------------------------------------------------------- |
+| **Flagged by Spark**  | Island     | An unreviewed action crossed a protected path.                         |
+| **Working**           | Spark card | A request in one of its chats is running.                              |
+| **Needs you**         | Spark card | A card in one of its chats waits.                                      |
+| **Done** / **Failed** | Spark card | Its latest request finished in the last hour / failed in the last day. |
 
 ## Outpost requests
 
