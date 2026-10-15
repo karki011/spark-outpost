@@ -148,6 +148,7 @@ Added with outposts ([A2A_CHATS.md](A2A_CHATS.md), October 9, 2026), with no new
 - Never from a phone: both A2A routes, `GET /api/a2a/chats/:chatId/.well-known/agent-card.json` and `POST /api/a2a/chats/:chatId`. A paired phone has no A2A endpoint, and a remote request never passes the launch-token check those routes need.
 - Added with release 2 of outposts, always allowed: `POST /api/outposts/:id/posts/:postId/start-now` (Start anyway on a held request, like cancel) and `GET /api/conversations/:id/outpost-drafts` (the draft line under a turn; counts and ids only).
 - Never from a phone: `GET /api/outposts/drafts/:id`, the draft the create sheet opens from. Starting a story is `POST /api/outposts`, which is create and membership and stays on the Mac; on a phone the draft line reads "Review and start on your Mac".
+- Added with Pause Spark ([A2A_CHATS.md](A2A_CHATS.md#16-pause-spark-october-14-2026)), always allowed: `GET` and `PUT /api/spark-pause`. Pausing only holds work that would start by itself, so a device may pause and resume like the Mac.
 - The web app does not yet hide **New outpost**, **Add to outpost**, the chat list of the edit sheet or **Hold to delete outpost** on a phone; the gateway refuses the request.
 
 What a phone is shown differently (`apps/server/src/remote/redaction.ts`):

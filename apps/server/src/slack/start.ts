@@ -17,6 +17,7 @@ import {
   saveSlackChatThread,
   settleSlackDeliveries,
 } from '../persistence/slack.ts';
+import { sparkPaused } from '../persistence/spark-pause.ts';
 import { PLAN_COMMAND, PLAN_FIRST_LINE } from '../tickets/request.ts';
 import { requireSlackPlace } from './access.ts';
 import { saveSlackThreadAttachment } from './context.ts';
@@ -26,6 +27,7 @@ import { readSlackThread, type SlackThread } from './thread.ts';
 import { SlackChannelNotAllowedError } from './web-api.ts';
 
 const SLACK_START_MESSAGE_MAX_LENGTH = 20_000;
+const SLACK_PAUSED_MESSAGE = 'Spark is paused, so it starts no work from Slack.';
 
 export interface SlackStartDeps extends SlackDeps {
   runTarget(conversationId: string): Promise<RunTarget>;
@@ -46,7 +48,7 @@ export interface SlackStartRequest {
 
 export class SlackStartRefusedError extends Error {
   constructor(
-    readonly reason: 'off' | 'user_not_allowed' | 'duplicate',
+    readonly reason: 'off' | 'paused' | 'user_not_allowed' | 'duplicate',
     message: string,
   ) {
     super(message);
@@ -110,6 +112,9 @@ async function checked(deps: SlackDeps, request: SlackStartRequest): Promise<Ope
       request,
       new SlackStartRefusedError('off', 'Start work from Slack is off in Settings.'),
     );
+  }
+  if (fromSlack && (await sparkPaused(deps.db, deps.workspaceId))) {
+    return refuse(deps, request, new SlackStartRefusedError('paused', SLACK_PAUSED_MESSAGE));
   }
   if (!mayStart(open, request.userId)) {
     return refuse(

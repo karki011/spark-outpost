@@ -10,15 +10,15 @@ These hold in every chat, agent mode and autonomy level, not in [Terminal sessio
 
 ## What always asks
 
-| What                         | Examples                                                                                                             | What happens                                                                   |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| **Secret files**             | See the list below                                                                                                   | Claude refuses changes; Codex asks. Reading follows your agent's mode.         |
-| **Files in `.sparkignore`**  | Anything you [list](sparkignore.md)                                                                                  | Reading asks too.                                                              |
-| **Agent instruction files**  | `AGENTS.md` and `CLAUDE.md` at any depth, `.github/copilot-instructions.md`, `.claude/`, `.cursor/rules/`, `.spark/` | Always ask, with **Allow once** or **Allow for this chat**.                    |
-| **Git hooks and config**     | `.git/hooks/*`, `.git/config`, a `git config` command that sets a value, `--global` too                              | Ask with hold to confirm, in a worktree too. Other `.git` files can't change.  |
-| **Outside the linked repos** | Changing or deleting files outside the project                                                                       | Asks, naming the path. Temp folders such as `/tmp` follow your mode. No reads. |
-| **Force pushes**             | `git push --force-with-lease` to a named, non-default branch                                                         | Asks with hold to confirm; no "always" option.                                 |
-| **Sending a secret value**   | A push, a `gh` upload, or an address or text an agent sends to a site, holding a secret file's value                 | Asks with hold to confirm, naming the file.                                    |
+| What                         | Examples                                                                                                                                    | What happens                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Secret files**             | See the list below                                                                                                                          | Claude refuses changes; Codex asks. Reading follows your agent's mode.         |
+| **Files in `.sparkignore`**  | Anything you [list](sparkignore.md)                                                                                                         | Reading asks too.                                                              |
+| **Agent instruction files**  | `AGENTS.md` and `CLAUDE.md` at any depth, `.github/copilot-instructions.md`, `.agents/`, `.claude/`, `.codex/`, `.cursor/rules/`, `.spark/` | Always ask, with **Allow once** or **Allow for this chat**.                    |
+| **Git hooks and config**     | `.git/hooks/*`, `.git/config`, a `git config` command that sets a value, `--global` too                                                     | Ask with hold to confirm, in a worktree too. Other `.git` files can't change.  |
+| **Outside the linked repos** | Changing or deleting files outside the project                                                                                              | Asks, naming the path. Temp folders such as `/tmp` follow your mode. No reads. |
+| **Force pushes**             | `git push --force-with-lease` to a named, non-default branch                                                                                | Asks with hold to confirm; no "always" option.                                 |
+| **Sending a secret value**   | A push, a `gh` upload, or an address or text an agent sends to a site, holding a secret file's value                                        | Asks with hold to confirm, naming the file.                                    |
 
 ![The Change agent instructions card with Allow once, Allow for this chat and Deny](images/approvals-instructions-light.png)
 

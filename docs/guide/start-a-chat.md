@@ -54,7 +54,9 @@ For several chats in one thread, use an [outpost](outposts.md).
 
 1. Press **⌘⇧K**, or select **Sessions** above the chat list.
 2. Read the list: sessions that need you come first, then working ones. A Terminal session shows its steps and cost.
-3. Type to filter by title, project, agent or state.
-4. Press **↑** or **↓**, then **Enter**. **Esc** closes.
+3. Type to filter by title, project, agent, state or message text. Words match from their start, so `deplo` finds "deploy". A message match shows its line under the name.
+4. Press **↑** or **↓**, then **Enter**. A chat found by a message opens at that message. **Esc** closes.
+
+**Search chats** (**⌘K**) also shows the matching line and opens the chat there.
 
 **Next:** [Pick the model, effort and mode](agent-mode.md)

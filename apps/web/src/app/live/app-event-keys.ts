@@ -19,6 +19,7 @@ import {
   terminalStartKey,
 } from '../../terminal/terminal-api.ts';
 import { ticketKeys } from '../../tickets/tickets-api.ts';
+import { sparkPauseKey } from '../pause/spark-pause-api.ts';
 
 interface Invalidation {
   queryKey: QueryKey;
@@ -147,6 +148,8 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
             { queryKey: nativeTerminalKey(event.conversationId), exact: true },
           ]
         : [];
+    case 'spark_pause':
+      return [{ queryKey: sparkPauseKey, exact: true }];
   }
 }
 

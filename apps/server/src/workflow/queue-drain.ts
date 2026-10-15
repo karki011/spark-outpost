@@ -7,7 +7,9 @@ import {
   QueueError,
   takePostedAfterStop,
   takeQueued,
+  takeTypedRequest,
 } from '../persistence/chat-queue.ts';
+import { chatSparkPaused, sparkPausedForChat } from '../persistence/spark-pause.ts';
 import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
 import { postAttachmentIds } from '../persistence/outpost-posts.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
@@ -19,7 +21,7 @@ import {
 } from '../persistence/member-messages.ts';
 
 export type ResolveTarget = (conversationId: string) => Promise<RunTarget>;
-export type DrainOutcome = 'sent' | 'busy' | 'paused' | 'empty';
+export type DrainOutcome = 'sent' | 'busy' | 'paused' | 'held' | 'empty';
 
 const ACTIVE = `('queued', 'running', 'awaiting_approval')`;
 
@@ -87,15 +89,33 @@ async function sendQueued(
   });
 }
 
+async function sendTypedWhilePaused(
+  db: Queryable,
+  conversationId: string,
+  typedPostId: string | undefined,
+  target: RunTarget,
+): Promise<DrainOutcome> {
+  if (!typedPostId) return 'held';
+  const flowing = await lastTurnSucceeded(db, conversationId);
+  const typed = await takeTypedRequest(db, conversationId, typedPostId, flowing);
+  if (!typed) return 'held';
+  await sendQueued(db, conversationId, typed, target);
+  return 'sent';
+}
+
 export async function drainQueue(
   db: Db,
   conversationId: string,
   resolveTarget: ResolveTarget,
+  typedPostId?: string,
 ): Promise<DrainOutcome> {
   const target = await resolveTarget(conversationId);
   return withTransaction(db, async (client) => {
     if (!(await lockConversation(client, conversationId))) return 'empty';
     if (await activeTurn(client, conversationId)) return 'busy';
+    if (await chatSparkPaused(client, conversationId)) {
+      return sendTypedWhilePaused(client, conversationId, typedPostId, target);
+    }
     const urgent = (await urgentLeftovers(client, conversationId))[0];
     if (urgent) {
       await sendInTransaction(
@@ -184,7 +204,8 @@ export async function waitingQueues(db: Queryable, limit = 20): Promise<string[]
          AND (m.status = 'interrupting'
            OR (m.status = 'queued' AND (m.urgency = 'now' OR target.parent_run_id IS NULL)))
      ) c
-     WHERE NOT EXISTS (
+     WHERE NOT ${sparkPausedForChat('c.conversation_id')}
+     AND NOT EXISTS (
        SELECT 1 FROM runs r WHERE r.conversation_id = c.conversation_id
          AND r.parent_run_id IS NULL AND r.status IN ${ACTIVE}
      )

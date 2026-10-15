@@ -128,6 +128,21 @@ describe('palette order', () => {
       ['From last year', 'recent'],
     ]);
   });
+
+  it('keeps the server snippet and orders each group by search rank', () => {
+    const match = (n: number) => ({
+      messageId: uuid(100 + n),
+      runId: null,
+      parts: [{ text: `hit ${n}`, match: true }],
+    });
+    const loaded = [chat(1, { title: 'Alpha' }), chat(2, { title: 'Beta' })];
+    const found = [chat(1, { match: match(1) }), chat(2, { match: match(2) })];
+    const entries = paletteEntries(loaded, found, NAMES, 'hit');
+    expect(entries.map((entry) => [entry.chat.title, entry.chat.match?.parts[0]?.text])).toEqual([
+      ['Alpha', 'hit 1'],
+      ['Beta', 'hit 2'],
+    ]);
+  });
 });
 
 describe('palette rows', () => {

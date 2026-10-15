@@ -6,6 +6,7 @@ import type { BlobExpression } from '../brand/blob-expression.ts';
 import { UserBlob } from '../brand/UserBlob.tsx';
 import { SIDEBAR_HINT, useSidebarLayout } from '../conversations/sidebar-layout.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
+import { useSparkPause } from './pause/use-spark-pause.ts';
 import { RailMore } from './RailMore.tsx';
 import { UpdateBlob } from './UpdateBlob.tsx';
 import './rail.css';
@@ -115,6 +116,20 @@ const SETTINGS_ICON = (
   </svg>
 );
 
+const PAUSE_ICON = (
+  <svg {...ICON}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M10 9v6M14 9v6" />
+  </svg>
+);
+
+const RESUME_ICON = (
+  <svg {...ICON}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="m10 8.5 5 3.5-5 3.5z" />
+  </svg>
+);
+
 const MOOD_EXPRESSIONS: Record<NonNullable<ScoutMood>, BlobExpression> = {
   working: 'thinking',
   alert: 'unsure',
@@ -157,7 +172,18 @@ export function Rail({
   const { remote } = useRemoteClient();
   const reopens = layout?.collapsed && !phone;
   const primary = phone ? PHONE_VIEWS : VIEWS;
+  const pause = useSparkPause();
+  const pauseLabel = pause.paused ? 'Resume Spark' : 'Pause Spark';
+  const pauseIcon = pause.paused ? RESUME_ICON : PAUSE_ICON;
+  const togglePause = () => pause.setPaused(!pause.paused);
   const more = [
+    {
+      id: 'pause',
+      label: pauseLabel,
+      icon: pauseIcon,
+      current: false,
+      onSelect: togglePause,
+    },
     {
       id: 'phone',
       label: 'Remote control',
@@ -241,6 +267,17 @@ export function Rail({
         <>
           <span className="rail-sp" />
           {!remote && <UpdateBlob />}
+          <button
+            type="button"
+            className="rail-btn"
+            aria-label={pauseLabel}
+            title={pause.paused ? 'Resume automatic work' : 'Hold automatic work'}
+            disabled={pause.saving}
+            onClick={togglePause}
+          >
+            {pauseIcon}
+            {pause.paused ? 'Resume' : 'Pause'}
+          </button>
           <button
             type="button"
             className="rail-btn"

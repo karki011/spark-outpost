@@ -100,6 +100,23 @@ describe('spark_chats and spark_chat', () => {
     expect(body.runs.latest[0]!.costUsd).toBe(0.12);
   });
 
+  it('gives each search hit a redacted snippet quoted as data', async () => {
+    const other = await startChat(t, 'Rotate keys');
+    await finish(other.runId, 0, `Rotated the deploy token ${LEAKED} for staging.`);
+    const harness = await open((await startChat(t, 'Plan the week')).conversationId);
+
+    const found = await harness.call('spark_chats', { query: 'deploy tok' });
+    const body = found.json<{
+      items: { id: string; match?: { messageId: string; snippet: string } }[];
+      untrusted?: string;
+    }>();
+
+    expect(found.text).not.toContain(LEAKED);
+    expect(body.items.map((item) => item.id)).toEqual([other.conversationId]);
+    expect(body.items[0]!.match?.snippet).toMatch(/^Rotated the deploy token \[redacted:/);
+    expect(body.untrusted).toContain('quoted from another Spark chat');
+  });
+
   it('shows the queued messages in order and what the user told crew members', async () => {
     const chat = await startChat(t, 'Busy chat');
     const first = randomUUID();
