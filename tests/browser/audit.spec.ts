@@ -79,7 +79,7 @@ test('the audit view summarises, times, lists, and exports a session @packaged',
   await expect(dialog.locator('.set-head .chain')).toHaveText('Hash chain verified · 4 events');
   await expect(dialog.locator('.astat').first()).toContainText('~$0.004');
   const byRun = dialog.getByRole('region', { name: 'By run' });
-  await expect(byRun).toContainText('Fake provider');
+  await expect(byRun).toContainText('Claude');
   await expect(byRun).not.toContainText('Reader');
   await expect(byRun.locator('.srctag.est')).toHaveAttribute('title', /list price/);
   await shot(page, 'summary');

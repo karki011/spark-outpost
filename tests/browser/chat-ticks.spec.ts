@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import type { ConversationDetail } from '../../packages/contracts/src/conversations.ts';
 import { resetTestDatabase } from './database.ts';
+import { animationsSettled } from './settle.ts';
 import { useSystemTheme } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
 import {
@@ -146,6 +147,8 @@ test.describe('plain chats', () => {
     test.setTimeout(120_000);
     await longChat(page);
     await widenSecondReply(page);
+    await expect(page.getByRole('group', { name: 'How did it go?' })).toHaveCount(4);
+    await animationsSettled(page);
     const thread = page.locator('.thread');
     const place = async () => ({
       column: await page.locator('.col').boundingBox(),
@@ -190,6 +193,7 @@ test.describe('plain chats', () => {
           return Math.abs(composer.left - column.left) + Math.abs(composer.right - column.right);
         })
         .toBeLessThan(1);
+      await animationsSettled(page);
       const column = (await page.locator('.col').boundingBox())!;
       const main = (await page.getByRole('main').boundingBox())!;
       const strip = (await outline(page).boundingBox())!;
