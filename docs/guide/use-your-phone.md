@@ -18,15 +18,15 @@ You'll use Spark on another device; work stays on the Mac. About 5 minutes. Need
 
 Creating or deleting an [outpost](outposts.md), changing its chats and starting a proposed story stay on the Mac.
 
-A paired device can answer an agent's browser cards: open a site, click and type, send a secret value. The Browser pane stays on the Mac.
+A paired device can answer an agent's browser cards; the Browser pane stays on the Mac.
 
-**Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages, grouped steps and how long the agent has worked, with a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both start off.
+**Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages and steps, with a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both start off.
 
-While the agent works, **Queue message** reaches it when it can; **Send now** stops the turn first, though in Claude a message you queued earlier still goes first. **Deny** offers **Tell the agent why (optional)**, which the agent reads.
+While it works, **Send now** stops the turn first; in Claude an earlier queued message still goes first. **Deny** takes an optional reason the agent reads.
 
-Messages are read from the CLI to show on the device and are not stored. Starting a session stays on the Mac.
+Messages shown aren't stored; starting a session stays on the Mac.
 
-**Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device**. A notification names the chat and what waits, never a command. Push services see the **Sender contact** under the switch; refusals show there.
+**Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device**. It names the chat, never a command. Push services see the **Sender contact** under the switch; refusals show there.
 
 A device you're using gets none. iPhone needs iOS 16.4 or later and Spark on the Home Screen: save a passkey first, then sign in with it there.
 
