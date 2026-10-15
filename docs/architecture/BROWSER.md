@@ -262,6 +262,13 @@ Later on 2026-10-04, in the same kind of dev build with a throwaway data folder 
 - After a tab went from one page to another, its console and network logs held only the new page, and no Electron security warning.
 - Quitting the app ended the preview process and recorded a stop with reason `shutdown`.
 
+On 2026-10-15 (Apple silicon, Electron 44.4.5, dev channel, throwaway data folder, a live Claude Code 2.1.300 Terminal session and a plain chat, driven over a debugging port on that instance only), on example.com:
+
+- An element pick in the Terminal session landed in Claude's input as a pasted draft with no Enter; the cropped picture was in the session's `attachments/` folder, mode 0600. Asked about the drafts, Claude quoted their first lines, the page line and the picture path, and opened the picture after its own prompt for a read outside the working directories.
+- In the plain chat the same pick gave **Selected: paragraph**, and highlighted text gave **Selected text** with the untrusted note.
+- The right-click menu was built with **Add to terminal** (or **Add to chat**), **Ask about this** and **Copy** on a real `context-menu` event, and its **Ask about this** item, clicked from the main process, put the draft in the input. The native menu itself was replaced by a capture for the check, because synthetic input cannot click a native menu.
+- **⌘⇧A** was checked by emitting `before-input-event` on the tab's `webContents` from the main process: the isolated-world read returned the selection and the draft landed. A key sent with CDP `Input.dispatchKeyEvent` does not raise `before-input-event`, so a real key press was not tried.
+
 ## Not verified
 
 Opening sites and acting (2026-10-12) were not run in the shell or against a real site: the CDP calls are covered with a fake `Cdp` (`agent-act.test.ts`), the address rules as pure functions (`request-guard.test.ts`), the tools with a fake browser host (`spark-browser-open.db.test.ts`, `spark-browser-act.db.test.ts`, `tests/browser/browser-agent.spec.ts`). Redirects, crossings between the two partitions, popups, the guards on the agent's partition and a saved sign-in typed into an agent tab are driven through the real `PaneTab`, `BrowserPanes`, `browserSession` and `runBrowserOp` over a fake Electron (`agent-partition.test.ts`, `electron.fixture.ts`): a redirect to a Spark port, `data:`, `javascript:` or a file fails the load and sends no request there. Electron's own event order for a real redirect, how the highlight looks, whether a view swap flickers, and how real Claude and Codex sessions use the tools need a check in the Mac app.
