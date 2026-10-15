@@ -24,6 +24,7 @@ import {
   type BrowserDecision,
 } from './context.ts';
 import { signInScrub } from './scrub.ts';
+import { allowedNote } from '../allowed-note.ts';
 
 const TOOL = 'spark_browser_act';
 
@@ -131,6 +132,7 @@ async function act(args: ActArgs, context: SparkToolContext) {
     url: hidden(done.url),
     title: hidden(done.title),
     place: done.place,
+    ...allowedNote(decision),
     ...(page.refound
       ? { refound: `${args.ref} was replaced by the page; Spark found it again.` }
       : {}),

@@ -22,6 +22,7 @@ import { clearPage } from './read-flow.ts';
 import { browserScreenshotTool } from './screenshot.ts';
 import { signInScrub } from './scrub.ts';
 import { browserSignInTools } from './sign-in.ts';
+import { allowedNote } from '../allowed-note.ts';
 
 const keep = (text: string) => text;
 
@@ -99,6 +100,7 @@ async function read(args: ReadArgs, context: SparkToolContext) {
     ...(page.leftOut > 0 ? { leftOut: page.leftOut } : {}),
     ...(page.dialog ? { scope: 'dialog' } : {}),
     maskedFields: page.masked,
+    ...allowedNote(cleared.decision),
     note: readNote(page),
   };
   return new SparkBlocks([
@@ -145,6 +147,7 @@ async function logs(args: LogArgs, context: SparkToolContext) {
     kind: found.kind,
     entries: lines.length,
     droppedOlder: found.dropped,
+    ...allowedNote(cleared.decision),
     note: 'Newest last. Request and response headers and query strings are never recorded.',
   };
   return new SparkBlocks([

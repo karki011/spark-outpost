@@ -12,8 +12,18 @@ import {
 } from '@spark-outpost/contracts';
 import { renderResult } from '../../format.ts';
 import { SparkBlocks, SparkToolError, sparkTool, type SparkToolContext } from '../../tool.ts';
-import { asToolError, auditMac, macSession, refusalFor, type MacSession } from './context.ts';
+import {
+  MacToolError,
+  alreadyAudited,
+  asToolError,
+  auditFailures,
+  auditMac,
+  macSession,
+  refusalFor,
+  type MacSession,
+} from './context.ts';
 import { allowedApps, clearMacApp, DECLINED_APP, WAITING_FOR_APP } from './gate.ts';
+import { allowedNote } from '../allowed-note.ts';
 
 const READ_TOOL = 'spark_mac_read';
 const APPS_TOOL = 'spark_mac_apps';
@@ -41,7 +51,7 @@ export function refuseApp(context: SparkToolContext, tool: string, action: strin
   const refusal = refusalFor(app);
   if (!refusal) return;
   auditMac(context, { tool, action, app, decision: 'refused', detail: { reason: app.refused } });
-  throw new SparkToolError(refusal);
+  throw alreadyAudited(new SparkToolError(refusal));
 }
 
 export function notCleared(
@@ -122,7 +132,10 @@ async function read(args: ReadArgs, context: SparkToolContext) {
   const app = await resolveApp(session, args.app, context.signal);
   refuseApp(context, READ_TOOL, 'read', app);
   if (app.pid === null) {
-    throw new SparkToolError(`${app.name} is not running. Open it with spark_mac_act action open.`);
+    throw new MacToolError(
+      'not_running',
+      `${app.name} is not running. Open it with spark_mac_act action open.`,
+    );
   }
   const cleared = await clearMacApp(context, app, `Read ${app.name}`);
   if (!cleared.cleared)
@@ -144,8 +157,15 @@ async function read(args: ReadArgs, context: SparkToolContext) {
       context.signal,
     )
     .catch((error: unknown) => {
-      auditMac(context, { tool: READ_TOOL, action: 'read', app, decision: 'failed' });
-      throw asToolError(error);
+      const failure = asToolError(error);
+      auditMac(context, {
+        tool: READ_TOOL,
+        action: 'read',
+        app,
+        decision: 'failed',
+        detail: { reason: failure instanceof MacToolError ? failure.reason : 'failed' },
+      });
+      throw alreadyAudited(failure);
     });
   context.scope.observations?.record({ source: 'mac_app', label: `Mac app ${app.name}` });
   auditMac(context, {
@@ -170,6 +190,7 @@ async function read(args: ReadArgs, context: SparkToolContext) {
       ? { truncated: 'The app has more than Spark reads at once; read a ref for a part.' }
       : {}),
     maskedFields: page.masked,
+    ...allowedNote(cleared.decision),
     note: readNote(page),
   };
   return new SparkBlocks([
@@ -185,7 +206,8 @@ export const macAppsTool = sparkTool({
   description:
     'Lists the running Mac apps: name, bundle id, frontmost, window count, and whether Spark refuses it (System Settings, password managers, web browsers, Spark) or this chat already uses it.',
   input: {},
-  run: (_args, context) => apps(context),
+  run: (_args, context) =>
+    auditFailures(context, { tool: APPS_TOOL, action: 'apps', app: null }, () => apps(context)),
 });
 
 export const macReadTool = sparkTool({
@@ -209,5 +231,8 @@ export const macReadTool = sparkTool({
     offset: z.number().int().min(0).default(0),
     maxChars: z.number().int().min(BROWSER_READ_MIN_CHARS).max(BROWSER_READ_MAX_CHARS).optional(),
   },
-  run: read,
+  run: (args, context) =>
+    auditFailures(context, { tool: READ_TOOL, action: 'read', app: args.app }, () =>
+      read(args, context),
+    ),
 });

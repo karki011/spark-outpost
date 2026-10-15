@@ -3,6 +3,22 @@ import { macRunRefusal, type MacRefusedRun } from '../../../mac-control/offered.
 import { MacHostError, type MacHost } from '../../../mac-control/host-client.ts';
 import { SparkToolError, type SparkToolContext } from '../../tool.ts';
 
+export class MacToolError extends SparkToolError {
+  readonly reason: string;
+
+  constructor(reason: string, message: string) {
+    super(message);
+    this.reason = reason;
+  }
+}
+
+const audited = new WeakSet<Error>();
+
+export function alreadyAudited<E extends Error>(error: E): E {
+  audited.add(error);
+  return error;
+}
+
 export interface MacSession {
   host: MacHost;
   chatId: string;
@@ -21,9 +37,12 @@ const RUN_REFUSALS: Record<MacRefusedRun, string> = {
 export async function macSession(context: SparkToolContext): Promise<MacSession> {
   const host = context.deps.mac;
   if (!host)
-    throw new SparkToolError('Mac control is only available in the Spark Outpost Mac app.');
+    throw new MacToolError(
+      'no_shell',
+      'Mac control is only available in the Spark Outpost Mac app.',
+    );
   const refused = await macRunRefusal(context.deps.db, context.scope);
-  if (refused) throw new SparkToolError(RUN_REFUSALS[refused]);
+  if (refused) throw new MacToolError(refused, RUN_REFUSALS[refused]);
   return { host, chatId: context.scope.conversationId!, runId: context.scope.runId };
 }
 
@@ -37,7 +56,7 @@ const HOST_MESSAGES: Partial<Record<MacHostError['code'], string>> = {
 
 export function asToolError(error: unknown): Error {
   if (!(error instanceof MacHostError)) return error as Error;
-  return new SparkToolError(redactText(HOST_MESSAGES[error.code] ?? error.message));
+  return new MacToolError(error.code, redactText(HOST_MESSAGES[error.code] ?? error.message));
 }
 
 export function refusalFor(app: MacApp): string | null {
@@ -75,4 +94,30 @@ export function auditMac(context: SparkToolContext, entry: MacAuditEntry): void 
       ...entry.detail,
     },
   });
+}
+
+function failureReason(error: unknown): string {
+  if (error instanceof MacToolError) return error.reason;
+  return error instanceof SparkToolError ? 'refused' : 'failed';
+}
+
+export async function auditFailures<T>(
+  context: SparkToolContext,
+  entry: { tool: string; action: string; app: string | null },
+  work: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await work();
+  } catch (error) {
+    if (error instanceof Error && !audited.has(error)) {
+      auditMac(context, {
+        tool: entry.tool,
+        action: entry.action,
+        app: entry.app === null ? null : { name: entry.app.slice(0, 200), bundleId: null },
+        decision: failureReason(error) === 'failed' ? 'failed' : 'refused',
+        detail: { reason: failureReason(error) },
+      });
+    }
+    throw error;
+  }
 }
