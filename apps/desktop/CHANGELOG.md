@@ -12,7 +12,7 @@ Newest first. Each release adds a section before packaging; the release script t
 - Remote control: in a Terminal session, Deny takes a reason the agent reads, Send now stops the turn first, and steps fold into one row. A message to Claude waits until Claude is idle, and Claude shows the connected device.
 - Pause: Pause in the left bar holds the work Spark starts by itself, while running turns and messages you send go on. A paired device can pause and resume too.
 - Search: Sessions and the chat list match words from their start, show the matching line and open the chat at that message.
-- Terminal: a Claude Terminal session's cost by turn comes from Claude Code as each request finishes, and counts sub-agents and turn time.
+- Terminal: with Spark's mod loaded, a Claude Terminal session's cost by turn comes from Claude Code as each request finishes and includes sub-agents, and the Work panel shows how long each turn took. Without the mod, cost is estimated from the session file as before.
 - Terminal: Record Terminal sessions like chats, under Settings → Spark, keeps a Claude Terminal session's commands, replies, changed files and audit, and flags risky pushes. It is off by default.
 - Browser: in a Terminal session, Browser pane picks go into the terminal's input. Right-click highlighted page text, or press ⌘⇧A, to add it to a chat or terminal.
 - Browser: an agent's click skips an element that a banner or invisible layer covers, and the agent is told what covers it. Agents read long pages controls first, read only an open dialog, and keep their place when a page redraws.
