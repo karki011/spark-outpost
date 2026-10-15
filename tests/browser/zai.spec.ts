@@ -4,6 +4,7 @@ import { expandSection } from './provider-screen.ts';
 import { resetTestDatabase } from './database.ts';
 import { REJECTED_KEY_MARKER } from './stub-config.ts';
 import { openChats } from './navigation.ts';
+import { animationsSettled } from './settle.ts';
 
 const ZAI_KEY = 'b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6.GlmTestTail';
 const NOTE =
@@ -62,6 +63,7 @@ test('Z.ai connects with an API key, says who bills it, and runs a chat', async 
   await expect(page.locator('body')).not.toContainText(ZAI_KEY);
 
   for (const name of ['How to connect', 'Test', 'Danger zone']) await expandSection(zai, name);
+  await animationsSettled(page);
   const results = await new AxeBuilder({ page })
     .include('.pconf[data-prov="zai"]')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
@@ -80,6 +82,7 @@ test('Z.ai connects with an API key, says who bills it, and runs a chat', async 
   await page.keyboard.press('Escape');
   await expect(tile).toBeFocused();
   await expect(tile).toContainText('Last test passed');
+  await animationsSettled(page);
   const tiles = await new AxeBuilder({ page })
     .include('.ptiles-view')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])

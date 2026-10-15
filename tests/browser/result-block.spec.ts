@@ -14,6 +14,7 @@ import {
   SHOTS,
   timeOutLastTurn,
 } from './result-block-kit.ts';
+import { animationsSettled } from './settle.ts';
 import { FAKE_GH_STATE, STUB_PORT } from './stub-config.ts';
 
 test.describe.configure({ timeout: 90_000 });
@@ -174,6 +175,7 @@ test('the result block fits a phone and passes axe in light and dark', async ({ 
     await page.evaluate((skin) => {
       document.documentElement.dataset.skin = skin === 'light' ? 'light' : 'graphite';
     }, scheme);
+    await animationsSettled(page);
     const axe = await new AxeBuilder({ page }).include('section.result').analyze();
     expect(axe.violations, scheme).toEqual([]);
     await shoot(page, `after-expanded-${scheme}`);

@@ -4,6 +4,7 @@ import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
+import { animationsSettled } from './settle.ts';
 
 const NAMES = [
   'api',
@@ -77,6 +78,7 @@ async function inEveryTheme(page: Page, screen: string) {
   const found: string[] = [];
   for (const theme of THEMES) {
     await page.evaluate((skin) => (document.documentElement.dataset.skin = skin), theme);
+    await animationsSettled(page);
     found.push(...(await seriousViolations(page)).map((line) => `${theme} ${screen} ${line}`));
   }
   expect(found).toEqual([]);

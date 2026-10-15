@@ -4,6 +4,7 @@ import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { animationsSettled } from './settle.ts';
 
 const SHOTS = process.env.SPARK_SHEET_SHOTS ?? 'test-results/spark-sheet';
 
@@ -106,6 +107,7 @@ test('a new Spark gets its blob from its name, with the pickers one click away',
     await page.evaluate((next) => {
       document.documentElement.dataset.skin = next;
     }, skin);
+    await animationsSettled(page);
     const scan = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
       .include('.tm-sheet')
