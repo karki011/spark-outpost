@@ -18,11 +18,16 @@ import { SIGN_IN_ORIGIN_MAX, SIGN_IN_PASSWORD_MAX, SIGN_IN_USERNAME_MAX } from '
 export const BROWSER_HOST_ENV = 'SPARK_BROWSER_HOST';
 export const BROWSER_REQUEST_TIMEOUT_MS = 30_000;
 export const BROWSER_READ_MAX_CHARS = 12_000;
+export const BROWSER_READ_MIN_CHARS = 500;
 export const BROWSER_LOG_ENTRIES_MAX = 200;
 export const BROWSER_LOG_TEXT_MAX = 500;
 
 const chat = { chatId: z.uuid(), runId: z.uuid().nullable() };
 const tab = z.string().min(1).max(40).optional();
+const boundNode = {
+  node: z.number().int().positive().optional(),
+  epoch: z.number().int().positive().optional(),
+};
 
 export const browserReadModeSchema = z.enum(['tree', 'text']);
 export type BrowserReadMode = z.infer<typeof browserReadModeSchema>;
@@ -48,6 +53,7 @@ export const browserHostRequestSchema = z.discriminatedUnion('op', [
     mode: browserReadModeSchema,
     ref: z.string().max(20).optional(),
     offset: z.number().int().min(0),
+    maxChars: z.number().int().min(BROWSER_READ_MIN_CHARS).max(BROWSER_READ_MAX_CHARS).optional(),
   }),
   z.object({
     op: z.literal('screenshot'),
@@ -65,7 +71,13 @@ export const browserHostRequestSchema = z.discriminatedUnion('op', [
     limit: z.number().int().min(1).max(BROWSER_LOG_ENTRIES_MAX),
   }),
   z.object({ op: z.literal('end_run'), ...chat }),
-  z.object({ op: z.literal('page'), ...chat, tab, ref: z.string().max(20).optional() }),
+  z.object({
+    op: z.literal('page'),
+    ...chat,
+    tab,
+    ref: z.string().max(20).optional(),
+    action: browserActKindSchema.optional(),
+  }),
   z.object({
     op: z.literal('act'),
     ...chat,
@@ -76,6 +88,7 @@ export const browserHostRequestSchema = z.discriminatedUnion('op', [
     key: browserActKeySchema.optional(),
     direction: browserActDirectionSchema.optional(),
     origin: z.string().min(1).max(300),
+    ...boundNode,
   }),
   z.object({
     op: z.literal('sign_in'),
@@ -117,6 +130,9 @@ export const browserReadResultSchema = z.object({
   offset: z.number().int().nonnegative(),
   nextOffset: z.number().int().nonnegative().nullable(),
   masked: z.number().int().nonnegative(),
+  leftOut: z.number().int().nonnegative().default(0),
+  dialog: z.boolean().optional(),
+  pageRef: z.string().max(20).optional(),
 });
 export type BrowserReadResult = z.infer<typeof browserReadResultSchema>;
 
@@ -153,6 +169,8 @@ export const browserEndRunResultSchema = z.object({ closed: z.number().int().non
 export const browserPageResultSchema = z.object({
   ...tabFacts,
   target: browserActTargetSchema.nullable().optional(),
+  ...boundNode,
+  refound: z.boolean().optional(),
 });
 export type BrowserPageResult = z.infer<typeof browserPageResultSchema>;
 

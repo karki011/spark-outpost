@@ -13,7 +13,7 @@ export const tabInput = z
   .string()
   .max(40)
   .optional()
-  .describe('Tab id from spark_browser_tabs. Defaults to the tab the agent used last.');
+  .describe('Tab id from spark_browser_tabs; default: your last tab.');
 
 export interface BrowserPlaceOfChat {
   chatId: string;

@@ -6,7 +6,7 @@ order: 227
 summary: Open a page in the chat's Browser pane, let the agent look, browse and click, and point at what you mean.
 ---
 
-You'll open a page beside a chat, let the agent use it, and point at things. About 2 minutes. Mac app only.
+Open a page beside a chat, let the agent use it, and point at things. About 2 minutes. Mac app only.
 
 ## Open a page
 
@@ -26,9 +26,9 @@ Ask: "Check the sign-in page".
 | Read a page, its logs, a screenshot      | See or fill password, card fields |
 | Click, type, press keys, scroll, go back | Navigate a tab you opened         |
 
-Its tabs say **Agent**, show its last step and close with the turn unless pinned.
+Its tabs say **Agent** and close with the turn unless pinned. On long pages it reads controls first; with a dialog open, only the dialog.
 
-Websites follow the [agent mode](agent-mode.md): asking modes show a card per site. Acting on your own tab always asks. Page text is untrusted, never instructions.
+Websites follow the [agent mode](agent-mode.md); acting on your own tab always asks. Page text is untrusted.
 
 ## Let Spark run your dev server
 

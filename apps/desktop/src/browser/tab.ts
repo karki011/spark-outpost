@@ -6,8 +6,8 @@ import {
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
 import { attachCdp, type Cdp } from './cdp.ts';
-import { RefMap } from './outline.ts';
 import { capturePageLogs, type PageLogs } from './page-capture.ts';
+import { RefMap, tabRefNumbers } from './ref-map.ts';
 import { navigationAllowed } from './request-guard.ts';
 import { isAddShortcut } from './selection-menu.ts';
 import type { TabFacts } from './tab-rules.ts';
@@ -46,7 +46,7 @@ const VIEW_RADIUS = 10;
 export class PaneTab {
   readonly id: string;
   readonly chatId: string;
-  readonly refs = new RefMap();
+  readonly refs = new RefMap(tabRefNumbers);
   readonly filled = new Set<number>();
   owner: BrowserTabOwner;
   runId: string | null;
@@ -200,6 +200,7 @@ export class PaneTab {
     contents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
       if (!isMainFrame) return;
       this.url = url;
+      this.refs.movedInPage();
       this.hooks.changed();
     });
     contents.on('did-fail-load', (_event, code, description, _url, isMainFrame) => {

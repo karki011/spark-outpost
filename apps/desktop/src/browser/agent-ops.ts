@@ -9,6 +9,7 @@ import {
 import { describeTarget } from './act-target.ts';
 import { actOnPage } from './agent-act.ts';
 import { PageToolError, boxOf, readPage } from './page-read.ts';
+import { RefError, pageDocument, resolveRef, type RefindFor } from './ref-resolve.ts';
 import { capturePage } from './page-tools.ts';
 import type { BrowserPanes } from './panes.ts';
 import { agentOpenProblem } from './request-guard.ts';
@@ -122,10 +123,7 @@ async function screenshot(panes: BrowserPanes, request: Request<'screenshot'>) {
   const tab = targetTab(panes, request.chatId, request.tab);
   return panes.whileDriving(tab, async () => {
     const { cdp } = await tab.wake();
-    const node = request.ref === undefined ? null : tab.refs.nodeFor(request.ref);
-    if (request.ref !== undefined && node === null) {
-      throw new BrowserOpError('no_ref', `${request.ref} is not on this page. Read it again.`);
-    }
+    const node = (await boundNode(tab, request.ref, null))?.node ?? null;
     const box = node === null ? null : await boxOf(cdp, node);
     if (node !== null && !box) {
       throw new BrowserOpError('no_ref', `${request.ref} is not visible on the page.`);
@@ -172,22 +170,27 @@ async function signIn(panes: BrowserPanes, request: Request<'sign_in'>, signal: 
   });
 }
 
-function nodeOf(tab: PaneTab, ref: string | undefined): number | null {
+async function boundNode(tab: PaneTab, ref: string | undefined, refindFor: RefindFor) {
   if (ref === undefined) return null;
-  const node = tab.refs.nodeFor(ref);
-  if (node === null) {
-    throw new BrowserOpError('no_ref', `${ref} is not on this page any more. Read it again.`);
-  }
-  return node;
+  const { cdp } = await tab.wake();
+  return resolveRef(cdp, tab.refs, ref, await pageDocument(cdp), refindFor);
 }
+
+const MOVED = 'The element changed since it was checked, so nothing was done. Read the page again.';
 
 async function page(panes: BrowserPanes, request: Request<'page'>) {
   const tab = targetTab(panes, request.chatId, request.tab);
-  const node = nodeOf(tab, request.ref);
-  if (node === null) return tabFacts(tab);
+  const bound = await boundNode(tab, request.ref, request.action ?? null);
+  if (bound === null) return tabFacts(tab);
   const { cdp } = await tab.wake();
-  const target = await describeTarget(cdp, node, tab.filled);
-  return { ...tabFacts(tab), target };
+  const target = await describeTarget(cdp, bound.node, tab.filled);
+  return {
+    ...tabFacts(tab),
+    target,
+    node: bound.node,
+    epoch: tab.refs.epoch,
+    ...(bound.refound ? { refound: true } : {}),
+  };
 }
 
 async function act(panes: BrowserPanes, request: Request<'act'>, signal: AbortSignal) {
@@ -202,9 +205,14 @@ async function act(panes: BrowserPanes, request: Request<'act'>, signal: AbortSi
   return panes.whileDriving(tab, async () => {
     const { cdp } = await tab.wake();
     const { action, key, direction } = request;
+    const node = (await boundNode(tab, request.ref, null))?.node ?? null;
+    const moved = request.epoch !== undefined && request.epoch !== tab.refs.epoch;
+    if (moved || (request.node !== undefined && request.node !== node)) {
+      throw new BrowserOpError('page_changed', MOVED);
+    }
     const target = await actOnPage(
       cdp,
-      { action, node: nodeOf(tab, request.ref), text: request.text, key, direction },
+      { action, node, text: request.text, key, direction },
       { filled: tab.filled, history: (step) => tab.history(step), signal },
     );
     const did = browserActLine({ action, target, key, direction });
@@ -234,6 +242,7 @@ export async function runBrowserOp(
   } catch (error) {
     if (error instanceof BrowserOpError) throw error;
     if (error instanceof PageToolError) throw new BrowserOpError(error.code, error.message);
+    if (error instanceof RefError) throw new BrowserOpError('no_ref', error.message);
     if (error instanceof SignInError) throw new BrowserOpError(error.code, error.message);
     if (request.op === 'sign_in') {
       throw new BrowserOpError('failed', 'Spark could not sign in on this page.');

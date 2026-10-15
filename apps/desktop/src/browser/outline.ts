@@ -1,4 +1,6 @@
 import { BROWSER_READ_MAX_CHARS } from '@spark-outpost/contracts';
+import { refContextOf } from './ref-context.ts';
+import type { RefMap } from './ref-map.ts';
 
 export interface AxValue {
   value?: unknown;
@@ -42,35 +44,45 @@ const SHOWN_PROPERTIES = new Set([
   'invalid',
   'pressed',
 ]);
+const ACTING_ROLES = new Set([
+  'button',
+  'link',
+  'textbox',
+  'searchbox',
+  'combobox',
+  'checkbox',
+  'radio',
+  'switch',
+  'slider',
+  'spinbutton',
+  'menuitem',
+  'menuitemcheckbox',
+  'menuitemradio',
+  'tab',
+  'option',
+  'listbox',
+  'treeitem',
+  'TextField',
+  'PopUpButton',
+  'ToggleButton',
+]);
+const LANDMARK_ROLES = new Set([
+  'RootWebArea',
+  'heading',
+  'banner',
+  'navigation',
+  'main',
+  'contentinfo',
+  'complementary',
+  'region',
+  'form',
+  'search',
+  'dialog',
+  'alertdialog',
+  'alert',
+]);
 const SENSITIVE_NAME =
   /pass(word|code|phrase)|card.?(number|no)|cc.?(num|number)|cvv|cvc|security code|secret|one.?time code|otp/i;
-
-export class RefMap {
-  private readonly byNode = new Map<number, number>();
-  private readonly byRef = new Map<number, number>();
-  private next = 1;
-
-  refFor(backendNodeId: number): string {
-    let ref = this.byNode.get(backendNodeId);
-    if (ref === undefined) {
-      ref = this.next;
-      this.next += 1;
-      this.byNode.set(backendNodeId, ref);
-      this.byRef.set(ref, backendNodeId);
-    }
-    return `ref_${ref}`;
-  }
-
-  nodeFor(ref: string): number | null {
-    const match = /^ref_(\d+)$/.exec(ref.trim());
-    return match ? (this.byRef.get(Number(match[1])) ?? null) : null;
-  }
-
-  clear(): void {
-    this.byNode.clear();
-    this.byRef.clear();
-  }
-}
 
 function text(value: AxValue | undefined): string {
   return typeof value?.value === 'string' || typeof value?.value === 'number'
@@ -96,16 +108,31 @@ export interface OutlineOptions {
   rootBackendId?: number | null;
 }
 
+export type RowTier = 'act' | 'mark' | 'prose';
+
+export interface OutlineRow {
+  text: string;
+  depth: number;
+  tier: RowTier;
+  ref: string | null;
+}
+
 export interface Outline {
   lines: string[];
+  rows: OutlineRow[];
   masked: number;
 }
 
 interface Walk {
   byId: Map<string, AxNode>;
   options: OutlineOptions;
-  lines: string[];
+  rows: OutlineRow[];
   masked: number;
+}
+
+function tierOf(role: string): RowTier {
+  if (ACTING_ROLES.has(role)) return 'act';
+  return LANDMARK_ROLES.has(role) ? 'mark' : 'prose';
 }
 
 export function sensitiveByName(role: string, name: string): boolean {
@@ -128,14 +155,18 @@ function propertyNotes(node: AxNode): string[] {
   });
 }
 
-function describe(walk: Walk, node: AxNode): string {
+function refOf(walk: Walk, node: AxNode, role: string, name: string): string | null {
+  if (node.backendDOMNodeId === undefined || TEXT_ROLES.has(role)) return null;
+  const context = refContextOf(walk.byId, node);
+  return walk.options.refs.refFor(node.backendDOMNodeId, { role, name, context });
+}
+
+function describe(walk: Walk, node: AxNode, ref: string | null): string {
   const role = roleOf(node);
   const name = text(node.name);
   const parts = [role];
   if (name) parts.push(quoted(name, NAME_MAX));
-  if (node.backendDOMNodeId !== undefined && !TEXT_ROLES.has(role)) {
-    parts.push(`[${walk.options.refs.refFor(node.backendDOMNodeId)}]`);
-  }
+  if (ref) parts.push(`[${ref}]`);
   const value = text(node.value);
   if (isSensitive(node, name, walk.options.sensitive)) {
     parts.push(`value=${MASKED_VALUE}`);
@@ -166,7 +197,11 @@ function visit(walk: Walk, id: string, depth: number, parent: AxNode | null): vo
   const role = roleOf(node);
   if (SKIPPED_ROLES.has(role) || repeatsParent(node, parent)) return;
   const shown = !isWrapper(node);
-  if (shown) walk.lines.push(`${'  '.repeat(depth)}- ${describe(walk, node)}`);
+  if (shown) {
+    const ref = refOf(walk, node, role, text(node.name));
+    const line = `${'  '.repeat(depth)}- ${describe(walk, node, ref)}`;
+    walk.rows.push({ text: line, depth, tier: tierOf(role), ref });
+  }
   if (holdsFieldValue(node, walk.options.sensitive)) return;
   for (const child of node.childIds ?? []) {
     visit(walk, child, shown ? depth + 1 : depth, shown ? node : parent);
@@ -186,11 +221,11 @@ export function outlineOf(nodes: readonly AxNode[], options: OutlineOptions): Ou
   const walk: Walk = {
     byId: new Map(nodes.map((node) => [node.nodeId, node])),
     options,
-    lines: [],
+    rows: [],
     masked: 0,
   };
   visit(walk, root.nodeId, 0, null);
-  return { lines: walk.lines, masked: walk.masked };
+  return { lines: walk.rows.map((row) => row.text), rows: walk.rows, masked: walk.masked };
 }
 
 export function pageTextOf(
