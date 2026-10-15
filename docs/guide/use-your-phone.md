@@ -22,7 +22,7 @@ A paired device can answer an agent's browser cards: open a site, click and type
 
 **Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages, grouped steps and how long the agent has worked, with a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both start off.
 
-While the agent works, **Queue message** reaches it when it can; **Send now** stops the turn first. **Deny** offers **Tell the agent why (optional)**, which the agent reads.
+While the agent works, **Queue message** reaches it when it can; **Send now** stops the turn first, though in Claude a message you queued earlier still goes first. **Deny** offers **Tell the agent why (optional)**, which the agent reads.
 
 Messages are read from the CLI to show on the device and are not stored. Starting a session stays on the Mac.
 

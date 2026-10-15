@@ -29,8 +29,10 @@ export function RemoteTerminalComposer({
   const input = useRef<HTMLTextAreaElement>(null);
   const inputId = useId();
   const secrets = useSecretGuard(text);
+  const lastNow = useRef(false);
   const ready = text.trim().length > 0 && !sending && blocked === null;
   const send = async (now = false) => {
+    lastNow.current = now;
     if (!ready || secrets.blocks(text)) return;
     setSending(true);
     try {
@@ -47,7 +49,7 @@ export function RemoteTerminalComposer({
           guard={secrets}
           input={input}
           onText={setText}
-          onSendAnyway={() => void send()}
+          onSendAnyway={() => void send(lastNow.current)}
         />
       }
       context={null}

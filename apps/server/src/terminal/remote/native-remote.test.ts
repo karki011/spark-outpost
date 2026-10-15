@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { Db } from '../../persistence/db.ts';
 import type { LiveSession } from '../native-runtime-types.ts';
 import { terminalApprovals } from './approvals.ts';
-import { approvalDetail, codexMenuShows, nativeRemote, pastedMessage } from './native-remote.ts';
+import {
+  approvalDetail,
+  codexMenuShows,
+  menuOpen,
+  nativeRemote,
+  pastedMessage,
+} from './native-remote.ts';
 
 const CODEX_MENU = [
   '  Would you like to run the following command?',
@@ -12,6 +18,26 @@ const CODEX_MENU = [
   '  Press enter to confirm or esc to cancel',
 ].join('\n');
 const IDLE = '› Ask Codex to do anything\n  gpt · /work';
+const CODEX_0162_MENU = [
+  '• Running date > ../outside.txt',
+  '  Would you like to run the following command?',
+  '  Environment: local',
+  '  Reason: Allow running date outside the sandbox and writing its output to ../outside.txt?',
+  '  $ date > ../outside.txt',
+  '› 1. Yes, proceed (y)',
+  "  2. Yes, and don't ask again for commands that start with `date > ../outside.txt` (p)",
+  '  3. No, and tell Codex what to do differently (esc)',
+  '  Press enter to confirm or esc to cancel',
+].join('\n');
+const CODEX_0162_AFTER_ESC = [
+  '✗ You canceled the request to run date > ../outside.txt',
+  '• Failed (exit 1) date > ../outside.txt',
+  '  └ (no output)',
+  '■ Conversation interrupted - use /feedback if something went wrong',
+  '› Ask Codex to do anything',
+  '  GPT-6-Astra default · /work',
+  '  ? for shortcuts                                    ⚠ 1 warning · f2 to view',
+].join('\n');
 
 function setup(
   provider: 'claude' | 'codex',
@@ -242,6 +268,27 @@ describe('approving from a paired device', () => {
     const approval = await askCodex(codex);
     await codex.remote.decide('c1', { id: approval.id, decision: 'deny', reason: 'Use pnpm' });
     expect(codex.sent).toEqual(['\u001b', '\u001b[200~Use pnpm\u001b[201~', '\r']);
+  });
+
+  it('sends the reason to Codex 0.162.1 once Esc has closed its real menu', async () => {
+    const codex = setup('codex', {
+      state: 'waiting_for_permission',
+      whilePasting: () => {
+        codex.row.state = 'ready';
+        codex.setScreen(CODEX_0162_AFTER_ESC);
+      },
+    });
+    await codex.remote.permission(
+      codex.session,
+      { tool: 'Bash', input: { command: 'date > ../outside.txt', description: 'Allow date' } },
+      new AbortController().signal,
+    );
+    codex.setScreen(CODEX_0162_MENU);
+    expect(menuOpen(CODEX_0162_MENU)).toBe(true);
+    expect(menuOpen(CODEX_0162_AFTER_ESC)).toBe(false);
+    const approval = (await codex.remote.view('c1')).approval!;
+    await codex.remote.decide('c1', { id: approval.id, decision: 'deny', reason: 'Stay inside' });
+    expect(codex.sent).toEqual(['\u001b', '\u001b[200~Stay inside\u001b[201~', '\r']);
   });
 
   it('says the denial went through when the reason cannot be sent', async () => {
