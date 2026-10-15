@@ -6,12 +6,14 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { sparkAvailability, type SparkAvailability } from './availability.ts';
 import type { SparkScope, SparkToolDeps } from './deps.ts';
 import { sparkMcpServer } from './server.ts';
+import { endMacRun } from '../mac-control/end-run.ts';
 import { endBrowserRun } from './tools/browser/end-run.ts';
 
 export interface SparkGrant {
   url: string;
   token: string;
   revoke(): void;
+  endTurn?(runId: string): void;
 }
 
 export interface SparkMcpHost {
@@ -178,7 +180,9 @@ export async function startSparkMcpHost(
           if (callKey.startsWith(`${key}:`)) controller.abort();
         }
         void endBrowserRun(deps, scope);
+        void endMacRun(deps.mac, scope.conversationId, scope.runId);
       },
+      endTurn: (runId) => void endMacRun(deps.mac, scope.conversationId, runId),
     };
   };
 

@@ -9,6 +9,7 @@ import {
   type MacIndicator,
   type MacRunningApp,
   type MacStatus,
+  type MacTarget,
 } from '@spark-outpost/contracts';
 import { MacHelperError, type MacHelper } from './helper-process.ts';
 import { macOutlinePage } from './outline.ts';
@@ -39,6 +40,7 @@ interface Controlled {
   pid: number;
   app: string;
   run: string;
+  chatId: string;
 }
 
 const TAKEOVER_SLACK_MS = 500;
@@ -103,6 +105,8 @@ export function createMacControl(options: MacControlOptions): MacControl {
   const { helper } = options;
   const now = options.now ?? Date.now;
   const stopped = new Set<string>();
+  const active = new Map<string, Controlled>();
+  const chatRefs = new Map<string, Set<string>>();
   let controlled: Controlled | null = null;
   let paused: string | null = null;
   let lastActionAt: number | null = null;
@@ -148,6 +152,26 @@ export function createMacControl(options: MacControlOptions): MacControl {
     }
   };
 
+  const refKey = (ref: string) => `${helper.pid ?? 0}:${ref}`;
+
+  const own = (chatId: string, refs: readonly string[]) => {
+    const known = chatRefs.get(chatId) ?? new Set<string>();
+    for (const ref of refs) known.add(refKey(ref));
+    chatRefs.set(chatId, known);
+  };
+
+  const checkOwned = (chatId: string, ref: string | undefined) => {
+    if (ref === undefined || chatRefs.get(chatId)?.has(refKey(ref))) return;
+    throw opError('gone', `${ref} was not read in this chat. Read the app again.`);
+  };
+
+  const sameTarget = (target: MacTarget, pid: number): MacTarget => {
+    if (target.pid !== pid) {
+      throw opError('refused', `${target.ref} belongs to another app. Read the app you are using.`);
+    }
+    return target;
+  };
+
   const allowedApp = async (pid: number, signal: AbortSignal): Promise<MacApp> => {
     const app = (await listApps(signal)).find((candidate) => candidate.pid === pid);
     if (!app) throw opError('no_app', 'That app is no longer running. Call spark_mac_apps again.');
@@ -155,8 +179,10 @@ export function createMacControl(options: MacControlOptions): MacControl {
     return app;
   };
 
-  const acted = (run: string, app: MacApp, did: string) => {
-    controlled = { pid: app.pid!, app: app.name, run };
+  const acted = (request: { chatId: string; runId: string | null }, app: MacApp, did: string) => {
+    const run = runKey(request);
+    controlled = { pid: app.pid!, app: app.name, run, chatId: request.chatId };
+    active.set(run, controlled);
     lastActionAt = now();
     lastDid = did;
     show();
@@ -180,6 +206,7 @@ export function createMacControl(options: MacControlOptions): MacControl {
     const run = runKey(request);
     await guard(run, signal);
     const app = await allowedApp(request.pid, signal);
+    checkOwned(request.chatId, request.ref);
     const found = await helper.call(
       {
         op: 'read',
@@ -191,8 +218,9 @@ export function createMacControl(options: MacControlOptions): MacControl {
       signal,
     );
     const page = macOutlinePage(found.nodes, request.mode, request.offset, request.maxChars);
+    own(request.chatId, [found.rootRef, ...found.nodes.map((node) => node.ref)]);
     acted(
-      run,
+      request,
       app,
       `Read ${found.window.title ? `window "${found.window.title.slice(0, 80)}"` : 'a window'}`,
     );
@@ -213,28 +241,37 @@ export function createMacControl(options: MacControlOptions): MacControl {
   ) => {
     await guard(runKey(request), signal);
     const app = await allowedApp(request.pid, signal);
+    const found = await aimAt(request, app, signal);
+    own(request.chatId, [found.ref]);
+    return { app, target: sameTarget(found, request.pid) };
+  };
+
+  const aimAt = async (
+    request: Extract<MacHostRequest, { op: 'target' }>,
+    app: MacApp,
+    signal: AbortSignal,
+  ): Promise<MacTarget> => {
     if (request.menu) {
-      return {
-        app,
-        target: await helper.call({ op: 'menu', pid: request.pid, path: request.menu }, signal),
-      };
+      return helper.call({ op: 'menu', pid: request.pid, path: request.menu }, signal);
     }
     if (request.focused) {
       const focused = await helper.call({ op: 'focused', pid: request.pid }, signal);
       if (!focused) throw opError('not_found', `Nothing has the keyboard focus in ${app.name}.`);
-      return { app, target: focused };
+      return focused;
     }
     if (!request.ref) throw opError('not_found', 'Pass a ref.');
-    return {
-      app,
-      target: await helper.call({ op: 'target', ref: request.ref, refind: request.refind }, signal),
-    };
+    checkOwned(request.chatId, request.ref);
+    return helper.call(
+      { op: 'target', pid: request.pid, ref: request.ref, refind: request.refind },
+      signal,
+    );
   };
 
   const act = async (request: Extract<MacHostRequest, { op: 'act' }>, signal: AbortSignal) => {
     const run = runKey(request);
     await guard(run, signal);
     const app = await allowedApp(request.pid, signal);
+    checkOwned(request.chatId, request.ref);
     if (request.action === 'scroll') {
       await helper.call(
         {
@@ -249,13 +286,22 @@ export function createMacControl(options: MacControlOptions): MacControl {
       throw opError('not_found', 'Pass a ref.');
     } else if (request.action === 'key') {
       await helper.call(
-        { op: 'key', ref: request.ref, key: request.key ?? 'space', expect: request.expect },
+        {
+          op: 'key',
+          pid: request.pid,
+          ref: request.ref,
+          key: request.key ?? 'space',
+          expect: request.expect,
+        },
         signal,
       );
     } else {
-      await helper.call({ op: 'press', ref: request.ref, expect: request.expect }, signal);
+      await helper.call(
+        { op: 'press', pid: request.pid, ref: request.ref, expect: request.expect },
+        signal,
+      );
     }
-    acted(run, app, request.did);
+    acted(request, app, request.did);
     return { did: request.did };
   };
 
@@ -266,16 +312,24 @@ export function createMacControl(options: MacControlOptions): MacControl {
     await guard(run, signal);
     const { pid } = await helper.call({ op: 'open', bundleId: request.bundleId }, signal);
     const app = await allowedApp(pid, signal);
-    acted(run, app, `Opened ${app.name}`);
+    acted(request, app, `Opened ${app.name}`);
     return { app };
   };
 
   const endRun = (request: Extract<MacHostRequest, { op: 'end_run' }>) => {
-    const run = runKey(request);
-    stopped.delete(run);
-    if (paused === run) paused = null;
-    if (controlled?.run !== run) return { ended: false };
-    controlled = null;
+    const ending = [...active.values()]
+      .filter((entry) =>
+        request.runId === null ? entry.chatId === request.chatId : entry.run === request.runId,
+      )
+      .map((entry) => entry.run);
+    if (request.runId !== null) ending.push(request.runId);
+    for (const run of ending) {
+      stopped.delete(run);
+      active.delete(run);
+      if (paused === run) paused = null;
+    }
+    if (!controlled || active.has(controlled.run)) return { ended: false };
+    controlled = [...active.values()].at(-1) ?? null;
     lastActionAt = null;
     show();
     return { ended: true };
@@ -296,9 +350,10 @@ export function createMacControl(options: MacControlOptions): MacControl {
       }
     },
     stop() {
-      if (controlled) stopped.add(controlled.run);
+      for (const run of active.keys()) stopped.add(run);
       if (paused) stopped.add(paused);
       helper.kill();
+      active.clear();
       controlled = null;
       paused = null;
       lastActionAt = null;

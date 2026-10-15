@@ -36,17 +36,17 @@ public final class Engine<System: SystemSource, Source: AXSource> {
         switch request {
         case .read(let pid, let window, let ref, let scope):
             return .read(try read(pid: pid, windowIndex: window, ref: ref, scope: scope))
-        case .target(let ref, let refind):
-            return .target(try target(ref: ref, refind: refind))
+        case .target(let pid, let ref, let refind):
+            return .target(try target(pid: pid, ref: ref, refind: refind))
         case .focused(let pid):
             return .focused(try focused(pid: pid))
         case .menu(let pid, let path):
             return .target(try menuItem(pid: pid, path: path))
-        case .press(let ref, let expect):
-            try press(ref: ref, expect: expect)
+        case .press(let pid, let ref, let expect):
+            try press(pid: pid, ref: ref, expect: expect)
             return .done
-        case .key(let ref, let key, let expect):
-            try pressKey(ref: ref, key: key, expect: expect)
+        case .key(let pid, let ref, let key, let expect):
+            try pressKey(pid: pid, ref: ref, key: key, expect: expect)
             return .done
         case .scroll(let pid, let ref, let direction):
             try scroll(pid: pid, ref: ref, direction: direction)
@@ -117,6 +117,14 @@ public final class Engine<System: SystemSource, Source: AXSource> {
     func storedRecord(_ ref: String) throws -> RefRecord<Element> {
         guard let record = refs.record(ref) else {
             throw OpError(.gone, "\(ref) is not known")
+        }
+        return record
+    }
+
+    func ownedRecord(_ ref: String, pid: Int32) throws -> RefRecord<Element> {
+        let record = try storedRecord(ref)
+        guard record.pid == pid else {
+            throw OpError(.invalid, "\(ref) belongs to another app")
         }
         return record
     }

@@ -12,7 +12,7 @@ import {
 import { MacHostError, type MacHost } from '../src/mac-control/host-client.ts';
 import { createRunObservations } from '../src/observations/run-observations.ts';
 import { decideApproval } from '../src/persistence/approvals.ts';
-import { startSparkMcpHost, type SparkMcpHost } from '../src/spark-mcp/host.ts';
+import { startSparkMcpHost, type SparkGrant, type SparkMcpHost } from '../src/spark-mcp/host.ts';
 import type { SparkScope } from '../src/spark-mcp/deps.ts';
 import {
   connectClient,
@@ -56,6 +56,7 @@ export class FakeMacHost implements MacHost {
   readonly requests: MacHostRequest[] = [];
   apps: MacApp[] = [CALCULATOR, NOTES, SETTINGS];
   focused: MacIdentity = button('OK');
+  targetPid = 700;
   readText = '- window "Calculator" [ax_1]\n  - static text [ax_2] value="42"';
 
   request(request: MacHostRequest): Promise<never> {
@@ -71,7 +72,7 @@ export class FakeMacHost implements MacHost {
     return {
       ref,
       state: 'alive',
-      pid: 700,
+      pid: this.targetPid,
       window: { index: 0, title: 'Calculator' },
       identity,
       ancestors: [],
@@ -142,6 +143,7 @@ export class MacHarness {
   chat = { conversationId: '', runId: '' };
   private host: SparkMcpHost | null = null;
   private client: Client | null = null;
+  private grant: SparkGrant | null = null;
 
   private constructor(readonly t: TestDb) {}
 
@@ -178,15 +180,19 @@ export class MacHarness {
     await this.host?.close();
     this.host = await startSparkMcpHost(toolDeps(t, { mac: this.fake }));
     const { conversationId, runId } = this.chat;
-    const grant = await this.host.grant({
+    const grant = (this.grant = await this.host.grant({
       workspaceId: t.workspaceId,
       conversationId,
       runId,
       ...(options.noCards ? {} : { actions: recorded.hooks }),
       observations: createRunObservations({ db: t.db, runId, audit: recorded.hooks.audit }),
       ...options.scope,
-    });
+    }));
     this.client = await connectClient(grant);
+  }
+
+  async revoke(): Promise<void> {
+    this.grant?.revoke();
   }
 
   async toolNames(): Promise<string[]> {

@@ -38,7 +38,7 @@ import Testing
         let target = try scene.target(ref, refind: true)
         #expect(target.state == .refound)
         #expect(target.ref == ref)
-        try scene.engine.press(ref: ref, expect: scene.ax.identity(of: replacement))
+        try scene.engine.press(pid: Scene.pid, ref: ref, expect: scene.ax.identity(of: replacement))
         #expect(scene.ax.performed.last?.element === replacement)
         #expect(try scene.target(ref, refind: false).state == .alive)
     }
@@ -108,12 +108,12 @@ import Testing
         let target = try scene.engine.menuItem(pid: Scene.pid, path: ["File"])
         scene.system.running = []
         #expect(try scene.target(target.ref, refind: true).state == .gone)
-        #expect(scene.errorCode(.press(ref: target.ref, expect: scene.ax.identity(of: file))) == .gone)
+        #expect(scene.errorCode(.press(pid: Scene.pid, ref: target.ref, expect: scene.ax.identity(of: file))) == .gone)
     }
 
     @Test func unknownRefIsGoneError() {
         let scene = Scene()
-        #expect(scene.errorCode(.target(ref: "ax_77", refind: true)) == .gone)
+        #expect(scene.errorCode(.target(pid: Scene.pid, ref: "ax_77", refind: true)) == .gone)
     }
 
     @Test func focusedElementGetsARef() throws {

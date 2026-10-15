@@ -17,11 +17,11 @@ public enum Request: Equatable {
     case prompt
     case apps
     case read(pid: Int32, window: Int?, ref: String?, scope: RequestedScope?)
-    case target(ref: String, refind: Bool)
+    case target(pid: Int32, ref: String, refind: Bool)
     case focused(pid: Int32)
     case menu(pid: Int32, path: [String])
-    case press(ref: String, expect: Identity)
-    case key(ref: String, key: HelperKey, expect: Identity)
+    case press(pid: Int32, ref: String, expect: Identity)
+    case key(pid: Int32, ref: String, key: HelperKey, expect: Identity)
     case scroll(pid: Int32, ref: String?, direction: ScrollDirection)
     case open(bundleId: String)
 }
@@ -76,15 +76,15 @@ private func request(from raw: RawRequest) throws -> Request {
     case "read":
         return .read(pid: try pid(raw.pid), window: try windowIndex(raw.window), ref: try optionalRef(raw.ref), scope: try scope(raw.scope))
     case "target":
-        return .target(ref: try ref(raw.ref), refind: try required(raw.refind, "refind"))
+        return .target(pid: try pid(raw.pid), ref: try ref(raw.ref), refind: try required(raw.refind, "refind"))
     case "focused":
         return .focused(pid: try pid(raw.pid))
     case "menu":
         return .menu(pid: try pid(raw.pid), path: try menuPath(raw.path))
     case "press":
-        return .press(ref: try ref(raw.ref), expect: try required(raw.expect, "expect"))
+        return .press(pid: try pid(raw.pid), ref: try ref(raw.ref), expect: try required(raw.expect, "expect"))
     case "key":
-        return .key(ref: try ref(raw.ref), key: try enumValue(raw.key, "key"), expect: try required(raw.expect, "expect"))
+        return .key(pid: try pid(raw.pid), ref: try ref(raw.ref), key: try enumValue(raw.key, "key"), expect: try required(raw.expect, "expect"))
     case "scroll":
         return .scroll(pid: try pid(raw.pid), ref: try optionalRef(raw.ref), direction: try enumValue(raw.direction, "direction"))
     case "open":

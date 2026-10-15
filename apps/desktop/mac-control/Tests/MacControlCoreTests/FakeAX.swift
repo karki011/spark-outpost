@@ -151,7 +151,7 @@ struct Scene {
     }
 
     func target(_ ref: String, refind: Bool) throws -> Target {
-        guard case .target(let result) = try engine.handle(.target(ref: ref, refind: refind)) else {
+        guard case .target(let result) = try engine.handle(.target(pid: Self.pid, ref: ref, refind: refind)) else {
             throw OpError(.invalid, "not a target")
         }
         return result

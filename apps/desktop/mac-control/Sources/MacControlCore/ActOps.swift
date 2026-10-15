@@ -1,6 +1,6 @@
 extension Engine {
-    func press(ref: String, expect: Identity) throws {
-        let record = try checkedRecord(ref, expect: expect)
+    func press(pid: Int32, ref: String, expect: Identity) throws {
+        let record = try checkedRecord(ref, pid: pid, expect: expect)
         let actions = source.actionNames(of: record.element)
         let pressActions = [AXName.press, AXName.confirm, AXName.pick]
         guard let action = pressActions.first(where: actions.contains) else {
@@ -9,8 +9,8 @@ extension Engine {
         try source.perform(action, on: record.element)
     }
 
-    func pressKey(ref: String, key: HelperKey, expect: Identity) throws {
-        let record = try checkedRecord(ref, expect: expect)
+    func pressKey(pid: Int32, ref: String, key: HelperKey, expect: Identity) throws {
+        let record = try checkedRecord(ref, pid: pid, expect: expect)
         let pressable = source.actionNames(of: record.element).contains(AXName.press)
         switch key {
         case .space:
@@ -48,7 +48,8 @@ extension Engine {
         try move(area: area, direction: direction)
     }
 
-    private func checkedRecord(_ ref: String, expect: Identity) throws -> RefRecord<Element> {
+    private func checkedRecord(_ ref: String, pid: Int32, expect: Identity) throws -> RefRecord<Element> {
+        _ = try ownedRecord(ref, pid: pid)
         let record = try liveRecord(ref)
         guard source.identity(of: record.element) == expect else {
             throw OpError(.changed, "\(ref) no longer matches the expected element")

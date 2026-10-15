@@ -44,6 +44,8 @@ export function nativeControl(
       session.completedEvents.delete(session.completedEvents.keys().next().value!);
   };
   const clearTurn = (session: LiveSession) => {
+    const ended = session.scope.runId;
+    if (ended) session.grant.endTurn?.(ended);
     session.context = null;
     session.scope.readOnly = true;
     session.scope.runId = null;

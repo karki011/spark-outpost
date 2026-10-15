@@ -96,6 +96,11 @@ async function aim(
     };
   }
   const target = await aimedTarget(session, app.pid!, args, signal);
+  if (target.pid !== app.pid) {
+    throw new SparkToolError(
+      `${target.ref} belongs to another app, not ${app.name}. Read ${app.name} and use its refs.`,
+    );
+  }
   if (target.secure && args.action === 'key') {
     throw new SparkToolError('The focused field is a secure field. Agents never type into those.');
   }

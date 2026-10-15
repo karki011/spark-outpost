@@ -96,11 +96,11 @@ import Testing
     }
 
     @Test func validRequestsParse() {
-        let press = #"{"id":"p","op":"press","ref":"ax_12","expect":{"role":"AXButton","subrole":null,"title":"Send","description":null,"identifier":null}}"#
+        let press = #"{"id":"p","op":"press","pid":42,"ref":"ax_12","expect":{"role":"AXButton","subrole":null,"title":"Send","description":null,"identifier":null}}"#
         let expected = Identity(role: "AXButton", subrole: nil, title: "Send", description: nil, identifier: nil)
-        #expect(parseRequestLine(press) == .request(id: "p", .press(ref: "ax_12", expect: expected)))
-        let key = #"{"id":"k","op":"key","ref":"ax_1","key":"return","expect":{"role":"AXButton","subrole":null,"title":null,"description":null,"identifier":null}}"#
-        #expect(parseRequestLine(key) == .request(id: "k", .key(ref: "ax_1", key: .returnKey, expect: Identity(role: "AXButton", subrole: nil, title: nil, description: nil, identifier: nil))))
+        #expect(parseRequestLine(press) == .request(id: "p", .press(pid: Scene.pid, ref: "ax_12", expect: expected)))
+        let key = #"{"id":"k","op":"key","pid":42,"ref":"ax_1","key":"return","expect":{"role":"AXButton","subrole":null,"title":null,"description":null,"identifier":null}}"#
+        #expect(parseRequestLine(key) == .request(id: "k", .key(pid: Scene.pid, ref: "ax_1", key: .returnKey, expect: Identity(role: "AXButton", subrole: nil, title: nil, description: nil, identifier: nil))))
         #expect(parseRequestLine(#"{"id":"r","op":"read","pid":9,"window":1,"scope":"sheet"}"#) == .request(id: "r", .read(pid: 9, window: 1, ref: nil, scope: .sheet)))
     }
 

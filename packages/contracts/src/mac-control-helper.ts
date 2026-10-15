@@ -87,7 +87,13 @@ export const macHelperRequestSchema = z.discriminatedUnion('op', [
     ref: macRefSchema.optional(),
     scope: macReadScopeSchema.optional(),
   }),
-  z.object({ id: z.string(), op: z.literal('target'), ref: macRefSchema, refind: z.boolean() }),
+  z.object({
+    id: z.string(),
+    op: z.literal('target'),
+    pid,
+    ref: macRefSchema,
+    refind: z.boolean(),
+  }),
   z.object({ id: z.string(), op: z.literal('focused'), pid }),
   z.object({
     id: z.string(),
@@ -98,12 +104,14 @@ export const macHelperRequestSchema = z.discriminatedUnion('op', [
   z.object({
     id: z.string(),
     op: z.literal('press'),
+    pid,
     ref: macRefSchema,
     expect: macIdentitySchema,
   }),
   z.object({
     id: z.string(),
     op: z.literal('key'),
+    pid,
     ref: macRefSchema,
     key: macHelperKeySchema,
     expect: macIdentitySchema,

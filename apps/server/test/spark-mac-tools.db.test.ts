@@ -179,6 +179,21 @@ describe('pressing', () => {
     });
   });
 
+  it('refuses a ref that belongs to another app, with no card and no press', async () => {
+    await h.start({ mode: 'bypassPermissions' });
+    await h.allowFirstUse();
+    h.fake.targetPid = 701;
+    const refused = await h.call('spark_mac_act', {
+      action: 'press',
+      app: 'Calculator',
+      ref: 'ax_4',
+    });
+    expect(refused.result.isError).toBe(true);
+    expect(refused.texts[0]).toContain('belongs to another app');
+    expect(h.fake.ops()).not.toContain('act');
+    expect(await h.cards()).toEqual(['mac_use_app']);
+  });
+
   it('asks once per app in Manual, then presses', async () => {
     await h.start({ mode: 'default' });
     await h.allowFirstUse();

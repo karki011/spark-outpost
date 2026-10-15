@@ -1,8 +1,8 @@
 import Foundation
 
 extension Engine {
-    func target(ref: String, refind: Bool) throws -> Target {
-        let stored = try storedRecord(ref)
+    func target(pid: Int32, ref: String, refind: Bool) throws -> Target {
+        let stored = try ownedRecord(ref, pid: pid)
         let windowOpen = isOpen(stored.placement.window, pid: stored.pid)
         if windowOpen, source.isAlive(stored.element) {
             var current = stored

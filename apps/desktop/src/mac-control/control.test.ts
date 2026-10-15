@@ -27,6 +27,13 @@ const SETTINGS: MacRunningApp = {
   bundleId: 'com.apple.systempreferences',
 };
 
+const TEXTEDIT: MacRunningApp = {
+  ...CALCULATOR,
+  pid: 703,
+  name: 'TextEdit',
+  bundleId: 'com.apple.TextEdit',
+};
+
 const FAKE_NOTES: MacRunningApp = {
   ...CALCULATOR,
   pid: 702,
@@ -69,7 +76,7 @@ class FakeHelper implements MacHelper {
     idleSeconds: 100,
     frontmostPid: null,
   };
-  apps: MacRunningApp[] = [CALCULATOR, SETTINGS, FAKE_NOTES];
+  apps: MacRunningApp[] = [CALCULATOR, SETTINGS, FAKE_NOTES, TEXTEDIT];
   calls: MacHelperCall[] = [];
   killed = 0;
   pid = 9000;
@@ -101,6 +108,18 @@ class FakeHelper implements MacHelper {
       };
     }
     if (request.op === 'open') return { pid: 700 };
+    if (request.op === 'target') {
+      return {
+        ref: request.ref,
+        state: 'alive',
+        pid: 700,
+        window: { index: 0, title: 'Calculator' },
+        identity: SEVEN,
+        ancestors: [],
+        actions: ['AXPress'],
+        secure: false,
+      };
+    }
     if (request.op === 'press' || request.op === 'key' || request.op === 'scroll')
       return { done: true };
     throw new MacHelperError('not_found', 'not faked');
@@ -177,6 +196,7 @@ describe('Mac control in the shell', () => {
       ['Calculator', null],
       ['System Settings', 'system_settings'],
       ['Notes', 'impostor'],
+      ['TextEdit', null],
       ['Electron', 'spark'],
     ]);
   });
@@ -208,6 +228,7 @@ describe('Mac control in the shell', () => {
 
   it('pauses when the user moves the mouse in the controlled app, until Resume', async () => {
     const { control, helper, advance, shown } = setup();
+    await control.run(read(700), signal);
     await control.run(press(), signal);
     advance(5_000);
     helper.status = { ...helper.status, frontmostPid: 700, idleSeconds: 1 };
@@ -221,6 +242,7 @@ describe('Mac control in the shell', () => {
 
   it('does not pause for input in another app, and a new turn resumes', async () => {
     const { control, helper, advance } = setup();
+    await control.run(read(700), signal);
     await control.run(press(), signal);
     advance(5_000);
     helper.status = { ...helper.status, frontmostPid: 4242, idleSeconds: 0 };
@@ -233,6 +255,7 @@ describe('Mac control in the shell', () => {
 
   it('Stop kills the helper, hides the indicator and refuses the rest of the turn', async () => {
     const { control, helper, shown } = setup();
+    await control.run(read(700), signal);
     await control.run(press(), signal);
     control.stop();
     expect(helper.killed).toBe(1);
@@ -244,6 +267,7 @@ describe('Mac control in the shell', () => {
 
   it('ends the indicator with the turn', async () => {
     const { control, shown } = setup();
+    await control.run(read(700), signal);
     await control.run(press(), signal);
     expect(await control.run({ op: 'end_run', chatId: CHAT, runId: RUN }, signal)).toEqual({
       ended: true,
@@ -261,7 +285,7 @@ describe('Mac control in the shell', () => {
     };
     expect(byName.app.pid).toBe(700);
     const closed = (await control.run(
-      { op: 'resolve', chatId: CHAT, runId: RUN, app: 'com.apple.TextEdit' },
+      { op: 'resolve', chatId: CHAT, runId: RUN, app: 'com.apple.Preview' },
       signal,
     )) as {
       app: { pid: number | null; refused: string | null };
@@ -279,5 +303,46 @@ describe('Mac control in the shell', () => {
         )
       ).code,
     ).toBe('no_app');
+  });
+
+  it('refuses a ref from another app, and a ref this chat never read', async () => {
+    const { control, helper } = setup();
+    await control.run(read(700), signal);
+    const otherApp = await failure(
+      control.run(
+        { op: 'target', chatId: CHAT, runId: RUN, pid: 703, ref: 'ax_3', refind: false },
+        signal,
+      ),
+    );
+    expect(otherApp).toMatchObject({ code: 'refused' });
+    const otherChat = await failure(
+      control.run({ ...press(), chatId: '44444444-4444-4444-8444-444444444444' }, signal),
+    );
+    expect(otherChat.code).toBe('gone');
+    expect(helper.calls.filter((call) => call.op === 'press')).toHaveLength(0);
+    await control.run(press(), signal);
+    expect(helper.calls.at(-1)).toMatchObject({ op: 'press', pid: 700, ref: 'ax_3' });
+  });
+
+  it('Stop stops every run using Mac control, not just the latest', async () => {
+    const { control, helper } = setup();
+    const otherChat = '55555555-5555-4555-8555-555555555555';
+    await control.run(read(700), signal);
+    await control.run({ ...read(700, NEXT_RUN), chatId: otherChat }, signal);
+    control.stop();
+    expect((await failure(control.run(press(), signal))).code).toBe('stopped');
+    expect(
+      (await failure(control.run({ ...press(NEXT_RUN), chatId: otherChat }, signal))).code,
+    ).toBe('stopped');
+    expect(helper.calls.filter((call) => call.op === 'press')).toHaveLength(0);
+  });
+
+  it('a turn that ends without a run id ends every run of its chat', async () => {
+    const { control, shown } = setup();
+    await control.run(read(700), signal);
+    expect(await control.run({ op: 'end_run', chatId: CHAT, runId: null }, signal)).toEqual({
+      ended: true,
+    });
+    expect(shown.at(-1)).toBeNull();
   });
 });

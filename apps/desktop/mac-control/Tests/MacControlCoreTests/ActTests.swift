@@ -10,7 +10,7 @@ import Testing
         let scene = Scene()
         let send = scene.button("Send")
         let ref = try readRef(scene, send)
-        #expect(try scene.engine.handle(.press(ref: ref, expect: scene.ax.identity(of: send))) == .done)
+        #expect(try scene.engine.handle(.press(pid: Scene.pid, ref: ref, expect: scene.ax.identity(of: send))) == .done)
         #expect(scene.ax.performed.map(\.action) == ["AXPress"])
     }
 
@@ -19,7 +19,7 @@ import Testing
         let long = scene.button(String(repeating: "x", count: 400))
         let read = try scene.read()
         let node = try #require(read.nodes.last)
-        try scene.engine.press(ref: node.ref, expect: node.identity)
+        try scene.engine.press(pid: Scene.pid, ref: node.ref, expect: node.identity)
         #expect(scene.ax.performed.last?.element === long)
     }
 
@@ -27,7 +27,7 @@ import Testing
         let scene = Scene()
         let item = scene.window.add(FakeNode("AXCell", title: "Row", actions: ["AXPick", "AXConfirm"]))
         let ref = try readRef(scene, item)
-        try scene.engine.press(ref: ref, expect: scene.ax.identity(of: item))
+        try scene.engine.press(pid: Scene.pid, ref: ref, expect: scene.ax.identity(of: item))
         #expect(scene.ax.performed.map(\.action) == ["AXConfirm"])
     }
 
@@ -37,7 +37,7 @@ import Testing
         let ref = try readRef(scene, send)
         let expect = scene.ax.identity(of: send)
         send.title = "Delete"
-        #expect(scene.errorCode(.press(ref: ref, expect: expect)) == .changed)
+        #expect(scene.errorCode(.press(pid: Scene.pid, ref: ref, expect: expect)) == .changed)
         #expect(scene.ax.performed.isEmpty)
     }
 
@@ -48,7 +48,7 @@ import Testing
         let expect = scene.ax.identity(of: send)
         send.kill()
         scene.button("Send")
-        #expect(scene.errorCode(.press(ref: ref, expect: expect)) == .gone)
+        #expect(scene.errorCode(.press(pid: Scene.pid, ref: ref, expect: expect)) == .gone)
         #expect(scene.ax.performed.isEmpty)
     }
 
@@ -56,14 +56,14 @@ import Testing
         let scene = Scene()
         let label = scene.window.add(FakeNode("AXStaticText", title: "Hello"))
         let ref = try readRef(scene, label)
-        #expect(scene.errorCode(.press(ref: ref, expect: scene.ax.identity(of: label))) == .notPressable)
+        #expect(scene.errorCode(.press(pid: Scene.pid, ref: ref, expect: scene.ax.identity(of: label))) == .notPressable)
     }
 
     @Test func spaceOnAPressableElementPresses() throws {
         let scene = Scene()
         let send = scene.button("Send")
         let ref = try readRef(scene, send)
-        try scene.engine.pressKey(ref: ref, key: .space, expect: scene.ax.identity(of: send))
+        try scene.engine.pressKey(pid: Scene.pid, ref: ref, key: .space, expect: scene.ax.identity(of: send))
         #expect(scene.ax.performed.map(\.action) == ["AXPress"])
         #expect(scene.system.postedKeys.isEmpty)
     }
@@ -72,7 +72,7 @@ import Testing
         let scene = Scene()
         let field = scene.window.add(FakeNode("AXTextField", title: "To"))
         let ref = try readRef(scene, field)
-        #expect(scene.errorCode(.key(ref: ref, key: .space, expect: scene.ax.identity(of: field))) == .notPressable)
+        #expect(scene.errorCode(.key(pid: Scene.pid, ref: ref, key: .space, expect: scene.ax.identity(of: field))) == .notPressable)
     }
 
     @Test func returnAndEnterPostKeysToTheApp() throws {
@@ -80,8 +80,8 @@ import Testing
         let field = scene.window.add(FakeNode("AXTextField", title: "To"))
         let ref = try readRef(scene, field)
         let expect = scene.ax.identity(of: field)
-        try scene.engine.pressKey(ref: ref, key: .returnKey, expect: expect)
-        try scene.engine.pressKey(ref: ref, key: .enter, expect: expect)
+        try scene.engine.pressKey(pid: Scene.pid, ref: ref, key: .returnKey, expect: expect)
+        try scene.engine.pressKey(pid: Scene.pid, ref: ref, key: .enter, expect: expect)
         #expect(scene.system.postedKeys.map(\.key) == [.returnKey, .enterKey])
         #expect(scene.system.postedKeys.allSatisfy { $0.pid == Scene.pid })
         #expect(KeyCode.returnKey.rawValue == 36 && KeyCode.enterKey.rawValue == 76)
@@ -93,7 +93,7 @@ import Testing
         let ref = try readRef(scene, send)
         let expect = scene.ax.identity(of: send)
         send.identifier = "delete-button"
-        #expect(scene.errorCode(.key(ref: ref, key: .returnKey, expect: expect)) == .changed)
+        #expect(scene.errorCode(.key(pid: Scene.pid, ref: ref, key: .returnKey, expect: expect)) == .changed)
         #expect(scene.system.postedKeys.isEmpty)
     }
 
@@ -124,5 +124,19 @@ import Testing
         #expect(scene.errorCode(.open(bundleId: "com.apple.Notes")) == .notFound)
         scene.system.openedPid = 77
         #expect(try scene.engine.handle(.open(bundleId: "com.apple.Notes")) == .pid(77))
+    }
+
+    @Test func aRefFromAnotherAppIsRefusedForTargetPressAndKey() throws {
+        let scene = Scene()
+        let send = scene.button("Send")
+        let ref = try readRef(scene, send)
+        let expect = scene.ax.identity(of: send)
+        let other: Int32 = 77
+        scene.system.running.insert(other)
+        #expect(scene.errorCode(.target(pid: other, ref: ref, refind: true)) == .invalid)
+        #expect(scene.errorCode(.press(pid: other, ref: ref, expect: expect)) == .invalid)
+        #expect(scene.errorCode(.key(pid: other, ref: ref, key: .space, expect: expect)) == .invalid)
+        #expect(scene.ax.performed.isEmpty)
+        #expect(scene.system.postedKeys.isEmpty)
     }
 }
