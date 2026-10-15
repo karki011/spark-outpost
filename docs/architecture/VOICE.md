@@ -4,16 +4,14 @@
 
 ## Pieces
 
-| Piece     | Where                                      | Does                                                                       |
-| --------- | ------------------------------------------ | -------------------------------------------------------------------------- |
-| Helper    | `apps/desktop/voice/` (Swift package)      | `spark-voice`: records the mic, Silero VAD, whisper.cpp, level meter       |
-| Host      | `apps/desktop/src/voice/`                  | Starts the helper, the shortcut, mic permission, model download and checks |
-| Contracts | `packages/contracts/src/voice.ts`          | Helper messages, the bridge, the model manifest (URL, size, sha256)        |
-| Matcher   | `apps/web/src/voice/commands.ts`           | Templates and fuzzy matching, a pure function like `ask-fast-path.ts`      |
-| UI        | `apps/web/src/voice/`, island and composer | Mic button, listening state, prefilled screens                             |
-| Settings  | Settings → **Voice**, `companion-settings` | Switch, model, shortcut; spoken replies in Phase 2                         |
-
-`apps/web/src/spark/voice.ts` already names Scout's personality `Voice`; the new code uses `speech` names (`SpeechState`, `useSpeech`) to keep the two apart.
+| Piece     | Where                                      | Does                                                                                                          |
+| --------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Helper    | `apps/desktop/voice/` (Swift package)      | `spark-voice`: records the mic, Silero VAD, whisper.cpp, level meter                                          |
+| Host      | `apps/desktop/src/voice/`                  | Starts the helper, the shortcut, mic permission, model download and checks                                    |
+| Contracts | `packages/contracts/src/voice.ts`          | Helper messages, the bridge, the model manifest (URL, size, sha256)                                           |
+| Matcher   | `apps/web/src/voice/commands.ts`           | Templates and fuzzy matching, a pure function like `ask-fast-path.ts`                                         |
+| UI        | `apps/web/src/voice/`, island and composer | Mic button, listening state, prefilled screens; `speech` names, since `spark/voice.ts` is Scout's personality |
+| Settings  | Settings → **Voice**, `companion-settings` | Switch, model, shortcut; spoken replies in Phase 2                                                            |
 
 ## Process and permissions
 
@@ -61,16 +59,23 @@ Events during `listen`: `level` (0 to 1, ten a second, for the meter), `speech` 
 
 ## Models
 
-| Model                                   | File                           | Size     | sha256 (LFS oid) | How                            |
-| --------------------------------------- | ------------------------------ | -------- | ---------------- | ------------------------------ |
-| Silero VAD v6.2.0                       | `ggml-silero-v6.2.0.bin`       | 885 KB   | `2aa269b7…6987`  | Bundled in the helper          |
-| Whisper base.en, 5-bit (default)        | `ggml-base.en-q5_1.bin`        | 59.7 MB  | `4baf70dd…dd2f`  | Downloaded on turning Voice on |
-| Whisper small.en, 5-bit (Phase 2)       | `ggml-small.en-q5_1.bin`       | 190.1 MB | `bfdff489…ad30`  | Optional, Settings             |
-| Whisper large-v3-turbo, 5-bit (Phase 2) | `ggml-large-v3-turbo-q5_0.bin` | 574.0 MB | `39422170…a7e2`  | Optional, multilingual         |
+| Model                                   | File and size                             | How                            |
+| --------------------------------------- | ----------------------------------------- | ------------------------------ |
+| Silero VAD v6.2.0                       | `ggml-silero-v6.2.0.bin`, 885,098 bytes   | Bundled in the helper          |
+| Whisper base.en, 5-bit (default)        | `ggml-base.en-q5_1.bin`, 59,721,011 bytes | Downloaded on turning Voice on |
+| Whisper small.en, 5-bit (Phase 2)       | `ggml-small.en-q5_1.bin`, 190 MB          | Optional, Settings             |
+| Whisper large-v3-turbo, 5-bit (Phase 2) | `ggml-large-v3-turbo-q5_0.bin`, 574 MB    | Optional, multilingual         |
+
+Pinned sha256 (the Hugging Face LFS oid, read 2026-10-15):
+
+- `ggml-silero-v6.2.0.bin`: `2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987`
+- `ggml-base.en-q5_1.bin`: `4baf70dd0d7c4247ba2b81fafd9c01005ac77c2f9ef064e00dcf195d0e2fdd2f`
+- `ggml-small.en-q5_1.bin`: `bfdff4894dcb76bbf647d56263ea2a96645423f1669176f4844a1bf8e478ad30`
+- `ggml-large-v3-turbo-q5_0.bin`: `394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2`
 
 **Why base.en, downloaded.** Voice is off by default. Bundling 60 MB would grow every install and update, for both arches and for everyone; a download happens once, only for those who turn Voice on, and the pinned hash gives a bundle's integrity. base.en is the smallest model we expect to get project names and ticket letters right; tiny.en (32 MB) is the fallback if it is too slow on older Intel Macs. Accuracy and latency are **to measure** in Phase 1.
 
-**Integrity.** The manifest in `packages/contracts/src/voice.ts` holds each file's full sha256, byte size and a URL pinned to a commit, never `main`: `https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/<file>` (Silero from `ggml-org/whisper-vad` at `9ffd54a1e1ee413ddf265af9913beaf518d1639b`). Main downloads with Electron `net` to `<userData>/voice/<sha256>.partial`, hashing as it streams; a wrong size or hash deletes it and says **The download didn't check out**, otherwise it is renamed to `<sha256>.bin`. The helper checks the hash again on `load`. A failed download starts over.
+**Integrity.** The manifest in `packages/contracts/src/voice.ts` holds these hashes, byte sizes and a URL pinned to a commit, never `main`: `https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/<file>` (Silero from `ggml-org/whisper-vad` at `9ffd54a1e1ee413ddf265af9913beaf518d1639b`). Main downloads with Electron `net` to `<userData>/voice/<sha256>.partial`, hashing as it streams; a wrong size or hash deletes it and says **The download didn't check out**, otherwise it is renamed to `<sha256>.bin`. The helper checks the hash again on `load`. A failed download starts over.
 
 ## Commands
 
@@ -106,13 +111,15 @@ The global **Voice shortcut** (default ⌥⇧V, changeable next to the other two
 2. **Transcribing.** **Working it out…** for the second or so whisper takes; the transcript then shows above the result.
 3. **The result**, always a prefilled screen with focus on its confirm button or text box:
 
-| Intent       | Screen                                                                                                                                                                                                                                                                                                                 | Confirm                |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| `start_chat` | **New chat** with the project chip set, a ticket chip (new; removable) and the task in the text box. With a ticket, Send uses the existing ticket start route (`projectId`, `note` = the task) and shows its **Move to In Progress** choice, set to the user's last choice, because that move writes to Jira or Linear | Enter, Send, or "send" |
-| `open`       | One match: **Open "Fix login redirect"** with Open focused. Several: which one                                                                                                                                                                                                                                         | Enter, click, or "yes" |
-| `ask_fast`   | **Ask Spark** with the instant answer shown at once (local data, no model call); spoken in Phase 2 when turned on                                                                                                                                                                                                      | none: it only shows    |
-| `reply`      | **Chats** → that chat → **Reply** with the text in the box                                                                                                                                                                                                                                                             | Enter, Send, or "send" |
-| none         | **Ask Spark** with the transcript in the box, not sent                                                                                                                                                                                                                                                                 | Enter, Ask, or "send"  |
+| Intent       | Screen                                                                                                            | Confirm                |
+| ------------ | ----------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `start_chat` | **New chat** with the project chip, a removable ticket chip (new) and the task                                    | Enter, Send, or "send" |
+| `open`       | One match: **Open "Fix login redirect"** with Open focused. Several: which one                                    | Enter, click, or "yes" |
+| `ask_fast`   | **Ask Spark** with the instant answer shown at once (local data, no model call); spoken in Phase 2 when turned on | none: it only shows    |
+| `reply`      | **Chats** → that chat → **Reply** with the text in the box                                                        | Enter, Send, or "send" |
+| none         | **Ask Spark** with the transcript in the box, not sent                                                            | Enter, Ask, or "send"  |
+
+With a ticket, Send uses the existing ticket start route (`projectId`, `note` = the task) and shows its **Move to In Progress** choice, since that move writes to Jira or Linear.
 
 **Confirming by voice** needs a fresh press of the shortcut: Spark never listens on its own after a result. The `confirm` listen is bound to the id of that voice draft only; anything but a confirm phrase changes nothing and shows **Say "send" or "cancel"**.
 
@@ -141,10 +148,9 @@ The global **Voice shortcut** (default ⌥⇧V, changeable next to the other two
 
 ## Accessibility
 
-- Mic buttons have `aria-pressed` and the labels **Dictate** and **Stop dictating**; every voice screen works by keyboard alone, and macOS Voice Control can click **Dictate** by name.
-- State is text, not colour or motion alone: "Listening", "Working it out" and "Didn't catch that" go to an `aria-live` region; the meter respects reduced motion.
-- A start and stop sound follows the island's **Sound** setting (off by default).
-- The mic can hear VoiceOver; spoken replies stay off while VoiceOver runs.
+- Mic buttons have `aria-pressed` and the labels **Dictate** and **Stop dictating**; every voice screen works by keyboard alone, and Voice Control can click **Dictate**.
+- State is text in an `aria-live` region ("Listening", "Working it out", "Didn't catch that"), not colour or motion alone; the meter respects reduced motion, and a start sound follows the island's **Sound** setting.
+- The mic can hear VoiceOver, so spoken replies stay off while it runs.
 
 ## Testing
 
@@ -152,7 +158,7 @@ The global **Voice shortcut** (default ⌥⇧V, changeable next to the other two
 - **Matcher unit tests** on text: every template, normalising, key spellings, ambiguity, no match, nothing outside the lists picked.
 - **Swift tests** with a fake audio source and clock: VAD, the 30 s silence stop, cancel dropping audio, empty results, `bad_model`.
 - **Fake helper** (`SPARK_FAKE_VOICE=1`) replaying scripted protocol events, for host tests and browser specs of every flow, ambiguity, Esc, a denied mic and a bad hash.
-- **Real on this Mac:** the packaged build's Microphone entry; real Claude in a chat (dictate, send, Claude answers) and in a Claude Terminal session (dictate, send through the message route, the `/` refusal); and "start a chat in spark-outpost for <ticket> …" with a connected ticket source.
+- **Real on this Mac:** the packaged build's Microphone entry; real Claude in a chat (dictate, send, Claude answers) and in a Claude Terminal session (dictate and send through the message route; a dictated "slash compact" arrives as words, a typed `/` is refused); and "start a chat in spark-outpost for <ticket> …" with a connected ticket source.
 
 ## Phases
 
@@ -163,13 +169,7 @@ The global **Voice shortcut** (default ⌥⇧V, changeable next to the other two
 
 By the owner on 2026-10-15: everything in [Safety](#safety), whisper.cpp with Silero VAD, local matching, the five intents, dictation, the Terminal message route, and no voice on paired phones in v1. Rejected by the owner: Chromium Web Speech (sends audio to Google), Cactus Whistle (speech-to-text only, closed engine source), openWakeWord and Porcupine.
 
-Chosen by default, not by the owner:
-
-1. **Toggle, not hold**, until a permission-free key-up is verified.
-2. **base.en 5-bit, downloaded** when Voice is turned on; Silero bundled.
-3. **A ticket start goes through the ticket start route**, with its Move to In Progress choice shown.
-4. **Instant answers show at once**; everything else waits for a confirm.
-5. **Default shortcut ⌥⇧V.**
+Chosen by default, not by the owner: toggle rather than hold, base.en downloaded rather than bundled, ticket starts through the start route, instant answers shown at once, and ⌥⇧V.
 
 ## Open questions
 
@@ -189,7 +189,7 @@ Read 2026-10-15.
 | whisper.cpp                       | MIT                                     | [ggml-org/whisper.cpp LICENSE](https://github.com/ggml-org/whisper.cpp/blob/master/LICENSE)                                                                    |
 | Whisper weights (ggml)            | MIT                                     | [openai/whisper LICENSE](https://github.com/openai/whisper/blob/main/LICENSE), [ggerganov/whisper.cpp card](https://huggingface.co/ggerganov/whisper.cpp)      |
 | Silero VAD                        | MIT                                     | [snakers4/silero-vad LICENSE](https://github.com/snakers4/silero-vad/blob/master/LICENSE), [ggml-org/whisper-vad](https://huggingface.co/ggml-org/whisper-vad) |
-| hassil (syntax only)              | Apache-2.0                              | [OHF-Voice/hassil LICENSE](https://github.com/OHF-Voice/hassil/blob/main/LICENSE)                                                                              |
+| hassil (syntax only)              | Apache-2.0                              | [OHF-Voice/hassil LICENSE](https://github.com/OHF-Voice/hassil/blob/main/LICENSE.md)                                                                           |
 | Home Assistant intents (not used) | CC-BY-4.0                               | [OHF-Voice/intents](https://github.com/OHF-Voice/intents)                                                                                                      |
 | Kokoro-82M                        | Apache-2.0                              | [hexgrad/Kokoro-82M card](https://huggingface.co/hexgrad/Kokoro-82M)                                                                                           |
 | misaki (Kokoro's G2P)             | Apache-2.0; its fallback is espeak-ng   | [hexgrad/misaki](https://github.com/hexgrad/misaki)                                                                                                            |
