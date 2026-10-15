@@ -11,7 +11,7 @@ Development uses a native PostgreSQL 17 cluster that lives in the repository's i
 
 Requirements: `brew install postgresql@17`. Set `SPARK_PG_PORT` before `pnpm db:setup` to use a different port.
 
-`pnpm db:up` starts the cluster with `max_connections` 300, so `pnpm test:browser:shards 8` fits (each shard's stack may hold 24 connections). A cluster that is already running keeps its old limit until `pnpm db:stop` and `pnpm db:up`. Set `SPARK_PG_MAX_CONNECTIONS` to change it.
+`pnpm db:up` starts the cluster with `max_connections` 300, so `pnpm test:browser:shards` (6 shards) fits, with room for 8 (each shard's stack may hold 24 connections). A cluster that is already running keeps its old limit until `pnpm db:stop` and `pnpm db:up`. Set `SPARK_PG_MAX_CONNECTIONS` to change it.
 
 The cluster listens on loopback only, uses SCRAM password authentication, and has no Unix socket. `.local/credentials.env` holds `DATABASE_URL` and `TEST_DATABASE_URL`; the server and test scripts load it automatically. Never commit it.
 

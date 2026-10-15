@@ -14,6 +14,8 @@ import {
 if (!process.env.TEST_DATABASE_URL && existsSync('.local/credentials.env'))
   process.loadEnvFile('.local/credentials.env');
 
+const DEFAULT_SHARDS = 6;
+
 interface Options {
   count: number;
   firstSlot: number;
@@ -23,10 +25,12 @@ interface Options {
 
 function parseOptions(args: string[]): Options {
   const flags = args.filter((arg) => arg.startsWith('--'));
-  const [count, ...filters] = args.filter((arg) => !arg.startsWith('--'));
+  const positional = args.filter((arg) => !arg.startsWith('--'));
+  const counted = /^\d+$/.test(positional[0] ?? '');
+  const filters = counted ? positional.slice(1) : positional;
   const firstSlot = flags.find((flag) => flag.startsWith('--first-slot='))?.split('=')[1];
   return {
-    count: Number(count),
+    count: counted ? Number(positional[0]) : DEFAULT_SHARDS,
     firstSlot: Number(firstSlot ?? 1),
     dryRun: flags.includes('--dry-run'),
     filters,
@@ -112,7 +116,7 @@ async function main(): Promise<number> {
   const url = process.env.TEST_DATABASE_URL;
   if (!Number.isInteger(options.count) || !url) {
     console.error(
-      'Usage: tsx scripts/browser-shards.ts <shards> [spec filter...] [--first-slot=N] [--dry-run] (needs TEST_DATABASE_URL)',
+      'Usage: tsx scripts/browser-shards.ts [shards, default 6] [spec filter...] [--first-slot=N] [--dry-run] (needs TEST_DATABASE_URL)',
     );
     return 2;
   }
