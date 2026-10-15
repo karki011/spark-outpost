@@ -1,8 +1,9 @@
 import '../../chat/composer.css';
 import { useId, useRef, useState } from 'react';
-import { TERMINAL_MESSAGE_MAX_LENGTH } from '@spark-outpost/contracts';
+import { TERMINAL_MESSAGE_MAX_LENGTH, type BusyEnterAction } from '@spark-outpost/contracts';
 import { ComposerShell, composerRows } from '../../chat/composer/ComposerShell.tsx';
 import { SendButton } from '../../chat/composer/SendButton.tsx';
+import { enterAction } from '../../chat/queue/send-choice.ts';
 import { SecretWarning } from '../../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../../ui/use-secret-guard.ts';
 
@@ -11,14 +12,16 @@ const LABEL = 'Message the agent';
 export function RemoteTerminalComposer({
   blocked,
   working,
+  preferred,
   error,
   onSend,
   onStop,
 }: {
   blocked: string | null;
   working: boolean;
+  preferred: BusyEnterAction;
   error: string | null;
-  onSend: (text: string) => Promise<boolean>;
+  onSend: (text: string, now: boolean) => Promise<boolean>;
   onStop: () => Promise<unknown>;
 }) {
   const [text, setText] = useState('');
@@ -26,12 +29,14 @@ export function RemoteTerminalComposer({
   const input = useRef<HTMLTextAreaElement>(null);
   const inputId = useId();
   const secrets = useSecretGuard(text);
+  const lastNow = useRef(false);
   const ready = text.trim().length > 0 && !sending && blocked === null;
-  const send = async () => {
+  const send = async (now = false) => {
+    lastNow.current = now;
     if (!ready || secrets.blocks(text)) return;
     setSending(true);
     try {
-      if (await onSend(text)) setText('');
+      if (await onSend(text, now)) setText('');
     } finally {
       setSending(false);
     }
@@ -44,29 +49,19 @@ export function RemoteTerminalComposer({
           guard={secrets}
           input={input}
           onText={setText}
-          onSendAnyway={() => void send()}
+          onSendAnyway={() => void send(lastNow.current)}
         />
       }
       context={null}
       bar={
-        <>
-          {working && (
-            <SendButton
-              busy
-              label="Stop"
-              disabled={false}
-              onSend={() => undefined}
-              onStop={() => void onStop()}
-            />
-          )}
-          <SendButton
-            busy={false}
-            label="Send"
-            disabled={!ready}
-            onSend={() => void send()}
-            onStop={() => undefined}
-          />
-        </>
+        <SendButton
+          busy={working}
+          label="Send"
+          disabled={!ready}
+          onSend={() => void send()}
+          onStop={() => void onStop()}
+          busySend={{ preferred, onChoice: (action) => void send(action === 'now') }}
+        />
       }
     >
       {blocked && (
@@ -88,7 +83,7 @@ export function RemoteTerminalComposer({
         onKeyDown={(event) => {
           if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
           event.preventDefault();
-          void send();
+          void send(working && enterAction(event, preferred) === 'now');
         }}
       />
     </ComposerShell>

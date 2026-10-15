@@ -17,8 +17,8 @@ describe('terminal approvals', () => {
     });
     const shown = approvals.current('c1')!;
     expect(shown).toMatchObject({ tool: 'Bash', detail: 'npm test' });
-    approvals.take('c1', shown.id)!.settle('allow');
-    await expect(waiting).resolves.toBe('allow');
+    approvals.take('c1', shown.id)!.settle({ behavior: 'deny', message: 'Use pnpm' });
+    await expect(waiting).resolves.toEqual({ behavior: 'deny', message: 'Use pnpm' });
     expect(approvals.current('c1')).toBeNull();
     expect(approvals.take('c1', shown.id)).toBeNull();
   });

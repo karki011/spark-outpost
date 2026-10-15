@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { nativeActivity } from './native-context.ts';
 import { parseNativeHook } from './native-hooks.ts';
 
 describe('native terminal observation', () => {
@@ -77,6 +78,24 @@ describe('native terminal observation', () => {
     expect(parseNativeHook('claude', { hook_event_name: 'ElicitationResult' })).toEqual({
       kind: 'tool_start',
     });
+  });
+
+  it('reads the Interrupt Codex 0.162.1 sends after Esc in its approval menu', () => {
+    const event = parseNativeHook('codex', {
+      session_id: '01a13d05-5a6a-7b93-9b73-31bffd0f34eb',
+      turn_id: '01a13d0a-7a87-72d0-b76e-3779bfbebeab',
+      transcript_path:
+        '/Users/me/.codex/sessions/2026/10/14/rollout-2026-10-14T20-45-23-01a13d05-5a6a-7b93-9b73-31bffd0f34eb.jsonl',
+      cwd: '/work',
+      hook_event_name: 'Interrupt',
+      model: 'gpt-6-astra',
+      permission_mode: 'default',
+    });
+    expect(event).toMatchObject({
+      kind: 'interrupt',
+      nativeTurnId: '01a13d0a-7a87-72d0-b76e-3779bfbebeab',
+    });
+    expect(nativeActivity(event!, true)).toBe('ready');
   });
 
   it('rejects unsupported and malformed events', () => {

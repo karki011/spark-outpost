@@ -4,11 +4,11 @@ import { connectableIdSchema } from '@spark-outpost/contracts';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
 import { formatDuration } from '../audit/audit-model.ts';
 import { ChevronIcon, TrashIcon } from '../ui/icons.tsx';
+import { LiveElapsed } from '../ui/LiveElapsed.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { CrewBlob } from './CrewBlob.tsx';
 import { crewExpression } from './crew-model.ts';
 import { StopIcon } from './tv-icons.tsx';
-import { TvElapsed } from './TvElapsed.tsx';
 import {
   activityText,
   needsYou,
@@ -131,7 +131,7 @@ function Row({
             item.durationMs !== null && <span>{formatDuration(item.durationMs)}</span>
           ) : item.startedAt !== null ? (
             <span>
-              <TvElapsed since={item.startedAt} />
+              <LiveElapsed since={item.startedAt} className="tvl-clock" />
             </span>
           ) : null}
           <span>{item.model}</span>

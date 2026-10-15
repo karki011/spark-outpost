@@ -37,6 +37,8 @@ const cached: Record<string, QueryKey> = {
   previewProject: ['preview', 'project', A],
   outpostList: ['outposts', 'list'],
   outpostDetail: ['outposts', 'detail', A],
+  terminalRemoteA: ['terminal-remote', A],
+  terminalRemoteB: ['terminal-remote', B],
 };
 
 async function invalidatedBy(...events: AppEvent[]): Promise<string[]> {
@@ -75,6 +77,7 @@ describe('app event invalidation', () => {
         'spendToday',
         'spendWeek',
         'task',
+        'terminalRemoteA',
         'today',
         'usage',
       ].sort(),
@@ -109,8 +112,14 @@ describe('app event invalidation', () => {
     ]);
   });
 
-  it('a step refreshes the sidebar row, the open chat, its audit summary and live change counts', async () => {
-    expect(await invalidatedBy(event('step'))).toEqual(['auditA', 'changesA', 'detailA', 'list']);
+  it('a step refreshes the sidebar row, the open chat, its audit summary, live change counts and a phone following its Terminal session', async () => {
+    expect(await invalidatedBy(event('step'))).toEqual([
+      'auditA',
+      'changesA',
+      'detailA',
+      'list',
+      'terminalRemoteA',
+    ]);
   });
 
   it('a sub-agent starting or ending refreshes the sidebar row and the open chat, outside the step lane', async () => {
@@ -136,12 +145,13 @@ describe('app event invalidation', () => {
     expect(await invalidatedBy(event('orchestration', B))).toEqual(['detailB']);
   });
 
-  it('a conversation change refreshes the list, search results and that chat', async () => {
+  it('a conversation change refreshes the list, search results, that chat and its Terminal view on a phone', async () => {
     expect(await invalidatedBy(event('conversation'))).toEqual([
       'detailA',
       'list',
       'previewA',
       'search',
+      'terminalRemoteA',
     ]);
   });
 

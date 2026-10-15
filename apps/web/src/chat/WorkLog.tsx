@@ -10,7 +10,7 @@ export function StepName({ name }: { name: string }) {
     .map((part, index) => (index % 2 === 1 ? <code key={index}>{part}</code> : part));
 }
 
-function stepCount(steps: readonly StepView[]): string {
+export function stepCount(steps: readonly unknown[]): string {
   return `${steps.length} ${steps.length === 1 ? 'step' : 'steps'}`;
 }
 
@@ -60,7 +60,13 @@ export function useStepLog(
   };
 }
 
-export function StepToggle({ log, label }: { log: StepLog; label: string }) {
+export function StepToggle({
+  log,
+  label,
+}: {
+  log: Pick<StepLog, 'open' | 'listId' | 'toggle'>;
+  label: string;
+}) {
   return (
     <button
       type="button"
