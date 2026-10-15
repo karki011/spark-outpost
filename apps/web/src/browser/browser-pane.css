@@ -180,6 +180,14 @@
   white-space: nowrap;
 }
 
+.bp-notice {
+  display: inline-flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--text);
+}
+
 .bp-agent-opened {
   display: inline-flex;
   min-width: 0;

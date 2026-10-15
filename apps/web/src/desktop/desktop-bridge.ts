@@ -4,6 +4,7 @@ import type {
   BrowserPaneState,
   BrowserPick,
   BrowserPlacement,
+  BrowserSelectedText,
   DesktopHelpInfo,
   DiagnosticsExport,
   InstallResult,
@@ -61,6 +62,7 @@ export interface DesktopBrowser {
   onState(callback: (state: BrowserPaneState) => void): Unsubscribe;
   onSnapshot(callback: (snapshot: BrowserSnapshot) => void): Unsubscribe;
   onPicked(callback: (pick: BrowserPick) => void): Unsubscribe;
+  onSelectedText(callback: (selected: BrowserSelectedText) => void): Unsubscribe;
 }
 
 export interface SparkDesktop {

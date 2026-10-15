@@ -7,6 +7,19 @@ export interface BrowserHome {
   projectId: string | null;
   keepSignIns: boolean;
   roots: readonly string[];
+  sendsTo: 'chat' | 'terminal';
+}
+
+export function hiddenPlacement(home: BrowserHome): BrowserPlacement {
+  return {
+    chatId: home.chatId,
+    projectId: home.projectId,
+    keepSignIns: home.keepSignIns,
+    roots: [...home.roots].slice(0, 16),
+    bounds: null,
+    covered: false,
+    sendsTo: home.sendsTo,
+  };
 }
 
 const PROBE_INSET = 6;
@@ -57,7 +70,7 @@ export function useViewPlacement(
   home: BrowserHome,
   shown: boolean,
 ): void {
-  const { chatId, projectId, keepSignIns } = home;
+  const { chatId, projectId, keepSignIns, sendsTo } = home;
   const rootsKey = home.roots.join('\n');
 
   useEffect(() => {
@@ -93,6 +106,7 @@ export function useViewPlacement(
         roots,
         bounds,
         covered,
+        sendsTo,
       };
       const key = JSON.stringify(placement);
       if (key === sent) return;
@@ -157,7 +171,15 @@ export function useViewPlacement(
       cancelAnimationFrame(frame);
       cancelAnimationFrame(animating);
       clearTimeout(settle);
-      void browser.place({ chatId, projectId, keepSignIns, roots, bounds: null, covered: false });
+      void browser.place({
+        chatId,
+        projectId,
+        keepSignIns,
+        roots,
+        bounds: null,
+        covered: false,
+        sendsTo,
+      });
     };
-  }, [target, chatId, projectId, keepSignIns, rootsKey, shown]);
+  }, [target, chatId, projectId, keepSignIns, rootsKey, shown, sendsTo]);
 }

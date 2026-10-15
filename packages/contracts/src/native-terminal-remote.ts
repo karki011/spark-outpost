@@ -45,3 +45,9 @@ export const terminalApprovalDecisionSchema = z.strictObject({
   reason: z.string().trim().max(TERMINAL_DENY_REASON_MAX_LENGTH).optional(),
 });
 export type TerminalApprovalDecision = z.infer<typeof terminalApprovalDecisionSchema>;
+
+export const terminalImageRequestSchema = z.strictObject({ attachmentId: z.uuid() });
+export type TerminalImageRequest = z.infer<typeof terminalImageRequestSchema>;
+
+export const terminalImageResponseSchema = z.object({ path: z.string() });
+export type TerminalImageResponse = z.infer<typeof terminalImageResponseSchema>;

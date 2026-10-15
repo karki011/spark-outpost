@@ -64,6 +64,7 @@ export interface NativeRuntime {
   stopRun(runId: string): Promise<boolean>;
   stopSession(id: string): Promise<boolean>;
   attachSession(id: string): Promise<CreateShellResponse | null>;
+  saveImage(conversationId: string, attachmentId: string): Promise<string>;
   recover(): Promise<void>;
   detach(): Promise<void>;
   dispose(): Promise<void>;

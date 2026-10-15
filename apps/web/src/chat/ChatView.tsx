@@ -9,7 +9,7 @@ import {
   type Run,
   type TaskOverview,
 } from '@spark-outpost/contracts';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
@@ -23,9 +23,8 @@ import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
 import { BrowserPane } from '../browser/BrowserPane.tsx';
 import { ChatLinks } from '../browser/ChatLinks.tsx';
 import { usePreviewDockTab } from '../browser/use-chat-preview.ts';
-import { onBrowserPick } from '../browser/browser-store.ts';
 import { useBrowserPane } from '../browser/pane-open.ts';
-import { pickFiles, pickText } from '../browser/pick-files.ts';
+import { useBrowserInput } from '../browser/use-browser-input.ts';
 import { TerminalDock } from '../terminal/dock/TerminalDock.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { PanelOpenContext } from '../tasks/panel-open.ts';
@@ -212,17 +211,10 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     if (browsing) panel.closeBrowser();
     else panel.setView('browser');
   });
-  const addPick = attachments.addPick;
-  useEffect(
-    () =>
-      onBrowserPick((pick) => {
-        if (pick.chatId === conversationId) addPick(pickText(pick), pickFiles(pick));
-      }),
-    [conversationId, addPick],
-  );
   const firstRepo = repos[0] ?? null;
   const view = sessionView(detail.data, terminalLaunching);
   const terminalSession = view === 'terminal';
+  useBrowserInput(conversationId, terminalSession, attachments.addPick, quotes.requestFocus);
   const newSession = view === 'draft';
   const chooseSession = (choice: SessionChoice) => {
     setSessionChoice(choice);
@@ -249,6 +241,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     projectId: firstRepo?.id ?? null,
     keepSignIns: firstRepo?.browserKeepSignIns ?? true,
     roots: panelRoots,
+    sendsTo: terminalSession ? ('terminal' as const) : ('chat' as const),
   };
 
   return (

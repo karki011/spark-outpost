@@ -10,7 +10,10 @@
   white-space: nowrap;
 }
 .tbar-agent {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 13px;
 }
 .tbar-state,
@@ -18,11 +21,14 @@
   margin: 0;
   color: var(--muted);
 }
-.tbar-state,
-.tbar-hint {
+.tbar-state {
   flex: none;
 }
 .tbar-hint {
+  flex: 0 100 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--muted);
 }
 .tbar-note {
@@ -47,8 +53,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-width: 0;
-  flex: 0 1 auto;
+  min-width: 14px;
+  flex: 0 4 auto;
+  overflow: hidden;
   color: var(--text);
 }
 .tbar-place svg {

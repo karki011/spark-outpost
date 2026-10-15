@@ -2,6 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import {
   nativeTerminalLaunchRequestSchema,
   terminalApprovalDecisionSchema,
+  terminalImageRequestSchema,
   terminalMessageRequestSchema,
 } from '@spark-outpost/contracts';
 import { paramId, parseBody } from '../api/validation.ts';
@@ -34,6 +35,10 @@ export function nativeTerminalRoutes(runtime?: NativeRuntime): Router {
   router.delete('/conversations/:id/terminal', available, async (req, res) => {
     await runtime!.stop(paramId(req));
     res.status(204).end();
+  });
+  router.post('/conversations/:id/terminal/images', available, async (req, res) => {
+    const { attachmentId } = parseBody(terminalImageRequestSchema, req);
+    res.status(201).json({ path: await runtime!.saveImage(paramId(req), attachmentId) });
   });
   router.get('/conversations/:id/terminal/transcript', available, async (req, res) => {
     res.json(await runtime!.remote.view(paramId(req), remoteDeviceOf(res) !== null));

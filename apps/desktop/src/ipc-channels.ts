@@ -55,6 +55,7 @@ export const IPC = {
   browserStateChanged: 'browser:state-changed',
   browserSnapshot: 'browser:snapshot',
   browserPicked: 'browser:picked',
+  browserSelectedText: 'browser:selected-text',
 } as const;
 
 export type DragPhase = 'start' | 'lift' | 'move' | 'end';
