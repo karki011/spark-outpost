@@ -118,7 +118,7 @@ const REFUSAL_LINES: Record<MacRefusalKind, string> = {
     'Spark never controls web browsers, which hold the user’s own sign-ins. Use the Browser pane (spark_browser_open) instead.',
   spark: 'Spark never controls Spark Outpost itself.',
   impostor:
-    'This app’s code signature does not match the app it names, or is not valid, so Spark refuses it.',
+    'This app’s code signature is not valid or does not match the app it names, so Spark refuses it. An app updated while it runs fails this until it is quit and opened again.',
 };
 
 export function macRefusalLine(kind: MacRefusalKind, appName: string): string {
