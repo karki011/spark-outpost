@@ -11,6 +11,7 @@ export async function withDesktopBrowser(page: Page) {
     const stateListeners = new Set<(state: unknown) => void>();
     const snapshotListeners = new Set<(snapshot: unknown) => void>();
     const pickListeners = new Set<(pick: unknown) => void>();
+    const textListeners = new Set<(selected: unknown) => void>();
     const noop = () => () => undefined;
     const tab = (id: string, change: Record<string, unknown>) => ({
       id,
@@ -38,6 +39,8 @@ export async function withDesktopBrowser(page: Page) {
       browserSnapshot: (chatId: string, image: string | null) =>
         snapshotListeners.forEach((listener) => listener({ chatId, image })),
       browserPick: (pick: unknown) => pickListeners.forEach((listener) => listener(pick)),
+      browserSelectedText: (selected: unknown) =>
+        textListeners.forEach((listener) => listener(selected)),
       sparkDesktop: {
         platform: 'darwin',
         companion: { get: async () => null, onChange: noop },
@@ -69,6 +72,10 @@ export async function withDesktopBrowser(page: Page) {
           onPicked: (listener: (pick: unknown) => void) => {
             pickListeners.add(listener);
             return () => pickListeners.delete(listener);
+          },
+          onSelectedText: (listener: (selected: unknown) => void) => {
+            textListeners.add(listener);
+            return () => textListeners.delete(listener);
           },
         },
       },

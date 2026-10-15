@@ -84,6 +84,7 @@ export const SPEC_GROUPS = {
   'terminal-preview-browser': [
     'browser-agent',
     'browser-pane',
+    'browser-pane-input',
     'chat-links',
     'chat-terminal',
     'native-terminal',

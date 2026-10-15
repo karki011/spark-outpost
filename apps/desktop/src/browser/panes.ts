@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { BrowserWindow, WebContentsView } from 'electron';
+import type { BrowserWindow, ContextMenuParams, WebContentsView } from 'electron';
 import {
   BROWSER_TABS_MAX,
   browserOrigin,
@@ -16,6 +16,7 @@ import {
   type GuardFacts,
   type PartitionChoice,
 } from './request-guard.ts';
+import type { SendsTo } from './selection-menu.ts';
 import { browserSession } from './sessions.ts';
 import { PaneTab } from './tab.ts';
 
@@ -25,6 +26,8 @@ export interface PanesOptions {
   stateChanged(state: BrowserPaneState): void;
   snapshot(chatId: string, image: string | null): void;
   localOriginSeen(projectId: string, origin: string): void;
+  contextMenu(tab: PaneTab, params: ContextMenuParams): void;
+  addShortcut(tab: PaneTab): void;
   log(line: string): void;
   idleMs?: number;
 }
@@ -39,6 +42,7 @@ interface ChatPane {
   chatId: string;
   tabs: PaneTab[];
   home: ChatHome;
+  sendsTo: SendsTo;
   idle: NodeJS.Timeout | null;
   notify: boolean;
 }
@@ -67,6 +71,7 @@ export class BrowserPanes {
         chatId,
         tabs: [],
         home: home ?? { projectId: null, keepSignIns: true, roots: [] },
+        sendsTo: 'chat',
         idle: null,
         notify: false,
       };
@@ -104,6 +109,10 @@ export class BrowserPanes {
     return { blockedPorts: this.options.blockedPorts(), roots: [...roots] };
   }
 
+  sendsTo(chatId: string): SendsTo {
+    return this.chats.get(chatId)?.sendsTo ?? 'chat';
+  }
+
   tabsOf(chatId: string): readonly PaneTab[] {
     return this.chats.get(chatId)?.tabs ?? [];
   }
@@ -125,8 +134,9 @@ export class BrowserPanes {
     });
   }
 
-  touch(chatId: string, home?: ChatHome): void {
+  touch(chatId: string, home?: ChatHome, sendsTo?: SendsTo): void {
     const pane = this.chat(chatId, home);
+    if (sendsTo) pane.sendsTo = sendsTo;
     this.scheduleIdle(pane);
   }
 
@@ -171,6 +181,8 @@ export class BrowserPanes {
         viewCreated: (view) => this.attach(view),
         viewClosed: (view) => this.detach(view),
         visited: (url) => this.visited(pane, projectId, url),
+        contextMenu: (owner, params) => this.options.contextMenu(owner, params),
+        addShortcut: (owner) => this.options.addShortcut(owner),
       },
     );
     pane.tabs.push(tab);
@@ -266,6 +278,7 @@ export class BrowserPanes {
     const before = this.placement;
     const home = { projectId: next.projectId, keepSignIns: next.keepSignIns, roots: next.roots };
     const pane = this.chat(next.chatId, home);
+    pane.sendsTo = next.sendsTo;
     if (next.covered && before?.chatId === next.chatId && !before.covered) {
       await this.sendSnapshot(pane);
     }

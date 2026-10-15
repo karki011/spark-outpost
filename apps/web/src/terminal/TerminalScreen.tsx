@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { setDraftTarget } from './draft-target.ts';
 import { nativeTerminalApi } from './terminal-api.ts';
 import type { LinkOpener } from './link-pointer.ts';
 import { openTerminal } from './terminal-connection.ts';
@@ -16,6 +17,7 @@ export function TerminalScreen({
   onEnded,
   onMouseReporting,
   links,
+  draftRefusal,
 }: {
   chatId: string;
   attempt: number;
@@ -26,10 +28,12 @@ export function TerminalScreen({
   onEnded: () => void;
   onMouseReporting: (on: boolean) => void;
   links: LinkOpener;
+  draftRefusal: string | null;
 }) {
   const screen = useRef<HTMLDivElement>(null);
   const selection = useTerminalSelection();
   const { report, attach } = selection;
+  const refusal = useRef(draftRefusal);
   const callbacks = useRef({
     onConnected,
     onDisconnected,
@@ -40,6 +44,7 @@ export function TerminalScreen({
     links,
   });
   useEffect(() => {
+    refusal.current = draftRefusal;
     callbacks.current = {
       onConnected,
       onDisconnected,
@@ -77,7 +82,12 @@ export function TerminalScreen({
       },
     );
     attach(connection);
+    const releaseDraftTarget = setDraftTarget(chatId, {
+      refusal: () => refusal.current,
+      insert: (kind, text) => connection.insertSelection(kind, text),
+    });
     return () => {
+      releaseDraftTarget();
       attach(null);
       connection.dispose();
     };

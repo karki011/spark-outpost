@@ -135,6 +135,7 @@ export const browserPlacementSchema = z.object({
   roots: z.array(z.string().max(4096)).max(16),
   bounds: browserBoundsSchema.nullable(),
   covered: z.boolean(),
+  sendsTo: z.enum(['chat', 'terminal']),
 });
 export type BrowserPlacement = z.infer<typeof browserPlacementSchema>;
 
@@ -187,6 +188,17 @@ export const browserPickSchema = z.object({
   image: z.string().max(8_000_000).nullable(),
 });
 export type BrowserPick = z.infer<typeof browserPickSchema>;
+
+export const BROWSER_SELECTED_TEXT_MAX = 4000;
+
+export const browserSelectedTextSchema = z.object({
+  chatId: z.string(),
+  url: z.string().max(BROWSER_URL_MAX),
+  title: z.string().max(300),
+  text: z.string().min(1).max(BROWSER_SELECTED_TEXT_MAX),
+  intent: z.enum(['add', 'ask']),
+});
+export type BrowserSelectedText = z.infer<typeof browserSelectedTextSchema>;
 
 export const browserIdSchema = z.uuid();
 

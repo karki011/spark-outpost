@@ -123,6 +123,7 @@ async function readoptOne(input: ReadoptInput, row: NativeTerminalRow): Promise<
       env: {},
       observation: observed ? 'hooks' : 'unsupported',
       version: '',
+      ...(stored ? { directory: stored.directory } : {}),
       dispose: () => rm(root, { recursive: true, force: true }),
     },
     context: turnInput ? await nativeTurnContext(db, row, turnInput, null, input.waiters) : null,

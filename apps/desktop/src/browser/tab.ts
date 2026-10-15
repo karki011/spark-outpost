@@ -1,4 +1,4 @@
-import { WebContentsView, type Session } from 'electron';
+import { WebContentsView, type ContextMenuParams, type Session } from 'electron';
 import {
   browserPlaceOf,
   classifyBrowserUrl,
@@ -9,6 +9,7 @@ import { attachCdp, type Cdp } from './cdp.ts';
 import { RefMap } from './outline.ts';
 import { capturePageLogs, type PageLogs } from './page-capture.ts';
 import { navigationAllowed } from './request-guard.ts';
+import { isAddShortcut } from './selection-menu.ts';
 import type { TabFacts } from './tab-rules.ts';
 
 export interface TabHooks {
@@ -20,6 +21,8 @@ export interface TabHooks {
   viewCreated(view: WebContentsView): void;
   viewClosed(view: WebContentsView): void;
   visited(url: string): void;
+  contextMenu(tab: PaneTab, params: ContextMenuParams): void;
+  addShortcut(tab: PaneTab): void;
 }
 
 export interface TabInit {
@@ -202,6 +205,12 @@ export class PaneTab {
     contents.on('did-fail-load', (_event, code, description, _url, isMainFrame) => {
       if (!isMainFrame || code === -3) return;
       this.note({ loading: false, error: description || 'The page did not load.' });
+    });
+    contents.on('context-menu', (_event, params) => this.hooks.contextMenu(this, params));
+    contents.on('before-input-event', (event, input) => {
+      if (!isAddShortcut(input, process.platform)) return;
+      event.preventDefault();
+      this.hooks.addShortcut(this);
     });
     contents.on('render-process-gone', () => this.note({ error: 'The page stopped working.' }));
     const cdp = attachCdp(contents);

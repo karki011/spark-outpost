@@ -7,6 +7,7 @@ import {
   shellBusyResponseSchema,
   terminalStartSchema,
   terminalRemoteViewSchema,
+  terminalImageResponseSchema,
   type TerminalApprovalDecision,
   type CreateShellResponse,
   type CreateTerminalResponse,
@@ -106,6 +107,11 @@ export const nativeTerminalApi = {
     request(nativeTerminalLaunchResponseSchema, `/conversations/${conversationId}/terminal`, {
       method: 'POST',
       body: JSON.stringify({ ...body, colors: colorsFromTokens() ?? undefined }),
+    }),
+  saveImage: (conversationId: string, attachmentId: string) =>
+    request(terminalImageResponseSchema, `/conversations/${conversationId}/terminal/images`, {
+      method: 'POST',
+      body: JSON.stringify({ attachmentId }),
     }),
   attach: (id: string) =>
     request(createShellResponseSchema, `/terminal/sessions/${id}/attach`, {
