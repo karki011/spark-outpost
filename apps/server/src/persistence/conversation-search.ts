@@ -8,6 +8,7 @@ import { matchSnippet, prefixQuery, searchWords } from './search-snippet.ts';
 import { summaryQuery } from './summary-query.ts';
 
 export const CHAT_LIST_LIMIT = 500;
+const SNIPPET_SOURCE_CHARS = 100_000;
 
 export const LISTED_CHAT = `c.workspace_id = $1 AND c.kind = 'chat'
   AND (EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
@@ -42,25 +43,31 @@ const TEXT_MATCH = {
 
 function hitsQuery(match: typeof WORDS_MATCH): string {
   return `
-    WITH best AS (
-      SELECT DISTINCT ON (m.conversation_id) m.conversation_id, m.id, m.run_id, m.content,
+    WITH best AS MATERIALIZED (
+      SELECT DISTINCT ON (m.conversation_id) m.conversation_id, m.id, m.run_id,
         ${match.rank} AS rank
       FROM messages m
       JOIN conversations c ON c.id = m.conversation_id AND c.workspace_id = $1 AND c.kind = 'chat'
       WHERE ${match.message}
       ORDER BY m.conversation_id, rank DESC, m.created_at DESC, m.id
+    ), ranked AS (
+      SELECT c.id, b.id AS message_id, b.run_id,
+        row_number() OVER (
+          ORDER BY c.title ILIKE $3 DESC, ${match.title} DESC, COALESCE(b.rank, 0) DESC,
+            c.pinned_at DESC NULLS LAST, c.updated_at DESC
+        ) AS place
+      FROM conversations c
+      LEFT JOIN best b ON b.conversation_id = c.id
+      WHERE ${LISTED_CHAT}
+        AND (b.id IS NOT NULL OR c.title ILIKE $3 OR ${match.title})
+      ORDER BY place
+      LIMIT ${CHAT_LIST_LIMIT}
     )
-    SELECT c.id, b.id AS message_id, b.content,
-      COALESCE(b.run_id, (SELECT r.id FROM runs r WHERE r.user_message_id = b.id)) AS run_id,
-      c.title ILIKE $3 AS title_text, ${match.title} AS title_words,
-      COALESCE(b.rank, 0) AS message_rank
-    FROM conversations c
-    LEFT JOIN best b ON b.conversation_id = c.id
-    WHERE ${LISTED_CHAT}
-      AND (b.id IS NOT NULL OR c.title ILIKE $3 OR ${match.title})
-    ORDER BY title_text DESC, title_words DESC, message_rank DESC,
-      c.pinned_at DESC NULLS LAST, c.updated_at DESC
-    LIMIT ${CHAT_LIST_LIMIT}`;
+    SELECT k.id, k.message_id, left(m.content, ${SNIPPET_SOURCE_CHARS}) AS content,
+      COALESCE(k.run_id, (SELECT r.id FROM runs r WHERE r.user_message_id = k.message_id)) AS run_id
+    FROM ranked k
+    LEFT JOIN messages m ON m.id = k.message_id
+    ORDER BY k.place`;
 }
 
 function toHit(row: HitRow, text: string): ChatHit {

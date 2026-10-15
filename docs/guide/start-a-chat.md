@@ -57,6 +57,6 @@ For several chats in one thread, use an [outpost](outposts.md).
 3. Type to filter by title, project, agent, state or message text. Words match from their start, so `deplo` finds "deploy". A message match shows its line under the name.
 4. Press **↑** or **↓**, then **Enter**. A chat found by a message opens at that message. **Esc** closes.
 
-**Search chats** above the list (**⌘K**) finds and opens chats the same way.
+**Search chats** (**⌘K**) also shows the matching line and opens the chat there.
 
 **Next:** [Pick the model, effort and mode](agent-mode.md)
