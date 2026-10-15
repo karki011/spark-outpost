@@ -2,7 +2,7 @@
 
 The app now calls this feature **Remote control** and what connects a **paired device**; a phone is one kind. See [REMOTE_CONTROL.md](REMOTE_CONTROL.md) for the rename and the names that stay.
 
-Status: T1 and T2 built. Order chosen by the owner on 2026-10-05: Tailscale first, then a Cloudflare relay with end-to-end encryption. The same web UI runs on the phone in both.
+Status: T1 and T2 built; T3 and T4 in part (layout pass, service worker, notifications when a chat needs you). Order chosen by the owner on 2026-10-05: Tailscale first, then a Cloudflare relay with end-to-end encryption. The same web UI runs on the phone in both.
 
 ## Goal
 
@@ -41,12 +41,12 @@ Limits: the user installs Tailscale on the Mac and the phone and enables HTTPS c
 
 ### Phases for the Tailscale version
 
-| #   | What                                                                                                     | Done when                                                                                                     |
-| --- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| T1  | Done. Remote gateway: devices and pairing, cookie sessions, allowlist, switches, audit, per-client focus | A paired fake device can read a chat and answer a card; blocked routes return 403; local traffic is unchanged |
-| T2  | Done. Tailscale: detect, turn Serve on and off, accept the Serve hostname, the Phone page with the QR    | With a fake Tailscale CLI, turning it on yields an address and a QR; turning it off closes remote access      |
-| T3  | Phone web app: manifest, service worker, layout pass, Mac-only parts hidden, asleep and offline states   | The full flow passes in a phone-sized browser through a local HTTPS proxy standing in for Serve               |
-| T4  | Notifications, keep-awake, guide pages, first real-phone test by the owner                               | A card on the Mac reaches a real phone on the tailnet and is answered from it                                 |
+| #   | What                                                                                                      | Done when                                                                                                     |
+| --- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| T1  | Done. Remote gateway: devices and pairing, cookie sessions, allowlist, switches, audit, per-client focus  | A paired fake device can read a chat and answer a card; blocked routes return 403; local traffic is unchanged |
+| T2  | Done. Tailscale: detect, turn Serve on and off, accept the Serve hostname, the Phone page with the QR     | With a fake Tailscale CLI, turning it on yields an address and a QR; turning it off closes remote access      |
+| T3  | Part done (manifest, service worker, layout pass, Mac-only parts hidden). Left: asleep and offline states | The full flow passes in a phone-sized browser through a local HTTPS proxy standing in for Serve               |
+| T4  | Part done (needs-you notifications, guide pages). Left: finished and failed, keep-awake, real-phone test  | A card on the Mac reaches a real phone on the tailnet and is answered from it                                 |
 
 The relay version follows and replaces only the reach, sign-in transport and encryption parts.
 
@@ -299,10 +299,29 @@ Decided by the owner on 2026-10-14. Two switches, both off by default and change
 
 Verified against Claude Code 2.1.294 and Codex CLI 0.153.4: multi-line pastes and messages sent during a turn submit in both; Claude's hook allow, deny, timeout and Mac-first answers behave as above; Codex `y` approves and Esc denies.
 
+### Notifications (built)
+
+Code: `apps/server/src/remote/push-*.ts`, `apps/web/public/sw.js`, `apps/web/src/phone/PhoneNotifications.tsx`, `use-device-push.ts`, `push-browser.ts`, `use-notification-chats.ts`. Storage: migration `0174_remote_push.sql`. Library: `web-push` 3.6.7 (MPL-2.0), pinned.
+
+- **Switch.** **Notify when a chat needs you** (`notifications`, `can_notifications`), off by default and changed only on the Mac. Without it the Mac sends nothing and a device cannot subscribe; a device can always unsubscribe.
+- **Keys.** One VAPID key pair per install, made the first time a device asks for it and kept as one keychain entry (`remote:push:vapid`). One holder behind a single in-flight promise; a value the keychain returns that does not parse is replaced.
+- **Subscriptions.** `remote_push_subscriptions`: device (cascade), endpoint (unique), the browser's `p256dh` and `auth`, the Serve hostname and the public key it was made under. Revoke, Remove old entry, being replaced by pairing again and Disconnect all delete a device's rows in the statement that sets `revoked_at`. A row made under another hostname or key is never sent to.
+- **Endpoint check.** The endpoint is an address the device chose and the Mac posts to, so `PUT /api/remote/push/subscription` takes only `https` on port 443 at `fcm.googleapis.com`, `android.googleapis.com`, `*.push.apple.com`, `*.push.services.mozilla.com` or `*.notify.windows.com`, with no user or password. The sender checks again.
+- **Routes.** `GET /api/remote/push` (the public key and this device's endpoints) and `DELETE /api/remote/push/subscription` are always allowed; `PUT /api/remote/push/subscription` needs the switch. All three answer `404` without a device, so the Mac has no use for them.
+- **What is sent.** One notification per chat after an 8-second wait, for approval cards created since the server started and for a Terminal session entering `waiting_for_permission` or `waiting_for_input`, once per wait. Before sending, the Mac checks the card is still pending or the session still waiting. The payload is `{ title, body, chatId, tag }`: the chat title (redacted, 80 characters; a chat that read Slack direct messages gets Slack's fixed title), a fixed line per card kind as Slack uses ("Needs your approval", "Has a question for you", "Waiting for permission in the terminal"), the chat id and a tag that replaces the chat's older notification. Never a command, path, project or card title. A Terminal-session push does not need the `terminal` switch: it says only that the session waits.
+- **Who gets it.** Every device with a subscription that is not revoked, was seen in 30 days, and is not the focused client (`device:<id>` in the shared focus list; the web app now reports focus on a paired device even without Slack). Focus has one owner, created in `main.ts` and shared with the Slack notifier.
+- **Sending.** `web-push` with TTL one hour, urgency high, a 15-second socket timeout, and the subject `mailto:notifications@spark-outpost.invalid`, the same for every install so Apple and Google never see the tailnet name. `404` and `410` delete the row. Each send is a `notification_sent` audit row with its outcome, never its content.
+- **Service worker.** `sw.js` is served to a paired device and, like the icons, to an unpaired one. It shows every push it gets (iOS ends a subscription that receives pushes without a notification), so all quieting happens on the Mac. A tap focuses an open window and posts `spark-open-chat`, or opens `/?chat=<id>`; the app checks the id is a UUID and opens the chat. It has no `fetch` handler. The app registers it only when `GET /api/remote/session` says remote, never in Electron.
+- **On the device.** Remote control → **Notifications** → **Notify this device**. The public key is loaded first, so the tap goes straight to `pushManager.subscribe`, which asks for permission. Without Push support the card says what iPhone needs (iOS 16.4 or later, on the Home Screen) or that the browser cannot. Blocked permission and the switch being off on the Mac are said in words.
+
+What reaches Apple, Google or Mozilla: an encrypted payload (RFC 8291), its size and time, the VAPID public key and the fixed subject. They cannot read the title or the line.
+
+Not verified: any real iPhone or Android delivery. Tests use a fake sender and a stubbed `PushManager`; the endpoint list, Apple's acceptance of the `.invalid` subject and iOS behaviour come from documentation, not a run.
+
 ### What is left for the phone app
 
 - A local HTTPS proxy standing in for Serve, so a phone-sized browser runs the whole flow with the real cookie.
-- A service worker (none yet, so nothing works offline and there is no install prompt on Android).
+- An offline cache in the service worker (it has no `fetch` handler, so nothing works offline).
 - "Your Mac is asleep or offline" states with the last-seen time.
 - A real-device check of the keyboard, safe areas and the home-screen app.
 - Controls outside Settings that a switch turns off (linking a folder, deleting a chat, raising the agent mode, high-risk cards) still show; the server refuses them with the "Turned off for phones on your Mac" message.
@@ -401,7 +420,7 @@ Every remote request is audited with the device id. The Mac shows a "phone conne
 ### Notifications
 
 - Web Push sent by the Mac itself with keys generated per install and kept in the keychain. No push server.
-- Sent for: a card needs you, a run finished, a run failed. Content is minimal by default (chat title and card type); the payload is encrypted to the device by the Web Push standard.
+- Sent for: a card needs you (built, see [Notifications](#notifications-built)); a run finished and a run failed are not built yet. Content is minimal by default (chat title and card type); the payload is encrypted to the device by the Web Push standard.
 - iPhone needs iOS 16.4 or later and the app added to the home screen. Android Chrome works without that step.
 - The focus flag becomes per client, so a phone in focus quiets the phone, not Slack for everyone.
 

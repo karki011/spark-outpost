@@ -40,6 +40,7 @@ const PUBLIC_FILES = new Set([
   '/icon-192.png',
   '/icon-512.png',
   '/apple-touch-icon.png',
+  '/sw.js',
 ]);
 const NOT_LOCAL = 'Requests must target the local API host.';
 const BAD_ORIGIN = 'This origin is not allowed.';

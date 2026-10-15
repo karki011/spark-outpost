@@ -2,6 +2,7 @@ import {
   pairingStartSchema,
   passkeyCreationOptionsSchema,
   pendingPairingListSchema,
+  pushStateSchema,
   remoteAuditListSchema,
   remoteDeviceListSchema,
   remoteDeviceSchema,
@@ -13,6 +14,8 @@ import {
   type PasskeyCreationOptions,
   type PasskeyRegistration,
   type PendingPairing,
+  type PushState,
+  type PushSubscribeRequest,
   type RemoteAuditEntry,
   type RemoteDevice,
   type RemotePasskey,
@@ -30,6 +33,8 @@ export const phoneKeys = {
   pairings: ['phone', 'pairings'] as const,
   audit: ['phone', 'audit'] as const,
   passkeys: ['phone', 'passkeys'] as const,
+  push: ['phone', 'push'] as const,
+  pushLocal: ['phone', 'push', 'local'] as const,
 };
 
 const post = { method: 'POST', body: '{}' };
@@ -79,4 +84,15 @@ export const phoneApi = {
         body: JSON.stringify(registration),
       })
     ).passkeys,
+  push: (): Promise<PushState> => request(pushStateSchema, '/remote/push'),
+  subscribePush: (subscription: PushSubscribeRequest): Promise<PushState> =>
+    request(pushStateSchema, '/remote/push/subscription', {
+      method: 'PUT',
+      body: JSON.stringify(subscription),
+    }),
+  unsubscribePush: (endpoint: string): Promise<PushState> =>
+    request(pushStateSchema, '/remote/push/subscription', {
+      method: 'DELETE',
+      body: JSON.stringify({ endpoint }),
+    }),
 };

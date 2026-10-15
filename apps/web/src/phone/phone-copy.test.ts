@@ -89,6 +89,16 @@ describe('activity', () => {
     ).toBe('A passkey sign-in was refused');
   });
 
+  it('says where a notification went and when one could not be delivered', () => {
+    const line = (outcome: string) =>
+      activityLine(
+        entry({ action: 'notification_sent', deviceName: 'Pixel', detail: { outcome } }),
+      );
+    expect(line('sent')).toBe('Sent a notification to Pixel');
+    expect(line('failed')).toBe('A notification to Pixel failed');
+    expect(line('gone')).toBe('Pixel no longer takes notifications');
+  });
+
   it('shows the request and its result when there is one', () => {
     expect(activityDetail(entry({ method: 'POST', path: '/api/reset', status: 403 }))).toBe(
       'POST /api/reset · 403',

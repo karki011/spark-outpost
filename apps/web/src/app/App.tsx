@@ -67,6 +67,8 @@ import { useAttentionTitle } from './use-attention-title.ts';
 import { useAttentionReport } from '../desktop/use-attention-report.ts';
 import { useChatRequests } from './chat-request.ts';
 import { useSlackPresence } from '../slack/use-slack-presence.ts';
+import { useNotificationChats } from '../phone/use-notification-chats.ts';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { useShareOnScreenChat } from '../island/on-screen-chat.ts';
 import { startIdleMotion } from './idle-motion.ts';
 import '../ui/controls.css';
@@ -191,7 +193,9 @@ function ChatShell({ entering }: { entering: boolean }) {
     [],
   );
   useChatRequests(openChat);
-  useSlackPresence();
+  const { remote } = useRemoteClient();
+  useSlackPresence(remote);
+  useNotificationChats(remote, openChat);
   useEffect(() => sparkDesktop()?.help?.onOpenFeedback(requestFeedback), []);
   useEffect(
     () =>

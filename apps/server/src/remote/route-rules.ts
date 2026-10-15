@@ -8,6 +8,8 @@ GET /api/health
 GET /api/events
 GET /api/remote/switches
 GET /api/remote/session
+GET /api/remote/push
+DELETE /api/remote/push/subscription
 GET /api/agent-config/trust
 GET /api/analytics/overview
 GET /api/analytics/rollups
@@ -293,6 +295,9 @@ POST /api/conversations/:id/terminal/interrupt
 `,
   terminalApprove: `
 POST /api/conversations/:id/terminal/approval
+`,
+  notifications: `
+PUT /api/remote/push/subscription
 `,
 };
 

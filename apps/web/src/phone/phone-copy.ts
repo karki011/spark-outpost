@@ -9,6 +9,17 @@ export const PASSKEY_NOT_SAVED = 'No passkey was saved. Try again when you are r
 export const PASSKEY_EXISTS = 'This device already has a passkey there.';
 export const PASSKEY_UNSUPPORTED = 'This browser cannot save passkeys.';
 export const PASSKEY_OFF = 'Passkey sign-in is turned off on your Mac.';
+export const NOTIFY_LABEL = 'Notify this device';
+export const NOTIFY_PURPOSE =
+  'Get a notification here when a chat waits for your approval or answer. It shows the chat title and what is waiting, nothing more.';
+export const NOTIFY_HOME_SCREEN =
+  'On iPhone and iPad, notifications need iOS 16.4 or later and Spark Outpost on the Home Screen: tap Share, then Add to Home Screen, and open it from there.';
+export const NOTIFY_UNSUPPORTED = 'This browser cannot show notifications from Spark Outpost.';
+export const NOTIFY_OFF = 'Notifications are turned off on your Mac.';
+export const NOTIFY_BLOCKED =
+  'Notifications are blocked for this site. Allow them in the browser or system settings, then try again.';
+export const NOTIFY_NOT_ALLOWED = 'Notifications were not allowed on this device.';
+export const NOTIFY_ON = 'This device gets a notification when a chat needs you.';
 
 function shortDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -101,6 +112,13 @@ function passkeySignInLine(entry: RemoteAuditEntry): string {
     : line;
 }
 
+function notificationLine(entry: RemoteAuditEntry): string {
+  const device = named(entry);
+  if (entry.detail.outcome === 'gone') return `${device} no longer takes notifications`;
+  if (entry.detail.outcome === 'failed') return `A notification to ${device} failed`;
+  return `Sent a notification to ${device}`;
+}
+
 export function activityLine(entry: RemoteAuditEntry): string {
   const device = named(entry);
   switch (entry.action) {
@@ -138,6 +156,8 @@ export function activityLine(entry: RemoteAuditEntry): string {
       return `Passkeys removed for ${device}`;
     case 'passkey_sign_in_failed':
       return passkeyRefusedLine(entry);
+    case 'notification_sent':
+      return notificationLine(entry);
     case 'request':
       return `${device} made a change`;
     case 'refused':

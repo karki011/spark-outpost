@@ -51,6 +51,7 @@ import { nativeTerminalRoutes } from '../terminal/native-routes.ts';
 import { A2A_MOUNT_PATH } from '../a2a/agent-card.ts';
 import { outpostRouters, type OutpostDelivery } from '../outposts/mount.ts';
 import type { StackGit } from '../outposts/ports.ts';
+import type { PushKeys } from '../remote/push-keys.ts';
 
 export interface AppOptions
   extends
@@ -77,6 +78,7 @@ export interface AppOptions
   allowedOrigins: readonly string[];
   apiToken: string;
   webRoot?: string;
+  pushKeys?: PushKeys;
   diagnostics?: DiagnosticsPlaces;
   activeWork?: ActiveWork;
 }

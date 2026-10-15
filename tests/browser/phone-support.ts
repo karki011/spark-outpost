@@ -27,7 +27,8 @@ export async function resetPhone(): Promise<void> {
   const db = openTestDb();
   try {
     await db.query(
-      `TRUNCATE remote_audit, remote_device_sessions, remote_passkeys, remote_devices,
+      `TRUNCATE remote_audit, remote_device_sessions, remote_passkeys, remote_push_subscriptions,
+         remote_devices,
          remote_access_settings`,
     );
   } finally {

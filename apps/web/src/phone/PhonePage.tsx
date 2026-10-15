@@ -10,6 +10,7 @@ import { PairPhone } from './PairPhone.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 import { PhoneActivity } from './PhoneActivity.tsx';
 import { PhoneDevices } from './PhoneDevices.tsx';
+import { PhoneNotifications } from './PhoneNotifications.tsx';
 import { PhonePasskey } from './PhonePasskey.tsx';
 import { PhoneStatus } from './PhoneStatus.tsx';
 import { PhoneSwitches, PhoneSwitchesReadOnly } from './PhoneSwitches.tsx';
@@ -132,6 +133,7 @@ function RemotePhonePage({ session }: { session: RemoteSession }) {
           remove it, open Remote control on your Mac.
         </p>
       </section>
+      <PhoneNotifications session={session} />
       <PhonePasskey session={session} />
       <PhoneSwitchesReadOnly switches={session.switches} />
     </>

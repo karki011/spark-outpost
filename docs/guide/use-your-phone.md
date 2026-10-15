@@ -24,4 +24,8 @@ A paired device can answer an agent's browser cards: open a site, click and type
 
 Messages are read from the CLI to show on the device and are not stored. Starting a session stays on the Mac.
 
+**Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device** on the device. A notification names the chat and what waits, never a command.
+
+A device you're using gets none. iPhone needs iOS 16.4 or later and Spark on the Home Screen.
+
 **Next:** [Answer an approval card](answer-approvals.md)

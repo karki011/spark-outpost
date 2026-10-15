@@ -7,9 +7,9 @@ const CLIENT_ID = crypto.randomUUID();
 
 const focusedNow = () => document.visibilityState === 'visible' && document.hasFocus();
 
-export function useSlackPresence(): void {
+export function useSlackPresence(remote: boolean): void {
   const status = useQuery({ queryKey: slackKeys.status, queryFn: slackApi.status });
-  const wanted = status.data?.connection?.settings.quietWhenFocused === true;
+  const wanted = remote || status.data?.connection?.settings.quietWhenFocused === true;
 
   useEffect(() => {
     if (!wanted) return;

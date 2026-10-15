@@ -19,6 +19,7 @@ export const remoteSwitchSchema = z.enum([
   'passkeys',
   'terminal',
   'terminalApprove',
+  'notifications',
 ]);
 export type RemoteSwitch = z.infer<typeof remoteSwitchSchema>;
 
@@ -34,6 +35,7 @@ export const remoteSwitchesSchema = z.object({
   passkeys: z.boolean(),
   terminal: z.boolean(),
   terminalApprove: z.boolean(),
+  notifications: z.boolean(),
 });
 export type RemoteSwitches = z.infer<typeof remoteSwitchesSchema>;
 
@@ -49,6 +51,7 @@ export const REMOTE_SWITCH_DEFAULTS: RemoteSwitches = {
   passkeys: true,
   terminal: false,
   terminalApprove: false,
+  notifications: false,
 };
 
 export const REMOTE_MAC_ONLY_SWITCHES: readonly RemoteSwitch[] = ['devices'];
@@ -66,6 +69,7 @@ export const REMOTE_SWITCH_LABELS: Record<RemoteSwitch, string> = {
   passkeys: 'Sign in with a passkey',
   terminal: 'Follow, type in and stop Terminal sessions',
   terminalApprove: 'Approve in Terminal sessions',
+  notifications: 'Notify when a chat needs you',
 };
 
 export const updateRemoteSwitchesRequestSchema = remoteSwitchesSchema
@@ -210,6 +214,7 @@ export const remoteAuditActionSchema = z.enum([
   'device_passkey_sign_in',
   'device_passkeys_removed',
   'passkey_sign_in_failed',
+  'notification_sent',
   'request',
   'refused',
 ]);

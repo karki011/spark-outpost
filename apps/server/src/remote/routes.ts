@@ -19,6 +19,8 @@ import { RateLimitError } from './attempt-window.ts';
 import type { Pairings } from './pairing.ts';
 import type { PasskeyChallenges } from './passkey-challenges.ts';
 import { passkeyRoutes, toPasskey } from './passkey-routes.ts';
+import type { PushKeys } from './push-keys.ts';
+import { pushRoutes } from './push-routes.ts';
 import {
   devicePasskeys,
   listPasskeys,
@@ -54,6 +56,7 @@ export interface RemoteRouteDeps {
   challenges: PasskeyChallenges;
   streams: DeviceStreams;
   tailscale: TailscaleServe;
+  pushKeys: PushKeys;
 }
 
 const BAD_CODE = 'That code is not valid. Start pairing again on your Mac.';
@@ -194,6 +197,7 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
   });
 
   router.use(passkeyRoutes({ db, workspaceId, challenges }));
+  router.use(pushRoutes({ db, workspaceId, keys: deps.pushKeys }));
 
   router.get('/remote/switches', async (_req, res) => {
     res.json((await remoteAccess(db, workspaceId)).switches);
