@@ -345,4 +345,15 @@ describe('Mac control in the shell', () => {
     });
     expect(shown.at(-1)).toBeNull();
   });
+
+  it('a run-less chat stopped by Stop works again after its turn ends', async () => {
+    const { control, helper } = setup();
+    const runless = { ...read(700), runId: null };
+    await control.run(runless, signal);
+    control.stop();
+    expect((await failure(control.run(runless, signal))).code).toBe('stopped');
+    await control.run({ op: 'end_run', chatId: CHAT, runId: null }, signal);
+    await control.run(runless, signal);
+    expect(helper.calls.filter((call) => call.op === 'read')).toHaveLength(2);
+  });
 });

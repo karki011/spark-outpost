@@ -322,7 +322,7 @@ export function createMacControl(options: MacControlOptions): MacControl {
         request.runId === null ? entry.chatId === request.chatId : entry.run === request.runId,
       )
       .map((entry) => entry.run);
-    if (request.runId !== null) ending.push(request.runId);
+    ending.push(runKey(request));
     for (const run of ending) {
       stopped.delete(run);
       active.delete(run);
