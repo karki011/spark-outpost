@@ -66,6 +66,7 @@ describe('the Claude mod inbox', () => {
       messages: [],
       notices: [],
       status: 'Spark · phone connected · approvals on · PR #42 · checks running',
+      record: false,
     });
   });
 

@@ -21,6 +21,7 @@ import {
 import { NativeRuntimeError, type nativeControl } from './native-control.ts';
 import { parseNativeHook, type NativeHookEvent } from './native-hooks.ts';
 import { readModTelemetry, recordModTelemetry } from './mod-telemetry.ts';
+import { chatRecordFor } from './chat-record.ts';
 import type { NativeUsage } from './native-usage.ts';
 import type { LiveSession } from './native-runtime-types.ts';
 
@@ -272,7 +273,12 @@ export function nativeObserver({
     if (!session || session.row.provider !== 'claude' || !items) return false;
     const aborted = await enqueue(session, async () => {
       if (tokens.get(session.hookKey) !== session) return null;
-      return recordModTelemetry(db, (prompt) => usage.promptRun(session, prompt), items);
+      return recordModTelemetry(
+        db,
+        (prompt) => usage.promptRun(session, prompt),
+        items,
+        (runId) => chatRecordFor(db, session, runId),
+      );
     });
     for (const prompt of aborted ?? []) void interruptedTwice(session, prompt);
     return aborted !== null;

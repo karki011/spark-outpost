@@ -22,6 +22,7 @@ import type { ShellFolder } from './shell-folder.ts';
 import type { TerminalSessions } from './sessions.ts';
 import type { TmuxHost } from './tmux/tmux-host.ts';
 import type { ModRoutedRemote } from './remote/mod-routing.ts';
+import type { ChatRecord } from './chat-record.ts';
 
 export interface NativeRuntimeDeps {
   db: Db;
@@ -89,4 +90,5 @@ export interface LiveSession {
   completedEvents: Map<string, string | null>;
   transcript: SessionTranscript | null;
   readopted?: { at: string; stepsComplete: boolean };
+  chatRecord?: { runId: string; record: ChatRecord | null };
 }

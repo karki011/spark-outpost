@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConversationDetail, ConversationSummary } from '@spark-outpost/contracts';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery, queryKeys } from '../api/client.ts';
 import { ApprovalCard } from '../chat/approvals/ApprovalCard.tsx';
+import { OpenRailFlags } from '../chat/approvals/RailFlags.tsx';
 import { useLinkedProjects } from '../chat/project/use-chat-repos.ts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
@@ -257,6 +258,7 @@ export function NativeTerminalWorkspace({
           ))}
         </div>
       )}
+      <OpenRailFlags detail={detail} />
     </section>
   );
 }

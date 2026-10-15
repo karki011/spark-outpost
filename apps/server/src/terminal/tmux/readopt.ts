@@ -6,6 +6,7 @@ import { parseLine } from '../native-transcript.ts';
 import { expirePendingApprovals } from '../../persistence/approvals.ts';
 import type { Db } from '../../persistence/db.ts';
 import type { NativeTerminalRow } from '../../persistence/native-terminals.ts';
+import { recordsTerminalLikeChat } from '../../persistence/native-terminal-settings.ts';
 import { setNativeTerminalState } from '../../persistence/native-terminal-turns.ts';
 import type { SparkScope } from '../../spark-mcp/deps.ts';
 import type { SparkMcpHost } from '../../spark-mcp/host.ts';
@@ -95,6 +96,7 @@ async function readoptOne(input: ReadoptInput, row: NativeTerminalRow): Promise<
       sessionId: row.id,
       provider: row.provider,
       ...(approvals ? { permissionUrl: input.permissionUrl } : {}),
+      record: row.provider === 'claude' && (await recordsTerminalLikeChat(db, row.conversation_id)),
     });
   const scope: SparkScope = {
     workspaceId: input.workspaceId,

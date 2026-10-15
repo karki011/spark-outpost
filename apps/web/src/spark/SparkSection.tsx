@@ -8,6 +8,7 @@ import { CompanionSetting } from '../settings/CompanionSetting.tsx';
 import { DesktopCompanionSetting } from '../settings/DesktopCompanionSetting.tsx';
 import { WideWindowSetting } from '../settings/WideWindowSetting.tsx';
 import { OpenPullRequestsAsSetting, PrFollowUpSettings } from '../settings/PullRequestSettings.tsx';
+import { TerminalRecordSetting } from '../settings/TerminalRecordSetting.tsx';
 import { CompactionSettings } from './CompactionSettings.tsx';
 import { LevelSetting } from './LevelSetting.tsx';
 import { MorningBriefSetting } from './MorningBriefSetting.tsx';
@@ -49,6 +50,7 @@ export function SparkSection({ setup }: { setup: SetupState }) {
       <section className="spark-group" aria-labelledby="spark-work">
         <h4 id="spark-work">How Spark works</h4>
         <AgentInstructionsSetting profile={profile} />
+        <TerminalRecordSetting enabled={profile.terminalRecordLikeChat} />
       </section>
       <details
         className="spark-group spark-options"

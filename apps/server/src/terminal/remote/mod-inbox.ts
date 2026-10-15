@@ -1,5 +1,6 @@
 import type { PrChecks, TerminalApprovalDecision } from '@spark-outpost/contracts';
 import type { Db } from '../../persistence/db.ts';
+import { recordsTerminalLikeChat } from '../../persistence/native-terminal-settings.ts';
 import { trackedPullsOf } from '../../persistence/tracked-pulls.ts';
 import { remoteAccess } from '../../remote/store.ts';
 import type { LiveSession } from '../native-runtime-types.ts';
@@ -13,6 +14,7 @@ export interface ModReply {
   messages: string[];
   notices: string[];
   status: string | null;
+  record: boolean;
 }
 
 export interface StatusFacts {
@@ -33,7 +35,7 @@ interface ModSession {
   followed: number;
   queue: Queued[];
   notices: string[];
-  facts: { at: number; approvals: boolean; pull: StatusFacts['pull'] } | null;
+  facts: { at: number; approvals: boolean; record: boolean; pull: StatusFacts['pull'] } | null;
 }
 
 const CHECKS: Record<PrChecks, string | null> = {
@@ -84,14 +86,16 @@ export function modInbox(deps: ModInboxDeps) {
   };
   const facts = async (conversationId: string, found: ModSession) => {
     if (found.facts && now() - found.facts.at <= FACTS_FRESH_MS) return found.facts;
-    const [access, pulls] = await Promise.all([
+    const [access, pulls, record] = await Promise.all([
       remoteAccess(deps.db, deps.workspaceId),
       trackedPullsOf(deps.db, deps.workspaceId, conversationId),
+      recordsTerminalLikeChat(deps.db, conversationId),
     ]);
     const pull = pulls[0];
     found.facts = {
       at: now(),
       approvals: access.hostname !== null && access.switches.terminalApprove,
+      record,
       pull: pull ? { number: pull.number, state: pull.prState, checks: pull.checks } : null,
     };
     return found.facts;
@@ -117,6 +121,7 @@ export function modInbox(deps: ModInboxDeps) {
           approvals: known.approvals,
           pull: known.pull,
         }),
+        record: known.record,
       };
     },
 
