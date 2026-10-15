@@ -104,7 +104,7 @@ export function telemetry() {
       if (!owner || !id || !name) return;
       push({ kind: 'tool', prompt: owner, agent, id, name, phase, failed, at });
     },
-    working: () => working,
+    idle: () => !working && lastMain !== null,
     between(costUsd) {
       if (!lastMain || typeof costUsd !== 'number' || costUsd <= 0) return;
       push({

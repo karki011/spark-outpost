@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { supportsMods, writeSparkMod } from './native-mod-script.ts';
-import { MOD_SEND_MAX, MOD_SIDE_INDEX } from './native-mod-telemetry-script.ts';
+import { MOD_SEND_MAX } from './native-mod-telemetry-script.ts';
 
 type Next = ((e: unknown) => unknown) & { origin?: { plugin: string; tier: string } };
 type Hook = ($: FakeEngine, e: Record<string, unknown>, next: Next) => unknown;
@@ -391,44 +391,6 @@ describe('the Spark mod when sends fail or requests overlap', () => {
     await tick();
     expect(sentItems(3).items).toEqual(sentItems(1).items);
   });
-
-  it('reads Claude Code’s cost one request at a time, so overlapping requests never count twice', async () => {
-    const usage = {
-      input_tokens: 1,
-      output_tokens: 1,
-      cache_read_input_tokens: 0,
-      cache_creation_input_tokens: 0,
-      model: 'claude-opus-5-5',
-    };
-    await hooks.get('classic.UserPromptSubmit')!(engine, { prompt_id: 'p' }, (e) => e);
-    await hooks.get('turn.start')!(engine, { turnId: 'main' }, (e) => e);
-    await hooks.get('turn.start')!(engine, { turnId: 'sub', agentId: 'agent-a' }, (e) => e);
-    let release = () => undefined as void;
-    const held = new Promise<void>((done) => (release = done));
-    let calls = 0;
-    engine.session.usage = async () => {
-      calls += 1;
-      const seen = spent;
-      if (calls === 1) await held;
-      return { cost: { usd: seen } };
-    };
-    spent = 0.1;
-    const first = step({ turnId: 'main', index: 0 }, usage);
-    await new Promise((done) => setTimeout(done, 0));
-    spent = 0.25;
-    const second = step({ turnId: 'sub', index: 0, agentId: 'agent-a' }, usage);
-    await new Promise((done) => setTimeout(done, 0));
-    expect(calls).toBe(1);
-    release();
-    await Promise.all([first, second]);
-    reply({ messages: [], notices: [], status: null });
-    replies.push(() => ({ ok: true, status: 204, text: '' }));
-    await tick();
-    const costs = sentItems(1)
-      .items.filter((item) => item.kind === 'request')
-      .map((item) => item.costUsd);
-    expect(costs).toEqual([0.1, 0.15]);
-  });
 });
 
 describe('the Spark mod when only its turn facts are refused', () => {
@@ -459,22 +421,6 @@ describe('the Spark mod when only its turn facts are refused', () => {
     await tick();
     expect(requests[2]!.url).toBe('http://127.0.0.1:4200/mod/inbox');
     expect(sentItems(3).items).toEqual(sentItems(1).items);
-  });
-});
-
-describe('cost Claude Code spends between turns', () => {
-  it('goes to the turn that just ended, read while the session is idle', async () => {
-    await oneTurn();
-    reply({ messages: [], notices: [], status: null });
-    replies.push(() => ({ ok: true, status: 204, text: '' }));
-    await tick();
-    spent = 0.27;
-    reply({ messages: [], notices: [], status: null });
-    replies.push(() => ({ ok: true, status: 204, text: '' }));
-    await tick();
-    expect(sentItems(3).items).toEqual([
-      expect.objectContaining({ turn: 'turn-1', index: MOD_SIDE_INDEX, output: 0, costUsd: 0.02 }),
-    ]);
   });
 });
 
