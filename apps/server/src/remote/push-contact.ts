@@ -28,6 +28,7 @@ export const CONTACT_FORMAT =
   'Enter an email address or an https:// address, such as you@example.org.';
 export const CONTACT_NOT_PUBLIC =
   'Use an address on a public domain. Apple refuses local, test and .invalid names.';
+export const CONTACT_TOO_LONG = `Use a contact of at most ${PUSH_CONTACT_MAX} characters.`;
 export const CONTACT_TAILNET =
   'Do not use your tailnet name: the contact is sent to Apple and Google with every notification.';
 
@@ -61,7 +62,8 @@ function httpsProblem(contact: string, serveHostname: string | null): string | n
 }
 
 export function pushContactProblem(contact: string, serveHostname: string | null): string | null {
-  if (contact.length === 0 || contact.length > PUSH_CONTACT_MAX) return CONTACT_FORMAT;
+  if (contact.length === 0) return CONTACT_FORMAT;
+  if (contact.length > PUSH_CONTACT_MAX) return CONTACT_TOO_LONG;
   if (contact.startsWith('mailto:')) {
     const mailbox = MAILBOX.exec(contact);
     return mailbox ? hostProblem(mailbox[2]!, serveHostname) : CONTACT_FORMAT;

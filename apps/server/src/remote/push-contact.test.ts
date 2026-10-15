@@ -4,6 +4,7 @@ import {
   CONTACT_FORMAT,
   CONTACT_NOT_PUBLIC,
   CONTACT_TAILNET,
+  CONTACT_TOO_LONG,
   normalizePushContact,
   pushContactProblem,
   pushSubject,
@@ -45,7 +46,7 @@ describe('a push sender contact', () => {
     ['https://example.org:8443', CONTACT_FORMAT],
     ['example.org', CONTACT_FORMAT],
     ['', CONTACT_FORMAT],
-    [`mailto:me@${'a'.repeat(200)}.org`, CONTACT_FORMAT],
+    [`mailto:me@${'a'.repeat(200)}.org`, CONTACT_TOO_LONG],
   ])('refuses %s', (contact, problem) => {
     expect(pushContactProblem(contact, SERVE)).toBe(problem);
   });

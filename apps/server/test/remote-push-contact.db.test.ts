@@ -58,6 +58,13 @@ describe('the sender contact', () => {
     expect(state.body.contact).toBeNull();
   });
 
+  it('says a long email is too long rather than malformed', async () => {
+    const email = `${'a'.repeat(186)}@example.org`;
+    expect(email).toHaveLength(198);
+    const refused = await save(email).expect(400);
+    expect(refused.body.error).toBe('Use a contact of at most 200 characters.');
+  });
+
   it('records a change in the remote activity without the contact', async () => {
     await save('me@example.org').expect(200);
     const { rows } = await t.db.query<{ detail: object }>(

@@ -125,7 +125,7 @@ export function startPushNotifier(
     );
     if (targets.length === 0) return;
     const keys = await deps.keys.get();
-    const subject = pushSubject((await pushContact(db, workspaceId)).contact, access.hostname);
+    const subject = pushSubject(await pushContact(db, workspaceId), access.hostname);
     const payload = JSON.stringify(pushMessage(chat, live));
     const current = targets.filter((target) => target.serverKey === keys.publicKey);
     await Promise.all(current.map((target) => sendTo(target, payload, { keys, subject })));

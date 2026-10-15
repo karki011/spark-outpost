@@ -107,24 +107,12 @@ export async function pushTargets(
   return rows;
 }
 
-export interface SavedPushContact {
-  contact: string | null;
-  changedAt: Date | null;
-}
-
-export async function pushContact(db: Queryable, workspaceId: string): Promise<SavedPushContact> {
-  const { rows } = await db.query<{
-    push_contact: string | null;
-    push_contact_changed_at: Date | null;
-  }>(
-    `SELECT push_contact, push_contact_changed_at FROM remote_access_settings
-     WHERE workspace_id = $1`,
+export async function pushContact(db: Queryable, workspaceId: string): Promise<string | null> {
+  const { rows } = await db.query<{ push_contact: string | null }>(
+    'SELECT push_contact FROM remote_access_settings WHERE workspace_id = $1',
     [workspaceId],
   );
-  return {
-    contact: rows[0]?.push_contact ?? null,
-    changedAt: rows[0]?.push_contact_changed_at ?? null,
-  };
+  return rows[0]?.push_contact ?? null;
 }
 
 export async function savePushContact(
@@ -148,20 +136,17 @@ interface FailureRow {
   detail: { outcome?: unknown; reason?: unknown };
 }
 
-export async function lastPushFailures(
-  db: Queryable,
-  workspaceId: string,
-  since: Date | null,
-): Promise<PushFailure[]> {
+export async function lastPushFailures(db: Queryable, workspaceId: string): Promise<PushFailure[]> {
   const { rows } = await db.query<FailureRow>(
     `SELECT * FROM (
        SELECT DISTINCT ON (a.device_id) a.created_at, a.device_name, a.status, a.detail
        FROM remote_audit a JOIN remote_devices d ON d.id = a.device_id
        WHERE a.workspace_id = $1 AND a.action = 'notification_sent' AND d.revoked_at IS NULL
-         AND ($2::timestamptz IS NULL OR a.created_at > $2)
+         AND a.created_at > COALESCE((SELECT push_contact_changed_at FROM remote_access_settings
+           WHERE workspace_id = $1), '-infinity')
        ORDER BY a.device_id, a.created_at DESC, a.id DESC
      ) latest WHERE detail->>'outcome' = 'failed' ORDER BY created_at DESC`,
-    [workspaceId, since],
+    [workspaceId],
   );
   return rows.map((row) => ({
     at: row.created_at.toISOString(),

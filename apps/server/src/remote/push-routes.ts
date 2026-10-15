@@ -51,14 +51,14 @@ export function pushRoutes(deps: PushRouteDeps): Router {
   };
 
   const contactState = async (): Promise<PushContactState> => {
-    const [saved, { hostname }] = await Promise.all([
+    const [contact, { hostname }] = await Promise.all([
       pushContact(db, workspaceId),
       remoteAccess(db, workspaceId),
     ]);
     return {
-      contact: saved.contact,
-      inUse: pushSubject(saved.contact, hostname),
-      failures: await lastPushFailures(db, workspaceId, saved.changedAt),
+      contact,
+      inUse: pushSubject(contact, hostname),
+      failures: await lastPushFailures(db, workspaceId),
     };
   };
 
