@@ -1,4 +1,5 @@
 import { isRecord } from '../agent-config/records.ts';
+import { MOD_NAME } from './native-mod-script.ts';
 import {
   parseLine,
   tokenCount,
@@ -141,6 +142,10 @@ function sidechainParser(): TranscriptParser {
   };
 }
 
+function sentFromPhone(origin: Record<string, unknown>): boolean {
+  return origin.kind === 'plugin' && origin.name === MOD_NAME && origin.asUser === true;
+}
+
 export function claudeTranscriptParser(
   sidechain = false,
   openTurnId: string | null = null,
@@ -157,7 +162,7 @@ export function claudeTranscriptParser(
     if (!isRecord(origin)) return [];
     const position = isRecord(record.turnPosition) ? record.turnPosition.promptIndex : null;
     const index = typeof position === 'number' ? position : null;
-    const human = origin.kind === 'human';
+    const human = origin.kind === 'human' || sentFromPhone(origin);
     if (human) {
       lastHuman = promptId;
       if (index !== null) byIndex.set(index, promptId);

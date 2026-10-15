@@ -23,6 +23,30 @@ const assistant = (id: string, usage: Record<string, unknown>, model = 'claude-o
 const reported = (records: readonly TranscriptRecord[]) =>
   records.flatMap((record) => (record.kind === 'reported' ? [record.usage] : []));
 
+describe('prompts the Spark mod submitted', () => {
+  const prompt = (promptId: string, origin: Record<string, unknown>) => ({
+    type: 'user',
+    isSidechain: false,
+    promptId,
+    origin,
+    turnPosition: { promptIndex: 1, turnIndex: 1 },
+    message: { role: 'user', content: 'run the tests' },
+  });
+
+  it('starts a turn of their own, like a prompt typed on the Mac', () => {
+    const records = parse(
+      prompt('typed', { kind: 'human' }),
+      prompt('phone', { kind: 'plugin', name: 'spark-outpost', asUser: true }),
+      prompt('other', { kind: 'plugin', name: 'someone-else', asUser: true }),
+    );
+    expect(records.flatMap((record) => (record.kind === 'prompt' ? [record] : []))).toEqual([
+      { kind: 'prompt', promptId: 'typed', human: true, owner: null, agentId: null },
+      { kind: 'prompt', promptId: 'phone', human: true, owner: null, agentId: null },
+      { kind: 'prompt', promptId: 'other', human: false, owner: 'phone', agentId: null },
+    ]);
+  });
+});
+
 describe('Claude interrupt records', () => {
   it('reads the turn of an interrupt record and of an interrupted tool use', () => {
     expect(
