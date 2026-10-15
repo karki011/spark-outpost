@@ -120,12 +120,12 @@ async function main(): Promise<number> {
     );
     return 2;
   }
-  const plans = planShards(options.count, options.firstSlot, url);
   const specs = specsToRun(options.filters);
   if (specs.length === 0) {
     console.error('No specs match.');
     return 2;
   }
+  const plans = planShards(Math.min(options.count, specs.length), options.firstSlot, url);
   for (const plan of plans) describe(plan, specs);
   const shortage = await checkConnections(url, plans.length);
   if (options.dryRun) {
