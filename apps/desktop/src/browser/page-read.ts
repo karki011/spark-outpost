@@ -45,6 +45,7 @@ export async function readPage(
   filled: ReadonlySet<number> = new Set(),
 ) {
   const document = await pageDocument(cdp);
+  refs.useDocument(document.root.backendNodeId);
   const asked =
     request.ref === undefined
       ? null

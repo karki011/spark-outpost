@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { outlineOf } from './outline.ts';
+import { readPage } from './page-read.ts';
 import { RefMap, RefNumbers } from './ref-map.ts';
-import { el, fakeCdp, axOf, domOf, text, type El, type FakeDocument } from './ref-page.fixture.ts';
+import { el, fakeCdp, domOf, text, type El, type FakeDocument } from './ref-page.fixture.ts';
 import { indexDocument, resolveRef, type RefindFor } from './ref-resolve.ts';
 
 function fruit(base: number, name: string): El {
@@ -47,9 +47,13 @@ const REPLACED = shop(1000, [
   [60, 'Cherry'],
 ]);
 
-function read(refs: RefMap, page: FakeDocument): string[] {
-  refs.useDocument(page.documentId);
-  return outlineOf(axOf(page), { refs, sensitive: new Set() })!.lines;
+async function read(refs: RefMap, page: FakeDocument): Promise<string[]> {
+  const result = await readPage(
+    fakeCdp(() => page),
+    refs,
+    { mode: 'tree', offset: 0 },
+  );
+  return result.text.split('\n');
 }
 
 function refOn(lines: string[], before: string, role: string): string {
@@ -70,21 +74,21 @@ function resolve(refs: RefMap, page: FakeDocument, ref: string, refindFor: Refin
 }
 
 describe('refs that stay on their element', () => {
-  it('keeps a ref on its node across reads while the page adds and moves things', () => {
+  it('keeps a ref on its node across reads while the page adds and moves things', async () => {
     const refs = new RefMap();
-    const banana = refOn(read(refs, FIRST), 'Banana', 'button');
+    const banana = refOn(await read(refs, FIRST), 'Banana', 'button');
     const grown = shop(0, [
       [60, 'Cherry'],
       [50, 'Banana'],
       [40, 'Apple'],
     ]);
-    expect(refOn(read(refs, grown), 'Banana', 'button')).toBe(banana);
+    expect(refOn(await read(refs, grown), 'Banana', 'button')).toBe(banana);
     expect(refs.nodeFor(banana)).toBe(52);
   });
 
   it('acts on the same node with no lookup while it is still in the document', async () => {
     const refs = new RefMap();
-    const apple = refOn(read(refs, FIRST), 'Apple', 'button');
+    const apple = refOn(await read(refs, FIRST), 'Apple', 'button');
     await expect(resolve(refs, FIRST, apple, 'click')).resolves.toEqual({
       node: 42,
       refound: false,
@@ -95,7 +99,7 @@ describe('refs that stay on their element', () => {
 describe('a page that replaced its elements', () => {
   it('finds a replaced button again when exactly one element matches', async () => {
     const refs = new RefMap();
-    const banana = refOn(read(refs, FIRST), 'Banana', 'button');
+    const banana = refOn(await read(refs, FIRST), 'Banana', 'button');
     await expect(resolve(refs, REPLACED, banana, 'click')).resolves.toEqual({
       node: 1052,
       refound: true,
@@ -104,12 +108,12 @@ describe('a page that replaced its elements', () => {
       node: 1052,
       refound: false,
     });
-    expect(refOn(read(refs, REPLACED), 'Banana', 'button')).toBe(banana);
+    expect(refOn(await read(refs, REPLACED), 'Banana', 'button')).toBe(banana);
   });
 
   it('does not guess when two elements match', async () => {
     const refs = new RefMap();
-    const banana = refOn(read(refs, FIRST), 'Banana', 'button');
+    const banana = refOn(await read(refs, FIRST), 'Banana', 'button');
     const twice = shop(1000, [
       [50, 'Banana'],
       [70, 'Banana'],
@@ -119,7 +123,7 @@ describe('a page that replaced its elements', () => {
 
   it('never looks again for a submit button, a link or a key press in a form', async () => {
     const refs = new RefMap();
-    const lines = read(refs, FIRST);
+    const lines = await read(refs, FIRST);
     const order = refOn(lines, 'Order', 'button');
     const next = refOn(lines, 'Next page', 'link');
     const qty = refOn(lines, 'Order', 'textbox');
@@ -135,13 +139,13 @@ describe('a page that replaced its elements', () => {
 
   it('does not look again when the action was already checked against another element', async () => {
     const refs = new RefMap();
-    const apple = refOn(read(refs, FIRST), 'Apple', 'button');
+    const apple = refOn(await read(refs, FIRST), 'Apple', 'button');
     await expect(resolve(refs, REPLACED, apple, null)).rejects.toThrow(/is gone/);
   });
 
   it('does not look again for a ref read before the page changed its address in place', async () => {
     const refs = new RefMap();
-    const apple = refOn(read(refs, FIRST), 'Apple', 'button');
+    const apple = refOn(await read(refs, FIRST), 'Apple', 'button');
     refs.movedInPage();
     await expect(resolve(refs, REPLACED, apple, 'click')).rejects.toThrow(/is gone/);
   });
@@ -150,26 +154,60 @@ describe('a page that replaced its elements', () => {
 describe('the page epoch', () => {
   it('rejects a ref from the document before a navigation', async () => {
     const refs = new RefMap();
-    const apple = refOn(read(refs, FIRST), 'Apple', 'button');
+    const apple = refOn(await read(refs, FIRST), 'Apple', 'button');
     refs.clear();
     await expect(resolve(refs, FIRST, apple, 'click')).rejects.toThrow(/from an earlier page/);
   });
 
   it('starts a new epoch when the tab shows a new document without a navigation event', async () => {
     const refs = new RefMap();
-    const apple = refOn(read(refs, FIRST), 'Apple', 'button');
+    const apple = refOn(await read(refs, FIRST), 'Apple', 'button');
     const epoch = refs.epoch;
     const rewritten = { ...FIRST, documentId: 9001 };
     await expect(resolve(refs, rewritten, apple, 'click')).rejects.toThrow(/from an earlier page/);
     expect(refs.epoch).toBe(epoch + 1);
   });
 
+  it('accepts the refs of a read made after the page swapped its document in place', async () => {
+    const refs = new RefMap();
+    const before = refOn(await read(refs, FIRST), 'Apple', 'button');
+    await resolve(refs, FIRST, before, 'click');
+    const swapped = { ...FIRST, documentId: 9001 };
+    const after = refOn(await read(refs, swapped), 'Apple', 'button');
+    expect(after).not.toBe(before);
+    await expect(resolve(refs, swapped, after, 'click')).resolves.toEqual({
+      node: 42,
+      refound: false,
+    });
+  });
+
+  it('never lets an old ref reach the swapped document, by a reused node id or by looking again', async () => {
+    const refs = new RefMap();
+    const lines = await read(refs, FIRST);
+    const apple = refOn(lines, 'Apple', 'button');
+    const banana = refOn(lines, 'Banana', 'button');
+    const swapped: FakeDocument = {
+      documentId: 9001,
+      body: el(1, 'RootWebArea', 'Account', {
+        tag: 'HTML',
+        kids: [
+          el(42, 'button', 'Delete account', { tag: 'BUTTON', attrs: ['type', 'button'] }),
+          el(2000, 'list', 'Fruits', { tag: 'UL', kids: [fruit(2050, 'Banana')] }),
+        ],
+      }),
+    };
+    await read(refs, swapped);
+    const earlier = /from an earlier page/;
+    await expect(resolve(refs, swapped, apple, 'click')).rejects.toThrow(earlier);
+    await expect(resolve(refs, swapped, banana, 'click')).rejects.toThrow(earlier);
+  });
+
   it('never takes a ref from another tab for one of its own', async () => {
     const numbers = new RefNumbers();
     const first = new RefMap(numbers);
     const second = new RefMap(numbers);
-    const apple = refOn(read(first, FIRST), 'Apple', 'button');
-    read(second, REPLACED);
+    const apple = refOn(await read(first, FIRST), 'Apple', 'button');
+    await read(second, REPLACED);
     expect(second.nodeFor(apple)).toBeNull();
     await expect(resolve(second, REPLACED, 'ref_9999', 'click')).rejects.toThrow(
       /not a ref on this tab's page/,
