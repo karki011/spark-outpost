@@ -21,7 +21,7 @@ import type { prepareNativeLaunch, NativeLaunch } from './native-launch.ts';
 import type { ShellFolder } from './shell-folder.ts';
 import type { TerminalSessions } from './sessions.ts';
 import type { TmuxHost } from './tmux/tmux-host.ts';
-import type { NativeRemote } from './remote/native-remote.ts';
+import type { ModRoutedRemote } from './remote/mod-routing.ts';
 
 export interface NativeRuntimeDeps {
   db: Db;
@@ -50,7 +50,7 @@ export interface PendingNativeLaunch {
 
 export interface NativeRuntime {
   port: number;
-  remote: Pick<NativeRemote, 'view' | 'message' | 'interrupt' | 'decide'>;
+  remote: Pick<ModRoutedRemote, 'view' | 'message' | 'interrupt' | 'decide'>;
   get(conversationId: string): Promise<NativeTerminalSession | null>;
   launch(
     conversationId: string,

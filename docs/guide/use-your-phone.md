@@ -22,6 +22,10 @@ A paired device can answer an agent's browser cards: open a site, click and type
 
 **Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages and steps, with a message box and **Stop**. **Approve in Terminal sessions** adds **Allow** and **Deny**. Both start off.
 
+In Claude Code 2.1.287 or newer, Spark's mod hands your message to Claude, which sends it once idle instead of typing it. Older versions type it in.
+
+Above Claude's prompt, **Spark · phone connected** shows while a device follows. After you answer, **Allowed from your phone** or **Denied from your phone** appears.
+
 Messages are read from the CLI to show on the device and are not stored. Starting a session stays on the Mac.
 
 **Next:** [Answer an approval card](answer-approvals.md)

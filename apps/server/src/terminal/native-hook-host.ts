@@ -7,14 +7,19 @@ export type PermissionHandler = (
   signal: AbortSignal,
 ) => Promise<'allow' | 'deny' | null>;
 
+export type InboxHandler = (token: string) => Promise<unknown>;
+
+const PATHS = new Set(['/events', '/permission', '/mod/inbox']);
+
 export async function nativeHookHost(
   authorised: (token: string) => boolean,
   observe: (token: string, body: unknown) => Promise<boolean>,
   permission: PermissionHandler,
+  inbox: InboxHandler = async () => null,
 ) {
   let host = '';
   const handle = async (req: IncomingMessage, res: ServerResponse) => {
-    if (req.url !== '/events' && req.url !== '/permission') return res.writeHead(404).end();
+    if (!PATHS.has(req.url ?? '')) return res.writeHead(404).end();
     if (req.headers.host !== host || req.headers.origin !== undefined)
       return res.writeHead(403).end();
     const token = /^Bearer (\S+)$/.exec(req.headers.authorization ?? '')?.[1];
@@ -32,6 +37,11 @@ export async function nativeHookHost(
       body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
     } catch {
       return res.writeHead(400).end();
+    }
+    if (req.url === '/mod/inbox') {
+      const reply = await inbox(token);
+      if (reply === null) return res.writeHead(404).end();
+      return res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(reply));
     }
     if (req.url === '/permission') {
       const gone = new AbortController();

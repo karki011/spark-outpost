@@ -61,6 +61,28 @@ describe('native terminal launch', () => {
     await expect(stat(mcpPath)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
+  it('loads the Spark mod for Claude versions with mods, keeping its config beside it', async () => {
+    const request = { ...(await input()), version: '2.1.294 (Claude Code)' };
+    const launch = await prepareNativeLaunch(request);
+    const root = launch.args[launch.args.indexOf('--plugin-dir') + 1]!;
+    expect(root).toBe(join(launch.directory!, 'mod'));
+    for (const file of ['.claude-plugin/plugin.json', 'hooks/hooks.json', 'hooks/register.js']) {
+      expect((await stat(join(root, file))).mode & 0o777).toBe(0o600);
+      expect(await readFile(join(root, file), 'utf8')).not.toContain('observer-secret');
+    }
+    expect(JSON.parse(await readFile(join(root, 'hooks/hooks.json'), 'utf8'))).toEqual({
+      modules: ['./register.js'],
+    });
+    expect(JSON.parse(await readFile(join(root, '../observer.json'), 'utf8'))).toMatchObject({
+      token: 'observer-secret',
+    });
+    const older = await prepareNativeLaunch(await input());
+    const unobserved = await prepareNativeLaunch({ ...request, verifyHooks: async () => false });
+    const codex = await prepareNativeLaunch(await input('codex'));
+    for (const other of [older, unobserved, codex])
+      expect(other.args).not.toContain('--plugin-dir');
+  });
+
   it('leaves Codex user settings untouched and passes separate session hooks without bypassing trust', async () => {
     const request = await input('codex');
     await mkdir(join(request.dataDir, '.codex'));
