@@ -43,7 +43,7 @@ import { writeAdoptRecord } from './tmux/adopt-record.ts';
 import { readoptTmuxSessions } from './tmux/readopt.ts';
 import { terminalApprovals } from './remote/approvals.ts';
 import { modInbox } from './remote/mod-inbox.ts';
-import { withMod } from './remote/mod-routing.ts';
+import { answerWaits, withMod } from './remote/mod-routing.ts';
 import { nativeRemote, remoteHookHandlers } from './remote/native-remote.ts';
 
 export type { NativeRuntime, NativeRuntimeDeps } from './native-runtime-types.ts';
@@ -94,7 +94,8 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     usage,
   });
   const approvals = terminalApprovals();
-  const mod = modInbox({ db: deps.db, workspaceId: deps.workspaceId });
+  const waitsForAnswer = answerWaits(approvals, deps.db);
+  const mod = modInbox({ db: deps.db, workspaceId: deps.workspaceId, waitsForAnswer });
   const remote = withMod(
     nativeRemote({
       db: deps.db,
@@ -105,8 +106,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       owned,
     }),
     mod,
-    approvals,
-    deps.db,
+    waitsForAnswer,
   );
   const handlers = remoteHookHandlers(remote, (token) => tokens.get(digest(token)), hook);
   const host = await nativeHookHost(

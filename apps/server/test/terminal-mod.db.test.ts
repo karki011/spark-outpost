@@ -7,7 +7,10 @@ import { saveRemoteHostname, saveRemoteSwitches } from '../src/remote/store.ts';
 import { nativeHookHost } from '../src/terminal/native-hook-host.ts';
 import type { NativeRuntime } from '../src/terminal/native-runtime.ts';
 import type { LiveSession } from '../src/terminal/native-runtime-types.ts';
+import { reserveNativeTerminalLaunch } from '../src/persistence/native-terminal-turns.ts';
+import { terminalApprovals } from '../src/terminal/remote/approvals.ts';
 import { modInbox } from '../src/terminal/remote/mod-inbox.ts';
+import { answerWaits } from '../src/terminal/remote/mod-routing.ts';
 import { localClient, testAppOptions } from './app-support.ts';
 import { pairDevice, remoteClient, setSwitches, turnRemoteOn } from './remote-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
@@ -53,7 +56,11 @@ describe('the Claude mod inbox', () => {
       followUp: true,
     });
     await t.db.query(`UPDATE pr_watches SET checks = 'pending' WHERE conversation_id = $1`, [chat]);
-    const mod = modInbox({ db: t.db, workspaceId: t.workspaceId });
+    const mod = modInbox({
+      db: t.db,
+      workspaceId: t.workspaceId,
+      waitsForAnswer: async () => false,
+    });
     mod.followed(chat);
     expect(await mod.poll(session())).toEqual({
       messages: [],
@@ -62,8 +69,28 @@ describe('the Claude mod inbox', () => {
     });
   });
 
-  it('carries a phone message from the hook host to the mod and back to the sender', async () => {
-    const mod = modInbox({ db: t.db, workspaceId: t.workspaceId });
+  it('carries a phone message from the hook host to the mod, unless the agent asks first', async () => {
+    await reserveNativeTerminalLaunch(t.db, {
+      id: randomUUID(),
+      conversationId: chat,
+      provider: 'claude',
+      cwd: '/tmp',
+      label: 'Session',
+      runId: null,
+      messageId: null,
+      observation: 'hooks',
+      reason: null,
+      resume: false,
+    });
+    await t.db.query(
+      `UPDATE native_terminal_sessions SET state = 'ready' WHERE conversation_id = $1`,
+      [chat],
+    );
+    const mod = modInbox({
+      db: t.db,
+      workspaceId: t.workspaceId,
+      waitsForAnswer: answerWaits(terminalApprovals(), t.db),
+    });
     const host = await nativeHookHost(
       (token) => token === 'session-token',
       async () => true,
@@ -82,7 +109,19 @@ describe('the Claude mod inbox', () => {
       await poll();
       const sent = mod.send(chat, 'run the tests');
       expect((await poll()).messages).toEqual(['run the tests']);
-      await expect(sent).resolves.toBe(true);
+      await expect(sent).resolves.toBe('taken');
+      expect((await poll()).messages).toEqual([]);
+      const late = mod.send(chat, 'then push');
+      await t.db.query(
+        `UPDATE native_terminal_sessions SET state = 'waiting_for_permission' WHERE conversation_id = $1`,
+        [chat],
+      );
+      expect((await poll()).messages).toEqual([]);
+      await expect(late).resolves.toBe('refused');
+      await t.db.query(
+        `UPDATE native_terminal_sessions SET state = 'ready' WHERE conversation_id = $1`,
+        [chat],
+      );
       expect((await poll()).messages).toEqual([]);
     } finally {
       await host.close();

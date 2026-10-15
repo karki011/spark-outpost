@@ -1,24 +1,32 @@
 import type { TerminalApprovalDecision } from '@spark-outpost/contracts';
 import type { Db } from '../../persistence/db.ts';
 import { nativeTerminalRow } from '../../persistence/native-terminals.ts';
+import { NativeRuntimeError } from '../native-control.ts';
 import type { TerminalApprovals } from './approvals.ts';
 import type { ModInbox } from './mod-inbox.ts';
-import { COMMAND_PREFIX, type NativeRemote } from './native-remote.ts';
+import { COMMAND_PREFIX, withoutControls, type NativeRemote } from './native-remote.ts';
 
 const WAITS_FOR_ANSWER = new Set(['waiting_for_permission', 'waiting_for_input']);
+const ASKED_FIRST =
+  'The agent asked something before your message was sent. Answer it first; your message wasn’t sent.';
+
+export function answerWaits(approvals: Pick<TerminalApprovals, 'current'>, db: Db) {
+  return async (conversationId: string): Promise<boolean> => {
+    if (approvals.current(conversationId)) return true;
+    const row = await nativeTerminalRow(db, conversationId);
+    return row === null || WAITS_FOR_ANSWER.has(row.state);
+  };
+}
 
 export function withMod(
   remote: NativeRemote,
   mod: ModInbox,
-  approvals: Pick<TerminalApprovals, 'current'>,
-  db: Db,
+  waitsForAnswer: (conversationId: string) => Promise<boolean>,
 ) {
-  const modTakes = async (conversationId: string, text: string): Promise<boolean> => {
-    if (!mod.active(conversationId) || COMMAND_PREFIX.test(text)) return false;
-    if (approvals.current(conversationId)) return false;
-    const row = await nativeTerminalRow(db, conversationId);
-    return row !== null && !WAITS_FOR_ANSWER.has(row.state);
-  };
+  const modTakes = async (conversationId: string, text: string): Promise<boolean> =>
+    mod.active(conversationId) &&
+    !COMMAND_PREFIX.test(text) &&
+    !(await waitsForAnswer(conversationId));
 
   return {
     ...remote,
@@ -30,12 +38,11 @@ export function withMod(
 
     async message(...args: Parameters<NativeRemote['message']>): Promise<void> {
       const [conversationId, text, ...options] = args;
-      if (
-        !options.some(Boolean) &&
-        (await modTakes(conversationId, text)) &&
-        (await mod.send(conversationId, text))
-      )
-        return;
+      if (!options.some(Boolean) && (await modTakes(conversationId, text))) {
+        const outcome = await mod.send(conversationId, withoutControls(text));
+        if (outcome === 'taken') return;
+        if (outcome === 'refused') throw new NativeRuntimeError(ASKED_FIRST, 409);
+      }
       await remote.message(...args);
     },
 

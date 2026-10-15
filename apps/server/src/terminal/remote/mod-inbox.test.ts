@@ -16,14 +16,16 @@ function setup(options: { approve?: boolean; timeout?: 'now' | 'never' } = {}) {
         : [],
     }),
   } as unknown as Db;
+  let asked = false;
   const mod = modInbox({
     db,
     workspaceId: 'w',
+    waitsForAnswer: async () => asked,
     now: () => clock,
     delay: () =>
       options.timeout === 'never' ? new Promise<void>(() => undefined) : Promise.resolve(),
   });
-  return { mod, advance: (ms: number) => (clock += ms) };
+  return { mod, advance: (ms: number) => (clock += ms), ask: () => (asked = true) };
 }
 
 describe('the mod status line', () => {
@@ -88,20 +90,31 @@ describe('the mod inbox', () => {
     const sent = mod.send('c1', 'run the tests');
     await Promise.resolve();
     expect((await mod.poll(session()))?.messages).toEqual(['run the tests']);
-    await expect(sent).resolves.toBe(true);
+    await expect(sent).resolves.toBe('taken');
+    expect((await mod.poll(session()))?.messages).toEqual([]);
+  });
+
+  it('refuses a queued message, and never hands it out later, once the agent waits for an answer', async () => {
+    const { mod, ask } = setup({ timeout: 'never' });
+    await mod.poll(session());
+    const sent = mod.send('c1', 'run the tests');
+    await Promise.resolve();
+    ask();
+    expect((await mod.poll(session()))?.messages).toEqual([]);
+    await expect(sent).resolves.toBe('refused');
     expect((await mod.poll(session()))?.messages).toEqual([]);
   });
 
   it('withdraws a message the mod did not take in time', async () => {
     const { mod } = setup({ timeout: 'now' });
     await mod.poll(session());
-    await expect(mod.send('c1', 'run the tests')).resolves.toBe(false);
+    await expect(mod.send('c1', 'run the tests')).resolves.toBe('not taken');
     expect((await mod.poll(session()))?.messages).toEqual([]);
   });
 
   it('queues nothing when the mod has not checked in', async () => {
     const { mod } = setup({ timeout: 'never' });
-    await expect(mod.send('c1', 'hello')).resolves.toBe(false);
+    await expect(mod.send('c1', 'hello')).resolves.toBe('not taken');
   });
 
   it('passes an approval answer from the phone to the terminal once', async () => {

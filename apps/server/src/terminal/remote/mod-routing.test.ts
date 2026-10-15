@@ -3,13 +3,20 @@ import type { Db } from '../../persistence/db.ts';
 import type { LiveSession } from '../native-runtime-types.ts';
 import { terminalApprovals } from './approvals.ts';
 import { modInbox } from './mod-inbox.ts';
-import { withMod } from './mod-routing.ts';
+import { answerWaits, withMod } from './mod-routing.ts';
 import { nativeRemote } from './native-remote.ts';
 
 const MENU = '   Rewind\n   ❯ (current)\n   Enter to continue · Esc to cancel';
 const PASTED = ['\u001b[200~hello\u001b[201~', '\r'];
 
-function setup(options: { state?: string; screen?: string; modTakes?: boolean } = {}) {
+function setup(
+  options: {
+    state?: string;
+    screen?: string;
+    modTakes?: boolean;
+    askWhileQueued?: 'waiting_for_input' | 'approval';
+  } = {},
+) {
   const row = {
     id: 's1',
     conversation_id: 'c1',
@@ -30,11 +37,16 @@ function setup(options: { state?: string; screen?: string; modTakes?: boolean } 
   const sent: string[] = [];
   const approvals = terminalApprovals();
   const taken: string[][] = [];
+  const waitsForAnswer = answerWaits(approvals, db);
   const mod = modInbox({
     db,
     workspaceId: 'w',
+    waitsForAnswer,
     delay: async () => {
       if (options.modTakes === false) return;
+      if (options.askWhileQueued === 'waiting_for_input') row.state = 'waiting_for_input';
+      if (options.askWhileQueued === 'approval')
+        approvals.note({ conversationId: 'c1', provider: 'claude', tool: 'Bash', detail: 'ls' });
       taken.push((await mod.poll(session))!.messages);
       await new Promise<void>(() => undefined);
     },
@@ -56,10 +68,9 @@ function setup(options: { state?: string; screen?: string; modTakes?: boolean } 
       delay: async () => undefined,
     }),
     mod,
-    approvals,
-    db,
+    waitsForAnswer,
   );
-  return { remote, mod, session, sent, taken, approvals };
+  return { remote, mod, session, row, sent, taken, approvals };
 }
 
 describe('phone messages through the Claude mod', () => {
@@ -92,6 +103,27 @@ describe('phone messages through the Claude mod', () => {
     approvals.note({ conversationId: 'c1', provider: 'claude', tool: 'Bash', detail: 'ls' });
     await expect(remote.message('c1', 'hello')).rejects.toMatchObject({ status: 409 });
     expect([taken, sent]).toEqual([[], []]);
+  });
+
+  it('removes control characters before the mod gets the message, as a paste does', async () => {
+    const { remote, mod, session, taken } = setup();
+    await mod.poll(session);
+    await remote.message('c1', 'a\u001b[201~b\u0003c\td\r\ne');
+    expect(taken).toEqual([['a[201~bc\td\ne']]);
+  });
+
+  it('refuses a queued message when the agent starts waiting before the mod takes it', async () => {
+    const waits = setup({ askWhileQueued: 'waiting_for_input' });
+    await waits.mod.poll(waits.session);
+    await expect(waits.remote.message('c1', 'hello')).rejects.toMatchObject({ status: 409 });
+    expect(waits.taken).toEqual([[]]);
+    waits.row.state = 'ready';
+    expect((await waits.mod.poll(waits.session))!.messages).toEqual([]);
+    expect(waits.sent).toEqual([]);
+    const approval = setup({ askWhileQueued: 'approval' });
+    await approval.mod.poll(approval.session);
+    await expect(approval.remote.message('c1', 'hello')).rejects.toMatchObject({ status: 409 });
+    expect([approval.taken, approval.sent]).toEqual([[[]], []]);
   });
 
   it('pastes as before when the mod never checked in', async () => {

@@ -21,9 +21,11 @@ export interface StatusFacts {
   pull: { number: number; state: 'open' | 'merged' | 'closed'; checks: PrChecks } | null;
 }
 
+export type SendOutcome = 'taken' | 'refused' | 'not taken';
+
 interface Queued {
   text: string;
-  taken: () => void;
+  settle: (outcome: Exclude<SendOutcome, 'not taken'>) => void;
 }
 
 interface ModSession {
@@ -59,6 +61,7 @@ export function decisionNotice(decision: TerminalApprovalDecision['decision']): 
 export interface ModInboxDeps {
   db: Db;
   workspaceId: string;
+  waitsForAnswer: (conversationId: string) => Promise<boolean>;
   now?: () => number;
   delay?: (ms: number) => Promise<void>;
 }
@@ -103,10 +106,11 @@ export function modInbox(deps: ModInboxDeps) {
       const found = entry(conversationId);
       found.checkedIn = now();
       const known = await facts(conversationId, found);
-      const taken = found.queue.splice(0);
-      for (const message of taken) message.taken();
+      const asked = found.queue.length > 0 && (await deps.waitsForAnswer(conversationId));
+      const handed = found.queue.splice(0);
+      for (const message of handed) message.settle(asked ? 'refused' : 'taken');
       return {
-        messages: taken.map((message) => message.text),
+        messages: asked ? [] : handed.map((message) => message.text),
         notices: found.notices.splice(0),
         status: modStatus({
           phone: now() - found.followed <= FOLLOWED_MS,
@@ -116,23 +120,23 @@ export function modInbox(deps: ModInboxDeps) {
       };
     },
 
-    async send(conversationId: string, text: string): Promise<boolean> {
-      if (!active(conversationId)) return false;
+    async send(conversationId: string, text: string): Promise<SendOutcome> {
+      if (!active(conversationId)) return 'not taken';
       const found = entry(conversationId);
-      let delivered = false;
-      let markTaken = () => undefined as void;
-      const handed = new Promise<void>((taken) => (markTaken = taken));
+      let outcome: SendOutcome = 'not taken';
+      let wake = () => undefined as void;
+      const handed = new Promise<void>((done) => (wake = done));
       const queued: Queued = {
         text,
-        taken: () => {
-          delivered = true;
-          markTaken();
+        settle: (result) => {
+          outcome = result;
+          wake();
         },
       };
       found.queue.push(queued);
       await Promise.race([handed, delay(TAKE_WAIT_MS)]);
-      if (!delivered) found.queue = found.queue.filter((item) => item !== queued);
-      return delivered;
+      found.queue = found.queue.filter((item) => item !== queued);
+      return outcome;
     },
 
     followed(conversationId: string): void {

@@ -61,14 +61,17 @@ interface ParsedTail {
   truncated: boolean;
 }
 
-export function pastedMessage(text: string): string {
-  const clean = Array.from(text.replace(/\r\n?/g, '\n'))
+export function withoutControls(text: string): string {
+  return Array.from(text.replace(/\r\n?/g, '\n'))
     .filter((char) => {
       const code = char.charCodeAt(0);
       return char === '\n' || char === '\t' || (code >= 0x20 && code !== 0x7f);
     })
     .join('');
-  return `${PASTE_START}${clean}${PASTE_END}`;
+}
+
+export function pastedMessage(text: string): string {
+  return `${PASTE_START}${withoutControls(text)}${PASTE_END}`;
 }
 
 export function approvalDetail(tool: string, input: unknown): string {
