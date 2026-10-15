@@ -94,7 +94,7 @@ export const ASK_TURN_ASKS =
   'Spark asks before commands in a question turn, unless they only read files';
 
 export const INSTRUCTION_REASON =
-  'Agent instruction files (AGENTS.md, CLAUDE.md, .claude, .cursor/rules, .spark) always ask';
+  'Agent instruction files (AGENTS.md, CLAUDE.md, .agents, .claude, .codex, .cursor/rules, .spark) always ask';
 export const GIT_CONTROL_REASON =
   'Git runs hooks and settings from .git outside Spark on every commit, so changing them always asks';
 
