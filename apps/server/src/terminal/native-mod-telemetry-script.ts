@@ -1,8 +1,11 @@
 export const MOD_SEND_MAX = 200;
 const MOD_QUEUE_MAX = 5_000;
 
+export const MOD_SIDE_INDEX = 1_000_000;
+
 export function sparkModTelemetryScript(): string {
   return String.raw`
+const SIDE_INDEX = ${MOD_SIDE_INDEX};
 const SEND_MAX = ${MOD_SEND_MAX};
 const QUEUE_MAX = ${MOD_QUEUE_MAX};
 const KEPT = 256;
@@ -27,6 +30,8 @@ export function fromEngine(origin) {
 export function telemetry() {
   let prompt = null;
   let spent = null;
+  let working = false;
+  let lastMain = null;
   const owners = new Map();
   const turns = new Map();
   const queue = [];
@@ -53,6 +58,7 @@ export function telemetry() {
       const turn = label(e.turnId);
       if (!owner || !turn) return;
       remember(turns, turn, owner);
+      if (!agent) working = true;
       push({ kind: 'turn_start', prompt: owner, agent, turn, at });
     },
     stepped(e, usage, costUsd) {
@@ -60,6 +66,7 @@ export function telemetry() {
       const owner = turn ? turns.get(turn) : null;
       const model = label(usage && usage.model);
       if (!owner || !model || !Number.isSafeInteger(e.index) || e.index < 0) return;
+      if (!label(e.agentId)) lastMain = { prompt: owner, turn, model, side: 0 };
       push({
         kind: 'request',
         prompt: owner,
@@ -78,6 +85,7 @@ export function telemetry() {
       const turn = label(e.turnId);
       const owner = turn ? turns.get(turn) : null;
       if (!owner) return;
+      if (!label(e.agentId)) working = false;
       push({
         kind: 'turn_end',
         prompt: owner,
@@ -95,6 +103,23 @@ export function telemetry() {
       const name = label(e.tool);
       if (!owner || !id || !name) return;
       push({ kind: 'tool', prompt: owner, agent, id, name, phase, failed, at });
+    },
+    working: () => working,
+    between(costUsd) {
+      if (!lastMain || typeof costUsd !== 'number' || costUsd <= 0) return;
+      push({
+        kind: 'request',
+        prompt: lastMain.prompt,
+        agent: null,
+        turn: lastMain.turn,
+        index: SIDE_INDEX + lastMain.side++,
+        model: lastMain.model,
+        input: 0,
+        output: 0,
+        cacheRead: 0,
+        cacheWrite: 0,
+        costUsd,
+      });
     },
     take() {
       return queue.splice(0, SEND_MAX);

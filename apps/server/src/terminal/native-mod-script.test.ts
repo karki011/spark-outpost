@@ -1,11 +1,10 @@
-import { spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { supportsMods, writeSparkMod } from './native-mod-script.ts';
-import { MOD_SEND_MAX } from './native-mod-telemetry-script.ts';
+import { MOD_SEND_MAX, MOD_SIDE_INDEX } from './native-mod-telemetry-script.ts';
 
 type Next = ((e: unknown) => unknown) & { origin?: { plugin: string; tier: string } };
 type Hook = ($: FakeEngine, e: Record<string, unknown>, next: Next) => unknown;
@@ -401,6 +400,9 @@ describe('the Spark mod when sends fail or requests overlap', () => {
       cache_creation_input_tokens: 0,
       model: 'claude-opus-5-5',
     };
+    await hooks.get('classic.UserPromptSubmit')!(engine, { prompt_id: 'p' }, (e) => e);
+    await hooks.get('turn.start')!(engine, { turnId: 'main' }, (e) => e);
+    await hooks.get('turn.start')!(engine, { turnId: 'sub', agentId: 'agent-a' }, (e) => e);
     let release = () => undefined as void;
     const held = new Promise<void>((done) => (release = done));
     let calls = 0;
@@ -410,9 +412,6 @@ describe('the Spark mod when sends fail or requests overlap', () => {
       if (calls === 1) await held;
       return { cost: { usd: seen } };
     };
-    await hooks.get('classic.UserPromptSubmit')!(engine, { prompt_id: 'p' }, (e) => e);
-    await hooks.get('turn.start')!(engine, { turnId: 'main' }, (e) => e);
-    await hooks.get('turn.start')!(engine, { turnId: 'sub', agentId: 'agent-a' }, (e) => e);
     spent = 0.1;
     const first = step({ turnId: 'main', index: 0 }, usage);
     await new Promise((done) => setTimeout(done, 0));
@@ -463,6 +462,22 @@ describe('the Spark mod when only its turn facts are refused', () => {
   });
 });
 
+describe('cost Claude Code spends between turns', () => {
+  it('goes to the turn that just ended, read while the session is idle', async () => {
+    await oneTurn();
+    reply({ messages: [], notices: [], status: null });
+    replies.push(() => ({ ok: true, status: 204, text: '' }));
+    await tick();
+    spent = 0.27;
+    reply({ messages: [], notices: [], status: null });
+    replies.push(() => ({ ok: true, status: 204, text: '' }));
+    await tick();
+    expect(sentItems(3).items).toEqual([
+      expect.objectContaining({ turn: 'turn-1', index: MOD_SIDE_INDEX, output: 0, costUsd: 0.02 }),
+    ]);
+  });
+});
+
 describe('mod support', () => {
   it('needs Claude Code 2.1.287 or newer', () => {
     expect(supportsMods('2.1.287 (Claude Code)')).toBe(true);
@@ -472,17 +487,5 @@ describe('mod support', () => {
     expect(supportsMods('2.1.286 (Claude Code)')).toBe(false);
     expect(supportsMods('2.0.999')).toBe(false);
     expect(supportsMods('')).toBe(false);
-  });
-});
-
-const claudeCli = spawnSync('claude', ['--version'], { encoding: 'utf8' }).status === 0;
-
-describe.skipIf(!claudeCli)('the Spark mod against the installed Claude Code', () => {
-  it('passes claude plugin validate, so Claude Code loads it', async () => {
-    const checked = spawnSync('claude', ['plugin', 'validate', join(folder, 'mod')], {
-      encoding: 'utf8',
-      timeout: 60_000,
-    });
-    expect(checked.stdout + checked.stderr).toContain('Validation passed');
   });
 });

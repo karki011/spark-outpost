@@ -66,7 +66,9 @@ export function register(on) {
     return next(e);
   }).catch(($, e, next) => next(e));
   on('turn.start', async ($, e, next) => {
-    if (fromEngine(next.origin)) facts.turnStarted(e, Math.round(await $.clock.now()));
+    if (!fromEngine(next.origin)) return next(e);
+    if (!e.agentId && !facts.working()) facts.between(await costed($, ledger));
+    facts.turnStarted(e, Math.round(await $.clock.now()));
     return next(e);
   });
   on('turn.step', async function* ($, e, next) {
@@ -109,6 +111,7 @@ export function register(on) {
       );
     };
     const poll = async () => {
+      if (!facts.working()) facts.between(await costed($, ledger));
       config ??= JSON.parse(await $.fs.read($.plugin.root + '/../observer.json'));
       const response = await $.http.fetch(new URL('/mod/inbox', config.url).href, {
         method: 'POST',
