@@ -118,7 +118,6 @@ export async function startSparkMcpHost(
     const cancelled = cancelledId(body);
     if (cancelled !== null) calls.get(`${grant}:${cancelled}`)?.abort();
     const call = toolCallId(body);
-    if (call !== null) auditInvalidMacCall({ deps, scope: session.scope }, body);
     if (call !== null) {
       try {
         await session.scope.beforeToolCall?.();
@@ -130,6 +129,7 @@ export async function startSparkMcpHost(
         reply(res, 401, 'This Spark session has ended.');
         return;
       }
+      if (session.available.mac) auditInvalidMacCall({ deps, scope: session.scope }, body);
     }
     const key = call === null ? null : `${grant}:${call}`;
     const controller = new AbortController();

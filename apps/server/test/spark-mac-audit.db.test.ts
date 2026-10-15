@@ -97,6 +97,30 @@ describe('failures that are not refusals, and bad input', () => {
     ]);
   });
 
+  it('audits no bad input when the turn is unavailable, the grant ended or there are no Mac tools', async () => {
+    const bad = { action: 'fly-to-the-moon', app: 'Calculator' };
+    const attempt = (call: Promise<unknown>) =>
+      call.then(
+        () => 'answered',
+        () => 'rejected',
+      );
+    await h.start({
+      mode: 'auto',
+      scope: {
+        beforeToolCall: async () => {
+          throw new Error('turn unavailable');
+        },
+      },
+    });
+    expect(await attempt(h.call('spark_mac_act', bad))).toBe('rejected');
+    await h.start({ mode: 'auto' });
+    await h.revoke();
+    expect(await attempt(h.call('spark_mac_act', bad))).toBe('rejected');
+    await h.start({ mode: 'auto', macControl: false });
+    await attempt(h.call('spark_mac_act', bad));
+    expect(h.audited()).toEqual([]);
+  });
+
   it('audits malformed arguments with the tool name only', async () => {
     await h.start({ mode: 'auto' });
     const refused = await h.call('spark_mac_act', { action: 'fly-to-the-moon', app: 'Calculator' });
