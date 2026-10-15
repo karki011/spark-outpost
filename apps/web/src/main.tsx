@@ -36,19 +36,37 @@ ignoreAnimationIterationListeners(EventTarget.prototype);
 const IslandApp = lazy(() =>
   import('./island/IslandApp.tsx').then((module) => ({ default: module.IslandApp })),
 );
+const MacIndicatorApp = lazy(() =>
+  import('./mac-control/MacIndicatorApp.tsx').then((module) => ({
+    default: module.MacIndicatorApp,
+  })),
+);
 const island = window.location.pathname === '/island';
+const macIndicator = window.location.pathname === '/mac-indicator';
+
+function Root() {
+  if (island) {
+    return (
+      <Suspense fallback={null}>
+        <IslandApp />
+      </Suspense>
+    );
+  }
+  if (macIndicator) {
+    return (
+      <Suspense fallback={null}>
+        <MacIndicatorApp />
+      </Suspense>
+    );
+  }
+  return <App />;
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AppMotion>
-        {island ? (
-          <Suspense fallback={null}>
-            <IslandApp />
-          </Suspense>
-        ) : (
-          <App />
-        )}
+        <Root />
       </AppMotion>
     </QueryClientProvider>
   </StrictMode>,

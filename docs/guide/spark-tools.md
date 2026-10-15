@@ -46,9 +46,10 @@ Spark does what the agent proposes.
 | Add, change, switch or remove an MCP server | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
 | Open a site; act on a page                  | `spark_browser_open`, `spark_browser_act`                                                               |
 | Use a saved sign-in (always asks)           | `spark_browser_sign_in`                                                                                 |
+| Use a [Mac app](mac-control.md)             | `spark_mac_apps`, `spark_mac_read`, `spark_mac_act`                                                     |
 | Keep one command running after the turn     | `spark_terminal_run`                                                                                    |
 
-An MCP server card shows the exact command. Agents pass only names of variables and headers; you fill values in **Settings → MCP servers**, for new agent sessions.
+An MCP server card shows the exact command. Agents pass only variable and header names; you fill values in **Settings → MCP servers**, for new agent sessions.
 
 ## Outpost tools
 
@@ -73,7 +74,7 @@ Any chat with a project gets `spark_outpost_draft`. A Spark handed a job gets no
 
 ![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
 
-Change any field, then select the confirm button or **Don't**. The card then shows the result with a link, or why it failed with **Try again**. Every action is audited.
+Edit any field, then confirm or select **Don't**. The card shows the result, or why it failed with **Try again**. Every action is audited.
 
 ## Commands after the turn
 
