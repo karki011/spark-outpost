@@ -1,8 +1,9 @@
 import { execFile } from 'node:child_process';
-import { cp, mkdir, stat } from 'node:fs/promises';
+import { cp, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type { MacArch } from './builder-config.ts';
+import { checkBundledBinary } from './bundled-binary.ts';
 
 const run = promisify(execFile);
 
@@ -15,8 +16,6 @@ export interface TmuxSource {
   sha256: string;
   licence: string;
 }
-
-export const DEPLOYMENT_TARGET = '12.0';
 
 export const TMUX: TmuxSource = {
   name: 'tmux',
@@ -40,14 +39,11 @@ export const LIBEVENT: TmuxSource = {
 
 export const TMUX_LICENCES = ['tmux-COPYING.txt', 'libevent-LICENSE.txt'];
 
-const CLANG_ARCH: Record<MacArch, string> = { x64: 'x86_64', arm64: 'arm64' };
 const HOST_TRIPLE: Record<MacArch, string> = {
   x64: 'x86_64-apple-darwin',
   arm64: 'aarch64-apple-darwin',
 };
-const SYSTEM_LIBRARY = /^\/(usr\/lib|System\/Library)\//;
 
-export const clangArch = (arch: MacArch) => CLANG_ARCH[arch];
 export const hostTriple = (arch: MacArch) => HOST_TRIPLE[arch];
 
 export function tmuxStamp(): string {
@@ -62,57 +58,13 @@ export function tmuxBuiltDir(repoRoot: string, arch: MacArch): string {
   return path.join(tmuxCacheDir(repoRoot), arch);
 }
 
-export function foreignLibraries(otoolOutput: string): string[] {
-  return otoolOutput
-    .split('\n')
-    .slice(1)
-    .map((line) => line.trim().split(' ')[0] ?? '')
-    .filter((name) => name !== '' && !SYSTEM_LIBRARY.test(name));
-}
-
-export function binaryProblems(
-  arch: MacArch,
-  facts: { archs: string; otool: string; minOs: string | null },
-): string[] {
-  const problems: string[] = [];
-  if (facts.archs.trim() !== clangArch(arch))
-    problems.push(
-      `it is built for ${facts.archs.trim() || 'an unknown CPU'}, not ${clangArch(arch)}`,
-    );
-  const foreign = foreignLibraries(facts.otool);
-  if (foreign.length > 0)
-    problems.push(`it links ${foreign.join(', ')}, which a Mac does not ship`);
-  if (facts.minOs !== null && Number(facts.minOs) > Number(DEPLOYMENT_TARGET))
-    problems.push(`it needs macOS ${facts.minOs}, newer than the app's ${DEPLOYMENT_TARGET}`);
-  return problems;
-}
-
-export function minimumOs(loadCommands: string): string | null {
-  return /^\s*minos (\d+\.\d+)/m.exec(loadCommands)?.[1] ?? null;
-}
-
 export async function checkTmuxBinary(binary: string, arch: MacArch): Promise<void> {
-  const exists = await stat(binary).then(
-    (info) => info.isFile(),
-    () => false,
-  );
-  if (!exists)
-    throw new Error(
-      `No tmux for ${arch} at ${binary}. Run pnpm desktop:tmux to build it; Terminal sessions need it to survive a restart.`,
-    );
-  const [archs, otool, commands] = await Promise.all([
-    run('lipo', ['-archs', binary]),
-    run('otool', ['-L', binary]),
-    run('otool', ['-l', binary]),
-  ]);
-  const problems = binaryProblems(arch, {
-    archs: archs.stdout,
-    otool: otool.stdout,
-    minOs: minimumOs(commands.stdout),
+  await checkBundledBinary({
+    name: 'tmux',
+    path: binary,
+    arch,
+    missing: 'Run pnpm desktop:tmux to build it; Terminal sessions need it to survive a restart.',
   });
-  if (problems.length > 0)
-    throw new Error(`The tmux built for ${arch} can't be bundled: ${problems.join('; ')}.`);
-  if (arch === 'arm64') await run('codesign', ['--verify', binary]);
 }
 
 export async function checkTmuxStarts(binary: string): Promise<void> {

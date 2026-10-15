@@ -1,6 +1,14 @@
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
-import { app, autoUpdater as nativeUpdater, BrowserWindow, dialog, session, shell } from 'electron';
+import {
+  app,
+  autoUpdater as nativeUpdater,
+  BrowserWindow,
+  dialog,
+  session,
+  shell,
+  type IpcMainInvokeEvent,
+} from 'electron';
 import { BROWSER_HOST_ENV, isBetaVersion, parseSparkChatLink } from '@spark-outpost/contracts';
 import { linkIn } from './deep-link.ts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
@@ -32,7 +40,7 @@ import {
   workerEnv,
   type ServerLaunch,
 } from './server-env.ts';
-import { startBrowserHost, type DesktopBrowserHost } from './browser/host.ts';
+import { startAgentHosts, type AgentHosts } from './agent-hosts.ts';
 import type { ServiceOptions } from './service.ts';
 import { RuntimeServices } from './runtime-services.ts';
 import { createQuitPolicy } from './quit-policy.ts';
@@ -95,7 +103,7 @@ let help: Help | null = null;
 let privacy: Privacy | null = null;
 let heartbeat: HeartbeatTimer | null = null;
 let storage: StorageSync | null = null;
-let browser: DesktopBrowserHost | null = null;
+let browser: AgentHosts | null = null;
 const fileLog = new FileLog({ dir: paths.logs });
 
 function log(source: string) {
@@ -313,13 +321,17 @@ async function launch(): Promise<void> {
   await runtime.configure({ port: apiPort, token, version: app.getVersion() });
 
   spark?.status('spark');
-  const browserHost = await startBrowserHost({
-    window: () => spark?.window ?? null,
-    trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
-    userData: paths.userData,
-    blockedPorts: [apiPort, databaseOptions.port],
-    log: log('browser'),
-  });
+  const trusted = (event: IpcMainInvokeEvent) => targetsApi(event.senderFrame?.url ?? '', apiUrl);
+  const browserHost = await startAgentHosts(
+    {
+      window: () => spark?.window ?? null,
+      trusted,
+      userData: paths.userData,
+      blockedPorts: [apiPort, databaseOptions.port],
+      log: log('browser'),
+    },
+    { helperPath: layout.macControlBin, origin: () => origin, preload, trusted, log: log('mac') },
+  );
   browser = browserHost;
   let apiReady = false;
   supervise(

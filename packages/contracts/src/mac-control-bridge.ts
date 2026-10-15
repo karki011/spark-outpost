@@ -11,6 +11,8 @@ import {
 } from './mac-control-helper.ts';
 
 export const MAC_REQUEST_TIMEOUT_MS = 30_000;
+export const MAC_ACCESSIBILITY_SETTINGS_URL =
+  'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility';
 
 const chat = { chatId: z.uuid(), runId: z.uuid().nullable() };
 const pid = z.number().int().positive();

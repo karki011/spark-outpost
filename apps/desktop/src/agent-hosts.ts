@@ -1,0 +1,26 @@
+import type { BridgePort, WorkerBridge } from './browser/bridge.ts';
+import { startBrowserHost, type BrowserHostOptions } from './browser/host.ts';
+import { joinBridges } from './mac-control/bridge.ts';
+import { startMacControlHost, type MacControlHostOptions } from './mac-control/host.ts';
+
+export interface AgentHosts {
+  connectWorker(port: BridgePort): WorkerBridge;
+  windowClosed(): void;
+  dispose(): void;
+}
+
+export async function startAgentHosts(
+  browserOptions: BrowserHostOptions,
+  macOptions: MacControlHostOptions,
+): Promise<AgentHosts> {
+  const browser = await startBrowserHost(browserOptions);
+  const mac = startMacControlHost(macOptions);
+  return {
+    connectWorker: (port) => joinBridges([browser.connectWorker(port), mac.connectWorker(port)]),
+    windowClosed: () => browser.windowClosed(),
+    dispose() {
+      browser.dispose();
+      mac.dispose();
+    },
+  };
+}

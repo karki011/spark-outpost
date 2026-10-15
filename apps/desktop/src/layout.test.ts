@@ -14,6 +14,7 @@ describe('appLayout', () => {
       serverDir: '/repo/apps/server',
       webRoot: '/repo/apps/web/dist',
       tmuxBin: '/repo/.local/tmux/arm64/bin/tmux',
+      macControlBin: '/repo/.local/mac-control/arm64/spark-mac-control',
     });
   });
 
@@ -28,6 +29,8 @@ describe('appLayout', () => {
       serverDir: '/Applications/Spark Outpost.app/Contents/Resources/server',
       webRoot: '/Applications/Spark Outpost.app/Contents/Resources/web',
       tmuxBin: '/Applications/Spark Outpost.app/Contents/Resources/tmux/bin/tmux',
+      macControlBin:
+        '/Applications/Spark Outpost.app/Contents/Resources/mac-control/bin/spark-mac-control',
     });
   });
 });
