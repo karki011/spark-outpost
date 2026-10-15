@@ -3,8 +3,12 @@ import { useEffect, useState, type CSSProperties } from 'react';
 const PANEL = 'main.main, main.page';
 const BELOW_HEADER_PX = 58;
 
-function measure(): CSSProperties | undefined {
-  const panel = document.querySelector<HTMLElement>(PANEL);
+function findPanel(): HTMLElement | null {
+  const panels = document.querySelectorAll<HTMLElement>(PANEL);
+  return [...panels].find((panel) => panel.getClientRects().length > 0) ?? null;
+}
+
+function measure(panel: HTMLElement | null): CSSProperties | undefined {
   if (!panel) return undefined;
   const rect = panel.getBoundingClientRect();
   if (rect.width === 0) return undefined;
@@ -15,31 +19,40 @@ function measure(): CSSProperties | undefined {
   };
 }
 
-export function usePanelAnchor(): CSSProperties | undefined {
-  const [style, setStyle] = useState<CSSProperties | undefined>(measure);
-
+function useWatchedPanel(onChange: (panel: HTMLElement | null) => void, sizes: boolean): void {
   useEffect(() => {
     let watched: HTMLElement | null = null;
-    const update = () => setStyle(measure());
+    const update = () => onChange(watched);
     const resize = new ResizeObserver(update);
     const watch = () => {
-      const panel = document.querySelector<HTMLElement>(PANEL);
+      const panel = findPanel();
       if (panel === watched) return;
-      if (watched) resize.unobserve(watched);
+      if (watched && sizes) resize.unobserve(watched);
       watched = panel;
-      if (panel) resize.observe(panel);
+      if (panel && sizes) resize.observe(panel);
       update();
     };
     const swaps = new MutationObserver(watch);
     swaps.observe(document.body, { childList: true, subtree: true });
-    window.addEventListener('resize', update);
+    if (sizes) window.addEventListener('resize', update);
     watch();
     return () => {
       swaps.disconnect();
       resize.disconnect();
-      window.removeEventListener('resize', update);
+      if (sizes) window.removeEventListener('resize', update);
     };
-  }, []);
+  }, [onChange, sizes]);
+}
 
+export function usePanelElement(): HTMLElement | null {
+  const [panel, setPanel] = useState<HTMLElement | null>(findPanel);
+  useWatchedPanel(setPanel, false);
+  return panel;
+}
+
+export function usePanelAnchor(): CSSProperties | undefined {
+  const [style, setStyle] = useState<CSSProperties | undefined>(() => measure(findPanel()));
+  const [update] = useState(() => (panel: HTMLElement | null) => setStyle(measure(panel)));
+  useWatchedPanel(update, true);
   return style;
 }

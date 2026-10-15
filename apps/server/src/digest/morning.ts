@@ -1,6 +1,7 @@
 import type { Db } from '../persistence/db.ts';
 import { asLast, latestDigests } from '../persistence/digests.ts';
 import { claimMorningBrief, morningBriefSetting } from '../persistence/setup.ts';
+import { sparkPaused } from '../persistence/spark-pause.ts';
 import { morningDue } from './policy.ts';
 import { requestDigest } from './service.ts';
 
@@ -26,7 +27,7 @@ export function startMorningBrief(
   const attempt = async (now: Date) => {
     const day = localDay(now);
     const setting = await morningBriefSetting(db, workspaceId);
-    if (!setting.enabled) return;
+    if (!setting.enabled || (await sparkPaused(db, workspaceId))) return;
     const { latest } = await latestDigests(db, workspaceId, now);
     if (!morningDue(asLast(latest), now, setting.time)) return;
     triedOn = day;

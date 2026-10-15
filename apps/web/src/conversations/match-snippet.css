@@ -1,0 +1,19 @@
+.match-snippet {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.match-snippet mark {
+  border-radius: 3px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 500;
+}

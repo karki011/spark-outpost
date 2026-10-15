@@ -29,13 +29,17 @@ export function inputDetail(input: unknown, max = DETAIL_MAX): string {
   return '';
 }
 
+function said(text: string): Pick<Item, 'text' | 'clipped'> {
+  return { text: clip(text, TEXT_MAX), clipped: text.length > TEXT_MAX };
+}
+
 function joinAssistant(items: Item[], text: string, id: string, at: string | null): void {
   const last = items.at(-1);
   if (last?.kind === 'assistant' && last.id === id) {
-    last.text = clip(`${last.text}\n\n${text}`, TEXT_MAX);
+    if (!last.clipped) Object.assign(last, said(`${last.text}\n\n${text}`));
     return;
   }
-  items.push({ id, kind: 'assistant', text: clip(text, TEXT_MAX), tool: null, at });
+  items.push({ id, kind: 'assistant', ...said(text), tool: null, at });
 }
 
 function claudeRecord(record: Record<string, unknown>, items: Item[]): void {
@@ -48,9 +52,16 @@ function claudeRecord(record: Record<string, unknown>, items: Item[]): void {
   if (record.type === 'user') {
     const text = typeof content === 'string' ? content.trim() : '';
     if (text && !COMMAND_WRAPPER.test(text))
-      items.push({ id: uuid, kind: 'user', text: clip(text, TEXT_MAX), tool: null, at });
+      items.push({ id: uuid, kind: 'user', ...said(text), tool: null, at });
     else if (interruptText(message))
-      items.push({ id: uuid, kind: 'interrupt', text: 'Interrupted', tool: null, at });
+      items.push({
+        id: uuid,
+        kind: 'interrupt',
+        text: 'Interrupted',
+        tool: null,
+        at,
+        clipped: false,
+      });
     return;
   }
   if (record.type !== 'assistant' || !Array.isArray(content)) return;
@@ -65,6 +76,7 @@ function claudeRecord(record: Record<string, unknown>, items: Item[]): void {
         text: inputDetail(block.input),
         tool: block.name,
         at,
+        clipped: false,
       });
   }
 }
@@ -90,7 +102,7 @@ function codexRecord(record: Record<string, unknown>, items: Item[]): void {
       items.push({
         id: stringAt(item, 'id') ?? `${items.length}`,
         kind: 'user',
-        text: clip(text, TEXT_MAX),
+        ...said(text),
         tool: null,
         at,
       });
@@ -103,6 +115,7 @@ function codexRecord(record: Record<string, unknown>, items: Item[]): void {
       text: 'Interrupted',
       tool: null,
       at,
+      clipped: false,
     });
     return;
   }
@@ -119,7 +132,14 @@ function codexRecord(record: Record<string, unknown>, items: Item[]): void {
   ) {
     const input = payload.type === 'custom_tool_call' ? payload.input : payload.arguments;
     const parsed = typeof input === 'string' ? (parseLine(input) ?? input) : input;
-    items.push({ id, kind: 'tool', text: inputDetail(parsed), tool: payload.name, at });
+    items.push({
+      id,
+      kind: 'tool',
+      text: inputDetail(parsed),
+      tool: payload.name,
+      at,
+      clipped: false,
+    });
   }
 }
 

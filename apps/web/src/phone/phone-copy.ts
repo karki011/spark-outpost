@@ -1,4 +1,9 @@
-import type { RemoteAuditEntry, RemotePasskey, TailscaleState } from '@spark-outpost/contracts';
+import type {
+  PushFailure,
+  RemoteAuditEntry,
+  RemotePasskey,
+  TailscaleState,
+} from '@spark-outpost/contracts';
 import { countLabel } from '../ui/count-label.ts';
 
 export const PASSKEY_PURPOSE =
@@ -9,6 +14,30 @@ export const PASSKEY_NOT_SAVED = 'No passkey was saved. Try again when you are r
 export const PASSKEY_EXISTS = 'This device already has a passkey there.';
 export const PASSKEY_UNSUPPORTED = 'This browser cannot save passkeys.';
 export const PASSKEY_OFF = 'Passkey sign-in is turned off on your Mac.';
+export const NOTIFY_LABEL = 'Notify this device';
+export const NOTIFY_PURPOSE =
+  'Get a notification here when a chat waits for your approval or answer. It shows the chat title and what is waiting, nothing more.';
+export const NOTIFY_HOME_SCREEN =
+  'On iPhone and iPad, notifications need iOS 16.4 or later and Spark Outpost on the Home Screen. Save a passkey here first, then tap Share, Add to Home Screen, open it and sign in with the passkey.';
+export const NOTIFY_UNSUPPORTED = 'This browser cannot show notifications from Spark Outpost.';
+export const NOTIFY_OFF = 'Notifications are turned off on your Mac.';
+export const NOTIFY_BLOCKED =
+  'Notifications are blocked for this site. Allow them in the browser or system settings, then try again.';
+export const NOTIFY_NOT_ALLOWED = 'Notifications were not allowed on this device.';
+export const NOTIFY_FAILED = 'Notifications could not be turned on. Try again.';
+export const NOTIFY_ON = 'This device gets a notification when a chat needs you.';
+export const CONTACT_LABEL = 'Sender contact';
+export const CONTACT_PURPOSE =
+  'Apple, Google, Mozilla and Microsoft receive this contact with every notification, so they can reach whoever sends it. Leave it empty to use the Spark Outpost project page. Your tailnet name is never used.';
+
+export function pushFailureLine(failure: PushFailure): string {
+  const device = failure.deviceName ?? 'a device';
+  if (failure.reason === 'BadJwtToken') {
+    return `The last notification to ${device} was refused: the push service did not accept the sender contact. Set a contact you own.`;
+  }
+  const code = failure.reason ?? (failure.status === null ? null : `status ${failure.status}`);
+  return `The last notification to ${device} could not be delivered${code ? ` (${code})` : ''}.`;
+}
 
 function shortDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -101,6 +130,16 @@ function passkeySignInLine(entry: RemoteAuditEntry): string {
     : line;
 }
 
+function notificationLine(entry: RemoteAuditEntry): string {
+  const device = named(entry);
+  if (entry.detail.outcome === 'gone') return `${device} no longer takes notifications`;
+  if (entry.detail.outcome === 'failed') {
+    const reason = typeof entry.detail.reason === 'string' ? `: ${entry.detail.reason}` : '';
+    return `A notification to ${device} failed${reason}`;
+  }
+  return `Sent a notification to ${device}`;
+}
+
 export function activityLine(entry: RemoteAuditEntry): string {
   const device = named(entry);
   switch (entry.action) {
@@ -138,6 +177,10 @@ export function activityLine(entry: RemoteAuditEntry): string {
       return `Passkeys removed for ${device}`;
     case 'passkey_sign_in_failed':
       return passkeyRefusedLine(entry);
+    case 'notification_sent':
+      return notificationLine(entry);
+    case 'push_contact_changed':
+      return 'The notification sender contact was changed';
     case 'request':
       return `${device} made a change`;
     case 'refused':

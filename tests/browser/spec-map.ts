@@ -6,6 +6,7 @@ export const SHELL_SPECS = [
   'lazy-ui',
   'packaged-parity',
   'responsive-shell',
+  'spark-pause',
 ] as const;
 
 export const PERF_SPECS = [
@@ -107,6 +108,7 @@ export const SPEC_GROUPS = {
     'project-work-place',
     'projects',
     'rail-badges-live',
+    'search-jump',
     'session-palette',
     'sidebar',
     'sidebar-attention',
@@ -177,7 +179,7 @@ export const SPEC_GROUPS = {
     'island-states',
     'island-terminal',
   ],
-  phone: ['phone', 'phone-motion', 'phone-pair-again', 'phone-passkey'],
+  phone: ['phone', 'phone-motion', 'phone-notify', 'phone-pair-again', 'phone-passkey'],
   'docs-help': ['docs', 'help'],
 } as const satisfies Record<string, readonly string[]>;
 

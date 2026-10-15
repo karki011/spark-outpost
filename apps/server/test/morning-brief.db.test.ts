@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { startMorningBrief, type MorningBrief } from '../src/digest/morning.ts';
 import type { Db } from '../src/persistence/db.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
+import { setSparkPaused } from '../src/persistence/spark-pause.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 const TICK_MS = 20;
@@ -88,6 +89,18 @@ describe('the morning brief job', () => {
     start();
     await settle();
     expect(refreshes).toBe(0);
+  });
+
+  it('waits while Spark is paused and runs the same day once it is resumed', async () => {
+    await updateProfile(t.db, t.workspaceId, { morningBriefTime: '00:00' });
+    await setSparkPaused(t.db, t.workspaceId, true);
+    start();
+    await settle();
+    expect(refreshes).toBe(0);
+
+    await setSparkPaused(t.db, t.workspaceId, false);
+    await eventually(async () => refreshes > 0 || null);
+    expect(refreshes).toBe(1);
   });
 
   it('does nothing when you turn it off', async () => {

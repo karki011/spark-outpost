@@ -73,10 +73,10 @@ export const terminalRemoteKey = (conversationId: string) =>
 export const terminalRemoteApi = {
   view: (conversationId: string) =>
     request(terminalRemoteViewSchema, `/conversations/${conversationId}/terminal/transcript`),
-  message: (conversationId: string, text: string) =>
+  message: (conversationId: string, text: string, now = false) =>
     request(z.null(), `/conversations/${conversationId}/terminal/message`, {
       method: 'POST',
-      body: JSON.stringify({ text }),
+      body: JSON.stringify(now ? { text, now } : { text }),
     }),
   interrupt: (conversationId: string) =>
     request(z.null(), `/conversations/${conversationId}/terminal/interrupt`, { method: 'POST' }),

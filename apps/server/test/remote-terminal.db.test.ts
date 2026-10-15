@@ -13,6 +13,7 @@ const VIEW: TerminalRemoteView = {
   provider: 'claude',
   state: 'working',
   running: true,
+  workingSince: null,
   items: [],
   truncated: false,
   approval: null,
@@ -27,10 +28,13 @@ function fakeRuntime(): NativeRuntime {
     get: async () => ({ id: randomUUID(), conversationId: CHAT }),
     remote: {
       view: async () => VIEW,
-      message: async (_id: string, text: string) => void calls.push(`message ${text}`),
+      message: async (_id: string, text: string, now?: boolean) =>
+        void calls.push(`message ${text}${now ? ' now' : ''}`),
       interrupt: async () => void calls.push('interrupt'),
-      decide: async (_id: string, decision: { decision: string }) =>
-        void calls.push(`decide ${decision.decision}`),
+      decide: async (_id: string, decision: { decision: string; reason?: string }) =>
+        void calls.push(
+          `decide ${decision.decision}${decision.reason ? ` ${decision.reason}` : ''}`,
+        ),
     },
     stopRun: async () => {
       calls.push('stopRun');
@@ -105,6 +109,29 @@ describe('a Terminal session from a paired device', () => {
     await setSwitches(app, { terminalApprove: true });
     expect((await call(phone, 'approval')).status).toBe(204);
     expect(calls).toEqual(['message run the tests please', 'interrupt', 'decide allow']);
+  });
+
+  it('passes Send now and a denial reason through, trimmed', async () => {
+    const phone = remoteClient(app, (await pairDevice(app)).cookie);
+    await setSwitches(app, { terminal: true, terminalApprove: true });
+    const message = await phone.send('post', routes.message[1], {
+      text: 'stop and lint',
+      now: true,
+    });
+    expect(message.status).toBe(204);
+    const denied = await phone.send('post', routes.approval[1], {
+      id: randomUUID(),
+      decision: 'deny',
+      reason: '  use pnpm instead  ',
+    });
+    expect(denied.status).toBe(204);
+    const long = await phone.send('post', routes.approval[1], {
+      id: randomUUID(),
+      decision: 'deny',
+      reason: 'x'.repeat(501),
+    });
+    expect(long.status).toBe(400);
+    expect(calls).toEqual(['message stop and lint now', 'decide deny use pnpm instead']);
   });
 
   it('audits what the device did by path and never keeps the message text', async () => {

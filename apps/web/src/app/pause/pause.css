@@ -1,0 +1,33 @@
+.spark-paused {
+  order: -1;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 5px 14px;
+  border-bottom: 1px solid var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, var(--panel));
+  font-size: 13px;
+  white-space: nowrap;
+}
+.spark-paused b {
+  font-weight: 500;
+}
+.spark-paused small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.spark-paused .btn {
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 12.5px;
+}
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .spark-paused small {
+    display: none;
+  }
+}

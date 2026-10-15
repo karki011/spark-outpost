@@ -10,11 +10,17 @@ const items = [item('a', 1), item('b', 2), item('c', 3)];
 
 describe('queue model', () => {
   it('waits while a turn runs, sends next after a success, and pauses after a stop or failure', () => {
-    expect(queueMode(true, [{ status: 'cancelled' }])).toBe('waiting');
-    expect(queueMode(false, [])).toBe('next');
-    expect(queueMode(false, [{ status: 'failed' }, { status: 'succeeded' }])).toBe('next');
-    expect(queueMode(false, [{ status: 'cancelled' }])).toBe('paused');
-    expect(queueMode(false, [{ status: 'failed' }])).toBe('paused');
+    expect(queueMode(true, [{ status: 'cancelled' }], false)).toBe('waiting');
+    expect(queueMode(false, [], false)).toBe('next');
+    expect(queueMode(false, [{ status: 'failed' }, { status: 'succeeded' }], false)).toBe('next');
+    expect(queueMode(false, [{ status: 'cancelled' }], false)).toBe('paused');
+    expect(queueMode(false, [{ status: 'failed' }], false)).toBe('paused');
+  });
+
+  it('holds the queue while Spark is paused, once the running turn has ended', () => {
+    expect(queueMode(true, [{ status: 'running' }], true)).toBe('waiting');
+    expect(queueMode(false, [{ status: 'succeeded' }], true)).toBe('held');
+    expect(queueNote('held', 1)).toBe('Held while Spark is paused. Send one now to go on.');
   });
 
   it('says when queued messages go', () => {

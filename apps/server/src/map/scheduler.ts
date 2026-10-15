@@ -6,6 +6,7 @@ import { headCommit, workingChanges } from '../codescan/git.ts';
 import type { CodeScanner } from '../codescan/scanner.ts';
 import type { Db, Queryable } from '../persistence/db.ts';
 import type { JevAccess } from '../advisor/jev-calls.ts';
+import { anySparkPaused } from '../persistence/spark-pause.ts';
 import { readIgnore } from '../projects/project-fs.ts';
 import { advisorEntry } from '../providers/catalog.ts';
 import { buildRepo } from './build.ts';
@@ -151,7 +152,7 @@ export function createMapBuilder(options: MapSchedulerOptions): MapBuilder {
 
   async function runOnce(): Promise<boolean> {
     await syncRepos(db, MAP_RULES_VERSION, options.rootPrefix ?? null);
-    if (await agentsBusy(db)) return false;
+    if ((await agentsBusy(db)) || (await anySparkPaused(db))) return false;
     const repo = (await pendingRepo(db)) ?? (await staleRepo());
     if (!repo) return false;
     if (repo.sourceSignature) {

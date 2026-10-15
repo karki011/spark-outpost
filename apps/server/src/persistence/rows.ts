@@ -25,6 +25,8 @@ import {
 } from '@spark-outpost/contracts';
 import { toAttention, type PendingApprovalRow } from './attention.ts';
 
+export const MESSAGE_COLUMNS = 'id, conversation_id, role, content, run_id, created_at';
+
 export interface MessageRow {
   id: string;
   conversation_id: string;

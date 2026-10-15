@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import { formatElapsed } from './tv-list.ts';
+import { formatElapsed } from './elapsed.ts';
 
 const TICK_MS = 1000;
 const clocks = new Map<HTMLElement, number>();
@@ -27,11 +27,11 @@ function track(element: HTMLElement, since: number): () => void {
   };
 }
 
-export function TvElapsed({ since }: { since: number }) {
+export function LiveElapsed({ since, className }: { since: number; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
     const element = ref.current;
     return element ? track(element, since) : undefined;
   }, [since]);
-  return <span ref={ref} className="tvl-clock" />;
+  return <span ref={ref} className={className} />;
 }

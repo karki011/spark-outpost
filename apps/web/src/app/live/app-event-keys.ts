@@ -13,8 +13,13 @@ import { diffKeys } from '../../diff/diff-api.ts';
 import { homeKeys } from '../../home/home-api.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
 import { teammateKeys } from '../../teammates/teammates-api.ts';
-import { nativeTerminalKey, terminalStartKey } from '../../terminal/terminal-api.ts';
+import {
+  nativeTerminalKey,
+  terminalRemoteKey,
+  terminalStartKey,
+} from '../../terminal/terminal-api.ts';
 import { ticketKeys } from '../../tickets/tickets-api.ts';
+import { sparkPauseKey } from '../pause/spark-pause-api.ts';
 
 interface Invalidation {
   queryKey: QueryKey;
@@ -63,6 +68,11 @@ function conversationScoped(event: AppEvent, withAudit: boolean): Invalidation[]
   return withAudit ? [detail, { queryKey: auditKeys.summary(id), exact: true }] : [detail];
 }
 
+function terminalRemote(event: AppEvent): Invalidation[] {
+  const id = event.conversationId;
+  return id ? [{ queryKey: terminalRemoteKey(id), exact: true }] : [];
+}
+
 function chatPreview(event: AppEvent): Invalidation[] {
   const id = event.conversationId;
   return id ? [{ queryKey: previewKeys.chat(id), exact: true }] : [];
@@ -75,7 +85,14 @@ function outcome(event: AppEvent): Invalidation[] {
 function invalidationsFor(event: AppEvent): Invalidation[] {
   switch (event.kind) {
     case 'conversation':
-      return [list, search, teammates, ...conversationScoped(event, false), ...chatPreview(event)];
+      return [
+        list,
+        search,
+        teammates,
+        ...conversationScoped(event, false),
+        ...chatPreview(event),
+        ...terminalRemote(event),
+      ];
     case 'run':
       return [
         list,
@@ -90,9 +107,10 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
         analytics,
         outposts,
         ...outcome(event),
+        ...terminalRemote(event),
       ];
     case 'step':
-      return [list, ...conversationScoped(event, true), changeSummaries];
+      return [list, ...conversationScoped(event, true), changeSummaries, ...terminalRemote(event)];
     case 'subagent':
       return [list, ...conversationScoped(event, true)];
     case 'approval':
@@ -130,6 +148,8 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
             { queryKey: nativeTerminalKey(event.conversationId), exact: true },
           ]
         : [];
+    case 'spark_pause':
+      return [{ queryKey: sparkPauseKey, exact: true }];
   }
 }
 

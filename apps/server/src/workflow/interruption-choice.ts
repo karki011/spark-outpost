@@ -16,7 +16,13 @@ import {
   SESSION_CLOSE_REASONS,
   closeConversationSessions,
 } from '../persistence/provider-sessions.ts';
-import { toMessage, toRun, type MessageRow, type RunRow } from '../persistence/rows.ts';
+import {
+  MESSAGE_COLUMNS,
+  toMessage,
+  toRun,
+  type MessageRow,
+  type RunRow,
+} from '../persistence/rows.ts';
 
 export const CONTINUE_METHOD = 'interruption/continue';
 export const START_FRESH_METHOD = 'interruption/start_fresh';
@@ -42,9 +48,10 @@ async function auditChoice(db: Db, runId: string, method: string, payload: objec
 
 async function continuation(client: Queryable, runId: string): Promise<SendMessageResponse> {
   const run = await client.query<RunRow>('SELECT * FROM runs WHERE id = $1', [runId]);
-  const message = await client.query<MessageRow>('SELECT * FROM messages WHERE id = $1', [
-    run.rows[0]!.user_message_id,
-  ]);
+  const message = await client.query<MessageRow>(
+    `SELECT ${MESSAGE_COLUMNS} FROM messages WHERE id = $1`,
+    [run.rows[0]!.user_message_id],
+  );
   return { message: toMessage(message.rows[0]!), run: toRun(run.rows[0]!) };
 }
 

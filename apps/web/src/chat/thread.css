@@ -444,3 +444,17 @@
 .ai-head .steps-head .chev {
   order: 1;
 }
+
+.col :is(.bubble, .md, section[data-turn]).flash {
+  outline: 2px solid transparent;
+  outline-offset: 4px;
+  animation: thread-jump-flash 2.4s var(--out);
+}
+
+@keyframes thread-jump-flash {
+  0%,
+  60% {
+    outline-color: var(--accent);
+    box-shadow: 0 0 0 8px var(--accent-soft);
+  }
+}

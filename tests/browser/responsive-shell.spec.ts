@@ -231,7 +231,7 @@ test('phone landscape with a mouse-sized window keeps the desktop shell', async 
   await expect(navButton(page, 'More')).toHaveCount(0);
 });
 
-test('the desktop rail keeps all eight entries', async ({ page }) => {
+test('the desktop rail keeps all nine entries', async ({ page }) => {
   await page.setViewportSize(DESKTOP);
   await page.goto('/');
   await expect(mainNav(page).locator('.rail-btn')).toHaveText([
@@ -241,6 +241,7 @@ test('the desktop rail keeps all eight entries', async ({ page }) => {
     /^Tickets/,
     /^Map/,
     /^Docs/,
+    /^Pause$/,
     /^Remote$/,
     /^Settings/,
   ]);

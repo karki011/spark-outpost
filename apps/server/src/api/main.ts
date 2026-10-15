@@ -41,7 +41,11 @@ import { gitHubAppConfig } from '../ship/github/app-config.ts';
 import { loadInbox } from '../tickets/inbox.ts';
 import { RunEventHub } from './run-event-hub.ts';
 import { resolveRunTarget } from './run-target.ts';
-import { startSlackNotifier } from '../slack/notifier.ts';
+import { FOCUS_TTL_MS, startSlackNotifier } from '../slack/notifier.ts';
+import { ClientFocus } from '../slack/client-focus.ts';
+import { pushKeys } from '../remote/push-keys.ts';
+import { startPushNotifier } from '../remote/push-notifier.ts';
+import { generateVapidKeys, webPushSend } from '../remote/push-send.ts';
 import { slackSignInConfig } from '../slack/sign-in-config.ts';
 import { startSlackSocket } from '../slack/socket.ts';
 import { pruneOldRows } from './startup-prune.ts';
@@ -88,7 +92,19 @@ const slackDeps = {
   slackApiUrl: config.SLACK_API_URL,
   signIn: slackSignIn,
 };
-const slackNotifier = startSlackNotifier(slackDeps, { linkScheme: config.SPARK_LINK_SCHEME });
+const focus = new ClientFocus(Date.now, FOCUS_TTL_MS);
+const slackNotifier = startSlackNotifier(slackDeps, {
+  linkScheme: config.SPARK_LINK_SCHEME,
+  focus,
+});
+const remotePushKeys = pushKeys(secrets, generateVapidKeys);
+const pushNotifier = startPushNotifier({
+  db,
+  workspaceId,
+  keys: remotePushKeys,
+  focus,
+  send: webPushSend,
+});
 const slackSocket = startSlackSocket({
   ...slackDeps,
   runTarget: (conversationId) => resolveRunTarget({ db, workspaceId }, conversationId),
@@ -115,6 +131,7 @@ const outposts = outpostDelivery({
 });
 const appEvents = new AppEventFeed(undefined, (event) => {
   slackNotifier.changed(event);
+  pushNotifier.changed(event);
   outposts.changed(event);
   if (event.kind === 'preview') void previews.sync();
   if (event.kind === 'agent_terminal') void agentTerminals.sync();
@@ -246,6 +263,7 @@ const { app, reconcileRemote } = createAppParts({
   slackSignIn,
   slackNotifier,
   slackSocket,
+  pushKeys: remotePushKeys,
   ...(config.WEB_ROOT ? { webRoot: config.WEB_ROOT } : {}),
   diagnostics: {
     appVersion: config.SPARK_APP_VERSION ?? null,
@@ -302,6 +320,7 @@ const shutdown = async (keepTerminals = false) => {
   morningBrief?.stop();
   slackSocket.stop();
   await slackNotifier.stop();
+  await pushNotifier.stop();
   await outposts.close();
   server.close();
   server.closeAllConnections();
