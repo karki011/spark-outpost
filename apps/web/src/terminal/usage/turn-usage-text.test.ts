@@ -10,6 +10,7 @@ const turn = (extra: Partial<NativeTerminalTurn>): NativeTerminalTurn => ({
   tokens: null,
   costUsd: null,
   costSource: null,
+  durationMs: null,
   steps: [],
   ...extra,
 });

@@ -3,11 +3,13 @@ import { useQuery } from '@tanstack/react-query';
 import {
   reportedSessionTotal,
   reportedTotalNote,
+  usageOriginLabel,
   type NativeTerminalUsage,
 } from '@spark-outpost/contracts';
 import { formatTokens } from '../../chat/composer/model-options.ts';
 import { formatCost } from '../../usage/format.ts';
 import { terminalUsageQuery } from './terminal-usage-api.ts';
+import { durationText } from './step-rows.ts';
 import { estimateTotal, turnUsageText } from './turn-usage-text.ts';
 
 function ReportedTotal({ usage }: { usage: NativeTerminalUsage }) {
@@ -55,6 +57,9 @@ export function TerminalCost({ conversationId }: { conversationId: string }) {
   if (!usage.data) return null;
   const { turns, provider } = usage.data;
   const estimate = estimateTotal(turns);
+  const allReported = turns.every(
+    (turn) => turn.costUsd === null || turn.costSource === 'reported',
+  );
   return (
     <div className="wsec tu-cost-pane">
       <div className="wsec-h">
@@ -62,7 +67,9 @@ export function TerminalCost({ conversationId }: { conversationId: string }) {
         <span>
           {estimate === null
             ? 'no estimate yet'
-            : `${formatCost(estimate, 'estimated')} estimated from tokens`}
+            : allReported
+              ? `${formatCost(estimate, 'reported')} ${usageOriginLabel('reported', provider)}`
+              : `${formatCost(estimate, 'estimated')} estimated from tokens`}
         </span>
       </div>
       {turns.length === 0 ? (
@@ -76,6 +83,7 @@ export function TerminalCost({ conversationId }: { conversationId: string }) {
                 <span className="tu-name">
                   Turn {index + 1}
                   {turn.model && <small> · {turn.model}</small>}
+                  {turn.durationMs !== null && <small> · {durationText(turn.durationMs)}</small>}
                 </span>
                 <span className="tu-cost">
                   {text.cost}
@@ -92,8 +100,10 @@ export function TerminalCost({ conversationId }: { conversationId: string }) {
       )}
       <ReportedTotal usage={usage.data} />
       <p className="wnote">
-        Turn figures are a lower bound: they count only the replies the agent wrote to its session
-        file. The session total is the agent&apos;s own figure and is never added to them.
+        While Spark&apos;s mod is loaded in a Claude Code session, turn figures come from Claude
+        Code as each request finishes. Otherwise they are a lower bound: they count only the replies
+        the agent wrote to its session file. The session total is the agent&apos;s own figure and is
+        never added to them.
       </p>
     </div>
   );
