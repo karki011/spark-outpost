@@ -93,3 +93,15 @@ export function RailFlags({ detail, runId }: { detail: ConversationDetail; runId
     </>
   );
 }
+
+export function OpenRailFlags({ detail }: { detail: ConversationDetail }) {
+  const flags = (detail.railFlags ?? []).filter((flag) => flag.status === 'open');
+  if (flags.length === 0) return null;
+  return (
+    <div className="native-approvals" role="group" aria-label="Flagged by Spark">
+      {flags.map((flag) => (
+        <RailFlagCard key={flag.id} flag={flag} conversationId={detail.conversation.id} />
+      ))}
+    </div>
+  );
+}

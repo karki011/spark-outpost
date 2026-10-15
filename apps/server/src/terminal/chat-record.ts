@@ -2,6 +2,7 @@ import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { createRailWatch } from '../agents/acp/rail-watch.ts';
 import { createCommandTracker } from '../agents/acp/command-output.ts';
 import { createTurnMapper } from '../agents/acp/subagent-updates.ts';
+import { mentionsSecretFile, withoutFileContent } from '../audit/redact.ts';
 import { createRedactionFilter } from '../audit/redact-stream.ts';
 import { projectSecretValues, withoutSecretValues } from '../audit/secret-values.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
@@ -123,8 +124,10 @@ export async function startChatRecord(
     runId,
     async toolStarted(tool) {
       if (tools.has(tool.id)) return;
-      tools.set(tool.id, tool);
-      await see(toolCallStarted(tool, cwd));
+      const input = mentionsSecretFile(tool.input) ? withoutFileContent(tool.input) : tool.input;
+      const kept = { ...tool, input };
+      tools.set(tool.id, kept);
+      await see(toolCallStarted(kept, cwd));
     },
     async toolEnded(end) {
       const tool = tools.get(end.id);
