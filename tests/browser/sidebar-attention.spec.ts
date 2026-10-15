@@ -159,7 +159,9 @@ test('each chat row shows its own blob, the same after a reload, with a face for
   await expect(face('Quiet chat')).toBeVisible();
   await expect(face('Quiet chat')).toHaveAttribute('data-expression', 'idle');
   await expect(face('Run the suite')).toHaveAttribute('data-expression', 'unsure');
-  await expect(row(page, 'Run the suite').locator('.st .dia')).toBeVisible();
+  await expect(
+    row(page, 'Run the suite').getByRole('img', { name: 'Waiting for you' }),
+  ).toBeVisible();
   const before = { quiet: await look('Quiet chat'), current: await look('Current chat') };
   expect(before.quiet.drawn).not.toBe(before.current.drawn);
 

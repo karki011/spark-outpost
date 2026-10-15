@@ -63,7 +63,9 @@ async function seeded(page: Page, asking = false): Promise<void> {
   const created = await page.request.post('/api/projects', { data: { rootPath: folder } });
   expect(created.ok()).toBe(true);
   const { id: projectId } = (await created.json()) as { id: string };
-  const waiting = asking ? { run: { status: 'awaiting_approval' }, approval: question } : {};
+  const waiting = asking
+    ? { run: { status: 'awaiting_approval' }, approval: question, minutesAgo: 5 }
+    : {};
   const [frontend, api] = await seedChats([
     { title: 'Frontend', projectIds: [projectId], ...waiting },
     { title: 'Orders API', projectIds: [projectId] },
