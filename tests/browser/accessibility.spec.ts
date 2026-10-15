@@ -11,6 +11,7 @@ import { seedChats } from './sidebar-seed.ts';
 import { combinedFixture, monoFixture, REPO_ROOT, serveMap } from './map-fixture.ts';
 import { nxFixture } from './map-nx-fixture.ts';
 import { openChats } from './navigation.ts';
+import { animationsSettled } from './settle.ts';
 import { seedFlowChats } from './ticket-flow-seed.ts';
 import { connectTickets, openTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
 import { JIRA_EMAIL } from '../../apps/server/test/fake-jira.ts';
@@ -78,20 +79,8 @@ function isBlocking(violation: { id: string; impact?: string | null }): boolean 
   return isColourOrAria(violation.id) && BLOCKING_IMPACTS.has(violation.impact ?? '');
 }
 
-async function settle(page: Page) {
-  await page.waitForFunction(() =>
-    document
-      .getAnimations()
-      .every(
-        (animation) =>
-          animation.playState !== 'running' ||
-          animation.effect?.getTiming().iterations === Infinity,
-      ),
-  );
-}
-
 async function blockingViolations(page: Page, screen: string) {
-  await settle(page);
+  await animationsSettled(page);
   const results = await new AxeBuilder({ page })
     .withRules(CHECKED_RULES)
     .setLegacyMode(true)

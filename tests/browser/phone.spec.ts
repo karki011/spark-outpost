@@ -15,6 +15,7 @@ import {
   turnOn,
   WIDE,
 } from './phone-support.ts';
+import { animationsSettled } from './settle.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
 const LAYOUT_SIZES = [{ width: 1440, height: 900 }, WIDE, { width: 820, height: 900 }, NARROW];
@@ -75,15 +76,7 @@ async function expectEveryTheme(pages: [Page, string][], name: string) {
   for (const theme of THEMES) {
     for (const [page, scope] of pages) {
       await page.evaluate((skin) => (document.documentElement.dataset.skin = skin), theme);
-      await page.waitForFunction(() =>
-        document
-          .getAnimations()
-          .every(
-            (animation) =>
-              animation.playState !== 'running' ||
-              animation.effect?.getTiming().iterations === Infinity,
-          ),
-      );
+      await animationsSettled(page);
       await expectAccessible(page, scope);
       if (SHOTS) {
         const width = page.viewportSize()?.width ?? 0;
