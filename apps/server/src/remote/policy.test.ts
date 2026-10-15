@@ -65,6 +65,8 @@ describe('remote policy', () => {
       ['POST', '/api/remote/pairings'],
       ['GET', '/api/remote/devices'],
       ['PATCH', '/api/remote/switches'],
+      ['GET', '/api/remote/push/contact'],
+      ['PUT', '/api/remote/push/contact'],
       ['PUT', '/api/remote/access'],
       ['GET', '/api/diagnostics/export'],
       ['GET', '/api/remote/tailscale'],

@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { insertApproval } from '../src/persistence/approvals.ts';
 import { pushKeys } from '../src/remote/push-keys.ts';
 import { startPushNotifier, type PushNotifier } from '../src/remote/push-notifier.ts';
-import type { PushDelivery, PushOutcome } from '../src/remote/push-send.ts';
+import { PUSH_CONTACT_DEFAULT } from '@spark-outpost/contracts';
+import type { PushDelivery, PushResult } from '../src/remote/push-send.ts';
+import { savePushContact } from '../src/remote/push-store.ts';
 import { revokeDevice, saveRemoteHostname, saveRemoteSwitches } from '../src/remote/store.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import { createTestDb, startChat, type TestDb } from './support.ts';
@@ -15,7 +17,7 @@ const KEYS = { publicKey: 'BPublicKeyForTests', privateKey: 'private-key-for-tes
 let t: TestDb;
 let notifier: PushNotifier;
 let sent: PushDelivery[];
-let outcome: PushOutcome;
+let result: PushResult;
 let focused: string[];
 let chat: { conversationId: string; runId: string };
 let phone: string;
@@ -41,7 +43,7 @@ async function subscribe(deviceId: string, endpoint: string, hostname = HOST) {
 beforeEach(async () => {
   t = await createTestDb();
   sent = [];
-  outcome = 'sent';
+  result = { outcome: 'sent', status: null, reason: null };
   focused = [];
   const secrets = memorySecretStore({ 'remote:push': JSON.stringify(KEYS) });
   notifier = startPushNotifier(
@@ -54,7 +56,7 @@ beforeEach(async () => {
       focus: { focusedClients: () => focused },
       send: async (delivery) => {
         sent.push(delivery);
-        return outcome;
+        return result;
       },
     },
     { since: SINCE, batchMs: 60_000 },
@@ -216,7 +218,7 @@ describe('who gets it', () => {
   });
 
   it('forgets a subscription the push service says is gone', async () => {
-    outcome = 'gone';
+    result = { outcome: 'gone', status: 410, reason: null };
     await changed();
     expect(sent).toHaveLength(1);
     const { rows } = await t.db.query('SELECT 1 FROM remote_push_subscriptions');
@@ -224,12 +226,38 @@ describe('who gets it', () => {
   });
 
   it('records each send in the remote activity without the content', async () => {
-    outcome = 'failed';
+    result = { outcome: 'failed', status: 500, reason: null };
     await changed();
     const { rows } = await t.db.query<{ device_id: string; detail: object }>(
       "SELECT device_id, detail FROM remote_audit WHERE action = 'notification_sent'",
     );
     expect(rows).toEqual([{ device_id: phone, detail: { outcome: 'failed' } }]);
+  });
+
+  it('records why the push service refused a notification', async () => {
+    result = { outcome: 'failed', status: 403, reason: 'BadJwtToken' };
+    await changed();
+    const { rows } = await t.db.query<{ status: number; detail: object }>(
+      "SELECT status, detail FROM remote_audit WHERE action = 'notification_sent'",
+    );
+    expect(rows).toEqual([{ status: 403, detail: { outcome: 'failed', reason: 'BadJwtToken' } }]);
+  });
+
+  it('signs with the project page until a contact is set, then with that contact', async () => {
+    await changed();
+    await savePushContact(t.db, t.workspaceId, 'mailto:me@example.org');
+    await ask('plan');
+    await changed();
+    expect(sent.map((delivery) => delivery.subject)).toEqual([
+      PUSH_CONTACT_DEFAULT,
+      'mailto:me@example.org',
+    ]);
+  });
+
+  it('never signs with a saved contact that names the tailnet', async () => {
+    await savePushContact(t.db, t.workspaceId, `https://${HOST}`);
+    await changed();
+    expect(sent.map((delivery) => delivery.subject)).toEqual([PUSH_CONTACT_DEFAULT]);
   });
 });
 

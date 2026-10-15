@@ -24,3 +24,26 @@ export const pushStateSchema = z.object({
   endpoints: z.array(z.string()),
 });
 export type PushState = z.infer<typeof pushStateSchema>;
+
+export const PUSH_CONTACT_DEFAULT = 'https://github.com/karki011/spark-outpost';
+export const PUSH_CONTACT_MAX = 200;
+
+export const updatePushContactRequestSchema = z.object({
+  contact: z.string().trim().max(PUSH_CONTACT_MAX).nullable(),
+});
+export type UpdatePushContactRequest = z.infer<typeof updatePushContactRequestSchema>;
+
+export const pushFailureSchema = z.object({
+  at: z.string(),
+  deviceName: z.string().nullable(),
+  status: z.number().int().nullable(),
+  reason: z.string().nullable(),
+});
+export type PushFailure = z.infer<typeof pushFailureSchema>;
+
+export const pushContactStateSchema = z.object({
+  contact: z.string().nullable(),
+  inUse: z.string(),
+  failures: z.array(pushFailureSchema),
+});
+export type PushContactState = z.infer<typeof pushContactStateSchema>;

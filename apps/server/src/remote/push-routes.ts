@@ -2,15 +2,25 @@ import { Router, type Response } from 'express';
 import {
   pushSubscribeRequestSchema,
   pushUnsubscribeRequestSchema,
+  updatePushContactRequestSchema,
+  type PushContactState,
   type PushState,
 } from '@spark-outpost/contracts';
 import { parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import type { PushKeys } from './push-keys.ts';
 import { isPushEndpoint } from './push-plan.ts';
-import { deletePushSubscription, devicePushEndpoints, savePushSubscription } from './push-store.ts';
+import { normalizePushContact, pushContactProblem, pushSubject } from './push-contact.ts';
+import {
+  deletePushSubscription,
+  devicePushEndpoints,
+  lastPushFailures,
+  pushContact,
+  savePushContact,
+  savePushSubscription,
+} from './push-store.ts';
 import { remoteDeviceOf, type RemoteDevicePrincipal } from './principal.ts';
-import { remoteAccess } from './store.ts';
+import { recordRemoteAudit, remoteAccess } from './store.ts';
 
 export interface PushRouteDeps {
   db: Db;
@@ -39,6 +49,48 @@ export function pushRoutes(deps: PushRouteDeps): Router {
       endpoints: await devicePushEndpoints(db, workspaceId, deviceId, publicKey),
     };
   };
+
+  const contactState = async (): Promise<PushContactState> => {
+    const [saved, { hostname }] = await Promise.all([
+      pushContact(db, workspaceId),
+      remoteAccess(db, workspaceId),
+    ]);
+    return {
+      contact: saved.contact,
+      inUse: pushSubject(saved.contact, hostname),
+      failures: await lastPushFailures(db, workspaceId, saved.changedAt),
+    };
+  };
+
+  const onTheMac = (res: Response): boolean => {
+    if (remoteDeviceOf(res) === null) return true;
+    res.status(404).json({ error: NOT_FOUND });
+    return false;
+  };
+
+  router.get('/remote/push/contact', async (_req, res) => {
+    if (!onTheMac(res)) return;
+    res.set('Cache-Control', 'no-store').json(await contactState());
+  });
+
+  router.put('/remote/push/contact', async (req, res) => {
+    if (!onTheMac(res)) return;
+    const { contact: raw } = parseBody(updatePushContactRequestSchema, req);
+    const contact = raw === null || raw === '' ? null : normalizePushContact(raw);
+    if (contact !== null) {
+      const problem = pushContactProblem(contact, (await remoteAccess(db, workspaceId)).hostname);
+      if (problem) {
+        res.status(400).json({ error: problem });
+        return;
+      }
+    }
+    await savePushContact(db, workspaceId, contact);
+    await recordRemoteAudit(db, workspaceId, {
+      action: 'push_contact_changed',
+      detail: { set: contact !== null },
+    });
+    res.json(await contactState());
+  });
 
   router.get('/remote/push', async (_req, res) => {
     const device = pairedDevice(res);

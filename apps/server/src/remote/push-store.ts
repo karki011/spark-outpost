@@ -1,4 +1,4 @@
-import { REMOTE_DEVICE_IDLE_DAYS } from '@spark-outpost/contracts';
+import { REMOTE_DEVICE_IDLE_DAYS, type PushFailure } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 
@@ -105,4 +105,68 @@ export async function pushTargets(
     [workspaceId, hostname],
   );
   return rows;
+}
+
+export interface SavedPushContact {
+  contact: string | null;
+  changedAt: Date | null;
+}
+
+export async function pushContact(db: Queryable, workspaceId: string): Promise<SavedPushContact> {
+  const { rows } = await db.query<{
+    push_contact: string | null;
+    push_contact_changed_at: Date | null;
+  }>(
+    `SELECT push_contact, push_contact_changed_at FROM remote_access_settings
+     WHERE workspace_id = $1`,
+    [workspaceId],
+  );
+  return {
+    contact: rows[0]?.push_contact ?? null,
+    changedAt: rows[0]?.push_contact_changed_at ?? null,
+  };
+}
+
+export async function savePushContact(
+  db: Queryable,
+  workspaceId: string,
+  contact: string | null,
+): Promise<void> {
+  await db.query(
+    `INSERT INTO remote_access_settings (workspace_id, push_contact, push_contact_changed_at)
+     VALUES ($1, $2, now())
+     ON CONFLICT (workspace_id) DO UPDATE SET push_contact = $2,
+       push_contact_changed_at = now(), updated_at = now()`,
+    [workspaceId, contact],
+  );
+}
+
+interface FailureRow {
+  created_at: Date;
+  device_name: string | null;
+  status: number | null;
+  detail: { outcome?: unknown; reason?: unknown };
+}
+
+export async function lastPushFailures(
+  db: Queryable,
+  workspaceId: string,
+  since: Date | null,
+): Promise<PushFailure[]> {
+  const { rows } = await db.query<FailureRow>(
+    `SELECT * FROM (
+       SELECT DISTINCT ON (a.device_id) a.created_at, a.device_name, a.status, a.detail
+       FROM remote_audit a JOIN remote_devices d ON d.id = a.device_id
+       WHERE a.workspace_id = $1 AND a.action = 'notification_sent' AND d.revoked_at IS NULL
+         AND ($2::timestamptz IS NULL OR a.created_at > $2)
+       ORDER BY a.device_id, a.created_at DESC, a.id DESC
+     ) latest WHERE detail->>'outcome' = 'failed' ORDER BY created_at DESC`,
+    [workspaceId, since],
+  );
+  return rows.map((row) => ({
+    at: row.created_at.toISOString(),
+    deviceName: row.device_name,
+    status: row.status,
+    reason: typeof row.detail.reason === 'string' ? row.detail.reason : null,
+  }));
 }

@@ -155,6 +155,8 @@ const NEVER = `
 GET /api/remote/access
 PUT /api/remote/access
 PATCH /api/remote/switches
+GET /api/remote/push/contact
+PUT /api/remote/push/contact
 GET /api/remote/devices
 PATCH /api/remote/devices/:id
 DELETE /api/remote/devices/:id

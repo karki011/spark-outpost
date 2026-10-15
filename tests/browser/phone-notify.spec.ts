@@ -3,7 +3,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import type { RemoteSession, RemoteSwitches } from '../../packages/contracts/src/remote.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
-import { openTestDb, resetTestDatabase } from './database.ts';
+import { openTestDb } from './database.ts';
+import { openPhone, resetPhone, turnOn, WIDE } from './phone-support.ts';
 
 const PHONE = { width: 390, height: 844 };
 const KEY =
@@ -17,7 +18,7 @@ interface PushCalls {
 }
 
 test.beforeEach(async () => {
-  await resetTestDatabase({ onboarded: true });
+  await resetPhone();
 });
 
 async function fakeBrowserPush(page: Page, options: { supported: boolean; iphone?: boolean }) {
@@ -178,4 +179,61 @@ test('a tapped notification opens its chat', async ({ page }) => {
   await page.goto(`/?chat=${id}`);
   await expect(page.getByRole('heading', { name: 'Fix the upload retry' })).toBeVisible();
   expect(new URL(page.url()).searchParams.has('chat')).toBe(false);
+});
+
+async function refusedNotification(): Promise<void> {
+  const db = openTestDb();
+  try {
+    const workspaceId = await ensureLocalWorkspace(db);
+    const deviceId = randomUUID();
+    await db.query(
+      `INSERT INTO remote_devices (id, workspace_id, name, token_hash) VALUES ($1, $2, 'iPhone', $3)`,
+      [deviceId, workspaceId, 'a'.repeat(64)],
+    );
+    await db.query(
+      `INSERT INTO remote_audit (id, workspace_id, device_id, device_name, action, status, detail)
+       VALUES ($1, $2, $3, 'iPhone', 'notification_sent', 403,
+         '{"outcome":"failed","reason":"BadJwtToken"}')`,
+      [randomUUID(), workspaceId, deviceId],
+    );
+  } finally {
+    await db.end();
+  }
+}
+
+test('the Mac sets the sender contact and shows why Apple refused a notification', async ({
+  page,
+}) => {
+  await page.setViewportSize(WIDE);
+  const main = await openPhone(page);
+  await turnOn(page);
+  const switches = main.getByRole('region', { name: 'What paired devices can do' });
+  const field = switches.getByRole('textbox', { name: 'Sender contact' });
+  await expect(field).toHaveCount(0);
+
+  await switches.getByRole('switch', { name: 'Notify when a chat needs you' }).click();
+  await expect(field).toBeVisible();
+  await expect(
+    switches.getByText('In use: https://github.com/karki011/spark-outpost'),
+  ).toBeVisible();
+
+  await refusedNotification();
+  await expect(switches.getByText(/did not accept the sender contact/)).toBeVisible({
+    timeout: 10_000,
+  });
+  const axe = await new AxeBuilder({ page })
+    .include('section[aria-labelledby="ph-switches-title"]')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze();
+  expect(axe.violations).toEqual([]);
+
+  await field.fill('me@mac.local');
+  await field.press('Enter');
+  await expect(switches.getByRole('alert')).toHaveText(/Use an address on a public domain/);
+
+  await field.fill('me@example.org');
+  await switches.getByRole('button', { name: 'Save' }).click();
+  await expect(switches.getByText('In use: me@example.org')).toBeVisible();
+  await expect(switches.getByText(/did not accept the sender contact/)).toHaveCount(0);
+  await expect(field).toBeFocused();
 });

@@ -12,8 +12,9 @@ import {
   TerminalWaits,
   type PushCandidate,
 } from './push-plan.ts';
+import { pushSubject } from './push-contact.ts';
 import type { PushSend } from './push-send.ts';
-import { forgetPushSubscription, pushTargets, type PushTarget } from './push-store.ts';
+import { forgetPushSubscription, pushContact, pushTargets, type PushTarget } from './push-store.ts';
 import { recordRemoteAudit, remoteAccess } from './store.ts';
 
 export const PUSH_BATCH_MS = 8000;
@@ -36,6 +37,11 @@ export interface PushNotifier {
   changed(event: AppEvent): void;
   settled(): Promise<void>;
   stop(): Promise<void>;
+}
+
+interface Sender {
+  keys: VapidKeys;
+  subject: string;
 }
 
 interface WaitingRow {
@@ -83,20 +89,25 @@ export function startPushNotifier(
     });
   }
 
-  async function sendTo(target: PushTarget, payload: string, keys: VapidKeys): Promise<void> {
+  async function sendTo(target: PushTarget, payload: string, sender: Sender): Promise<void> {
     if (!isPushEndpoint(target.endpoint)) return;
-    const outcome = await deps.send({
+    const result = await deps.send({
       endpoint: target.endpoint,
       p256dh: target.p256dh,
       auth: target.auth,
       payload,
-      keys,
+      keys: sender.keys,
+      subject: sender.subject,
     });
-    if (outcome === 'gone') await forgetPushSubscription(db, target.id);
+    if (result.outcome === 'gone') await forgetPushSubscription(db, target.id);
     await recordRemoteAudit(db, workspaceId, {
       action: 'notification_sent',
       device: { id: target.deviceId, name: target.deviceName },
-      detail: { outcome },
+      ...(result.status === null ? {} : { status: result.status }),
+      detail: {
+        outcome: result.outcome,
+        ...(result.reason === null ? {} : { reason: result.reason }),
+      },
     });
   }
 
@@ -114,9 +125,10 @@ export function startPushNotifier(
     );
     if (targets.length === 0) return;
     const keys = await deps.keys.get();
+    const subject = pushSubject((await pushContact(db, workspaceId)).contact, access.hostname);
     const payload = JSON.stringify(pushMessage(chat, live));
     const current = targets.filter((target) => target.serverKey === keys.publicKey);
-    await Promise.all(current.map((target) => sendTo(target, payload, keys)));
+    await Promise.all(current.map((target) => sendTo(target, payload, { keys, subject })));
   }
 
   const batcher = new NotifyBatcher<PushCandidate>(

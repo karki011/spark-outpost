@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { RemoteAuditEntry, RemotePasskey, TailscaleState } from '@spark-outpost/contracts';
-import { activityDetail, activityLine, passkeySummary, statusCopy } from './phone-copy.ts';
+import {
+  activityDetail,
+  activityLine,
+  passkeySummary,
+  pushFailureLine,
+  statusCopy,
+} from './phone-copy.ts';
 
 function state(change: Partial<TailscaleState>): TailscaleState {
   return { status: 'off', hostname: null, address: null, message: null, ...change };
@@ -97,6 +103,31 @@ describe('activity', () => {
     expect(line('sent')).toBe('Sent a notification to Pixel');
     expect(line('failed')).toBe('A notification to Pixel failed');
     expect(line('gone')).toBe('Pixel no longer takes notifications');
+    expect(
+      activityLine(
+        entry({
+          action: 'notification_sent',
+          deviceName: 'iPhone',
+          detail: { outcome: 'failed', reason: 'BadJwtToken' },
+        }),
+      ),
+    ).toBe('A notification to iPhone failed: BadJwtToken');
+  });
+
+  it('explains a refused sender contact and names other failures by their code', () => {
+    const failure = { at: '2026-10-14T10:00:00.000Z', deviceName: 'iPhone', status: 403 };
+    expect(pushFailureLine({ ...failure, reason: 'BadJwtToken' })).toBe(
+      'The last notification to iPhone was refused: the push service did not accept the sender contact. Set a contact you own.',
+    );
+    expect(pushFailureLine({ ...failure, reason: 'TooManyRequests', status: 429 })).toBe(
+      'The last notification to iPhone could not be delivered (TooManyRequests).',
+    );
+    expect(pushFailureLine({ ...failure, reason: null, status: 500 })).toBe(
+      'The last notification to iPhone could not be delivered (status 500).',
+    );
+    expect(pushFailureLine({ ...failure, deviceName: null, reason: null, status: null })).toBe(
+      'The last notification to a device could not be delivered.',
+    );
   });
 
   it('shows the request and its result when there is one', () => {

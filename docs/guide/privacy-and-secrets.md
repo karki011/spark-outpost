@@ -16,7 +16,7 @@ Your chats, settings and code stay on your computer; keys live in your keychain.
 | **Jev**, if connected                 | Redacted pull request comments, short facts about a chat's turn, Map file contents.  | See [what Jev reads](jev.md#what-jev-reads)                      |
 | **GitHub, Jira, Linear, MCP servers** | What you or an agent sends; a clone talks to its host.                               | Disconnect them                                                  |
 | **Sites agents open**                 | Addresses, typed text; never your sign-ins.                                          | [Agent mode](agent-mode.md)                                      |
-| **Apple or Google push**              | Encrypted paired-device notifications.                                               | **Notify this device**                                           |
+| **Apple or Google push**              | Encrypted notifications; sender contact.                                             | **Notify this device**                                           |
 | **Slack**                             | Notifications, confirmed posts (as you after sign-in). Never direct message text.    | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
 | **Spark Outpost team**                | Anonymous heartbeat.                                                                 | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
 
