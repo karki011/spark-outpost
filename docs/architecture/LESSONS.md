@@ -37,7 +37,7 @@ Non-goals:
 1. The chat's ⋯ menu has **Find a lesson**, which queues a review run for that chat. A chat whose pull request is merged gets one automatically (phase 2). The run shows its time and cost like any run.
 2. With nothing found, one line says "No lesson found". Otherwise a **Lesson** card appears under the last reply: the target ("Patch `.agents/skills/release/SKILL.md`" or "New skill `pnpm-filters`"), a one-line reason, the message it came from, and the diff or new file.
 3. **Accept** writes the file; the click is the approval, so no second card appears. **Edit** opens the text in place first. **Dismiss** is kept so the same lesson is not offered again.
-4. Settings → Projects lists the skills Spark wrote, with accept date, last seen use, state (active, stale, archived), Pin and Restore.
+4. Settings → Projects lists the skills Spark created from a lesson (not ones a lesson only patched), with accept date, last seen use, state (active, stale, archived), Pin and Restore.
 
 **Who writes the file.** Spark, on Accept; the agent never does. The file lands in the chat's working folder: its worktree on its own spark/\* branch, or the user's checkout when the chat works there. A chat with no project gets no lesson. The file is an ordinary uncommitted change: it never starts a publish by itself, and it ships with the chat's next commit or pull request like any kept change, so a later turn's publish can include it.
 
@@ -47,8 +47,18 @@ Non-goals:
 
 - A child run on the chat's provider and model through `executeChildRun`, picked up by an `isLessonRun` check next to `isDigestRun`.
 - Read-only: no edit tools, no Spark action tools, no outpost tools, no publish step.
-- Input: the user's messages (corrections first), short reply excerpts, and the existing skills (name, description, body), all through `redactText` as `digest/input.ts` does. No tool output, other file contents or attachments.
-- Output: `none` or one proposal (`patch <path>` or `new <name>`) with a reason and the full text, parsed like `digest/parse.ts`.
+- Input: the user's messages (corrections first), each tagged with its message id, short reply excerpts, and the existing skills (name, description, body, path), all through `redactText` as `digest/input.ts` does. No tool output, other file contents or attachments.
+- Output: `none` or one proposal (`patch <path>` or `new <name>`) with a reason, the id of the user message it came from, and the full text, parsed like `digest/parse.ts`. As that parser keeps only chat ids it sent, this one keeps a proposal only when its source id is one of the user message ids it sent, so the source is always a user message of this chat.
+
+### Validating the target
+
+The target is model output and the chat text may carry an injection, so Spark never writes to a path the model chose. A proposal that fails any check is dropped before it is saved, and the run ends with the "no lesson made" line and the reason.
+
+- **Patch:** the path must equal, as an exact string, the `path` of a skill in a fresh `scan.skills` of the chat's working folder. Matching the pattern is not enough: `skillName` in `agent-config/discovery.ts` takes `[^/]+` as the skill name, which also matches `..`.
+- **New:** the model gives only a name, a lowercase slug (`[a-z0-9]` then up to 63 of `[a-z0-9-]`), so no `/`, `.` or `..`. Spark builds the path itself, `<skills folder>/<name>/SKILL.md`, with the folder from "Claude vs Codex" below and the fixed file name `SKILL.md`. If anything already exists at `<name>/`, the proposal is dropped.
+- **No symlink escape:** the target is resolved with `resolveInProject` (`projects/project-fs.ts`) under a policy whose only root is the chat's working folder, with write access, which takes the realpath of the target or its nearest existing parent and refuses a path outside the root. Discovery's `walk` already skips symlinked entries inside a skills folder (it uses `Dirent.isFile()` and `isDirectory()`), but `readdir` follows a symlinked `.agents` or `.agents/skills`, so this check is still needed. A patch target must also be a regular file by `lstat`, not a symlink.
+- **Checked again on Accept**, since the folder may have changed: the same checks, then the `base_hash` check. A patch opens the file without following a symlink; a new skill is created with an exclusive create, so it never replaces a file that appeared meanwhile.
+- **Edit** changes the text only. The target shown on the card cannot be edited.
 
 ## Data model (migration sketch)
 
@@ -57,6 +67,7 @@ create table lesson_drafts (
   id uuid primary key,
   conversation_id uuid not null references conversations(id) on delete cascade,
   run_id uuid not null references runs(id),
+  source_message_id uuid references messages(id) on delete set null,
   project_id uuid not null,
   kind text not null check (kind in ('patch', 'new')),
   target_path text not null,
@@ -79,7 +90,9 @@ create table lesson_skills (
 );
 ```
 
-Drafts stay in the database until accepted. `lesson_skills` records provenance; the curator touches only its rows, never a skill a person wrote. `path` is the original repo path that Restore puts the skill back to.
+Drafts stay in the database until accepted. `source_message_id` is the user message the card shows; the card reads its text from `messages`, so no copy is stored. It is set when the draft is saved and nullable only because one message can be removed on its own (`persistence/native-terminal-turns.ts` deletes a Terminal turn's user message when it merges runs); then the card says the message was removed, and the draft and any `lesson_skills` row stay.
+
+`lesson_skills` records skills Spark created, and the curator touches only its rows. Only Accept of a `new` draft adds a row. Accept of a `patch` adds none and leaves an existing row as it was, so a person's skill that a lesson patched never enters the stale and archive lifecycle; a patch to a skill Spark created keeps that skill's row. `path` is the original repo path that Restore puts the skill back to.
 
 ## Usage counting and the curator
 
@@ -89,7 +102,7 @@ Spark can't reliably see skill use:
 - **Codex:** no skill tool. The only signal is a read of the `SKILL.md` path, a heuristic that a mode the gate can't see may never report.
 - **None:** the accept date is the clock.
 
-Proposal: count Claude's `Skill` events, count Codex reads as best effort, fall back to the accept date. A daily worker pass marks a skill stale after 14 days unused (a label only) and after 30 offers an archive card. Archiving, only when the user confirms, moves the skill out of the repo into Spark's data folder (`lesson-archive/<project id>/<name>/`) and records `archive_path`; Restore moves it back to `path` in one click and refuses if something else is there now. Pinned skills are exempt. These clocks age skills; they limit nothing about runs.
+Only skills with a `lesson_skills` row are aged. Proposal: count Claude's `Skill` events, count Codex reads as best effort, fall back to the accept date. A daily worker pass marks a skill stale after 14 days unused (a label only) and after 30 offers an archive card. Archiving, only when the user confirms, moves the skill out of the repo into Spark's data folder (`lesson-archive/<project id>/<name>/`) and records `archive_path`; Restore moves it back to `path` in one click and refuses if something else is there now. Pinned skills are exempt. These clocks age skills; they limit nothing about runs.
 
 ## Triggers, Jev and cost
 
@@ -109,7 +122,7 @@ Proposal: count Claude's `Skill` events, count Codex reads as best effort, fall 
 - **Review run fails or is stopped:** one line says no lesson was made, and why.
 - **Skill file changed since the draft:** Accept refuses (the `base_hash` no longer matches) and offers a fresh review.
 - **Dismissed lesson returns:** past dismissals go into the review as "already declined".
-- **Prompt injection in chat text:** the draft is data; the user reads the full text before Accept, and frontmatter is limited to `name` and `description`.
+- **Prompt injection in chat text:** the draft is data; the target is validated as above, the user reads the full text before Accept, and frontmatter is limited to `name` and `description`.
 - **Skills switched off for the project:** the card says the skill won't load until the switch is on.
 - **Skill arrives from elsewhere** (a pull, another tool): it changes the fingerprint, and the folder shows "Folder setup changed" with the skill listed.
 - **Paired device:** reading drafts may be `always`; Accept, Edit, Dismiss, Restore and archive are `never` in `route-rules.ts`.
@@ -118,12 +131,12 @@ Proposal: count Claude's `Skill` events, count Codex reads as best effort, fall 
 
 0. **Prerequisite:** `spark/protect-agent-folders` merged, so `.agents/` and `.codex/` are protected like `.claude/`.
 1. **Phase 1:**
-   - **Find a lesson**, the read-only review run and `lesson_drafts`.
+   - **Find a lesson**, the read-only review run, target validation and `lesson_drafts` with its source message.
    - The card with Accept, Edit and Dismiss, writing to the folder chosen above.
    - Skills in the trust fingerprint, with Accept updating it in the same step. This goes in phase 1 because Accept must not trip the new prompt. On upgrade, a trusted folder's current skills are taken into its fingerprint; they already load whatever the trust state, so this grants nothing new.
    - Remote rules, a guide page and a whats-new row.
 2. **Phase 2:** the merged pull request trigger, and Jev's `lesson_check`, observed only.
-3. **Phase 3:** `lesson_skills`, usage counting, stale and archive cards, Pin and Restore.
+3. **Phase 3:** `lesson_skills` for skills Spark created, usage counting, stale and archive cards, Pin and Restore.
 
 ## Decisions
 
