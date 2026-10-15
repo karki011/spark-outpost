@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { refitWhenFontLoads, terminalFont, warmTerminalFont } from './terminal-font.ts';
 
-const FONT = "'Geist Mono', ui-monospace, Menlo, monospace";
+const FONT = "'SF Mono', Menlo, monospace";
 
 function fontSet(ready: boolean) {
   const pending: (() => void)[] = [];
@@ -35,28 +35,30 @@ function terminal() {
 }
 
 afterEach(() => {
+  document.documentElement.style.removeProperty('--font-terminal');
   document.documentElement.style.removeProperty('--font-mono');
 });
 
 describe('terminalFont', () => {
-  it('is the mono font the rest of the app uses', () => {
-    document.documentElement.style.setProperty('--font-mono', FONT);
+  it('is the terminal font token, not the mono font the rest of the app uses', () => {
+    document.documentElement.style.setProperty('--font-mono', "'Geist Mono', monospace");
+    document.documentElement.style.setProperty('--font-terminal', FONT);
     expect(terminalFont()).toBe(FONT);
   });
 
-  it('falls back to the system mono font on a page without the token', () => {
-    expect(terminalFont()).toBe('ui-monospace, Menlo, monospace');
+  it('falls back to Menlo on a page without the token', () => {
+    expect(terminalFont()).toBe('Menlo, monospace');
   });
 });
 
 describe('warmTerminalFont', () => {
   it('asks for the regular and the bold face before any terminal opens', () => {
-    document.documentElement.style.setProperty('--font-mono', FONT);
+    document.documentElement.style.setProperty('--font-terminal', FONT);
     const fonts = fontSet(false);
     warmTerminalFont(fonts.set);
     expect(fonts.load.mock.calls.map(([spec]) => spec)).toEqual([
-      '12.5px "Geist Mono"',
-      'bold 12.5px "Geist Mono"',
+      '12.5px "SF Mono"',
+      'bold 12.5px "SF Mono"',
     ]);
   });
 });
@@ -69,8 +71,8 @@ describe('refitWhenFontLoads', () => {
     refitWhenFontLoads(opened, refit, fonts.set);
     expect(refit).not.toHaveBeenCalled();
     expect(fonts.load.mock.calls.map(([spec]) => spec)).toEqual([
-      '12.5px "Geist Mono"',
-      'bold 12.5px "Geist Mono"',
+      '12.5px "SF Mono"',
+      'bold 12.5px "SF Mono"',
     ]);
     fonts.finish();
     await vi.waitFor(() => expect(refit).toHaveBeenCalledTimes(2));
@@ -89,14 +91,25 @@ describe('refitWhenFontLoads', () => {
     const refit = vi.fn();
     const fonts = fontSet(true);
     refitWhenFontLoads(opened, refit, fonts.set);
-    fonts.faceLoaded('Geist');
+    fonts.faceLoaded('SF');
     expect(refit).not.toHaveBeenCalled();
-    fonts.faceLoaded('"Geist Mono"');
+    fonts.faceLoaded('"SF Mono"');
     expect(opened.options.fontFamily).not.toBe(FONT);
-    fonts.faceLoaded('Geist Mono');
+    fonts.faceLoaded('SF Mono');
     expect(opened.options.fontFamily).toBe(FONT);
     expect(opened.clearTextureAtlas).toHaveBeenCalledTimes(2);
     expect(refit).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores the app mono font finishing after the terminal opened', () => {
+    const opened = terminal();
+    const refit = vi.fn();
+    const fonts = fontSet(true);
+    refitWhenFontLoads(opened, refit, fonts.set);
+    fonts.faceLoaded('Geist Mono');
+    expect(refit).not.toHaveBeenCalled();
+    expect(opened.clearTextureAtlas).not.toHaveBeenCalled();
+    expect(opened.options.fontFamily).toBe(FONT);
   });
 
   it('leaves a terminal that closed before the font loaded alone', async () => {
@@ -106,7 +119,7 @@ describe('refitWhenFontLoads', () => {
     const unfollow = refitWhenFontLoads(opened, refit, fonts.set);
     unfollow();
     fonts.finish();
-    fonts.faceLoaded('Geist Mono');
+    fonts.faceLoaded('SF Mono');
     await Promise.resolve();
     await Promise.resolve();
     expect(refit).not.toHaveBeenCalled();

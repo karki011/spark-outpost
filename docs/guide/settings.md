@@ -50,7 +50,7 @@ A push of another branch, a force push, a protected file or a write outside the 
 | **Projects**     | Linked folders; open one for trust, **Where Spark works**, **Keep sign-ins in the browser**, **Saved sign-ins**, **Preview**. | [Where a chat works](where-spark-works.md)                  |
 | **Connectors**   | GitHub, Jira, Linear and [Slack](connect-slack.md).                                                                           | [Connect them](tickets-and-github.md)                       |
 | **MCP servers**  | Servers start off. Turn one on for all chats, projects, or one chat. Fill values an agent's server needs.                     | [Glossary](glossary.md)                                     |
-| **Appearance**   | The theme. **Graphite** is the default.                                                                                       | [Set up](getting-started.md#meet-spark-and-pick-a-theme)    |
+| **Appearance**   | The theme. **Graphite** is the default. Terminals use [SF Mono](https://developer.apple.com/fonts/) if installed, else Menlo. | [Set up](getting-started.md#meet-spark-and-pick-a-theme)    |
 | **Updates**      | Mac app: the version, **Channel**, **Download updates automatically**, **Check for updates**.                                 | [Update the app](updates.md)                                |
 | **Help**         | **Export diagnostics**, **Send feedback**. Mac app: **Logs folder**, heartbeat, **Full Disk Access**.                         | [Mac privacy settings](mac-privacy.md)                      |
 | **Reset**        | Start over. **Keep my API keys** is off by default.                                                                           | [Start over](trouble-setup-and-reset.md#start-over)         |

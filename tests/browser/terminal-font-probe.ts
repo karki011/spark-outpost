@@ -56,6 +56,47 @@ export function probeFonts(page: Page, family: string): Promise<FontProbe> {
   }, family);
 }
 
+export interface StackProbe {
+  regularLikeReference: boolean;
+  boldLikeReference: boolean;
+  inked: boolean;
+  regularWidth: number;
+  boldWidth: number;
+}
+
+export function probeStack(page: Page, stack: string, reference: string): Promise<StackProbe> {
+  return page.evaluate(
+    ({ stack, reference }) => {
+      const SAMPLE = 'Rg@agQ0O1lI{}';
+      const raster = (font: string) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 240;
+        canvas.height = 40;
+        const context = canvas.getContext('2d')!;
+        context.font = font;
+        context.textBaseline = 'top';
+        context.fillText(SAMPLE, 2, 6);
+        const pixels = context.getImageData(0, 0, 240, 40).data;
+        return {
+          pixels: pixels.join(','),
+          inked: pixels.some((value, index) => index % 4 === 3 && value > 0),
+          width: context.measureText(SAMPLE).width,
+        };
+      };
+      const regular = raster(`24px ${stack}`);
+      const bold = raster(`bold 24px ${stack}`);
+      return {
+        regularLikeReference: regular.pixels === raster(`24px ${reference}`).pixels,
+        boldLikeReference: bold.pixels === raster(`bold 24px ${reference}`).pixels,
+        inked: regular.inked && bold.inked,
+        regularWidth: regular.width,
+        boldWidth: bold.width,
+      };
+    },
+    { stack, reference },
+  );
+}
+
 export async function tableShot(page: Page, workspace: Locator): Promise<Buffer> {
   const [top, bottom, rows] = await workspace
     .locator('.xterm-accessibility-tree > div')

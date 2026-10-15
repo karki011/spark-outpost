@@ -1,6 +1,6 @@
 export const TERMINAL_FONT_SIZE = 12.5;
-const FONT_TOKEN = '--font-mono';
-const SYSTEM_FONT = 'ui-monospace, Menlo, monospace';
+const FONT_TOKEN = '--font-terminal';
+const SYSTEM_FONT = 'Menlo, monospace';
 const REMEASURE_SUFFIX = ', monospace';
 
 interface FontTerminal {
