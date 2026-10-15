@@ -16,6 +16,7 @@ import {
   auditBrowser,
   browserSession,
   chatHome,
+  tabInput,
   type BrowserDecision,
 } from './context.ts';
 import { cardDecision } from './gate.ts';
@@ -248,14 +249,10 @@ const browserSignInTool = sparkTool({
   acts: true,
   title: 'Sign in with a saved sign-in',
   description:
-    'Asks Spark to type a saved username and password into the sign-in form of a Browser pane tab and submit it. Works only when the tab is on exactly the saved site (https, or a local development host), on the page itself and not in a frame; it handles a username page followed by a password page. The first use of a sign-in in a chat waits for the user on a card, in every agent mode. Returns form_submitted with the page it landed on, or the reason nothing was filled. It never returns the values; password fields and the fields Spark filled stay masked in reads, screenshots and logs.',
+    'Asks Spark to type a saved username and password into the sign-in form of a Browser pane tab and submit it. Works only when the tab is on exactly the saved site (https, or a local development host), on the page itself and not in a frame; it handles a username page followed by a password page. The first use of a sign-in in a chat waits for the user on a card, in every agent mode. Returns form_submitted with the page it landed on, or the reason nothing was filled. It never returns the values, and the fields it filled stay masked.',
   input: {
     signIn: z.string().min(1).max(60).describe('Label or id from spark_browser_signins.'),
-    tab: z
-      .string()
-      .max(40)
-      .optional()
-      .describe('Tab id from spark_browser_tabs. Defaults to the tab the agent used last.'),
+    tab: tabInput,
   },
   run: signIn,
 });

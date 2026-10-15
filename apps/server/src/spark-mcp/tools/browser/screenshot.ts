@@ -11,7 +11,7 @@ import { LeaseLostError } from '../../../persistence/run-events.ts';
 import { runEvents } from '../../../workflow/run-events.ts';
 import { renderResult } from '../../format.ts';
 import { SparkBlocks, sparkTool, type SparkBlock, type SparkToolContext } from '../../tool.ts';
-import { asToolError, auditBrowser, browserSession } from './context.ts';
+import { asToolError, auditBrowser, browserSession, tabInput } from './context.ts';
 import { runShotDir } from './end-run.ts';
 import { clearPage } from './read-flow.ts';
 import { signInScrub } from './scrub.ts';
@@ -145,7 +145,7 @@ export const browserScreenshotTool = sparkTool({
   description:
     'Takes a screenshot of a Browser pane tab (the visible part, the full page, or one element by ref), at most 1280 px wide, with password and card fields painted over. The user sees it in the chat. Returns the image when the model can take one, otherwise a file path and a short description. A page on an external site the user opened follows the agent mode.',
   input: {
-    tab: z.string().max(40).optional().describe('Tab id. Defaults to the tab the agent used last.'),
+    tab: tabInput,
     ref: z.string().max(20).optional().describe('A ref_N from spark_browser_read to crop to.'),
     fullPage: z.boolean().default(false).describe('Capture the whole page, not just what shows.'),
   },

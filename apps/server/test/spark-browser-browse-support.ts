@@ -41,6 +41,8 @@ export class FakeBrowserHost implements BrowserHost {
   url = 'about:blank';
   owner: 'agent' | 'user' = 'agent';
   landsOn: string | null = null;
+  checked: Record<string, unknown> = {};
+  readAnswer: Record<string, unknown> = {};
   refuses: string | null = null;
 
   request(request: BrowserHostRequest): Promise<never> {
@@ -67,7 +69,8 @@ export class FakeBrowserHost implements BrowserHost {
       return { ...this.facts(), status: 200, reused: false };
     }
     if (request.op === 'page') {
-      return { ...this.facts(), target: request.ref ? TARGETS[request.ref] : null };
+      const target = request.ref ? TARGETS[request.ref] : null;
+      return { ...this.facts(), target, ...(request.ref ? this.checked : {}) };
     }
     if (request.op === 'act') {
       const from = this.url;
@@ -84,6 +87,7 @@ export class FakeBrowserHost implements BrowserHost {
         offset: 0,
         nextOffset: null,
         masked: 0,
+        ...this.readAnswer,
       };
     }
     return { closed: 0 };

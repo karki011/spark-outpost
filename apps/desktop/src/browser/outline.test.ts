@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  MASKED_VALUE,
-  RefMap,
-  outlineOf,
-  pageOfLines,
-  pageTextOf,
-  type AxNode,
-} from './outline.ts';
+import { MASKED_VALUE, outlineOf, pageOfLines, pageTextOf, type AxNode } from './outline.ts';
+import { RefMap } from './ref-map.ts';
 import { sensitiveNodes } from './sensitive-nodes.ts';
 
 function node(
