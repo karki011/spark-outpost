@@ -1,4 +1,11 @@
-import type { OutlineRow } from './outline.ts';
+export type RowTier = 'act' | 'mark' | 'prose';
+
+export interface OutlineRow {
+  text: string;
+  depth: number;
+  tier: RowTier;
+  ref: string | null;
+}
 
 export interface BudgetPage {
   text: string;

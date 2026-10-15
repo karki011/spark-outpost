@@ -7,7 +7,7 @@ import type { Cdp } from './cdp.ts';
 import { quadBox } from './mask.ts';
 import { modalDialogOf } from './modal-scope.ts';
 import { outlineOf, pageOfLines, pageTextOf, type AxNode } from './outline.ts';
-import { budgetPage } from './read-budget.ts';
+import { budgetPage } from '../outline/read-budget.ts';
 import type { RefMap } from './ref-map.ts';
 import { pageDocument, resolveRef } from './ref-resolve.ts';
 import { sensitiveNodes, type DomNode } from './sensitive-nodes.ts';

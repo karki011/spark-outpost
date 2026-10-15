@@ -1,4 +1,5 @@
 import { BROWSER_READ_MAX_CHARS } from '@spark-outpost/contracts';
+import type { OutlineRow, RowTier } from '../outline/read-budget.ts';
 import { refContextOf } from './ref-context.ts';
 import type { RefMap } from './ref-map.ts';
 
@@ -106,15 +107,6 @@ export interface OutlineOptions {
   refs: RefMap;
   sensitive: ReadonlySet<number>;
   rootBackendId?: number | null;
-}
-
-export type RowTier = 'act' | 'mark' | 'prose';
-
-export interface OutlineRow {
-  text: string;
-  depth: number;
-  tier: RowTier;
-  ref: string | null;
 }
 
 export interface Outline {
