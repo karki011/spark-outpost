@@ -89,6 +89,21 @@ describe('searching chats', () => {
     expect(hit?.match).toMatchObject({ messageId: found.messageId, runId: found.runId });
   });
 
+  it('gives a user message its own run when that run has child runs', async () => {
+    const found = await chat('Crew', 'Please rename the gadget factory');
+    for (const role of ['scout', 'builder']) {
+      await t.db.query(
+        `INSERT INTO runs (id, conversation_id, user_message_id, provider, status, parent_run_id, role)
+         VALUES ($1, $2, $3, 'fake', 'succeeded', $4, $5)`,
+        [randomUUID(), found.id, found.messageId, found.runId, role],
+      );
+    }
+
+    const [hit] = await listConversations(t.db, t.workspaceId, 'gadget');
+
+    expect(hit?.match).toMatchObject({ messageId: found.messageId, runId: found.runId });
+  });
+
   it('ranks a title match first, then the closer message match', async () => {
     const once = await chat('One', 'cache');
     await reply(

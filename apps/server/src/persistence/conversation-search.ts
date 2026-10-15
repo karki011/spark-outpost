@@ -64,7 +64,8 @@ function hitsQuery(match: typeof WORDS_MATCH): string {
       LIMIT ${CHAT_LIST_LIMIT}
     )
     SELECT k.id, k.message_id, left(m.content, ${SNIPPET_SOURCE_CHARS}) AS content,
-      COALESCE(k.run_id, (SELECT r.id FROM runs r WHERE r.user_message_id = k.message_id)) AS run_id
+      COALESCE(k.run_id, (SELECT r.id FROM runs r
+        WHERE r.user_message_id = k.message_id AND r.parent_run_id IS NULL)) AS run_id
     FROM ranked k
     LEFT JOIN messages m ON m.id = k.message_id
     ORDER BY k.place`;
