@@ -179,7 +179,7 @@ export const SPEC_GROUPS = {
     'island-states',
     'island-terminal',
   ],
-  phone: ['phone', 'phone-motion', 'phone-pair-again', 'phone-passkey'],
+  phone: ['phone', 'phone-motion', 'phone-notify', 'phone-pair-again', 'phone-passkey'],
   'docs-help': ['docs', 'help'],
 } as const satisfies Record<string, readonly string[]>;
 

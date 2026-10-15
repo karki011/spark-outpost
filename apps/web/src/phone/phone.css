@@ -312,3 +312,26 @@ h2[data-status='https_off'] .ph-dot {
 .ph-removed .ph-devices {
   justify-self: stretch;
 }
+.ph-push-contact {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.ph-push-contact > label {
+  font-size: 13px;
+  font-weight: 500;
+}
+.ph-push-contact code {
+  overflow-wrap: anywhere;
+}
+.ph-push-failures {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ph-push-failures time {
+  color: var(--muted);
+}

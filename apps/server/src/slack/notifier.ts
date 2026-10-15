@@ -20,12 +20,13 @@ import { ClientFocus, DEFAULT_FOCUS_CLIENT } from './client-focus.ts';
 import { sendSlackMessage } from './post.ts';
 
 export const NOTIFY_BATCH_MS = 20_000;
-const FOCUS_TTL_MS = 45_000;
+export const FOCUS_TTL_MS = 45_000;
 export const DIRECT_CHAT_TITLE = 'A chat that read your Slack direct messages';
 const WATCHED_KINDS = new Set(['approval', 'run', 'conversation', 'pull_request', 'task']);
 
 export interface SlackNotifierOptions {
   batchMs?: number;
+  focus?: ClientFocus;
   now?: () => number;
   since?: Date;
   linkScheme?: string | undefined;
@@ -72,7 +73,10 @@ async function candidates(
   return rows;
 }
 
-async function chatOf(deps: SlackDeps, conversationId: string): Promise<NotifyChat | null> {
+export async function chatOf(
+  deps: Pick<SlackDeps, 'db' | 'workspaceId'>,
+  conversationId: string,
+): Promise<NotifyChat | null> {
   const { rows } = await deps.db.query<{ title: string; project: string | null }>(
     `SELECT c.title, (
        SELECT p.name FROM conversation_projects cp JOIN projects p ON p.id = cp.project_id
@@ -104,7 +108,7 @@ export function startSlackNotifier(
 ): SlackNotifier {
   const now = options.now ?? Date.now;
   const since = options.since ?? new Date(now());
-  const focus = new ClientFocus(now, FOCUS_TTL_MS);
+  const focus = options.focus ?? new ClientFocus(now, FOCUS_TTL_MS);
   let stopped = false;
   let work: Promise<void> = Promise.resolve();
   const scanning = new Set<string>();

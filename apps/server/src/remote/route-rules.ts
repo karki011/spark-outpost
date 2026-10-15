@@ -8,6 +8,8 @@ GET /api/health
 GET /api/events
 GET /api/remote/switches
 GET /api/remote/session
+GET /api/remote/push
+DELETE /api/remote/push/subscription
 GET /api/spark-pause
 PUT /api/spark-pause
 GET /api/agent-config/trust
@@ -155,6 +157,8 @@ const NEVER = `
 GET /api/remote/access
 PUT /api/remote/access
 PATCH /api/remote/switches
+GET /api/remote/push/contact
+PUT /api/remote/push/contact
 GET /api/remote/devices
 PATCH /api/remote/devices/:id
 DELETE /api/remote/devices/:id
@@ -295,6 +299,9 @@ POST /api/conversations/:id/terminal/interrupt
 `,
   terminalApprove: `
 POST /api/conversations/:id/terminal/approval
+`,
+  notifications: `
+PUT /api/remote/push/subscription
 `,
 };
 

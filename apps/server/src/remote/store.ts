@@ -22,6 +22,7 @@ const SWITCH_COLUMNS: Record<RemoteSwitch, string> = {
   passkeys: 'can_passkeys',
   terminal: 'can_terminal',
   terminalApprove: 'can_terminal_approve',
+  notifications: 'can_notifications',
 };
 
 const SWITCH_IDS = Object.keys(SWITCH_COLUMNS) as RemoteSwitch[];
@@ -154,6 +155,8 @@ export async function repairDevice(
 
 const PASSKEYS_GONE = `gone AS (
   DELETE FROM remote_passkeys WHERE workspace_id = $1 AND device_id = $2
+), push_gone AS (
+  DELETE FROM remote_push_subscriptions WHERE workspace_id = $1 AND device_id = $2
 )`;
 
 export async function markDeviceReplaced(
@@ -211,7 +214,8 @@ export async function revokeDevice(
 
 export async function revokeAllDevices(db: Queryable, workspaceId: string): Promise<string[]> {
   const { rows } = await db.query<{ id: string }>(
-    `WITH gone AS (DELETE FROM remote_passkeys WHERE workspace_id = $1)
+    `WITH gone AS (DELETE FROM remote_passkeys WHERE workspace_id = $1),
+       push_gone AS (DELETE FROM remote_push_subscriptions WHERE workspace_id = $1)
      UPDATE remote_devices SET revoked_at = now()
      WHERE workspace_id = $1 AND revoked_at IS NULL RETURNING id`,
     [workspaceId],
