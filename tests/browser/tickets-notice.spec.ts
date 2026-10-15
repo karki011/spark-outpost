@@ -3,6 +3,7 @@ import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { animationsSettled } from './settle.ts';
 import { useSystemTheme } from './docs-seed.ts';
 import { seedFlowChats, setPullChecks, type PullChecks } from './ticket-flow-seed.ts';
 import { connectTickets, openTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
@@ -147,6 +148,7 @@ test('the notice states have no accessibility issues and can be captured in ligh
 
   const found: string[] = [];
   const check = async (label: string) => {
+    await animationsSettled(page);
     const results = await new AxeBuilder({ page })
       .include('main.tk')
       .include('nav.rail')

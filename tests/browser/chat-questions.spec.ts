@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { chatRepo, type ChatRepo, projectChat, resetWithAgents, send } from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
+import { animationsSettled } from './settle.ts';
 import { openChats } from './navigation.ts';
 
 const SHOTS = process.env.CHAT_QUESTIONS_SHOTS ?? '';
@@ -77,6 +78,7 @@ test.describe('a waiting card', () => {
       await page.setViewportSize({ width, height: 900 });
       for (const open of width > 1100 ? [true, false] : [false]) {
         await setPanel(page, open);
+        await animationsSettled(page);
         await expect(waitingCard(page)).toBeInViewport();
         await expect(message(page)).toBeVisible();
         expect(await pageScroll(page), `page scroll at ${width}`).toBe(0);

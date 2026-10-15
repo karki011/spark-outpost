@@ -6,6 +6,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { FakeDevPull } from '../../apps/server/test/fake-jira-dev.ts';
 import { repoWithRemote } from '../../apps/server/test/ship-support.ts';
 import { resetTestDatabase } from './database.ts';
+import { animationsSettled } from './settle.ts';
 import { seedFlowChats } from './ticket-flow-seed.ts';
 import {
   connectTickets,
@@ -132,6 +133,7 @@ test('a pull request linked in Jira shows on the row and in Development, with Ji
   const found: string[] = [];
   for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    await animationsSettled(page);
     const results = await new AxeBuilder({ page })
       .include('.tk-detail')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])

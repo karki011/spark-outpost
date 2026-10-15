@@ -213,7 +213,7 @@ test('Jev connects with an API key as the advisor and does not unlock chats', as
   await expect(section(page, 'jev', 'How to connect')).toContainText('Key…c3d4');
   const settings = section(page, 'jev', 'Settings');
   await expect(settings).toContainText('Modeljev-latest');
-  await expect(settings).toContainText('Never keys or tool output');
+  await expect(settings).toContainText('Never keys, tool output or your chat history');
   await expect(jev.getByRole('button', { name: 'Send test message' })).toHaveCount(0);
   await expect(continueButton(page)).toBeDisabled();
 

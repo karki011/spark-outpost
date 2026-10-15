@@ -217,7 +217,7 @@ test('a paired phone hides what only works on the Mac', async ({ browser }) => {
   await expect(phone.getByText('Maya’s iPhone')).toBeVisible();
   await expect(phone.getByText('https://mac.tail.test')).toBeVisible();
   await expect(phone.getByRole('button', { name: 'Pair a device' })).toHaveCount(0);
-  await expect(phone.getByRole('switch')).toHaveCount(0);
+  await expect(phone.getByRole('switch')).toHaveAccessibleName('Notify this device');
   await expect(phone.getByText(/Change these on your Mac/)).toBeVisible();
   await shot(phone, 'remote-phone-page');
   await phone.close();
