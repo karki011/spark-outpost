@@ -141,6 +141,10 @@ How Phase 1 settles what the design left open:
 - **Audit.** `spark/mac` entries carry tool, run, app, bundle id, action line and decision; `decision: mode` entries are marked `ranWithoutReview`. A read records a `mac_app` observation.
 - **Not built in Phase 1.** The island line, an Electron-level 2 s grace before killing the helper on Stop (it is killed at once), and `IsSecureEventInputEnabled` checks (no typing yet).
 
+### Verified, and not
+
+On 2026-10-15 (Apple silicon, macOS 26.5, Electron 44.4.5 dev channel launched with `open`, throwaway data folder, Claude Code 2.1.300, Opus 5.5 in Auto): the helper built for arm64 and x64 (minos 12.0, system libraries only) and its Swift tests passed. Without the Accessibility grant, the real helper listed the running apps with their signatures: Dia and Chrome were refused as browsers, Electron (the running Spark) as Spark by process, an app updated while running as an invalid signature; Calculator, Notes and TextEdit passed as Apple-signed. In a chat and in a Claude Terminal session, real Claude listed the apps with the refusals and `spark_mac_read` on Calculator showed **Let the agent use Calculator in this chat?**; in the chat, after **Allow for this chat**, the read answered that Spark Outpost lacks Accessibility. **Not verified:** anything that needs the grant (reading a real window, pressing Calculator's buttons, TextEdit and Notes, the indicator over a real action, takeover, ⌃⌥⌘. and the locked screen), which permission entry a Developer ID build gets, and the paired-device paths end to end (DB tests only).
+
 ## Saved app sign-ins
 
 The [Browser pane model](BROWSER.md#saved-sign-ins), reused:
