@@ -40,17 +40,17 @@ Accessibility and Screen Recording are granted per app in System Settings → Pr
 
 ## The tool surface
 
-| Tool                             | Takes                                                                                           | Returns                                                                                             |
-| -------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `spark_mac_apps`                 | nothing                                                                                         | Running apps with windows: name, bundle id, frontmost, refused or used in this chat, sign-in labels |
-| `spark_mac_read`                 | `app`, `window`, `ref`, `mode` (`tree`/`text`), `offset`, `maxChars`, `scope` (`window`/`menu`) | An outline with refs, paged like `spark_browser_read`                                               |
-| `spark_mac_act`                  | `action`, `ref`, `text`, `key`, `menu` (title path), `direction`, `app`                         | One line of what happened and where; no content                                                     |
-| `spark_mac_screenshot` (Phase 3) | `app`, `window`, `region`                                                                       | An image, secure fields painted over                                                                |
-| `spark_mac_sign_in` (Phase 2)    | `label`                                                                                         | `form_submitted` or the reason                                                                      |
+| Tool                             | Takes                                                                                                   | Returns                                                                                             |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `spark_mac_apps`                 | nothing                                                                                                 | Running apps with windows: name, bundle id, frontmost, refused or used in this chat, sign-in labels |
+| `spark_mac_read`                 | `app`, `window`, `ref`, `mode` (`tree`/`text`), `offset`, `maxChars`, `scope` (`window`/`sheet`/`menu`) | An outline with refs, paged like `spark_browser_read`                                               |
+| `spark_mac_act`                  | `action`, `ref`, `text`, `key`, `menu` (title path), `direction`, `app`                                 | One line of what happened and where; no content                                                     |
+| `spark_mac_screenshot` (Phase 3) | `app`, `window`, `region`                                                                               | An image, secure fields painted over                                                                |
+| `spark_mac_sign_in` (Phase 2)    | `label`                                                                                                 | `form_submitted` or the reason                                                                      |
 
 Actions: `press` (AXPress), `type` (set AXValue, or Unicode key events after focus), `focus`, `menu` (walks AXMenuBar by titles), `key` (the pane's 14 named keys plus ⌘ shortcuts), `scroll`, `open` (launch or activate by bundle id); Phase 3 adds `click` at a point.
 
-The outline uses the pane's line form, `- button "Send" [ax_12] enabled=false`: roles without `AX`, a subrole where it helps (`window:AXDialog`), AXValue clipped to 160 characters, `[masked]` for secure fields. Refs are `ax_N`. With no `ref`, a read covers the window's frontmost sheet or dialog (`scope: sheet`). Reused from the pane: `read-budget.ts` (moved to `apps/desktop/src/outline/`), `untrustedPage`, `redactText`, the sign-in scrub and the card wait (`clearSiteAction`).
+The outline uses the pane's line form, `- button "Send" [ax_12] enabled=false`: roles without `AX`, a subrole where it helps (`window:AXDialog`), AXValue clipped to 160 characters, `[masked]` for secure fields. Refs are `ax_N`. With no `ref` or `scope`, a read covers the window's frontmost sheet or dialog and reports `scope: sheet`. Reused from the pane: `read-budget.ts` (moved to `apps/desktop/src/outline/`), `untrustedPage`, `redactText`, the sign-in scrub and the card wait (`clearSiteAction`).
 
 ## Ref stability
 
@@ -78,7 +78,7 @@ Approval follows the agent's mode through `actionPath`, unchanged (the new actio
 | `spark_mac_sign_in`                                                    | **Sign in to <App> as …?** first use per chat, every mode                            | Audit, every use                   |
 | Anything else in an allowed app                                        | The mode, as above                                                                   | Audit; a `mac_app` run observation |
 
-**Keys that send or run ask each time:** Return sends in Messages and runs a command in Terminal. Spark can't tell from a key whether it sends, so Return, Enter, ⌘↩ and the send-and-delete shortcuts below always ask; other ⌘ shortcuts count as typing.
+**Keys that send or run ask each time:** Return sends in Messages and runs a command in Terminal. Spark can't tell from a key whether it sends, so Return, Enter, ⌘↩ and the send-and-delete shortcuts below always ask; other ⌘ shortcuts count as typing. **Activation keys are presses too:** for Space, Return and Enter Spark reads the focused element first and applies the press checks, so a focused Buy button is refused and a focused Send button asks.
 
 ### Detecting the floor and hard limits
 
@@ -104,12 +104,12 @@ Every result is redacted, scrubbed and wrapped like a page: `<page_evidence … 
 
 ### Who gets it
 
-| Run                                                                 | Offered                                                                                                                                                                                   |
-| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A chat on the Mac                                                   | Yes, with the switch on; Plan and Read-only chats get it with its card                                                                                                                    |
-| A Terminal session                                                  | Yes: Spark runs these tools itself, so the floor and hard limits hold; a floor action with no card shown is refused, never run                                                            |
-| Companion read-only session, Sparks' child runs, outpost child runs | No                                                                                                                                                                                        |
-| A paired device                                                     | Never: no tools and the settings route is `NEVER`. A device sees that a Mac control card is waiting but can't answer it; it is approved on the Mac, where takeover and the indicator work |
+| Run                                                                 | Offered                                                                                                                                                                                                                     |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A chat on the Mac                                                   | Yes, with the switch on; Plan and Read-only chats get it with its card                                                                                                                                                      |
+| A Terminal session                                                  | Yes: Spark runs these tools itself, so the floor and hard limits hold; a floor action with no card shown is refused, never run                                                                                              |
+| Companion read-only session, Sparks' child runs, outpost child runs | No                                                                                                                                                                                                                          |
+| A paired device                                                     | Never. The gateway marks a run started from a paired device with the admitted device id (never the client's `source`), and such a run gets no `spark_mac_*` tools. A device sees that a card is waiting but can't answer it |
 
 ### Audit
 
@@ -126,7 +126,7 @@ The [Browser pane model](BROWSER.md#saved-sign-ins), reused:
 
 ## What leaves the computer, and cost
 
-- Outlines and screenshots of other apps go to the chat's model provider, so Mail, Messages or Notes content can leave the computer; the settings text says so.
+- Outlines and screenshots go to the chat's model provider, so Mail, Messages or Notes content can leave the computer.
 - A Mac read is a `mac_app` work-data read (like `web_page`), so a later send that turn is flagged "sent data … after reading <App>".
 - A read is at most 12,000 characters (about 3,000 tokens). Screenshots are scaled to at most 1280 px on the long edge, inside every model's limit in the docs, about 1,400 tokens at 1280 × 800. Spark can't prune images from the agent's own session, so the tools say outline first. Nothing is capped.
 
@@ -134,12 +134,12 @@ The [Browser pane model](BROWSER.md#saved-sign-ins), reused:
 
 - **Fake AX layer:** a fake Swift `AXSource` tree for refs, refinding, masking and the hit check (`pnpm desktop:mac-control --test`); a fake helper for the TS protocol; contract tests for the floor, hard limits and a spoofed bundle id; the tools against a fake host for every policy row, Stop, takeover, the locked screen and missing permission.
 - **Real apps** (`--real`, skipped without the grant): Calculator (press 7 × 6 =, read 42), TextEdit (type through the card, read it back), Notes (new note, delete through the card), and System Settings and Spark refused.
-- **Real Claude** (Opus 5.5, Auto and Manual): those tasks in a chat and a Terminal session, plus takeover and Stop.
+- **Real Claude** (Auto and Manual): those tasks in a chat and a Terminal session.
 
 ## Phases
 
 1. **Read and press, in one app per chat:** the helper, permissions, `spark_mac_apps`, `_read`, and `_act` with `press`, `menu`, `scroll`, `open`, plus every safety piece above that doesn't involve typing.
-2. **Typing and saved sign-ins:** `type`, `focus`, `key`, several apps per chat, `spark_mac_sign_in`.
+2. **Typing and sign-ins:** `type`, `focus`, `key`, several apps, `spark_mac_sign_in`.
 3. **Screenshot fallback** (macOS 14 and later): `spark_mac_screenshot` and point `click`.
 
 ## Decided
