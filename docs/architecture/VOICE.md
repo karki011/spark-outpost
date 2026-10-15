@@ -54,8 +54,8 @@ Requests carry an `id`; every message is validated with zod in the host.
 
 Events during `listen`: `level` (0 to 1, ten a second, for the meter), `speech` (VAD heard speech start), `partial` (text so far, dictation only) and `final` (`text`, `ms`, `reason`: `stopped`, `silence`). `error` carries a code: `mic_denied`, `no_input_device`, `model_missing`, `busy`.
 
-- **Audio stays in the helper's memory.** 16 kHz mono float samples in one buffer, never written to disk, never sent over the pipe, cleared after `final` or `cancel`. One `listen` at a time; a second answers `busy`.
-- **Silence.** Silero VAD runs on every 32 ms frame. After 30 s with no speech the helper stops on its own (`reason: silence`); there is no length cap.
+- **Audio stays in the helper's memory, bounded.** 16 kHz mono float samples, never written to disk or sent over the pipe. Each speech segment VAD closes (or cuts at 30 s, whisper's window) is transcribed at once and its samples dropped, so the helper holds at most one segment (about 2 MB) plus the text so far; `stop` transcribes only the open segment, and `cancel` drops it and the text. One `listen` at a time; a second answers `busy`.
+- **Silence.** Silero VAD runs on every 32 ms frame. After 30 s with no speech the helper stops on its own (`reason: silence`). Continuous noise or music keeps it listening, with the listening view and meter on screen until the user stops it; memory and transcription cost stay per segment.
 - **Whisper invents text on silence** ("Thank you."): only the spans VAD marked as speech are transcribed, and a `final` with no speech span, or only punctuation, is empty and shows **Didn't catch that**.
 - **Hint.** `hint` is whisper's initial prompt, built locally from the user's project names, chat titles and ticket prefixes, so names like `spark-outpost` and `CP` are recognised. It never leaves the helper.
 
