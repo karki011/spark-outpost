@@ -36,6 +36,7 @@ import { signInRoutes } from './sign-in-routes.ts';
 import { taskChangeRoutes } from './task-change-routes.ts';
 import { taskRoutes } from './task-routes.ts';
 import { queueRoutes } from './queue-routes.ts';
+import { sparkPauseRoutes } from './spark-pause-routes.ts';
 import { teammateRoutes } from './teammate-routes.ts';
 import { slackRoutes, type SlackRouteDeps } from './slack-routes.ts';
 import { ticketRoutes, type TicketRouteDeps } from './ticket-routes.ts';
@@ -123,6 +124,7 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', auditRoutes(options));
   app.use('/api', taskRoutes(options));
   app.use('/api', queueRoutes(options));
+  app.use('/api', sparkPauseRoutes(options));
   const outposts = outpostRouters(options);
   app.use('/api', outposts.api);
   app.use(A2A_MOUNT_PATH, outposts.a2a);

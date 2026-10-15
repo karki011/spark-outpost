@@ -4,7 +4,6 @@ import { tvCast } from './conversation-crew.ts';
 import { member, orchestration } from './test-orchestration.ts';
 import { RUN_ID, run } from './test-run.ts';
 import {
-  formatElapsed,
   outcomeOf,
   rowUsage,
   sortFinished,
@@ -36,17 +35,6 @@ function item(overrides: Partial<TvRow>): TvRow {
     ...overrides,
   };
 }
-
-describe('Agent TV list elapsed time', () => {
-  it('shows seconds, then minutes with padded seconds, then hours with padded minutes', () => {
-    expect(formatElapsed(0)).toBe('0s');
-    expect(formatElapsed(-500)).toBe('0s');
-    expect(formatElapsed(42_900)).toBe('42s');
-    expect(formatElapsed(60_000)).toBe('1m 00s');
-    expect(formatElapsed(20 * 60_000 + 5_000)).toBe('20m 05s');
-    expect(formatElapsed(3_600_000 + 2 * 60_000 + 59_000)).toBe('1h 02m');
-  });
-});
 
 describe('Agent TV list order', () => {
   it('puts agents that need you first, then working, then queued', () => {

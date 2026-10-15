@@ -72,11 +72,22 @@ export function matchesEntry(entry: PaletteEntry, query: string): boolean {
   return words.every((word) => text.includes(word));
 }
 
-function ranked(entries: readonly PaletteEntry[]): PaletteEntry[] {
+function ranked(
+  entries: readonly PaletteEntry[],
+  searchRank: ReadonlyMap<string, number> = new Map(),
+): PaletteEntry[] {
+  const rankOf = (entry: PaletteEntry) => searchRank.get(entry.chat.id) ?? searchRank.size;
   return entries.toSorted(
     (a, b) =>
-      GROUP_RANK[a.group] - GROUP_RANK[b.group] || b.chat.updatedAt.localeCompare(a.chat.updatedAt),
+      GROUP_RANK[a.group] - GROUP_RANK[b.group] ||
+      rankOf(a) - rankOf(b) ||
+      b.chat.updatedAt.localeCompare(a.chat.updatedAt),
   );
+}
+
+function withMatch(entry: PaletteEntry, found: ReadonlyMap<string, ConversationSummary>) {
+  const match = found.get(entry.chat.id)?.match;
+  return match ? { ...entry, chat: { ...entry.chat, match } } : entry;
 }
 
 export function paletteEntries(
@@ -88,6 +99,7 @@ export function paletteEntries(
   const entries = loaded.map((chat) => paletteEntry(chat, projectNames));
   if (query.trim() === '') return ranked(entries.filter((entry) => !entry.chat.archivedAt));
   const byId = new Map(entries.map((entry) => [entry.chat.id, entry]));
+  const foundById = new Map(found.map((chat) => [chat.id, chat]));
   const shown = new Set<string>();
   const matched = entries.filter((entry) => matchesEntry(entry, query));
   matched.forEach((entry) => shown.add(entry.chat.id));
@@ -96,7 +108,11 @@ export function paletteEntries(
     shown.add(chat.id);
     return [byId.get(chat.id) ?? paletteEntry(chat, projectNames)];
   });
-  return ranked([...matched, ...fromSearch]);
+  const searchRank = new Map(found.map((chat, index) => [chat.id, index]));
+  return ranked(
+    [...matched, ...fromSearch].map((entry) => withMatch(entry, foundById)),
+    searchRank,
+  );
 }
 
 export interface PaletteSection {

@@ -263,6 +263,16 @@ export function feedbackView(item: StoredFeedback, excerptChars = 280): Feedback
   };
 }
 
+export async function pollWaitingRounds(db: Queryable, workspaceId: string): Promise<void> {
+  await db.query(
+    `UPDATE pr_watches w SET next_poll_at = now()
+     WHERE w.workspace_id = $1 AND EXISTS (
+       SELECT 1 FROM pr_feedback_items f WHERE f.watch_id = w.id AND f.state = 'queued'
+     )`,
+    [workspaceId],
+  );
+}
+
 export async function pollNowForApproval(db: Queryable, approvalId: string): Promise<boolean> {
   const { rowCount } = await db.query(
     "UPDATE pr_watches SET next_poll_at = now() WHERE approval_id = $1 AND phase = 'confirming'",

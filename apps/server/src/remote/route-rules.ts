@@ -10,6 +10,8 @@ GET /api/remote/switches
 GET /api/remote/session
 GET /api/remote/push
 DELETE /api/remote/push/subscription
+GET /api/spark-pause
+PUT /api/spark-pause
 GET /api/agent-config/trust
 GET /api/analytics/overview
 GET /api/analytics/rollups

@@ -22,6 +22,7 @@ import { messageText, requestMessage, textPart } from '../src/a2a/task-view.ts';
 import { addToQueue } from '../src/persistence/chat-queue.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { getRun } from '../src/persistence/runs.ts';
+import { setSparkPaused } from '../src/persistence/spark-pause.ts';
 import { LAUNCH_TOKEN, startA2a, type A2aHarness } from './a2a-harness.ts';
 import {
   chatRow,
@@ -201,6 +202,21 @@ describe('SendMessage', () => {
     expect(run?.conversationId).toBe(api);
     expect(run?.status).toBe('queued');
     expect(await queueRows(t.db, api)).toEqual([]);
+  });
+
+  it('while Spark is paused, starts a request the user typed and holds one another chat wrote', async () => {
+    await setSparkPaused(t.db, t.workspaceId, true);
+    const typed = await sendStored();
+    await setRunStatus(t.db, await startedRun(typed.postId), 'succeeded');
+
+    const written = await insertRequestRow(t.db, {
+      outpostId,
+      toConversationId: api,
+      toHandle: 'api',
+      fromUser: false,
+    });
+    await send(wireMessage('text on the wire', written));
+    expect((await queueRows(t.db, api)).map((row) => row.outpost_post_id)).toEqual([written]);
   });
 
   it('returns at once even when the caller asks to wait', async () => {

@@ -161,5 +161,21 @@ describe('long content', () => {
     ]);
     expect(reply!.text).toHaveLength(8_000);
     expect(reply!.text.endsWith('…')).toBe(true);
+    expect(reply!.clipped).toBe(true);
+  });
+
+  it('marks a reply clipped once its joined parts pass the limit, and adds nothing after', () => {
+    const part = (text: string) =>
+      line({ type: 'assistant', message: { id: 'm', content: [{ type: 'text', text }] } });
+    const short = transcriptItems('claude', [part('Short.'), part('Still short.')]);
+    expect(short).toMatchObject([{ text: 'Short.\n\nStill short.', clipped: false }]);
+    const [long] = transcriptItems('claude', [
+      part('a'.repeat(5_000)),
+      part('b'.repeat(5_000)),
+      part('the end'),
+    ]);
+    expect(long).toMatchObject({ clipped: true });
+    expect(long!.text).toHaveLength(8_000);
+    expect(long!.text).not.toContain('the end');
   });
 });

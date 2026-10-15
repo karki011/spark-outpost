@@ -135,7 +135,7 @@ export function isCredentialPath(absolute: string): boolean {
 export type ProtectedKind = 'instructions' | 'git_control';
 
 const INSTRUCTION_NAMES = new Set(['AGENTS.md', 'CLAUDE.md']);
-const INSTRUCTION_PREFIXES = ['.claude/', '.cursor/rules/', '.spark/'];
+const INSTRUCTION_PREFIXES = ['.agents/', '.claude/', '.codex/', '.cursor/rules/', '.spark/'];
 const INSTRUCTION_FILES = new Set(['.github/copilot-instructions.md']);
 const GIT_HOOK = /^\.git\/hooks\/[^/]+$/;
 const GIT_CONFIG = '.git/config';
