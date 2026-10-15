@@ -10,6 +10,7 @@ const NOTHING: SparkAvailability = {
   publish: false,
   pull_request_create: false,
   browser: false,
+  mac: false,
   outpost: false,
   outpost_draft: false,
 };

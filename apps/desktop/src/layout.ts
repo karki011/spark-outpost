@@ -4,6 +4,7 @@ export interface AppLayout {
   serverDir: string;
   webRoot: string;
   tmuxBin: string;
+  macControlBin: string;
 }
 
 export interface LayoutSource {
@@ -20,6 +21,7 @@ export function appLayout(source: LayoutSource): AppLayout {
       serverDir: path.join(resourcesPath, 'server'),
       webRoot: path.join(resourcesPath, 'web'),
       tmuxBin: path.join(resourcesPath, 'tmux/bin/tmux'),
+      macControlBin: path.join(resourcesPath, 'mac-control/bin/spark-mac-control'),
     };
   }
   const repoRoot = path.resolve(appPath, '../..');
@@ -27,5 +29,6 @@ export function appLayout(source: LayoutSource): AppLayout {
     serverDir: path.join(repoRoot, 'apps/server'),
     webRoot: path.join(repoRoot, 'apps/web/dist'),
     tmuxBin: path.join(repoRoot, '.local/tmux', arch, 'bin/tmux'),
+    macControlBin: path.join(repoRoot, '.local/mac-control', arch, 'spark-mac-control'),
   };
 }

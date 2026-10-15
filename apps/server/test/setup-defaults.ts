@@ -25,4 +25,5 @@ export const NEW_PROFILE = {
   wideWindow: 'rail',
   busyEnter: 'queue',
   terminalRecordLikeChat: false,
+  macControl: false,
 };

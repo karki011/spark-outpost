@@ -14,6 +14,7 @@ import { UsageSection } from '../usage/UsageSection.tsx';
 import { SparkSection } from '../spark/SparkSection.tsx';
 import { SparksSection } from '../teammates/SparksSection.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
+import { MacControlSection, macControlAvailable } from './MacControlSection.tsx';
 import { ResetSection } from '../reset/ResetSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
 import { UpdatesSection, updatesAvailable } from './UpdatesSection.tsx';
@@ -28,6 +29,7 @@ export type SettingsSection =
   | 'models'
   | 'usage'
   | 'projects'
+  | 'mac'
   | 'tools'
   | 'mcp'
   | 'look'
@@ -81,6 +83,16 @@ const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
     id: 'projects',
     label: 'Projects',
     icon: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
+  },
+  {
+    id: 'mac',
+    label: 'Mac control',
+    icon: (
+      <>
+        <rect x="3" y="4" width="18" height="12" rx="2" />
+        <path d="M8 20h8M12 16v4M10.5 8.5l4 2-4 2z" />
+      </>
+    ),
   },
   {
     id: 'tools',
@@ -159,7 +171,11 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const closeRef = useRef<HTMLButtonElement>(null);
   const connected = setup.data?.providers.filter((provider) => provider.connection).length ?? 0;
-  const sections = SECTIONS.filter((entry) => entry.id !== 'updates' || updatesAvailable());
+  const sections = SECTIONS.filter(
+    (entry) =>
+      (entry.id !== 'updates' || updatesAvailable()) &&
+      (entry.id !== 'mac' || macControlAvailable()),
+  );
   const title = sections.find((entry) => entry.id === section)?.label ?? '';
 
   const onCloseRef = useRef(onClose);
@@ -295,6 +311,9 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                 {section === 'models' && <ModelsSection />}
                 {section === 'usage' && <UsageSection />}
                 {section === 'projects' && <ProjectsSection />}
+                {setup.data && section === 'mac' && macControlAvailable() && (
+                  <MacControlSection profile={setup.data.profile} />
+                )}
                 {section === 'tools' && (
                   <>
                     <p className="lede">

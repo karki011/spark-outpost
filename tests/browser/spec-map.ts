@@ -137,6 +137,7 @@ export const SPEC_GROUPS = {
   'settings-providers': [
     'agent-instructions',
     'keychain-notice',
+    'mac-control-settings',
     'mcp-settings',
     'model-availability',
     'models',
@@ -262,6 +263,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/web/src/help/', groups: ['docs-help'] },
   { prefix: 'apps/web/src/home/', groups: ['home'] },
   { prefix: 'apps/web/src/island/', groups: ['island-desktop'] },
+  { prefix: 'apps/web/src/mac-control/', groups: ['settings-providers'] },
   { prefix: 'apps/web/src/map/', groups: ['map'] },
   { prefix: 'apps/web/src/models/', groups: ['settings-providers'] },
   { prefix: 'apps/web/src/onboarding/', groups: ['settings-providers'] },
@@ -295,6 +297,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   },
   { prefix: 'apps/server/src/audit/', groups: ['analytics-audit', 'approvals'] },
   { prefix: 'apps/server/src/browser/', groups: ['terminal-preview-browser'] },
+  { prefix: 'apps/server/src/mac-control/', groups: ['settings-providers'] },
   { prefix: 'apps/server/src/chat-share/', groups: ['chat'] },
   { prefix: 'apps/server/src/checks/', groups: ['ship-pr'] },
   { prefix: 'apps/server/src/codescan/', groups: ['map'] },

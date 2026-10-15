@@ -102,6 +102,10 @@ export function setupRoutes(deps: SetupDeps): Router {
       res.status(403).json({ error: 'Choose local instruction files on your Mac.' });
       return;
     }
+    if (isRemote(res) && update.macControl !== undefined) {
+      res.status(403).json({ error: 'Turn Mac control on or off on your Mac.' });
+      return;
+    }
     try {
       await updateProfile(db, workspaceId, update);
     } catch (error) {

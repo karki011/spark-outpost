@@ -69,6 +69,18 @@ export function performSparkAction(
         message: `The agent can use ${action.label} on ${action.origin} in this chat.`,
         url: null,
       });
+    case 'mac_use_app':
+      return Promise.resolve({
+        message: `The agent can use ${action.app} in this chat.`,
+        url: null,
+      });
+    case 'mac_act':
+      return Promise.resolve({
+        message: `The agent can press buttons and menus in ${action.app} in this chat.`,
+        url: null,
+      });
+    case 'mac_press':
+      return Promise.resolve({ message: `Allowed once in ${action.app}.`, url: null });
     case 'post_slack':
       return performPostSlack(context, action);
     case 'pr_follow_up':

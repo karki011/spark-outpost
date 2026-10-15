@@ -65,6 +65,7 @@ const sparkDeps: SparkToolDeps = {
   linkScheme: config.SPARK_LINK_SCHEME,
   codeScan,
   browser: desktopBrowser?.host,
+  mac: desktopBrowser?.mac,
   outposts: { wakes: outpostWakes, parked: parkedTurns, stackGit },
 };
 const sparkTools = await startSparkMcpHost(sparkDeps);

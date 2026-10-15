@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  binaryProblems,
-  clangArch,
-  foreignLibraries,
-  hostTriple,
-  LIBEVENT,
-  minimumOs,
-  TMUX,
-  tmuxBuiltDir,
-  tmuxStamp,
-} from './tmux-bundle.ts';
+import { binaryProblems, clangArch, foreignLibraries, minimumOs } from './bundled-binary.ts';
+import { hostTriple, LIBEVENT, TMUX, tmuxBuiltDir, tmuxStamp } from './tmux-bundle.ts';
 
 const SYSTEM = [
   '/out/bin/tmux:',

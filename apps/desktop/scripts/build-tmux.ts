@@ -5,11 +5,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type { MacArch } from './builder-config.ts';
+import { clangArch, DEPLOYMENT_TARGET } from './bundled-binary.ts';
 import {
   checkTmuxBinary,
   checkTmuxStarts,
-  clangArch,
-  DEPLOYMENT_TARGET,
   hostTriple,
   LIBEVENT,
   TMUX,

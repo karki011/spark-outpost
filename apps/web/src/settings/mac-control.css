@@ -1,0 +1,10 @@
+.mac-control {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.mac-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

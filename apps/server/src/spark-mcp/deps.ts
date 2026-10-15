@@ -1,4 +1,5 @@
 import type { BrowserHost } from '../browser/host-client.ts';
+import type { MacHost } from '../mac-control/host-client.ts';
 import type { CodeScanner } from '../codescan/scanner.ts';
 import type { Db } from '../persistence/db.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
@@ -37,6 +38,7 @@ export interface SparkToolDeps {
   timeZone?: string;
   now?: () => Date;
   browser?: BrowserHost | undefined;
+  mac?: MacHost | undefined;
   shotDir?: string;
   outposts?: OutpostToolDeps | undefined;
 }

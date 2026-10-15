@@ -9,6 +9,8 @@ import type {
   DiagnosticsExport,
   InstallResult,
   IslandSize,
+  MacControlStatus,
+  MacIndicator,
   SignedInSite,
   UpdateChannel,
   UpdateStatus,
@@ -63,6 +65,16 @@ export interface DesktopBrowser {
   onSnapshot(callback: (snapshot: BrowserSnapshot) => void): Unsubscribe;
   onPicked(callback: (pick: BrowserPick) => void): Unsubscribe;
   onSelectedText(callback: (selected: BrowserSelectedText) => void): Unsubscribe;
+}
+
+export interface DesktopMacControl {
+  status(): Promise<MacControlStatus | null>;
+  prompt(): Promise<MacControlStatus | null>;
+  openSettings(): Promise<void>;
+  stop(): Promise<void>;
+  resume(): Promise<void>;
+  indicator(): Promise<MacIndicator | null>;
+  onIndicator(callback: (state: MacIndicator | null) => void): Unsubscribe;
 }
 
 export interface SparkDesktop {
@@ -121,6 +133,7 @@ export interface SparkDesktop {
     openFullDiskAccess(): Promise<void>;
   };
   browser?: DesktopBrowser;
+  macControl?: DesktopMacControl;
   onOpenChat(callback: (id: string, runId: string | null) => void): Unsubscribe;
   onOpenSettings?(callback: (target: IslandSettingsTarget) => void): Unsubscribe;
 }
@@ -136,6 +149,10 @@ export function afterPaint(run: () => void): void {
 
 export function desktopBrowser(): DesktopBrowser | null {
   return sparkDesktop()?.browser ?? null;
+}
+
+export function desktopMacControl(): DesktopMacControl | null {
+  return sparkDesktop()?.macControl ?? null;
 }
 
 export function companionAvailable(): boolean {

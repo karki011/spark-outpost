@@ -195,6 +195,7 @@ const nativeMcp = await startSparkMcpHost(
     linkScheme: config.SPARK_LINK_SCHEME,
     codeScan: createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) }),
     browser: desktopBrowser?.host,
+    mac: desktopBrowser?.mac,
   },
   undefined,
   savedPort(nativeMcpPortFile),

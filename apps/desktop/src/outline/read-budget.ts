@@ -1,4 +1,11 @@
-import type { OutlineRow } from './outline.ts';
+export type RowTier = 'act' | 'mark' | 'prose';
+
+export interface OutlineRow {
+  text: string;
+  depth: number;
+  tier: RowTier;
+  ref: string | null;
+}
 
 export interface BudgetPage {
   text: string;
@@ -24,7 +31,7 @@ function clip(line: string, max: number): string {
 function kept(rows: readonly OutlineRow[], index: number): boolean {
   const row = rows[index]!;
   if (row.tier !== 'prose') return true;
-  if (!row.text.trimStart().startsWith('- StaticText')) return false;
+  if (!/^- (StaticText|static text)\b/.test(row.text.trimStart())) return false;
   const beside = [rows[index - 1], rows[index + 1]];
   return beside.some((other) => other?.tier === 'act' && other.depth === row.depth);
 }

@@ -43,6 +43,7 @@ import { findInterruption } from './interruptions.ts';
 import { withNativeTerminals } from './native-terminals.ts';
 import { applyConversationOptions } from './conversation-options.ts';
 import { continueOpenRequest } from '../outposts/continuation.ts';
+import { deviceStartingRun } from '../remote/run-mark.ts';
 import {
   MESSAGE_COLUMNS,
   RUN_OUTPOST_COLUMNS,
@@ -313,11 +314,13 @@ export async function sendInTransaction(
   const terminal = current.session_type === 'terminal';
   const task = await taskForNewRun(client, conversationId);
   const mode = await runMode(client, conversationId, target.permission ?? null);
+  const device = await deviceStartingRun(client, conversationId, request.id, terminal);
   const run = await client.query<RunRow>(
     `INSERT INTO runs (id, conversation_id, user_message_id, provider, model, effort, status,
        task_id, plan_version, mode, level, agent_mode, config_values,
-       picked_mode, start_as, source, continues_run_id, model_switch)
-     VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7, $8, $9, $10, $11, $12, $9, $13, $14, $15, $16)
+       picked_mode, start_as, source, continues_run_id, model_switch, remote_device_id)
+     VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7, $8, $9, $10, $11, $12, $9, $13, $14, $15, $16,
+       $17)
      RETURNING *`,
     [
       runId,
@@ -336,6 +339,7 @@ export async function sendInTransaction(
       request.source ?? null,
       request.continuesRunId ?? null,
       target.modelSwitch ? JSON.stringify(target.modelSwitch) : null,
+      device,
     ],
   );
   await continueOpenRequest(client, conversationId, runId);

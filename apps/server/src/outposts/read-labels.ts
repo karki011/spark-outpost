@@ -14,6 +14,7 @@ const SOURCES: ReadonlySet<string> = new Set<ObservationSource>([
   'secret_output',
   'private_data',
   'web_page',
+  'mac_app',
 ]);
 
 export type OutpostRead = 'answer' | 'notes';

@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import type { z } from 'zod';
 import {
   BROWSER_HOST_ENV,
@@ -10,6 +9,8 @@ import {
   type BrowserHostOp,
   type BrowserHostRequest,
 } from '@spark-outpost/contracts';
+import { createMacHostClient, type MacHost } from '../mac-control/host-client.ts';
+import { createBridgeClient } from './bridge-client.ts';
 
 export type BrowserHostResult<Op extends BrowserHostOp> = z.infer<
   (typeof browserHostResultSchemas)[Op]
@@ -42,73 +43,24 @@ export interface BrowserHostClientOptions {
   newId?: () => string;
 }
 
-interface Waiting {
-  op: BrowserHostOp;
-  resolve(result: unknown): void;
-  reject(error: BrowserHostError): void;
-}
-
 export function createBrowserHostClient(options: BrowserHostClientOptions): BrowserHost {
-  const { port } = options;
-  const timeoutMs = options.timeoutMs ?? BROWSER_REQUEST_TIMEOUT_MS;
-  const newId = options.newId ?? randomUUID;
-  const waiting = new Map<string, Waiting>();
-
-  port.subscribe((raw) => {
-    const parsed = browserBridgeFromHostSchema.safeParse(raw);
-    if (!parsed.success) return;
-    const message = parsed.data;
-    const entry = waiting.get(message.id);
-    if (!entry) return;
-    waiting.delete(message.id);
-    if (!message.ok) {
-      entry.reject(new BrowserHostError(message.code, message.message));
-      return;
-    }
-    const result = browserHostResultSchemas[entry.op].safeParse(message.result);
-    if (result.success) entry.resolve(result.data);
-    else
-      entry.reject(
-        new BrowserHostError('invalid', 'The browser sent an answer Spark cannot read.'),
-      );
-  });
-
-  return {
-    request(request, signal) {
-      if (signal?.aborted) {
-        return Promise.reject(new BrowserHostError('cancelled', 'Cancelled.'));
-      }
-      const id = newId();
-      return new Promise((resolve, reject) => {
-        const giveUp = (error: BrowserHostError) => {
-          if (!waiting.delete(id)) return;
-          port.post({ kind: 'browser:cancel', id });
-          reject(error);
-        };
-        const timer = setTimeout(
-          () => giveUp(new BrowserHostError('timeout', 'The browser took too long to answer.')),
-          timeoutMs,
-        );
-        const onAbort = () => giveUp(new BrowserHostError('cancelled', 'Cancelled.'));
-        signal?.addEventListener('abort', onAbort, { once: true });
-        const settle = () => {
-          clearTimeout(timer);
-          signal?.removeEventListener('abort', onAbort);
-        };
-        waiting.set(id, {
-          op: request.op,
-          resolve: (result) => {
-            settle();
-            resolve(result as never);
-          },
-          reject: (error) => {
-            settle();
-            reject(error);
-          },
-        });
-        port.post({ kind: 'browser:request', id, request });
-      });
+  const request = createBridgeClient({
+    port: options.port,
+    timeoutMs: options.timeoutMs ?? BROWSER_REQUEST_TIMEOUT_MS,
+    ...(options.newId ? { newId: options.newId } : {}),
+    answer: (raw) => {
+      const parsed = browserBridgeFromHostSchema.safeParse(raw);
+      return parsed.success ? parsed.data : null;
     },
+    results: browserHostResultSchemas,
+    request: (id, sent) => ({ kind: 'browser:request', id, request: sent }) as BrowserBridgeToHost,
+    cancel: (id) => ({ kind: 'browser:cancel', id }) as const,
+    failure: (code, message) => new BrowserHostError(code as BrowserHostError['code'], message),
+    timeoutMessage: 'The browser took too long to answer.',
+    invalidMessage: 'The browser sent an answer Spark cannot read.',
+  });
+  return {
+    request: (sent, signal) => request(sent, signal) as never,
   };
 }
 
@@ -119,6 +71,7 @@ interface ParentPort {
 
 export interface DesktopBrowser {
   host: BrowserHost;
+  mac: MacHost;
   blockPorts(ports: readonly number[]): void;
 }
 
@@ -128,12 +81,14 @@ export function connectDesktopBrowser(
 ): DesktopBrowser | null {
   const parent = (owner as { parentPort?: ParentPort }).parentPort;
   if (env[BROWSER_HOST_ENV] !== '1' || !parent) return null;
-  const port: BrowserHostPort = {
-    post: (message) => parent.postMessage(message),
-    subscribe: (listener) => parent.on('message', (event) => listener(event.data)),
+  const port = {
+    post: (message: unknown) => parent.postMessage(message),
+    subscribe: (listener: (message: unknown) => void) =>
+      parent.on('message', (event) => listener(event.data)),
   };
   return {
     host: createBrowserHostClient({ port }),
+    mac: createMacHostClient({ port }),
     blockPorts: (ports) => port.post({ kind: 'browser:ports', ports: [...ports] }),
   };
 }

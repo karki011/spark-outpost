@@ -154,6 +154,7 @@ export const profileSchema = z.object({
   wideWindow: wideWindowSchema.default(DEFAULT_WIDE_WINDOW),
   busyEnter: busyEnterSchema.default(DEFAULT_BUSY_ENTER),
   terminalRecordLikeChat: z.boolean().default(false),
+  macControl: z.boolean().default(false),
 });
 export type Profile = z.infer<typeof profileSchema>;
 export type SparkSessionPrefs = Pick<
@@ -197,6 +198,7 @@ export const updateProfileRequestSchema = z
     wideWindow: wideWindowSchema,
     busyEnter: busyEnterSchema,
     terminalRecordLikeChat: z.boolean(),
+    macControl: z.boolean(),
   })
   .partial();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

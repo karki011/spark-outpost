@@ -1,6 +1,7 @@
 import {
   REMOTE_SWITCH_LABELS,
   approvalPayloadSchema,
+  isMacAction,
   isSecretFileName,
   type RemoteSwitch,
   type RemoteSwitches,
@@ -102,6 +103,14 @@ export function blockedFieldIn(body: unknown, fields: readonly string[]): string
 
 function baseName(path: string): string {
   return path.split('/').at(-1) ?? path;
+}
+
+export const MAC_CARD_REFUSAL = 'Mac control cards are answered on your Mac.';
+
+export function macOnlyCard(payload: unknown): boolean {
+  const parsed = approvalPayloadSchema.safeParse(payload);
+  const action = parsed.success ? parsed.data.sparkAction?.action : undefined;
+  return action !== undefined && isMacAction(action);
 }
 
 export function cardSwitch(payload: unknown): RemoteSwitch | null {

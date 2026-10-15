@@ -11,3 +11,5 @@ test-results/
 *.tsbuildinfo
 apps/desktop/release/
 .wrangler/
+apps/desktop/mac-control/.build/
+apps/desktop/mac-control/.swiftpm/

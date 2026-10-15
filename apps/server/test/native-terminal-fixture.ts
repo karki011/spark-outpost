@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { vi } from 'vitest';
 import { createConversation } from '../src/persistence/conversations.ts';
 import { EVERYTHING_AVAILABLE } from '../src/spark-mcp/availability.ts';
+import type { MacHost } from '../src/mac-control/host-client.ts';
 import { startSparkMcpHost } from '../src/spark-mcp/host.ts';
 import type { NativeLaunch, NativeLaunchInput } from '../src/terminal/native-launch.ts';
 import { createNativeRuntime, type NativeRuntimeDeps } from '../src/terminal/native-runtime.ts';
@@ -32,7 +33,12 @@ const interruptRecord = (promptId: string) => ({
 });
 
 export async function nativeRuntimeFixture(
-  options: { maxShells?: number; provider?: 'claude' | 'codex'; realFiles?: boolean } = {},
+  options: {
+    maxShells?: number;
+    provider?: 'claude' | 'codex';
+    realFiles?: boolean;
+    mac?: MacHost;
+  } = {},
 ) {
   const provider = options.provider ?? 'claude';
   const agentMode = provider === 'claude' ? 'default' : 'agent';
@@ -63,10 +69,13 @@ export async function nativeRuntimeFixture(
     ...defaultLimits,
     maxShells: options.maxShells ?? defaultLimits.maxShells,
   });
-  const host = await startSparkMcpHost(toolDeps(t), async () => ({
-    ...EVERYTHING_AVAILABLE,
-    browser: false,
-  }));
+  const host = await startSparkMcpHost(
+    toolDeps(t, options.mac ? { mac: options.mac } : {}),
+    async () => ({
+      ...EVERYTHING_AVAILABLE,
+      browser: false,
+    }),
+  );
   const place: NonNullable<NativeRuntimeDeps['place']> = async (_deps, input) => ({
     input: { ...input, projectRoots: [folder] },
     repoRoot: folder,

@@ -20,6 +20,7 @@ import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { isAllow } from './approval-outcome.ts';
 import { ObservedNote } from './ObservedNote.tsx';
 import { SignInFacts } from './SignInFacts.tsx';
+import { MacFacts, macByline, macNote } from './MacFacts.tsx';
 import { SiteFacts } from './SiteFacts.tsx';
 import { siteByline, siteNote } from './site-card-text.ts';
 import { PrFollowUpFacts, PrRoundFacts } from './PrFollowUpFacts.tsx';
@@ -176,6 +177,10 @@ function Facts({ action }: { action: SparkAction }) {
       return <SiteFacts action={action} />;
     case 'browser_sign_in':
       return <SignInFacts action={action} />;
+    case 'mac_use_app':
+    case 'mac_act':
+    case 'mac_press':
+      return <MacFacts action={action} />;
     case 'post_slack':
       return (
         <dl className="sac-facts">
@@ -205,6 +210,8 @@ function Facts({ action }: { action: SparkAction }) {
 function byline(action: SparkAction, agent: string, secretFiles?: readonly string[]): string {
   const site = siteByline(action, agent, secretFiles);
   if (site) return site;
+  const mac = macByline(action, agent);
+  if (mac) return mac;
   if (action.action === 'pr_follow_up') {
     return 'Spark fixed the PR feedback in this chat. Confirm to push and reply on GitHub.';
   }
@@ -217,6 +224,8 @@ function byline(action: SparkAction, agent: string, secretFiles?: readonly strin
 function confirmNote(action: SparkAction, secretFiles?: readonly string[]): string {
   const site = siteNote(action, secretFiles);
   if (site) return site;
+  const mac = macNote(action);
+  if (mac) return mac;
   if (action.action === 'pr_follow_up') {
     return 'Nothing is pushed or posted until you confirm. Uncheck anything to leave it out; a fix reply needs the push.';
   }

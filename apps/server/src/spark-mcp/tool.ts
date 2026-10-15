@@ -27,6 +27,7 @@ export type SparkToolNeed =
   | 'publish'
   | 'pull_request_create'
   | 'browser'
+  | 'mac'
   | 'outpost'
   | 'outpost_draft';
 

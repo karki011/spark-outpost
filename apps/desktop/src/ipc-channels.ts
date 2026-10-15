@@ -56,6 +56,13 @@ export const IPC = {
   browserSnapshot: 'browser:snapshot',
   browserPicked: 'browser:picked',
   browserSelectedText: 'browser:selected-text',
+  macControlStatus: 'mac-control:status',
+  macControlPrompt: 'mac-control:prompt',
+  macControlOpenSettings: 'mac-control:open-settings',
+  macControlStop: 'mac-control:stop',
+  macControlResume: 'mac-control:resume',
+  macControlIndicator: 'mac-control:indicator',
+  macControlIndicatorChanged: 'mac-control:indicator-changed',
 } as const;
 
 export type DragPhase = 'start' | 'lift' | 'move' | 'end';

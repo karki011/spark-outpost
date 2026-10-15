@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { OutlineRow, RowTier } from './outline.ts';
-import { budgetPage } from './read-budget.ts';
+import { budgetPage, type OutlineRow, type RowTier } from './read-budget.ts';
 
 function row(depth: number, tier: RowTier, body: string, ref: string | null = null): OutlineRow {
   return { text: `${'  '.repeat(depth)}- ${body}${ref ? ` [${ref}]` : ''}`, depth, tier, ref };

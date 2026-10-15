@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "package": "node --import tsx scripts/package.ts",
     "tmux": "node --import tsx scripts/build-tmux-cli.ts",
+    "mac-control": "node --import tsx scripts/build-mac-control-cli.ts",
     "e2e:update": "node --import tsx scripts/e2e-update.ts",
     "release": "node --import tsx scripts/release.ts",
     "icons": "node --import tsx scripts/icons.ts"

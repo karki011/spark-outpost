@@ -96,6 +96,7 @@ describe('what a Spark tools session can use', () => {
       publish: false,
       pull_request_create: false,
       browser: false,
+      mac: false,
       outpost: false,
       outpost_draft: false,
     });
