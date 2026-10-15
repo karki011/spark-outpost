@@ -190,7 +190,7 @@ test('native terminal keeps its process across reconnects, fills the pane in foc
     await expect(workspace).not.toContainText('Detailed activity is unavailable');
     await expect(workspace.getByRole('button', { name: 'Terminal help' })).toHaveCount(0);
     const row = page.locator(`[data-chat="${session.conversationId}"]`);
-    await expect(row.locator('.sub')).toHaveText('Terminal session · Open');
+    await expect(row.locator('.row-open')).toHaveAccessibleName(/, Terminal session/);
     await expect(row).not.toContainText('>_');
     await expect(workspace.locator('.tbar-agent')).toHaveText('Codex · Terminal');
     const processId = async () =>

@@ -117,24 +117,6 @@
   }
 }
 
-.sub {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-  line-height: 1.35;
-  color: var(--faint);
-}
-
-.row.st-asking .sub,
-.row.st-permission .sub {
-  color: var(--warn);
-}
-
-.row.st-error .sub {
-  color: var(--danger);
-}
-
 .row.st-running .tt > span {
   color: var(--text);
   animation: glow 1.8s ease-in-out infinite alternate;
@@ -254,178 +236,14 @@
   --row-bg: var(--raise);
 }
 
-.st-mark {
-  position: absolute;
-  right: -4px;
-  bottom: -4px;
-  width: 9px;
-  height: 9px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--row-bg);
-  box-shadow: 0 0 0 1px var(--row-bg);
-  transition:
-    background 0.15s,
-    box-shadow 0.15s;
-}
-
-.st-mark:empty {
-  display: none;
-}
-
-.orb {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent 0 15%, var(--accent));
-  -webkit-mask: radial-gradient(circle, transparent 2.2px, #000 2.7px);
-  mask: radial-gradient(circle, transparent 2.2px, #000 2.7px);
-  animation: rot 0.8s linear infinite;
-}
-
-.enter .orb {
-  animation:
-    sb-popin 0.2s var(--out),
-    rot 0.8s linear infinite;
-}
-
-.udot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.dchk {
-  position: absolute;
-  width: 9px;
-  height: 9px;
-  color: var(--accent-text);
-}
-
-.st-mark:not(.enter) .dchk {
-  display: none;
-}
-
-.enter .dchk path {
-  stroke-dasharray: 24;
-  stroke-dashoffset: 24;
-  animation: sb-draw 0.25s var(--out) forwards;
-}
-
-.enter .dchk {
-  animation: sb-chkout 0.2s 1.1s var(--out) forwards;
-}
-
-.enter .udot {
-  animation: sb-popin 0.2s 1.2s var(--out) both;
-}
-
-.ask,
 .dia {
   position: relative;
   display: block;
-}
-
-.ask {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  border: 2px solid var(--warn);
-}
-
-.dia {
   width: 6px;
   height: 6px;
   border-radius: 1.5px;
   background: var(--warn);
   rotate: 45deg;
-}
-
-.ask::before,
-.ask::after {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: inherit;
-  border: 1.5px solid var(--warn);
-  animation: sb-ripple 1.9s var(--out) infinite;
-}
-
-.ask::after {
-  animation-delay: 0.95s;
-}
-
-.st-mark .ask {
-  width: 8px;
-  height: 8px;
-}
-
-.st-mark .ask::before,
-.st-mark .ask::after {
-  content: none;
-}
-
-.enter .ask,
-.enter .dia {
-  animation: sb-popin 0.2s var(--out);
-}
-
-.row .errdot {
-  width: 9px;
-  height: 9px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--danger);
-  color: var(--panel);
-  font-size: 8px;
-  font-style: normal;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.row .enter .errdot {
-  animation:
-    sb-popin 0.2s var(--out),
-    sb-shake 0.25s 0.2s var(--out);
-}
-
-@keyframes sb-ripple {
-  from {
-    transform: scale(1);
-    opacity: 0.9;
-  }
-  to {
-    transform: scale(3);
-    opacity: 0;
-  }
-}
-
-@keyframes sb-draw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes sb-chkout {
-  to {
-    opacity: 0;
-    transform: scale(0.4);
-  }
-}
-
-@keyframes sb-shake {
-  25% {
-    transform: translateX(-4px);
-  }
-  50% {
-    transform: translateX(3px);
-  }
-  75% {
-    transform: translateX(-2px);
-  }
 }
 
 @media (hover: none) {

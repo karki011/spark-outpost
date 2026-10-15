@@ -48,7 +48,8 @@ test('a turn lists its sub-agents, says the agent waits on them, and stops them 
   await expect(rows.nth(1)).toContainText('Tests');
 
   const sidebar = page.getByRole('navigation', { name: 'Chats' });
-  await expect(sidebar.getByText('Waiting on 2 sub-agents')).toBeVisible({ timeout: 10_000 });
+  await expect(sidebar.locator('.row.st-running.active')).toHaveCount(1);
+  await expect(sidebar.getByText('Waiting on 2 sub-agents')).toHaveCount(0);
 
   await input.fill('still typing');
   await expect(input).toBeFocused();

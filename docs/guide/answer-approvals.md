@@ -50,7 +50,7 @@ A listed command covers longer forms too: `pnpm test` allows `pnpm test -- api`.
 
 ## Where waiting cards show
 
-Cards wait in the chat, on **Home** under **What needs you today**, in the chat list as **Asking permission**, and on [Spark Island](desktop-companion.md#answer-a-card).
+Cards wait in the chat, on **Home** under **What needs you today**, in the chat list as a **Waiting for you** dot, and on [Spark Island](desktop-companion.md#answer-a-card).
 
 To see what was allowed, open the chat's **…** menu and select **Audit this chat**.
 

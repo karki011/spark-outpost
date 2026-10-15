@@ -218,8 +218,14 @@ test('row states and the attention banner jump to the chat that needs input', as
   await expect(page.locator('.chat-title')).toHaveText('Current chat');
 
   await expect(row(page, 'Deploy the site')).toHaveClass(/st-asking/);
-  await expect(row(page, 'Deploy the site')).toContainText('Needs your input');
-  await expect(row(page, 'Mock fetch')).toContainText('Stopped: rate limit reached');
+  await expect(row(page, 'Deploy the site').locator('.row-open')).toHaveAttribute(
+    'title',
+    /Needs your input/,
+  );
+  await expect(row(page, 'Mock fetch').locator('.row-open')).toHaveAttribute(
+    'title',
+    /Stopped with an error/,
+  );
   await expect(
     page.getByRole('navigation', { name: 'Main' }).getByLabel('1 chat needs your input'),
   ).toHaveText('1');

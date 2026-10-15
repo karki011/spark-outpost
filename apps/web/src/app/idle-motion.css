@@ -1,8 +1,9 @@
-:root:is([data-motion='rest'], [data-motion='paused']) :is(.mo-root, .row.st-running .tt) {
+:root:is([data-motion='rest'], [data-motion='paused'])
+  :is(.mo-root, .row.st-running .tt, .rblob-slot) {
   --motion-rest: 1;
 }
 @container style(--motion-rest: 1) {
-  :is(.mo-root *, .row.st-running .tt > span) {
+  :is(.mo-root *, .row.st-running .tt > span, .rblob.working) {
     animation-play-state: paused !important;
   }
 }

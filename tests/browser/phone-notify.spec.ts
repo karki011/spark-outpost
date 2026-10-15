@@ -168,7 +168,7 @@ test('a tapped notification opens its chat', async ({ page }) => {
   try {
     const workspaceId = await ensureLocalWorkspace(db);
     await db.query(
-      `INSERT INTO conversations (id, workspace_id, title, last_read_at) VALUES ($1, $2, $3, now())`,
+      `INSERT INTO conversations (id, workspace_id, title, seen_at) VALUES ($1, $2, $3, now())`,
       [id, workspaceId, 'Fix the upload retry'],
     );
   } finally {

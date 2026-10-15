@@ -39,8 +39,8 @@ const api = {
   },
   patch: (id: string, body: object) =>
     request(app).patch(`/api/conversations/${id}`).set(LOCAL_HEADERS).send(body),
-  read: (id: string) =>
-    request(app).post(`/api/conversations/${id}/read`).set(LOCAL_HEADERS).send({}),
+  seen: (id: string) =>
+    request(app).post(`/api/conversations/${id}/seen`).set(LOCAL_HEADERS).send({}),
   remove: (id: string) =>
     request(app).delete(`/api/conversations/${id}`).set(LOCAL_HEADERS).send({}),
   settings: (id: string, body: object) =>
@@ -198,9 +198,9 @@ describe('unread and attention', () => {
     await finishRun(runId, 'succeeded', null);
     expect((await api.list())[0]?.unread).toBe(true);
 
-    await api.read(id).expect(204);
+    await api.seen(id).expect(204);
     expect((await api.list())[0]?.unread).toBe(false);
-    await api.read(randomUUID()).expect(404);
+    await api.seen(randomUUID()).expect(404);
   });
 
   it('reports the latest failure reason and the running step', async () => {

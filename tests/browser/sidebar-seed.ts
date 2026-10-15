@@ -119,8 +119,8 @@ export async function seedChats(chats: readonly SeedChat[]): Promise<string[]> {
       const messageId = randomUUID();
       const updated = new Date(Date.now() - (chat.minutesAgo ?? ids.length) * 60_000);
       await db.query(
-        `INSERT INTO conversations (id, workspace_id, title, updated_at, archived_at, last_read_at)
-         VALUES ($1, $2, $3, $4, $5, CASE WHEN $6 THEN NULL ELSE now() END)`,
+        `INSERT INTO conversations (id, workspace_id, title, updated_at, archived_at, seen_at)
+         VALUES ($1, $2, $3, $4, $5, CASE WHEN $6 THEN NULL ELSE now() - interval '1 second' END)`,
         [
           id,
           workspaceId,

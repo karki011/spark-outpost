@@ -8,7 +8,10 @@ import { useTooltip } from '../ui/Tooltip.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { MatchSnippet } from './MatchSnippet.tsx';
 import { recencyLabel } from './recency.ts';
-import { rowFaceState, rowState, type RowTone } from './row-state.ts';
+import { rowFaceState, rowState } from './row-state.ts';
+import { chatBlob } from './chat-blob.ts';
+import { ChatBlob } from './ChatBlob.tsx';
+import { useChatOnScreen } from './on-screen.ts';
 import { RowTitle, useMarquee } from './RowTitle.tsx';
 import { useSortableMotion } from './use-sortable-motion.ts';
 import { RowFace } from './RowFace.tsx';
@@ -28,45 +31,6 @@ interface ChatRowProps {
   onRename: (chat: ConversationSummary, title: string | null) => void;
   onRestore: (chat: ConversationSummary) => void;
   onDelete: (chat: ConversationSummary) => void;
-}
-
-function StatusMark({ tone }: { tone: RowTone }) {
-  if (tone === 'running') return <i className="orb" />;
-  if (tone === 'asking') return <i className="ask" />;
-  if (tone === 'permission') return <i className="dia" />;
-  if (tone === 'error') return <i className="errdot">!</i>;
-  if (tone === 'done') {
-    return (
-      <>
-        <svg
-          className="dchk"
-          width="13"
-          height="13"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="m5 12 5 5 9-10" />
-        </svg>
-        <i className="udot" />
-      </>
-    );
-  }
-  return null;
-}
-
-function RowSub({ terminal, sub }: { terminal: boolean; sub: string }) {
-  if (!terminal) return sub ? <small className="sub">{sub}</small> : null;
-  return (
-    <small className="sub">
-      Terminal<span className="sr-only"> session</span>
-      {sub ? ` · ${sub}` : ''}
-    </small>
-  );
 }
 
 const MERGED_LABEL = 'Pull request merged';
@@ -178,7 +142,8 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   });
   const marquee = useMarquee(chat.title);
   const state = rowState(chat, selected);
-  const [firstTone] = useState(state.tone);
+  const onScreen = useChatOnScreen(chat.id);
+  const blob = chatBlob(chat, onScreen);
   const face = <RowFace chat={chat} state={rowFaceState(chat, state.tone)} />;
   const classes = [
     'row',
@@ -245,20 +210,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
           onBlur={marquee.stop}
           {...pointerListeners}
         >
-          <span
-            className="st"
-            role={state.label ? 'img' : undefined}
-            aria-label={state.label || undefined}
-          >
-            {face}
-            <span
-              key={state.tone}
-              className={`st-mark${state.tone !== firstTone ? ' enter' : ''}`}
-              aria-hidden="true"
-            >
-              <StatusMark tone={state.tone} />
-            </span>
-          </span>
+          <span className="st">{face}</span>
           <span className="rt">
             <span className="row-title-line">
               <RowTitle
@@ -269,17 +221,12 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
               />
               {chat.pullRequestMerged && <MergedMark />}
             </span>
-            {handle ? (
-              <span className="row-member">
-                <span className="row-handle">@{handle}</span>
-                <RowSub terminal={terminal} sub={state.sub} />
-              </span>
-            ) : (
-              <RowSub terminal={terminal} sub={state.sub} />
-            )}
+            {handle && <span className="sr-only">{`, @${handle}`}</span>}
+            {terminal && <span className="sr-only">, Terminal session</span>}
             {chat.match && <MatchSnippet match={chat.match} />}
             {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}
           </span>
+          <ChatBlob kind={blob} />
         </button>
       )}
       {history ? (

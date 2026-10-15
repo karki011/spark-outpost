@@ -52,7 +52,7 @@ test('an interrupted turn offers Continue from here, which resumes in a new turn
   const { runId } = await interruptedChat();
   await openChats(page);
 
-  await expect(row(page).locator('.sub')).toHaveText('Interrupted: continue or start fresh');
+  await expect(row(page).locator('.row-open')).toHaveAttribute('title', /Interrupted/);
   await expect(page.locator('.msg.ai .mood').last()).toHaveText('interrupted');
   await expect(page.locator('.error-line')).toHaveCount(0);
   await expect(card(page)).toContainText(/Spark Outpost stopped at .+ while this turn was running/);
