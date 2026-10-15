@@ -48,6 +48,8 @@ function app(name: string, bundleId: string, pid: number): MacApp {
   };
 }
 
+const CONVERSATION_MODES: Record<string, string> = { claude: 'default', codex: 'read-only' };
+
 export const CALCULATOR = app('Calculator', 'com.apple.calculator', 700);
 export const NOTES = app('Notes', 'com.apple.Notes', 701);
 export const SETTINGS = app('System Settings', 'com.apple.systempreferences', 702);
@@ -132,6 +134,7 @@ export interface MacCall {
 
 export interface MacSessionOptions {
   mode?: string;
+  provider?: string;
   macControl?: boolean;
   scope?: Partial<SparkScope>;
   noCards?: boolean;
@@ -158,12 +161,12 @@ export class MacHarness {
     await this.t.cleanup();
   }
 
-  async newChat(mode = 'default'): Promise<void> {
-    this.chat = await startChat(this.t, 'Use Calculator to work out 7 times 6');
-    await this.t.db.query(`UPDATE runs SET provider = 'claude', used_mode = $2 WHERE id = $1`, [
-      this.chat.runId,
-      mode,
-    ]);
+  async newChat(mode = 'default', provider = 'claude'): Promise<void> {
+    this.chat = await startChat(this.t, 'Work out 7 times 6');
+    await this.t.db.query(
+      `UPDATE runs SET provider = $2, agent_mode = $3, used_mode = $4 WHERE id = $1`,
+      [this.chat.runId, provider, mode, CONVERSATION_MODES[provider]],
+    );
   }
 
   async start(options: MacSessionOptions = {}): Promise<void> {
@@ -175,7 +178,7 @@ export class MacHarness {
       t.workspaceId,
       options.macControl ?? true,
     ]);
-    if (!this.chat.runId) await this.newChat(options.mode);
+    if (!this.chat.runId) await this.newChat(options.mode, options.provider);
     await this.client?.close();
     await this.host?.close();
     this.host = await startSparkMcpHost(toolDeps(t, { mac: this.fake }));
