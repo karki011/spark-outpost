@@ -99,7 +99,8 @@ describe('phone messages through the Claude mod', () => {
     }
     const { remote, mod, session, sent, taken, approvals } = setup();
     await mod.poll(session);
-    await expect(remote.message('c1', '/model')).rejects.toMatchObject({ status: 409 });
+    for (const text of ['/model', '\u0007/model', '\u0001!rm -rf x'])
+      await expect(remote.message('c1', text)).rejects.toMatchObject({ status: 409 });
     approvals.note({ conversationId: 'c1', provider: 'claude', tool: 'Bash', detail: 'ls' });
     await expect(remote.message('c1', 'hello')).rejects.toMatchObject({ status: 409 });
     expect([taken, sent]).toEqual([[], []]);

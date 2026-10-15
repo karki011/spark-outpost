@@ -29,7 +29,7 @@ const ESCAPE = '\u001b';
 const CODEX_MENU = /press enter to confirm or esc to cancel/i;
 const MENU_FOOTER = /esc to (?:cancel|go back)/i;
 const MENU_LINES = 15;
-export const COMMAND_PREFIX = /^\s*[/!]/;
+const COMMAND_PREFIX = /^\s*[/!]/;
 const PATCH_FILE = /^\*\*\* (?:Add|Update|Delete) File: (.+)$/m;
 const NOT_RUNNING = 'This Terminal session isn’t running. Start it again on your Mac.';
 const CHANGED = 'This approval has changed. Check the session again.';
@@ -68,6 +68,10 @@ export function withoutControls(text: string): string {
       return char === '\n' || char === '\t' || (code >= 0x20 && code !== 0x7f);
     })
     .join('');
+}
+
+export function runsCliCommand(text: string): boolean {
+  return COMMAND_PREFIX.test(withoutControls(text));
 }
 
 export function pastedMessage(text: string): string {
@@ -160,7 +164,7 @@ export function nativeRemote(deps: NativeRemoteDeps) {
   };
 
   const sendable = async (conversationId: string, session: LiveSession, text: string) => {
-    if (COMMAND_PREFIX.test(text)) throw new NativeRuntimeError(COMMAND, 409);
+    if (runsCliCommand(text)) throw new NativeRuntimeError(COMMAND, 409);
     if (await answerOpen(conversationId, session)) throw new NativeRuntimeError(WAITING, 409);
   };
   const submit = async (conversationId: string, session: LiveSession, text: string) => {
@@ -170,7 +174,7 @@ export function nativeRemote(deps: NativeRemoteDeps) {
     write(session, '\r');
   };
   const typeable = async (reason: string) => {
-    if (COMMAND_PREFIX.test(reason)) throw new NativeRuntimeError(COMMAND, 409);
+    if (runsCliCommand(reason)) throw new NativeRuntimeError(COMMAND, 409);
     if (!(await remoteAccess(deps.db, deps.workspaceId)).switches.terminal)
       throw new NativeRuntimeError(switchRefusal('terminal'), 403);
   };

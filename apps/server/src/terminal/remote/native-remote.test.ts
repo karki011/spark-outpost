@@ -139,7 +139,14 @@ describe('typing from a paired device', () => {
 
   it('refuses messages that would run a CLI command', async () => {
     const { remote, sent } = setup('claude');
-    for (const text of ['/model', '  !rm -rf build', '/permissions'])
+    for (const text of [
+      '/model',
+      '  !rm -rf build',
+      '/permissions',
+      '\u0007/model',
+      '\u0001!rm -rf x',
+      '\r/model',
+    ])
       await expect(remote.message('c1', text)).rejects.toMatchObject({ status: 409 });
     expect(sent).toEqual([]);
   });

@@ -4,7 +4,7 @@ import { nativeTerminalRow } from '../../persistence/native-terminals.ts';
 import { NativeRuntimeError } from '../native-control.ts';
 import type { TerminalApprovals } from './approvals.ts';
 import type { ModInbox } from './mod-inbox.ts';
-import { COMMAND_PREFIX, withoutControls, type NativeRemote } from './native-remote.ts';
+import { runsCliCommand, withoutControls, type NativeRemote } from './native-remote.ts';
 
 const WAITS_FOR_ANSWER = new Set(['waiting_for_permission', 'waiting_for_input']);
 const ASKED_FIRST =
@@ -24,9 +24,7 @@ export function withMod(
   waitsForAnswer: (conversationId: string) => Promise<boolean>,
 ) {
   const modTakes = async (conversationId: string, text: string): Promise<boolean> =>
-    mod.active(conversationId) &&
-    !COMMAND_PREFIX.test(text) &&
-    !(await waitsForAnswer(conversationId));
+    mod.active(conversationId) && !runsCliCommand(text) && !(await waitsForAnswer(conversationId));
 
   return {
     ...remote,
