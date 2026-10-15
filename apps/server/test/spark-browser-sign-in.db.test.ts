@@ -30,10 +30,12 @@ class FakeBrowserHost implements BrowserHost {
   readonly requests: BrowserHostRequest[] = [];
   url = `${ORIGIN}/login`;
   failure: BrowserHostError | null = null;
+  owner: 'user' | 'agent' = 'user';
 
   request(request: BrowserHostRequest): Promise<never> {
     this.requests.push(request);
-    if (this.failure && request.op === 'sign_in') return Promise.reject(this.failure);
+    const fails = request.op === 'sign_in' || request.op === 'act';
+    if (this.failure && fails) return Promise.reject(this.failure);
     return Promise.resolve(this.answer(request) as never);
   }
 
@@ -47,7 +49,7 @@ class FakeBrowserHost implements BrowserHost {
       url: this.url,
       title: `Welcome ${PLANTED.username}`,
       place: 'external',
-      owner: 'user',
+      owner: this.owner,
     };
     if (request.op === 'sign_in') {
       this.url = `${ORIGIN}/home?u=${encodeURIComponent(PLANTED.username)}&p=${encodeURIComponent(PLANTED.password)}`;
@@ -397,7 +399,11 @@ describe('a planted sign-in never reaches the agent or the record', () => {
     await chat.call('spark_browser_logs', { kind: 'network' });
     fake.failure = new BrowserHostError('failed', `The page said ${ECHO}`);
     await chat.call('spark_browser_sign_in', { signIn: 'Staging admin' });
+    fake.owner = 'agent';
+    fake.failure = new BrowserHostError('failed', `ref_1 is covered by dialog '${ECHO}'.`);
+    await chat.call('spark_browser_act', { action: 'click', ref: 'ref_1' });
 
+    expect(fake.ops('act')).toHaveLength(1);
     expect(read.url).toBe(`${ORIGIN}/home?u=${SIGN_IN_HIDDEN}&p=${SIGN_IN_HIDDEN}`);
     expect(chat.results.join('\n')).toContain(SIGN_IN_HIDDEN);
     expect(plantedIn(chat.results.join('\n'))).toEqual([]);

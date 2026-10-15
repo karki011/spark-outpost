@@ -1,0 +1,118 @@
+body {
+  margin: 0;
+}
+
+#buy,
+#partial,
+#ghost,
+#send,
+.host {
+  position: absolute;
+  left: 24px;
+  width: 160px;
+  height: 40px;
+  display: block;
+}
+
+#buy {
+  top: 70px;
+}
+
+#banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 160px;
+  padding: 16px;
+  box-sizing: border-box;
+  background: #fff3cd;
+  border-bottom: 2px solid #c90;
+}
+
+#partial {
+  top: 240px;
+}
+
+#sticky {
+  position: fixed;
+  top: 230px;
+  left: 0;
+  width: 240px;
+  height: 30px;
+  background: #ccc;
+}
+
+#ghost {
+  top: 320px;
+  pointer-events: none;
+}
+
+#faded {
+  position: absolute;
+  top: 320px;
+  left: 260px;
+  opacity: 0;
+}
+
+#honeypot {
+  position: absolute;
+  top: 320px;
+  left: -9999px;
+}
+
+#agree-control {
+  position: absolute;
+  top: 380px;
+  left: 260px;
+  width: 24px;
+  height: 24px;
+}
+
+#agree-box,
+#agree {
+  position: absolute;
+  inset: 0;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+}
+
+#agree-box {
+  border: 2px solid #36d;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+#agree {
+  opacity: 0;
+}
+
+#open-host {
+  top: 400px;
+}
+
+#closed-host {
+  top: 460px;
+}
+
+#log {
+  position: absolute;
+  top: 540px;
+  left: 24px;
+}
+
+#send {
+  top: 90px;
+  width: 200px;
+}
+
+#trap {
+  position: fixed;
+  top: 60px;
+  left: 0;
+  width: 320px;
+  height: 100px;
+  opacity: 0;
+  background: #f00;
+}

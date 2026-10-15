@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { expect, test, type CDPSession, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import type { Cdp } from '../../apps/desktop/src/browser/cdp.ts';
 import { RefMap } from '../../apps/desktop/src/browser/outline.ts';
 import { capturePageLogs } from '../../apps/desktop/src/browser/page-capture.ts';
@@ -8,6 +8,7 @@ import { readPage } from '../../apps/desktop/src/browser/page-read.ts';
 import { SIGN_IN_REASONS } from '../../apps/desktop/src/browser/sign-in-fields.ts';
 import { SignInError, signInOnPage } from '../../apps/desktop/src/browser/sign-in.ts';
 import { scrubberFor } from '../../apps/server/src/spark-mcp/tools/browser/scrub.ts';
+import { cdpOf } from './playwright-cdp.ts';
 
 const FIXTURES = path.resolve(import.meta.dirname, '../fixtures/browser-pane');
 const SITE = 'http://vault.test';
@@ -20,36 +21,6 @@ const TYPES: Record<string, string> = {
   '.js': 'text/javascript',
   '.css': 'text/css',
 };
-const EVENTS = [
-  'Page.frameStartedLoading',
-  'Page.frameRequestedNavigation',
-  'Page.frameNavigated',
-  'Page.loadEventFired',
-  'Page.navigatedWithinDocument',
-  'Runtime.consoleAPICalled',
-  'Runtime.exceptionThrown',
-  'Log.entryAdded',
-  'Network.requestWillBeSent',
-  'Network.responseReceived',
-  'Network.loadingFailed',
-] as const;
-
-function cdpOf(session: CDPSession): Cdp {
-  return {
-    send: (method, params) => session.send(method as never, params as never) as Promise<never>,
-    listen(listener) {
-      const handlers = EVENTS.map((name) => {
-        const handler = (params: unknown) =>
-          listener(name, (params ?? {}) as Record<string, unknown>);
-        session.on(name, handler as never);
-        return { name, handler };
-      });
-      return () => handlers.forEach(({ name, handler }) => session.off(name, handler as never));
-    },
-    detach: () => void session.detach(),
-  };
-}
-
 interface Site {
   cdp: Cdp;
   posted: URLSearchParams[];
