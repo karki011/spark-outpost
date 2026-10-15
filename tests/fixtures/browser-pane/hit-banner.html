@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fixture shop</title>
+    <link rel="stylesheet" href="site.css" />
+    <link rel="stylesheet" href="hit.css" />
+  </head>
+  <body>
+    <main>
+      <button id="buy" type="button">Buy now</button>
+      <button id="partial" type="button">Half hidden</button>
+      <div id="sticky">Sticky header</div>
+      <button id="ghost" type="button">Ghost</button>
+      <div id="faded"><button id="invisible" type="button">Invisible</button></div>
+      <span id="open-host" class="host"></span>
+      <span id="closed-host" class="host"></span>
+      <p id="log" role="status">Nothing clicked yet</p>
+    </main>
+    <div id="banner" role="dialog" aria-label="Cookie consent">
+      <p>We use cookies to run this shop.</p>
+      <button id="accept" type="button">Accept cookies</button>
+    </div>
+    <script src="hit-banner.js"></script>
+  </body>
+</html>

@@ -1,0 +1,85 @@
+body {
+  margin: 0;
+}
+
+#buy,
+#partial,
+#ghost,
+#send,
+.host {
+  position: absolute;
+  left: 24px;
+  width: 160px;
+  height: 40px;
+  display: block;
+}
+
+#buy {
+  top: 70px;
+}
+
+#banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 160px;
+  padding: 16px;
+  box-sizing: border-box;
+  background: #fff3cd;
+  border-bottom: 2px solid #c90;
+}
+
+#partial {
+  top: 240px;
+}
+
+#sticky {
+  position: fixed;
+  top: 230px;
+  left: 0;
+  width: 240px;
+  height: 30px;
+  background: #ccc;
+}
+
+#ghost {
+  top: 320px;
+  pointer-events: none;
+}
+
+#faded {
+  position: absolute;
+  top: 320px;
+  left: 260px;
+  opacity: 0;
+}
+
+#open-host {
+  top: 400px;
+}
+
+#closed-host {
+  top: 460px;
+}
+
+#log {
+  position: absolute;
+  top: 540px;
+  left: 24px;
+}
+
+#send {
+  top: 90px;
+  width: 200px;
+}
+
+#trap {
+  position: fixed;
+  top: 60px;
+  left: 0;
+  width: 320px;
+  height: 100px;
+  opacity: 0;
+  background: #f00;
+}

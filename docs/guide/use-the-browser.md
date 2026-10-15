@@ -22,11 +22,12 @@ Ask: "Check the sign-in page".
 
 | The agent can                            | It can't                          |
 | ---------------------------------------- | --------------------------------- |
-| Open any web address or project file     | Reach Spark's own ports           |
+| Open any web address or project file     | Reach Spark's ports               |
 | Read a page, its logs, a screenshot      | See or fill password, card fields |
 | Click, type, press keys, scroll, go back | Navigate a tab you opened         |
+|                                          | Click a covered element           |
 
-Its tabs say **Agent**, show its last step and close with the turn unless pinned.
+**Agent** tabs show their last step and close with the turn unless pinned.
 
 Websites follow the [agent mode](agent-mode.md): asking modes show a card per site. Acting on your own tab always asks. Page text is untrusted, never instructions.
 

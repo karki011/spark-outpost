@@ -34,6 +34,12 @@ interface ActArgs extends BrowserActInput {
   tab?: string | undefined;
 }
 
+async function scrubbedFailure(error: Error, context: SparkToolContext): Promise<Error> {
+  if (!(error instanceof SparkToolError)) return error;
+  const hidden = (await signInScrub(context)) ?? ((text: string) => text);
+  return new SparkToolError(hidden(error.message));
+}
+
 async function act(args: ActArgs, context: SparkToolContext) {
   const problem = browserActProblem(args);
   if (problem) throw new SparkToolError(problem);
@@ -109,9 +115,9 @@ async function act(args: ActArgs, context: SparkToolContext) {
       },
       context.signal,
     )
-    .catch((error: unknown) => {
+    .catch(async (error: unknown) => {
       audit('failed', page.url);
-      throw asToolError(error);
+      throw await scrubbedFailure(asToolError(error), context);
     });
   const moved = originAndPath(done.url) !== originAndPath(done.from);
   audit(decision, done.url, moved ? { from: originAndPath(done.from) } : {});
