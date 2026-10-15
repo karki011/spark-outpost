@@ -47,6 +47,12 @@ async function readCost($) {
   }
 }
 
+function costed($, ledger) {
+  const read = ledger.reads.then(async () => ledger.facts.cost(await readCost($)));
+  ledger.reads = read.then(() => undefined);
+  return read;
+}
+
 function sent(response) {
   return response.ok || (response.status >= 400 && response.status < 500 && response.status !== 401);
 }
@@ -54,23 +60,21 @@ function sent(response) {
 export function register(on) {
   let line = null;
   const facts = telemetry();
-  let costs = Promise.resolve();
-  const costed = ($) => {
-    const read = costs.then(async () => facts.cost(await readCost($)));
-    costs = read.then(() => undefined);
-    return read;
-  };
+  const ledger = { facts, reads: Promise.resolve() };
   on('classic.UserPromptSubmit', async ($, e, next) => {
     facts.prompted(e.prompt_id);
     return next(e);
   }).catch(($, e, next) => next(e));
   on('turn.start', async ($, e, next) => {
-    if (fromEngine(next.origin)) facts.turnStarted(e, Math.round(await $.clock.now()));
+    if (!fromEngine(next.origin)) return next(e);
+    if (!e.agentId && facts.idle()) facts.between(await costed($, ledger));
+    facts.turnStarted(e, Math.round(await $.clock.now()));
     return next(e);
   });
   on('turn.step', async function* ($, e, next) {
+    if (fromEngine(next.origin)) facts.stepping(e);
     const result = yield* next(e);
-    if (result.usage && fromEngine(next.origin)) facts.stepped(e, result.usage, await costed($));
+    if (result.usage && fromEngine(next.origin)) facts.stepped(e, result.usage, await costed($, ledger));
     return result;
   });
   on('turn.complete', async ($, e, next) => {
@@ -91,7 +95,7 @@ export function register(on) {
     return h(Text, { dimColor: true, wrap: 'truncate-end' }, line);
   });
   on('session.start', async ($, e, next) => {
-    await costed($);
+    await costed($, ledger);
     let config = null;
     let busy = false;
     const show = (text) => {
@@ -108,6 +112,7 @@ export function register(on) {
       );
     };
     const poll = async () => {
+      if (facts.idle()) facts.between(await costed($, ledger));
       config ??= JSON.parse(await $.fs.read($.plugin.root + '/../observer.json'));
       const response = await $.http.fetch(new URL('/mod/inbox', config.url).href, {
         method: 'POST',

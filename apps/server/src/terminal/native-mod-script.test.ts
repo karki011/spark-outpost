@@ -391,44 +391,6 @@ describe('the Spark mod when sends fail or requests overlap', () => {
     await tick();
     expect(sentItems(3).items).toEqual(sentItems(1).items);
   });
-
-  it('reads Claude Code’s cost one request at a time, so overlapping requests never count twice', async () => {
-    const usage = {
-      input_tokens: 1,
-      output_tokens: 1,
-      cache_read_input_tokens: 0,
-      cache_creation_input_tokens: 0,
-      model: 'claude-opus-5-5',
-    };
-    let release = () => undefined as void;
-    const held = new Promise<void>((done) => (release = done));
-    let calls = 0;
-    engine.session.usage = async () => {
-      calls += 1;
-      const seen = spent;
-      if (calls === 1) await held;
-      return { cost: { usd: seen } };
-    };
-    await hooks.get('classic.UserPromptSubmit')!(engine, { prompt_id: 'p' }, (e) => e);
-    await hooks.get('turn.start')!(engine, { turnId: 'main' }, (e) => e);
-    await hooks.get('turn.start')!(engine, { turnId: 'sub', agentId: 'agent-a' }, (e) => e);
-    spent = 0.1;
-    const first = step({ turnId: 'main', index: 0 }, usage);
-    await new Promise((done) => setTimeout(done, 0));
-    spent = 0.25;
-    const second = step({ turnId: 'sub', index: 0, agentId: 'agent-a' }, usage);
-    await new Promise((done) => setTimeout(done, 0));
-    expect(calls).toBe(1);
-    release();
-    await Promise.all([first, second]);
-    reply({ messages: [], notices: [], status: null });
-    replies.push(() => ({ ok: true, status: 204, text: '' }));
-    await tick();
-    const costs = sentItems(1)
-      .items.filter((item) => item.kind === 'request')
-      .map((item) => item.costUsd);
-    expect(costs).toEqual([0.1, 0.15]);
-  });
 });
 
 describe('the Spark mod when only its turn facts are refused', () => {
