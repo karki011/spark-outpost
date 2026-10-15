@@ -4,14 +4,22 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { supportsMods, writeSparkMod } from './native-mod-script.ts';
+import { MOD_SEND_MAX } from './native-mod-telemetry-script.ts';
 
-type Hook = ($: FakeEngine, e: Record<string, unknown>, next: (e: unknown) => unknown) => unknown;
+type Next = ((e: unknown) => unknown) & { origin?: { plugin: string; tier: string } };
+type Hook = ($: FakeEngine, e: Record<string, unknown>, next: Next) => unknown;
 
 interface FakeEngine {
   plugin: { root: string };
   fs: { read: (path: string) => Promise<string> };
-  http: { fetch: (url: string, init: RequestInit) => Promise<{ ok: boolean; text: string }> };
-  clock: { every: (ms: number, fn: () => Promise<void>) => () => void };
+  http: {
+    fetch: (
+      url: string,
+      init: RequestInit,
+    ) => Promise<{ ok: boolean; status?: number; text: string }>;
+  };
+  clock: { every: (ms: number, fn: () => Promise<void>) => () => void; now: () => Promise<number> };
+  session: { usage: () => Promise<{ cost?: { usd: number } }> };
   prompt: { submit: (input: { text: string; asUser: true }) => Promise<unknown> };
   ui: {
     log: (text: string) => void;
@@ -24,7 +32,8 @@ let folder: string;
 let hooks: Map<string, Hook>;
 let tick: () => Promise<void>;
 let requests: { url: string; init: RequestInit }[];
-let replies: (() => { ok: boolean; text: string })[];
+let replies: (() => { ok: boolean; status?: number; text: string })[];
+let spent: number;
 let submitted: { text: string; asUser: true }[];
 let logs: string[];
 let redraws: number;
@@ -56,6 +65,7 @@ beforeEach(async () => {
   submitted = [];
   logs = [];
   redraws = 0;
+  spent = 0;
   engine = {
     plugin: { root },
     fs: { read: (path) => readFile(path, 'utf8') },
@@ -72,7 +82,9 @@ beforeEach(async () => {
         tick = fn;
         return () => undefined;
       },
+      now: async () => 1_792_000_000_000.4,
     },
+    session: { usage: async () => ({ cost: { usd: spent } }) },
     prompt: {
       submit: async (input) => {
         submitted.push(input);
@@ -91,8 +103,11 @@ beforeEach(async () => {
   const module = (await import(pathToFileURL(join(root, 'hooks/register.js')).href)) as {
     register: (on: (event: string, matcher: unknown, hook?: Hook) => void) => void;
   };
-  module.register((event, matcher, hook) => hooks.set(event, (hook ?? matcher) as Hook));
-  hooks.get('session.start')!(engine, {}, (e) => e);
+  module.register((event, matcher, hook) => {
+    hooks.set(event, (hook ?? matcher) as Hook);
+    return { catch: () => undefined };
+  });
+  await hooks.get('session.start')!(engine, {}, (e) => e);
 });
 
 afterEach(async () => {
@@ -184,6 +199,181 @@ describe('the Spark mod', () => {
     await tick();
     await new Promise((done) => setTimeout(done, 0));
     expect(logs).toEqual(['Spark: a message from your phone was not sent. Type it here instead.']);
+  });
+});
+
+async function step(e: Record<string, unknown>, usage: Record<string, unknown> | null) {
+  const hook = hooks.get('turn.step') as unknown as (
+    ...args: Parameters<Hook>
+  ) => AsyncGenerator<unknown, unknown, unknown>;
+  const generator = hook(engine, e, async function* () {
+    yield { kind: 'text', text: 'hello' };
+    return { usage };
+  } as unknown as Next);
+  let next = await generator.next();
+  while (!next.done) next = await generator.next();
+  return next.value;
+}
+
+const ENGINE = { plugin: 'engine', tier: 'core' };
+
+async function oneTurn() {
+  const engineCall: Next = Object.assign((e: unknown) => e, { origin: ENGINE });
+  await hooks.get('classic.UserPromptSubmit')!(engine, { prompt_id: 'prompt-1' }, engineCall);
+  await hooks.get('turn.start')!(engine, { turnId: 'turn-1', text: 'secret prompt' }, engineCall);
+  const call = { tool: 'Bash', tool_use_id: 'toolu_1', command: 'cat .env', description: 'x' };
+  const ran = async () => ({ isError: true, text: 'tool-printed-this' });
+  await hooks.get('tool.call')!(engine, call, Object.assign(ran, { origin: ENGINE }));
+  spent = 0.25;
+  const usage = {
+    input_tokens: 3,
+    output_tokens: 40,
+    cache_read_input_tokens: 900,
+    cache_creation_input_tokens: 100,
+    model: 'claude-opus-5-5',
+  };
+  await step({ turnId: 'turn-1', index: 0, model: 'claude-opus-5-5' }, usage);
+  await hooks.get('turn.complete')!(
+    engine,
+    { turnId: 'turn-1', durationMs: 1234.6, isAborted: false, answer: 'secret reply' },
+    engineCall,
+  );
+}
+
+function sentItems(index: number) {
+  return JSON.parse(String(requests[index]!.init.body)) as { items: Record<string, unknown>[] };
+}
+
+describe('the Spark mod’s turn facts', () => {
+  it('sends Spark only names, times, token counts and cost, never commands, prompts or replies', async () => {
+    await oneTurn();
+    reply({ messages: [], notices: [], status: null });
+    replies.push(() => ({ ok: true, status: 204, text: '' }));
+    await tick();
+    expect(requests[1]!.url).toBe('http://127.0.0.1:4100/mod/telemetry');
+    expect(requests[1]!.init.headers).toMatchObject({ Authorization: 'Bearer first-token' });
+    const { items } = sentItems(1);
+    const at = 1_792_000_000_000;
+    expect(items).toEqual([
+      { kind: 'turn_start', prompt: 'prompt-1', agent: null, turn: 'turn-1', at },
+      {
+        kind: 'tool',
+        prompt: 'prompt-1',
+        agent: null,
+        id: 'toolu_1',
+        name: 'Bash',
+        phase: 'start',
+        failed: false,
+        at,
+      },
+      {
+        kind: 'tool',
+        prompt: 'prompt-1',
+        agent: null,
+        id: 'toolu_1',
+        name: 'Bash',
+        phase: 'end',
+        failed: true,
+        at,
+      },
+      {
+        kind: 'request',
+        prompt: 'prompt-1',
+        agent: null,
+        turn: 'turn-1',
+        index: 0,
+        model: 'claude-opus-5-5',
+        input: 3,
+        output: 40,
+        cacheRead: 900,
+        cacheWrite: 100,
+        costUsd: 0.25,
+      },
+      {
+        kind: 'turn_end',
+        prompt: 'prompt-1',
+        agent: null,
+        turn: 'turn-1',
+        at,
+        durationMs: 1235,
+        aborted: false,
+      },
+    ]);
+    expect(String(requests[1]!.init.body)).not.toMatch(
+      /cat \.env|secret|description|tool-printed-this/,
+    );
+  });
+
+  it('keeps the facts for the next poll when Spark is away or the token is stale', async () => {
+    await oneTurn();
+    reply({ messages: [], notices: [], status: null });
+    replies.push(() => ({ ok: false, status: 401, text: '' }));
+    await tick();
+    reply({ messages: [], notices: [], status: null });
+    replies.push(() => ({ ok: true, status: 204, text: '' }));
+    await tick();
+    expect(sentItems(3).items).toEqual(sentItems(1).items);
+    reply({ messages: [], notices: [], status: null });
+    await tick();
+    expect(requests).toHaveLength(5);
+  });
+
+  it('sends the facts in batches of a bounded size', async () => {
+    await hooks.get('classic.UserPromptSubmit')!(engine, { prompt_id: 'p' }, (e) => e);
+    for (let index = 0; index < 225; index++)
+      await hooks.get('tool.call')!(
+        engine,
+        { tool: 'Read', tool_use_id: `toolu_${index}` },
+        async () => ({}),
+      );
+    reply({ messages: [], notices: [], status: null });
+    for (let round = 0; round < 3; round++)
+      replies.push(() => ({ ok: true, status: 204, text: '' }));
+    await tick();
+    expect([1, 2, 3].map((index) => sentItems(index).items.length)).toEqual([
+      MOD_SEND_MAX,
+      MOD_SEND_MAX,
+      450 - 2 * MOD_SEND_MAX,
+    ]);
+  });
+
+  it('drops a batch Spark turned down, so one bad item never blocks the rest', async () => {
+    await oneTurn();
+    reply({ messages: [], notices: [], status: null });
+    replies.push(() => ({ ok: false, status: 400, text: '' }));
+    await tick();
+    reply({ messages: [], notices: [], status: null });
+    await tick();
+    expect(requests.map((request) => new URL(request.url).pathname)).toEqual([
+      '/mod/inbox',
+      '/mod/telemetry',
+      '/mod/inbox',
+    ]);
+  });
+
+  it('attributes a subagent to the turn that started it and skips facts other mods raised', async () => {
+    const engineCall = Object.assign((e: unknown) => e, {
+      origin: { plugin: 'engine', tier: 'core' },
+    });
+    const pluginCall = Object.assign((e: unknown) => e, {
+      origin: { plugin: 'other-mod', tier: 'user' },
+    });
+    await hooks.get('classic.UserPromptSubmit')!(engine, { prompt_id: 'prompt-1' }, engineCall);
+    await hooks.get('turn.start')!(engine, { turnId: 'sub-1', agentId: 'agent-a' }, engineCall);
+    await hooks.get('classic.UserPromptSubmit')!(engine, { prompt_id: 'prompt-2' }, engineCall);
+    await hooks.get('turn.start')!(engine, { turnId: 'mine', agentId: 'agent-b' }, pluginCall);
+    await hooks.get('turn.complete')!(
+      engine,
+      { turnId: 'sub-1', agentId: 'agent-a', durationMs: 5, isAborted: true },
+      engineCall,
+    );
+    reply({ messages: [], notices: [], status: null });
+    replies.push(() => ({ ok: true, status: 204, text: '' }));
+    await tick();
+    expect(sentItems(1).items.map((item) => [item.kind, item.prompt, item.agent])).toEqual([
+      ['turn_start', 'prompt-1', 'agent-a'],
+      ['turn_end', 'prompt-1', 'agent-a'],
+    ]);
   });
 });
 

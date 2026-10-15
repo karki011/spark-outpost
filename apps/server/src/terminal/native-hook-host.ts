@@ -9,14 +9,16 @@ export type PermissionHandler = (
 ) => Promise<ApprovalAnswer | null>;
 
 export type InboxHandler = (token: string) => Promise<unknown>;
+export type TelemetryHandler = (token: string, body: unknown) => Promise<boolean>;
 
-const PATHS = new Set(['/events', '/permission', '/mod/inbox']);
+const PATHS = new Set(['/events', '/permission', '/mod/inbox', '/mod/telemetry']);
 
 export async function nativeHookHost(
   authorised: (token: string) => boolean,
   observe: (token: string, body: unknown) => Promise<boolean>,
   permission: PermissionHandler,
   inbox: InboxHandler = async () => null,
+  telemetry: TelemetryHandler = async () => false,
 ) {
   let host = '';
   const handle = async (req: IncomingMessage, res: ServerResponse) => {
@@ -44,6 +46,8 @@ export async function nativeHookHost(
       if (reply === null) return res.writeHead(404).end();
       return res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(reply));
     }
+    if (req.url === '/mod/telemetry')
+      return res.writeHead((await telemetry(token, body)) ? 204 : 400).end();
     if (req.url === '/permission') {
       const gone = new AbortController();
       res.once('close', () => gone.abort());

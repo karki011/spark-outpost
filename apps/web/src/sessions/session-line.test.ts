@@ -70,6 +70,7 @@ function turn(patch: Partial<NativeTerminalTurn> = {}): NativeTerminalTurn {
     model: 'claude-opus-4-1[1m]',
     tokens: null,
     costUsd: 0.1234,
+    durationMs: null,
     costSource: 'estimated',
     steps: [],
     ...patch,

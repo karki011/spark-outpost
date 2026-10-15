@@ -20,6 +20,7 @@ import {
 } from './native-context.ts';
 import { NativeRuntimeError, type nativeControl } from './native-control.ts';
 import { parseNativeHook, type NativeHookEvent } from './native-hooks.ts';
+import { readModTelemetry, recordModTelemetry } from './mod-telemetry.ts';
 import type { NativeUsage } from './native-usage.ts';
 import type { LiveSession } from './native-runtime-types.ts';
 
@@ -265,5 +266,20 @@ export function nativeObserver({
       return true;
     });
   };
-  return { hook, resumeUsage: (session: LiveSession) => usage.resume(session, interruptedTwice) };
+  const telemetry = async (token: string, body: unknown) => {
+    const session = tokens.get(digest(token));
+    const items = readModTelemetry(body);
+    if (!session || session.row.provider !== 'claude' || !items) return false;
+    const aborted = await enqueue(session, async () => {
+      if (tokens.get(session.hookKey) !== session) return null;
+      return recordModTelemetry(db, (prompt) => usage.promptRun(session, prompt), items);
+    });
+    for (const prompt of aborted ?? []) void interruptedTwice(session, prompt);
+    return aborted !== null;
+  };
+  return {
+    hook,
+    telemetry,
+    resumeUsage: (session: LiveSession) => usage.resume(session, interruptedTwice),
+  };
 }

@@ -85,7 +85,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
   const usage = nativeUsage(deps.db, deps.watchTranscript ?? watchTranscript, enqueue);
   const control = nativeControl(deps.db, live, tokens, usage);
   const { syncScope, finish } = control;
-  const { hook, resumeUsage } = nativeObserver({
+  const { hook, resumeUsage, telemetry } = nativeObserver({
     db: deps.db,
     waiters,
     tokens,
@@ -117,6 +117,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       const session = tokens.get(digest(token));
       return session ? mod.poll(session) : null;
     },
+    telemetry,
   );
   const exited = (running: LiveSession) => (exit: { exitCode: number }) => {
     const state = exit.exitCode === 0 ? 'exited' : 'error';

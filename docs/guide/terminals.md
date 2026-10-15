@@ -8,7 +8,7 @@ summary: Run commands beside a chat, or work with Claude Code or Codex in a Term
 
 Open an AI terminal. About 1 minute.
 
-> **Important:** A Terminal session runs the provider's CLI under the agent's mode. Spark's cards, [protected paths](protected-paths.md) and audit don't apply. Spark records state, tool names and times, tokens and estimated cost, never commands or replies: Work panel **Steps** and **Cost**.
+> **Important:** A Terminal session runs the provider's CLI under the agent's mode. Spark's cards, [protected paths](protected-paths.md) and audit don't apply. Spark records state, tool names and times, tokens and cost, never commands or replies: Work panel **Steps** and **Cost**.
 
 ## Start a Terminal session
 

@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { sparkModTelemetryScript } from './native-mod-telemetry-script.ts';
 
 export const MOD_POLL_MS = 1_000;
 export const MOD_NAME = 'spark-outpost';
@@ -17,7 +18,10 @@ export function supportsMods(version: string): boolean {
 
 export function sparkModScript(): string {
   return String.raw`
+import { fromEngine, telemetry } from './telemetry.js';
+
 const POLL_MS = ${MOD_POLL_MS};
+const SEND_ROUNDS = 10;
 const NOT_SENT = 'Spark: a message from your phone was not sent. Type it here instead.';
 
 function strings(value) {
@@ -34,14 +38,59 @@ export function readInbox(text) {
   };
 }
 
+function sent(response) {
+  return response.ok || (response.status >= 400 && response.status < 500 && response.status !== 401);
+}
+
 export function register(on) {
   let line = null;
+  const facts = telemetry();
+  on('classic.UserPromptSubmit', async ($, e, next) => {
+    facts.prompted(e.prompt_id);
+    return next(e);
+  }).catch(($, e, next) => next(e));
+  on('turn.start', async ($, e, next) => {
+    if (fromEngine(next.origin)) facts.turnStarted(e, Math.round(await $.clock.now()));
+    return next(e);
+  });
+  on('turn.step', async function* ($, e, next) {
+    const result = yield* next(e);
+    if (result.usage && fromEngine(next.origin)) {
+      let usd = null;
+      try {
+        const usage = await $.session.usage();
+        usd = usage.cost ? usage.cost.usd : null;
+      } catch {
+        usd = null;
+      }
+      facts.stepped(e, result.usage, facts.cost(usd));
+    }
+    return result;
+  });
+  on('turn.complete', async ($, e, next) => {
+    if (fromEngine(next.origin)) facts.turnEnded(e, Math.round(await $.clock.now()));
+    return next(e);
+  });
+  on('tool.call', async ($, e, next) => {
+    const watched = fromEngine(next.origin);
+    if (watched) facts.tool(e, 'start', false, Math.round(await $.clock.now()));
+    const result = await next(e);
+    const failed = Boolean(result && (result.isError || result.deny));
+    if (watched) facts.tool(e, 'end', failed, Math.round(await $.clock.now()));
+    return result;
+  }).catch(($, e, next) => next(e));
   on('ui.render', { component: 'AbovePrompt' }, ($, e, next) => {
     if (line === null || e.props.hasSurvey) return next(e);
     const { Text } = $.ui.resolve(e);
     return h(Text, { dimColor: true, wrap: 'truncate-end' }, line);
   });
-  on('session.start', ($, e, next) => {
+  on('session.start', async ($, e, next) => {
+    try {
+      const usage = await $.session.usage();
+      facts.cost(usage.cost ? usage.cost.usd : null);
+    } catch {
+      facts.cost(null);
+    }
     let config = null;
     let busy = false;
     const show = (text) => {
@@ -69,6 +118,18 @@ export function register(on) {
       show(inbox.status);
       for (const notice of inbox.notices) $.ui.log(notice);
       for (const text of inbox.messages) submit(text);
+      for (let round = 0; round < SEND_ROUNDS; round++) {
+        const items = facts.take();
+        if (items.length === 0) return;
+        const answer = await $.http.fetch(new URL('/mod/telemetry', config.url).href, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + config.token },
+          body: JSON.stringify({ items }),
+        });
+        if (sent(answer)) continue;
+        facts.putBack(items);
+        throw new Error('Spark refused the telemetry request.');
+      }
     };
     $.clock.every(POLL_MS, async () => {
       if (busy) return;
@@ -98,12 +159,14 @@ export async function writeSparkMod(directory: string): Promise<string> {
       JSON.stringify({
         name: MOD_NAME,
         version: '1.0.0',
-        description: 'Spark Outpost: messages from your paired phone and its status line.',
+        description:
+          'Spark Outpost: messages from your paired phone, its status line, and turn usage for Spark.',
         author: { name: 'Spark Outpost' },
       }),
     ],
     ['hooks/hooks.json', JSON.stringify({ modules: ['./register.js'] })],
     ['hooks/register.js', sparkModScript()],
+    ['hooks/telemetry.js', sparkModTelemetryScript()],
   ];
   for (const [path, text] of files)
     await writeFile(join(root, path), text, { mode: 0o600, flag: 'wx' });

@@ -25,6 +25,7 @@ interface TurnRow {
   thought_tokens: number | null;
   cost_usd: string | null;
   cost_source: CostSource | null;
+  duration_ms: number | null;
 }
 
 function turnTokens(row: TurnRow): NativeTerminalTurn['tokens'] {
@@ -68,7 +69,9 @@ export async function nativeTerminalUsage(
     db.query<TurnRow>(
       `SELECT r.id, r.status, r.created_at, r.used_model AS model, r.input_tokens, r.output_tokens,
          r.total_tokens, r.cached_read_tokens, r.cached_write_tokens, r.thought_tokens,
-         r.cost_usd::text AS cost_usd, r.cost_source
+         r.cost_usd::text AS cost_usd, r.cost_source,
+         (SELECT sum(m.duration_ms)::int FROM native_terminal_mod_turns m
+          WHERE m.run_id = r.id AND m.agent_id IS NULL) AS duration_ms
        FROM runs r JOIN conversations c ON c.id = r.conversation_id
        WHERE r.conversation_id = $1 AND c.session_type = 'terminal' AND r.parent_run_id IS NULL
        ORDER BY r.created_at`,
@@ -93,6 +96,7 @@ export async function nativeTerminalUsage(
       tokens: turnTokens(row),
       costUsd: row.cost_usd === null ? null : Number(row.cost_usd),
       costSource: row.cost_usd === null ? null : row.cost_source,
+      durationMs: row.duration_ms,
       steps: steps.get(row.id) ?? [],
     })),
     reported: reportedTotals(reported.rows),
@@ -118,7 +122,9 @@ export async function recordNativeTurnUsage(
        cost_usd = CASE WHEN cost_source = 'reported' THEN cost_usd ELSE $9::numeric END,
        cost_source = CASE WHEN cost_source = 'reported' THEN cost_source
          WHEN $9::numeric IS NULL THEN NULL ELSE 'estimated' END
-     WHERE id = $1`,
+     WHERE id = $1 AND NOT EXISTS (
+       SELECT 1 FROM native_terminal_mod_turns m
+       WHERE m.run_id = $1 AND m.agent_id IS NULL AND m.started_at IS NOT NULL)`,
     [
       runId,
       tokens.input,

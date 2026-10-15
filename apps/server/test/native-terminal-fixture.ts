@@ -162,6 +162,18 @@ export async function nativeRuntimeFixture(
       });
       return response.status;
     },
+    async modFacts(items: unknown[]) {
+      const input = inputs.at(-1)!;
+      const response = await fetch(new URL('/mod/telemetry', input.hooks.url), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${input.hooks.token}`,
+        },
+        body: JSON.stringify({ items }),
+      });
+      return response.status;
+    },
     async restart() {
       await this.runtime.dispose();
       this.runtime = await createNativeRuntime(deps);

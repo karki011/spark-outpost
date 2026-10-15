@@ -24,7 +24,11 @@ function stepState(step: NativeTerminalStep, live: boolean): StepState {
 
 export function stepDuration(step: Pick<NativeTerminalStep, 'startedAt' | 'endedAt'>): string {
   if (step.startedAt === null || step.endedAt === null) return '';
-  const ms = Math.max(0, Date.parse(step.endedAt) - Date.parse(step.startedAt));
+  return durationText(Date.parse(step.endedAt) - Date.parse(step.startedAt));
+}
+
+export function durationText(elapsed: number): string {
+  const ms = Math.max(0, elapsed);
   if (ms < 1000) return `${ms} ms`;
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)} s`;
   return `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1000)}s`;

@@ -187,6 +187,14 @@ export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
       const owner = transcript?.prompts.get(promptId)?.owner;
       return (owner && transcript?.turns.get(owner)?.runId) || null;
     },
+    promptRun(session: LiveSession, promptId: string): string | null {
+      for (const transcript of chain(session.transcript)) {
+        const runId = stepRun(transcript, promptId);
+        if (runId) return runId;
+      }
+      const open = session.context && session.row.native_turn_id === promptId;
+      return open ? session.context!.input.identity.runId : null;
+    },
     onNotTyped(handler: OnNotTyped) {
       notTyped = handler;
     },

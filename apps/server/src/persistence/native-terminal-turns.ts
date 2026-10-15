@@ -7,6 +7,7 @@ import { runEvents } from '../workflow/run-events.ts';
 import { expirePendingApprovals } from './approvals.ts';
 import { writeArtifact } from './artifacts.ts';
 import { withTransaction, type Db, type DbClient } from './db.ts';
+import { moveModUsage } from './native-terminal-mod-usage.ts';
 import { notifyNativeTerminal, type NativeTerminalRow } from './native-terminals.ts';
 import { insertRunEvent, type AppendOptions } from './run-events.ts';
 
@@ -390,6 +391,7 @@ export async function retractNativeRun(
          SELECT 1 FROM native_terminal_steps o WHERE o.run_id = $2 AND o.tool_use_id = s.tool_use_id)`,
       [runId, ownerRunId],
     );
+    await moveModUsage(client, runId, ownerRunId);
     await client.query(
       'UPDATE native_terminal_sessions SET active_run_id = NULL WHERE id = $1 AND active_run_id = $2',
       [row.id, runId],

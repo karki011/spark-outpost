@@ -5,6 +5,7 @@ import {
   setNativeTerminalState,
 } from '../persistence/native-terminal-turns.ts';
 import { SparkToolError } from '../spark-mcp/tool.ts';
+import { saveModUsage } from './mod-telemetry.ts';
 import type { LiveSession } from './native-runtime-types.ts';
 import type { NativeUsage } from './native-usage.ts';
 
@@ -79,6 +80,7 @@ export function nativeControl(
     if (open && !removed) await finishNativeRun(db, session.row, 'succeeded');
     if (open) clearTurn(session);
     await usage.saveNow(session);
+    await saveModUsage(db, moved.ownerRunId).catch(() => undefined);
   };
   const finish = async (
     session: LiveSession,

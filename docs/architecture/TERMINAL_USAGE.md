@@ -1,6 +1,6 @@
 # Terminal usage
 
-A Terminal session runs the provider's CLI directly. Spark records the session's start, mode and observed state, and also what this page describes: the tool names and times of its steps, token counts, model and cost per turn read from the CLI's own session file, and the CLI's own session total. It records the user's typed message as the chat's message and never records commands, paths, replies or tool output; a paired device can read replies and tool calls from the session file to show them, and Spark does not store them. Spark's approval cards, protected-path rules and ran-without-review audit still do not apply inside a Terminal session.
+A Terminal session runs the provider's CLI directly. Spark records the session's start, mode and observed state, and also what this page describes: the tool names and times of its steps, token counts, model and cost per turn read from the CLI's own session file, and the CLI's own session total. For Claude Code with the Spark mod loaded, the same facts come from the mod as each request finishes ([From the Spark mod](#from-the-spark-mod-claude)). It records the user's typed message as the chat's message and never records commands, paths, replies or tool output; a paired device can read replies and tool calls from the session file to show them, and Spark does not store them. Spark's approval cards, protected-path rules and ran-without-review audit still do not apply inside a Terminal session.
 
 Measured against Claude Code 2.1.296 and Codex CLI 0.157.0. Neither file format is a documented interface. A CLI that changes it returns the affected number to "unknown".
 
@@ -12,6 +12,7 @@ Measured against Claude Code 2.1.296 and Codex CLI 0.157.0. Neither file format 
 | Tokens per turn (input, output, cache read, cache write, thinking), model    | `runs` token columns and `used_model` of the turn's run                       | Claude session file, Codex rollout file                                |
 | Estimated cost per turn                                                      | `runs.cost_usd` with `cost_source = 'estimated'`                              | Tokens × the model card price                                          |
 | The CLI's own session total and per-model totals                             | `native_terminal_reported_usage` (migration 0169), one row per CLI session id | Claude `cost-state` record. Codex has none                             |
+| Claude requests, turns and sub-agent turns seen by the Spark mod             | `native_terminal_requests`, `native_terminal_mod_turns` (migration 0177)      | The mod's `turn.step`, `turn.start` and `turn.complete` hooks          |
 
 The session row also keeps the session file's path and the position Spark has read up to (migration 0170).
 
@@ -60,6 +61,25 @@ Sum of per-turn estimates against the last `cost-state` of the same file:
 
 The estimate is a lower bound. Claude Code makes requests that leave no `assistant` record: in the last sample Opus input is 18 tokens in the files against 1,534 in `cost-state`, output 710 against 1,314, cache read 265,645 against 351,598, and Haiku 5.5 appears only in `cost-state`. An interrupted reply records `output_tokens: 2` although much more had streamed. In that sample the background sub-agent's own file is $0.161 of the estimate; without it the share is 52.3%.
 
+## From the Spark mod (Claude)
+
+A Claude session that loads the Spark mod ([The Spark mod](NATIVE_TERMINALS.md#the-spark-mod-claude)) also sends Spark its turn facts. The mod queues them in memory and posts them to the hook host's `/mod/telemetry` on its one-second poll, at most 200 per request and ten requests per poll; it keeps at most 5,000, dropping the oldest. A failed request or a stale token (after a restart) keeps them for the next poll; a request Spark turns down is dropped. Hooks only queue, never wait on Spark.
+
+| Fact                | From                                                                                            | Fields sent                                                    |
+| ------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| One model request   | `turn.step` result `usage`, then `$.session.usage().cost`                                       | turn id, step index, sub-agent id, model, 4 token counts, cost |
+| A turn starts, ends | `turn.start`, `turn.complete`                                                                   | turn id, sub-agent id, time, duration, interrupted             |
+| A tool call         | `tool.call` before and after `next`                                                             | tool id, tool name, sub-agent id, time, failed                 |
+| The owning prompt   | `classic.UserPromptSubmit` `prompt_id`; a sub-agent keeps the prompt open when it first started | every fact carries it, so Spark files it as the hooks do       |
+
+Nothing else leaves the mod: no tool arguments, command, path, prompt or reply text, and no tool output. The server checks each fact against a strict schema (`mod-telemetry.ts`) and drops one with any other field or a wrong shape; only Claude sessions are accepted. Facts raised by another mod (`next.origin` not the engine) are skipped. A fact whose prompt Spark has no run for is dropped. Under managed settings that keep `classic.*` events from installed mods, no prompt id arrives and the session file stays the source.
+
+Cost per request is the change in Claude Code's own running session cost (`$.session.usage().cost.usd`, what `/cost` totals) since the last request the mod saw, so it includes one-hour cache writes and requests that leave no `assistant` record; it is stored as reported by Claude Code. A request without a cost makes the turn's cost an estimate from tokens, without the one-hour cache rule, since the mod's counts don't split cache writes by duration. The mod sends no thinking count.
+
+A run is the mod's once a main-loop `turn_start` for it is stored. From then its tokens and cost are the sum of its stored requests, recomputed on each batch; the session-file reader keeps running (prompt origin, interrupts, the CLI total) but no longer writes that run's tokens. A run without the mod's start keeps the session-file figures, so a session started before this, an older Claude, or a turn the mod missed are counted as before, and a turn is never counted from both. Requests and turns are keyed by turn id and step index, steps by tool id, so a resend or a restart counts nothing twice; the rows are stored, so a restart loses nothing the mod already sent. When Spark takes a handback's run back, its mod rows move to the owning run with its steps. An interrupted main-loop turn closes the run as cancelled, as the session file's interrupt record does.
+
+Measured with Claude Code 2.1.300 and Opus 5.5, two turns (a Bash call, then a foreground sub-agent): the mod's per-turn costs sum to $0.446216 against the `cost-state` total of $0.462482 (96.5%), where the session-file estimate gives $0.41769 (90.3%). Main-loop tokens match the file; the sub-agent's output tokens are 74 and 64 from the mod against 16 and 24 in its file, which keeps the count from when the reply started.
+
 ## Codex
 
 The Codex hook payload carries the rollout path as `transcript_path`; it is now kept when the file name is `rollout-…-<thread id>.jsonl` for the thread id the same hook reports. Nothing is scanned.
@@ -83,7 +103,7 @@ A sub-agent's file is followed until its `SubagentHandback` call ends (Claude) o
 
 Every figure names its origin: "estimated from tokens", "reported by Claude Code", or "unknown" (never zero) when there is no data.
 
-- Work panel of a Terminal session: a Steps tab (turn, tool, duration, failed, sub-agent) and a Cost tab (tokens and estimated cost by turn, the CLI's total for each CLI session id when present). A Terminal session without a task has a Work panel with these two tabs.
+- Work panel of a Terminal session: a Steps tab (turn, tool, duration, failed, sub-agent) and a Cost tab (tokens and cost by turn with the turn's duration when the mod sent it, the CLI's total for each CLI session id when present). The by-turn sum says "reported by Claude Code" when every priced turn came from the mod. A Terminal session without a task has a Work panel with these two tabs.
 - Island: the session's activity lines show the steps.
 - Everything that already sums `runs.cost_usd` now includes Terminal turns: the chat's usage totals, Analytics Spend, Home, the audit cost export. Spend marks the provider total as estimated or mixed. A Terminal estimate is not a separate line there: Spend groups by provider and by category only, and a session-type line would need a new field in the usage contract, a new query group and a new row in the page.
 
@@ -101,6 +121,8 @@ Every figure names its origin: "estimated from tokens", "reported by Claude Code
 - `native-tail.test.ts`: appended lines only, late-created file, continue from a position, partial last line, truncated file, closed watcher, failing handler.
 - `claude-transcript.test.ts`, `codex-rollout.test.ts`, `turn-usage.test.ts`: parsers and the accumulator against reduced copies of the real files in `apps/server/test/fixtures/terminal-usage/` (structure, ids and numbers kept; attachments and all text removed), including the undercount, repeated ids, interrupt, resume, sub-agent files and unknown records.
 - `native-hook-script.test.ts`: the generated hook script against a local listener.
+- `native-mod-script.test.ts`, `mod-telemetry.test.ts`: what the mod queues and sends (no arguments, prompt or reply text), batches, resend after a refused token, and the server dropping a fact with any other field.
+- `native-terminal-mod-usage.db.test.ts`: the mod's facts recorded once, cost reported or estimated, the session file for turns the mod did not see and never both, the mod replacing what the file counted, a handback's facts moved to its owner, an interrupted turn.
 - `native-terminal-steps.db.test.ts`, `native-terminal-usage.db.test.ts`: steps, tokens, cost and the session total on real runs through the authenticated hook endpoint, including a background sub-agent that finishes after Stop (real sample), resume from the stored position, and the read after Stop.
 - `tests/browser/native-terminal-usage.spec.ts`: a fixture CLI for each agent that calls the real hook script and writes a session file; checks the Steps and Cost tabs, for Claude before and after exit.
 

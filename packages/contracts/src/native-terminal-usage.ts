@@ -22,6 +22,7 @@ export const nativeTerminalTurnSchema = z.object({
   tokens: tokenUsageSchema.nullable(),
   costUsd: z.number().nullable(),
   costSource: costSourceSchema.nullable(),
+  durationMs: z.number().int().nonnegative().nullable(),
   steps: z.array(nativeTerminalStepSchema),
 });
 export type NativeTerminalTurn = z.infer<typeof nativeTerminalTurnSchema>;

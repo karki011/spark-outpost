@@ -22,6 +22,7 @@ const turn = (
   tokens: null,
   costUsd: null,
   costSource: null,
+  durationMs: null,
   steps,
 });
 
