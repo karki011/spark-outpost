@@ -42,7 +42,7 @@ export interface HandlerDeps {
   baseUrl: string;
   getPost: PostStore['getPost'];
   readAnswer: ReadAnswer;
-  drain: (conversationId: string) => Promise<unknown>;
+  drain: (conversationId: string, typedPostId?: string) => Promise<unknown>;
   stopRun: (runId: string) => Promise<unknown>;
   wakes: TaskWakes;
 }
@@ -134,9 +134,9 @@ export function outpostRequestHandler(
     return task;
   }
 
-  async function startTurn(): Promise<void> {
+  async function startTurn(postId: string): Promise<void> {
     try {
-      await deps.drain(chatId);
+      await deps.drain(chatId, postId);
     } catch (error) {
       console.error(`Could not start the queued outpost request for chat ${chatId}`, error);
     }
@@ -145,7 +145,7 @@ export function outpostRequestHandler(
   async function accept(params: SendMessageRequest): Promise<Task> {
     const outcome = await acceptTask(db, chatId, inboundRequest(params));
     if (outcome.kind === 'refused') throw REFUSALS[outcome.why]();
-    if (outcome.kind === 'accepted' && outcome.queued) await startTurn();
+    if (outcome.kind === 'accepted' && outcome.queued) await startTurn(outcome.postId);
     const task = await readTask(outcome.postId);
     if (task === null) throw new TaskNotFoundError('The request was removed.');
     return task;

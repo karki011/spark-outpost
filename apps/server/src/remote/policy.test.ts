@@ -37,6 +37,11 @@ describe('remote policy', () => {
     }
   });
 
+  it('lets a paired device pause and resume Spark whatever the switches say', () => {
+    expect(remoteDecision('GET', '/api/spark-pause', ALL_OFF).kind).toBe('allow');
+    expect(remoteDecision('PUT', '/api/spark-pause', ALL_OFF).kind).toBe('allow');
+  });
+
   it('refuses the never list whatever the switches say', () => {
     for (const [route, rule] of ROUTE_RULES) {
       if (rule === 'never') expect([route, kindOf(route, ALL_ON)]).toEqual([route, 'refuse']);

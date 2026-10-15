@@ -51,6 +51,7 @@ import { useTicketRequests } from '../tickets/ticket-request.ts';
 import { BackOnlineToast } from './connection/BackOnlineToast.tsx';
 import { markConnectionRestored, useConnection } from './connection/connection-store.ts';
 import { OfflineScreen } from './connection/OfflineScreen.tsx';
+import { PauseBanner } from './pause/PauseBanner.tsx';
 import { ReconnectBanner } from './connection/ReconnectBanner.tsx';
 import { LivePausedHint } from './live/LivePausedHint.tsx';
 import { useAppEvents } from './live/use-app-events.ts';
@@ -423,6 +424,7 @@ export function App() {
         <Onboarding onFinished={handleOnboardingFinished} />
       )}
       {connection.lost && <ReconnectBanner />}
+      {!connection.lost && setup.data.profile.onboardingCompleted && <PauseBanner />}
       {connection.recoveries > 0 && <BackOnlineToast key={connection.recoveries} />}
       <ResetHost />
     </>

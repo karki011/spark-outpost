@@ -193,4 +193,10 @@ describe('app event invalidation', () => {
       mergeInvalidations([{ kind: 'terminal_start', conversationId: null, runId: null }]),
     ).toEqual([]);
   });
+
+  it('refetches the pause state when Spark is paused or resumed elsewhere', () => {
+    expect(
+      mergeInvalidations([{ kind: 'spark_pause', conversationId: null, runId: null }]),
+    ).toEqual([{ queryKey: ['spark-pause'], exact: true }]);
+  });
 });

@@ -26,7 +26,8 @@
   color: var(--text);
 }
 
-.qstrip.paused .qs-note {
+.qstrip.paused .qs-note,
+.qstrip.held .qs-note {
   color: var(--warn);
 }
 

@@ -1,9 +1,14 @@
 import type { QueuedMessage, Run } from '@spark-outpost/contracts';
 
-export type QueueMode = 'waiting' | 'paused' | 'next';
+export type QueueMode = 'waiting' | 'paused' | 'held' | 'next';
 
-export function queueMode(busy: boolean, runs: readonly Pick<Run, 'status'>[]): QueueMode {
+export function queueMode(
+  busy: boolean,
+  runs: readonly Pick<Run, 'status'>[],
+  sparkPaused: boolean,
+): QueueMode {
   if (busy) return 'waiting';
+  if (sparkPaused) return 'held';
   const last = runs.at(-1)?.status;
   return !last || last === 'succeeded' ? 'next' : 'paused';
 }
@@ -14,6 +19,7 @@ export function queuedCount(count: number): string {
 
 export function queueNote(mode: QueueMode, count: number): string {
   if (mode === 'paused') return 'Paused because the last turn stopped. Send one now to go on.';
+  if (mode === 'held') return 'Held while Spark is paused. Send one now to go on.';
   if (mode === 'next') return 'Sending the next one…';
   return count === 1 ? 'Sends when this turn ends' : 'Send in order when this turn ends';
 }
