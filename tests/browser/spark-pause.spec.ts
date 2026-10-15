@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { resetTestDatabase } from './database.ts';
+import { openTestDb, resetTestDatabase } from './database.ts';
 import { mainNav, navButton, openTouch, PHONE } from './responsive-kit.ts';
 
 test.beforeEach(async () => {
@@ -31,6 +31,28 @@ test('pauses Spark from the rail with the keyboard and resumes it from the banne
   await banner(page).getByRole('button', { name: 'Resume' }).click();
   await expect(banner(page)).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Pause Spark' })).toBeVisible();
+});
+
+test('the banner takes the place of the new default notice until Spark is resumed', async ({
+  page,
+}) => {
+  const db = openTestDb();
+  try {
+    await db.query('UPDATE profiles SET default_level_notice = true');
+  } finally {
+    await db.end();
+  }
+  const notice = page.getByRole('complementary', { name: 'Default for new chats changed' });
+  await page.goto('/');
+  await expect(notice).toBeVisible();
+
+  await page.getByRole('button', { name: 'Pause Spark' }).click();
+  await expect(banner(page)).toBeVisible();
+  await expect(notice).toHaveCount(0);
+  await banner(page).getByRole('button', { name: 'Resume' }).click();
+
+  await expect(banner(page)).toHaveCount(0);
+  await expect(notice).toBeVisible();
 });
 
 test('a phone pauses Spark from More and the Mac shows it at once', async ({ page, browser }) => {

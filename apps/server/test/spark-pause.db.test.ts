@@ -112,6 +112,43 @@ describe('pausing Spark', () => {
     expect(await queuedIds()).toEqual([written]);
   });
 
+  it('holds a typed request to a chat whose last turn failed, as it would while running', async () => {
+    const failed = await sendUserMessage(
+      t.db,
+      api,
+      { id: randomUUID(), content: 'first' },
+      { provider: 'fake' },
+    );
+    await finishRun(t.db, failed.run.id, 'failed');
+    const typed = await outpostRequest(true);
+
+    expect(await drainQueue(t.db, api, target, typed)).toBe('paused');
+    await pause(true);
+    expect(await drainQueue(t.db, api, target, typed)).toBe('held');
+
+    expect(await queuedIds()).toHaveLength(1);
+    expect(await chatTurns(t.db, api)).toHaveLength(1);
+  });
+
+  it('starts a request the user typed after stopping the last turn', async () => {
+    const stopped = await sendUserMessage(
+      t.db,
+      api,
+      { id: randomUUID(), content: 'first' },
+      { provider: 'fake' },
+    );
+    await t.db.query(
+      `UPDATE runs SET status = 'cancelled', cancel_requested_at = now() - interval '1 minute'
+       WHERE id = $1`,
+      [stopped.run.id],
+    );
+    const typed = await outpostRequest(true);
+    await pause(true);
+
+    expect(await drainQueue(t.db, api, target, typed)).toBe('sent');
+    expect(await queuedIds()).toEqual([]);
+  });
+
   it('does not start the next queued message when a turn ends while paused', async () => {
     const sent = await sendUserMessage(
       t.db,

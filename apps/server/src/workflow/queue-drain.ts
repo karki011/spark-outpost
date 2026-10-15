@@ -95,7 +95,9 @@ async function sendTypedWhilePaused(
   typedPostId: string | undefined,
   target: RunTarget,
 ): Promise<DrainOutcome> {
-  const typed = typedPostId ? await takeTypedRequest(db, conversationId, typedPostId) : null;
+  if (!typedPostId) return 'held';
+  const flowing = await lastTurnSucceeded(db, conversationId);
+  const typed = await takeTypedRequest(db, conversationId, typedPostId, flowing);
   if (!typed) return 'held';
   await sendQueued(db, conversationId, typed, target);
   return 'sent';

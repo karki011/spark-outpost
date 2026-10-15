@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { usePanelAnchor } from '../app/connection/use-panel-anchor.ts';
+import { useSparkPaused } from '../app/pause/use-spark-pause.ts';
 import { XIcon } from '../ui/icons.tsx';
 import { dismissPasskeyOffer, passkeyOfferDismissed } from './passkey-offer-store.ts';
 import { passkeysSupported } from './passkey-browser.ts';
@@ -55,7 +56,8 @@ export function PasskeyOffer() {
   const [dismissed, setDismissed] = useState(passkeyOfferDismissed);
   const phone = useRemoteClient();
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get, retry: false });
-  const otherNoticeShowing = setup.data?.profile.defaultLevelNotice === true;
+  const sparkPaused = useSparkPaused();
+  const otherNoticeShowing = setup.data?.profile.defaultLevelNotice === true || sparkPaused;
   if (dismissed || otherNoticeShowing || !phone.remote) return null;
   if (!phone.allows('passkeys') || !passkeysSupported()) return null;
   return (

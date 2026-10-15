@@ -154,12 +154,13 @@ export async function takeTypedRequest(
   db: Queryable,
   conversationId: string,
   postId: string,
+  flowing: boolean,
 ): Promise<QueuedMessage | null> {
   const { rows } = await db.query<QueueRow>(
     `DELETE FROM chat_queue WHERE id = (
        SELECT q.id FROM chat_queue q JOIN outpost_posts typed ON typed.id = q.outpost_post_id
        WHERE q.conversation_id = $1 AND q.outpost_post_id = $2 AND typed.from_user
-         AND NOT ${PAUSED_OUTPOST_ITEM}
+         AND NOT ${PAUSED_OUTPOST_ITEM} ${flowing ? '' : `AND ${POSTED_AFTER_STOP_ITEM}`}
        FOR UPDATE OF q
      ) RETURNING *`,
     [conversationId, postId],

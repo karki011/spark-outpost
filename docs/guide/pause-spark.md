@@ -13,12 +13,12 @@ You'll stop Spark starting work by itself while you step away. About 1 minute.
 
 Pausing never stops a turn that is already running, and it stays paused after Spark restarts.
 
-| Held until you resume                                          | Still runs                                                      |
-| -------------------------------------------------------------- | --------------------------------------------------------------- |
-| Queued messages, when the turn before them ends                | A message you send, and **Send now** on a queued one            |
-| Requests from other chats, wrap-ups and held requests          | A request you type in an [outpost](outposts.md) to an idle chat |
-| [PR follow-up](pr-follow-up.md) rounds; feedback is still read | Running turns, their cards and their publish step               |
-| The morning brief and [Map](map.md) builds                     | Terminal sessions                                               |
+| Held until you resume                                          | Still runs                                                                                                                  |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Queued messages, when the turn before them ends                | A message you send, and **Send now** on a queued one                                                                        |
+| Requests from other chats, wrap-ups and held requests          | A request you type in an [outpost](outposts.md) to an idle chat, unless its last turn failed or stopped before you typed it |
+| [PR follow-up](pr-follow-up.md) rounds; feedback is still read | Running turns, their cards and their publish step                                                                           |
+| The morning brief and [Map](map.md) builds                     | Terminal sessions                                                                                                           |
 
 Work started from inside Slack is skipped while paused; start it again after you resume.
 
