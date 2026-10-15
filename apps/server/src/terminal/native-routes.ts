@@ -6,6 +6,7 @@ import {
 } from '@spark-outpost/contracts';
 import { paramId, parseBody } from '../api/validation.ts';
 import { NativeTerminalConflictError } from '../persistence/native-terminal-turns.ts';
+import { remoteDeviceOf } from '../remote/principal.ts';
 import { NativeRuntimeError } from './native-control.ts';
 import type { NativeRuntime } from './native-runtime.ts';
 
@@ -35,7 +36,7 @@ export function nativeTerminalRoutes(runtime?: NativeRuntime): Router {
     res.status(204).end();
   });
   router.get('/conversations/:id/terminal/transcript', available, async (req, res) => {
-    res.json(await runtime!.remote.view(paramId(req)));
+    res.json(await runtime!.remote.view(paramId(req), remoteDeviceOf(res) !== null));
   });
   router.post('/conversations/:id/terminal/message', available, async (req, res) => {
     const { text, now } = parseBody(terminalMessageRequestSchema, req);

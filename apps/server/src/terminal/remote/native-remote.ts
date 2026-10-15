@@ -61,14 +61,21 @@ interface ParsedTail {
   truncated: boolean;
 }
 
-export function pastedMessage(text: string): string {
-  const clean = Array.from(text.replace(/\r\n?/g, '\n'))
+export function withoutControls(text: string): string {
+  return Array.from(text.replace(/\r\n?/g, '\n'))
     .filter((char) => {
       const code = char.charCodeAt(0);
       return char === '\n' || char === '\t' || (code >= 0x20 && code !== 0x7f);
     })
     .join('');
-  return `${PASTE_START}${clean}${PASTE_END}`;
+}
+
+export function runsCliCommand(text: string): boolean {
+  return COMMAND_PREFIX.test(withoutControls(text));
+}
+
+export function pastedMessage(text: string): string {
+  return `${PASTE_START}${withoutControls(text)}${PASTE_END}`;
 }
 
 export function approvalDetail(tool: string, input: unknown): string {
@@ -157,7 +164,7 @@ export function nativeRemote(deps: NativeRemoteDeps) {
   };
 
   const sendable = async (conversationId: string, session: LiveSession, text: string) => {
-    if (COMMAND_PREFIX.test(text)) throw new NativeRuntimeError(COMMAND, 409);
+    if (runsCliCommand(text)) throw new NativeRuntimeError(COMMAND, 409);
     if (await answerOpen(conversationId, session)) throw new NativeRuntimeError(WAITING, 409);
   };
   const submit = async (conversationId: string, session: LiveSession, text: string) => {
@@ -167,7 +174,7 @@ export function nativeRemote(deps: NativeRemoteDeps) {
     write(session, '\r');
   };
   const typeable = async (reason: string) => {
-    if (COMMAND_PREFIX.test(reason)) throw new NativeRuntimeError(COMMAND, 409);
+    if (runsCliCommand(reason)) throw new NativeRuntimeError(COMMAND, 409);
     if (!(await remoteAccess(deps.db, deps.workspaceId)).switches.terminal)
       throw new NativeRuntimeError(switchRefusal('terminal'), 403);
   };

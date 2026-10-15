@@ -22,9 +22,9 @@ A paired device can answer an agent's browser cards; the Browser pane stays on t
 
 **Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages and steps, with a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both start off.
 
-While it works, **Send now** stops the turn first; in Claude an earlier queued message still goes first. **Deny** takes an optional reason the agent reads.
+**Send now** stops the turn first; in Claude an earlier queued message goes first. **Deny** takes an optional reason the agent reads. Claude's terminal shows **Spark · phone connected**.
 
-Messages shown aren't stored; starting a session stays on the Mac.
+Messages shown aren't stored; sessions start on the Mac.
 
 **Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device**. It names the chat, never a command. Push services see the **Sender contact** under the switch; refusals show there.
 

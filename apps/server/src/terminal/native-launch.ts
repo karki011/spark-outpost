@@ -7,6 +7,7 @@ import { isRecord } from '../agent-config/records.ts';
 import type { TurnAttachment } from '../providers/provider.ts';
 import { NativeRuntimeError } from './native-control.ts';
 import { nativeHookScript } from './native-hook-script.ts';
+import { supportsMods, writeSparkMod } from './native-mod-script.ts';
 import { verifyNativeHooks, verifyNativeOption } from './native-capabilities.ts';
 import { CLAUDE_PERMISSION_HOOK_SECONDS } from './remote/approvals.ts';
 import { isNativeSessionId, nativeHookNames, type NativeProvider } from './native-hooks.ts';
@@ -174,6 +175,8 @@ export async function prepareNativeLaunch(input: NativeLaunchInput): Promise<Nat
       .join(' ');
     const config = await providerConfiguration(input, directory, hookCommand, observation);
     const args = [...modeArgs, ...config.args];
+    if (input.provider === 'claude' && observation === 'hooks' && supportsMods(version))
+      args.push('--plugin-dir', await writeSparkMod(directory));
     if (input.provider === 'claude' && input.resumeSessionId && input.instructions !== undefined) {
       if (
         !(await (input.verifyOption ?? verifyNativeOption)(

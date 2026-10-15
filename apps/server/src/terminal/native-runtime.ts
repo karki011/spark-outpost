@@ -42,6 +42,8 @@ import { assertTerminalChat, providerToLaunch } from './native-launch-checks.ts'
 import { writeAdoptRecord } from './tmux/adopt-record.ts';
 import { readoptTmuxSessions } from './tmux/readopt.ts';
 import { terminalApprovals } from './remote/approvals.ts';
+import { modInbox } from './remote/mod-inbox.ts';
+import { answerWaits, withMod } from './remote/mod-routing.ts';
 import { nativeRemote, remoteHookHandlers } from './remote/native-remote.ts';
 
 export type { NativeRuntime, NativeRuntimeDeps } from './native-runtime-types.ts';
@@ -91,19 +93,30 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     control,
     usage,
   });
-  const remote = nativeRemote({
-    db: deps.db,
-    workspaceId: deps.workspaceId,
-    live,
-    terminals: deps.terminals,
-    approvals: terminalApprovals(),
-    owned,
-  });
+  const approvals = terminalApprovals();
+  const waitsForAnswer = answerWaits(approvals, deps.db);
+  const mod = modInbox({ db: deps.db, workspaceId: deps.workspaceId, waitsForAnswer });
+  const remote = withMod(
+    nativeRemote({
+      db: deps.db,
+      workspaceId: deps.workspaceId,
+      live,
+      terminals: deps.terminals,
+      approvals,
+      owned,
+    }),
+    mod,
+    waitsForAnswer,
+  );
   const handlers = remoteHookHandlers(remote, (token) => tokens.get(digest(token)), hook);
   const host = await nativeHookHost(
     (token) => tokens.has(digest(token)),
     handlers.observe,
     handlers.permission,
+    async (token) => {
+      const session = tokens.get(digest(token));
+      return session ? mod.poll(session) : null;
+    },
   );
   const exited = (running: LiveSession) => (exit: { exitCode: number }) => {
     const state = exit.exitCode === 0 ? 'exited' : 'error';
