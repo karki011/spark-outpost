@@ -14,6 +14,7 @@ import {
 } from './context.ts';
 import { ensurePreview } from './preview.ts';
 import { signInScrub } from './scrub.ts';
+import { allowedNote } from '../allowed-note.ts';
 
 const TOOL = 'spark_browser_open';
 
@@ -94,6 +95,7 @@ async function open(args: OpenArgs, context: SparkToolContext) {
     status: opened.status,
     place: opened.place,
     reusedTab: opened.reused,
+    ...allowedNote(decision),
     note: 'Agent tabs close when this turn ends unless the user pins them.',
   };
 }

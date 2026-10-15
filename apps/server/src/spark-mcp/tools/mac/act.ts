@@ -14,9 +14,21 @@ import {
   type MacTarget,
 } from '@spark-outpost/contracts';
 import { SparkToolError, sparkTool, type SparkToolContext } from '../../tool.ts';
-import { asToolError, auditMac, macSession, type MacDecision, type MacSession } from './context.ts';
+import {
+  MacToolError,
+  alreadyAudited,
+  failureDecision,
+  failureReason,
+  asToolError,
+  auditFailures,
+  auditMac,
+  macSession,
+  type MacDecision,
+  type MacSession,
+} from './context.ts';
 import { clearMacAct, clearMacApp, clearMacPress, type MacClearance } from './gate.ts';
 import { appInput, notCleared, refuseApp, resolveApp } from './read.ts';
+import { allowedNote } from '../allowed-note.ts';
 
 const TOOL = 'spark_mac_act';
 
@@ -67,7 +79,8 @@ async function aimedTarget(session: MacSession, pid: number, args: ActArgs, sign
   ).target;
   if (first.state !== 'gone') return first;
   if (macPressClass(first.identity, null) !== 'plain') {
-    throw new SparkToolError(
+    throw new MacToolError(
+      'stale_ref',
       `${args.ref} is gone, and Spark never looks again for a send or delete control. Read the app again.`,
     );
   }
@@ -76,7 +89,9 @@ async function aimedTarget(session: MacSession, pid: number, args: ActArgs, sign
       session.host.request({ op: 'target', ...where, ref: args.ref!, refind: true }, signal),
     )
   ).target;
-  if (again.state === 'gone') throw new SparkToolError(`${args.ref} is gone. Read the app again.`);
+  if (again.state === 'gone') {
+    throw new MacToolError('stale_ref', `${args.ref} is gone. Read the app again.`);
+  }
   return again;
 }
 
@@ -97,7 +112,8 @@ async function aim(
   }
   const target = await aimedTarget(session, app.pid!, args, signal);
   if (target.pid !== app.pid) {
-    throw new SparkToolError(
+    throw new MacToolError(
+      'other_app',
       `${target.ref} belongs to another app, not ${app.name}. Read ${app.name} and use its refs.`,
     );
   }
@@ -162,7 +178,13 @@ async function open(context: SparkToolContext, session: MacSession, app: MacApp)
     decision: mode.decision,
     detail: { did },
   });
-  return { outcome: 'done', did, app: opened.app.name, note: 'Read the app with spark_mac_read.' };
+  return {
+    outcome: 'done',
+    did,
+    app: opened.app.name,
+    ...allowedNote(first.decision, mode.decision),
+    note: 'Read the app with spark_mac_read.',
+  };
 }
 
 async function act(args: ActArgs, context: SparkToolContext) {
@@ -173,7 +195,7 @@ async function act(args: ActArgs, context: SparkToolContext) {
   refuseApp(context, TOOL, args.action, app);
   if (args.action === 'open') return open(context, session, app);
   if (app.pid === null)
-    throw new SparkToolError(`${app.name} is not running. Use action open first.`);
+    throw new MacToolError('not_running', `${app.name} is not running. Use action open first.`);
   const first = await clearMacApp(context, app, `${args.action} in ${app.name}`);
   if (!first.cleared)
     return notCleared(context, TOOL, args.action, app, first.decision, first.approvalId);
@@ -187,7 +209,7 @@ async function act(args: ActArgs, context: SparkToolContext) {
       decision: 'refused',
       detail: { did, reason: 'money_or_account' },
     });
-    throw new SparkToolError(MAC_MONEY_REFUSAL);
+    throw alreadyAudited(new SparkToolError(MAC_MONEY_REFUSAL));
   }
   const window = aimed.target?.window?.title ?? null;
   const cleared = await clearAimed(context, app, aimed, window);
@@ -212,14 +234,15 @@ async function act(args: ActArgs, context: SparkToolContext) {
       context.signal,
     )
     .catch((error: unknown) => {
+      const failure = asToolError(error);
       auditMac(context, {
         tool: TOOL,
         action: args.action,
         app,
-        decision: 'failed',
-        detail: { did },
+        decision: failureDecision(failureReason(failure)),
+        detail: { did, reason: failureReason(failure) },
       });
-      throw asToolError(error);
+      throw alreadyAudited(failure);
     });
   auditMac(context, {
     tool: TOOL,
@@ -237,6 +260,7 @@ async function act(args: ActArgs, context: SparkToolContext) {
     outcome: 'done',
     did,
     app: app.name,
+    ...allowedNote(first.decision, decision),
     ...(aimed.target?.state === 'refound'
       ? { refound: `${args.ref} was replaced; Spark found it again.` }
       : {}),
@@ -261,5 +285,8 @@ export const macActTool = sparkTool({
     key: macHelperKeySchema.optional(),
     direction: macScrollDirectionSchema.optional(),
   },
-  run: act,
+  run: (args, context) =>
+    auditFailures(context, { tool: TOOL, action: args.action, app: args.app }, () =>
+      act(args, context),
+    ),
 });

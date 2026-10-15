@@ -15,6 +15,7 @@ import { asToolError, auditBrowser, browserSession, tabInput } from './context.t
 import { runShotDir } from './end-run.ts';
 import { clearPage } from './read-flow.ts';
 import { signInScrub } from './scrub.ts';
+import { allowedNote } from '../allowed-note.ts';
 
 export function takesImageResults(provider: string | null, model: string | null): boolean {
   if (provider === 'claude' || provider === 'codex') return true;
@@ -120,6 +121,7 @@ async function screenshot(args: ShotArgs, context: SparkToolContext) {
     width: shot.width,
     height: shot.height,
     maskedFields: shot.masked,
+    ...allowedNote(cleared.decision),
     shownToUser: 'The screenshot is shown in the chat.',
   };
   const run = await runModel(deps.db, scope.runId);

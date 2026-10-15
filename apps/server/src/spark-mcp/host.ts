@@ -8,6 +8,7 @@ import type { SparkScope, SparkToolDeps } from './deps.ts';
 import { sparkMcpServer } from './server.ts';
 import { endMacRun } from '../mac-control/end-run.ts';
 import { endBrowserRun } from './tools/browser/end-run.ts';
+import { auditInvalidMacCall } from './tools/mac/invalid-input.ts';
 
 export interface SparkGrant {
   url: string;
@@ -128,6 +129,7 @@ export async function startSparkMcpHost(
         reply(res, 401, 'This Spark session has ended.');
         return;
       }
+      if (session.available.mac) auditInvalidMacCall({ deps, scope: session.scope }, body);
     }
     const key = call === null ? null : `${grant}:${call}`;
     const controller = new AbortController();

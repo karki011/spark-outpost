@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { ALLOWED_ON_CARD } from '../src/spark-mcp/tools/allowed-note.ts';
 import { BrowseHarness, PAGE, SITE, TOKEN } from './spark-browser-browse-support.ts';
 
 let h: BrowseHarness;
@@ -45,8 +46,11 @@ describe('acting on a page', () => {
     });
     expect(h.fake.ops()).toEqual(['page']);
     await h.answer('confirm');
-    expect((await typing).facts.outcome).toBe('done');
-    await h.call('spark_browser_act', { action: 'key', key: 'Enter' });
+    const typed = await typing;
+    expect(typed.facts.outcome).toBe('done');
+    expect(typed.facts.allowed).toBe(ALLOWED_ON_CARD);
+    const pressed = await h.call('spark_browser_act', { action: 'key', key: 'Enter' });
+    expect(pressed.facts.allowed).toBeUndefined();
     expect(await h.cards()).toBe(1);
     expect(h.audited('spark/browser').map((entry) => [entry.action, entry.decision])).toEqual([
       ['type', 'user_allowed'],

@@ -28,7 +28,7 @@ What the agent reads goes to the model provider. Paired devices never get Mac co
 | Buys, pays, transfers or creates an account               | Refuses                                                     |
 | Opens System Settings, passwords, a web browser, or Spark | Refuses; agents use the [Browser pane](use-the-browser.md)  |
 
-Answer these cards on the Mac. Agents can't type into other apps yet.
+Answer these cards on the Mac; the agent is told you allowed it. Agents can't type into other apps yet.
 
 ## Watch, take over and stop
 

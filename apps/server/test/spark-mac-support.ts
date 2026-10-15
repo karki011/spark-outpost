@@ -59,6 +59,9 @@ export class FakeMacHost implements MacHost {
   apps: MacApp[] = [CALCULATOR, NOTES, SETTINGS];
   focused: MacIdentity = button('OK');
   targetPid = 700;
+  targetError: MacHostError | null = null;
+  readError: MacHostError | null = null;
+  targetState: MacTarget['state'] = 'alive';
   readText = '- window "Calculator" [ax_1]\n  - static text [ax_2] value="42"';
 
   request(request: MacHostRequest): Promise<never> {
@@ -73,7 +76,7 @@ export class FakeMacHost implements MacHost {
   private target(ref: string, identity: MacIdentity): MacTarget {
     return {
       ref,
-      state: 'alive',
+      state: this.targetState,
       pid: this.targetPid,
       window: { index: 0, title: 'Calculator' },
       identity,
@@ -93,6 +96,7 @@ export class FakeMacHost implements MacHost {
       return { app: found };
     }
     if (request.op === 'read') {
+      if (this.readError) throw this.readError;
       const found = this.apps.find((candidate) => candidate.pid === request.pid)!;
       return {
         app: found,
@@ -110,6 +114,7 @@ export class FakeMacHost implements MacHost {
       };
     }
     if (request.op === 'target') {
+      if (this.targetError) throw this.targetError;
       const found = this.apps.find((candidate) => candidate.pid === request.pid)!;
       if (request.menu)
         return { app: found, target: this.target('ax_9', button(request.menu.at(-1)!)) };

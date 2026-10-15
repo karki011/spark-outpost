@@ -8,9 +8,9 @@ import {
 import type { Queryable } from '../../../persistence/db.ts';
 import { actionFacts, actionPath } from '../../actions/action-policy.ts';
 import { actionRun, postCard, RESULT_WAIT_MS } from '../../actions/confirm.ts';
-import { SparkToolError, type SparkToolContext } from '../../tool.ts';
+import type { SparkToolContext } from '../../tool.ts';
 import { cardDecision } from '../browser/gate.ts';
-import type { MacDecision } from './context.ts';
+import { MacToolError, type MacDecision } from './context.ts';
 
 export interface MacClearance {
   cleared: boolean;
@@ -57,7 +57,8 @@ async function onlyApp(db: Queryable, conversationId: string, app: MacApp): Prom
   const taken = await appsOfChat(db, conversationId, 'mac_use_app', ['allowed', 'pending']);
   const other = taken.find((bundleId) => !sameId(bundleId, app.bundleId ?? ''));
   if (other) {
-    throw new SparkToolError(
+    throw new MacToolError(
+      'one_app_per_chat',
       `Mac control works in one app per chat for now, and this chat uses ${other}. Ask the user to start a new chat for ${app.name}.`,
     );
   }
@@ -99,7 +100,7 @@ export async function clearMacApp(
   if (allowed.some((id) => sameId(id, bundleId)))
     return { cleared: true, decision: 'allowed_earlier' };
   await onlyApp(context.deps.db, conversationId, app);
-  if (!canAsk(context)) throw new SparkToolError(NO_CARDS);
+  if (!canAsk(context)) throw new MacToolError('no_cards', NO_CARDS);
   return waitFor(
     context,
     { action: 'mac_use_app', app: app.name, bundleId, first: first.slice(0, 300) },
@@ -115,7 +116,7 @@ export async function clearMacAct(
 ): Promise<MacClearance> {
   const { scope, deps } = context;
   const bundleId = app.bundleId ?? app.name;
-  if (!canAsk(context)) throw new SparkToolError(NO_CARDS);
+  if (!canAsk(context)) throw new MacToolError('no_cards', NO_CARDS);
   const facts = await actionFacts(deps.db, scope.runId!, 'mac_act');
   if (actionPath(facts) === 'perform') return { cleared: true, decision: 'mode' };
   const allowed = await appsOfChat(deps.db, scope.conversationId!, 'mac_act', ['allowed']);
@@ -135,7 +136,7 @@ export async function clearMacPress(
   what: string,
   window: string | null,
 ): Promise<MacClearance> {
-  if (!canAsk(context)) throw new SparkToolError(NO_CARDS);
+  if (!canAsk(context)) throw new MacToolError('no_cards', NO_CARDS);
   const action: MacPressAction = {
     action: 'mac_press',
     app: app.name,

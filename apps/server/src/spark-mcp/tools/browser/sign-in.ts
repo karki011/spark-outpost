@@ -22,6 +22,7 @@ import {
 import { cardDecision } from './gate.ts';
 import type { PageFacts } from './read-flow.ts';
 import { scrubberFor } from './scrub.ts';
+import { allowedNote } from '../allowed-note.ts';
 
 const TOOL = 'spark_browser_sign_in';
 
@@ -167,6 +168,7 @@ async function fill(context: SparkToolContext, attempt: Attempt, clearance: Clea
       tab: done.tabId,
       page: landed,
       steps: done.steps,
+      ...allowedNote(clearance.decision),
       note: SIGN_IN_NOTE,
     };
   } catch (error) {
