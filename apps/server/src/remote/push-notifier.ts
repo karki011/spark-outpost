@@ -115,9 +115,8 @@ export function startPushNotifier(
     if (targets.length === 0) return;
     const keys = await deps.keys.get();
     const payload = JSON.stringify(pushMessage(chat, live));
-    for (const target of targets) {
-      if (target.serverKey === keys.publicKey) await sendTo(target, payload, keys);
-    }
+    const current = targets.filter((target) => target.serverKey === keys.publicKey);
+    await Promise.all(current.map((target) => sendTo(target, payload, keys)));
   }
 
   const batcher = new NotifyBatcher<PushCandidate>(

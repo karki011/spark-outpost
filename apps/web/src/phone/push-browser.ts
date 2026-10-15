@@ -38,7 +38,8 @@ export function registerServiceWorker(): Promise<ServiceWorkerRegistration> {
 }
 
 export async function localPush(): Promise<LocalPush> {
-  const registration = await registerServiceWorker();
+  await registerServiceWorker();
+  const registration = await navigator.serviceWorker.ready;
   return { registration, subscription: await registration.pushManager.getSubscription() };
 }
 
@@ -48,10 +49,11 @@ function keyOf(subscription: PushSubscription): string | null {
 }
 
 export function subscribedWith(subscription: PushSubscription, publicKey: string): boolean {
-  return keyOf(subscription) === publicKey.replace(/=+$/, '');
+  const key = keyOf(subscription);
+  return key === null || key === publicKey.replace(/=+$/, '');
 }
 
-export async function subscribe(
+export function subscribe(
   registration: ServiceWorkerRegistration,
   publicKey: string,
 ): Promise<PushSubscription> {

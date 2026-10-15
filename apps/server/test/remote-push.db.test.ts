@@ -108,6 +108,14 @@ describe('subscribing', () => {
     expect(await subscriptions()).toHaveLength(1);
   });
 
+  it('keeps the newest five subscriptions of a device', async () => {
+    for (let index = 1; index <= 7; index += 1) {
+      await subscribe(phone, `${ENDPOINT}-${index}`).expect(200);
+    }
+    const kept = (await subscriptions()).map((row) => row.endpoint);
+    expect(kept).toEqual([3, 4, 5, 6, 7].map((index) => `${ENDPOINT}-${index}`));
+  });
+
   it('lists only the asking device’s endpoints', async () => {
     const other = await pairDevice(app, 'Tablet');
     await subscribe(remoteClient(app, other.cookie), `${ENDPOINT}-tablet`).expect(200);
@@ -176,5 +184,16 @@ describe('ending a device', () => {
     const again = await pairDevice(app, 'Test phone', undefined, device.cookie);
     expect(again.id).toBe(device.id);
     expect(await subscriptions()).toHaveLength(1);
+  });
+});
+
+describe('focus from a paired device', () => {
+  it('is reported without filling the remote activity', async () => {
+    for (const focused of [true, false, true, true, false]) {
+      await phone.send('post', '/api/slack/presence', { focused }).expect(204);
+    }
+    await phone.send('post', '/api/slack/presence/', { focused: true }).expect(204);
+    const { rows } = await t.db.query("SELECT 1 FROM remote_audit WHERE action = 'request'");
+    expect(rows).toEqual([]);
   });
 });

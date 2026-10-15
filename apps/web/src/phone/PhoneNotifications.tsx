@@ -17,9 +17,9 @@ function NotifyToggle({ allowed }: { allowed: boolean }) {
   const switchId = useId();
   const push = useDevicePush(true);
   const blocked = notificationsBlocked();
-  const checked = push.change.isPending ? push.change.variables : push.on;
+  const checked = push.pending ?? push.on;
   const canTurnOn = allowed && !blocked;
-  const error = push.change.error ?? push.loadError;
+  const error = push.error ?? push.loadError;
   return (
     <>
       <ul className="ph-switches">
@@ -31,9 +31,7 @@ function NotifyToggle({ allowed }: { allowed: boolean }) {
             label={NOTIFY_LABEL}
             checked={checked}
             disabled={!push.ready || (!push.on && !canTurnOn)}
-            onChange={(next) => {
-              if (!push.change.isPending) push.change.mutate(next);
-            }}
+            onChange={push.turn}
           />
         </li>
       </ul>

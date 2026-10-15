@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PushState } from '@spark-outpost/contracts';
 import { phoneApi, phoneKeys } from './phone-api.ts';
-import { NOTIFY_NOT_ALLOWED } from './phone-copy.ts';
+import { NOTIFY_FAILED, NOTIFY_NOT_ALLOWED } from './phone-copy.ts';
 import {
   localPush,
   subscribe,
@@ -15,19 +15,35 @@ interface Change {
   local: LocalPush;
 }
 
-async function askBrowser(registration: ServiceWorkerRegistration, publicKey: string) {
+interface Turn {
+  next: boolean;
+  asked: Promise<PushSubscription> | null;
+}
+
+async function answerOf(asked: Promise<PushSubscription>): Promise<PushSubscription> {
   try {
-    return await subscribe(registration, publicKey);
-  } catch {
-    throw new Error(NOTIFY_NOT_ALLOWED);
+    return await asked;
+  } catch (error) {
+    const refused = error instanceof Error && error.name === 'NotAllowedError';
+    throw new Error(refused ? NOTIFY_NOT_ALLOWED : NOTIFY_FAILED, { cause: error });
   }
 }
 
-async function turnOn(local: LocalPush, publicKey: string): Promise<Change> {
+function reusable(local: LocalPush, publicKey: string): PushSubscription | null {
   const existing = local.subscription;
-  const reusable = existing && subscribedWith(existing, publicKey) ? existing : null;
-  if (existing && !reusable) await existing.unsubscribe();
-  const subscription = reusable ?? (await askBrowser(local.registration, publicKey));
+  return existing && subscribedWith(existing, publicKey) ? existing : null;
+}
+
+async function turnOn(
+  local: LocalPush,
+  publicKey: string,
+  asked: Promise<PushSubscription> | null,
+): Promise<Change> {
+  let subscription = reusable(local, publicKey);
+  if (!subscription) {
+    await local.subscription?.unsubscribe();
+    subscription = await answerOf(asked ?? subscribe(local.registration, publicKey));
+  }
   const state = await phoneApi.subscribePush(subscribeRequest(subscription));
   return { state, local: { registration: local.registration, subscription } };
 }
@@ -58,19 +74,32 @@ export function useDevicePush(enabled: boolean) {
     staleTime: Infinity,
   });
   const change = useMutation({
-    mutationFn: (next: boolean) => {
-      if (!local.data || !server.data) throw new Error('Notifications are still loading.');
-      return next ? turnOn(local.data, server.data.publicKey) : turnOff(local.data, server.data);
+    mutationFn: ({ next, asked }: Turn) => {
+      if (!local.data || !server.data) throw new Error(NOTIFY_FAILED);
+      return next
+        ? turnOn(local.data, server.data.publicKey, asked)
+        : turnOff(local.data, server.data);
     },
     onSuccess: ({ state, local: nextLocal }) => {
       queryClient.setQueryData(phoneKeys.push, state);
       queryClient.setQueryData(phoneKeys.pushLocal, nextLocal);
     },
   });
+  const turn = (next: boolean) => {
+    if (change.isPending) return;
+    const fresh =
+      next && local.data && server.data && !local.data.subscription
+        ? subscribe(local.data.registration, server.data.publicKey)
+        : null;
+    fresh?.catch(() => undefined);
+    change.mutate({ next, asked: fresh });
+  };
   return {
     ready: server.data !== undefined && local.data !== undefined,
     loadError: server.error ?? local.error,
     on: isPushOn(local.data, server.data),
-    change,
+    pending: change.isPending ? change.variables.next : null,
+    error: change.error,
+    turn,
   };
 }

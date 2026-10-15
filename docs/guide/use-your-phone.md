@@ -26,6 +26,6 @@ Messages are read from the CLI to show on the device and are not stored. Startin
 
 **Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device** on the device. A notification names the chat and what waits, never a command.
 
-A device you're using gets none. iPhone needs iOS 16.4 or later and Spark on the Home Screen.
+A device you're using gets none. iPhone needs iOS 16.4 or later and Spark on the Home Screen: save a passkey first, then sign in with it there.
 
 **Next:** [Answer an approval card](answer-approvals.md)

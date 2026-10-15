@@ -54,6 +54,7 @@ async function fakeBrowserPush(page: Page, options: { supported: boolean; iphone
       Object.defineProperty(navigator, 'serviceWorker', {
         value: {
           register: async () => registration,
+          ready: Promise.resolve(registration),
           addEventListener: () => undefined,
           removeEventListener: () => undefined,
         },

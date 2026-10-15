@@ -48,6 +48,7 @@ const NOT_PAIRED = 'Pair this device first.';
 const PAIR_AGAIN = 'This device needs to pair again.';
 const PAIRING_PAGE_AUDIT_EVERY_SECONDS = 60;
 const ASSET_PATH = /\.[a-z0-9]+$/i;
+const UNAUDITED_WRITES = new Set(['POST /api/slack/presence']);
 
 const uuid = z.uuid();
 
@@ -82,6 +83,11 @@ function isPageRequest(req: Request): boolean {
 
 function wantsStream(req: Request): boolean {
   return req.headers.accept?.includes('text/event-stream') === true;
+}
+
+function audited(req: Request): boolean {
+  const path = req.path.toLowerCase().replace(/\/+$/, '');
+  return !UNAUDITED_WRITES.has(`${req.method} ${path}`);
 }
 
 function staleReason(device: DeviceRow): string | null {
@@ -215,7 +221,7 @@ export function remoteGateway(deps: GatewayDeps) {
       return;
     }
     if (isPageRequest(req) && !ASSET_PATH.test(req.path)) res.set('Cache-Control', 'no-store');
-    if (mutating) await auditRequest(req, res, device);
+    if (mutating && audited(req)) await auditRequest(req, res, device);
     if (wantsStream(req)) streams.track(device.id, res);
     next();
   };

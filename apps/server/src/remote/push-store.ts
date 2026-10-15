@@ -2,6 +2,8 @@ import { REMOTE_DEVICE_IDLE_DAYS } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 
+const DEVICE_SUBSCRIPTION_LIMIT = 5;
+
 export interface NewPushSubscription {
   deviceId: string;
   endpoint: string;
@@ -45,7 +47,15 @@ export async function savePushSubscription(
       subscription.serverKey,
     ],
   );
-  return rowCount === 1;
+  if (rowCount !== 1) return false;
+  await db.query(
+    `DELETE FROM remote_push_subscriptions WHERE device_id = $1 AND id NOT IN (
+       SELECT id FROM remote_push_subscriptions WHERE device_id = $1
+       ORDER BY created_at DESC, id DESC LIMIT ${DEVICE_SUBSCRIPTION_LIMIT}
+     )`,
+    [subscription.deviceId],
+  );
+  return true;
 }
 
 export async function deletePushSubscription(
