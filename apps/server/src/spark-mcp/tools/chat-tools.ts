@@ -9,7 +9,9 @@ import {
   type ChatShareState as ChatState,
   type ConversationDetail,
   type Run,
+  type SearchMatch,
 } from '@spark-outpost/contracts';
+import { redactText } from '../../audit/redact.ts';
 import {
   CHAT_NOT_FOUND,
   CHAT_SHARE_UNTRUSTED_NOTE,
@@ -20,6 +22,7 @@ import { resolveChatSettings } from '../../persistence/chat-settings.ts';
 import { primaryChatWorktree } from '../../persistence/chat-worktrees.ts';
 import { getConversationDetail, listConversations } from '../../persistence/conversations.ts';
 import type { Queryable } from '../../persistence/db.ts';
+import { snippetText } from '../../persistence/search-snippet.ts';
 import { replyText } from '../../persistence/spark-mentions.ts';
 import { listProjects } from '../../projects/projects.ts';
 import { nowOf, type SparkScope } from '../deps.ts';
@@ -97,10 +100,16 @@ async function chats(
         ...(chat.pinnedAt ? { pinned: true } : {}),
         ...(chat.archivedAt ? { archived: true } : {}),
         ...(chat.id === scope.conversationId ? { thisChat: true } : {}),
+        ...(chat.match ? { match: matchLine(chat.match) } : {}),
       };
     }),
   );
-  return { ...shown, items };
+  const quoted = items.some((item) => item.match && !item.thisChat);
+  return { ...shown, items, ...(quoted ? { untrusted: CHAT_SHARE_UNTRUSTED_NOTE } : {}) };
+}
+
+function matchLine(match: SearchMatch) {
+  return { messageId: match.messageId, snippet: redactText(snippetText(match.parts)) };
 }
 
 function runLine(run: Run) {
@@ -290,7 +299,7 @@ export const chatTools = [
     privateData: true,
     title: 'Chats',
     description:
-      'List or search Spark chats (title and message text): title, projects, last update, state (working, needs_you, failed, done, idle), provider, model, mode and autonomy. Newest first, paged.',
+      'List or search Spark chats (title and message text): title, projects, last update, state (working, needs_you, failed, done, idle), provider, model, mode and autonomy. Newest first, paged; a query puts the best match first, with a snippet.',
     input: {
       query: z
         .string()
