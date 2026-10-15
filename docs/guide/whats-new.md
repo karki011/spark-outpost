@@ -12,7 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                                                  | What to do                                                           |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| In a chat without a project, Spark actions follow your picked mode, so **Auto** runs them at once. Sends and deletes still ask.                               | See [Spark tools](spark-tools.md#when-actions-ask-first).            |
+| In a chat without a project, Spark actions follow your picked mode, so **Auto** runs them at once. Mac-app sends and deletes still ask.                       | See [Spark tools](spark-tools.md#when-actions-ask-first).            |
 | Agents can read another Mac app and press its buttons and menus, one app per chat. Sends and deletes always ask.                                              | See [Mac control](mac-control.md).                                   |
 | Chat list rows show only the title, with a dot for working, waiting for you, done or couldn't finish. Opening the chat clears it.                             | See [statuses](statuses-and-limits.md#chat-list).                    |
 | Terminals use SF Mono when it's installed on your Mac, and Menlo otherwise.                                                                                   | Get it from [Apple](https://developer.apple.com/fonts/).             |
