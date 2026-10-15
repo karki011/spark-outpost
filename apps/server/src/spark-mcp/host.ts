@@ -8,6 +8,7 @@ import type { SparkScope, SparkToolDeps } from './deps.ts';
 import { sparkMcpServer } from './server.ts';
 import { endMacRun } from '../mac-control/end-run.ts';
 import { endBrowserRun } from './tools/browser/end-run.ts';
+import { auditInvalidMacCall } from './tools/mac/invalid-input.ts';
 
 export interface SparkGrant {
   url: string;
@@ -117,6 +118,7 @@ export async function startSparkMcpHost(
     const cancelled = cancelledId(body);
     if (cancelled !== null) calls.get(`${grant}:${cancelled}`)?.abort();
     const call = toolCallId(body);
+    if (call !== null) auditInvalidMacCall({ deps, scope: session.scope }, body);
     if (call !== null) {
       try {
         await session.scope.beforeToolCall?.();

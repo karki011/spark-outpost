@@ -15,6 +15,8 @@ import { SparkBlocks, SparkToolError, sparkTool, type SparkToolContext } from '.
 import {
   MacToolError,
   alreadyAudited,
+  failureDecision,
+  failureReason,
   asToolError,
   auditFailures,
   auditMac,
@@ -162,8 +164,8 @@ async function read(args: ReadArgs, context: SparkToolContext) {
         tool: READ_TOOL,
         action: 'read',
         app,
-        decision: 'failed',
-        detail: { reason: failure instanceof MacToolError ? failure.reason : 'failed' },
+        decision: failureDecision(failureReason(failure)),
+        detail: { reason: failureReason(failure) },
       });
       throw alreadyAudited(failure);
     });

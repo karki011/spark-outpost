@@ -78,6 +78,42 @@ describe('a Mac control call that fails before acting', () => {
   });
 });
 
+describe('failures that are not refusals, and bad input', () => {
+  it('audits a helper timeout and crash as failed, not refused', async () => {
+    await h.start({ mode: 'auto' });
+    await h.allowFirstUse();
+    h.fake.readError = new MacHostError('timeout', 'Mac control took too long to answer.');
+    expect((await h.call('spark_mac_read', { app: 'Calculator' })).result.isError).toBe(true);
+    h.fake.targetError = new MacHostError('failed', 'The Mac control helper exited.');
+    expect((await h.call('spark_mac_act', press('ax_3'))).result.isError).toBe(true);
+    expect(
+      h
+        .audited()
+        .slice(-2)
+        .map((entry) => [entry.action, entry.decision, entry.reason]),
+    ).toEqual([
+      ['read', 'failed', 'timeout'],
+      ['press', 'failed', 'failed'],
+    ]);
+  });
+
+  it('audits malformed arguments with the tool name only', async () => {
+    await h.start({ mode: 'auto' });
+    const refused = await h.call('spark_mac_act', { action: 'fly-to-the-moon', app: 'Calculator' });
+    expect(refused.result.isError).toBe(true);
+    expect(h.audited()).toEqual([
+      expect.objectContaining({
+        tool: 'spark_mac_act',
+        action: 'invalid_input',
+        decision: 'refused',
+        reason: 'invalid_input',
+      }),
+    ]);
+    expect(JSON.stringify(h.audited())).not.toContain('fly-to-the-moon');
+    expect(h.fake.ops()).toEqual([]);
+  });
+});
+
 describe('a result after a card', () => {
   it('says the user allowed it when the call waited on a card, and not otherwise', async () => {
     await h.start({ mode: 'default' });

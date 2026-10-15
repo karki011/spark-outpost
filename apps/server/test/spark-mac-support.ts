@@ -60,6 +60,7 @@ export class FakeMacHost implements MacHost {
   focused: MacIdentity = button('OK');
   targetPid = 700;
   targetError: MacHostError | null = null;
+  readError: MacHostError | null = null;
   targetState: MacTarget['state'] = 'alive';
   readText = '- window "Calculator" [ax_1]\n  - static text [ax_2] value="42"';
 
@@ -95,6 +96,7 @@ export class FakeMacHost implements MacHost {
       return { app: found };
     }
     if (request.op === 'read') {
+      if (this.readError) throw this.readError;
       const found = this.apps.find((candidate) => candidate.pid === request.pid)!;
       return {
         app: found,

@@ -49,7 +49,7 @@ Spark does what the agent proposes.
 | Use a [Mac app](mac-control.md)             | `spark_mac_apps`, `spark_mac_read`, `spark_mac_act`                                                     |
 | Keep one command running after the turn     | `spark_terminal_run`                                                                                    |
 
-An MCP server card shows the exact command. Agents pass only variable and header names; you fill values in **Settings → MCP servers**, for new agent sessions.
+An MCP server card shows the exact command. Agents pass only variable and header names; you fill values in **Settings → MCP servers**.
 
 ## Outpost tools
 
@@ -62,7 +62,7 @@ A chat in an [outpost](outposts.md) gets these. None shows a card.
 | Leave a note for the other chats                 | `spark_outpost_note`  |
 | Propose sub-task chats that you review and start | `spark_outpost_draft` |
 
-Any chat with a project gets `spark_outpost_draft`. A Spark handed a job gets none. What another chat wrote is never your message.
+Project chats get `spark_outpost_draft`; a Spark's job gets none. What another chat wrote is never your message.
 
 ## When actions ask first
 
@@ -74,7 +74,7 @@ Any chat with a project gets `spark_outpost_draft`. A Spark handed a job gets no
 
 ![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
 
-Edit any field, then confirm or select **Don't**. The card shows the result, or why it failed with **Try again**. Every action is audited.
+Edit any field, then confirm or select **Don't**. Browser and Mac tools report cards you allowed. The card shows the result, or why it failed with **Try again**. Every action is audited.
 
 ## Commands after the turn
 

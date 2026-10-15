@@ -17,6 +17,8 @@ import { SparkToolError, sparkTool, type SparkToolContext } from '../../tool.ts'
 import {
   MacToolError,
   alreadyAudited,
+  failureDecision,
+  failureReason,
   asToolError,
   auditFailures,
   auditMac,
@@ -237,8 +239,8 @@ async function act(args: ActArgs, context: SparkToolContext) {
         tool: TOOL,
         action: args.action,
         app,
-        decision: 'failed',
-        detail: { did, reason: failure instanceof MacToolError ? failure.reason : 'failed' },
+        decision: failureDecision(failureReason(failure)),
+        detail: { did, reason: failureReason(failure) },
       });
       throw alreadyAudited(failure);
     });

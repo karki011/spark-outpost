@@ -96,9 +96,27 @@ export function auditMac(context: SparkToolContext, entry: MacAuditEntry): void 
   });
 }
 
-function failureReason(error: unknown): string {
+const REFUSAL_REASONS: ReadonlySet<string> = new Set([
+  'refused',
+  'not_found',
+  'gone',
+  'stale_ref',
+  'other_app',
+  'not_running',
+  'one_app_per_chat',
+  'no_cards',
+  'no_shell',
+  'invalid_input',
+  ...Object.keys(RUN_REFUSALS),
+]);
+
+export function failureReason(error: unknown): string {
   if (error instanceof MacToolError) return error.reason;
   return error instanceof SparkToolError ? 'refused' : 'failed';
+}
+
+export function failureDecision(reason: string): MacDecision {
+  return REFUSAL_REASONS.has(reason) ? 'refused' : 'failed';
 }
 
 export async function auditFailures<T>(
@@ -114,7 +132,7 @@ export async function auditFailures<T>(
         tool: entry.tool,
         action: entry.action,
         app: entry.app === null ? null : { name: entry.app.slice(0, 200), bundleId: null },
-        decision: failureReason(error) === 'failed' ? 'failed' : 'refused',
+        decision: failureDecision(failureReason(error)),
         detail: { reason: failureReason(error) },
       });
     }
