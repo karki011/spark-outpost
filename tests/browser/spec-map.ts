@@ -296,6 +296,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   },
   { prefix: 'apps/server/src/audit/', groups: ['analytics-audit', 'approvals'] },
   { prefix: 'apps/server/src/browser/', groups: ['terminal-preview-browser'] },
+  { prefix: 'apps/server/src/mac-control/', groups: ['settings-providers'] },
   { prefix: 'apps/server/src/chat-share/', groups: ['chat'] },
   { prefix: 'apps/server/src/checks/', groups: ['ship-pr'] },
   { prefix: 'apps/server/src/codescan/', groups: ['map'] },

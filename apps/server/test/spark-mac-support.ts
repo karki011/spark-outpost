@@ -133,6 +133,7 @@ export interface MacSessionOptions {
   mode?: string;
   macControl?: boolean;
   scope?: Partial<SparkScope>;
+  noCards?: boolean;
 }
 
 export class MacHarness {
@@ -181,7 +182,7 @@ export class MacHarness {
       workspaceId: t.workspaceId,
       conversationId,
       runId,
-      actions: recorded.hooks,
+      ...(options.noCards ? {} : { actions: recorded.hooks }),
       observations: createRunObservations({ db: t.db, runId, audit: recorded.hooks.audit }),
       ...options.scope,
     });

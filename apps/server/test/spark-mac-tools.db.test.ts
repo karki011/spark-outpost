@@ -109,7 +109,7 @@ describe('the first use of an app in a chat', () => {
   });
 
   it('refuses without a card when no card can be shown', async () => {
-    await h.start({ mode: 'auto', scope: { actions: undefined } });
+    await h.start({ mode: 'auto', noCards: true });
     const refused = await h.call('spark_mac_read', { app: 'Calculator' });
     expect(refused.result.isError).toBe(true);
     expect(h.fake.ops()).not.toContain('read');
