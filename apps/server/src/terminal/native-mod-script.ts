@@ -131,7 +131,8 @@ export function register(on) {
           .catch(() => null);
         if (answer && sent(answer)) continue;
         facts.putBack(items);
-        throw new Error('Spark refused the telemetry request.');
+        if (!answer || answer.status === 401) config = null;
+        return;
       }
     };
     $.clock.every(POLL_MS, async () => {

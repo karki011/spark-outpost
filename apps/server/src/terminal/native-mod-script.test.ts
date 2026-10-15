@@ -431,6 +431,37 @@ describe('the Spark mod when sends fail or requests overlap', () => {
   });
 });
 
+describe('the Spark mod when only its turn facts are refused', () => {
+  it('keeps the status line and the facts while the telemetry request fails', async () => {
+    await oneTurn();
+    reply({ messages: [], notices: [], status: 'Spark · phone connected' });
+    replies.push(() => ({ ok: false, status: 500, text: '' }));
+    await tick();
+    expect(band()).toMatchObject({ children: ['Spark · phone connected'] });
+    await writeConfig('http://127.0.0.1:4200/events', 'second-token');
+    reply({ messages: [], notices: [], status: 'Spark · phone connected' });
+    replies.push(() => ({ ok: true, status: 204, text: '' }));
+    await tick();
+    expect(band()).toMatchObject({ children: ['Spark · phone connected'] });
+    expect(requests[3]!.url).toBe('http://127.0.0.1:4100/mod/telemetry');
+    expect(sentItems(3).items).toEqual(sentItems(1).items);
+  });
+
+  it('reads its config again after a stale token or a refused connection on the facts request', async () => {
+    await oneTurn();
+    reply({ messages: [], notices: [], status: 'Spark · phone connected' });
+    replies.push(() => ({ ok: false, status: 401, text: '' }));
+    await tick();
+    expect(band()).toMatchObject({ children: ['Spark · phone connected'] });
+    await writeConfig('http://127.0.0.1:4200/events', 'second-token');
+    reply({ messages: [], notices: [], status: null });
+    replies.push(() => ({ ok: true, status: 204, text: '' }));
+    await tick();
+    expect(requests[2]!.url).toBe('http://127.0.0.1:4200/mod/inbox');
+    expect(sentItems(3).items).toEqual(sentItems(1).items);
+  });
+});
+
 describe('mod support', () => {
   it('needs Claude Code 2.1.287 or newer', () => {
     expect(supportsMods('2.1.287 (Claude Code)')).toBe(true);
