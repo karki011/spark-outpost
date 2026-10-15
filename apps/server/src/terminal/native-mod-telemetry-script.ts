@@ -1,5 +1,5 @@
 export const MOD_SEND_MAX = 200;
-export const MOD_SEND_CHARS = 400_000;
+export const MOD_SEND_BYTES = 400_000;
 export const MOD_INPUT_CHARS = 20_000;
 export const MOD_OUTPUT_CHARS = 16_000;
 export const MOD_REPLY_CHARS = 100_000;
@@ -13,7 +13,7 @@ export function sparkModTelemetryScript(): string {
   return String.raw`
 const SIDE_INDEX = ${MOD_SIDE_INDEX};
 const SEND_MAX = ${MOD_SEND_MAX};
-const SEND_CHARS = ${MOD_SEND_CHARS};
+const SEND_BYTES = ${MOD_SEND_BYTES};
 const INPUT_CHARS = ${MOD_INPUT_CHARS};
 const OUTPUT_CHARS = ${MOD_OUTPUT_CHARS};
 const REPLY_CHARS = ${MOD_REPLY_CHARS};
@@ -22,6 +22,24 @@ const QUEUE_CHARS = ${MOD_QUEUE_CHARS};
 const CLIPPED_FIELD_CHARS = ${MOD_CLIPPED_FIELD_CHARS};
 const KEPT = 256;
 const NOT_ARGUMENTS = new Set(['tool', 'tool_use_id', 'agentId', 'requestMeta', 'consent']);
+
+export function utf8Bytes(text) {
+  let bytes = 0;
+  for (let index = 0; index < text.length; index++) {
+    const code = text.charCodeAt(index);
+    if (code < 0x80) bytes += 1;
+    else if (code < 0x800) bytes += 2;
+    else if (code >= 0xd800 && code <= 0xdbff && index + 1 < text.length) {
+      bytes += 4;
+      index += 1;
+    } else bytes += 3;
+  }
+  return bytes;
+}
+
+function sized(item) {
+  return { item, size: utf8Bytes(JSON.stringify(item)) + 1 };
+}
 
 function label(value) {
   return typeof value === 'string' && value.length > 0 && value.length <= 200 ? value : null;
@@ -81,9 +99,9 @@ export function telemetry() {
       queued -= queue.shift().size;
   };
   const push = (item) => {
-    const size = JSON.stringify(item).length + 1;
-    queue.push({ item, size });
-    queued += size;
+    const entry = sized(item);
+    queue.push(entry);
+    queued += entry.size;
     trim();
   };
   const ownerOf = (agent) => (agent ? (owners.get(agent) ?? null) : prompt);
@@ -140,7 +158,14 @@ export function telemetry() {
       const turn = label(e.turnId);
       const owner = turn ? turns.get(turn) : null;
       if (!recording || !owner || label(e.agentId) || typeof text !== 'string' || !text) return;
-      push({ kind: 'reply', prompt: owner, agent: null, turn, text: clip(text, REPLY_CHARS) });
+      push({
+        kind: 'reply',
+        prompt: owner,
+        agent: null,
+        turn,
+        index: e.index,
+        text: clip(text, REPLY_CHARS),
+      });
     },
     turnEnded(e, at) {
       const turn = label(e.turnId);
@@ -209,12 +234,12 @@ export function telemetry() {
         costUsd,
       });
     },
-    take() {
+    take(most = SEND_MAX) {
       let chars = 0;
       let taken = 0;
-      while (taken < queue.length && taken < SEND_MAX) {
+      while (taken < queue.length && taken < most) {
         const size = queue[taken].size;
-        if (taken > 0 && chars + size > SEND_CHARS) break;
+        if (taken > 0 && chars + size > SEND_BYTES) break;
         chars += size;
         taken += 1;
       }
@@ -222,7 +247,7 @@ export function telemetry() {
       return queue.splice(0, taken).map((entry) => entry.item);
     },
     putBack(items) {
-      const entries = items.map((item) => ({ item, size: JSON.stringify(item).length + 1 }));
+      const entries = items.map(sized);
       queue.unshift(...entries);
       for (const entry of entries) queued += entry.size;
       trim();

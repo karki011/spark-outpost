@@ -5,7 +5,7 @@ import {
   startSparkMod,
   type SparkModHarness,
 } from '../../test/spark-mod-engine.ts';
-import { MOD_SEND_CHARS, MOD_SEND_MAX } from './native-mod-telemetry-script.ts';
+import { MOD_SEND_BYTES, MOD_SEND_MAX } from './native-mod-telemetry-script.ts';
 
 let mod: SparkModHarness;
 
@@ -92,16 +92,15 @@ describe('the Spark mod’s turn facts', () => {
     );
   });
 
-  it('keeps the facts for the next poll when Spark is away, the token is stale or the batch is too big', async () => {
+  it('keeps the facts for the next poll when Spark is away or the token is stale', async () => {
     mod = await startSparkMod();
     await oneTurn();
     await pollOnce(401);
-    await pollOnce(413);
     await pollOnce(204);
-    expect(facts(5)).toEqual(facts(1));
+    expect(facts(3)).toEqual(facts(1));
     mod.inbox({ messages: [], notices: [], status: null });
     await mod.tick();
-    expect(mod.requests).toHaveLength(7);
+    expect(mod.requests).toHaveLength(5);
   });
 
   it('sends the facts in batches of a bounded count', async () => {
@@ -238,7 +237,14 @@ describe('the Spark mod while Terminal sessions are recorded like chats', () => 
         input: { command: 'cat .env', description: 'x' },
       },
       { ...toolFact, phase: 'end', failed: false, at: FACT_AT, output: 'printed', asked: true },
-      { kind: 'reply', prompt: 'prompt-1', agent: null, turn: 'turn-1', text: 'All done.' },
+      {
+        kind: 'reply',
+        prompt: 'prompt-1',
+        agent: null,
+        turn: 'turn-1',
+        index: 0,
+        text: 'All done.',
+      },
     ]);
   });
 
@@ -276,6 +282,55 @@ describe('the Spark mod while Terminal sessions are recorded like chats', () => 
     expect(facts(0)).toHaveLength(2);
   });
 
+  it('sizes requests in UTF-8 bytes, so wide characters never pass the hook host’s limit', async () => {
+    mod = await startSparkMod({ record: true });
+    await prompted();
+    for (let index = 0; index < 20; index++)
+      await mod.hook('tool.call')(
+        mod.engine,
+        {
+          tool: 'Write',
+          tool_use_id: `toolu_${index}`,
+          file_path: '/p',
+          content: '漢'.repeat(6000),
+        },
+        async () => ({ text: '😀'.repeat(3000) }),
+      );
+    mod.inbox({ messages: [], notices: [], status: null });
+    for (let round = 0; round < 10; round++) mod.answer(204);
+    await mod.tick();
+    const bytes = mod.requests
+      .slice(1)
+      .map((request) => Buffer.byteLength(String(request.init.body), 'utf8'));
+    expect(bytes.length).toBeGreaterThan(1);
+    expect(Math.max(...bytes)).toBeLessThanOrEqual(MOD_SEND_BYTES + 20);
+  });
+
+  it('sends facts one at a time after a too-big batch and drops one still too big', async () => {
+    mod = await startSparkMod({ record: true });
+    await prompted();
+    await mod.hook('tool.call')(
+      mod.engine,
+      bash,
+      fromEngine(async () => ({ text: 'x' })),
+    );
+    mod.inbox({ messages: [], notices: [], status: null });
+    mod.answer(413);
+    await mod.tick();
+    mod.inbox({ messages: [], notices: [], status: null });
+    mod.answer(413);
+    mod.answer(204);
+    await mod.tick();
+    expect(mod.requests.map((request) => new URL(request.url).pathname)).toEqual([
+      '/mod/inbox',
+      '/mod/telemetry',
+      '/mod/inbox',
+      '/mod/telemetry',
+      '/mod/telemetry',
+    ]);
+    expect([facts(3), facts(4)]).toEqual([[facts(1)[0]], [facts(1)[1]]]);
+  });
+
   it('keeps each request under its size cap', async () => {
     mod = await startSparkMod({ record: true });
     await prompted();
@@ -295,7 +350,7 @@ describe('the Spark mod while Terminal sessions are recorded like chats', () => 
     await mod.tick();
     const sizes = mod.requests.slice(1).map((request) => String(request.init.body).length);
     expect(sizes.length).toBeGreaterThan(1);
-    expect(Math.max(...sizes)).toBeLessThanOrEqual(MOD_SEND_CHARS + 20);
+    expect(Math.max(...sizes)).toBeLessThanOrEqual(MOD_SEND_BYTES + 20);
     expect(sizes.reduce((sum, size) => sum + size, 0)).toBeGreaterThan(60 * 18000);
   });
 });

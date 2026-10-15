@@ -46,7 +46,14 @@ describe('turn facts from the Spark mod', () => {
   it('reads a tool’s input and output and a reply, which Spark stores only while recording', () => {
     const started = { ...tool, input: { command: 'npm test' } };
     const ended = { ...tool, phase: 'end', output: 'ok', asked: true };
-    const reply = { kind: 'reply', prompt: 'prompt-1', agent: null, turn: 'turn-1', text: 'Done.' };
+    const reply = {
+      kind: 'reply',
+      prompt: 'prompt-1',
+      agent: null,
+      turn: 'turn-1',
+      index: 0,
+      text: 'Done.',
+    };
     expect(readModTelemetry({ items: [started, ended, reply] })).toEqual([started, ended, reply]);
     const tooLong = { ...tool, input: { command: 'x'.repeat(MOD_INPUT_CHARS) } };
     const listed = { ...tool, input: ['npm', 'test'] };

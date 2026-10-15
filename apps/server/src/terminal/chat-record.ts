@@ -45,7 +45,7 @@ export interface ChatRecord {
   runId: string;
   toolStarted(tool: RecordedTool): Promise<void>;
   toolEnded(end: ToolEnd): Promise<void>;
-  replied(text: string): Promise<void>;
+  replied(key: string, text: string): Promise<void>;
   finish(): Promise<void>;
   kept(): Promise<void>;
   discard(): void;
@@ -104,6 +104,7 @@ export async function startChatRecord(
   });
   const events = createTurnEvents({ append, secretValues });
   const tools = new Map<string, RecordedTool>();
+  const done = new Set<string>();
   let replies = 0;
 
   const produced = async (outputs: ProviderOutput[]) => {
@@ -123,7 +124,7 @@ export async function startChatRecord(
   return {
     runId,
     async toolStarted(tool) {
-      if (tools.has(tool.id)) return;
+      if (tools.has(tool.id) || done.has(tool.id)) return;
       const input = mentionsSecretFile(tool.input) ? withoutFileContent(tool.input) : tool.input;
       const kept = { ...tool, input };
       tools.set(tool.id, kept);
@@ -133,13 +134,16 @@ export async function startChatRecord(
       const tool = tools.get(end.id);
       if (!tool) return;
       tools.delete(end.id);
+      done.add(end.id);
       if (end.asked) {
         watch.asked(tool.id);
         observer.message('from_agent', permissionAsked(tool, cwd));
       }
       await see(toolCallEnded(tool, end.output, end.failed));
     },
-    async replied(text) {
+    async replied(key, text) {
+      if (done.has(key)) return;
+      done.add(key);
       const shown = replies > 0 ? `\n\n${text}` : text;
       replies += 1;
       await reply.say(redaction.push(shown));

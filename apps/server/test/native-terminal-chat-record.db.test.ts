@@ -66,7 +66,13 @@ async function workedTurn() {
       'ok',
     ),
     ...tool('toolu_push', 'Bash', { command: 'git push --force origin main' }, 'pushed'),
-    { kind: 'reply', ...owned, turn: 't1', text: `I wrote notes.md and pushed ${SECRET}.` },
+    {
+      kind: 'reply',
+      ...owned,
+      turn: 't1',
+      index: 0,
+      text: `I wrote notes.md and pushed ${SECRET}.`,
+    },
   ]);
   await f.hook('Stop', { prompt_id: 'first' });
 }

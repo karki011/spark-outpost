@@ -74,6 +74,7 @@ const itemSchema = z.discriminatedUnion('kind', [
     prompt: label,
     agent: z.null(),
     turn: label,
+    index: count,
     text: z.string().min(1).max(MOD_REPLY_CHARS),
   }),
 ]);
@@ -150,7 +151,7 @@ export type ChatRecordFor = (runId: string) => Promise<ChatRecord | null>;
 
 async function recordDetail(record: ChatRecord | null, item: ModItem): Promise<void> {
   if (!record) return;
-  if (item.kind === 'reply') return record.replied(item.text);
+  if (item.kind === 'reply') return record.replied(`${item.turn}:${item.index}`, item.text);
   if (item.kind !== 'tool') return;
   if (item.phase === 'start' && item.input !== undefined)
     return record.toolStarted({ id: item.id, name: item.name, input: item.input });

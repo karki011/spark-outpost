@@ -72,7 +72,7 @@ async function readConfig($, link) {
 async function sendFacts($, link) {
   const config = await readConfig($, link);
   for (let round = 0; round < SEND_ROUNDS; round++) {
-    const items = link.facts.take();
+    const items = link.facts.take(link.single ? 1 : undefined);
     if (items.length === 0) return;
     const answer = await $.http
       .fetch(new URL('/mod/telemetry', config.url).href, {
@@ -81,7 +81,14 @@ async function sendFacts($, link) {
         body: JSON.stringify({ items }),
       })
       .catch(() => null);
-    if (answer && sent(answer)) continue;
+    if (answer && sent(answer)) {
+      link.single = false;
+      continue;
+    }
+    if (answer && answer.status === 413) {
+      if (items.length === 1) continue;
+      link.single = true;
+    }
     link.facts.putBack(items);
     if (!answer || answer.status === 401) link.config = null;
     return;
@@ -104,6 +111,7 @@ export function register(on) {
     told: false,
     sending: Promise.resolve(),
     reads: Promise.resolve(),
+    single: false,
   };
   const facts = link.facts;
   on('classic.UserPromptSubmit', async ($, e, next) => {

@@ -116,4 +116,33 @@ describe('flags for a recorded Terminal session', () => {
     expect(text).not.toContain(OLD);
     expect(text).not.toContain(NEW);
   });
+
+  it('stores a replayed or partly replayed batch of details once', async () => {
+    await project({});
+    const facts = [
+      ...call('toolu_a', 'Bash', { command: 'npm test' }, 'passed'),
+      { kind: 'reply', ...owned, turn: 't1', index: 0, text: 'Tests pass.' },
+      ...call('toolu_b', 'Bash', { command: 'npm run lint' }, 'clean'),
+      { kind: 'reply', ...owned, turn: 't1', index: 1, text: 'Lint is clean.' },
+    ];
+    await turn(async () => {
+      expect(await f.modFacts(facts.slice(0, 3))).toBe(204);
+      expect(await f.modFacts(facts)).toBe(204);
+    }, facts);
+    const commands = await rows(
+      `SELECT c.command FROM run_commands c JOIN runs r ON r.id = c.run_id
+       WHERE r.conversation_id = :c ORDER BY c.started_at`,
+    );
+    expect(commands.map((row) => row.command)).toEqual(['npm test', 'npm run lint']);
+    const replies = await rows(
+      `SELECT content FROM messages WHERE conversation_id = :c AND role = 'assistant'`,
+    );
+    expect(replies).toEqual([{ content: 'Tests pass.\n\nLint is clean.' }]);
+    const audited = await rows(
+      `SELECT l.payload->'params'->'update'->>'toolCallId' AS id FROM run_protocol_log l
+       JOIN runs r ON r.id = l.run_id
+       WHERE r.conversation_id = :c AND l.payload->'params'->'update'->>'sessionUpdate' = 'tool_call'`,
+    );
+    expect(audited.map((row) => row.id).sort()).toEqual(['toolu_a', 'toolu_b']);
+  });
 });

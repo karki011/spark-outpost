@@ -127,7 +127,7 @@ Spark counts the mod as active while it checked in within the last 5 s (`remote/
 - whether Claude showed a permission prompt for the call. The mod matches `classic.PermissionRequest` to the in-flight call by tool name and input.
 - every main-loop step's visible reply text, up to 100,000 characters.
 
-**When the mod delivers.** A post is capped at 400,000 characters, and a 413 keeps the batch for the next poll. The mod also delivers, waiting at most 2 s, at two moments:
+**When the mod delivers.** A post is capped at 400,000 bytes of UTF-8. After a 413 the mod sends facts one at a time, and drops a single fact that is still too big. A batch that was stored but got no answer is sent again, and the recorder keeps each tool call by its id and each reply by its turn and step, so a replay stores nothing twice. The mod also delivers, waiting at most 2 s, at two moments:
 
 - at a main-loop `turn.start`, so Spark can take the git snapshot before any tool runs;
 - in `classic.Stop` before Claude's own Stop hooks run, so the turn's facts arrive before Spark closes the run.
