@@ -15,7 +15,7 @@ You'll let an agent read and press in other Mac apps, one app per chat. About 2 
 3. Select **Ask macOS**, or **Open Accessibility settings**, and switch on **Spark Outpost**.
 4. Come back to Spark; the card shows **Allowed**.
 
-What the agent reads goes to the chat's model provider. Turns started from a paired device never get Mac control.
+What the agent reads goes to the model provider. Paired devices never get Mac control.
 
 ## What asks and what never happens
 

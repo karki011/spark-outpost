@@ -97,7 +97,7 @@ test('the chat shows what Spark is doing with its PR and one card confirms the p
     .getByRole('navigation', { name: 'Chats' })
     .getByRole('listitem')
     .filter({ hasText: 'Fix the cents parser' });
-  await expect(row.getByRole('img', { name: 'PR feedback' })).toBeVisible();
+  await expect(row.locator('.row-open')).toHaveAttribute('title', /PR feedback/);
 
   const card = page.getByRole('group', { name: /Address PR feedback\?/ });
   await expect(card.getByRole('link', { name: 'acme/widgets#7' })).toBeVisible();

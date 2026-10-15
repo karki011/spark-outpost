@@ -2,6 +2,11 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.17
+
+- Chats: the chat list shows only each chat's title. A dot at the end shows what it's doing: a ring while it works, then amber when it waits for you, green when it's done and red when it couldn't finish. Opening the chat clears the dot, and your phone and Mac agree on what you've seen.
+- Terminal: terminals use SF Mono when it's installed on your Mac, and Menlo otherwise. The rest of the app keeps Geist Mono.
+
 ## 0.1.0-beta.16
 
 - Remote control: a paired phone or computer can follow a running Terminal session, send it a message, stop the agent and approve its permission requests. Two switches on the Remote control page turn this on, and both start off. Messages that would run a CLI command, and messages while the agent waits for an answer, stay on the Mac.

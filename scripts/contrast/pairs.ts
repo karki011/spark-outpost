@@ -9,6 +9,7 @@ import {
   FORMS,
   HOME,
   PROVIDERS,
+  SIDEBAR_BLOBS,
   STATUS,
 } from './interface-pairs.ts';
 import { COMMANDS } from './command-pairs.ts';
@@ -49,6 +50,7 @@ export const PAIRS: Pair[] = [
   ...CHIPS,
   ...CHAT_TICKS,
   ...DROP_TARGET,
+  ...SIDEBAR_BLOBS,
   ...PROVIDERS,
   ...HOME,
   ...COMPANION,

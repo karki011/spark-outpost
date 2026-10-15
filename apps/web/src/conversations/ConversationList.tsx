@@ -54,7 +54,6 @@ import { useRowFocus } from './use-row-focus.ts';
 import { useSidebarDnd, type Point } from './use-sidebar-dnd.ts';
 import { useSidebarFolds } from './use-sidebar-folds.ts';
 import { useSidebarShortcuts } from './use-sidebar-shortcuts.ts';
-import { useMarkRead } from './use-mark-read.ts';
 import { useToast } from './use-toast.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { requestMessageJump } from '../chat/message-jump.ts';
@@ -128,7 +127,6 @@ export const ConversationList = memo(function ConversationList({
   const byId = new Map([...chats, ...visible].map((chat) => [chat.id, chat]));
   const activeCount = chats.filter((chat) => !chat.archivedAt).length;
   const waiting = attention(chats, selectedId);
-  useMarkRead(selectedId, chats);
 
   const projectAdded = async (project: Project) => {
     setAddingProject(false);

@@ -105,6 +105,9 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   pinned_order: number | null;
   project_order: number | null;
   unread: boolean;
+  seen_at?: Date | null;
+  latest_run_finished_at?: Date | null;
+  waiting_since?: Date | null;
   needs_input: boolean;
   pull_request_merged: boolean;
   title_source: string;
@@ -247,6 +250,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
             interruptionChoice: row.latest_run_interruption_choice ?? null,
             needsYou: needsYouLines(row.latest_run_asking_reply ?? '')[0] ?? null,
             ...(row.latest_run_waiting_on ? { waitingOn: row.latest_run_waiting_on } : {}),
+            finishedAt: iso(row.latest_run_finished_at ?? null),
           }
         : null,
     archivedAt: iso(row.archived_at),
@@ -254,6 +258,8 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
     pinnedOrder: row.pinned_order,
     projectOrder: row.project_order,
     unread: row.unread,
+    seenAt: iso(row.seen_at ?? null),
+    waitingSince: row.needs_input ? iso(row.waiting_since ?? null) : null,
     needsInput: row.needs_input,
     attention: row.needs_input ? toAttention(row) : null,
     titleSource: titleSourceSchema.safeParse(row.title_source).data ?? 'message',

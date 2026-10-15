@@ -99,6 +99,7 @@ export const conversationSummarySchema = z.object({
       interruptionChoice: interruptionChoiceSchema.nullable().optional(),
       needsYou: z.string().nullable().optional(),
       waitingOn: z.number().int().positive().optional(),
+      finishedAt: z.string().nullable().optional(),
     })
     .nullable(),
   archivedAt: z.string().nullable(),
@@ -107,6 +108,8 @@ export const conversationSummarySchema = z.object({
   projectOrder: z.number().int().nullable().default(null),
   unread: z.boolean(),
   needsInput: z.boolean(),
+  seenAt: z.string().nullable().optional(),
+  waitingSince: z.string().nullable().optional(),
   attention: conversationAttentionSchema.nullable().default(null),
   titleSource: titleSourceSchema.default('message'),
   category: categorySchema.nullable().default(null),

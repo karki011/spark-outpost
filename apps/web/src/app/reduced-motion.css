@@ -113,11 +113,6 @@
       opacity: 0;
     }
   }
-  @keyframes sb-chkout {
-    to {
-      opacity: 0;
-    }
-  }
   @keyframes onbout {
     to {
       opacity: 0;
@@ -139,15 +134,11 @@
   }
   @keyframes shake {
   }
-  @keyframes sb-shake {
-  }
   @keyframes hand-wave {
   }
   @keyframes shimmer {
   }
   @keyframes row-marquee {
-  }
-  @keyframes sb-ripple {
   }
   @keyframes appr-ripple {
   }

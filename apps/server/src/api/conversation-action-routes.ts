@@ -7,7 +7,7 @@ import {
 import type { Db } from '../persistence/db.ts';
 import {
   deleteConversation,
-  markConversationRead,
+  markConversationSeen,
   orderPinned,
   updateConversation,
 } from '../persistence/conversation-actions.ts';
@@ -80,8 +80,8 @@ export function conversationActionRoutes({
     res.json(response);
   });
 
-  router.post('/conversations/:id/read', async (req, res) => {
-    await markConversationRead(db, workspaceId, paramId(req));
+  router.post('/conversations/:id/seen', async (req, res) => {
+    await markConversationSeen(db, workspaceId, paramId(req));
     res.status(204).end();
   });
 

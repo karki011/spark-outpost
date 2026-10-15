@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const appEventKindSchema = z.enum([
   'conversation',
+  'seen',
   'run',
   'step',
   'subagent',

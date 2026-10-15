@@ -96,6 +96,7 @@ export async function withNativeTerminals(
       sessionType: row?.session_type ?? 'chat',
       terminal,
       needsInput: conversation.needsInput || waiting,
+      waitingSince: conversation.waitingSince ?? (waiting ? terminal.updatedAt : null),
       attention:
         conversation.attention ??
         (waiting
