@@ -1,6 +1,7 @@
 import {
   macAppRefusal,
   macRefusalLine,
+  refusedAppName,
   refusedBundleId,
   type MacApp,
   type MacHostErrorCode,
@@ -76,6 +77,17 @@ export function hostError(error: unknown): MacOpError {
     return opError(code, error.message);
   }
   return opError('failed', (error as Error).message);
+}
+
+function closedApp(bundleId: string): MacApp {
+  return {
+    pid: null,
+    name: bundleId,
+    bundleId,
+    frontmost: false,
+    windows: [],
+    refused: refusedBundleId(bundleId),
+  };
 }
 
 function runKey(request: { chatId: string; runId: string | null }): string {
@@ -156,18 +168,12 @@ export function createMacControl(options: MacControlOptions): MacControl {
   ) => {
     const found = (await listApps(signal)).find((app) => sameApp(app, request.app));
     if (found) return { app: found };
+    const named = refusedAppName(request.app);
+    if (named) return { app: { ...closedApp(request.app), bundleId: null, refused: named } };
     if (!BUNDLE_ID.test(request.app)) {
       throw opError('no_app', `${request.app} is not running. Pass its bundle id to open it.`);
     }
-    const app: MacApp = {
-      pid: null,
-      name: request.app,
-      bundleId: request.app,
-      frontmost: false,
-      windows: [],
-      refused: refusedBundleId(request.app),
-    };
-    return { app };
+    return { app: closedApp(request.app) };
   };
 
   const read = async (request: Extract<MacHostRequest, { op: 'read' }>, signal: AbortSignal) => {

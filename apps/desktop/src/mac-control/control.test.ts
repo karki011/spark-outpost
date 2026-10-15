@@ -267,6 +267,11 @@ describe('Mac control in the shell', () => {
       app: { pid: number | null; refused: string | null };
     };
     expect(closed.app).toMatchObject({ pid: null, refused: null });
+    const settings = (await control.run(
+      { op: 'resolve', chatId: CHAT, runId: RUN, app: 'Keychain Access' },
+      signal,
+    )) as { app: { pid: number | null; refused: string | null } };
+    expect(settings.app).toMatchObject({ pid: null, refused: 'passwords' });
     expect(
       (
         await failure(

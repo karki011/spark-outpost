@@ -94,6 +94,10 @@ export function refusedBundleId(bundleId: string): MacRefusalKind | null {
   return REFUSED_APPS.find((entry) => matchesId(entry, bundleId))?.reason ?? null;
 }
 
+export function refusedAppName(name: string): MacRefusalKind | null {
+  return REFUSED_APPS.find((entry) => sameName(entry.name, name))?.reason ?? null;
+}
+
 export function macAppRefusal(
   app: MacAppFacts,
   sparkPids: ReadonlySet<number>,
