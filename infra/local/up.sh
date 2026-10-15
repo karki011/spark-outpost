@@ -12,5 +12,6 @@ if "$PG_BIN/pg_ctl" --pgdata="$PG_DATA" status >/dev/null 2>&1; then
   exit 0
 fi
 
-"$PG_BIN/pg_ctl" --pgdata="$PG_DATA" --log="$PG_LOG" --wait start >/dev/null
+"$PG_BIN/pg_ctl" --pgdata="$PG_DATA" --log="$PG_LOG" \
+  --options="-c max_connections=$PG_MAX_CONNECTIONS" --wait start >/dev/null
 echo "Local PostgreSQL is running on 127.0.0.1:$PG_PORT."
