@@ -13,6 +13,7 @@
   - `blob-scout-logo-guide.html`: the logo guide, with moods, colors, and usage rules
 - `tickets/`: the Tickets + Home-brief reference plan (`TICKETS_SCREEN_PLAN.md`) and its two mockups, `tickets-mockup-inbox.html` and `home-brief-mockup.html`.
 - `map/`: the Project Map design target. `project-map-mockup.html` is the mockup, built by `build-map-data.mjs` and loaded by `tests/browser/map-fixture.ts`. To compare the app with it, run `tests/browser/project-map.spec.ts` with `SPARK_SHOTS` set to an output folder.
+- `mocks/calendar-mock.html`: the Calendar design mock (Today view, event actions, the island nudge, the morning brief block, Settings → Calendar), sample data only. The design is in `docs/architecture/CALENDAR.md`. Add `?theme=dark`, `?view=home` or `settings`, `?time=700` (minutes after midnight), `?island=open` and `?select=review` to the address to open a given state.
 - `ux/spark-outpost-ux-flow.md`: the UX flow and interaction spec (still-general sections only; see the note in that file for screens it no longer covers).
 - `ACCESSIBILITY.md`: the WCAG 2.2 AA colour, typography, focus, target and motion rules, and how `pnpm a11y:contrast` checks them.
 - `RESPONSIVE.md`: the phone, tablet and touch queries, and where each lives.
