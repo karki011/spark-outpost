@@ -19,7 +19,7 @@ test('Spark screenshots', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1000 });
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  const spark = page.getByRole('dialog', { name: 'Spark' });
+  const spark = page.getByRole('dialog', { name: 'Profile & personality' });
   await spark.getByLabel('What should Spark call you?', { exact: true }).fill('Sam Rivera');
   await expect(spark.locator('.spark-preview')).toContainText('Hi Sam');
   const panel = page.locator('.set-panel');
@@ -32,9 +32,11 @@ test('Spark screenshots', async ({ page }) => {
     spark: 'Spark',
     'morning-brief': 'Morning brief',
   };
+  await spark.getByRole('tab', { name: 'Notifications' }).click();
+  const notifications = page.getByRole('dialog', { name: 'Notifications' });
   for (const [file, name] of Object.entries(blobs)) {
-    const toggle = spark.getByRole('switch', { name, exact: true });
-    const row = spark
+    const toggle = notifications.getByRole('switch', { name, exact: true });
+    const row = notifications
       .locator('.set-row')
       .filter({ has: page.getByRole('switch', { name, exact: true }) });
     for (let flip = 0; flip < 2; flip += 1) {

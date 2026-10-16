@@ -43,4 +43,4 @@ Sending a secret file's value [always asks](protected-paths.md#what-always-asks)
 
 Approval cards wait up to 30 minutes, then the request is declined.
 
-**This chat is almost full** follows **Wait before going on without your answer** in **Settings → Spark**: **30s**, **60s** (default), **2 min**, **5 min**, **Never** or **Custom**. Then Spark keeps going.
+**This chat is almost full** follows **Wait before going on without your answer** in **Settings → Chats & autonomy**: **30s**, **60s** (default), **2 min**, **5 min**, **Never** or **Custom**. Then Spark keeps going.

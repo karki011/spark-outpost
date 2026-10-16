@@ -4,6 +4,9 @@ import { SettingRow } from '../settings/SettingRow.tsx';
 import { useProfileSetting } from '../settings/use-profile-setting.ts';
 import { SwitchValueSetting } from './SwitchValueSetting.tsx';
 
+export const WARN_LABEL = 'Warn when context is';
+export const COMPACT_LABEL = 'Compact automatically at';
+
 const WARN_INFO = {
   lead: 'The context ring in the composer turns amber at this point.',
   items: [
@@ -94,7 +97,7 @@ function WarnSetting({ profile }: { profile: Profile }) {
     field.error ?? setting.error ?? `The context ring turns amber at ${setting.value}% full.`;
   return (
     <SettingRow
-      label="Warn when context is"
+      label={WARN_LABEL}
       info={WARN_INFO}
       doc={{ page: 'compaction', heading: 'change-when-spark-compacts' }}
       hint={hint}
@@ -122,7 +125,7 @@ function CompactAtSetting({ profile }: { profile: Profile }) {
   const hint = field.error ?? at.error ?? on.error ?? compactHint(on.value, at.value);
   return (
     <SwitchValueSetting
-      label="Compact automatically at"
+      label={COMPACT_LABEL}
       blob="plain"
       info={COMPACT_INFO}
       doc={{ page: 'compaction', heading: 'change-when-spark-compacts' }}

@@ -17,7 +17,7 @@ You'll let Spark handle checks and reviews on a chat's pull requests. About 2 mi
 4. The agent fixes what is right, pushes back on the rest, and pushes the fix. Spark replies on the threads.
 5. Read the agent's summary: fixed, pushed back, left for you.
 
-To approve each push, turn on **Ask before pushing and replying** in **Settings → Spark**.
+To approve each push, turn on **Ask before pushing and replying** in **Settings → Pull requests**.
 
 ![The Address PR feedback? card with the push and a reply checked](images/pr-follow-up-card-light.png)
 
@@ -40,6 +40,6 @@ To approve each push, turn on **Ask before pushing and replying** in **Settings 
 
 ## Turn it off
 
-In **Settings → Spark**, turn off **Follow up on pull requests**, or only **Fix failing checks**, **Handle review comments** or **Reply on GitHub threads**.
+In **Settings → Pull requests**, turn off **Follow up on pull requests**, or only **Fix failing checks**, **Handle review comments** or **Reply on GitHub threads**.
 
 **Next:** [Connect GitHub, Jira or Linear](tickets-and-github.md)

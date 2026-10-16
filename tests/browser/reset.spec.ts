@@ -14,7 +14,10 @@ async function openReset(page: Page) {
   await expect(page.getByRole('button', { name: 'Keep this chat', exact: true })).toBeVisible();
   await page.evaluate(() => localStorage.setItem('spark-outpost.models.provider', 'claude'));
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Reset' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Reset' })
+    .click();
   const dialog = page.getByRole('dialog', { name: 'Reset' });
   await expect(dialog.getByText('What stays')).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Hold to reset' })).toBeVisible();

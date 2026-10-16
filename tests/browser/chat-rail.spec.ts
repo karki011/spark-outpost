@@ -33,8 +33,12 @@ import {
 
 async function setWideWindows(page: Page, choice: string) {
   await page.getByRole('button', { name: 'Settings' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Chats & autonomy' })
+    .click();
   const group = page
-    .getByRole('dialog', { name: 'Spark' })
+    .getByRole('dialog', { name: 'Chats & autonomy' })
     .getByRole('radiogroup', { name: 'On wide windows' });
   const saved = page.waitForResponse(
     (response) => response.url().endsWith('/api/profile') && response.ok(),

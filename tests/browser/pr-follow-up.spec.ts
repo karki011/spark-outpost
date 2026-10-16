@@ -10,9 +10,11 @@ test.beforeEach(async () => {
 async function openSparkSettings(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Spark' });
-  await dialog.getByText('Workflow options', { exact: true }).click();
-  return dialog;
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Pull requests' })
+    .click();
+  return page.getByRole('dialog', { name: 'Pull requests' });
 }
 
 const saved = (page: Page) =>

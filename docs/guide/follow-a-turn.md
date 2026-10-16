@@ -37,7 +37,7 @@ Commands show output in the reply: passing ones fold, failed ones stay open. Cod
 | You stop the turn, or it fails | Pauses the queue until you select **Send now**.                |
 | You reload or restart          | Keeps the queue.                                               |
 
-Only text can be queued. Swap the keys in [Settings](settings.md#spark).
+Only text can be queued. Swap the keys in [Settings](settings.md#work).
 
 ## Delete a running chat
 

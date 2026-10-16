@@ -2,6 +2,8 @@ import type { WideWindowLayout } from '@spark-outpost/contracts';
 import { forgetPanelChoice } from '../tasks/work-panel-state.ts';
 import { ProfileChoiceSetting, type ProfileChoice } from './ProfileChoiceSetting.tsx';
 
+export const WIDE_WINDOW_LABEL = 'On wide windows';
+
 const CHOICES: ProfileChoice<WideWindowLayout>[] = [
   { id: 'rail', label: 'Context rail', value: 'rail' },
   { id: 'panel', label: 'Work panel', value: 'panel' },
@@ -20,7 +22,7 @@ export function WideWindowSetting({ layout }: { layout: WideWindowLayout }) {
     <ProfileChoiceSetting
       saved={layout}
       choices={CHOICES}
-      label="On wide windows"
+      label={WIDE_WINDOW_LABEL}
       hint={(value) => HINTS[value]}
       toUpdate={(value) => ({ wideWindow: value })}
       onPick={forgetPanelChoice}

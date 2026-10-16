@@ -287,7 +287,7 @@ test('Settings sets the default mode and autonomy that new chats start with', as
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Spark' })
+    .getByRole('dialog', { name: 'Profile & personality' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
@@ -300,9 +300,8 @@ test('Settings sets the default mode and autonomy that new chats start with', as
   await page.getByRole('menuitemradio', { name: /^Accept edits/ }).click();
   await expect(mode).toHaveText('Accept edits');
   await expect(claude.getByRole('button', { name: 'Claude harness autonomy' })).toHaveCount(0);
-  await providers.getByRole('tab', { name: 'Spark', exact: true }).click();
-  const spark = page.getByRole('dialog', { name: 'Spark' });
-  await spark.getByText('Workflow options', { exact: true }).click();
+  await providers.getByRole('tab', { name: 'Chats & autonomy' }).click();
+  const spark = page.getByRole('dialog', { name: 'Chats & autonomy' });
   const autonomy = spark.getByRole('radiogroup', { name: 'How much Spark does alone' });
   const saved = page.waitForResponse(
     (response) => response.url().endsWith('/api/profile') && response.ok(),

@@ -13,8 +13,15 @@ test('Spark settings save custom text and a local instruction file @packaged', a
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.addInitScript(() => localStorage.setItem('spark-outpost.theme', 'dark'));
     await page.goto('/');
-    await page.getByRole('button', { name: 'Settings' }).click();
-    const settings = page.getByRole('dialog', { name: 'Spark' });
+    const settings = page.getByRole('dialog', { name: 'Chats & autonomy' });
+    const openChatsSettings = async () => {
+      await page.getByRole('button', { name: 'Settings' }).click();
+      await page
+        .getByRole('dialog', { name: 'Profile & personality' })
+        .getByRole('tab', { name: 'Chats & autonomy' })
+        .click();
+    };
+    await openChatsSettings();
     await settings.getByLabel('Custom instructions', { exact: true }).fill('Keep changes small.');
     await settings.getByText('Use an instruction file', { exact: true }).click();
     await settings.getByLabel('Instructions file path').fill(file);
@@ -25,7 +32,7 @@ test('Spark settings save custom text and a local instruction file @packaged', a
     expect((await saved).status()).toBe(200);
     await expect(settings.getByRole('button', { name: 'Save instructions' })).toBeDisabled();
     await page.reload();
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await openChatsSettings();
     await expect(settings.getByLabel('Custom instructions', { exact: true })).toHaveValue(
       'Keep changes small.',
     );
@@ -39,10 +46,10 @@ test('Spark settings save custom text and a local instruction file @packaged', a
     await expect(settings.getByRole('alert')).toHaveCount(0);
     rmSync(file);
     await page.reload();
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await openChatsSettings();
     await expect(settings.getByRole('alert')).toContainText('it was moved or deleted');
     await settings
-      .getByLabel('What should Spark call you?', { exact: true })
+      .getByRole('switch', { name: 'Record Terminal sessions like chats' })
       .scrollIntoViewIfNeeded();
     await page.screenshot({ path: '.local/report/workflow-settings.png', fullPage: true });
   } finally {

@@ -5,7 +5,8 @@ import { SettingRow } from '../settings/SettingRow.tsx';
 import { useDisplayNameSave } from './use-display-name.ts';
 import { PERSONALITY_HINTS } from './voice.ts';
 
-const NAME_LABEL = 'What should Spark call you?';
+export const NAME_LABEL = 'What should Spark call you?';
+export const PERSONALITY_LABEL = 'Personality';
 
 const NAME_INFO =
   'Spark greets you with your first name, and agents use it when they explain something or ask you a question.';
@@ -78,7 +79,7 @@ export function PersonalitySetting({ personality }: { personality: Personality }
     <ProfileChoiceSetting
       saved={personality}
       choices={PERSONALITY_CHOICES}
-      label="Personality"
+      label={PERSONALITY_LABEL}
       info={PERSONALITY_INFO}
       hint={(value) => PERSONALITY_HINTS[value]}
       toUpdate={(value) => ({ personality: value })}
