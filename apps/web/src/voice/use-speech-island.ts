@@ -284,9 +284,9 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
     const listen = now.listen;
     if (!listen || listen.id !== event.id) return;
     const text = event.text.trim();
-    if (listen.purpose === 'confirm') {
+    const answer = listen.purpose === 'confirm' && text ? matchConfirmation(text) : null;
+    if (answer || (listen.purpose === 'confirm' && !text)) {
       dispatch({ type: 'heard', id: event.id, text, command: null });
-      const answer = text ? matchConfirmation(text) : null;
       if (answer) confirm(answer);
       return;
     }
@@ -301,7 +301,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
     void act(result, null);
   };
 
-  const begin = async () => {
+  const begin = async (file?: string) => {
     const { state: now, lists: names, options: opts } = latest.current;
     if (!speech || now.listen) return;
     const purpose = nextPurpose(now);
@@ -311,7 +311,8 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
       setHanded(null);
     }
     if (opts.panel === null || purpose === 'command') opts.openPanel(opts.panel ?? 'ask');
-    const answer = await speech.listen(purpose, speechHint(names));
+    const hint = speechHint(names);
+    const answer = await (file ? speech.listen(purpose, hint, file) : speech.listen(purpose, hint));
     dispatch(
       answer.ok ? { type: 'started', id: answer.id } : { type: 'refused', error: answer.error },
     );
@@ -320,7 +321,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
   useSpeechEvents((event) => {
     switch (event.kind) {
       case 'press':
-        return void begin();
+        return void begin(event.file);
       case 'level':
         return dispatch({ type: 'level', id: event.id, level: event.level });
       case 'speech':

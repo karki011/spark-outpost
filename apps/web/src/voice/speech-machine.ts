@@ -79,7 +79,7 @@ export function speechReducer(state: SpeechState, action: SpeechAction): SpeechS
       if (!listen) return state;
       const text = action.text.trim();
       if (!text) return { ...state, listen: null, notice: 'missed' };
-      if (listen.purpose === 'confirm' || !action.command) return { ...state, listen: null };
+      if (!action.command) return { ...state, listen: null };
       const results = state.results + 1;
       return {
         listen: null,

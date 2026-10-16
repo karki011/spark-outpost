@@ -18,7 +18,7 @@ export interface DesktopSpeech {
   update(
     patch: Partial<Pick<VoiceSettings, 'speakAnswers' | 'shortcutMode' | 'hold'>>,
   ): Promise<VoiceStatus | null>;
-  listen(purpose: VoicePurpose, hint: string): Promise<VoiceListenResult>;
+  listen(purpose: VoicePurpose, hint: string, file?: string): Promise<VoiceListenResult>;
   stop(id: string): Promise<void>;
   cancel(id: string): Promise<void>;
   speak(text: string): Promise<string | null>;

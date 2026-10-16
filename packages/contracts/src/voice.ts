@@ -127,7 +127,7 @@ export interface VoiceStatus {
 }
 
 export type VoiceEvent =
-  | { kind: 'press' }
+  | { kind: 'press'; file?: string }
   | { kind: 'release' }
   | { kind: 'level'; id: string; level: number }
   | { kind: 'speech'; id: string }

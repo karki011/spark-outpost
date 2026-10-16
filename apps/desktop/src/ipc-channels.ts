@@ -72,6 +72,7 @@ export const IPC = {
   voiceCancel: 'voice:cancel',
   voiceSpeak: 'voice:speak',
   voiceHush: 'voice:hush',
+  voiceTestPress: 'voice:test-press',
   voiceOpenSettings: 'voice:open-settings',
   voiceEvent: 'voice:event',
   voiceChanged: 'voice:changed',

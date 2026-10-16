@@ -84,6 +84,18 @@ describe('speechReducer', () => {
     expect(confirmed.listen).toBeNull();
   });
 
+  it('something other than a yes or no while confirming becomes a new result', () => {
+    const state = run([
+      { type: 'start', purpose: 'command' },
+      { type: 'started', id: 'a' },
+      { type: 'heard', id: 'a', text: 'what tickets do I have', command: ask },
+      { type: 'start', purpose: 'confirm' },
+      { type: 'started', id: 'b' },
+      { type: 'heard', id: 'b', text: 'who needs me', command: ask },
+    ]);
+    expect(state.result).toMatchObject({ id: 2, transcript: 'who needs me' });
+  });
+
   it('a refused listen shows why', () => {
     expect(
       run([

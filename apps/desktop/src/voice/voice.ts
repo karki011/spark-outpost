@@ -338,6 +338,12 @@ export function createVoice(effects: VoiceEffects) {
     hush,
     press,
 
+    testPress(file: unknown) {
+      if (!effects.allowFileInput || typeof file !== 'string' || !settings.enabled) return;
+      hush();
+      effects.sendIsland({ kind: 'press', file });
+    },
+
     dispose() {
       if (registered) effects.unregister(registered);
       registered = null;

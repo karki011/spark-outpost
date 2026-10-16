@@ -54,6 +54,7 @@ const INVOKE = [
   IPC.voiceCancel,
   IPC.voiceSpeak,
   IPC.voiceHush,
+  IPC.voiceTestPress,
   IPC.voiceOpenSettings,
 ];
 
@@ -181,6 +182,10 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
   ipcMain.handle(
     IPC.voiceHush,
     guard(() => voice.hush(), undefined),
+  );
+  ipcMain.handle(
+    IPC.voiceTestPress,
+    guard((_event, file) => voice.testPress(file), undefined),
   );
   ipcMain.handle(
     IPC.voiceOpenSettings,
