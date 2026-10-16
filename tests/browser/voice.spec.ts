@@ -150,6 +150,32 @@ test('a spoken new chat opens prefilled and starts nothing until "send"', async 
   await expect.poll(userMessages).toBe(before + 1);
 });
 
+test('a project linked after the island loaded is in the hint and matched by a spoken command', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await installFakeVoice(page);
+  const projectsLoaded = page.waitForResponse((response) =>
+    response.url().endsWith('/api/projects'),
+  );
+  await openIsland(page);
+  await projectsLoaded;
+  await linkProject(page);
+  const listen = await press(page);
+  const hint = (await voiceCalls(page)).filter((call) => call.op === 'listen').at(-1)!.args[1];
+  expect(String(hint)).toContain('feature-web-apps');
+  await emitVoice(page, {
+    kind: 'final',
+    id: listen.id,
+    text: 'Start a chat in feature web apps to add creator email.',
+    reason: 'paused',
+  });
+  await expect(island(page).getByRole('textbox', { name: 'Message' })).toHaveValue(
+    'add creator email',
+  );
+  await expect(island(page).getByRole('button', { name: 'feature-web-apps' })).toBeVisible();
+});
+
 test('a spoken ticket start keeps the autonomy level and project picked in the composer', async ({
   page,
 }) => {

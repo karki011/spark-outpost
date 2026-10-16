@@ -6,6 +6,7 @@ import type {
   TicketSourceId,
   VoiceEvent,
 } from '@spark-outpost/contracts';
+import { projectKeys, projectsApi } from '../api/projects.ts';
 import { homeApi, homeKeys } from '../home/home-api.ts';
 import type { FastState } from '../island/ask-fast-path.ts';
 import type { Panel } from '../island/island-model.ts';
@@ -65,6 +66,14 @@ export interface SpeechScreenModel {
   keepsPanel: boolean;
 }
 
+function projectRefs(projects: readonly Project[]): SpeechLists['projects'] {
+  return projects.map((project) => ({
+    id: project.id,
+    name: project.name,
+    folder: project.rootPath,
+  }));
+}
+
 function useLists(
   chats: readonly ConversationSummary[],
   projects: readonly Project[],
@@ -74,11 +83,7 @@ function useLists(
   const sources = connections.data?.connections;
   return useMemo(
     () => ({
-      projects: projects.map((project) => ({
-        id: project.id,
-        name: project.name,
-        folder: project.rootPath,
-      })),
+      projects: projectRefs(projects),
       chats: chats
         .filter((chat) => !chat.archivedAt)
         .slice(0, CHAT_LIMIT)
@@ -320,6 +325,13 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
     void act(result, null);
   };
 
+  const withFreshProjects = async (names: SpeechLists): Promise<SpeechLists> => {
+    const projects = await queryClient
+      .fetchQuery({ queryKey: projectKeys.all, queryFn: projectsApi.list, staleTime: 0 })
+      .catch(() => null);
+    return projects ? { ...names, projects: projectRefs(projects) } : names;
+  };
+
   const begin = async (file?: string) => {
     const { state: now, lists: names, options: opts } = latest.current;
     if (!speech || now.listen) return;
@@ -332,7 +344,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
       setHanded(null);
     }
     if (opts.panel === null || purpose === 'command') opts.openPanel(opts.panel ?? 'ask');
-    const hint = speechHint(names);
+    const hint = speechHint(purpose === 'command' ? await withFreshProjects(names) : names);
     const answer = await (file ? speech.listen(purpose, hint, file) : speech.listen(purpose, hint));
     if (escapedStart.current === start) {
       if (answer.ok) void speech.cancel(answer.id);
