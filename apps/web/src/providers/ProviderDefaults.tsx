@@ -82,7 +82,7 @@ const MODEL_NOTE =
 const PER_CHAT = 'per-chat';
 const PER_CHAT_NOTE = 'Each chat keeps its own effort.';
 
-function effortOptions(
+export function effortOptions(
   provider: ProviderSetup,
   capabilities: ProviderCapabilities | undefined,
 ): CapabilityOption[] {

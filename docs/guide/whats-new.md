@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                            | What to do                                                           |
 | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Ask Spark is faster and remembers key facts.                                                                                            | See [Settings](settings.md#spark-assistant).                         |
 | When you allow a browser or Mac control card, the agent is told you allowed it, so it doesn't say the step ran unasked.                 | See [Mac control](mac-control.md).                                   |
 | In a chat without a project, Spark actions follow your picked mode, so **Auto** runs them at once. Mac-app sends and deletes still ask. | See [Spark tools](spark-tools.md#when-actions-ask-first).            |
 | Agents can read another Mac app and press its buttons and menus, one app per chat. Sends and deletes always ask.                        | See [Mac control](mac-control.md).                                   |

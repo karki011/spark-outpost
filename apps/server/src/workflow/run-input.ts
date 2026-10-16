@@ -120,6 +120,7 @@ interface RunRow extends OutpostRow {
   in_chat_worktree: boolean;
   title_source: string;
   assistant: boolean;
+  assistant_history_from: Date | null;
   continues_run_id: string | null;
 }
 
@@ -127,6 +128,7 @@ interface HistoryRow extends OutpostRow {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  created_at: Date;
 }
 
 const RESENT_ATTACHMENT_TURNS = 3;
@@ -220,6 +222,9 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
               SELECT 1 FROM profiles pf
               WHERE pf.workspace_id = c.workspace_id AND pf.assistant_conversation_id = c.id
             ) AS assistant,
+            (SELECT pf.assistant_history_from FROM profiles pf
+             WHERE pf.workspace_id = c.workspace_id AND pf.assistant_conversation_id = c.id
+            ) AS assistant_history_from,
             pc.method, pc.model, pc.effort, pc.models,
             ARRAY(
               SELECT COALESCE(cw.path, p.root_path) FROM conversation_projects cp
@@ -250,7 +255,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
   if (!row) throw new Error(`Run ${runId} was not found.`);
   if (row.parent_run_id) return withUsableModel(db, childInput(runId, row));
   const history = await db.query<HistoryRow>(
-    `SELECT m.id, m.role, m.content,
+    `SELECT m.id, m.role, m.content, m.created_at,
             EXISTS (
               SELECT 1 FROM runs hr
               WHERE hr.user_message_id = m.id AND hr.parent_run_id IS NULL
@@ -269,8 +274,14 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
      ORDER BY m.created_at, m.id`,
     [row.conversation_id, row.user_message_id],
   );
-  const turns = await loadHistory(db, history.rows, row.user_message_id);
-  const seed = await chatSeed(db, row.conversation_id, history.rows);
+  const turns = await loadHistory(
+    db,
+    since(history.rows, row.assistant_history_from),
+    row.user_message_id,
+  );
+  const seed = row.assistant_history_from
+    ? null
+    : await chatSeed(db, row.conversation_id, history.rows);
   const input: RunInput = {
     identity: { runId, threadId: row.conversation_id },
     workspaceId: row.workspace_id,
@@ -302,6 +313,10 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
   };
   const usable = await withUsableModel(db, input);
   return row.continues_run_id ? withInterruptionNote(db, usable, row.continues_run_id) : usable;
+}
+
+function since(rows: HistoryRow[], from: Date | null): HistoryRow[] {
+  return from ? rows.filter((row) => row.created_at > from) : rows;
 }
 
 async function withUsableModel(db: Db, input: RunInput): Promise<RunInput> {

@@ -64,6 +64,8 @@ import { conversationProjectIds } from '../agent-config/store.ts';
 import { loadUserMcp } from '../mcp/launch.ts';
 import { withMoveNote } from './project-move.ts';
 import { ASSISTANT_PREAMBLE } from '../companion/assistant.ts';
+import { startAssistantTurn, type AssistantTurn } from '../companion/assistant-turn.ts';
+import type { AssistantIdleCompaction } from '../companion/assistant-idle.ts';
 import { createRunObservations } from '../observations/run-observations.ts';
 import { conversationHasSlackContext } from '../persistence/slack.ts';
 import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
@@ -106,6 +108,7 @@ export interface TurnDeps {
   sessionLimits?: SweepLimits;
   inboxPollMs?: number;
   browserPane?: boolean;
+  assistantIdle?: AssistantIdleCompaction;
 }
 
 export interface TurnOptions {
@@ -212,7 +215,9 @@ export async function runAgentTurn(
   const say = reply.say;
   const titles = hidesTitleLine(input) ? createTitleFilter() : null;
   let turnSession: TurnSession | null = null;
+  let assistantTurn: AssistantTurn | null = null;
   const ended = async (settled: TurnResult) => {
+    await assistantTurn?.settled();
     await turnSession
       ?.finished({ ...settled, stopReason: control.reason() })
       .catch((error: unknown) => console.error('Could not record the agent session', error));
@@ -315,9 +320,19 @@ export async function runAgentTurn(
     };
     auditSparkHandoff(audit, input, spark.teammate);
     const preamble = input.assistant ? ASSISTANT_PREAMBLE : withMoveNote(input);
+    assistantTurn = input.assistant
+      ? await startAssistantTurn(
+          deps.db,
+          input.workspaceId,
+          lease.runId,
+          audit,
+          session?.target ?? null,
+        )
+      : null;
     const outposts = preambleDeps(deps.db, input.workspaceId);
     const outpost =
       input.assistant || options.secondPrompt ? null : await outpostPreamble(outposts, shown);
+    const turnPreamble = assistantTurn ? assistantTurn.note : outpost?.text;
 
     if (input.modelSwitch) {
       await recordModelSwitch(deps.db, lease.runId, append, input.modelSwitch);
@@ -336,6 +351,7 @@ export async function runAgentTurn(
       signal: control.signal,
       observe: (output) => {
         if (output.kind === 'session') session?.noteSession(output);
+        assistantTurn?.see(output);
         edits?.see(output);
         options.onProduced?.(output);
       },
@@ -351,7 +367,7 @@ export async function runAgentTurn(
       ...(inbox ? { inbox } : {}),
       ...(input.askTitle ? { askTitle: true } : {}),
       ...(preamble ? { preamble } : {}),
-      ...(outpost?.text ? { turnPreamble: outpost.text } : {}),
+      ...(turnPreamble ? { turnPreamble } : {}),
       ...(session ? { session: session.target } : {}),
       ...(repo.length > 0 ? { repo } : {}),
       ...(userMcp.length > 0 ? { userMcp } : {}),

@@ -13,6 +13,7 @@ import { reveal } from '../ui/transitions.tsx';
 import { UsageSection } from '../usage/UsageSection.tsx';
 import { SparkSection } from '../spark/SparkSection.tsx';
 import { SparksSection } from '../teammates/SparksSection.tsx';
+import { SparkAssistantSection } from './assistant/SparkAssistantSection.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
 import { MacControlSection, macControlAvailable } from './MacControlSection.tsx';
 import { ResetSection } from '../reset/ResetSection.tsx';
@@ -25,6 +26,7 @@ import './settings-cards.css';
 export type SettingsSection =
   | 'spark'
   | 'sparks'
+  | 'assistant'
   | 'ai'
   | 'models'
   | 'usage'
@@ -56,6 +58,16 @@ const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
         <circle cx="9" cy="10" r="3.2" />
         <path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6" />
         <path d="M16 6.5c.3 1.6 1 2.3 2.6 2.6-1.6.3-2.3 1-2.6 2.6-.3-1.6-1-2.3-2.6-2.6 1.6-.3 2.3-1 2.6-2.6Z" />
+      </>
+    ),
+  },
+  {
+    id: 'assistant',
+    label: 'Spark assistant',
+    icon: (
+      <>
+        <path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+        <path d="M9 11h.01M12 11h.01M15 11h.01" />
       </>
     ),
   },
@@ -151,11 +163,13 @@ interface SettingsDialogProps {
   section: SettingsSection;
   onSection: (section: SettingsSection) => void;
   onClose: () => void;
+  onOpenChat: (conversationId: string) => void;
 }
 
 const SECTION_SWITCH: Partial<Record<SettingsSection, RemoteSwitch>> = {
   spark: 'settings',
   sparks: 'settings',
+  assistant: 'settings',
   models: 'settings',
   projects: 'settings',
   ai: 'connections',
@@ -164,7 +178,7 @@ const SECTION_SWITCH: Partial<Record<SettingsSection, RemoteSwitch>> = {
   reset: 'reset',
 };
 
-export function SettingsDialog({ section, onSection, onClose }: SettingsDialogProps) {
+export function SettingsDialog({ section, onSection, onClose, onOpenChat }: SettingsDialogProps) {
   const phone = useRemoteClient();
   const gate = SECTION_SWITCH[section];
   const off = gate !== undefined && !phone.allows(gate);
@@ -292,6 +306,9 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
               >
                 {setup.data && section === 'spark' && <SparkSection setup={setup.data} />}
                 {section === 'sparks' && <SparksSection />}
+                {setup.data && section === 'assistant' && (
+                  <SparkAssistantSection setup={setup.data} onOpenChat={onOpenChat} />
+                )}
                 {setup.data && section === 'ai' && (
                   <>
                     <p className="lede">

@@ -9,6 +9,7 @@ import { runChatTurn } from './chat-turn.ts';
 import type { ChatTurnDeps } from './chat-turn-hooks.ts';
 import { recoverExpiredLeases } from './recovery.ts';
 import { sweepSessions } from './turn-session.ts';
+import { assistantIdleCompaction, type IdleLimits } from '../companion/assistant-idle.ts';
 import type { ParkedTurns } from './parked-turns.ts';
 import { chatTarget, drainQueue, drainWaiting, type ResolveTarget } from './queue-drain.ts';
 
@@ -19,6 +20,7 @@ export interface WorkerOptions extends ChatTurnDeps {
   activeWork?: ActiveWork;
   queueTarget?: ResolveTarget;
   parked?: ParkedTurns;
+  assistantIdleLimits?: IdleLimits;
 }
 
 export interface Worker {
@@ -49,7 +51,11 @@ function queueTarget(options: WorkerOptions): ResolveTarget {
   return options.queueTarget ?? chatTarget(options.db);
 }
 
-export function startWorker(options: WorkerOptions): Worker {
+export function startWorker(given: WorkerOptions): Worker {
+  const assistantIdle =
+    given.assistantIdle ??
+    assistantIdleCompaction(given.db, given.providers, given.assistantIdleLimits);
+  const options = { ...given, assistantIdle };
   const active = new Set<Promise<void>>();
   let stopped = false;
   let wakeUp: (() => void) | null = null;
@@ -99,6 +105,7 @@ export function startWorker(options: WorkerOptions): Worker {
             await cleanOrphanedCopies(options.db);
             await sweepChatWorktrees(options.db);
             await sweepSessions(options.db, options.sessionLimits);
+            await assistantIdle.sweep();
             await drainWaiting(options.db, queueTarget(options));
           } finally {
             done?.();

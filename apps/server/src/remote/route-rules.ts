@@ -46,6 +46,8 @@ PUT /api/conversations/:id/workspace
 GET /api/conversations/:id/file-view
 POST /api/conversations/:id/update
 POST /api/spark-assistant
+GET /api/spark-assistant/settings
+GET /api/spark-assistant/events
 GET /api/conversations/:id/agent-commands
 GET /api/conversations/:id/agent-terminals
 PATCH /api/conversations/:id
@@ -223,6 +225,9 @@ PUT /api/projects/:id/agent-config/trust
 PUT /api/projects/:id/agent-config/trust/redirects
 PATCH /api/projects/:id
 PATCH /api/profile
+PUT /api/spark-assistant/settings
+POST /api/spark-assistant/clear
+DELETE /api/spark-assistant/facts/:id
 PATCH /api/providers/:provider/defaults
 PATCH /api/slack/settings
 PATCH /api/tickets/attention-settings
