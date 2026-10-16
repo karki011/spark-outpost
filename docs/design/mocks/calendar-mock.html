@@ -230,7 +230,8 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
   .nav{width:auto;white-space:nowrap}
   .theme-btn{margin:0}
   main{padding:70px 16px 60px}
-  .today,.settings,  .snav{flex-direction:row;overflow-x:auto}
+  .today,.settings{grid-template-columns:1fr}
+  .snav{flex-direction:row;overflow-x:auto}
   .island-wrap{top:56px}
 }
 </style>
@@ -424,7 +425,7 @@ function merged(){
   });
   return Object.keys(byUid).map(function(k){return byUid[k]}).sort(function(a,b){return a.s-b.s});
 }
-function visible(){return merged().filter(function(e){return !state.hidden[e.cal]})}
+function visible(){return merged().map(function(e){var shown=calsOf(e).filter(function(c){return !state.hidden[c]});return shown.length?Object.assign({},e,{cal:shown[0],also:shown.slice(1)}):null}).filter(Boolean)}
 function calsOf(e){return [e.cal].concat(e.also)}
 function isBusy(e){return calsOf(e).some(function(c){return CALS[c].busy})}
 function nudges(e){return !e.focus&&calsOf(e).some(function(c){return CALS[c].nudge})}
@@ -458,7 +459,7 @@ function buildTimeline(){
   var tl=document.getElementById("timeline");tl.innerHTML="";
   for(var h=8;h<=18;h++){var r=el("div","hour","<span>"+h+":00</span>");r.style.top=y(h*60)+"px";tl.appendChild(r)}
   var lane=el("div","lane");tl.appendChild(lane);
-  freeBlocks().forEach(function(f){var n=el("div","free","free "+hm(f[0])+"–"+hm(f[1]));n.style.top=y(f[0])+2+"px";n.style.height=y(f[1])-y(f[0])-4+"px";lane.appendChild(n)});
+  freeBlocks().forEach(function(f){var n=el("div","free",f[1]-f[0]<45?"free":"free "+hm(f[0])+"–"+hm(f[1]));n.style.top=y(f[0])+2+"px";n.style.height=y(f[1])-y(f[0])-4+"px";lane.appendChild(n)});
   visible().forEach(function(ev){
     var b=el("button","ev"+(ev.focus?" focus":"")+(isBusy(ev)?"":" notbusy"));
     b.style.borderLeftColor=CALS[ev.cal].color;
