@@ -811,9 +811,8 @@ function renderTodayState(){
 var MOCKS=[["normal","Normal"],["quiet","Quiet day"],["connect","First run"],["denied","Denied"],["none","No calendars"],["helper","Helper missing"],["web","Web app in a browser"]];
 function setMock(m){
   state.mock=m;
-  if(m==="quiet")DAYS[TODAY]=DAYS[TODAY].filter(function(e){return e.cal==="family"&&e.id!=="review-copy"&&e.id!=="lunch"});
-  else if(!DAYS._orig)DAYS._orig=DAYS[TODAY].slice();
-  if(m!=="quiet"&&DAYS._orig)DAYS[TODAY]=DAYS._orig.slice();
+  if(!DAYS._orig)DAYS._orig=DAYS[TODAY].slice();
+  DAYS[TODAY]=m==="quiet"?DAYS._orig.filter(function(e){return e.cal==="family"&&e.id!=="review-copy"&&e.id!=="lunch"}):DAYS._orig.slice();
   if(m==="none")Object.keys(CALS).forEach(function(k){CALS[k].on=false});
   else Object.keys(CALS).forEach(function(k){CALS[k].on=true});
   document.querySelectorAll("#mockbar button").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.m===m?"true":"false")});
