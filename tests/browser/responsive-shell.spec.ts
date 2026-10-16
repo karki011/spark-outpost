@@ -116,7 +116,7 @@ for (const size of TOUCH_SIZES) {
     await openSettings(page, phone);
     const tabs = page.getByRole('tablist', { name: 'Settings sections' });
     for (const name of SECTIONS) {
-      const tab = tabs.getByRole('tab', { name: new RegExp(`^${name}`) });
+      const tab = tabs.getByRole('tab', { name: new RegExp(`^${name}( \\d+)?$`) });
       await tab.scrollIntoViewIfNeeded();
       await expectInsideViewport(page, tab);
       await tab.click();
