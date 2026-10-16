@@ -5,7 +5,7 @@ import path from 'node:path';
 import pg from 'pg';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cardById } from '../src/model-cards/cards.ts';
+import { cardById, cardRetired } from '../src/model-cards/cards.ts';
 import { resolveChatSettings } from '../src/persistence/chat-settings.ts';
 import { createConversation, ensureLocalWorkspace } from '../src/persistence/conversations.ts';
 import { createDb, POOL_MAX, type Db } from '../src/persistence/db.ts';
@@ -120,7 +120,8 @@ describe('retiring models as defaults', () => {
   it('refuses a retiring provider default but lets a chat pick it', async () => {
     const refused = await send('patch', '/api/providers/claude/defaults', { model: 'haiku' });
     expect(refused.status).toBe(400);
-    expect(refused.body.error).toMatch(new RegExp(`retire[sd] on ${HAIKU_RETIRES}`));
+    const verb = cardRetired(cardById('claude-haiku-4-5')!, new Date()) ? 'retired' : 'retires';
+    expect(refused.body.error).toContain(`${verb} on ${HAIKU_RETIRES}`);
     await send('patch', '/api/providers/claude/defaults', { model: 'sonnet' }).expect(200);
 
     const id = randomUUID();
