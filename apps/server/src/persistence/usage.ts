@@ -86,13 +86,24 @@ function totalSource(reported: boolean, estimated: boolean): TotalCostSource | n
   return reported ? 'reported' : null;
 }
 
+export const EMPTY_USAGE_SUMMARY = {
+  last30Days: [],
+  allTime: [],
+  advisors: { last30Days: [], allTime: [] },
+  byCategory: { last30Days: [], allTime: [] },
+} satisfies UsageSummary;
+
 const RUN_TOTAL = 'COALESCE(r.total_tokens, r.input_tokens + r.output_tokens, 0)';
 const RECENT = "r.created_at >= now() - interval '30 days'";
 const PRICED = 'r.cost_usd IS NOT NULL';
 const ESTIMATED = `${PRICED} AND r.cost_source = 'estimated'`;
 const REPORTED = `${PRICED} AND r.cost_source IS DISTINCT FROM 'estimated'`;
 
-export async function usageSummary(db: Queryable, workspaceId: string): Promise<UsageSummary> {
+export async function usageSummary(
+  db: Queryable,
+  workspaceId: string,
+  onlyConversation: string | null = null,
+): Promise<UsageSummary> {
   const { rows } = await db.query<SummaryRow>(
     `SELECT r.provider,
        count(*)::int AS runs,
@@ -110,10 +121,10 @@ export async function usageSummary(db: Queryable, workspaceId: string): Promise<
        COALESCE(bool_or(${REPORTED}) FILTER (WHERE ${RECENT}), false) AS recent_reported,
        COALESCE(bool_or(${ESTIMATED}) FILTER (WHERE ${RECENT}), false) AS recent_estimated
      FROM runs r JOIN conversations c ON c.id = r.conversation_id
-     WHERE c.workspace_id = $1
+     WHERE c.workspace_id = $1 AND ($2::uuid IS NULL OR c.id = $2)
      GROUP BY r.provider
      ORDER BY r.provider`,
-    [workspaceId],
+    [workspaceId, onlyConversation],
   );
   const allTime = rows.map((row): ProviderTotals => ({
     provider: row.provider,

@@ -18,7 +18,7 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 
 ## Chat list
 
-Rows show only the title. A dot says what happened since you last opened the chat; opening it clears the dot, and a paired device agrees. Point at the row for detail, such as **Asking permission**.
+A dot says what happened since you last opened the chat; opening it clears the dot, on paired devices too. Point at the row for detail, such as **Asking permission**.
 
 | Dot                         | Means                                                                      |
 | --------------------------- | -------------------------------------------------------------------------- |

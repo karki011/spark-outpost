@@ -107,6 +107,7 @@ export const conversationSummarySchema = z.object({
   pinnedOrder: z.number().int().nullable().default(null),
   projectOrder: z.number().int().nullable().default(null),
   unread: z.boolean(),
+  assistant: z.boolean().optional(),
   needsInput: z.boolean(),
   seenAt: z.string().nullable().optional(),
   waitingSince: z.string().nullable().optional(),

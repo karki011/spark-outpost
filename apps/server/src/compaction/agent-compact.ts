@@ -8,6 +8,7 @@ import type { Lease } from '../persistence/jobs.ts';
 import type { ContextReading, ProviderSessionRecord } from '../persistence/provider-sessions.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import type { PermissionGate, ProviderTurn } from '../providers/provider.ts';
+import type { ProtocolEntry } from '../audit/protocol-entry.ts';
 import type { Append, TurnDeps } from '../workflow/agent-turn.ts';
 import { APPROVAL_POLL_MS, APPROVAL_TIMEOUT_MS } from '../workflow/approval-gate.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
@@ -55,9 +56,21 @@ async function launchExtras(deps: TurnDeps, input: RunInput) {
   return { repo, userMcp, spark: await sparkPreferences(deps.db, input.workspaceId) };
 }
 
+export interface RunLog {
+  runId: string;
+  write(entries: ProtocolEntry[]): Promise<void>;
+}
+
+export function leaseLog(deps: Pick<TurnDeps, 'db'>, lease: Lease): RunLog {
+  return {
+    runId: lease.runId,
+    write: (entries) => insertProtocolEntries(deps.db, lease, entries),
+  };
+}
+
 export async function compactInSession(
   deps: TurnDeps,
-  lease: Lease,
+  log: RunLog,
   input: RunInput,
   target: CompactTarget,
   append: Append,
@@ -66,9 +79,7 @@ export async function compactInSession(
   const provider = deps.providers.get(target.session.provider);
   if (!provider) return null;
   const extras = await launchExtras(deps, input);
-  const audit = createAuditRecorder({
-    write: (entries) => insertProtocolEntries(deps.db, lease, entries),
-  });
+  const audit = createAuditRecorder({ write: (entries) => log.write(entries) });
   const own = new AbortController();
   const stop = () => own.abort();
   signal.addEventListener('abort', stop, { once: true });
@@ -99,7 +110,7 @@ export async function compactInSession(
     sparkScope: {
       workspaceId: input.workspaceId,
       conversationId: input.identity.threadId,
-      runId: lease.runId,
+      runId: log.runId,
       actions: {
         append,
         waiters: deps.approvalWaiters ?? new ApprovalWaiters(),

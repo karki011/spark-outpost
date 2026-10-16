@@ -91,6 +91,8 @@
 }
 
 .usage-range {
+  display: grid;
+  gap: 8px;
   margin-bottom: 14px;
   max-width: 260px;
 }
