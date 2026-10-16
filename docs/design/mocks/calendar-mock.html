@@ -40,40 +40,48 @@
 }
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 var(--font-sans);-webkit-font-smoothing:antialiased}
-button,input{font:inherit;color:inherit}
+body{margin:0;background:var(--rail);color:var(--text);font:14px/1.55 var(--font-sans);-webkit-font-smoothing:antialiased}
+button,input,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
+button:disabled{cursor:default;opacity:.55}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.sample{position:fixed;right:12px;bottom:10px;z-index:50;font-size:11px;color:var(--faint);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+code{font-family:var(--font-mono);font-size:.92em;background:var(--code);border-radius:4px;padding:0 4px}
 
-.app{display:grid;grid-template-columns:216px 1fr;height:100%}
-.rail{background:var(--rail);border-right:1px solid var(--line);padding:14px 10px;display:flex;flex-direction:column;gap:2px}
-.brand{display:flex;align-items:center;gap:8px;font-weight:600;padding:4px 8px 14px}
-.brand svg{width:22px;height:22px}
-.nav{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-sm);border:0;background:none;text-align:left;color:var(--muted);width:100%}
-.nav svg{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-.nav:hover{background:var(--raise);color:var(--text)}
-.nav[aria-current="page"]{background:var(--panel);color:var(--text);box-shadow:0 0 0 1px var(--line)}
-.nav .count{margin-left:auto;font-size:11px;color:var(--faint);font-family:var(--font-mono)}
-.nav .new{margin-left:auto;font-size:10px;color:var(--accent-text);background:var(--accent-soft);border-radius:999px;padding:0 6px}
-.spacer{flex:1}
-.theme-btn{margin-top:8px;font-size:12px;color:var(--faint);background:none;border:1px solid var(--line);border-radius:var(--r-sm);padding:5px 8px}
-
-main{overflow:auto;padding:22px 28px 60px}
-.view{display:none;max-width:1080px}
+.app{display:flex;height:100%}
+.rail{width:70px;flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--accent-soft);display:grid;place-items:center;margin-bottom:8px}
+.avatar svg{width:28px;height:28px}
+.nav{width:56px;border:0;background:none;border-radius:var(--r-sm);padding:6px 0 4px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);font-size:12px;position:relative}
+.nav svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.nav:hover{color:var(--text);background:var(--raise)}
+.nav[aria-current="page"]{color:var(--text);background:var(--panel);box-shadow:0 0 0 1px var(--line)}
+.nav .badge{position:absolute;top:2px;right:8px;min-width:16px;height:16px;border-radius:8px;background:var(--warn);color:var(--warn-ink);font-size:10px;line-height:16px;text-align:center}
+.rail-sp{flex:1}
+.main{flex:1;min-width:0;margin:8px 8px 8px 0;background:var(--bg);border:1px solid var(--line);border-radius:var(--r);overflow:auto;display:flex}
+.content{flex:1;min-width:0;padding:22px 28px 70px}
+.view{display:none}
 .view.on{display:block}
 h1{font-size:20px;margin:0 0 2px;font-weight:600;letter-spacing:-.01em}
-.sub{color:var(--muted);margin:0 0 16px}
-h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transform:none}
+.sub{color:var(--muted);margin:0 0 14px}
+h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
-.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;border-radius:999px;padding:1px 9px;background:var(--raise);color:var(--muted);border:1px solid var(--line)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;border-radius:999px;padding:1px 9px;background:var(--raise);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
 .chip.ok{color:var(--accent-text);background:var(--accent-soft);border-color:transparent}
 .chip.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent);background:color-mix(in srgb,var(--warn) 8%,transparent)}
 .btn{border:1px solid var(--line);background:var(--panel);border-radius:var(--r-sm);padding:6px 12px;font-size:13px}
-.btn:hover{background:var(--raise)}
+.btn:hover:not(:disabled){background:var(--raise)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .btn.small{padding:3px 9px;font-size:12px}
+.hint{font-size:12px;color:var(--faint);margin:8px 0 0}
+.sw{display:inline-block;width:9px;height:9px;border-radius:3px;flex:none}
+.spacer{flex:1}
 
+.dayhead{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.dayhead .t{flex:1 1 220px}
+.shape{flex:0 1 360px;min-width:240px}
+.shape .bar{height:8px}
+.shape .words{display:flex;gap:12px;font-size:12px;color:var(--muted);margin-top:4px;flex-wrap:wrap}
+.shape .words b{color:var(--text);font-weight:600}
 .week{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto}
 .day{flex:1 0 72px;border:1px solid var(--line);background:var(--panel);border-radius:var(--r-sm);padding:6px 8px;text-align:left}
 .day b{display:block;font-size:13px}
@@ -84,11 +92,16 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
 .day[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 
 .today{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start}
-.next{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:12px}
-.next .what{flex:1 1 180px}
+.next{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:10px}
 .next .big{white-space:nowrap;font-size:22px;font-weight:600;font-family:var(--font-mono);color:var(--accent-text)}
-.next .what{font-weight:500}
+.next .what{flex:1 1 180px;font-weight:500}
 .next .what small{display:block;color:var(--muted);font-weight:400}
+.clockchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--faint)}
+.clockchip input{width:110px;accent-color:var(--accent)}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.fchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:2px 10px;font-size:12px;color:var(--muted)}
+.fchip[aria-pressed="false"]{opacity:.55;text-decoration:line-through}
+.fchip[aria-pressed="true"]{color:var(--text)}
 
 .timeline{position:relative;height:640px;border-top:1px solid var(--line)}
 .hour{position:absolute;left:0;right:0;border-top:1px solid var(--line);font-size:11px;color:var(--faint);font-family:var(--font-mono)}
@@ -97,26 +110,34 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
 .ev{position:absolute;left:0;right:0;border-radius:var(--r-sm);border:1px solid var(--line-strong);border-left-width:4px;background:var(--raise);padding:3px 9px;text-align:left;overflow:hidden;font-size:12.5px;line-height:1.35}
 .ev b{font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ev span{color:var(--muted);font-size:11.5px}
-.ev.focus{border-style:dashed;border-left-style:solid;border-left-color:var(--accent);background:var(--accent-soft)}
+.ev.focus{border-style:dashed;border-left-style:solid;background:var(--accent-soft)}
+.ev.notbusy{border-style:dotted;border-left-style:solid;background:transparent}
 .ev[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
-.ev .held{float:right;font-size:10.5px;color:var(--accent-text)}
-.free{position:absolute;left:0;right:0;border-radius:var(--r-sm);background:repeating-linear-gradient(135deg,transparent 0 6px,var(--accent-soft) 6px 8px);display:flex;align-items:center;justify-content:flex-end;padding-right:10px;font-size:11px;color:var(--accent-text)}
+.ev .tag{float:right;font-size:10.5px;margin-left:6px;color:var(--faint)}
+.ev .tag.held,.ev .tag.prep{color:var(--accent-text)}
+.free{position:absolute;left:0;right:0;border:0;border-radius:var(--r-sm);background:repeating-linear-gradient(135deg,transparent 0 6px,var(--accent-soft) 6px 8px);display:flex;align-items:center;justify-content:flex-end;padding:0 10px;font-size:11px;color:var(--accent-text)}
+.free:hover{outline:1px dashed var(--accent)}
+.buffer{position:absolute;right:10px;transform:translateY(-50%);z-index:2;font-size:10.5px;color:var(--warn);background:var(--panel);border:1px dotted var(--warn);border-radius:999px;padding:0 7px;white-space:nowrap}
 .now{position:absolute;left:44px;right:0;height:0;border-top:2px solid var(--danger);z-index:3}
 .now::before{content:"";position:absolute;left:-5px;top:-6px;width:10px;height:10px;border-radius:50%;background:var(--danger)}
 .now span{position:absolute;right:0;top:-18px;font-size:11px;color:var(--danger);font-family:var(--font-mono);background:var(--panel);padding:0 4px}
 .conflict{position:absolute;right:-6px;width:4px;border-radius:2px;background:var(--warn);z-index:2}
 
 .side{display:flex;flex-direction:column;gap:16px}
-.actions{display:none}
-.actions.on{display:block}
 .actions h3{margin:0 0 2px;font-size:15px}
 .actions .meta{color:var(--muted);font-size:12.5px;margin-bottom:10px}
+.joinrow{display:flex;align-items:center;gap:10px;margin:0 0 10px;flex-wrap:wrap}
+.joinrow small{color:var(--faint);font-size:12px}
 .act{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:7px 8px;border-radius:var(--r-sm);text-align:left}
 .act:hover{background:var(--raise)}
 .act svg{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .act small{margin-left:auto;color:var(--faint);font-size:11.5px}
 .act[aria-pressed="true"] small{color:var(--accent-text)}
-.hint{font-size:12px;color:var(--faint);margin:8px 0 0}
+.prep{border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;margin:4px 0 10px;background:var(--bg)}
+.prep h4{margin:0 0 4px;font-size:13px;display:flex;align-items:center;gap:8px}
+.prep ul{margin:4px 0;padding-left:18px;font-size:12.5px}
+.prep li{margin:2px 0}
+.prep .cost{font-size:11.5px;color:var(--faint);display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
 .chatrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
 .chatrow:first-of-type{border-top:0}
 .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--line-strong)}
@@ -128,33 +149,26 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
 .chatrow .t b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chatrow .t span{font-size:12px;color:var(--muted)}
 .warnline{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--warn);margin-top:10px;padding:8px 10px;border-radius:var(--r-sm);background:color-mix(in srgb,var(--warn) 8%,transparent)}
+.popover{position:absolute;z-index:5;left:20%;right:4%;background:var(--panel);border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:10px 12px;box-shadow:0 8px 24px rgba(0,0,0,.18);font-size:12.5px}
+.popover .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
 
-.island-wrap{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:40;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
-.island{pointer-events:auto;background:#0c0f12;color:#e7eaee;border-radius:22px;min-width:240px;padding:7px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 28px rgba(0,0,0,.28),0 0 0 1px rgba(255,255,255,.08);transition:all .35s var(--out);font-size:13px;border:0;text-align:left}
-.island .scout{width:18px;height:18px;border-radius:50%;background:#2BB39A;position:relative;flex:none}
-.island .scout::after{content:"";position:absolute;left:4px;top:6px;width:10px;height:3px;background:radial-gradient(circle,#0c0f12 1.3px,transparent 1.5px) 0 0/5px 3px repeat-x}
-.island.open{border-radius:20px;padding:12px 16px;flex-direction:column;align-items:stretch;width:min(380px,calc(100vw - 32px))}
-.island .row{display:flex;align-items:center;gap:10px}
-.island .meta{color:#a3aebc;font-size:12px}
-.island .lines{margin:8px 0 2px;padding:0;list-style:none;font-size:12.5px;color:#cfd5dc}
-.island .lines li{display:flex;gap:8px;padding:2px 0}
-.island .ib{display:flex;gap:6px;margin-top:8px}
-.island .ib button{flex:1;border:1px solid #2a323a;background:#1a1f25;color:#e7eaee;border-radius:10px;padding:5px 8px;font-size:12px}
-.island .ib button.go{background:#34c3a3;color:#05231c;border-color:#34c3a3}
-.island .muted{color:#909aa7}
-.island .n{color:#e8b04b}
-.island .r{color:#34c3a3}
-.held-badge{font-size:11px;color:#34c3a3;border:1px solid #2a3d39;border-radius:999px;padding:0 7px;margin-left:auto}
-.island-tabs{display:flex;gap:4px;margin-bottom:8px}
-.island-tabs span{font-size:11.5px;padding:2px 9px;border-radius:999px;color:#a3aebc}
-.island-tabs span.on{background:#1a1f25;color:#e7eaee}
+.state{max-width:560px;margin:40px auto;text-align:center}
+.state .blob{width:64px;height:64px;margin:0 auto 10px}
+.state h2{font-size:17px;color:var(--text);margin:0 0 6px}
+.state p{color:var(--muted);margin:0 0 14px}
 
-.brief{max-width:640px}
+.home-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start;max-width:1100px}
+.upc{display:grid;grid-template-columns:70px 1fr auto;gap:4px 12px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.upc:first-of-type{border-top:0}
+.upc .cd{font-family:var(--font-mono);font-size:13px;color:var(--accent-text);white-space:nowrap}
+.upc .w b{display:block;font-weight:500}
+.upc .w small{color:var(--muted);font-size:12px}
+.upc .ov{grid-column:2 / 4;font-size:12px;color:var(--warn)}
 .brief .greet{font-size:18px;font-weight:600;margin:0 0 4px}
 .brief section{margin-top:14px}
 .localcal{border:1px dashed var(--line-strong);border-radius:var(--r-sm);padding:10px 12px}
 .localnote{margin:0 0 8px;font-size:11.5px;color:var(--faint)}
-.brief .newtag{font-size:10.5px;color:var(--accent-text);background:var(--accent-soft);border-radius:999px;padding:0 7px;margin-left:6px;vertical-align:2px}
+.newtag{font-size:10.5px;color:var(--accent-text);background:var(--accent-soft);border-radius:999px;padding:0 7px;margin-left:6px;vertical-align:2px}
 .mt{display:grid;grid-template-columns:96px 1fr auto;gap:10px;padding:6px 0;border-top:1px solid var(--line);align-items:center}
 .mt:first-of-type{border-top:0}
 .mt time{font-family:var(--font-mono);font-size:12.5px;color:var(--muted)}
@@ -162,12 +176,34 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
 .bar i{position:absolute;top:0;height:100%}
 .bar i.m{background:var(--line-strong)}
 .bar i.f{background:var(--accent)}
-.legend{display:flex;gap:14px;font-size:11.5px;color:var(--faint)}
+.legend{display:flex;gap:14px;font-size:11.5px;color:var(--faint);flex-wrap:wrap}
 
-.settings{display:grid;grid-template-columns:180px 1fr;gap:18px;max-width:900px}
+.chats{display:flex;min-height:100%}
+.side-list{width:290px;flex:none;border-right:1px solid var(--line);padding:14px 12px;background:var(--panel)}
+.side-list .search{border:1px solid var(--line);border-radius:var(--r-sm);padding:5px 10px;color:var(--faint);font-size:12.5px;margin:8px 0 12px}
+.pg{font-size:11.5px;color:var(--faint);margin:10px 4px 4px;text-transform:uppercase;letter-spacing:.04em}
+.crow{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--r-sm);font-size:13px}
+.crow.on{background:var(--raise)}
+.chatmain{flex:1;min-width:0;padding:16px 24px 40px;max-width:880px}
+.chathead{border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:14px;font-weight:600}
+.msg{background:var(--user);border-radius:var(--r);padding:10px 14px;margin:0 0 12px auto;max-width:520px}
+.reply{margin:0 0 12px;max-width:640px;color:var(--text)}
+.agentcard{border:1px solid var(--line-strong);border-radius:var(--r);background:var(--panel);padding:12px 14px;margin:0 0 14px;max-width:640px}
+.agentcard h4{margin:0 0 6px;font-size:14px}
+.diff{display:grid;grid-template-columns:70px 1fr 1fr;gap:4px 10px;font-size:12.5px;margin:8px 0}
+.diff .h{color:var(--faint);font-size:11.5px}
+.diff .old{color:var(--danger);text-decoration:line-through}
+.diff .new{color:var(--accent-text)}
+.agentcard .foot{display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.floor{font-size:11.5px;color:var(--warn);margin-right:auto}
+
+.settings{display:grid;grid-template-columns:180px 1fr;gap:18px;max-width:920px}
 .snav{display:flex;flex-direction:column;gap:2px}
-.snav span{padding:6px 10px;border-radius:var(--r-sm);color:var(--muted);font-size:13px}
-.snav span.on{background:var(--panel);color:var(--text);box-shadow:0 0 0 1px var(--line)}
+.snav span,.snav button{padding:6px 10px;border-radius:var(--r-sm);color:var(--muted);font-size:13px;border:0;background:none;text-align:left}
+.snav button[aria-selected="true"]{background:var(--panel);color:var(--text);box-shadow:0 0 0 1px var(--line)}
+.snav em{font-style:normal;font-size:10.5px;color:var(--accent-text);background:var(--accent-soft);border-radius:999px;padding:0 6px;margin-left:4px}
+.pane{display:none}
+.pane.on{display:block}
 .group{margin-bottom:16px}
 .group h3{font-size:14px;margin:0 0 8px}
 .opt{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
@@ -183,18 +219,6 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
 .seg button{border:0;background:var(--panel);padding:4px 10px;font-size:12.5px;color:var(--muted)}
 .seg button+button{border-left:1px solid var(--line)}
 .seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-text)}
-
-.filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
-.fchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:2px 10px;font-size:12px;color:var(--muted)}
-.fchip i,.sw{display:inline-block;width:9px;height:9px;border-radius:3px;flex:none}
-.fchip[aria-pressed="false"]{opacity:.55;text-decoration:line-through}
-.fchip[aria-pressed="true"]{color:var(--text)}
-.ev .also{float:right;font-size:10.5px;color:var(--faint);margin-left:6px}
-.ev.notbusy{border-style:dotted;border-left-style:solid;background:transparent}
-.snav button{border:0;background:none;text-align:left;padding:6px 10px;border-radius:var(--r-sm);color:var(--muted);font-size:13px}
-.snav button[aria-selected="true"]{background:var(--panel);color:var(--text);box-shadow:0 0 0 1px var(--line)}
-.snav em{font-style:normal;font-size:10.5px;color:var(--accent-text);background:var(--accent-soft);border-radius:999px;padding:0 6px;margin-left:4px}
-.pane{display:none}.pane.on{display:block}
 .cxlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
 .cx{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
 .cxhead{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:0;background:none;text-align:left;border-radius:var(--r)}
@@ -205,176 +229,237 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
 .pill-ok{font-size:12px;color:var(--accent-text);background:var(--accent-soft);border-radius:999px;padding:1px 9px;white-space:nowrap}
 .cxbody{display:none;padding:0 14px 12px;border-top:1px solid var(--line)}
 .cx.open .cxbody{display:block}
-.cxbody .foot{display:flex;justify-content:flex-end;padding-top:8px}
+.cxbody .foot{display:flex;justify-content:flex-end;gap:8px;padding-top:8px}
 .acct{border-top:1px solid var(--line);padding:10px 0 4px}
-.accthead{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.accthead{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;flex-wrap:wrap}
 .accthead small{color:var(--faint);font-size:12px}
-.calrow{display:flex;align-items:center;flex-wrap:wrap;gap:6px 16px;padding:5px 0 5px 4px}
-.calname{display:flex;align-items:center;gap:8px;flex:1 1 160px}
+.calrow{display:grid;grid-template-columns:minmax(150px,1fr) repeat(4,auto);gap:6px 14px;align-items:center;padding:5px 0 5px 4px}
+.calname{display:flex;align-items:center;gap:8px}
 .calrow input{accent-color:var(--accent);width:15px;height:15px}
-.mini{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
-.mt .chip .sw{width:8px;height:8px}
-.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--text);color:var(--bg);border-radius:var(--r-sm);padding:7px 14px;font-size:13px;transition:all .25s var(--out);z-index:60;pointer-events:none}
-.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.mini{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);white-space:nowrap}
+.calhead{font-size:11px;color:var(--faint);padding-bottom:0}
+.connect{padding:14px 0 4px}
+.connect ol{margin:6px 0 12px;padding-left:20px;color:var(--muted);font-size:13px}
+.sheet{border:1px solid var(--line-strong);border-radius:12px;padding:14px;max-width:380px;margin:10px auto;background:var(--raise);text-align:center;font-size:13px}
+.sheet .foot{display:flex;gap:8px;justify-content:center;margin-top:10px}
 
+.island-wrap{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:40;pointer-events:none}
+.island{pointer-events:auto;background:#0c0f12;color:#e7eaee;border-radius:22px;min-width:240px;padding:7px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 28px rgba(0,0,0,.28),0 0 0 1px rgba(255,255,255,.08);transition:all .35s var(--out);font-size:13px;border:0;text-align:left}
+.island .scout{width:18px;height:18px;border-radius:50%;background:#2BB39A;position:relative;flex:none}
+.island .scout::after{content:"";position:absolute;left:4px;top:6px;width:10px;height:3px;background:radial-gradient(circle,#0c0f12 1.3px,transparent 1.5px) 0 0/5px 3px repeat-x}
+.island.open{border-radius:20px;padding:12px 16px;flex-direction:column;align-items:stretch;width:min(400px,calc(100vw - 32px))}
+.island .row{display:flex;align-items:center;gap:10px}
+.island .meta{color:#a3aebc;font-size:12px}
+.island .lines{margin:8px 0 2px;padding:0;list-style:none;font-size:12.5px;color:#cfd5dc}
+.island .lines li{display:flex;gap:8px;padding:2px 0}
+.island .ib{display:flex;gap:6px;margin-top:8px}
+.island .ib button{flex:1;border:1px solid #2a323a;background:#1a1f25;color:#e7eaee;border-radius:10px;padding:5px 8px;font-size:12px}
+.island .ib button.go{background:#34c3a3;color:#05231c;border-color:#34c3a3}
+.island .muted{color:#909aa7}
+.island .n{color:#e8b04b}
+.island .r{color:#34c3a3}
+.ijoin{border:0;border-radius:999px;background:#34c3a3;color:#05231c;font-size:12px;padding:1px 10px;margin-left:auto}
+.held-badge{font-size:11px;color:#34c3a3;border:1px solid #2a3d39;border-radius:999px;padding:0 7px;margin-left:auto}
+.island-tabs{display:flex;gap:4px;margin-bottom:8px}
+.island-tabs span{font-size:11.5px;padding:2px 9px;border-radius:999px;color:#a3aebc}
+.island-tabs span.on{background:#1a1f25;color:#e7eaee}
+
+.mockbar{position:fixed;left:84px;bottom:10px;z-index:45;display:flex;gap:4px;flex-wrap:wrap;align-items:center;font-size:11px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 6px;max-width:calc(100vw - 100px)}
+.mockbar b{color:var(--faint);font-weight:500;padding:0 4px}
+.mockbar button{border:0;background:none;border-radius:999px;padding:1px 8px;color:var(--muted)}
+.mockbar button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-text)}
+.toast{position:fixed;left:50%;bottom:52px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--text);color:var(--bg);border-radius:var(--r-sm);padding:7px 14px;font-size:13px;transition:all .25s var(--out);z-index:60;pointer-events:none;max-width:calc(100vw - 32px)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:70;padding:16px}
 .modal.on{display:flex}
 .modal .card{width:min(480px,100%)}
 .modal textarea{width:100%;min-height:90px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg);color:var(--text);padding:8px;font:inherit;resize:vertical}
 .modal .foot{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
 
+@media (max-width:1000px){
+  .home-grid{grid-template-columns:1fr}
+  .side-list{width:248px}
+}
 @media (max-width:640px),(max-height:500px) and (pointer:coarse){
-  .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
-  .rail{flex-direction:row;overflow-x:auto;padding:8px;gap:4px;border-right:0;border-bottom:1px solid var(--line)}
-  .brand,.spacer,.nav .count,.nav .new{display:none}
-  .nav{width:auto;white-space:nowrap}
-  .theme-btn{margin:0}
-  main{padding:70px 16px 60px}
-  .today,.settings{grid-template-columns:1fr}
+  .app{flex-direction:column-reverse}
+  .rail{width:100%;flex-direction:row;justify-content:space-around;padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+  .avatar,.rail-sp,.nav.more-only{display:none}
+  .nav{width:auto;flex:1;font-size:11px}
+  .main{margin:0;border-radius:0;border-width:0 0 1px}
+  .content{padding:64px 16px 70px}
+  .today,.settings,.home-grid{grid-template-columns:1fr}
   .snav{flex-direction:row;overflow-x:auto}
-  .island-wrap{top:56px}
+  .calrow{grid-template-columns:1fr 1fr}
+  .side-list{display:none}
+  .chatmain{padding:64px 16px 40px}
+  .mockbar{left:8px;bottom:70px}
+  .island-wrap{top:8px}
 }
 </style>
 </head>
 <body>
 <div class="app">
   <nav class="rail" aria-label="Main">
-    <div class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="#2BB39A"/><circle cx="9.5" cy="12.5" r="1.3" fill="#0c0f12"/><circle cx="14.5" cy="12.5" r="1.3" fill="#0c0f12"/><path d="M12 5V2" stroke="#F2B54A" stroke-width="2" stroke-linecap="round"/></svg>spark outpost</div>
+    <span class="avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="#2BB39A"/><circle cx="9.5" cy="12.5" r="1.3" fill="#0c0f12"/><circle cx="14.5" cy="12.5" r="1.3" fill="#0c0f12"/><path d="M12 5V2" stroke="#F2B54A" stroke-width="2" stroke-linecap="round"/></svg></span>
     <button class="nav" data-view="home" data-primary><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
-    <button class="nav" data-view="today"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg>Chats<span class="count">3</span></button>
-    <button class="nav" data-view="today" data-primary aria-current="page"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Today<span class="new">new</span></button>
-    <button class="nav" data-view="today"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Analytics</button>
-    <button class="nav" data-view="today"><svg viewBox="0 0 24 24"><path d="M4 7h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"/></svg>Tickets</button>
-    <button class="nav" data-view="today"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="10" cy="18" r="2"/><path d="M8 7l8 1M7 8l2 8M16.5 9.5L11.5 16.5"/></svg>Map</button>
-    <button class="nav" data-view="today"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5zM14 4v5h5"/></svg>Docs</button>
-    <div class="spacer"></div>
-    <button class="nav" data-view="today"><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg>Pause</button>
-    <button class="nav" data-view="today"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>Remote control</button>
+    <button class="nav" data-view="chats" data-primary><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg>Chats<span class="badge">2</span></button>
+    <button class="nav" data-view="today" data-primary aria-current="page"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Today</button>
+    <button class="nav more-only" data-view="home"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Analytics</button>
+    <button class="nav" data-view="home"><svg viewBox="0 0 24 24"><path d="M4 7h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"/></svg>Tickets</button>
+    <button class="nav more-only" data-view="home"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="10" cy="18" r="2"/><path d="M8 7l8 1M7 8l2 8M16.5 9.5L11.5 16.5"/></svg>Map</button>
+    <button class="nav more-only" data-view="home"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5zM14 4v5h5"/></svg>Docs</button>
+    <span class="rail-sp"></span>
+    <button class="nav more-only" data-view="home"><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg>Pause</button>
+    <button class="nav more-only" data-view="home"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>Remote</button>
     <button class="nav" data-view="settings" data-primary><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Settings</button>
-    <button class="theme-btn" id="themeBtn" type="button">Theme: system</button>
   </nav>
 
-  <main id="main">
-    <section class="view on" id="view-today" aria-labelledby="todayTitle">
-      <h1 id="todayTitle">Today</h1>
-      <p class="sub" id="todaySub">Thursday 15 October · macOS Calendar · 2 accounts, 3 calendars</p>
-      <div class="week" role="group" aria-label="This week" id="week"></div>
-      <div class="today">
-        <div class="card">
-          <div class="next" aria-live="polite">
-            <div class="big" id="countdown">10 min</div>
-            <div class="what" id="nextWhat">Standup<small>9:30–9:45 · Work · Zoom</small></div>
-            <span class="spacer"></span>
-            <label class="chip" style="cursor:pointer"><input type="range" id="clock" min="480" max="1080" step="5" value="560" aria-label="Mock time of day" style="width:110px;accent-color:var(--accent)"><span id="clockLabel">9:20</span></label>
-          </div>
-          <div class="filters" id="filters" role="group" aria-label="Show calendars"></div>
-          <div class="timeline" id="timeline" aria-label="Today's events"></div>
+  <div class="main" id="main">
+    <div class="content view on" id="view-today">
+      <div id="todayState"></div>
+      <div id="todayBody">
+        <div class="dayhead">
+          <div class="t"><h1 id="dayTitle">Today</h1><p class="sub" id="todaySub" style="margin:0">Thursday 15 October</p></div>
+          <div class="shape" aria-label="Day shape"><div class="bar" id="shapeBar"></div><div class="words" id="shapeWords"></div></div>
         </div>
-        <div class="side">
-          <div class="card actions" id="actions" aria-live="polite">
-            <h3 id="aTitle">Standup</h3>
-            <div class="meta" id="aMeta">9:30–9:45 · Work calendar · 6 people</div>
-            <button class="act" data-act="open"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>Open in Calendar<small>Calendar.app</small></button>
-            <button class="act" data-act="chat"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4zM12 8v5M9.5 10.5h5"/></svg>Start a chat for this<small>New chat</small></button>
-            <button class="act" data-act="remind" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></svg>Remind me 5 min before<small>Off</small></button>
-            <button class="act" data-act="hold" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 9-5.2M18 11v5l2 2H4M3 3l18 18"/></svg>Hold alerts during this<small>Off</small></button>
-            <p class="hint">Read-only in Phase 1: nothing here changes your calendar.</p>
-          </div>
-          <div class="card" id="noSel"><h2>Select an event</h2><p class="hint" style="margin:0">Click an event in the timeline for its actions.</p></div>
+        <div class="week" role="group" aria-label="This week" id="week"></div>
+        <div class="today">
           <div class="card">
-            <h2>Your chats today</h2>
-            <div class="chatrow"><i class="dot run"></i><div class="t"><b>Fix login redirect</b><span>Running · Claude · 12 min</span></div></div>
-            <div class="chatrow"><i class="dot need"></i><div class="t"><b>Docs pass for Tickets</b><span>Needs you · approval card</span></div></div>
-            <div class="chatrow"><i class="dot need"></i><div class="t"><b>Dashboards filters</b><span>Unpushed work on spark/dashboards</span></div></div>
-            <div class="warnline" id="conflictLine"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg><span><b>Design review at 14:00</b> overlaps "Fix login redirect", still running. Its approval cards would wait.</span></div>
+            <div class="next" aria-live="polite" id="nextRow">
+              <div class="big" id="countdown"></div>
+              <div class="what" id="nextWhat"></div>
+              <label class="clockchip">Mock time <input type="range" id="clock" min="480" max="1080" step="1" value="560" aria-label="Mock time of day"><span id="clockLabel"></span></label>
+            </div>
+            <div class="filters" id="filters" role="group" aria-label="Show calendars"></div>
+            <div class="timeline" id="timeline" aria-label="Events"></div>
+          </div>
+          <div class="side">
+            <div class="card actions" id="actions" hidden aria-live="polite">
+              <h3 id="aTitle"></h3>
+              <div class="meta" id="aMeta"></div>
+              <div class="joinrow" id="joinRow"></div>
+              <div id="prepBox"></div>
+              <button class="act" data-act="open"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>Open in Calendar<small>Calendar.app</small></button>
+              <button class="act" data-act="chat"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4zM12 8v5M9.5 10.5h5"/></svg>Start a chat for this<small>New chat</small></button>
+              <button class="act" data-act="remind" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></svg>Remind me 5 min before<small>Off</small></button>
+              <button class="act" data-act="hold" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 9-5.2M18 11v5l2 2H4M3 3l18 18"/></svg>Hold alerts during this<small>Off</small></button>
+              <p class="hint">Reminders and holds live in Spark; they don't change the event.</p>
+            </div>
+            <div class="card" id="noSel"><h2>Select an event</h2><p class="hint" style="margin:0">Click an event for Join, prep and actions, or a hatched free block to protect it.</p></div>
+            <div class="card">
+              <h2>Your chats today</h2>
+              <div class="chatrow"><i class="dot run"></i><div class="t"><b>Fix login redirect</b><span>Running · Claude · 12 min</span></div></div>
+              <div class="chatrow"><i class="dot need"></i><div class="t"><b>Docs pass for Tickets</b><span>Needs you · approval card</span></div></div>
+              <div class="chatrow"><i class="dot need"></i><div class="t"><b>Dashboards filters</b><span>Unpushed work on spark/dashboards</span></div></div>
+              <div class="warnline"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg><span><b>Design review at 14:00</b> overlaps "Fix login redirect", still running. Its approval cards would wait.</span></div>
+            </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
 
-    <section class="view" id="view-home" aria-labelledby="homeTitle">
-      <h1 id="homeTitle">Home</h1>
-      <p class="sub">The morning brief, with a calendar block drawn on this Mac beside it. The model-written brief never sees the events.</p>
-      <div class="card brief">
-        <p class="greet">Good morning, Sample.</p>
-        <p class="sub" style="margin:0">Brief written at 7:00 · 3 chats need you · 1 overnight run finished · 2 tickets moved</p>
-        <section class="localcal">
-          <p class="localnote">From your calendar · on this Mac, not sent to a model</p>
-          <h2>Today's meetings<span class="newtag">new</span></h2>
-          <div id="briefMeetings"></div>
-          <h2 style="margin-top:12px">Free blocks<span class="newtag">new</span></h2>
-          <div class="bar" id="briefBar" aria-hidden="true"></div>
-          <div class="legend"><span>9:00</span><span>▮ busy</span><span style="color:var(--accent-text)">▮ focus</span><span>blank: free</span><span style="margin-left:auto">18:00</span></div>
-          <p style="margin:8px 0 0" id="briefFree"></p>
-        </section>
-        <section>
-          <h2>Needs you</h2>
-          <div class="chatrow"><i class="dot need"></i><div class="t"><b>Docs pass for Tickets</b><span>Approval card waiting</span></div></div>
-        </section>
+    <div class="content view" id="view-home">
+      <h1>Good morning, Sample.</h1>
+      <p class="sub">Home, with an Upcoming card beside the brief. Event details here are drawn on this Mac.</p>
+      <div class="home-grid">
+        <div class="card brief">
+          <h2>Morning brief</h2>
+          <p class="sub" style="margin:0">Written at 7:00 · 3 chats need you · 1 overnight run finished · 2 tickets moved</p>
+          <section class="localcal">
+            <p class="localnote">From your calendar · on this Mac, not sent to a model</p>
+            <h2>Today's meetings<span class="newtag">new</span></h2>
+            <div id="briefMeetings"></div>
+            <h2 style="margin-top:12px">Free blocks</h2>
+            <div class="bar" id="briefBar" aria-hidden="true"></div>
+            <div class="legend"><span>9:00</span><span>▮ busy</span><span style="color:var(--accent-text)">▮ focus</span><span>blank: free</span><span style="margin-left:auto">18:00</span></div>
+            <p style="margin:8px 0 0" id="briefFree"></p>
+          </section>
+        </div>
+        <div class="card" id="upcomingCard">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><h2 style="margin:0">Upcoming</h2><span class="spacer"></span><span class="hint" style="margin:0">⌘J joins the next</span></div>
+          <div id="upcoming"></div>
+        </div>
       </div>
-    </section>
+    </div>
 
-    <section class="view" id="view-settings" aria-labelledby="setTitle">
-      <h1 id="setTitle">Settings</h1>
-      <p class="sub">The calendar is a connector. Nudges and holds live in a proposed Notifications section, which may move if Settings is reorganised.</p>
+    <div class="view" id="view-chats" style="width:100%">
+      <div class="chats">
+        <aside class="side-list" aria-label="Chats">
+          <button class="btn small primary" style="width:100%">New chat</button>
+          <div class="search">Search chats ⌘K</div>
+          <div class="pg">spark-outpost</div>
+          <div class="crow on"><i class="dot run"></i>Plan my Thursday</div>
+          <div class="crow"><i class="dot run"></i>Fix login redirect</div>
+          <div class="crow"><i class="dot need"></i>Docs pass for Tickets</div>
+          <div class="pg">dashboards</div>
+          <div class="crow"><i class="dot need"></i>Dashboards filters</div>
+        </aside>
+        <div class="chatmain">
+          <div class="chathead">Plan my Thursday <span class="chip" style="margin-left:6px">Claude · Manual</span></div>
+          <div class="msg">Move my dashboards focus block to the afternoon, and cancel the on-call handoff, Sam is covering.</div>
+          <p class="reply">I'll move the focus block to 17:00–18:00, which is free once the handoff is gone, and cancel the handoff.</p>
+          <div class="agentcard" id="cardEdit">
+            <h4>Change "Focus: dashboards" on Work?</h4>
+            <div class="diff"><span class="h"></span><span class="h">Before</span><span class="h">After</span><span class="h">When</span><span class="old">11:00–12:30</span><span class="new">17:00–18:00</span><span class="h">Repeats</span><span>This occurrence only</span><span>This occurrence only</span></div>
+            <div class="foot"><span class="hint" style="margin:0 auto 0 0">Manual asks; Auto would run this at once.</span><button class="btn small" data-card="reject">Reject</button><button class="btn small primary" data-card="allow">Allow once</button></div>
+          </div>
+          <div class="agentcard" id="cardDelete">
+            <h4>Delete "On-call handoff" from Team on-call?</h4>
+            <div class="diff"><span class="h"></span><span class="h">Before</span><span class="h">After</span><span class="h">Event</span><span>17:00–17:15 · 3 people</span><span class="old">Deleted for everyone</span><span class="h">Calendar</span><span>Team on-call (shared)</span><span></span></div>
+            <div class="foot"><span class="floor">Asks in every mode: a delete, on a shared calendar, with other people.</span><button class="btn small" data-card="reject">Reject</button><button class="btn small primary" data-card="allow">Allow once</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content view" id="view-settings">
+      <h1>Settings</h1>
+      <p class="sub">The calendar is a connector. Nudges, holds and prep timing live in a proposed Notifications section, which may move if Settings is reorganised.</p>
       <div class="settings">
         <div class="snav" role="tablist" aria-label="Settings sections">
-          <span>Spark</span><span>Crew</span><span>AI providers</span><span>Models</span><span>Usage</span><span>Projects</span><span>Mac control</span>
+          <span>Spark</span><span>Spark assistant</span><span>Crew</span><span>AI providers</span><span>Models</span><span>Usage</span><span>Projects</span><span>Mac control</span>
           <button role="tab" data-pane="connectors" aria-selected="true">Connectors</button>
           <button role="tab" data-pane="notifications" aria-selected="false">Notifications <em>proposed</em></button>
-          <span>MCP servers</span><span>Appearance</span>
+          <span>Appearance</span>
         </div>
         <div>
           <div class="pane on" id="pane-connectors" role="tabpanel" aria-label="Connectors">
             <ul class="cxlist">
               <li class="cx"><div class="cxhead"><span class="cxlogo">GH</span><span class="nm"><b>GitHub</b><small>Signed in as sample-dev</small></span><span class="pill-ok">✓ Connected</span></div></li>
               <li class="cx"><div class="cxhead"><span class="cxlogo">TK</span><span class="nm"><b>Jira and Linear</b><small>1 ticket source</small></span><span class="pill-ok">✓ Connected</span></div></li>
-              <li class="cx"><div class="cxhead"><span class="cxlogo">SL</span><span class="nm"><b>Slack</b><small>Not connected</small></span></div></li>
               <li class="cx open" id="calCard">
-                <button class="cxhead" id="calHead" aria-expanded="true" aria-controls="calBody"><span class="cxlogo">CA</span><span class="nm"><b>Calendar</b><small>macOS Calendar · 2 accounts · 3 calendars</small></span><span class="pill-ok">✓ Connected</span></button>
-                <div class="cxbody" id="calBody">
-                  <div class="opt"><div class="l"><b>Source</b><span id="srcHint">Every account synced to this Mac in System Settings → Internet Accounts. Stays on this Mac.</span></div><div class="seg" data-seg="source"><button aria-pressed="true" data-src="mac">macOS Calendar</button><button aria-pressed="false" data-src="google">Google · Phase 2</button></div></div>
-                  <div class="opt"><div class="l"><b>Permission</b><span>Calendars: full access, used read-only. Spark never changes your calendar in this version.</span></div><span class="chip ok">Allowed</span></div>
-                  <div id="accounts"></div>
-                  <div class="opt"><div class="l"><b>Let agents read my calendar</b><span>Offers <code>spark_calendar</code> to chats. Event details then go to the chat's model provider; it follows the agent's mode like other Spark tools.</span></div><button class="switch" role="switch" aria-checked="false" aria-label="Let agents read my calendar"></button></div>
-                  <div class="foot"><button class="btn small" id="disconnect">Disconnect</button></div>
-                </div>
+                <button class="cxhead" id="calHead" aria-expanded="true" aria-controls="calBody"><span class="cxlogo">CA</span><span class="nm"><b>Calendar</b><small id="calStatus"></small></span><span id="calBadge"></span></button>
+                <div class="cxbody" id="calBody"></div>
               </li>
             </ul>
           </div>
           <div class="pane" id="pane-notifications" role="tabpanel" aria-label="Notifications">
             <p class="hint" style="margin:0 0 10px">Proposed section: the owner may reorganise Settings.</p>
             <div class="card group">
-              <h3>Morning brief</h3>
-              <div class="opt"><div class="l"><b>Morning brief</b><span>A daily summary on Home at 7:00.</span></div><button class="switch" role="switch" aria-checked="true" aria-label="Morning brief"></button></div>
-              <div class="opt"><div class="l"><b>Add today's calendar</b><span>Meetings and free blocks, drawn on this Mac beside the brief, never in its prompt.</span></div><button class="switch" role="switch" aria-checked="true" aria-label="Add today's calendar to the brief"></button></div>
-            </div>
-            <div class="card group">
-              <h3>Calendar nudges</h3>
-              <div class="opt"><div class="l"><b>Before a meeting</b><span>A line in the island with what needs you. Only calendars set to Use for nudges.</span></div><div class="seg" data-seg="before"><button aria-pressed="false">5 min</button><button aria-pressed="true">10 min</button><button aria-pressed="false">15 min</button></div></div>
-              <div class="opt"><div class="l"><b>Wrap-up reminder</b><span>Names a chat with unpushed or running work before a meeting.</span></div><div class="seg" data-seg="wrap"><button aria-pressed="false">Off</button><button aria-pressed="true">15 min</button><button aria-pressed="false">30 min</button></div></div>
+              <h3>Meetings</h3>
+              <div class="opt"><div class="l"><b>Before a meeting</b><span>An island line with what needs you, and Join from 5 min before.</span></div><div class="seg"><button aria-pressed="false">5 min</button><button aria-pressed="true">10 min</button><button aria-pressed="false">15 min</button></div></div>
+              <div class="opt"><div class="l"><b>Prepare meetings</b><span>For calendars with Prep meetings on. Also on opening the event.</span></div><div class="seg"><button aria-pressed="false">15 min before</button><button aria-pressed="true">30 min before</button><button aria-pressed="false">1 h before</button></div></div>
+              <div class="opt"><div class="l"><b>Wrap-up reminder</b><span>Names a chat with unpushed or running work before a meeting.</span></div><div class="seg"><button aria-pressed="false">Off</button><button aria-pressed="true">15 min</button><button aria-pressed="false">30 min</button></div></div>
+              <div class="opt"><div class="l"><b>Anything to capture?</b><span>One island line when a meeting with notes or prep ends.</span></div><button class="switch" role="switch" aria-checked="true" aria-label="Anything to capture"></button></div>
             </div>
             <div class="card group">
               <h3>Island chimes</h3>
               <div class="opt"><div class="l"><b>Hold chimes during</b><span>Held alerts show as one catch-up line afterwards. Cards still appear, silently.</span></div><div class="seg" data-seg="hold"><button aria-pressed="false">Never</button><button aria-pressed="true">Focus blocks</button><button aria-pressed="false">All meetings</button></div></div>
-              <div class="opt"><div class="l"><b>Focus blocks are events named</b><span>Matched in calendars that count as busy; case does not matter.</span></div><span class="chip">Focus, Deep work, Heads down</span></div>
+              <div class="opt"><div class="l"><b>Focus blocks are events named</b><span>Case does not matter.</span></div><span class="chip">Focus, Deep work, Heads down</span></div>
             </div>
             <div class="card group">
-              <h3>Phone</h3>
-              <div class="opt"><div class="l"><b>Meeting alerts on paired devices</b><span>Only "Meeting in 10 min". Never a title or attendees. Needs Notify when a chat needs you on Remote control.</span></div><button class="switch" role="switch" aria-checked="false" aria-label="Meeting alerts on paired devices"></button></div>
+              <h3>Morning brief and phone</h3>
+              <div class="opt"><div class="l"><b>Add today's calendar to the brief</b><span>Drawn on this Mac beside the brief, never in its prompt.</span></div><button class="switch" role="switch" aria-checked="true" aria-label="Add today's calendar to the brief"></button></div>
+              <div class="opt"><div class="l"><b>Meeting alerts on paired devices</b><span>Only "Meeting in 10 min": no title, prep or Join. Needs Notify when a chat needs you on Remote control.</span></div><button class="switch" role="switch" aria-checked="false" aria-label="Meeting alerts on paired devices"></button></div>
             </div>
           </div>
         </div>
       </div>
-    </section>
-  </main>
+    </div>
+  </div>
 </div>
 
-<div class="island-wrap">
-  <button class="island" id="island" aria-expanded="false" aria-label="Spark Island">
-    <span class="scout" aria-hidden="true"></span><span id="islandLine">Standup in 10 min · 2 chats need you</span>
-  </button>
-</div>
+<div class="island-wrap"><button class="island" id="island" aria-expanded="false" aria-label="Spark Island"></button></div>
 
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
   <div class="card">
@@ -385,8 +470,8 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
     <div class="foot"><button class="btn" id="mCancel">Cancel</button><button class="btn primary" id="mStart">Start</button></div>
   </div>
 </div>
+<div class="mockbar" id="mockbar" role="group" aria-label="Mock states"><b>Mock state</b></div>
 <div class="toast" id="toast" role="status"></div>
-<div class="sample">Sample data · design mock</div>
 
 <script>
 var ACCOUNTS=[
@@ -394,30 +479,49 @@ var ACCOUNTS=[
   {id:"ic",name:"sample@icloud.example",kind:"iCloud"}
 ];
 var CALS={
-  work:{name:"Work",account:"g1",color:"var(--c-codex)",on:true,nudge:true,busy:true},
-  oncall:{name:"Team on-call",account:"g1",color:"var(--c-zai)",on:true,nudge:true,busy:false},
-  family:{name:"Family",account:"ic",color:"var(--c-claude)",on:true,nudge:false,busy:true}
+  work:{name:"Work",account:"g1",color:"var(--c-codex)",on:true,nudge:true,busy:true,prep:true,edit:true,shared:false},
+  oncall:{name:"Team on-call",account:"g1",color:"var(--c-zai)",on:true,nudge:true,busy:false,prep:false,edit:false,shared:true},
+  family:{name:"Family",account:"ic",color:"var(--c-claude)",on:true,nudge:false,busy:true,prep:false,edit:false,shared:true}
 };
-var EVENTS=[
-  {id:"standup",uid:"u-standup",t:"Standup",s:570,e:585,cal:"work",meta:"6 people · Zoom",notes:"Daily sync"},
-  {id:"focus",uid:"u-focus",t:"Focus: dashboards",s:660,e:750,cal:"work",focus:true,meta:"just you",notes:"Finish the dashboards filters"},
-  {id:"lunch",uid:"u-lunch",t:"Lunch",s:750,e:795,cal:"family",meta:"",notes:""},
-  {id:"review",uid:"u-review",t:"Design review",s:840,e:885,cal:"work",meta:"4 people · Room Sample",notes:"Review the Calendar mock and the Today view"},
-  {id:"review-copy",uid:"u-review",t:"Design review",s:840,e:885,cal:"family",meta:"",notes:""},
-  {id:"pickup",uid:"u-pickup",t:"School pickup",s:930,e:945,cal:"family",meta:"",notes:""},
-  {id:"oneone",uid:"u-oneone",t:"1:1 with Sample Lead",s:960,e:990,cal:"work",meta:"2 people",notes:"Roadmap, hiring"},
-  {id:"handoff",uid:"u-handoff",t:"On-call handoff",s:1020,e:1035,cal:"oncall",meta:"3 people",notes:""}
-];
-var DAY0=480,DAY1=1080,WORK0=540,H=640,state={sel:null,remind:{},hold:{focus:true},islandOpen:false,hidden:{}};
+var PREP={
+  "u-standup":{at:"9:00",tokens:"3.1k",cost:"$0.004",points:["Yesterday: Fix login redirect is running; its PR #212 has 2 checks failing.","CP-49084 moved to In Review.","Ask: who reviews the Dashboards filters branch? It has unpushed work."],changed:"Since last Thursday: 2 tickets closed, 1 new blocker (CP-49102)."},
+  "u-review":{at:"13:30",tokens:"5.4k",cost:"$0.007",points:["About: the Calendar design (PR #31), mock and open questions.","Open decision: Today as a left-bar item or a Home section.","Talking point: prep is opt-in per calendar and shows its cost."],changed:"First occurrence: nothing to compare."}
+};
+var TODAY=15;
+var DAYS={
+  12:[{id:"m1",uid:"u-standup",t:"Standup",s:570,e:585,cal:"work",people:6,link:{host:"acme.zoom.us",kind:"Zoom"}},{id:"m2",uid:"u-plan",t:"Sprint planning",s:600,e:690,cal:"work",people:8,link:{host:"meet.google.com",kind:"Google Meet"}}],
+  13:[{id:"t1",uid:"u-standup",t:"Standup",s:570,e:585,cal:"work",people:6,link:{host:"acme.zoom.us",kind:"Zoom"}},{id:"t2",uid:"u-f2",t:"Focus: tickets",s:600,e:720,cal:"work",focus:true,people:1},{id:"t3",uid:"u-vendor",t:"Vendor call",s:840,e:870,cal:"work",people:5,link:{host:"teams.microsoft.com",kind:"Microsoft Teams"}},{id:"t4",uid:"u-dent",t:"Dentist",s:1020,e:1065,cal:"family",people:1}],
+  14:[{id:"w1",uid:"u-f3",t:"Deep work",s:540,e:720,cal:"work",focus:true,people:1}],
+  15:[
+    {id:"standup",uid:"u-standup",t:"Standup",s:570,e:585,cal:"work",people:6,recurring:true,link:{host:"acme.zoom.us",kind:"Zoom"},notes:"Daily sync"},
+    {id:"focus",uid:"u-focus",t:"Focus: dashboards",s:660,e:750,cal:"work",focus:true,people:1,notes:"Finish the dashboards filters"},
+    {id:"lunch",uid:"u-lunch",t:"Lunch",s:750,e:795,cal:"family",people:1},
+    {id:"review",uid:"u-review",t:"Design review",s:840,e:885,cal:"work",people:4,link:{host:"meet.google.com",kind:"Google Meet"},notes:"Review the Calendar mock and the Today view"},
+    {id:"review-copy",uid:"u-review",t:"Design review",s:840,e:885,cal:"family",people:4},
+    {id:"pickup",uid:"u-pickup",t:"School pickup",s:930,e:945,cal:"family",people:1},
+    {id:"oneone",uid:"u-oneone",t:"1:1 with Sample Lead",s:960,e:990,cal:"work",people:2,link:{host:"acme.webex.com",kind:"Webex"},notes:"Roadmap, hiring"},
+    {id:"customer",uid:"u-customer",t:"Customer call",s:990,e:1020,cal:"work",people:5,link:{host:"teams.microsoft.com",kind:"Microsoft Teams"}},
+    {id:"handoff",uid:"u-handoff",t:"On-call handoff",s:1020,e:1035,cal:"oncall",people:3,link:{host:"teams.microsoft.com",kind:"Microsoft Teams"}}
+  ],
+  16:[{id:"f1",uid:"u-standup",t:"Standup",s:570,e:585,cal:"work",people:6,link:{host:"acme.zoom.us",kind:"Zoom"}},{id:"f2",uid:"u-demo",t:"Demo day",s:900,e:960,cal:"work",people:20,link:{host:"meet.google.com",kind:"Google Meet"}}],
+  17:[],
+  18:[{id:"s1",uid:"u-brunch",t:"Brunch",s:660,e:750,cal:"family",people:4}]
+};
+var DAYNAMES={12:"Monday",13:"Tuesday",14:"Wednesday",15:"Thursday",16:"Friday",17:"Saturday",18:"Sunday"};
+var DAY0=480,DAY1=1080,WORK0=540,H=640;
+var state={day:TODAY,sel:null,remind:{},hold:{focus:true},islandOpen:false,hidden:{},prepNow:{},protectAt:null,mock:"normal",captureDone:{}};
+
 function y(m){return (m-DAY0)/(DAY1-DAY0)*H}
 function hm(m){return Math.floor(m/60)+":"+String(m%60).padStart(2,"0")}
 function dur(m){return m>=60?Math.floor(m/60)+" h"+(m%60?" "+m%60:""):m+" min"}
 function el(tag,cls,html){var n=document.createElement(tag);if(cls)n.className=cls;if(html!=null)n.innerHTML=html;return n}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function now(){return +document.getElementById("clock").value}
+function isToday(){return state.day===TODAY}
 
-function merged(){
+function merged(day){
   var byUid={};
-  EVENTS.forEach(function(e){
+  (DAYS[day==null?state.day:day]||[]).forEach(function(e){
     if(!CALS[e.cal].on)return;
     var first=byUid[e.uid];
     if(first){first.also.push(e.cal);return}
@@ -425,133 +529,303 @@ function merged(){
   });
   return Object.keys(byUid).map(function(k){return byUid[k]}).sort(function(a,b){return a.s-b.s});
 }
-function visible(){return merged().map(function(e){var shown=calsOf(e).filter(function(c){return !state.hidden[c]});return shown.length?Object.assign({},e,{cal:shown[0],also:shown.slice(1)}):null}).filter(Boolean)}
 function calsOf(e){return [e.cal].concat(e.also)}
+function visible(){return merged().map(function(e){var shown=calsOf(e).filter(function(c){return !state.hidden[c]});return shown.length?Object.assign({},e,{cal:shown[0],also:shown.slice(1)}):null}).filter(Boolean)}
 function isBusy(e){return calsOf(e).some(function(c){return CALS[c].busy})}
 function nudges(e){return !e.focus&&calsOf(e).some(function(c){return CALS[c].nudge})}
-function freeBlocks(){
-  var busy=merged().filter(isBusy),out=[],t=WORK0;
-  busy.forEach(function(e){if(e.s-t>=30)out.push([t,e.s]);t=Math.max(t,e.e)});
+function prepOn(e){return !e.focus&&e.people>1&&calsOf(e).some(function(c){return CALS[c].prep})}
+function freeBlocks(day){
+  var out=[],t=WORK0;
+  merged(day).filter(isBusy).forEach(function(e){if(e.s-t>=30)out.push([t,e.s]);t=Math.max(t,e.e)});
   if(DAY1-t>=30)out.push([t,DAY1]);
   return out;
 }
 function longest(){return freeBlocks().reduce(function(a,b){return b[1]-b[0]>a[1]-a[0]?b:a},[0,0])}
+function joinable(e,t){return e.link&&t>=e.s-5&&t<e.e}
 
-function buildWeek(){
-  var days=[["Mon",12,2,0],["Tue",13,4,1],["Wed",14,1,1],["Thu",15,6,1],["Fri",16,3,0],["Sat",17,0,0],["Sun",18,1,0]],w=document.getElementById("week");
-  days.forEach(function(d){var b=el("button","day","<b>"+d[0]+" "+d[1]+"</b><span>"+(d[2]?d[2]+(d[2]===1?" event":" events"):"free")+"</span>");var dots=el("div","dots");for(var i=0;i<d[2];i++)dots.appendChild(el("i",""));for(var j=0;j<d[3];j++)dots.appendChild(el("i","f"));b.appendChild(dots);b.setAttribute("aria-pressed",d[1]===15?"true":"false");b.addEventListener("click",function(){w.querySelectorAll(".day").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");if(d[1]!==15)toast(d[0]+" "+d[1]+": the mock only has today's events")});w.appendChild(b)});
+function prepState(e){
+  if(!prepOn(e))return "off";
+  if(PREP[e.uid]&&(now()>=e.s-30||state.prepNow[e.uid]))return "ready";
+  if(state.prepNow[e.uid]===0)return "running";
+  return "scheduled";
 }
 
+function buildWeek(){
+  var w=document.getElementById("week");w.innerHTML="";
+  [12,13,14,15,16,17,18].forEach(function(d){
+    var evs=merged(d),n=evs.filter(function(e){return !e.focus}).length,f=evs.filter(function(e){return e.focus}).length;
+    var b=el("button","day","<b>"+DAYNAMES[d].slice(0,3)+" "+d+"</b><span>"+(n?n+(n===1?" meeting":" meetings"):"free")+"</span>");
+    var dots=el("div","dots");for(var i=0;i<n;i++)dots.appendChild(el("i",""));for(var j=0;j<f;j++)dots.appendChild(el("i","f"));b.appendChild(dots);
+    b.setAttribute("aria-pressed",d===state.day?"true":"false");
+    b.addEventListener("click",function(){state.day=d;state.sel=null;state.protectAt=null;render()});
+    w.appendChild(b);
+  });
+}
 function buildFilters(){
   var f=document.getElementById("filters");f.innerHTML="";
   Object.keys(CALS).forEach(function(id){
     var c=CALS[id];if(!c.on)return;
-    var b=el("button","fchip",'<i style="background:'+c.color+'"></i>'+esc(c.name));
+    var b=el("button","fchip",'<i class="sw" style="background:'+c.color+'"></i>'+esc(c.name));
     b.setAttribute("aria-pressed",state.hidden[id]?"false":"true");
-    b.addEventListener("click",function(){state.hidden[id]=!state.hidden[id];buildFilters();updateClock()});
+    b.addEventListener("click",function(){state.hidden[id]=!state.hidden[id];render()});
     f.appendChild(b);
   });
-  var on=Object.keys(CALS).filter(function(k){return CALS[k].on}).length;
-  document.getElementById("todaySub").textContent="Thursday 15 October · macOS Calendar · 2 accounts, "+on+" calendars";
+}
+function buildShape(){
+  var evs=merged(),meet=0,focus=0;
+  evs.filter(isBusy).forEach(function(e){if(e.focus)focus+=e.e-e.s;else meet+=e.e-e.s});
+  var free=freeBlocks().reduce(function(a,b){return a+b[1]-b[0]},0);
+  var load=meet>=240?"Heavy":meet>=120?"Balanced":meet>0?"Light":"Clear";
+  var bar=document.getElementById("shapeBar");bar.innerHTML="";bar.className="bar";
+  evs.filter(isBusy).forEach(function(e){var i=el("i",e.focus?"f":"m");i.style.left=(Math.max(e.s,WORK0)-WORK0)/(DAY1-WORK0)*100+"%";i.style.width=(e.e-Math.max(e.s,WORK0))/(DAY1-WORK0)*100+"%";bar.appendChild(i)});
+  document.getElementById("shapeWords").innerHTML="<span><b>"+load+"</b> day</span><span>meetings "+dur(meet||0)+"</span><span>focus "+dur(focus||0)+"</span><span>free "+dur(free)+"</span>";
 }
 
 function buildTimeline(){
   var tl=document.getElementById("timeline");tl.innerHTML="";
   for(var h=8;h<=18;h++){var r=el("div","hour","<span>"+h+":00</span>");r.style.top=y(h*60)+"px";tl.appendChild(r)}
   var lane=el("div","lane");tl.appendChild(lane);
-  freeBlocks().forEach(function(f){var n=el("div","free",f[1]-f[0]<45?"free":"free "+hm(f[0])+"–"+hm(f[1]));n.style.top=y(f[0])+2+"px";n.style.height=y(f[1])-y(f[0])-4+"px";lane.appendChild(n)});
-  visible().forEach(function(ev){
+  freeBlocks().forEach(function(f){
+    var n=el("button","free",f[1]-f[0]<45?"free":"free "+hm(f[0])+"–"+hm(f[1]));
+    n.style.top=y(f[0])+2+"px";n.style.height=y(f[1])-y(f[0])-4+"px";
+    n.setAttribute("aria-label","Free "+hm(f[0])+" to "+hm(f[1])+". Protect as focus");
+    n.addEventListener("click",function(){state.protectAt=f;buildTimeline()});
+    lane.appendChild(n);
+  });
+  var vis=visible();
+  vis.forEach(function(ev){
     var b=el("button","ev"+(ev.focus?" focus":"")+(isBusy(ev)?"":" notbusy"));
     b.style.borderLeftColor=CALS[ev.cal].color;
-    var also=ev.also.length?'<span class="also">also on '+ev.also.map(function(c){return esc(CALS[c].name)}).join(", ")+"</span>":"";
-    b.innerHTML=(state.hold[ev.id]?'<span class="held">alerts held</span>':"")+also+"<b>"+esc(ev.t)+"</b><span>"+hm(ev.s)+"–"+hm(ev.e)+" · "+esc(CALS[ev.cal].name)+"</span>";
+    var tags="",short=ev.e-ev.s<30;
+    if(state.hold[ev.id])tags+='<span class="tag held">alerts held</span>';
+    if(isToday()&&prepState(ev)==="ready"&&!short)tags+='<span class="tag prep">prep ready</span>';
+    if(ev.also.length&&!short)tags+='<span class="tag">also on '+ev.also.map(function(c){return esc(CALS[c].name)}).join(", ")+"</span>";
+    b.innerHTML=tags+"<b>"+esc(ev.t)+"</b><span>"+hm(ev.s)+"–"+hm(ev.e)+" · "+esc(CALS[ev.cal].name)+(ev.link?" · "+esc(ev.link.kind):"")+"</span>";
     b.style.top=y(ev.s)+1+"px";b.style.height=Math.max(22,y(ev.e)-y(ev.s)-2)+"px";
     b.setAttribute("aria-expanded",state.sel===ev.id?"true":"false");
     b.setAttribute("aria-label",ev.t+", "+hm(ev.s)+" to "+hm(ev.e)+", "+CALS[ev.cal].name);
     b.addEventListener("click",function(){select(ev.id)});
     lane.appendChild(b);
   });
-  if(!state.hidden.work&&CALS.work.on){var c=el("div","conflict");c.style.top=y(840)+"px";c.style.height=y(885)-y(840)+"px";c.title="Overlaps a running chat";lane.appendChild(c)}
-  var now=+document.getElementById("clock").value,n=el("div","now","<span>"+hm(now)+"</span>");n.style.top=y(now)+"px";tl.appendChild(n);
+  for(var i=1;i<vis.length;i++){
+    var a=vis[i-1],c=vis[i];
+    if(a.e===c.s&&!a.focus&&!c.focus&&a.link&&c.link&&a.link.host!==c.link.host){var bf=el("div","buffer","no gap: "+esc(a.link.kind)+" → "+esc(c.link.kind));bf.style.top=y(c.s)+"px";lane.appendChild(bf)}
+  }
+  if(isToday()&&!state.hidden.work){var cf=el("div","conflict");cf.style.top=y(840)+"px";cf.style.height=y(885)-y(840)+"px";cf.title="Overlaps a running chat";lane.appendChild(cf)}
+  if(state.protectAt){
+    var f=state.protectAt,p=el("div","popover");p.style.top=y(f[0])+4+"px";
+    p.innerHTML="<b>Protect "+hm(f[0])+"–"+hm(f[1])+" as focus?</b><div class=\"hint\" style=\"margin:4px 0 0\">Adds \"Focus\" to Work, shown busy. Chimes are held during it.</div><div class=\"foot\"><button class=\"btn small\" id=\"pCancel\">Cancel</button><button class=\"btn small primary\" id=\"pAdd\">Add to Work</button></div>";
+    lane.appendChild(p);
+    p.querySelector("#pCancel").addEventListener("click",function(){state.protectAt=null;buildTimeline()});
+    p.querySelector("#pAdd").addEventListener("click",function(){DAYS[state.day].push({id:"pf"+f[0],uid:"u-pf"+f[0]+state.day,t:"Focus",s:f[0],e:f[1],cal:"work",focus:true,people:1});state.hold["pf"+f[0]]=true;state.protectAt=null;render();toast("Added Focus "+hm(f[0])+"–"+hm(f[1])+" to Work")});
+  }
+  if(isToday()){var n=el("div","now","<span>"+hm(now())+"</span>");n.style.top=y(now())+"px";tl.appendChild(n)}
 }
 
 function findEvent(id){return merged().find(function(e){return e.id===id})}
 function select(id){
   var ev=findEvent(id);if(!ev)return;
-  state.sel=id;
-  document.getElementById("actions").classList.add("on");document.getElementById("noSel").style.display="none";
+  state.sel=id;state.protectAt=null;renderActions();buildTimeline();
+}
+function renderActions(){
+  var ev=findEvent(state.sel),box=document.getElementById("actions");
+  if(!ev){box.hidden=true;document.getElementById("noSel").hidden=false;return}
+  box.hidden=false;document.getElementById("noSel").hidden=true;
   document.getElementById("aTitle").textContent=ev.t;
   var where=calsOf(ev).map(function(c){return CALS[c].name}).join(" and ");
-  document.getElementById("aMeta").textContent=hm(ev.s)+"–"+hm(ev.e)+" · "+where+(ev.meta?" · "+ev.meta:"")+(nudges(ev)?"":" · no nudge");
-  setAct("remind",!!state.remind[id],"Set","Off");setAct("hold",!!state.hold[id],"Held","Off");
-  buildTimeline();
+  document.getElementById("aMeta").textContent=DAYNAMES[state.day]+" "+hm(ev.s)+"–"+hm(ev.e)+" · "+where+(ev.people>1?" · "+ev.people+" people":"")+(nudges(ev)?"":" · no nudge");
+  var jr=document.getElementById("joinRow");jr.innerHTML="";
+  if(ev.link){
+    var can=isToday()&&joinable(ev,now());
+    var jb=el("button",can?"btn primary small":"btn small","Join "+esc(ev.link.kind));jb.disabled=!can;
+    jb.addEventListener("click",function(){joinEvent(ev)});
+    jr.appendChild(jb);
+    jr.appendChild(el("small","",esc(ev.link.host)+(can?" · opens in your browser or app":isToday()&&now()<ev.s?" · from "+hm(ev.s-5):"")));
+  }
+  renderPrep(ev);
+  setAct("remind",!!state.remind[ev.id],"Set","Off");setAct("hold",!!state.hold[ev.id],"Held","Off");
+}
+function renderPrep(ev){
+  var box=document.getElementById("prepBox");box.innerHTML="";
+  if(ev.focus||ev.people<2)return;
+  var st=isToday()?prepState(ev):"other",p=PREP[ev.uid],d=el("div","prep");
+  if(st==="off"){d.innerHTML="<h4>Meeting prep</h4><div class=\"hint\" style=\"margin:0\">Off for "+esc(CALS[ev.cal].name)+". Turning it on sends this calendar's event titles, notes and attendee names to your Spark assistant's provider.</div><div class=\"cost\"><button class=\"btn small\" id=\"prepTurnOn\">Prep meetings from "+esc(CALS[ev.cal].name)+"…</button></div>"}
+  else if(st==="other"){d.innerHTML="<h4>Meeting prep</h4><div class=\"hint\" style=\"margin:0\">"+(prepOn(ev)?"Prepared 30 min before, on the day.":"Off for this calendar.")+"</div>"}
+  else if(st==="running"){d.innerHTML="<h4>Meeting prep <span class=\"chip\">Preparing…</span></h4><div class=\"hint\" style=\"margin:0\">Your Spark assistant is reading related chats, tickets and pull requests.</div>"}
+  else if(st==="scheduled"){d.innerHTML="<h4>Meeting prep <span class=\"chip\">at "+hm(ev.s-30)+"</span></h4><div class=\"cost\"><button class=\"btn small\" id=\"prepNow\">Prepare now</button><span>Read-only. Sends the title, notes without links, and attendee names.</span></div>"}
+  else{
+    d.innerHTML="<h4>Meeting prep <span class=\"chip ok\">Ready</span></h4><ul>"+p.points.map(function(x){return "<li>"+esc(x)+"</li>"}).join("")+"</ul><div class=\"hint\" style=\"margin:4px 0 0\">"+esc(p.changed)+"</div><div class=\"cost\"><span>Prepared "+p.at+" · Spark assistant · Fast model · "+p.tokens+" tokens · "+p.cost+"</span><button class=\"btn small\" id=\"prepRefresh\">Refresh</button></div>";
+  }
+  box.appendChild(d);
+  var b=d.querySelector("#prepNow")||d.querySelector("#prepRefresh");
+  if(b)b.addEventListener("click",function(){state.prepNow[ev.uid]=0;renderActions();setTimeout(function(){state.prepNow[ev.uid]=1;if(!PREP[ev.uid])PREP[ev.uid]={at:hm(now()),tokens:"2.8k",cost:"$0.004",points:["About: "+ev.t+".","No related chats or tickets found.","Talking point: confirm owners for open items."],changed:"First occurrence: nothing to compare."};renderActions();buildTimeline();renderIsland()},900)});
+  var t=d.querySelector("#prepTurnOn");
+  if(t)t.addEventListener("click",function(){show("settings");showPane("connectors");toast("Turn on Prep meetings for "+CALS[ev.cal].name+" in its connector card")});
 }
 function setAct(name,on,a,b){var x=document.querySelector('[data-act="'+name+'"]');x.setAttribute("aria-pressed",on?"true":"false");x.querySelector("small").textContent=on?a:b}
+function joinEvent(ev){toast("Opening "+ev.link.host+" in your default browser; it hands off to "+ev.link.kind+" if installed")}
 
 document.querySelectorAll(".act").forEach(function(b){b.addEventListener("click",function(){
   var ev=findEvent(state.sel);if(!ev)return;var a=b.dataset.act;
   if(a==="open")toast("Opens "+ev.t+" in Calendar.app");
-  if(a==="chat")openModal(ev,b);
+  if(a==="chat")openModal(ev.t+(ev.notes?"\n\n"+ev.notes:""),b);
   if(a==="remind"){state.remind[ev.id]=!state.remind[ev.id];setAct("remind",state.remind[ev.id],"Set","Off");toast(state.remind[ev.id]?"Island will remind you at "+hm(ev.s-5):"Reminder removed")}
   if(a==="hold"){state.hold[ev.id]=!state.hold[ev.id];setAct("hold",state.hold[ev.id],"Held","Off");buildTimeline();toast(state.hold[ev.id]?"Non-urgent chimes held during "+ev.t:"Alerts on during "+ev.t)}
 })});
+
 var opener=null;
-function setInert(on){document.querySelectorAll(".app,.island-wrap,.sample").forEach(function(n){n.inert=on;if(on)n.setAttribute("aria-hidden","true");else n.removeAttribute("aria-hidden")})}
-function openModal(ev,from){opener=from;document.getElementById("mText").value=ev.t+(ev.notes?"\n\n"+ev.notes:"");document.getElementById("modal").classList.add("on");setInert(true);document.getElementById("mText").focus()}
+function setInert(on){document.querySelectorAll(".app,.island-wrap,.mockbar").forEach(function(n){n.inert=on;if(on)n.setAttribute("aria-hidden","true");else n.removeAttribute("aria-hidden")})}
+function openModal(text,from){opener=from;document.getElementById("mText").value=text;document.getElementById("modal").classList.add("on");setInert(true);document.getElementById("mText").focus()}
 function closeModal(){var m=document.getElementById("modal");if(!m.classList.contains("on"))return;m.classList.remove("on");setInert(false);if(opener)opener.focus();opener=null}
 document.getElementById("mCancel").addEventListener("click",closeModal);
 document.getElementById("mStart").addEventListener("click",function(){closeModal();toast("Chat started (mock): the normal New chat confirm")});
-document.addEventListener("keydown",function(e){if(e.key==="Escape")closeModal()});
 
-function nextEvent(now){return merged().find(function(e){return e.e>now&&nudges(e)})}
-function inHeld(now){return merged().find(function(e){return state.hold[e.id]&&e.s<=now&&now<e.e})}
-function updateClock(){
-  var now=+document.getElementById("clock").value;document.getElementById("clockLabel").textContent=hm(now);
-  var nx=nextEvent(now),cd=document.getElementById("countdown"),w=document.getElementById("nextWhat");
+function todays(){return merged(TODAY)}
+function nextEvent(t){return todays().find(function(e){return e.e>t&&nudges(e)})}
+function inHeld(t){return todays().find(function(e){return state.hold[e.id]&&e.s<=t&&t<e.e})}
+function justEnded(t){return todays().find(function(e){return !e.focus&&e.people>1&&(e.notes||PREP[e.uid])&&t>=e.e&&t<e.e+15&&!state.captureDone[e.id]})}
+
+function renderNext(){
+  var row=document.getElementById("nextRow"),cd=document.getElementById("countdown"),w=document.getElementById("nextWhat");
+  document.getElementById("clockLabel").textContent=hm(now());
+  if(!isToday()){cd.textContent="";w.innerHTML=DAYNAMES[state.day]+"<small>"+merged().length+" events · Join and prep appear on the day</small>";return}
+  var t=now(),nx=nextEvent(t);
   if(!nx){cd.textContent="—";w.innerHTML="No more meetings<small>Nothing left to nudge for today</small>"}
-  else if(nx.s<=now){cd.textContent="now";w.innerHTML=esc(nx.t)+"<small>until "+hm(nx.e)+" · "+esc(CALS[nx.cal].name)+"</small>"}
-  else{cd.textContent=dur(nx.s-now);w.innerHTML=esc(nx.t)+"<small>"+hm(nx.s)+"–"+hm(nx.e)+" · "+esc(CALS[nx.cal].name)+(nx.meta?" · "+esc(nx.meta):"")+"</small>"}
-  renderIsland(now,nx);buildTimeline();buildBrief();
+  else if(nx.s<=t){cd.textContent="now";w.innerHTML=esc(nx.t)+"<small>until "+hm(nx.e)+" · "+esc(CALS[nx.cal].name)+"</small>"}
+  else{cd.textContent=dur(nx.s-t);w.innerHTML=esc(nx.t)+"<small>"+hm(nx.s)+"–"+hm(nx.e)+" · "+esc(CALS[nx.cal].name)+(nx.link?" · "+esc(nx.link.kind):"")+"</small>"}
 }
-function renderIsland(now,nx){
-  var i=document.getElementById("island"),held=inHeld(now),line,detail;
-  if(held){line="Focus · alerts held until "+hm(held.e);detail='<li><span class="muted">held</span>Docs pass for Tickets needs you</li><li><span class="muted">held</span>Fix login redirect finished a step</li>'}
-  else if(nx&&nx.s>now&&nx.s-now<=15){line=esc(nx.t)+" in "+(nx.s-now)+" min · 2 chats need you, 1 still running";detail='<li><span class="n">●</span>Docs pass for Tickets: approval card</li><li><span class="n">●</span>Dashboards filters: unpushed work</li><li><span class="r">●</span>Fix login redirect: still running</li>'}
-  else{line="2 chats need you";detail='<li><span class="n">●</span>Docs pass for Tickets: approval card</li><li><span class="n">●</span>Dashboards filters: unpushed work</li>'}
-  if(!state.islandOpen){i.className="island";i.innerHTML='<span class="scout" aria-hidden="true"></span><span>'+line+"</span>"+(held?'<span class="held-badge">2 held</span>':"");return}
-  i.className="island open";
-  i.innerHTML='<div class="island-tabs"><span class="on">Home ⌘1</span><span>Chats ⌘2</span><span>New chat ⌘3</span></div><div class="row"><span class="scout" aria-hidden="true"></span><b>'+line+'</b></div><ul class="lines">'+detail+'</ul><div class="ib"><button>Open chats</button><button class="go">Open Today</button></div>'+(held?'<div class="meta" style="margin-top:6px">Catch up after '+hm(held.e)+": held chimes play once as one line.</div>":"");
-}
-document.getElementById("island").addEventListener("click",function(e){if(e.target.closest(".ib button")){if(e.target.classList.contains("go"))show("today");else toast("Mock button");return}state.islandOpen=!state.islandOpen;this.setAttribute("aria-expanded",state.islandOpen);updateClock()});
-document.getElementById("clock").addEventListener("input",updateClock);
 
-function buildBrief(){
+function renderIsland(){
+  var i=document.getElementById("island"),t=now(),nx=nextEvent(t),held=inHeld(t),ended=justEnded(t),line,detail,join=null,extra="";
+  if(state.mock!=="normal"&&state.mock!=="quiet"){line="2 chats need you";detail='<li><span class="n">●</span>Docs pass for Tickets: approval card</li>'}
+  else if(held){line="Focus · alerts held until "+hm(held.e);detail='<li><span class="muted">held</span>Docs pass for Tickets needs you</li><li><span class="muted">held</span>Fix login redirect finished a step</li>';extra='<div class="meta" style="margin-top:6px">Catch up after '+hm(held.e)+": held chimes play once as one line.</div>"}
+  else if(ended){line=esc(ended.t)+" ended · anything to capture?";detail='<li>Start a chat from the notes and prep, or dismiss.</li>';extra='<div class="ib"><button data-i="dismiss">Dismiss</button><button class="go" data-i="capture">Start a chat</button></div><div class="meta" style="margin-top:6px">Turn this off in Settings → Notifications.</div>'}
+  else if(nx&&nx.s>=t-5&&nx.s-t<=10){
+    var pr=prepState(nx)==="ready"?": prep ready":"";
+    line=nx.s>t?esc(nx.t)+" in "+(nx.s-t)+" min"+pr:esc(nx.t)+" now"+pr;
+    detail='<li><span class="n">●</span>Docs pass for Tickets: approval card</li><li><span class="n">●</span>Dashboards filters: unpushed work</li><li><span class="r">●</span>Fix login redirect: still running</li>';
+    if(joinable(nx,t))join=nx;
+  }
+  else{line="2 chats need you";detail='<li><span class="n">●</span>Docs pass for Tickets: approval card</li><li><span class="n">●</span>Dashboards filters: unpushed work</li>'}
+  var jb=join?'<button class="ijoin" data-i="join">Join</button>':"";
+  if(!state.islandOpen){i.className="island";i.innerHTML='<span class="scout" aria-hidden="true"></span><span>'+line+"</span>"+(held?'<span class="held-badge">2 held</span>':jb);return}
+  i.className="island open";
+  if(!extra)extra='<div class="ib"><button data-i="chats">Open chats</button><button class="go" data-i="today">Open Today</button></div>';
+  i.innerHTML='<div class="island-tabs"><span class="on">Home ⌘1</span><span>Chats ⌘2</span><span>New chat ⌘3</span></div><div class="row"><span class="scout" aria-hidden="true"></span><b>'+line+"</b>"+jb+'</div><ul class="lines">'+detail+"</ul>"+extra;
+}
+document.getElementById("island").addEventListener("click",function(e){
+  var b=e.target.closest("[data-i]");
+  if(b){var k=b.dataset.i,ended=justEnded(now());
+    if(k==="join"){var nx=nextEvent(now());if(nx)joinEvent(nx)}
+    if(k==="today")show("today");
+    if(k==="chats")show("chats");
+    if(k==="dismiss"&&ended){state.captureDone[ended.id]=true;renderIsland()}
+    if(k==="capture"&&ended){state.captureDone[ended.id]=true;openModal("Follow up on "+ended.t+"\n\n"+(ended.notes||""),this);renderIsland()}
+    return}
+  state.islandOpen=!state.islandOpen;this.setAttribute("aria-expanded",state.islandOpen);renderIsland();
+});
+
+function renderHome(){
   var list=document.getElementById("briefMeetings");list.innerHTML="";
-  merged().filter(function(e){return !e.focus}).forEach(function(e){
+  todays().filter(function(e){return !e.focus}).forEach(function(e){
     var tag=e.id==="review"?'<span class="chip warn">overlaps a run</span>':'<span class="chip"><i class="sw" style="background:'+CALS[e.cal].color+'"></i>'+esc(CALS[e.cal].name)+"</span>";
     list.appendChild(el("div","mt","<time>"+hm(e.s)+"–"+hm(e.e)+"</time><span>"+esc(e.t)+"</span>"+tag));
   });
   var bar=document.getElementById("briefBar"),span=DAY1-WORK0;bar.innerHTML="";
-  merged().filter(isBusy).forEach(function(e){var i=el("i",e.focus?"f":"m");i.style.left=(Math.max(e.s,WORK0)-WORK0)/span*100+"%";i.style.width=(e.e-Math.max(e.s,WORK0))/span*100+"%";bar.appendChild(i)});
-  var l=longest(),focus=merged().find(function(e){return e.focus});
-  document.getElementById("briefFree").innerHTML="Longest free block, 9:00–18:00: <b>"+hm(l[0])+"–"+hm(l[1])+"</b> ("+dur(l[1]-l[0])+")."+(focus?" <b>"+hm(focus.s)+"–"+hm(focus.e)+"</b> is a focus block: island chimes will be held.":"");
+  todays().filter(isBusy).forEach(function(e){var i=el("i",e.focus?"f":"m");i.style.left=(Math.max(e.s,WORK0)-WORK0)/span*100+"%";i.style.width=(e.e-Math.max(e.s,WORK0))/span*100+"%";bar.appendChild(i)});
+  var l=freeBlocks(TODAY).reduce(function(a,b){return b[1]-b[0]>a[1]-a[0]?b:a},[0,0]),focus=todays().find(function(e){return e.focus});
+  document.getElementById("briefFree").innerHTML="Longest free block, 9:00–18:00: <b>"+hm(l[0])+"–"+hm(l[1])+"</b> ("+dur(l[1]-l[0])+")."+(focus?" <b>"+hm(focus.s)+"–"+hm(focus.e)+"</b> is a focus block: chimes will be held.":"");
+  var up=document.getElementById("upcoming"),t=now();up.innerHTML="";
+  var next=todays().filter(function(e){return e.e>t&&nudges(e)}).slice(0,3);
+  if(!next.length){up.appendChild(el("p","hint","No more meetings today."));return}
+  next.forEach(function(e){
+    var cd=e.s<=t?"now":"in "+dur(e.s-t),ps=prepState(e);
+    var prep=ps==="ready"?'<span class="chip ok">prep ready</span>':ps==="scheduled"?'<span class="chip">prep at '+hm(e.s-30)+"</span>":ps==="running"?'<span class="chip">preparing</span>':"";
+    var r=el("div","upc",'<span class="cd">'+cd+'</span><span class="w"><b>'+esc(e.t)+"</b><small>"+hm(e.s)+"–"+hm(e.e)+" · "+esc(CALS[e.cal].name)+(e.link?" · "+esc(e.link.host):"")+"</small></span>");
+    var right=el("span","");right.style.display="flex";right.style.gap="6px";right.style.alignItems="center";right.innerHTML=prep;
+    if(e.link){var ok=joinable(e,t),jb=el("button",ok?"btn small primary":"btn small","Join");jb.disabled=!ok;jb.title=jb.disabled?"From "+hm(e.s-5):"Join "+e.link.kind;jb.addEventListener("click",function(){joinEvent(e)});right.appendChild(jb)}
+    r.appendChild(right);
+    if(e.id==="review")r.appendChild(el("span","ov","Overlaps \"Fix login redirect\", still running"));
+    up.appendChild(r);
+  });
 }
 
-function buildAccounts(){
-  var box=document.getElementById("accounts");box.innerHTML="";
+function renderConnector(){
+  var body=document.getElementById("calBody"),st=document.getElementById("calStatus"),badge=document.getElementById("calBadge");
+  var m=state.mock;
+  if(m==="connect"||m==="denied"){
+    st.textContent=m==="denied"?"Calendars access is off for Spark Outpost":"Not connected";badge.innerHTML="";
+    body.innerHTML=m==="denied"
+      ?'<div class="connect"><b>Spark Outpost can\'t read your calendars.</b><p class="hint">Turn on Spark Outpost in System Settings → Privacy &amp; Security → Calendars, then come back; the status refreshes when this window is in front again.</p><div class="foot"><button class="btn small primary">Open Calendar settings</button></div></div>'
+      :'<div class="connect"><b>Connect macOS Calendar</b><ol><li>macOS asks to let Spark Outpost use your calendars.</li><li>Pick which calendars to include. Nothing leaves this Mac unless you turn on prep or agents.</li><li>Today, Upcoming and the island start showing your day.</li></ol><div id="sheet"></div><div class="foot"><button class="btn small primary" id="doConnect">Connect</button></div></div>';
+    var dc=document.getElementById("doConnect");
+    if(dc)dc.addEventListener("click",function(){document.getElementById("sheet").innerHTML='<div class="sheet" role="dialog" aria-label="macOS permission (mock)"><b>"Spark Outpost" would like full access to your Calendar.</b><p class="hint">Spark Outpost reads your calendars on this Mac for Today, reminders and focus holds, and changes an event only when you or an agent you allowed does.</p><div class="foot"><button class="btn small" id="sDeny">Don\'t Allow</button><button class="btn small primary" id="sAllow">Allow Full Access</button></div></div>';
+      document.getElementById("sAllow").addEventListener("click",function(){setMock("normal");toast("Connected: 3 calendars from 2 accounts")});
+      document.getElementById("sDeny").addEventListener("click",function(){setMock("denied")})});
+    return;
+  }
+  if(m==="helper"){st.textContent="The calendar helper isn't available";badge.innerHTML="";body.innerHTML='<div class="connect"><b>Spark Outpost can\'t start its calendar helper.</b><p class="hint">From source, build it with <code>pnpm desktop:calendar</code>. In a release, reinstall Spark Outpost.</p></div>';return}
+  var on=Object.keys(CALS).filter(function(k){return CALS[k].on}).length;
+  st.textContent="macOS Calendar · 2 accounts · "+on+" of 3 calendars";badge.innerHTML='<span class="pill-ok">✓ Connected</span>';
+  var html='<div class="opt"><div class="l"><b>Source</b><span>macOS Calendar: every account in System Settings → Internet Accounts. Calendars access: allowed.</span></div></div>';
+  html+='<div class="calrow calhead"><span></span><span>Nudges</span><span>Busy</span><span>Prep</span><span>Agents can edit</span></div>';
   ACCOUNTS.forEach(function(a){
-    var g=el("div","acct",'<div class="accthead"><b>'+esc(a.name)+"</b><small>"+esc(a.kind)+"</small></div>");
+    html+='<div class="acct"><div class="accthead"><b>'+esc(a.name)+"</b><small>"+esc(a.kind)+"</small></div>";
     Object.keys(CALS).forEach(function(id){
       var c=CALS[id];if(c.account!==a.id)return;
-      var row=el("div","calrow");
-      row.innerHTML='<label class="calname"><input type="checkbox"'+(c.on?" checked":"")+' data-k="on"><i class="sw" style="background:'+c.color+'"></i>'+esc(c.name)+'</label><label class="mini"><input type="checkbox"'+(c.nudge?" checked":"")+(c.on?"":" disabled")+' data-k="nudge">Use for nudges</label><label class="mini"><input type="checkbox"'+(c.busy?" checked":"")+(c.on?"":" disabled")+' data-k="busy">Counts as busy</label>';
-      row.querySelectorAll("input").forEach(function(inp){inp.addEventListener("change",function(){c[inp.dataset.k]=inp.checked;buildAccounts();buildFilters();updateClock()})});
-      g.appendChild(row);
+      var dis=c.on?"":" disabled";
+      html+='<div class="calrow" data-cal="'+id+'"><label class="calname"><input type="checkbox"'+(c.on?" checked":"")+' data-k="on"><i class="sw" style="background:'+c.color+'"></i>'+esc(c.name)+(c.shared?' <span class="chip">shared</span>':"")+"</label>";
+      [["nudge","Use for nudges"],["busy","Counts as busy"],["prep","Prep meetings from this calendar"],["edit","Agents can edit"]].forEach(function(k){html+='<label class="mini"><input type="checkbox"'+(c[k[0]]?" checked":"")+dis+' data-k="'+k[0]+'" aria-label="'+k[1]+", "+esc(c.name)+'">'+(k[0]==="nudge"?"Nudges":k[0]==="busy"?"Busy":k[0]==="prep"?"Prep":"Edit")+"</label>"});
+      html+="</div>";
     });
-    box.appendChild(g);
+    html+="</div>";
   });
-  var on=Object.keys(CALS).filter(function(k){return CALS[k].on}).length;
-  document.querySelector("#calHead small").textContent="macOS Calendar · 2 accounts · "+on+" of 3 calendars";
+  html+='<p class="hint">Prep sends a calendar\'s event titles, notes (join links and passcodes removed) and attendee names to your Spark assistant\'s provider, Claude today. Agents can edit lets agents change events here; deletes, events with other people and shared calendars always ask.</p>';
+  html+='<div class="opt"><div class="l"><b>Let agents read my calendar</b><span>Offers <code>spark_calendar</code> to chats. Reads follow the agent\'s mode, and count as work data for the send note.</span></div><button class="switch" role="switch" aria-checked="true" aria-label="Let agents read my calendar"></button></div>';
+  html+='<div class="opt"><div class="l"><b>Focus blocks go to</b><span>Where Protect as focus adds its event.</span></div><span class="chip"><i class="sw" style="background:var(--c-codex)"></i>Work</span></div>';
+  html+='<div class="foot"><button class="btn small" id="disconnect">Disconnect</button></div>';
+  body.innerHTML=html;
+  body.querySelectorAll(".calrow[data-cal] input").forEach(function(inp){inp.addEventListener("change",function(){
+    var c=CALS[inp.closest(".calrow").dataset.cal],k=inp.dataset.k;
+    if(k==="prep"&&inp.checked&&!confirm("Prep meetings from "+c.name+"?\n\nBefore each meeting, its title, notes (links removed) and attendee names go to your Spark assistant's provider. Each prep is in the audit, with its cost.")){inp.checked=false;return}
+    c[k]=inp.checked;render();
+  })});
+  body.querySelector(".switch").addEventListener("click",function(){this.setAttribute("aria-checked",this.getAttribute("aria-checked")==="true"?"false":"true")});
+  document.getElementById("disconnect").addEventListener("click",function(){setMock("connect");toast("Disconnected: Spark stops reading; reminders, holds and prep briefs are deleted")});
+}
+
+function renderTodayState(){
+  var box=document.getElementById("todayState"),body=document.getElementById("todayBody"),m=state.mock,html="";
+  var blob='<svg class="blob" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="#2BB39A"/><circle cx="9.5" cy="12.5" r="1.3" fill="#0c0f12"/><circle cx="14.5" cy="12.5" r="1.3" fill="#0c0f12"/></svg>';
+  if(m==="connect")html="<h2>See your day next to your chats</h2><p>Connect macOS Calendar to see meetings here, get a nudge before each one with what needs you, join with one click and keep focus time quiet.</p><button class=\"btn primary\" data-go=\"connect\">Connect calendar</button>";
+  if(m==="denied")html="<h2>Calendars access is off</h2><p>Spark Outpost needs Calendars access in System Settings → Privacy &amp; Security.</p><button class=\"btn primary\">Open Calendar settings</button>";
+  if(m==="none")html="<h2>No calendars included</h2><p>Your Mac has 3 calendars. Pick the ones Spark should show in Settings → Connectors → Calendar.</p><button class=\"btn primary\" data-go=\"connect\">Choose calendars</button>";
+  if(m==="helper")html="<h2>The calendar helper isn't available</h2><p>Spark Outpost couldn't start its calendar helper. From source, run <code>pnpm desktop:calendar</code>.</p>";
+  if(m==="web")html="<h2>Today lives in the Mac app</h2><p>Your calendar is read on your Mac. Open Spark Outpost there to see it.</p>";
+  box.innerHTML=html?'<div class="state">'+blob+html+"</div>":"";
+  body.hidden=!!html;
+  var up=document.getElementById("upcomingCard");up.hidden=(m==="web"||m==="connect"||m==="helper"||m==="denied");
+  box.querySelectorAll("[data-go]").forEach(function(b){b.addEventListener("click",function(){show("settings");showPane("connectors")})});
+}
+
+var MOCKS=[["normal","Normal"],["quiet","Quiet day"],["connect","First run"],["denied","Denied"],["none","No calendars"],["helper","Helper missing"],["web","Web app in a browser"]];
+function setMock(m){
+  state.mock=m;
+  if(m==="quiet")DAYS[TODAY]=DAYS[TODAY].filter(function(e){return e.cal==="family"&&e.id!=="review-copy"&&e.id!=="lunch"});
+  else if(!DAYS._orig)DAYS._orig=DAYS[TODAY].slice();
+  if(m!=="quiet"&&DAYS._orig)DAYS[TODAY]=DAYS._orig.slice();
+  if(m==="none")Object.keys(CALS).forEach(function(k){CALS[k].on=false});
+  else Object.keys(CALS).forEach(function(k){CALS[k].on=true});
+  document.querySelectorAll("#mockbar button").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.m===m?"true":"false")});
+  state.sel=null;render();
+}
+function buildMockbar(){var mb=document.getElementById("mockbar");MOCKS.forEach(function(x){var b=el("button","",x[1]);b.dataset.m=x[0];b.setAttribute("aria-pressed",x[0]===state.mock?"true":"false");b.addEventListener("click",function(){setMock(x[0])});mb.appendChild(b)})}
+
+function render(){
+  DAYS._orig=DAYS._orig||DAYS[TODAY].slice();
+  document.getElementById("dayTitle").textContent=isToday()?"Today":DAYNAMES[state.day];
+  document.getElementById("todaySub").textContent=DAYNAMES[state.day]+" "+state.day+" October · macOS Calendar · 2 accounts, "+Object.keys(CALS).filter(function(k){return CALS[k].on}).length+" calendars";
+  renderTodayState();buildWeek();buildFilters();buildShape();renderNext();buildTimeline();renderActions();renderIsland();renderHome();renderConnector();
 }
 
 function show(v,btn){
@@ -564,29 +838,34 @@ document.querySelectorAll(".nav").forEach(function(n){n.addEventListener("click"
 function showPane(p){document.querySelectorAll(".snav button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.pane===p?"true":"false")});document.querySelectorAll(".pane").forEach(function(x){x.classList.toggle("on",x.id==="pane-"+p)})}
 document.querySelectorAll(".snav button").forEach(function(b){b.addEventListener("click",function(){showPane(b.dataset.pane)})});
 document.getElementById("calHead").addEventListener("click",function(){var c=document.getElementById("calCard"),o=!c.classList.contains("open");c.classList.toggle("open",o);this.setAttribute("aria-expanded",o)});
-document.getElementById("disconnect").addEventListener("click",function(){toast("Disconnect (mock): stops reading, deletes reminder and hold marks")});
-
-document.querySelectorAll(".switch").forEach(function(s){s.addEventListener("click",function(){s.setAttribute("aria-checked",s.getAttribute("aria-checked")==="true"?"false":"true")})});
+document.querySelectorAll("#pane-notifications .switch").forEach(function(s){s.addEventListener("click",function(){s.setAttribute("aria-checked",s.getAttribute("aria-checked")==="true"?"false":"true")})});
 document.querySelectorAll(".seg").forEach(function(g){g.querySelectorAll("button").forEach(function(b){b.addEventListener("click",function(){
   g.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");
-  if(g.dataset.seg==="hold"){var mode=b.textContent;merged().forEach(function(e){state.hold[e.id]=mode==="All meetings"?isBusy(e):mode==="Focus blocks"?!!e.focus:false});buildTimeline()}
-  if(g.dataset.seg==="source")document.getElementById("srcHint").textContent=b.dataset.src==="google"?"Phase 2: Add Google account opens Google sign-in in your browser; each account's token stays in the keychain.":"Every account synced to this Mac in System Settings → Internet Accounts. Stays on this Mac.";
+  if(g.dataset.seg==="hold"){var mode=b.textContent;todays().forEach(function(e){state.hold[e.id]=mode==="All meetings"?isBusy(e):mode==="Focus blocks"?!!e.focus:false});buildTimeline()}
 })})});
+document.querySelectorAll("[data-card]").forEach(function(b){b.addEventListener("click",function(){var c=b.closest(".agentcard");c.querySelector(".foot").innerHTML='<span class="hint" style="margin:0">'+(b.dataset.card==="allow"?"Allowed once · in the audit":"Rejected · the agent was told")+"</span>"})});
+document.getElementById("clock").addEventListener("input",function(){renderNext();buildTimeline();renderActions();renderIsland();renderHome()});
+document.addEventListener("keydown",function(e){
+  if(e.key==="Escape"){closeModal();if(state.protectAt){state.protectAt=null;buildTimeline()}}
+  if((e.metaKey||e.ctrlKey)&&(e.key==="j"||e.key==="J")){
+    e.preventDefault();if(document.getElementById("modal").classList.contains("on"))return;
+    var t=now(),nx=todays().find(function(x){return x.link&&joinable(x,t)});
+    if(nx)joinEvent(nx);else{var up=todays().find(function(x){return x.link&&x.s>t});toast(up?"Nothing to join yet: "+up.t+" opens at "+hm(up.s-5):"No meeting to join")}
+  }
+});
 
-var themes=["system","light","dark"],ti=0;
-var q=new URLSearchParams(location.search);if(themes.indexOf(q.get("theme"))>0)ti=themes.indexOf(q.get("theme"));
-document.getElementById("themeBtn").textContent="Theme: "+themes[ti];
-document.getElementById("themeBtn").addEventListener("click",function(){ti=(ti+1)%3;var t=themes[ti];if(t==="system")delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t;this.textContent="Theme: "+t});
+var tt;function toast(msg){var t=document.getElementById("toast");t.textContent=msg;t.classList.add("on");clearTimeout(tt);tt=setTimeout(function(){t.classList.remove("on")},2600)}
 
-var tt;function toast(msg){var t=document.getElementById("toast");t.textContent=msg;t.classList.add("on");clearTimeout(tt);tt=setTimeout(function(){t.classList.remove("on")},2200)}
-
-buildWeek();buildAccounts();buildFilters();
-if(["today","home","settings"].indexOf(q.get("view"))>=0)show(q.get("view"));
-if(q.get("pane")==="notifications")showPane("notifications");
+var q=new URLSearchParams(location.search);
+buildMockbar();
 var qt=+q.get("time");if(qt>=DAY0&&qt<=DAY1)document.getElementById("clock").value=qt;
+var qd=+q.get("day");if(DAYS[qd])state.day=qd;
 if(q.get("island")==="open")state.islandOpen=true;
-updateClock();
+var qm=q.get("state");if(MOCKS.some(function(x){return x[0]===qm}))setMock(qm);else render();
+if(["today","home","settings","chats"].indexOf(q.get("view"))>=0)show(q.get("view"));
+if(q.get("pane")==="notifications")showPane("notifications");
 if(q.get("select"))select(q.get("select"));
+if(q.get("protect")){var fb=freeBlocks()[+q.get("protect")];if(fb){state.protectAt=fb;buildTimeline()}}
 </script>
 </body>
 </html>
