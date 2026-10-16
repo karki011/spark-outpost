@@ -180,6 +180,23 @@ describe('the persistent Ask Spark session', { timeout: 240_000 }, () => {
     expect(await auditedKinds(next.run.id)).toEqual(['history_cleared', 'session_started']);
   });
 
+  it('keeps cleared history out of the handoff to another provider', async () => {
+    await ask('remember the word pineapple');
+    await ask('my favourite colour is teal');
+    await api().send('post', '/api/spark-assistant/clear', { facts: false });
+    await api().send('put', '/api/spark-assistant/settings', {
+      provider: 'codex',
+      modelChoice: 'fast',
+      model: null,
+      effort: null,
+    });
+    const next = await ask('what do you know?');
+
+    expect(next.run.provider).toBe('codex');
+    expect(next.reply).toContain('the word pineapple');
+    expect(next.reply).not.toContain('teal');
+  });
+
   it('shows only Ask Spark runs in the assistant usage', async () => {
     await ask('Who needs me?');
     const usage = usageSummarySchema.parse(

@@ -16,6 +16,9 @@ describe('key facts from what the user wrote', () => {
     expect(factFrom('Who needs me?')).toBeNull();
     expect(factFrom('remember')).toBeNull();
     expect(factFrom('remember this\nand also run something')).toBeNull();
+    expect(factFrom('I want to know what I spent today')).toBeNull();
+    expect(factFrom('I never got a reply from the build chat, why?')).toBeNull();
+    expect(factFrom('remember when the deploy failed?')).toBeNull();
   });
 
   it('caps a fact at the stored length', () => {

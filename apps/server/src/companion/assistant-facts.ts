@@ -10,9 +10,9 @@ import { recordAssistantEvent } from './assistant-events.ts';
 const FACT_PATTERNS: readonly RegExp[] = [
   /^(?:please\s+)?remember(?:\s+that)?\s+(.+)$/i,
   /^(?:please\s+)?(?:note|keep in mind)(?:\s+that)?\s+(.+)$/i,
-  /^(i\s+(?:prefer|like|want|always|never|don't want|do not want)\s+.+)$/i,
+  /^(i\s+prefer\s+.+)$/i,
   /^(call me\s+.+)$/i,
-  /^(my\s+(?:name|preference|preferred\s+\S+)\s+is\s+.+)$/i,
+  /^(my\s+name\s+is\s+.+)$/i,
 ];
 
 function tidy(text: string): string {
@@ -23,7 +23,8 @@ function tidy(text: string): string {
 }
 
 export function factFrom(message: string): string | null {
-  if (message.trim().includes('\n')) return null;
+  const trimmed = message.trim();
+  if (trimmed.includes('\n') || trimmed.endsWith('?')) return null;
   const line = tidy(message);
   if (line === '') return null;
   for (const pattern of FACT_PATTERNS) {

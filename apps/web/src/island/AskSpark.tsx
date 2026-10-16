@@ -220,7 +220,7 @@ export function AskSpark({ fast, voice, focusDelay, onOpenChat }: AskSparkProps)
           onKeyDown={onKeyDown}
         />
         <div className="isl-qc-bar">
-          <span className="isl-qc-hint">Answers use Ask Spark’s fast model</span>
+          <span className="isl-qc-hint">Answers use the Spark assistant model</span>
           <span className="isl-sp" />
           <button
             type="button"

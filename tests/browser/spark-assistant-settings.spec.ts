@@ -82,3 +82,14 @@ test('Clear history asks first and offers to clear the key facts too', async ({ 
   const events = await (await page.request.get('/api/spark-assistant/events')).json();
   expect(events.events).toMatchObject([{ kind: 'history_cleared' }]);
 });
+
+test('View conversation opens the hidden Ask Spark chat read-only', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true, connected: ['claude'], catalog: true });
+  await page.request.post('/api/spark-assistant', { data: {} });
+  const section = await openSection(page);
+  await section.getByRole('button', { name: 'View conversation' }).click();
+  await expect(section).toHaveCount(0);
+  const activity = page.getByRole('region', { name: 'Ask Spark activity' });
+  await expect(activity).toContainText('Ask Spark’s conversation is read-only here.');
+  await expect(page.getByRole('textbox', { name: 'Message' })).toHaveCount(0);
+});

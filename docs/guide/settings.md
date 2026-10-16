@@ -41,7 +41,7 @@ A push of another branch, a force push, a protected file or a write outside the 
 
 ## Spark assistant
 
-**Spark assistant** sets [Ask Spark](companion-quick-chat.md#ask-spark)'s **Provider**, **Model** (**Fast (recommended)**: Sonnet 5.5, low effort), **Effort** and **Key facts**.
+**Spark assistant** sets [Ask Spark](companion-quick-chat.md#ask-spark)'s **Provider**, **Model** (**Fast (recommended)**: Sonnet 5.5), **Effort** and **Key facts**. **View conversation** opens its hidden chat.
 
 ## Other sections
 

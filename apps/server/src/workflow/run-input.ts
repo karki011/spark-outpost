@@ -279,7 +279,9 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     since(history.rows, row.assistant_history_from),
     row.user_message_id,
   );
-  const seed = await chatSeed(db, row.conversation_id, history.rows);
+  const seed = row.assistant_history_from
+    ? null
+    : await chatSeed(db, row.conversation_id, history.rows);
   const input: RunInput = {
     identity: { runId, threadId: row.conversation_id },
     workspaceId: row.workspace_id,
