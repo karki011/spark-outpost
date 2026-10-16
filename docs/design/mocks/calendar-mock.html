@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spark Outpost · Calendar (design mock)</title>
-<script>(function(){var q=new URLSearchParams(location.search).get("theme");if(q)document.documentElement.dataset.theme=q})()</script>
+<script>(function(){var q=new URLSearchParams(location.search).get("theme");if(q==="light"||q==="dark")document.documentElement.dataset.theme=q})()</script>
 <style>
 :root{
   color-scheme:light;
@@ -16,7 +16,7 @@
   --r:14px; --r-sm:8px; --out:cubic-bezier(.2,.8,.2,1);
   --font-sans:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
   --font-mono:'Geist Mono',ui-monospace,Menlo,monospace;
-  --c-claude:oklch(.605 .15 40); --c-codex:oklch(.575 .105 225);
+  --c-claude:oklch(.605 .15 40); --c-codex:oklch(.575 .105 225); --c-zai:oklch(.58 .13 115);
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
@@ -26,7 +26,7 @@
     --accent:#34c3a3; --accent-ink:#05231c; --accent-text:#34c3a3; --accent-soft:rgba(52,195,163,.13);
     --user:#172a2a; --danger:#f06b63; --danger-soft:rgba(240,107,99,.11);
     --warn:#e8b04b; --warn-ink:#1b1300; --success:#34c3a3; --switch-on:#52c77f; --switch-on-ink:#0b1f14; --code:#0e1215;
-    --c-claude:oklch(.68 .15 40); --c-codex:oklch(.64 .12 225);
+    --c-claude:oklch(.68 .15 40); --c-codex:oklch(.64 .12 225); --c-zai:oklch(.66 .14 115);
   }
 }
 :root[data-theme="dark"]{
@@ -36,7 +36,7 @@
   --accent:#34c3a3; --accent-ink:#05231c; --accent-text:#34c3a3; --accent-soft:rgba(52,195,163,.13);
   --user:#172a2a; --danger:#f06b63; --danger-soft:rgba(240,107,99,.11);
   --warn:#e8b04b; --warn-ink:#1b1300; --success:#34c3a3; --switch-on:#52c77f; --switch-on-ink:#0b1f14; --code:#0e1215;
-  --c-claude:oklch(.68 .15 40); --c-codex:oklch(.64 .12 225);
+  --c-claude:oklch(.68 .15 40); --c-codex:oklch(.64 .12 225); --c-zai:oklch(.66 .14 115);
 }
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%}
@@ -97,8 +97,6 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
 .ev{position:absolute;left:0;right:0;border-radius:var(--r-sm);border:1px solid var(--line-strong);border-left-width:4px;background:var(--raise);padding:3px 9px;text-align:left;overflow:hidden;font-size:12.5px;line-height:1.35}
 .ev b{font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ev span{color:var(--muted);font-size:11.5px}
-.ev.cal-work{border-left-color:var(--c-codex)}
-.ev.cal-personal{border-left-color:var(--c-claude)}
 .ev.focus{border-style:dashed;border-left-style:solid;border-left-color:var(--accent);background:var(--accent-soft)}
 .ev[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
 .ev .held{float:right;font-size:10.5px;color:var(--accent-text)}
@@ -185,16 +183,37 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
 .seg button{border:0;background:var(--panel);padding:4px 10px;font-size:12.5px;color:var(--muted)}
 .seg button+button{border-left:1px solid var(--line)}
 .seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-text)}
-.src{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.srcopt{border:1px solid var(--line);border-radius:var(--r);padding:12px;text-align:left;background:var(--panel)}
-.srcopt[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
-.srcopt b{display:block}
-.srcopt span{font-size:12px;color:var(--muted)}
-.cal{display:flex;align-items:center;gap:10px;padding:6px 0}
-.cal input{accent-color:var(--accent);width:16px;height:16px}
-.cal i{width:10px;height:10px;border-radius:3px}
-.cal small{color:var(--faint);margin-left:auto}
 
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.fchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:2px 10px;font-size:12px;color:var(--muted)}
+.fchip i,.sw{display:inline-block;width:9px;height:9px;border-radius:3px;flex:none}
+.fchip[aria-pressed="false"]{opacity:.55;text-decoration:line-through}
+.fchip[aria-pressed="true"]{color:var(--text)}
+.ev .also{float:right;font-size:10.5px;color:var(--faint);margin-left:6px}
+.ev.notbusy{border-style:dotted;border-left-style:solid;background:transparent}
+.snav button{border:0;background:none;text-align:left;padding:6px 10px;border-radius:var(--r-sm);color:var(--muted);font-size:13px}
+.snav button[aria-selected="true"]{background:var(--panel);color:var(--text);box-shadow:0 0 0 1px var(--line)}
+.snav em{font-style:normal;font-size:10.5px;color:var(--accent-text);background:var(--accent-soft);border-radius:999px;padding:0 6px;margin-left:4px}
+.pane{display:none}.pane.on{display:block}
+.cxlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.cx{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.cxhead{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:0;background:none;text-align:left;border-radius:var(--r)}
+.cxlogo{width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--accent-text);display:grid;place-items:center;font-size:11px;font-weight:600;flex:none}
+.cxhead .nm{flex:1;min-width:0}
+.cxhead .nm b{display:block;font-weight:500}
+.cxhead .nm small{color:var(--muted);font-size:12.5px}
+.pill-ok{font-size:12px;color:var(--accent-text);background:var(--accent-soft);border-radius:999px;padding:1px 9px;white-space:nowrap}
+.cxbody{display:none;padding:0 14px 12px;border-top:1px solid var(--line)}
+.cx.open .cxbody{display:block}
+.cxbody .foot{display:flex;justify-content:flex-end;padding-top:8px}
+.acct{border-top:1px solid var(--line);padding:10px 0 4px}
+.accthead{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.accthead small{color:var(--faint);font-size:12px}
+.calrow{display:flex;align-items:center;flex-wrap:wrap;gap:6px 16px;padding:5px 0 5px 4px}
+.calname{display:flex;align-items:center;gap:8px;flex:1 1 160px}
+.calrow input{accent-color:var(--accent);width:15px;height:15px}
+.mini{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.mt .chip .sw{width:8px;height:8px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--text);color:var(--bg);border-radius:var(--r-sm);padding:7px 14px;font-size:13px;transition:all .25s var(--out);z-index:60;pointer-events:none}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -211,8 +230,7 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
   .nav{width:auto;white-space:nowrap}
   .theme-btn{margin:0}
   main{padding:70px 16px 60px}
-  .today,.settings,.src{grid-template-columns:1fr}
-  .snav{flex-direction:row;overflow-x:auto}
+  .today,.settings,  .snav{flex-direction:row;overflow-x:auto}
   .island-wrap{top:56px}
 }
 </style>
@@ -221,9 +239,9 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
 <div class="app">
   <nav class="rail" aria-label="Main">
     <div class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="#2BB39A"/><circle cx="9.5" cy="12.5" r="1.3" fill="#0c0f12"/><circle cx="14.5" cy="12.5" r="1.3" fill="#0c0f12"/><path d="M12 5V2" stroke="#F2B54A" stroke-width="2" stroke-linecap="round"/></svg>spark outpost</div>
-    <button class="nav" data-view="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+    <button class="nav" data-view="home" data-primary><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
     <button class="nav" data-view="today"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg>Chats<span class="count">3</span></button>
-    <button class="nav" data-view="today" aria-current="page"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Today<span class="new">new</span></button>
+    <button class="nav" data-view="today" data-primary aria-current="page"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Today<span class="new">new</span></button>
     <button class="nav" data-view="today"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Analytics</button>
     <button class="nav" data-view="today"><svg viewBox="0 0 24 24"><path d="M4 7h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"/></svg>Tickets</button>
     <button class="nav" data-view="today"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="10" cy="18" r="2"/><path d="M8 7l8 1M7 8l2 8M16.5 9.5L11.5 16.5"/></svg>Map</button>
@@ -231,14 +249,14 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
     <div class="spacer"></div>
     <button class="nav" data-view="today"><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg>Pause</button>
     <button class="nav" data-view="today"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>Remote control</button>
-    <button class="nav" data-view="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Settings</button>
+    <button class="nav" data-view="settings" data-primary><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Settings</button>
     <button class="theme-btn" id="themeBtn" type="button">Theme: system</button>
   </nav>
 
   <main id="main">
     <section class="view on" id="view-today" aria-labelledby="todayTitle">
       <h1 id="todayTitle">Today</h1>
-      <p class="sub">Thursday 15 October · from macOS Calendar · 2 calendars</p>
+      <p class="sub" id="todaySub">Thursday 15 October · macOS Calendar · 2 accounts, 3 calendars</p>
       <div class="week" role="group" aria-label="This week" id="week"></div>
       <div class="today">
         <div class="card">
@@ -248,6 +266,7 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
             <span class="spacer"></span>
             <label class="chip" style="cursor:pointer"><input type="range" id="clock" min="480" max="1080" step="5" value="560" aria-label="Mock time of day" style="width:110px;accent-color:var(--accent)"><span id="clockLabel">9:20</span></label>
           </div>
+          <div class="filters" id="filters" role="group" aria-label="Show calendars"></div>
           <div class="timeline" id="timeline" aria-label="Today's events"></div>
         </div>
         <div class="side">
@@ -281,13 +300,11 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
         <section class="localcal">
           <p class="localnote">From your calendar · on this Mac, not sent to a model</p>
           <h2>Today's meetings<span class="newtag">new</span></h2>
-          <div class="mt"><time>9:30–9:45</time><span>Standup</span><span class="chip">Work</span></div>
-          <div class="mt"><time>14:00–14:45</time><span>Design review</span><span class="chip warn">overlaps a run</span></div>
-          <div class="mt"><time>16:00–16:30</time><span>1:1 with Sample Lead</span><span class="chip">Work</span></div>
+          <div id="briefMeetings"></div>
           <h2 style="margin-top:12px">Free blocks<span class="newtag">new</span></h2>
-          <div class="bar" aria-hidden="true"><i class="m" style="left:5.6%;width:2.8%"></i><i class="f" style="left:22.2%;width:16.7%"></i><i class="m" style="left:38.9%;width:8.3%"></i><i class="m" style="left:55.6%;width:8.3%"></i><i class="m" style="left:77.8%;width:5.6%"></i></div>
-          <div class="legend"><span>9:00</span><span>▮ meetings</span><span style="color:var(--accent-text)">▮ focus</span><span>blank: free</span><span style="margin-left:auto">18:00</span></div>
-          <p style="margin:8px 0 0">Longest free block: <b>9:45–11:00</b> (1 h 15). <b>11:00–12:30</b> is a focus block: island chimes will be held.</p>
+          <div class="bar" id="briefBar" aria-hidden="true"></div>
+          <div class="legend"><span>9:00</span><span>▮ busy</span><span style="color:var(--accent-text)">▮ focus</span><span>blank: free</span><span style="margin-left:auto">18:00</span></div>
+          <p style="margin:8px 0 0" id="briefFree"></p>
         </section>
         <section>
           <h2>Needs you</h2>
@@ -298,39 +315,53 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
 
     <section class="view" id="view-settings" aria-labelledby="setTitle">
       <h1 id="setTitle">Settings</h1>
-      <p class="sub">Calendar is a new section after Mac control, shown only in the Mac app.</p>
+      <p class="sub">The calendar is a connector. Nudges and holds live in a proposed Notifications section, which may move if Settings is reorganised.</p>
       <div class="settings">
-        <div class="snav"><span>Spark</span><span>Crew</span><span>AI providers</span><span>Models</span><span>Usage</span><span>Projects</span><span>Mac control</span><span class="on">Calendar</span><span>Connectors</span><span>MCP servers</span><span>Appearance</span></div>
+        <div class="snav" role="tablist" aria-label="Settings sections">
+          <span>Spark</span><span>Crew</span><span>AI providers</span><span>Models</span><span>Usage</span><span>Projects</span><span>Mac control</span>
+          <button role="tab" data-pane="connectors" aria-selected="true">Connectors</button>
+          <button role="tab" data-pane="notifications" aria-selected="false">Notifications <em>proposed</em></button>
+          <span>MCP servers</span><span>Appearance</span>
+        </div>
         <div>
-          <div class="card group">
-            <h3>Source</h3>
-            <div class="src" role="group" aria-label="Calendar source">
-              <button class="srcopt" data-src="mac" aria-pressed="true"><b>macOS Calendar</b><span>Every calendar synced to this Mac, Google included through Internet Accounts. Stays on this Mac. <span class="chip ok" style="margin-top:6px">Allowed</span></span></button>
-              <button class="srcopt" data-src="google" aria-pressed="false"><b>Google Calendar</b><span>Sign in with Google. Phase 2, for when the Calendar app isn't set up.</span></button>
+          <div class="pane on" id="pane-connectors" role="tabpanel" aria-label="Connectors">
+            <ul class="cxlist">
+              <li class="cx"><div class="cxhead"><span class="cxlogo">GH</span><span class="nm"><b>GitHub</b><small>Signed in as sample-dev</small></span><span class="pill-ok">✓ Connected</span></div></li>
+              <li class="cx"><div class="cxhead"><span class="cxlogo">TK</span><span class="nm"><b>Jira and Linear</b><small>1 ticket source</small></span><span class="pill-ok">✓ Connected</span></div></li>
+              <li class="cx"><div class="cxhead"><span class="cxlogo">SL</span><span class="nm"><b>Slack</b><small>Not connected</small></span></div></li>
+              <li class="cx open" id="calCard">
+                <button class="cxhead" id="calHead" aria-expanded="true" aria-controls="calBody"><span class="cxlogo">CA</span><span class="nm"><b>Calendar</b><small>macOS Calendar · 2 accounts · 3 calendars</small></span><span class="pill-ok">✓ Connected</span></button>
+                <div class="cxbody" id="calBody">
+                  <div class="opt"><div class="l"><b>Source</b><span id="srcHint">Every account synced to this Mac in System Settings → Internet Accounts. Stays on this Mac.</span></div><div class="seg" data-seg="source"><button aria-pressed="true" data-src="mac">macOS Calendar</button><button aria-pressed="false" data-src="google">Google · Phase 2</button></div></div>
+                  <div class="opt"><div class="l"><b>Permission</b><span>Calendars: full access, used read-only. Spark never changes your calendar in this version.</span></div><span class="chip ok">Allowed</span></div>
+                  <div id="accounts"></div>
+                  <div class="opt"><div class="l"><b>Let agents read my calendar</b><span>Offers <code>spark_calendar</code> to chats. Event details then go to the chat's model provider; it follows the agent's mode like other Spark tools.</span></div><button class="switch" role="switch" aria-checked="false" aria-label="Let agents read my calendar"></button></div>
+                  <div class="foot"><button class="btn small" id="disconnect">Disconnect</button></div>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div class="pane" id="pane-notifications" role="tabpanel" aria-label="Notifications">
+            <p class="hint" style="margin:0 0 10px">Proposed section: the owner may reorganise Settings.</p>
+            <div class="card group">
+              <h3>Morning brief</h3>
+              <div class="opt"><div class="l"><b>Morning brief</b><span>A daily summary on Home at 7:00.</span></div><button class="switch" role="switch" aria-checked="true" aria-label="Morning brief"></button></div>
+              <div class="opt"><div class="l"><b>Add today's calendar</b><span>Meetings and free blocks, drawn on this Mac beside the brief, never in its prompt.</span></div><button class="switch" role="switch" aria-checked="true" aria-label="Add today's calendar to the brief"></button></div>
             </div>
-            <p class="hint" id="srcHint">Spark reads your calendar; it never changes it in this version.</p>
-          </div>
-          <div class="card group">
-            <h3>Calendars</h3>
-            <label class="cal"><input type="checkbox" checked><i style="background:var(--c-codex)"></i>Work <small>Google · sample@company.example</small></label>
-            <label class="cal"><input type="checkbox" checked><i style="background:var(--c-claude)"></i>Personal <small>iCloud</small></label>
-            <label class="cal"><input type="checkbox"><i style="background:var(--line-strong)"></i>Holidays <small>Subscribed</small></label>
-          </div>
-          <div class="card group">
-            <h3>Nudges</h3>
-            <div class="opt"><div class="l"><b>Before a meeting</b><span>A line in the island with what needs you.</span></div><div class="seg" data-seg="before"><button aria-pressed="false">5 min</button><button aria-pressed="true">10 min</button><button aria-pressed="false">15 min</button></div></div>
-            <div class="opt"><div class="l"><b>Wrap-up reminder</b><span>Names a chat with unpushed or running work before a meeting.</span></div><div class="seg" data-seg="wrap"><button aria-pressed="false">Off</button><button aria-pressed="true">15 min</button><button aria-pressed="false">30 min</button></div></div>
-            <div class="opt"><div class="l"><b>Add meetings to the morning brief</b><span>Today's meetings and free blocks.</span></div><button class="switch" role="switch" aria-checked="true" aria-label="Add meetings to the morning brief"></button></div>
-            <div class="opt"><div class="l"><b>Notify paired devices</b><span>Only "Meeting in 10 min". Never a title or attendees. Needs the notify switch on Remote control.</span></div><button class="switch" role="switch" aria-checked="false" aria-label="Notify paired devices"></button></div>
-          </div>
-          <div class="card group">
-            <h3>Focus</h3>
-            <div class="opt"><div class="l"><b>Hold island chimes during</b><span>Held alerts show as one catch-up line afterwards. Approval cards still appear, silently.</span></div><div class="seg" data-seg="hold"><button aria-pressed="false">Never</button><button aria-pressed="true">Focus blocks</button><button aria-pressed="false">All meetings</button></div></div>
-            <div class="opt"><div class="l"><b>Focus blocks are events named</b><span>Matched in the calendars above, case does not matter.</span></div><span class="chip">Focus, Deep work, Heads down</span></div>
-          </div>
-          <div class="card group">
-            <h3>Agents</h3>
-            <div class="opt"><div class="l"><b>Let agents read my calendar</b><span>Offers <code>spark_calendar</code> to chats. Event details then go to the chat's model provider; it follows the agent's mode like other Spark tools.</span></div><button class="switch" role="switch" aria-checked="false" aria-label="Let agents read my calendar"></button></div>
+            <div class="card group">
+              <h3>Calendar nudges</h3>
+              <div class="opt"><div class="l"><b>Before a meeting</b><span>A line in the island with what needs you. Only calendars set to Use for nudges.</span></div><div class="seg" data-seg="before"><button aria-pressed="false">5 min</button><button aria-pressed="true">10 min</button><button aria-pressed="false">15 min</button></div></div>
+              <div class="opt"><div class="l"><b>Wrap-up reminder</b><span>Names a chat with unpushed or running work before a meeting.</span></div><div class="seg" data-seg="wrap"><button aria-pressed="false">Off</button><button aria-pressed="true">15 min</button><button aria-pressed="false">30 min</button></div></div>
+            </div>
+            <div class="card group">
+              <h3>Island chimes</h3>
+              <div class="opt"><div class="l"><b>Hold chimes during</b><span>Held alerts show as one catch-up line afterwards. Cards still appear, silently.</span></div><div class="seg" data-seg="hold"><button aria-pressed="false">Never</button><button aria-pressed="true">Focus blocks</button><button aria-pressed="false">All meetings</button></div></div>
+              <div class="opt"><div class="l"><b>Focus blocks are events named</b><span>Matched in calendars that count as busy; case does not matter.</span></div><span class="chip">Focus, Deep work, Heads down</span></div>
+            </div>
+            <div class="card group">
+              <h3>Phone</h3>
+              <div class="opt"><div class="l"><b>Meeting alerts on paired devices</b><span>Only "Meeting in 10 min". Never a title or attendees. Needs Notify when a chat needs you on Remote control.</span></div><button class="switch" role="switch" aria-checked="false" aria-label="Meeting alerts on paired devices"></button></div>
+            </div>
           </div>
         </div>
       </div>
@@ -357,53 +388,107 @@ h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px;text-transfo
 <div class="sample">Sample data · design mock</div>
 
 <script>
-var EVENTS=[
-  {id:"standup",t:"Standup",s:570,e:585,cal:"work",meta:"Work calendar · 6 people · Zoom",notes:"Daily sync"},
-  {id:"focus",t:"Focus: dashboards",s:660,e:750,cal:"focus",meta:"Work calendar · just you",notes:"Finish the dashboards filters"},
-  {id:"lunch",t:"Lunch",s:750,e:795,cal:"personal",meta:"Personal calendar",notes:""},
-  {id:"review",t:"Design review",s:840,e:885,cal:"work",meta:"Work calendar · 4 people · Room Sample",notes:"Review the Calendar mock and the Today view"},
-  {id:"oneone",t:"1:1 with Sample Lead",s:960,e:990,cal:"work",meta:"Work calendar · 2 people",notes:"Roadmap, hiring"}
+var ACCOUNTS=[
+  {id:"g1",name:"sample@company.example",kind:"Google, through Internet Accounts"},
+  {id:"ic",name:"sample@icloud.example",kind:"iCloud"}
 ];
-var DAY0=480,DAY1=1080,H=640,state={sel:null,remind:{},hold:{focus:true},islandOpen:false};
+var CALS={
+  work:{name:"Work",account:"g1",color:"var(--c-codex)",on:true,nudge:true,busy:true},
+  oncall:{name:"Team on-call",account:"g1",color:"var(--c-zai)",on:true,nudge:true,busy:false},
+  family:{name:"Family",account:"ic",color:"var(--c-claude)",on:true,nudge:false,busy:true}
+};
+var EVENTS=[
+  {id:"standup",uid:"u-standup",t:"Standup",s:570,e:585,cal:"work",meta:"6 people · Zoom",notes:"Daily sync"},
+  {id:"focus",uid:"u-focus",t:"Focus: dashboards",s:660,e:750,cal:"work",focus:true,meta:"just you",notes:"Finish the dashboards filters"},
+  {id:"lunch",uid:"u-lunch",t:"Lunch",s:750,e:795,cal:"family",meta:"",notes:""},
+  {id:"review",uid:"u-review",t:"Design review",s:840,e:885,cal:"work",meta:"4 people · Room Sample",notes:"Review the Calendar mock and the Today view"},
+  {id:"review-copy",uid:"u-review",t:"Design review",s:840,e:885,cal:"family",meta:"",notes:""},
+  {id:"pickup",uid:"u-pickup",t:"School pickup",s:930,e:945,cal:"family",meta:"",notes:""},
+  {id:"oneone",uid:"u-oneone",t:"1:1 with Sample Lead",s:960,e:990,cal:"work",meta:"2 people",notes:"Roadmap, hiring"},
+  {id:"handoff",uid:"u-handoff",t:"On-call handoff",s:1020,e:1035,cal:"oncall",meta:"3 people",notes:""}
+];
+var DAY0=480,DAY1=1080,WORK0=540,H=640,state={sel:null,remind:{},hold:{focus:true},islandOpen:false,hidden:{}};
 function y(m){return (m-DAY0)/(DAY1-DAY0)*H}
 function hm(m){return Math.floor(m/60)+":"+String(m%60).padStart(2,"0")}
+function dur(m){return m>=60?Math.floor(m/60)+" h"+(m%60?" "+m%60:""):m+" min"}
 function el(tag,cls,html){var n=document.createElement(tag);if(cls)n.className=cls;if(html!=null)n.innerHTML=html;return n}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+function merged(){
+  var byUid={};
+  EVENTS.forEach(function(e){
+    if(!CALS[e.cal].on)return;
+    var first=byUid[e.uid];
+    if(first){first.also.push(e.cal);return}
+    byUid[e.uid]=Object.assign({},e,{also:[]});
+  });
+  return Object.keys(byUid).map(function(k){return byUid[k]}).sort(function(a,b){return a.s-b.s});
+}
+function visible(){return merged().filter(function(e){return !state.hidden[e.cal]})}
+function calsOf(e){return [e.cal].concat(e.also)}
+function isBusy(e){return calsOf(e).some(function(c){return CALS[c].busy})}
+function nudges(e){return !e.focus&&calsOf(e).some(function(c){return CALS[c].nudge})}
+function freeBlocks(){
+  var busy=merged().filter(isBusy),out=[],t=WORK0;
+  busy.forEach(function(e){if(e.s-t>=30)out.push([t,e.s]);t=Math.max(t,e.e)});
+  if(DAY1-t>=30)out.push([t,DAY1]);
+  return out;
+}
+function longest(){return freeBlocks().reduce(function(a,b){return b[1]-b[0]>a[1]-a[0]?b:a},[0,0])}
 
 function buildWeek(){
-  var days=[["Mon",12,2,0],["Tue",13,4,1],["Wed",14,1,1],["Thu",15,4,1],["Fri",16,3,0],["Sat",17,0,0],["Sun",18,1,0]],w=document.getElementById("week");
-  days.forEach(function(d){var b=el("button","day","<b>"+d[0]+" "+d[1]+"</b><span>"+(d[2]?d[2]+" meetings":"free")+"</span>");var dots=el("div","dots");for(var i=0;i<d[2];i++)dots.appendChild(el("i",""));for(var j=0;j<d[3];j++)dots.appendChild(el("i","f"));b.appendChild(dots);b.setAttribute("aria-pressed",d[1]===15?"true":"false");b.addEventListener("click",function(){w.querySelectorAll(".day").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");if(d[1]!==15)toast(d[0]+" "+d[1]+": the mock only has today's events")});w.appendChild(b)});
+  var days=[["Mon",12,2,0],["Tue",13,4,1],["Wed",14,1,1],["Thu",15,6,1],["Fri",16,3,0],["Sat",17,0,0],["Sun",18,1,0]],w=document.getElementById("week");
+  days.forEach(function(d){var b=el("button","day","<b>"+d[0]+" "+d[1]+"</b><span>"+(d[2]?d[2]+(d[2]===1?" event":" events"):"free")+"</span>");var dots=el("div","dots");for(var i=0;i<d[2];i++)dots.appendChild(el("i",""));for(var j=0;j<d[3];j++)dots.appendChild(el("i","f"));b.appendChild(dots);b.setAttribute("aria-pressed",d[1]===15?"true":"false");b.addEventListener("click",function(){w.querySelectorAll(".day").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");if(d[1]!==15)toast(d[0]+" "+d[1]+": the mock only has today's events")});w.appendChild(b)});
+}
+
+function buildFilters(){
+  var f=document.getElementById("filters");f.innerHTML="";
+  Object.keys(CALS).forEach(function(id){
+    var c=CALS[id];if(!c.on)return;
+    var b=el("button","fchip",'<i style="background:'+c.color+'"></i>'+esc(c.name));
+    b.setAttribute("aria-pressed",state.hidden[id]?"false":"true");
+    b.addEventListener("click",function(){state.hidden[id]=!state.hidden[id];buildFilters();updateClock()});
+    f.appendChild(b);
+  });
+  var on=Object.keys(CALS).filter(function(k){return CALS[k].on}).length;
+  document.getElementById("todaySub").textContent="Thursday 15 October · macOS Calendar · 2 accounts, "+on+" calendars";
 }
 
 function buildTimeline(){
   var tl=document.getElementById("timeline");tl.innerHTML="";
   for(var h=8;h<=18;h++){var r=el("div","hour","<span>"+h+":00</span>");r.style.top=y(h*60)+"px";tl.appendChild(r)}
   var lane=el("div","lane");tl.appendChild(lane);
-  [[585,660],[885,960],[990,1080]].forEach(function(f){var n=el("div","free","free "+hm(f[0])+"–"+hm(f[1]));n.style.top=y(f[0])+2+"px";n.style.height=y(f[1])-y(f[0])-4+"px";lane.appendChild(n)});
-  EVENTS.forEach(function(ev){
-    var b=el("button","ev "+(ev.cal==="focus"?"focus":"cal-"+ev.cal));
-    b.innerHTML=(state.hold[ev.id]?'<span class="held">alerts held</span>':"")+"<b>"+ev.t+"</b><span>"+hm(ev.s)+"–"+hm(ev.e)+"</span>";
+  freeBlocks().forEach(function(f){var n=el("div","free","free "+hm(f[0])+"–"+hm(f[1]));n.style.top=y(f[0])+2+"px";n.style.height=y(f[1])-y(f[0])-4+"px";lane.appendChild(n)});
+  visible().forEach(function(ev){
+    var b=el("button","ev"+(ev.focus?" focus":"")+(isBusy(ev)?"":" notbusy"));
+    b.style.borderLeftColor=CALS[ev.cal].color;
+    var also=ev.also.length?'<span class="also">also on '+ev.also.map(function(c){return esc(CALS[c].name)}).join(", ")+"</span>":"";
+    b.innerHTML=(state.hold[ev.id]?'<span class="held">alerts held</span>':"")+also+"<b>"+esc(ev.t)+"</b><span>"+hm(ev.s)+"–"+hm(ev.e)+" · "+esc(CALS[ev.cal].name)+"</span>";
     b.style.top=y(ev.s)+1+"px";b.style.height=Math.max(22,y(ev.e)-y(ev.s)-2)+"px";
     b.setAttribute("aria-expanded",state.sel===ev.id?"true":"false");
-    b.setAttribute("aria-label",ev.t+", "+hm(ev.s)+" to "+hm(ev.e));
+    b.setAttribute("aria-label",ev.t+", "+hm(ev.s)+" to "+hm(ev.e)+", "+CALS[ev.cal].name);
     b.addEventListener("click",function(){select(ev.id)});
     lane.appendChild(b);
   });
-  var c=el("div","conflict");c.style.top=y(840)+"px";c.style.height=y(885)-y(840)+"px";c.title="Overlaps a running chat";lane.appendChild(c);
+  if(!state.hidden.work&&CALS.work.on){var c=el("div","conflict");c.style.top=y(840)+"px";c.style.height=y(885)-y(840)+"px";c.title="Overlaps a running chat";lane.appendChild(c)}
   var now=+document.getElementById("clock").value,n=el("div","now","<span>"+hm(now)+"</span>");n.style.top=y(now)+"px";tl.appendChild(n);
 }
 
+function findEvent(id){return merged().find(function(e){return e.id===id})}
 function select(id){
-  state.sel=id;var ev=EVENTS.find(function(e){return e.id===id});
+  var ev=findEvent(id);if(!ev)return;
+  state.sel=id;
   document.getElementById("actions").classList.add("on");document.getElementById("noSel").style.display="none";
   document.getElementById("aTitle").textContent=ev.t;
-  document.getElementById("aMeta").textContent=hm(ev.s)+"–"+hm(ev.e)+" · "+ev.meta;
+  var where=calsOf(ev).map(function(c){return CALS[c].name}).join(" and ");
+  document.getElementById("aMeta").textContent=hm(ev.s)+"–"+hm(ev.e)+" · "+where+(ev.meta?" · "+ev.meta:"")+(nudges(ev)?"":" · no nudge");
   setAct("remind",!!state.remind[id],"Set","Off");setAct("hold",!!state.hold[id],"Held","Off");
   buildTimeline();
 }
 function setAct(name,on,a,b){var x=document.querySelector('[data-act="'+name+'"]');x.setAttribute("aria-pressed",on?"true":"false");x.querySelector("small").textContent=on?a:b}
 
 document.querySelectorAll(".act").forEach(function(b){b.addEventListener("click",function(){
-  var ev=EVENTS.find(function(e){return e.id===state.sel});if(!ev)return;var a=b.dataset.act;
+  var ev=findEvent(state.sel);if(!ev)return;var a=b.dataset.act;
   if(a==="open")toast("Opens "+ev.t+" in Calendar.app");
   if(a==="chat"){document.getElementById("mText").value=ev.t+(ev.notes?"\n\n"+ev.notes:"");document.getElementById("modal").classList.add("on");document.getElementById("mText").focus()}
   if(a==="remind"){state.remind[ev.id]=!state.remind[ev.id];setAct("remind",state.remind[ev.id],"Set","Off");toast(state.remind[ev.id]?"Island will remind you at "+hm(ev.s-5):"Reminder removed")}
@@ -414,45 +499,87 @@ document.getElementById("mCancel").addEventListener("click",closeModal);
 document.getElementById("mStart").addEventListener("click",function(){closeModal();toast("Chat started (mock): the normal New chat confirm")});
 document.addEventListener("keydown",function(e){if(e.key==="Escape")closeModal()});
 
-function nextEvent(now){return EVENTS.find(function(e){return e.e>now&&e.cal!=="focus"&&e.cal!=="personal"})}
-function inHeld(now){return EVENTS.find(function(e){return state.hold[e.id]&&e.s<=now&&now<e.e})}
+function nextEvent(now){return merged().find(function(e){return e.e>now&&nudges(e)})}
+function inHeld(now){return merged().find(function(e){return state.hold[e.id]&&e.s<=now&&now<e.e})}
 function updateClock(){
   var now=+document.getElementById("clock").value;document.getElementById("clockLabel").textContent=hm(now);
   var nx=nextEvent(now),cd=document.getElementById("countdown"),w=document.getElementById("nextWhat");
-  if(!nx){cd.textContent="—";w.innerHTML="No more meetings<small>Free until the end of the day</small>"}
-  else if(nx.s<=now){cd.textContent="now";w.innerHTML=nx.t+"<small>until "+hm(nx.e)+" · "+nx.meta+"</small>"}
-  else{var d=nx.s-now;cd.textContent=d>=60?Math.floor(d/60)+" h "+(d%60)+" min":d+" min";w.innerHTML=nx.t+"<small>"+hm(nx.s)+"–"+hm(nx.e)+" · "+nx.meta+"</small>"}
-  renderIsland(now,nx);buildTimeline();
+  if(!nx){cd.textContent="—";w.innerHTML="No more meetings<small>Nothing left to nudge for today</small>"}
+  else if(nx.s<=now){cd.textContent="now";w.innerHTML=esc(nx.t)+"<small>until "+hm(nx.e)+" · "+esc(CALS[nx.cal].name)+"</small>"}
+  else{cd.textContent=dur(nx.s-now);w.innerHTML=esc(nx.t)+"<small>"+hm(nx.s)+"–"+hm(nx.e)+" · "+esc(CALS[nx.cal].name)+(nx.meta?" · "+esc(nx.meta):"")+"</small>"}
+  renderIsland(now,nx);buildTimeline();buildBrief();
 }
 function renderIsland(now,nx){
   var i=document.getElementById("island"),held=inHeld(now),line,detail;
   if(held){line="Focus · alerts held until "+hm(held.e);detail='<li><span class="muted">held</span>Docs pass for Tickets needs you</li><li><span class="muted">held</span>Fix login redirect finished a step</li>'}
-  else if(nx&&nx.s>now&&nx.s-now<=15){line=nx.t+" in "+(nx.s-now)+" min · 2 chats need you, 1 still running";detail='<li><span class="n">●</span>Docs pass for Tickets: approval card</li><li><span class="n">●</span>Dashboards filters: unpushed work</li><li><span class="r">●</span>Fix login redirect: still running</li>'}
+  else if(nx&&nx.s>now&&nx.s-now<=15){line=esc(nx.t)+" in "+(nx.s-now)+" min · 2 chats need you, 1 still running";detail='<li><span class="n">●</span>Docs pass for Tickets: approval card</li><li><span class="n">●</span>Dashboards filters: unpushed work</li><li><span class="r">●</span>Fix login redirect: still running</li>'}
   else{line="2 chats need you";detail='<li><span class="n">●</span>Docs pass for Tickets: approval card</li><li><span class="n">●</span>Dashboards filters: unpushed work</li>'}
   if(!state.islandOpen){i.className="island";i.innerHTML='<span class="scout" aria-hidden="true"></span><span>'+line+"</span>"+(held?'<span class="held-badge">2 held</span>':"");return}
   i.className="island open";
   i.innerHTML='<div class="island-tabs"><span class="on">Home ⌘1</span><span>Chats ⌘2</span><span>New chat ⌘3</span></div><div class="row"><span class="scout" aria-hidden="true"></span><b>'+line+'</b></div><ul class="lines">'+detail+'</ul><div class="ib"><button>Open chats</button><button class="go">Open Today</button></div>'+(held?'<div class="meta" style="margin-top:6px">Catch up after '+hm(held.e)+": held chimes play once as one line.</div>":"");
 }
-document.getElementById("island").addEventListener("click",function(e){if(e.target.closest(".ib button")){if(e.target.classList.contains("go"))show("today");toast("Mock button");return}state.islandOpen=!state.islandOpen;this.setAttribute("aria-expanded",state.islandOpen);updateClock()});
+document.getElementById("island").addEventListener("click",function(e){if(e.target.closest(".ib button")){if(e.target.classList.contains("go"))show("today");else toast("Mock button");return}state.islandOpen=!state.islandOpen;this.setAttribute("aria-expanded",state.islandOpen);updateClock()});
 document.getElementById("clock").addEventListener("input",updateClock);
 
-function show(v){document.querySelectorAll(".view").forEach(function(s){s.classList.toggle("on",s.id==="view-"+v)});document.querySelectorAll(".nav").forEach(function(n){n.removeAttribute("aria-current")});var first=document.querySelector('.nav[data-view="'+v+'"]');if(first)first.setAttribute("aria-current","page")}
-document.querySelectorAll(".nav").forEach(function(n){n.addEventListener("click",function(){show(n.dataset.view)})});
+function buildBrief(){
+  var list=document.getElementById("briefMeetings");list.innerHTML="";
+  merged().filter(function(e){return !e.focus}).forEach(function(e){
+    var tag=e.id==="review"?'<span class="chip warn">overlaps a run</span>':'<span class="chip"><i class="sw" style="background:'+CALS[e.cal].color+'"></i>'+esc(CALS[e.cal].name)+"</span>";
+    list.appendChild(el("div","mt","<time>"+hm(e.s)+"–"+hm(e.e)+"</time><span>"+esc(e.t)+"</span>"+tag));
+  });
+  var bar=document.getElementById("briefBar"),span=DAY1-WORK0;bar.innerHTML="";
+  merged().filter(isBusy).forEach(function(e){var i=el("i",e.focus?"f":"m");i.style.left=(Math.max(e.s,WORK0)-WORK0)/span*100+"%";i.style.width=(e.e-Math.max(e.s,WORK0))/span*100+"%";bar.appendChild(i)});
+  var l=longest(),focus=merged().find(function(e){return e.focus});
+  document.getElementById("briefFree").innerHTML="Longest free block, 9:00–18:00: <b>"+hm(l[0])+"–"+hm(l[1])+"</b> ("+dur(l[1]-l[0])+")."+(focus?" <b>"+hm(focus.s)+"–"+hm(focus.e)+"</b> is a focus block: island chimes will be held.":"");
+}
+
+function buildAccounts(){
+  var box=document.getElementById("accounts");box.innerHTML="";
+  ACCOUNTS.forEach(function(a){
+    var g=el("div","acct",'<div class="accthead"><b>'+esc(a.name)+"</b><small>"+esc(a.kind)+"</small></div>");
+    Object.keys(CALS).forEach(function(id){
+      var c=CALS[id];if(c.account!==a.id)return;
+      var row=el("div","calrow");
+      row.innerHTML='<label class="calname"><input type="checkbox"'+(c.on?" checked":"")+' data-k="on"><i class="sw" style="background:'+c.color+'"></i>'+esc(c.name)+'</label><label class="mini"><input type="checkbox"'+(c.nudge?" checked":"")+(c.on?"":" disabled")+' data-k="nudge">Use for nudges</label><label class="mini"><input type="checkbox"'+(c.busy?" checked":"")+(c.on?"":" disabled")+' data-k="busy">Counts as busy</label>';
+      row.querySelectorAll("input").forEach(function(inp){inp.addEventListener("change",function(){c[inp.dataset.k]=inp.checked;buildAccounts();buildFilters();updateClock()})});
+      g.appendChild(row);
+    });
+    box.appendChild(g);
+  });
+  var on=Object.keys(CALS).filter(function(k){return CALS[k].on}).length;
+  document.querySelector("#calHead small").textContent="macOS Calendar · 2 accounts · "+on+" of 3 calendars";
+}
+
+function show(v,btn){
+  document.querySelectorAll(".view").forEach(function(s){s.classList.toggle("on",s.id==="view-"+v)});
+  document.querySelectorAll(".nav").forEach(function(n){n.removeAttribute("aria-current")});
+  var cur=btn||document.querySelector('.nav[data-view="'+v+'"][data-primary]');
+  if(cur)cur.setAttribute("aria-current","page");
+}
+document.querySelectorAll(".nav").forEach(function(n){n.addEventListener("click",function(){show(n.dataset.view,n)})});
+function showPane(p){document.querySelectorAll(".snav button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.pane===p?"true":"false")});document.querySelectorAll(".pane").forEach(function(x){x.classList.toggle("on",x.id==="pane-"+p)})}
+document.querySelectorAll(".snav button").forEach(function(b){b.addEventListener("click",function(){showPane(b.dataset.pane)})});
+document.getElementById("calHead").addEventListener("click",function(){var c=document.getElementById("calCard"),o=!c.classList.contains("open");c.classList.toggle("open",o);this.setAttribute("aria-expanded",o)});
+document.getElementById("disconnect").addEventListener("click",function(){toast("Disconnect (mock): stops reading, deletes reminder and hold marks")});
 
 document.querySelectorAll(".switch").forEach(function(s){s.addEventListener("click",function(){s.setAttribute("aria-checked",s.getAttribute("aria-checked")==="true"?"false":"true")})});
-document.querySelectorAll(".seg").forEach(function(g){g.querySelectorAll("button").forEach(function(b){b.addEventListener("click",function(){g.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");if(g.dataset.seg==="hold"){var mode=b.textContent;EVENTS.forEach(function(e){state.hold[e.id]=mode==="All meetings"?e.cal!=="personal":mode==="Focus blocks"?e.cal==="focus":false});buildTimeline()}})})});
-document.querySelectorAll(".srcopt").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll(".srcopt").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");document.getElementById("srcHint").textContent=b.dataset.src==="google"?"Phase 2: opens Google sign-in in your browser; the token stays in the keychain.":"Spark reads your calendar; it never changes it in this version."})});
+document.querySelectorAll(".seg").forEach(function(g){g.querySelectorAll("button").forEach(function(b){b.addEventListener("click",function(){
+  g.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");
+  if(g.dataset.seg==="hold"){var mode=b.textContent;merged().forEach(function(e){state.hold[e.id]=mode==="All meetings"?isBusy(e):mode==="Focus blocks"?!!e.focus:false});buildTimeline()}
+  if(g.dataset.seg==="source")document.getElementById("srcHint").textContent=b.dataset.src==="google"?"Phase 2: Add Google account opens Google sign-in in your browser; each account's token stays in the keychain.":"Every account synced to this Mac in System Settings → Internet Accounts. Stays on this Mac.";
+})})});
 
 var themes=["system","light","dark"],ti=0;
-var q=new URLSearchParams(location.search);if(q.get("theme"))ti=themes.indexOf(q.get("theme"));
+var q=new URLSearchParams(location.search);if(themes.indexOf(q.get("theme"))>0)ti=themes.indexOf(q.get("theme"));
 document.getElementById("themeBtn").textContent="Theme: "+themes[ti];
 document.getElementById("themeBtn").addEventListener("click",function(){ti=(ti+1)%3;var t=themes[ti];if(t==="system")delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t;this.textContent="Theme: "+t});
 
 var tt;function toast(msg){var t=document.getElementById("toast");t.textContent=msg;t.classList.add("on");clearTimeout(tt);tt=setTimeout(function(){t.classList.remove("on")},2200)}
 
-buildWeek();
-if(q.get("view"))show(q.get("view"));
-if(q.get("time"))document.getElementById("clock").value=q.get("time");
+buildWeek();buildAccounts();buildFilters();
+if(["today","home","settings"].indexOf(q.get("view"))>=0)show(q.get("view"));
+if(q.get("pane")==="notifications")showPane("notifications");
+var qt=+q.get("time");if(qt>=DAY0&&qt<=DAY1)document.getElementById("clock").value=qt;
 if(q.get("island")==="open")state.islandOpen=true;
 updateClock();
 if(q.get("select"))select(q.get("select"));
