@@ -2,7 +2,12 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { stagedVoiceProblems, swiftLinkArgs, VOICE_LICENSES, whisperCmakeArgs } from './voice-bundle.ts';
+import {
+  stagedVoiceProblems,
+  swiftLinkArgs,
+  VOICE_LICENSES,
+  whisperCmakeArgs,
+} from './voice-bundle.ts';
 
 const made: string[] = [];
 afterEach(async () => {
@@ -23,9 +28,15 @@ describe('whisper.cpp build', () => {
   it('uses Metal on Apple silicon and AVX on Intel', () => {
     const arm = whisperCmakeArgs('arm64', '/s', '/b', '/p');
     const intel = whisperCmakeArgs('x64', '/s', '/b', '/p');
-    expect(arm).toEqual(expect.arrayContaining(['-DGGML_METAL=ON', '-DCMAKE_OSX_ARCHITECTURES=arm64']));
+    expect(arm).toEqual(
+      expect.arrayContaining(['-DGGML_METAL=ON', '-DCMAKE_OSX_ARCHITECTURES=arm64']),
+    );
     expect(intel).toEqual(
-      expect.arrayContaining(['-DGGML_METAL=OFF', '-DGGML_AVX2=ON', '-DCMAKE_OSX_ARCHITECTURES=x86_64']),
+      expect.arrayContaining([
+        '-DGGML_METAL=OFF',
+        '-DGGML_AVX2=ON',
+        '-DCMAKE_OSX_ARCHITECTURES=x86_64',
+      ]),
     );
     expect(swiftLinkArgs('x64', '/p')).not.toContain('-lggml-metal');
     expect(swiftLinkArgs('arm64', '/p')).toContain('-lggml-metal');
@@ -51,7 +62,8 @@ describe('staged voice files', () => {
     await mkdir(path.join(dir, 'models'), { recursive: true });
     await mkdir(path.join(dir, 'licenses'), { recursive: true });
     await writeFile(path.join(dir, 'models', 'ggml-silero-v6.2.0.bin'), 'not the model');
-    for (const license of VOICE_LICENSES) await writeFile(path.join(dir, 'licenses', license), 'MIT');
+    for (const license of VOICE_LICENSES)
+      await writeFile(path.join(dir, 'licenses', license), 'MIT');
     expect(await stagedVoiceProblems(dir)).toEqual([
       'ggml-silero-v6.2.0.bin does not match its pinned sha256',
     ]);

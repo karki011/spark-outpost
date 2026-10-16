@@ -29,7 +29,15 @@ export function fakeVoiceHelper(): ChildProcessWithoutNullStreams {
     const { id } = request;
     switch (request.op) {
       case 'status':
-        return say({ id, event: 'status', mic: 'granted', inputMonitoring: false, model: false, fnSetting: 'free', arch: 'arm64' });
+        return say({
+          id,
+          event: 'status',
+          mic: 'granted',
+          inputMonitoring: false,
+          model: false,
+          fnSetting: 'free',
+          arch: 'arm64',
+        });
       case 'load':
         return say({ id, event: 'loaded' });
       case 'keys':

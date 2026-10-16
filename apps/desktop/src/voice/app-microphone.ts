@@ -11,5 +11,7 @@ export function denyAppRecording(target: PermissionTarget): void {
   target.setPermissionRequestHandler((_contents, permission, callback) =>
     callback(!RECORDING_PERMISSIONS.has(permission)),
   );
-  target.setPermissionCheckHandler((_contents, permission) => !RECORDING_PERMISSIONS.has(permission));
+  target.setPermissionCheckHandler(
+    (_contents, permission) => !RECORDING_PERMISSIONS.has(permission),
+  );
 }

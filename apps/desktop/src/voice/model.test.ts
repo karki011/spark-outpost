@@ -46,7 +46,12 @@ describe('downloadModel', () => {
     const tampered = Buffer.from(body);
     tampered[10] = 0;
     await expect(
-      downloadModel({ dir, model, fetch: async () => new Response(tampered), progress: () => undefined }),
+      downloadModel({
+        dir,
+        model,
+        fetch: async () => new Response(tampered),
+        progress: () => undefined,
+      }),
     ).rejects.toThrow('The download didn’t check out.');
     expect(await readdir(dir)).toEqual([]);
   });

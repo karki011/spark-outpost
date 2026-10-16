@@ -91,8 +91,6 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     turnOn: () => ipcRenderer.invoke(IPC.voiceTurnOn),
     turnOff: () => ipcRenderer.invoke(IPC.voiceTurnOff),
     update: (patch: unknown) => ipcRenderer.invoke(IPC.voiceUpdate, patch),
-    setShortcut: (accelerator: string | null) =>
-      ipcRenderer.invoke(IPC.voiceSetShortcut, accelerator),
     listen: (purpose: string, hint: string, file?: string) =>
       ipcRenderer.invoke(IPC.voiceListen, purpose, hint, file),
     stop: (id: string) => ipcRenderer.invoke(IPC.voiceStop, id),

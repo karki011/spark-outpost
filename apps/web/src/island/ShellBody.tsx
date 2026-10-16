@@ -15,6 +15,8 @@ import { QuickChat, type Compose, type QuickDraft } from './QuickChat.tsx';
 import { Sessions } from './Sessions.tsx';
 import type { Grab } from './use-island-drop.ts';
 import { chatAgent } from './use-island-data.ts';
+import { SpeechScreen } from '../voice/SpeechScreen.tsx';
+import type { SpeechScreenModel } from '../voice/use-speech-island.ts';
 
 interface DropProps {
   grab: Grab;
@@ -39,6 +41,7 @@ export interface IslandShellProps {
   setAside: number;
   line: RestLine | null;
   voice: Voice;
+  speech: SpeechScreenModel | null;
   now: number;
   note: Decided | null;
   detailFor: (chatId: string) => ConversationDetail | undefined;
@@ -135,7 +138,13 @@ function PanelBody({ panel, props }: { panel: Panel; props: IslandShellProps }) 
     <div className="isl-body">
       <IslandBar panel={panel} waiting={props.waiting} actions={props.bar} onTab={props.onTab} />
       <div key={panel} className="isl-pane" data-dir={shown.direction}>
-        <PanelPane panel={panel} props={props} />
+        {props.speech ? (
+          <div className="isl-panel">
+            <SpeechScreen screen={props.speech} />
+          </div>
+        ) : (
+          <PanelPane panel={panel} props={props} />
+        )}
       </div>
     </div>
   );

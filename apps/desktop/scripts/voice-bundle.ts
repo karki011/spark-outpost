@@ -41,7 +41,9 @@ export function whisperCmakeArgs(arch: MacArch, source: string, build: string, p
     '-DGGML_BLAS=ON',
     '-DGGML_BLAS_VENDOR=Apple',
     '-DGGML_ACCELERATE=ON',
-    ...(arch === 'x64' ? ['-DGGML_AVX=ON', '-DGGML_AVX2=ON', '-DGGML_FMA=ON', '-DGGML_F16C=ON'] : []),
+    ...(arch === 'x64'
+      ? ['-DGGML_AVX=ON', '-DGGML_AVX2=ON', '-DGGML_FMA=ON', '-DGGML_F16C=ON']
+      : []),
     '-DWHISPER_BUILD_EXAMPLES=OFF',
     '-DWHISPER_BUILD_TESTS=OFF',
     '-DWHISPER_BUILD_SERVER=OFF',
@@ -105,7 +107,10 @@ async function buildWhisper(repoRoot: string, arch: MacArch): Promise<string> {
     await run(cmake(), whisperCmakeArgs(arch, source, build, prefix), options);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT')
-      throw new Error('cmake is missing: install it (brew install cmake) or set CMAKE to its path.');
+      throw new Error(
+        'cmake is missing: install it (brew install cmake) or set CMAKE to its path.',
+        { cause: error },
+      );
     throw error;
   }
   await run(cmake(), ['--build', build, '-j', String(os.availableParallelism())], options);
@@ -237,7 +242,11 @@ export async function checkStagedVoice(voiceDir: string, arch: MacArch): Promise
     throw new Error(`The voice bundle for ${arch} can't ship: ${problems.join('; ')}.`);
 }
 
-export async function stageVoice(builtDir: string, arch: MacArch, resources: string): Promise<void> {
+export async function stageVoice(
+  builtDir: string,
+  arch: MacArch,
+  resources: string,
+): Promise<void> {
   await voiceCheck(path.join(builtDir, VOICE_HELPER_NAME), arch);
   const target = path.join(resources, 'voice');
   await mkdir(path.join(target, 'bin'), { recursive: true });

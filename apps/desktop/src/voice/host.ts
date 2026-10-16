@@ -36,7 +36,6 @@ export interface VoiceHostOptions {
   userData: string;
   trusted(event: IpcMainInvokeEvent): boolean;
   island(): Electron.WebContents | null;
-  takenShortcuts(): string[];
   log(line: string): void;
 }
 
@@ -50,7 +49,6 @@ const INVOKE = [
   IPC.voiceTurnOn,
   IPC.voiceTurnOff,
   IPC.voiceUpdate,
-  IPC.voiceSetShortcut,
   IPC.voiceListen,
   IPC.voiceStop,
   IPC.voiceCancel,
@@ -125,7 +123,6 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
       }
     },
     unregister: (accelerator) => globalShortcut.unregister(accelerator),
-    takenShortcuts: options.takenShortcuts,
     sendTo: (owner, event: VoiceEvent) => {
       const target = webContents.fromId(owner);
       if (target && !target.isDestroyed()) target.send(IPC.voiceEvent, event);
@@ -143,9 +140,18 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
     (event: IpcMainInvokeEvent, ...args: unknown[]) =>
       options.trusted(event) ? run(event, ...args) : fallback;
 
-  ipcMain.handle(IPC.voiceStatus, guard(() => voice.status(), null));
-  ipcMain.handle(IPC.voiceTurnOn, guard(() => voice.turnOn(), null));
-  ipcMain.handle(IPC.voiceTurnOff, guard(() => voice.turnOff(), null));
+  ipcMain.handle(
+    IPC.voiceStatus,
+    guard(() => voice.status(), null),
+  );
+  ipcMain.handle(
+    IPC.voiceTurnOn,
+    guard(() => voice.turnOn(), null),
+  );
+  ipcMain.handle(
+    IPC.voiceTurnOff,
+    guard(() => voice.turnOff(), null),
+  );
   ipcMain.handle(
     IPC.voiceUpdate,
     guard((_event, patch) => {
@@ -154,26 +160,28 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
     }, null),
   );
   ipcMain.handle(
-    IPC.voiceSetShortcut,
-    guard(
-      (_event, accelerator) =>
-        accelerator === null || typeof accelerator === 'string'
-          ? voice.setShortcut(accelerator)
-          : { ok: false, error: 'Not allowed.' },
-      { ok: false, error: 'Not allowed.' },
-    ),
-  );
-  ipcMain.handle(
     IPC.voiceListen,
     guard(
       (event, purpose, hint, file) => voice.listen(event.sender.id, purpose, hint, file),
       Promise.resolve<VoiceListenResult>({ ok: false, error: 'invalid' }),
     ),
   );
-  ipcMain.handle(IPC.voiceStop, guard((event, id) => voice.stop(event.sender.id, id), undefined));
-  ipcMain.handle(IPC.voiceCancel, guard((event, id) => voice.cancel(event.sender.id, id), undefined));
-  ipcMain.handle(IPC.voiceSpeak, guard((event, text) => voice.speak(event.sender.id, text), null));
-  ipcMain.handle(IPC.voiceHush, guard(() => voice.hush(), undefined));
+  ipcMain.handle(
+    IPC.voiceStop,
+    guard((event, id) => voice.stop(event.sender.id, id), undefined),
+  );
+  ipcMain.handle(
+    IPC.voiceCancel,
+    guard((event, id) => voice.cancel(event.sender.id, id), undefined),
+  );
+  ipcMain.handle(
+    IPC.voiceSpeak,
+    guard((event, text) => voice.speak(event.sender.id, text), null),
+  );
+  ipcMain.handle(
+    IPC.voiceHush,
+    guard(() => voice.hush(), undefined),
+  );
   ipcMain.handle(
     IPC.voiceOpenSettings,
     guard((_event, page) => {

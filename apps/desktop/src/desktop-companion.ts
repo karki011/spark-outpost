@@ -274,7 +274,6 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       BrowserWindow.getAllWindows().find(
         (window) => !window.isDestroyed() && island?.owns(window.webContents.id),
       )?.webContents ?? null,
-    takenShortcuts: () => Object.values(companion.status().shortcuts),
     log: options.log,
   });
 

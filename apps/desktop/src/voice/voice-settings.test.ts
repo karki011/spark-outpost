@@ -27,15 +27,21 @@ describe('parseVoiceSettings', () => {
 
 describe('denyAppRecording', () => {
   it('denies the microphone to the app’s own windows and leaves other permissions alone', () => {
-    let request: ((contents: unknown, permission: string, callback: (granted: boolean) => void) => void) | null =
-      null;
+    let request:
+      | ((contents: unknown, permission: string, callback: (granted: boolean) => void) => void)
+      | null = null;
     let check: ((contents: unknown, permission: string) => boolean) | null = null;
     denyAppRecording({
       setPermissionRequestHandler: (handler) => void (request = handler),
       setPermissionCheckHandler: (handler) => void (check = handler),
     });
     const answers: Record<string, boolean> = {};
-    for (const permission of ['media', 'speaker-selection', 'clipboard-sanitized-write', 'notifications'])
+    for (const permission of [
+      'media',
+      'speaker-selection',
+      'clipboard-sanitized-write',
+      'notifications',
+    ])
       request!(null, permission, (granted) => void (answers[permission] = granted));
     expect(answers).toEqual({
       media: false,

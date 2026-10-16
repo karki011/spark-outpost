@@ -16,6 +16,7 @@ import { SparksSection } from '../teammates/SparksSection.tsx';
 import { SparkAssistantSection } from './assistant/SparkAssistantSection.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
 import { MacControlSection, macControlAvailable } from './MacControlSection.tsx';
+import { VoiceSection, voiceAvailable } from './VoiceSection.tsx';
 import { ResetSection } from '../reset/ResetSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
 import { UpdatesSection, updatesAvailable } from './UpdatesSection.tsx';
@@ -32,6 +33,7 @@ export type SettingsSection =
   | 'usage'
   | 'projects'
   | 'mac'
+  | 'voice'
   | 'tools'
   | 'mcp'
   | 'look'
@@ -104,6 +106,13 @@ const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
         <rect x="3" y="4" width="18" height="12" rx="2" />
         <path d="M8 20h8M12 16v4M10.5 8.5l4 2-4 2z" />
       </>
+    ),
+  },
+  {
+    id: 'voice',
+    label: 'Voice',
+    icon: (
+      <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Zm-6 9a6 6 0 0 0 12 0M12 18v3" />
     ),
   },
   {
@@ -188,7 +197,8 @@ export function SettingsDialog({ section, onSection, onClose, onOpenChat }: Sett
   const sections = SECTIONS.filter(
     (entry) =>
       (entry.id !== 'updates' || updatesAvailable()) &&
-      (entry.id !== 'mac' || macControlAvailable()),
+      (entry.id !== 'mac' || macControlAvailable()) &&
+      (entry.id !== 'voice' || voiceAvailable()),
   );
   const title = sections.find((entry) => entry.id === section)?.label ?? '';
 
@@ -331,6 +341,7 @@ export function SettingsDialog({ section, onSection, onClose, onOpenChat }: Sett
                 {setup.data && section === 'mac' && macControlAvailable() && (
                   <MacControlSection profile={setup.data.profile} />
                 )}
+                {section === 'voice' && voiceAvailable() && <VoiceSection />}
                 {section === 'tools' && (
                   <>
                     <p className="lede">

@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import {
-  VOICE_SILERO,
   VOICE_WHISPER_BASE,
   voicePurposeSchema,
   type VoiceEvent,
@@ -12,7 +11,6 @@ import {
   type VoiceSettings,
   type VoiceStatus,
 } from '@spark-outpost/contracts';
-import { isAccelerator } from '../companion-settings.ts';
 import type { VoiceHelper } from './helper-process.ts';
 import { downloadModel, modelPath, modelPresent, type FetchModel } from './model.ts';
 
@@ -28,7 +26,6 @@ export interface VoiceEffects {
   fetch: FetchModel;
   register(accelerator: string, run: () => void): boolean;
   unregister(accelerator: string): void;
-  takenShortcuts(): string[];
   sendTo(owner: number, event: VoiceEvent): void;
   sendIsland(event: VoiceEvent): void;
   voiceOver(): boolean;
@@ -242,7 +239,8 @@ export function createVoice(effects: VoiceEffects) {
   helper.onExit(() => {
     loaded = null;
     if (model === 'ready') model = 'missing';
-    for (const [id, owner] of listens) effects.sendTo(owner, { kind: 'error', id, error: 'failed' });
+    for (const [id, owner] of listens)
+      effects.sendTo(owner, { kind: 'error', id, error: 'failed' });
     listens.clear();
     speaking = null;
     fnActive = false;
@@ -288,28 +286,21 @@ export function createVoice(effects: VoiceEffects) {
       return snapshot();
     },
 
-    async setShortcut(accelerator: string | null): Promise<{ ok: true } | { ok: false; error: string }> {
-      const next = accelerator ?? 'Alt+Shift+V';
-      if (!isAccelerator(next)) return { ok: false, error: 'That isn’t a shortcut Spark can use.' };
-      if (effects.takenShortcuts().includes(next))
-        return { ok: false, error: 'This shortcut already opens Spark Island.' };
-      commit({ ...settings, shortcut: next });
-      bindShortcut();
-      publish();
-      return shortcutFailed
-        ? { ok: false, error: 'Another app is using this shortcut. Pick a different one.' }
-        : { ok: true };
-    },
-
     shortcut: () => (settings.enabled ? settings.shortcut : null),
 
-    async listen(owner: number, purpose: unknown, hint: unknown, file: unknown): Promise<VoiceListenResult> {
+    async listen(
+      owner: number,
+      purpose: unknown,
+      hint: unknown,
+      file: unknown,
+    ): Promise<VoiceListenResult> {
       const parsed = voicePurposeSchema.safeParse(purpose);
       if (!settings.enabled || !parsed.success) return { ok: false, error: 'invalid' };
       if (file !== undefined && (!effects.allowFileInput || typeof file !== 'string'))
         return { ok: false, error: 'file_input_off' };
       if (listens.size > 0) return { ok: false, error: 'busy' };
-      if (file === undefined && effects.micStatus() !== 'granted') return { ok: false, error: 'mic_denied' };
+      if (file === undefined && effects.micStatus() !== 'granted')
+        return { ok: false, error: 'mic_denied' };
       if (!(await ensureLoaded())) return NOT_READY;
       speaking = null;
       const id = randomUUID();

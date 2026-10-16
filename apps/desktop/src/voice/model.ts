@@ -15,7 +15,11 @@ export async function modelPresent(dir: string, model: VoiceModelFile): Promise<
   return info?.isFile() === true && info.size === model.size;
 }
 
-async function write(file: string, body: ReadableStream<Uint8Array>, progress: (bytes: number) => void) {
+async function write(
+  file: string,
+  body: ReadableStream<Uint8Array>,
+  progress: (bytes: number) => void,
+) {
   const hash = createHash('sha256');
   const out = createWriteStream(file);
   let bytes = 0;
@@ -24,10 +28,13 @@ async function write(file: string, body: ReadableStream<Uint8Array>, progress: (
       hash.update(chunk);
       bytes += chunk.byteLength;
       progress(bytes);
-      if (!out.write(chunk)) await new Promise<void>((resolve) => out.once('drain', () => resolve()));
+      if (!out.write(chunk))
+        await new Promise<void>((resolve) => out.once('drain', () => resolve()));
     }
   } finally {
-    await new Promise<void>((resolve, reject) => out.end((error?: Error | null) => (error ? reject(error) : resolve())));
+    await new Promise<void>((resolve, reject) =>
+      out.end((error?: Error | null) => (error ? reject(error) : resolve())),
+    );
   }
   return { bytes, sha256: hash.digest('hex') };
 }

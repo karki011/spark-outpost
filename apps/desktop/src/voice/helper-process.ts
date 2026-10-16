@@ -16,7 +16,10 @@ export type SpawnVoiceHelper = () => ChildProcessWithoutNullStreams;
 
 export interface VoiceHelper {
   send(request: VoiceHelperRequest, id?: string): string;
-  ask(request: VoiceHelperRequest, done: (message: VoiceHelperMessage) => boolean): Promise<VoiceHelperMessage>;
+  ask(
+    request: VoiceHelperRequest,
+    done: (message: VoiceHelperMessage) => boolean,
+  ): Promise<VoiceHelperMessage>;
   onMessage(listener: (message: VoiceHelperMessage) => void): void;
   onExit(listener: () => void): void;
   running(): boolean;
@@ -45,7 +48,10 @@ export function startVoiceHelper(options: VoiceHelperOptions): VoiceHelper {
   const timeoutMs = options.timeoutMs ?? 60_000;
   const listeners: ((message: VoiceHelperMessage) => void)[] = [];
   const exits: (() => void)[] = [];
-  const asking = new Map<string, { done: (message: VoiceHelperMessage) => boolean; fail(error: Error): void }>();
+  const asking = new Map<
+    string,
+    { done: (message: VoiceHelperMessage) => boolean; fail(error: Error): void }
+  >();
   let child: ChildProcessWithoutNullStreams | null = null;
 
   const read = (line: string) => {
@@ -90,7 +96,10 @@ export function startVoiceHelper(options: VoiceHelperOptions): VoiceHelper {
   };
 
   const send = (request: VoiceHelperRequest, id = newId()) => {
-    const body = request.op === 'stop' || request.op === 'cancel' ? { op: request.op, id: request.id } : { ...request, id };
+    const body =
+      request.op === 'stop' || request.op === 'cancel'
+        ? { op: request.op, id: request.id }
+        : { ...request, id };
     ensure().stdin.write(`${JSON.stringify(body)}\n`);
     return body.id;
   };

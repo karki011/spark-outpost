@@ -27,7 +27,8 @@ export const VOICE_MICROPHONE_SETTINGS_URL =
   'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone';
 export const VOICE_INPUT_MONITORING_SETTINGS_URL =
   'x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent';
-export const VOICE_KEYBOARD_SETTINGS_URL = 'x-apple.systempreferences:com.apple.Keyboard-Settings.extension';
+export const VOICE_KEYBOARD_SETTINGS_URL =
+  'x-apple.systempreferences:com.apple.Keyboard-Settings.extension';
 
 export const VOICE_DEFAULT_SHORTCUT = 'Alt+Shift+V';
 

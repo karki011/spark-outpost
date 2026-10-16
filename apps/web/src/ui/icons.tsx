@@ -93,6 +93,12 @@ export function TerminalIcon() {
   return <StrokeIcon path="m5 8 4 4-4 4M11 17h8" />;
 }
 
+export function MicIcon() {
+  return (
+    <StrokeIcon path="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Zm-6 9a6 6 0 0 0 12 0M12 18v3" />
+  );
+}
+
 export function KeyIcon() {
   return <StrokeIcon path="M12 15a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm-1-3 9-9M17 6l3 3" />;
 }

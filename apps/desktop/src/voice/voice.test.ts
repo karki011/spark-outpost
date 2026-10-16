@@ -18,7 +18,9 @@ afterEach(async () => {
   await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
-async function setup(options: { model?: boolean; mic?: VoiceMicPermission; enabled?: boolean } = {}) {
+async function setup(
+  options: { model?: boolean; mic?: VoiceMicPermission; enabled?: boolean } = {},
+) {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'voice-'));
   dirs.push(dir);
   if (options.model !== false) {
@@ -51,7 +53,6 @@ async function setup(options: { model?: boolean; mic?: VoiceMicPermission; enabl
       return true;
     },
     unregister: (accelerator) => registered.delete(accelerator),
-    takenShortcuts: () => ['Alt+Space', 'Alt+Shift+Space'],
     sendTo: (owner, event) => sent.push({ owner, event }),
     sendIsland: (event) => island.push(event),
     voiceOver: () => false,
@@ -68,7 +69,10 @@ const settle = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms));
 describe('Voice', () => {
   it('stays off and holds no shortcut until it is turned on', async () => {
     const scene = await setup();
-    expect(await scene.voice.listen(1, 'command', '', undefined)).toEqual({ ok: false, error: 'invalid' });
+    expect(await scene.voice.listen(1, 'command', '', undefined)).toEqual({
+      ok: false,
+      error: 'invalid',
+    });
     expect(scene.registered.size).toBe(0);
     scene.voice.dispose();
   });
@@ -127,7 +131,10 @@ describe('Voice', () => {
     const scene = await setup({ enabled: true });
     const first = await scene.voice.listen(1, 'dictation', '', undefined);
     if (!first.ok) throw new Error('not listening');
-    expect(await scene.voice.listen(2, 'dictation', '', undefined)).toEqual({ ok: false, error: 'busy' });
+    expect(await scene.voice.listen(2, 'dictation', '', undefined)).toEqual({
+      ok: false,
+      error: 'busy',
+    });
     scene.voice.cancel(2, first.id);
     await settle(50);
     expect(scene.sent.some((entry) => entry.event.kind === 'cancelled')).toBe(false);
@@ -154,20 +161,11 @@ describe('Voice', () => {
     expect(id).not.toBeNull();
     scene.voice.press();
     await settle(50);
-    expect(scene.sent).toContainEqual({ owner: 1, event: { kind: 'spoken', id, interrupted: true } });
-    expect(scene.island).toEqual([{ kind: 'press' }]);
-    scene.voice.dispose();
-  });
-
-  it('keeps the Voice shortcut apart from the island shortcuts', async () => {
-    const scene = await setup({ enabled: true });
-    await scene.voice.start();
-    expect(await scene.voice.setShortcut('Alt+Space')).toEqual({
-      ok: false,
-      error: 'This shortcut already opens Spark Island.',
+    expect(scene.sent).toContainEqual({
+      owner: 1,
+      event: { kind: 'spoken', id, interrupted: true },
     });
-    expect(await scene.voice.setShortcut('Control+Alt+V')).toEqual({ ok: true });
-    expect([...scene.registered.keys()]).toEqual(['Control+Alt+V']);
+    expect(scene.island).toEqual([{ kind: 'press' }]);
     scene.voice.dispose();
   });
 
@@ -188,7 +186,10 @@ describe('Voice', () => {
     const result = await scene.voice.listen(4, 'dictation', '', undefined);
     if (!result.ok) throw new Error('not listening');
     scene.helper.kill();
-    expect(scene.sent.at(-1)).toEqual({ owner: 4, event: { kind: 'error', id: result.id, error: 'failed' } });
+    expect(scene.sent.at(-1)).toEqual({
+      owner: 4,
+      event: { kind: 'error', id: result.id, error: 'failed' },
+    });
     expect((await scene.voice.listen(4, 'command', '', undefined)).ok).toBe(true);
     scene.voice.dispose();
   });
