@@ -7,7 +7,7 @@ import {
   helperEventSchema,
 } from './calendar-helper.ts';
 
-export const CALENDAR_REQUEST_TIMEOUT_MS = 120_000;
+export const CALENDAR_REQUEST_TIMEOUT_MS = 10 * 60_000;
 
 const occurrence = {
   eventId: z.string().min(1).max(500),
