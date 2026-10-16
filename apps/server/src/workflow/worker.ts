@@ -9,7 +9,7 @@ import { runChatTurn } from './chat-turn.ts';
 import type { ChatTurnDeps } from './chat-turn-hooks.ts';
 import { recoverExpiredLeases } from './recovery.ts';
 import { sweepSessions } from './turn-session.ts';
-import { assistantIdleCompaction } from '../companion/assistant-idle.ts';
+import { assistantIdleCompaction, type IdleLimits } from '../companion/assistant-idle.ts';
 import type { ParkedTurns } from './parked-turns.ts';
 import { chatTarget, drainQueue, drainWaiting, type ResolveTarget } from './queue-drain.ts';
 
@@ -20,7 +20,7 @@ export interface WorkerOptions extends ChatTurnDeps {
   activeWork?: ActiveWork;
   queueTarget?: ResolveTarget;
   parked?: ParkedTurns;
-  assistantIdleMs?: number;
+  assistantIdleLimits?: IdleLimits;
 }
 
 export interface Worker {
@@ -54,7 +54,7 @@ function queueTarget(options: WorkerOptions): ResolveTarget {
 export function startWorker(given: WorkerOptions): Worker {
   const assistantIdle =
     given.assistantIdle ??
-    assistantIdleCompaction(given.db, given.providers, given.assistantIdleMs);
+    assistantIdleCompaction(given.db, given.providers, given.assistantIdleLimits);
   const options = { ...given, assistantIdle };
   const active = new Set<Promise<void>>();
   let stopped = false;

@@ -11,12 +11,17 @@ import { sessionCommands } from '../persistence/session-commands.ts';
 import { compactionThresholds } from '../persistence/setup.ts';
 import type { Provider } from '../providers/provider.ts';
 import { compactInSession, offersCompact } from '../compaction/agent-compact.ts';
-import { agentCompactWorked, readingOf, usedPercent } from '../compaction/policy.ts';
+import { agentCompactWorked, readingOf } from '../compaction/policy.ts';
+import { kilo } from '../agents/acp/long-context.ts';
 import { loadRunInput } from '../workflow/run-input.ts';
 import { recordAssistantEvent } from './assistant-events.ts';
 
-export const ASSISTANT_IDLE_COMPACT_MS = 15 * 60_000;
-export const ASSISTANT_IDLE_COMPACT_PERCENT = 20;
+export interface IdleLimits {
+  idleMs: number;
+  minTokens: number;
+}
+
+export const ASSISTANT_IDLE_LIMITS: IdleLimits = { idleMs: 15 * 60_000, minTokens: 40_000 };
 
 export interface IdleFacts {
   lastAnsweredAt: Date | null;
@@ -26,11 +31,11 @@ export interface IdleFacts {
   reading: ContextReading | null;
 }
 
-export function idleCompactDue(facts: IdleFacts, now: Date, idleMs: number): boolean {
+export function idleCompactDue(facts: IdleFacts, now: Date, limits: IdleLimits): boolean {
   if (facts.busy || facts.compactedSince || !facts.autoCompact) return false;
   if (!facts.lastAnsweredAt || !facts.reading) return false;
-  if (now.getTime() - facts.lastAnsweredAt.getTime() < idleMs) return false;
-  return usedPercent(facts.reading) >= ASSISTANT_IDLE_COMPACT_PERCENT;
+  if (now.getTime() - facts.lastAnsweredAt.getTime() < limits.idleMs) return false;
+  return facts.reading.used >= limits.minTokens;
 }
 
 export interface AssistantIdleCompaction {
@@ -102,7 +107,10 @@ async function compactIdle(
     ignore,
     new AbortController().signal,
   );
-  if (!compacted || !agentCompactWorked(reading, compacted.after)) return;
+  if (!compacted || !agentCompactWorked(reading, compacted.after)) {
+    console.error(`Ask Spark's idle compaction did not shrink its context (run ${row.run_id})`);
+    return;
+  }
   await recordCompacted(db, session.id, compacted.after);
   await insertCompaction(db, {
     conversationId: row.conversation_id,
@@ -120,17 +128,19 @@ async function compactIdle(
     db,
     row.workspace_id,
     'compacted_idle',
-    `${usedPercent(reading)}% → ${usedPercent(compacted.after)}%`,
+    `${kilo(reading.used)} → ${kilo(compacted.after.used)} tokens`,
   );
 }
 
 export function assistantIdleCompaction(
   db: Db,
   providers: ReadonlyMap<string, Provider>,
-  idleMs = ASSISTANT_IDLE_COMPACT_MS,
+  limits: IdleLimits = ASSISTANT_IDLE_LIMITS,
 ): AssistantIdleCompaction {
   const running = new Map<string, Promise<void>>();
+  const tried = new Map<string, string>();
   const consider = async (row: IdleRow, now: Date) => {
+    if (tried.get(row.conversation_id) === row.run_id) return;
     const session = sessionFor(await openChatSessions(db, row.conversation_id), row.provider);
     const reading = session ? readingOf(session.contextUsed, session.contextSize) : null;
     const thresholds = await compactionThresholds(db, row.workspace_id);
@@ -141,7 +151,8 @@ export function assistantIdleCompaction(
       autoCompact: thresholds.autoCompact,
       reading,
     };
-    if (!session || !reading || !idleCompactDue(facts, now, idleMs)) return;
+    if (!session || !reading || !idleCompactDue(facts, now, limits)) return;
+    tried.set(row.conversation_id, row.run_id);
     const work = compactIdle(db, providers, row, session, reading)
       .catch((error: unknown) => console.error('Could not compact Ask Spark while idle', error))
       .finally(() => running.delete(row.conversation_id));

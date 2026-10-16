@@ -58,6 +58,7 @@ const configSchema = z.object({
     .int()
     .min(1)
     .default(15 * 60),
+  ASSISTANT_IDLE_COMPACT_TOKENS: z.coerce.number().int().min(0).default(40_000),
   AUDIT_RETENTION_DAYS: z.coerce.number().int().min(1).default(90),
   OUTCOME_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.2),
   AGENT_RUNTIME: z.enum(['acp', 'fake']).default('acp'),
