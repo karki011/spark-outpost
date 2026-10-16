@@ -29,13 +29,41 @@ import Testing
         #expect(scene.events.last == .final(text: "part1 part2 part3", reason: .stopped))
     }
 
-    @Test func thirtySecondsWithNoSpeechStops() {
+    @Test func thirtySecondsWithNoSpeechStopsADictation() {
         let scene = Scene().loaded()
         scene.send(#"{"id":"q","op":"listen","purpose":"dictation"}"#)
         scene.play(frames(seconds: 29.5, speech: false))
         #expect(scene.events.isEmpty)
         scene.play(frames(seconds: 1, speech: false))
         #expect(scene.events == [.final(text: "", reason: .silence)])
+    }
+
+    @Test func threeSecondsWithNoSpeechStopsACommand() {
+        let scene = Scene().loaded()
+        scene.send(#"{"id":"c","op":"listen","purpose":"command"}"#)
+        scene.play(frames(seconds: 2.9, speech: false))
+        #expect(scene.events.isEmpty)
+        scene.play(frames(seconds: 0.2, speech: false))
+        #expect(scene.events == [.final(text: "", reason: .silence)])
+        #expect(!scene.engine.isListening)
+    }
+
+    @Test func threeSecondsWithNoSpeechStopsAConfirm() {
+        let scene = Scene().loaded()
+        scene.send(#"{"id":"y","op":"listen","purpose":"confirm"}"#)
+        scene.play(frames(seconds: 3.1, speech: false))
+        #expect(scene.events == [.final(text: "", reason: .silence)])
+    }
+
+    @Test func aCommandSpokenAfterTwoSilentSecondsStillEndsOnItsPause() {
+        let scene = Scene().loaded()
+        scene.send(#"{"id":"c","op":"listen","purpose":"command"}"#)
+        scene.play(frames(seconds: 2.5, speech: false))
+        scene.play(frames(seconds: 1, speech: true))
+        scene.play(frames(seconds: 1.4, speech: false))
+        #expect(scene.events == [.speech])
+        scene.play(frames(seconds: 0.2, speech: false))
+        #expect(scene.events == [.speech, .final(text: "part1", reason: .paused)])
     }
 
     @Test func thirtySecondsAfterTheLastSpeechStopsADictation() {
