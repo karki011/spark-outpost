@@ -97,6 +97,7 @@ export * from './browser-bridge.ts';
 export * from './mac-control.ts';
 export * from './mac-control-bridge.ts';
 export * from './mac-control-helper.ts';
+export * from './voice.ts';
 export * from './sign-ins.ts';
 export * from './preview.ts';
 export * from './ui-touch.ts';

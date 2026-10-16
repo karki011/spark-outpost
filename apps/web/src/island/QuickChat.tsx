@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import type { TicketSourceId } from '@spark-outpost/contracts';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   AUTONOMY_LEVELS,
@@ -21,6 +22,11 @@ import { ProjectMenu } from './ProjectMenu.tsx';
 import { AttachmentChips } from '../chat/attachments/AttachmentChips.tsx';
 import type { AttachmentsState } from '../chat/attachments/use-attachments.ts';
 import type { useAddProject } from './use-add-project.ts';
+import { ticketsApi } from '../tickets/tickets-api.ts';
+import type { TicketRef } from '../voice/commands.ts';
+import { MicButton } from '../voice/MicButton.tsx';
+import { useSeed } from '../voice/speech-seed.tsx';
+import { joinDictation } from '../voice/use-dictation.ts';
 
 export interface QuickDraft {
   text: string;
@@ -74,6 +80,8 @@ export function QuickChat(props: QuickChatProps) {
   const setMenu = (open: boolean) => setMenuAt(open ? (added?.signal ?? 0) : null);
   const secrets = useSecretGuard(draft.text);
   const defaults = useDefaults();
+  const [ticket, setTicket] = useState<TicketRef | null>(null);
+  const [moveTicket, setMoveTicket] = useState(true);
   const level = draft.level ?? defaults.level ?? DEFAULT_INVOLVEMENT_LEVEL;
   const levelInfo = AUTONOMY_LEVELS.find((info) => info.id === level) ?? AUTONOMY_LEVELS[0]!;
   const project =
@@ -104,11 +112,23 @@ export function QuickChat(props: QuickChatProps) {
         projectIds: draft.projectId ? [draft.projectId] : [],
         level,
       });
+      if (ticket?.source) {
+        const started = await ticketsApi.start(ticket.source as TicketSourceId, ticket.key, {
+          conversationId: draftId,
+          messageId: crypto.randomUUID(),
+          ...(draft.projectId ? { projectId: draft.projectId } : {}),
+          note: content,
+          moveToInProgress: moveTicket,
+          attachmentIds,
+        });
+        return { id: started.conversationId, title: `${ticket.key} ${started.ticket.title}` };
+      }
       await api.sendMessage(draftId, crypto.randomUUID(), content, attachmentIds);
       return { id: draftId, title: titleFromMessage(content) };
     },
     onSuccess: ({ id, title }) => {
       onDraft({ ...draft, text: '' });
+      setTicket(null);
       attachments.clear();
       onSent(id, title, project?.name ?? null);
     },
@@ -125,6 +145,16 @@ export function QuickChat(props: QuickChatProps) {
     event.preventDefault();
     submit();
   };
+
+  useSeed(
+    'quick',
+    (seed) => {
+      onDraft({ ...draft, text: seed.text, projectId: seed.projectId });
+      setTicket(seed.ticket);
+      setMoveTicket(true);
+    },
+    submit,
+  );
 
   const pick = (id: string | null) => {
     onDraft({ ...draft, projectId: id });
@@ -175,6 +205,34 @@ export function QuickChat(props: QuickChatProps) {
           onText={(text) => onDraft({ ...draft, text })}
           onSendAnyway={submit}
         />
+        {ticket && !followUp && (
+          <div className="isl-qctx">
+            <span className="isl-chip static">
+              {ticket.key}
+              {ticket.title ? ` ${ticket.title}` : ''}
+              <button
+                type="button"
+                className="isl-btn link"
+                aria-label={`Remove ticket ${ticket.key}`}
+                onClick={() => setTicket(null)}
+              >
+                ×
+              </button>
+            </span>
+            {ticket.source ? (
+              <label>
+                <input
+                  type="checkbox"
+                  checked={moveTicket}
+                  onChange={(event) => setMoveTicket(event.target.checked)}
+                />{' '}
+                Move to In Progress
+              </label>
+            ) : (
+              <span className="isl-sub">Not in a connected tracker; sends as a plain chat</span>
+            )}
+          </div>
+        )}
         <label className="sr-only" htmlFor="isl-qc-text">
           Message
         </label>
@@ -238,6 +296,10 @@ export function QuickChat(props: QuickChatProps) {
           <span className="isl-qc-hint">
             {send.isPending ? 'Sending…' : attachments.uploading ? 'Uploading…' : ''}
           </span>
+          <MicButton
+            className="isl-chip"
+            onText={(heard) => onDraft({ ...draft, text: joinDictation(draft.text, heard) })}
+          />
           <button
             type="button"
             className="isl-send"

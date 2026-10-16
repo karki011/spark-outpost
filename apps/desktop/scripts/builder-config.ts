@@ -12,6 +12,7 @@ import { HEARTBEAT_URL_ENV, heartbeatUrl } from '../src/heartbeat.ts';
 import { SLACK_CLIENT_ID_ENV, slackClientId } from '../src/slack-sign-in.ts';
 import { checkTmuxBinary } from './tmux-bundle.ts';
 import { MAC_CONTROL_BINARY, macControlCheck } from './mac-control-bundle.ts';
+import { checkStagedVoice } from './voice-bundle.ts';
 
 export const UPDATE_FEED_ENV = 'SPARK_UPDATE_FEED_URL';
 const UPDATE_FEED_URL = '';
@@ -21,6 +22,9 @@ const GITHUB_APP_SLUG = 'spark-outpost';
 const SLACK_CLIENT_ID = '';
 
 export type MacArch = 'x64' | 'arm64';
+
+export const MICROPHONE_USAGE =
+  'Spark Outpost listens only while you press the Voice shortcut or the mic button, and turns your speech into text on this Mac.';
 
 export interface SigningPlan {
   adHoc: boolean;
@@ -131,6 +135,8 @@ async function copyRuntime(stageDir: string, arch: MacArch, resources: string): 
   await checkTmuxBinary(path.join(resources, 'tmux/bin/tmux'), arch);
   await copy(path.join(stageDir, arch, 'mac-control'), 'mac-control');
   await macControlCheck(path.join(resources, 'mac-control/bin', MAC_CONTROL_BINARY), arch);
+  await copy(path.join(stageDir, arch, 'voice'), 'voice');
+  await checkStagedVoice(path.join(resources, 'voice'), arch);
 }
 
 export interface BuilderOptions {
@@ -189,6 +195,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
       entitlements: options.entitlements,
       entitlementsInherit: options.entitlements,
       minimumSystemVersion: '12.0',
+      extendInfo: { NSMicrophoneUsageDescription: MICROPHONE_USAGE },
     },
     dmg: { writeUpdateInfo: false, sign: !signing.adHoc },
   };

@@ -17,6 +17,8 @@ import { useTerminalLinks } from './use-terminal-links.tsx';
 import { nativeTerminalApi, nativeTerminalKey } from './terminal-api.ts';
 import { shownSession, terminalEnded, terminalRelaunch } from './native-state.ts';
 import { TerminalBar, type TerminalLink } from './TerminalBar.tsx';
+import { TerminalDictation } from '../voice/TerminalDictation.tsx';
+import { terminalAgentName } from './terminal-agents.ts';
 import { TerminalMenu } from './TerminalMenu.tsx';
 import { TerminalScreen } from './TerminalScreen.tsx';
 import { RemoteTerminalView } from './remote/RemoteTerminalView.tsx';
@@ -159,6 +161,9 @@ export function NativeTerminalWorkspace({
           >
             {relaunch === 'resume' ? 'Resume session' : 'Start again'}
           </button>
+        )}
+        {native && !ended && (
+          <TerminalDictation chatId={chat.id} agentName={terminalAgentName(native.provider)} />
         )}
         <TerminalMenu
           buttonRef={menuButton}

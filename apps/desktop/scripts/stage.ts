@@ -11,6 +11,7 @@ import { collect, pruneRuntime, pruneServer } from './prune.ts';
 import { checkPostgresStarts, postgresNativeDir, prunePostgres } from './prune-postgres.ts';
 import { stageTmux } from './tmux-bundle.ts';
 import { buildMacControl, stageMacControl } from './mac-control-bundle.ts';
+import { buildVoice, stageVoice } from './voice-bundle.ts';
 
 const run = promisify(execFile);
 
@@ -74,6 +75,7 @@ async function stageArch(stageDir: string, arch: MacArch): Promise<void> {
   });
   await stageTmux(await buildTmux(repoRoot, arch), arch, archDir);
   await stageMacControl(await buildMacControl(repoRoot, arch), arch, archDir);
+  await stageVoice(await buildVoice(repoRoot, arch), arch, archDir);
 }
 
 async function stageApp(stageDir: string, version: string): Promise<void> {

@@ -11,6 +11,9 @@ import { AskThinking } from './AskThinking.tsx';
 import { islandApi, islandKeys } from './island-api.ts';
 import { queueApi } from '../chat/queue/queue-api.ts';
 import { plainLine } from './plain-line.ts';
+import { MicButton } from '../voice/MicButton.tsx';
+import { useSeed, useSpeechSeeds } from '../voice/speech-seed.tsx';
+import { joinDictation } from '../voice/use-dictation.ts';
 
 interface Exchange {
   id: string;
@@ -154,8 +157,37 @@ export function AskSpark({ fast, voice, focusDelay, onOpenChat }: AskSparkProps)
     submit();
   };
 
+  const { speak } = useSpeechSeeds();
+  const spokenQuestion = useRef<string | null>(null);
+  const seed = useSeed(
+    'ask',
+    (next) => {
+      if (next.answer) {
+        const { text: answer, chats } = next.answer;
+        setInstant((list) => [
+          ...list,
+          { id: crypto.randomUUID(), question: next.question, answer, chats, instant: true },
+        ]);
+        return;
+      }
+      setText(next.question);
+      inputRef.current?.focus({ preventScroll: true });
+    },
+    () => {
+      spokenQuestion.current = text.trim();
+      submit();
+    },
+  );
+
   const asked = modelExchanges(assistant.detail);
   const shown = [...asked, ...stillWaiting(waiting, asked), ...instant].slice(-HISTORY);
+  const latestAnswer = shown.at(-1);
+  useEffect(() => {
+    if (!latestAnswer?.answer || latestAnswer.instant || !spokenQuestion.current) return;
+    if (latestAnswer.question.trim() !== spokenQuestion.current) return;
+    spokenQuestion.current = null;
+    speak(plainLine(latestAnswer.answer));
+  }, [latestAnswer, speak]);
   const cheer = useCheer(thinking, shown.at(-1)?.answer ? shown.at(-1)!.id : null);
   const step = run?.step ? plainLine(run.step) : null;
   return (
@@ -220,8 +252,16 @@ export function AskSpark({ fast, voice, focusDelay, onOpenChat }: AskSparkProps)
           onKeyDown={onKeyDown}
         />
         <div className="isl-qc-bar">
-          <span className="isl-qc-hint">Answers use the Spark assistant model</span>
+          <span className="isl-qc-hint">
+            {seed && !seed.answer && text.trim() === seed.question
+              ? 'Enter to ask, or press the Voice shortcut and say “send”'
+              : 'Answers use the Spark assistant model'}
+          </span>
           <span className="isl-sp" />
+          <MicButton
+            className="isl-chip"
+            onText={(heard) => setText((now) => joinDictation(now, heard))}
+          />
           <button
             type="button"
             className="isl-send"

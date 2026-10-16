@@ -74,6 +74,10 @@ export const MAC_CONTROL_ICON = (
   </>
 );
 
+export const VOICE_ICON = (
+  <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Zm-6 9a6 6 0 0 0 12 0M12 18v3" />
+);
+
 export const NOTIFICATIONS_ICON = (
   <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15ZM10 20.5a2.2 2.2 0 0 0 4 0" />
 );

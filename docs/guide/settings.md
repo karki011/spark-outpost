@@ -13,6 +13,7 @@ Select **Settings** at the bottom of the rail. **Search settings** finds a secti
 | Section                   | Holds                                                                                                     | Read more                                                |
 | ------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | **Profile & personality** | **What should Spark call you?** and **Personality** (**Friendly**).                                       | [Set up](getting-started.md#meet-spark-and-pick-a-theme) |
+| **Voice**                 | Mac app: push to talk.                                                                                    | [Talk to Spark](voice.md)                                |
 | **Appearance**            | The theme, **Graphite** by default. Terminals use [SF Mono](https://developer.apple.com/fonts/) or Menlo. | [Set up](getting-started.md#meet-spark-and-pick-a-theme) |
 
 ### Spark assistant
