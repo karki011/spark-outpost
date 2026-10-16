@@ -1,9 +1,10 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import type { VoiceFnSetting, VoiceStatus } from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { CheckIcon } from '../ui/icons.tsx';
 import { desktopSpeech, useSpeechStatusState } from '../voice/speech-bridge.ts';
 import { SettingRow } from './SettingRow.tsx';
+import { useSettingFocus } from './setting-focus.ts';
 import '../providers/providers.css';
 import './full-disk-access.css';
 import './mac-control.css';
@@ -34,7 +35,18 @@ const SPEAK_INFO = {
   items: [{ label: 'Stop', text: 'Esc or a new press stops it before the mic opens.' }],
 };
 
-export const VOICE_ROWS = ['Voice', 'Shortcut', 'Hold to talk', 'Speak answers'] as const;
+const SHORTCUT_LABEL = 'Shortcut';
+const HOLD_LABEL = 'Hold to talk';
+
+export const VOICE_ROWS = ['Voice', SHORTCUT_LABEL, HOLD_LABEL, 'Speak answers'] as const;
+
+const SHOWN_WHEN_OFF: readonly string[] = [SHORTCUT_LABEL, HOLD_LABEL];
+const SHOWN_WITH_FN: readonly string[] = [HOLD_LABEL];
+
+function hiddenRows(on: boolean, fn: boolean): readonly string[] | undefined {
+  if (!on) return SHOWN_WHEN_OFF;
+  return fn ? undefined : SHOWN_WITH_FN;
+}
 
 export function voiceAvailable(): boolean {
   return desktopSpeech() !== null;
@@ -64,6 +76,7 @@ function Switch(props: {
   checked: boolean;
   disabled?: boolean;
   info: typeof SPEAK_INFO;
+  standsFor?: readonly string[] | undefined;
   onChange: (on: boolean) => void;
 }) {
   const id = useId();
@@ -75,6 +88,7 @@ function Switch(props: {
       info={props.info}
       hint={props.hint}
       hintId={hintId}
+      standsFor={props.standsFor}
     >
       <BlobToggle
         kind="plain"
@@ -99,16 +113,19 @@ function Shortcut({
   const speech = desktopSpeech()!;
   const fn = status.settings.shortcutMode === 'fn';
   const blocked = status.fnSetting !== 'free';
+  const card = useRef<HTMLElement>(null);
+  const choices = useRef<HTMLDivElement>(null);
+  useSettingFocus(SHORTCUT_LABEL, card, choices);
   return (
-    <section className="pcard fda-card" aria-label="Voice shortcut">
+    <section ref={card} className="pcard fda-card" aria-label="Voice shortcut">
       <div className="pc-head">
         <span className="nm">
-          <b>Shortcut</b>
+          <b>{SHORTCUT_LABEL}</b>
           <small>Press to start, press again to stop</small>
         </span>
       </div>
       <div className="pc-body">
-        <div className="mac-actions" role="radiogroup" aria-label="Voice shortcut">
+        <div ref={choices} className="mac-actions" role="radiogroup" aria-label="Voice shortcut">
           <label>
             <input
               type="radio"
@@ -228,6 +245,7 @@ export function VoiceSection() {
       <Switch
         label="Voice"
         info={VOICE_INFO}
+        standsFor={hiddenRows(on, status.settings.shortcutMode === 'fn')}
         checked={on}
         disabled={busy || missing}
         hint={
@@ -243,7 +261,7 @@ export function VoiceSection() {
       {on && <Shortcut status={status} onStatus={take} />}
       {on && status.settings.shortcutMode === 'fn' && (
         <Switch
-          label="Hold to talk"
+          label={HOLD_LABEL}
           info={{
             lead: 'Listen while the second Fn press is held, and stop when you let go.',
             items: [],

@@ -94,6 +94,37 @@ test('Settings search finds the Voice rows under General', async ({ page }) => {
   await expect(dialog.getByRole('switch', { name: 'Speak answers' })).toBeFocused();
 });
 
+async function searchVoice(page: Page, label: string) {
+  const search = page.getByRole('combobox', { name: 'Search settings' });
+  await search.fill(label);
+  const option = page
+    .getByRole('listbox', { name: 'Matching settings' })
+    .getByRole('option', { name: new RegExp(`^${label}`) });
+  await expect(option).toContainText('General · Voice');
+  await search.press('Enter');
+  return page.getByRole('dialog', { name: 'Voice' });
+}
+
+for (const enabled of [false, true]) {
+  test(`Settings search lands on a control for Shortcut and Hold to talk with Voice ${enabled ? 'on' : 'off'}`, async ({
+    page,
+  }) => {
+    await resetTestDatabase({ onboarded: true });
+    await installFakeVoice(page, { enabled });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const voiceSwitch = (dialog: ReturnType<Page['getByRole']>) =>
+      dialog.getByRole('switch', { name: 'Voice', exact: true });
+
+    const shortcut = await searchVoice(page, 'Shortcut');
+    if (enabled) await expect(shortcut.getByRole('radio', { name: 'Use ⌥⇧V' })).toBeFocused();
+    else await expect(voiceSwitch(shortcut)).toBeFocused();
+
+    const hold = await searchVoice(page, 'Hold to talk');
+    await expect(voiceSwitch(hold)).toBeFocused();
+  });
+}
+
 test('a spoken new chat opens prefilled and starts nothing until "send"', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await installFakeVoice(page);
