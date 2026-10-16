@@ -30,6 +30,7 @@ const PRIMARY = ['Home', 'Chats', 'Analytics', 'Tickets', 'Docs'];
 const UNDER_MORE = ['Remote control'];
 const SECTIONS = [
   'Profile & personality',
+  'Spark assistant',
   'Appearance',
   'AI providers',
   'Models',

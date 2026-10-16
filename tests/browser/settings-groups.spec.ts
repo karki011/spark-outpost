@@ -50,6 +50,7 @@ test('the sections sit under six groups, each tab described by its group', async
   ]);
   await expect(sections(page).getByRole('tab')).toHaveText([
     'Profile & personality',
+    'Spark assistant',
     'Appearance',
     /^AI providers/,
     'Models',
@@ -99,6 +100,16 @@ test('search finds Morning brief and opens Notifications focused on it', async (
   );
   await page.keyboard.press('Tab');
   await expect(dialog.locator('[data-found]')).toHaveCount(0);
+});
+
+test('search finds a Spark assistant row under General', async ({ page }) => {
+  await openSettingsDialog(page);
+  await search(page).fill('key facts');
+  const option = results(page).getByRole('option', { name: /^Key facts/ });
+  await expect(option).toContainText('General · Spark assistant');
+  await search(page).press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Spark assistant' });
+  await expect(dialog.locator('.set-row[data-found]')).toContainText('Key facts');
 });
 
 test('the search works from the keyboard', async ({ page }) => {
