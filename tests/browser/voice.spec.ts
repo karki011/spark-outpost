@@ -86,7 +86,12 @@ test('a spoken new chat opens prefilled and starts nothing until "send"', async 
   const listen = await press(page);
   expect(listen.purpose).toBe('command');
   await expect(island(page).getByText('Listening… Esc to cancel')).toBeVisible();
-  await emitVoice(page, { kind: 'final', id: listen.id, text: 'Start a chat in feature web apps to add creator email.', reason: 'paused' });
+  await emitVoice(page, {
+    kind: 'final',
+    id: listen.id,
+    text: 'Start a chat in feature web apps to add creator email.',
+    reason: 'paused',
+  });
   const box = island(page).getByRole('textbox', { name: 'Message' });
   await expect(box).toHaveValue('add creator email');
   await expect(island(page).getByRole('button', { name: 'feature-web-apps' })).toBeVisible();

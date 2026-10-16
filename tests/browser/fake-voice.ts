@@ -58,7 +58,13 @@ export async function installFakeVoice(page: Page, options: FakeVoiceOptions = {
         companion: { get: async () => null, onChange: none },
         updates: { get: async () => null, onChange: none },
         island: {
-          geometry: async () => ({ notch: false, top: 24, notchWidth: 0, docked: true, menuBar: 24 }),
+          geometry: async () => ({
+            notch: false,
+            top: 24,
+            notchWidth: 0,
+            docked: true,
+            menuBar: 24,
+          }),
           onGeometry: none,
           onCommand: none,
           onEscape: none,

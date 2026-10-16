@@ -289,6 +289,10 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/web/src/terminal/', groups: ['terminal-preview-browser'] },
   { prefix: 'apps/web/src/tickets/', groups: ['tickets'] },
   { prefix: 'apps/web/src/usage/', groups: ['chat', 'analytics-audit'] },
+  {
+    prefix: 'apps/web/src/voice/',
+    groups: ['island-desktop', 'chat', 'terminal-preview-browser', 'settings-providers'],
+  },
   { prefix: 'apps/server/src/a2a/', groups: ['outposts'] },
   { prefix: 'apps/server/src/advisor/', groups: ['map', 'ship-pr', 'home'] },
   { prefix: 'apps/server/src/agent-config/', groups: ['approvals'] },

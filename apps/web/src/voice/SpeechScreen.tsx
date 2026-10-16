@@ -121,7 +121,9 @@ export function SpeechScreen({ screen }: { screen: SpeechScreenModel }) {
             </button>
           </div>
         )}
-        {notice === 'missed' && <p className="speech-heard">Press the Voice shortcut to try again.</p>}
+        {notice === 'missed' && (
+          <p className="speech-heard">Press the Voice shortcut to try again.</p>
+        )}
       </div>
     );
   }

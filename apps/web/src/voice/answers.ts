@@ -5,7 +5,7 @@ import {
   type FastChat,
   type FastState,
 } from '../island/ask-fast-path.ts';
-import type { FastQuestion, TicketRef } from './commands.ts';
+import type { TicketRef } from './commands.ts';
 
 export interface InstantAnswer {
   text: string;
@@ -69,19 +69,4 @@ export function ticketStatusAnswer(ticket: InboxTicket): InstantAnswer {
 
 export function lookedUpAnswer(ref: TicketRef, title: string, statusName: string): InstantAnswer {
   return { text: `${ref.key} ${title} is ${statusName}.`, chats: [] };
-}
-
-export function questionText(question: FastQuestion, ticket: TicketRef | null): string {
-  switch (question) {
-    case 'needs':
-      return 'Who needs me?';
-    case 'running':
-      return 'What’s running?';
-    case 'spend':
-      return 'What did I spend today?';
-    case 'tickets':
-      return 'What tickets do I have pending?';
-    case 'ticket_status':
-      return `What’s the status of ${ticket?.key ?? 'that ticket'}?`;
-  }
 }

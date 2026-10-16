@@ -345,5 +345,3 @@ export function createVoice(effects: VoiceEffects) {
     },
   };
 }
-
-export type Voice = ReturnType<typeof createVoice>;
