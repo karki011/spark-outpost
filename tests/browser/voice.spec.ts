@@ -45,7 +45,7 @@ test('Voice is not offered without the Mac app', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.getByRole('dialog', { name: 'Spark' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Profile & personality' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Voice' })).toHaveCount(0);
 });
 
@@ -76,6 +76,22 @@ test('Settings: Voice starts off, Speak answers starts off, turning on asks the 
   await expect(settings.getByRole('switch', { name: 'Speak answers' })).toBeChecked();
   const ops = (await voiceCalls(page)).map((call) => call.op);
   expect(ops).toEqual(['turnOn', 'update', 'openSettings', 'update']);
+});
+
+test('Settings search finds the Voice rows under General', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await installFakeVoice(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const search = page.getByRole('combobox', { name: 'Search settings' });
+  await search.fill('Speak answers');
+  const option = page
+    .getByRole('listbox', { name: 'Matching settings' })
+    .getByRole('option', { name: /^Speak answers/ });
+  await expect(option).toContainText('General · Voice');
+  await search.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Voice' });
+  await expect(dialog.getByRole('switch', { name: 'Speak answers' })).toBeFocused();
 });
 
 test('a spoken new chat opens prefilled and starts nothing until "send"', async ({ page }) => {
