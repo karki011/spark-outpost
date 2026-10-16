@@ -208,6 +208,7 @@ export async function assistantView(
     session: await sessionOf(db, prefs.conversation_id, target?.provider ?? null),
     facts: await listFacts(db, workspaceId),
     notice: prefs.notice,
+    busy: await answering(db, prefs.conversation_id),
   };
 }
 
@@ -251,6 +252,20 @@ export async function saveAssistantSettings(
   return assistantView(db, workspaceId);
 }
 
+export const ASSISTANT_BUSY = 'Wait for Ask Spark to finish answering first.';
+
+async function answering(db: Queryable, conversationId: string | null): Promise<boolean> {
+  if (!conversationId) return false;
+  const { rows } = await db.query<{ busy: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM runs WHERE conversation_id = $1
+         AND status IN ('queued', 'running', 'awaiting_approval')
+     ) OR EXISTS (SELECT 1 FROM chat_queue WHERE conversation_id = $1) AS busy`,
+    [conversationId],
+  );
+  return rows[0]?.busy === true;
+}
+
 export async function clearAssistantHistory(
   db: Queryable,
   workspaceId: string,
@@ -259,6 +274,9 @@ export async function clearAssistantHistory(
   const prefs = await prefsRow(db, workspaceId);
   if (!prefs) throw new AssistantSettingsError('Finish setting up Spark first.');
   if (prefs.conversation_id) {
+    await db.query('SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE', [prefs.conversation_id]);
+    if (await answering(db, prefs.conversation_id))
+      throw new AssistantSettingsError(ASSISTANT_BUSY);
     await closeConversationSessions(
       db,
       workspaceId,

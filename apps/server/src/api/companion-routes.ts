@@ -80,7 +80,11 @@ export function companionRoutes(deps: CompanionRouteDeps): Router {
 
   router.post('/spark-assistant/clear', async (req, res) => {
     const options = parseBody(clearAssistantRequestSchema, req);
-    await answer(res, () => clearAssistantHistory(deps.db, deps.workspaceId, options));
+    await answer(res, () =>
+      withTransaction(deps.db, (client) =>
+        clearAssistantHistory(client, deps.workspaceId, options),
+      ),
+    );
   });
 
   router.delete('/spark-assistant/facts/:id', async (req, res) => {

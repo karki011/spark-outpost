@@ -23,6 +23,8 @@ const FAST = 'fast';
 const SAME_MODEL = 'default';
 const DEFAULT_EFFORT = 'default';
 
+const BUSY_POLL_MS = 2_000;
+
 const DOC = { page: 'settings', heading: 'spark-assistant' } as const;
 
 interface SparkAssistantSectionProps {
@@ -43,7 +45,11 @@ function connectedProviders(setup: SetupState): ProviderSetup[] {
 }
 
 export function SparkAssistantSection({ setup, onOpenChat }: SparkAssistantSectionProps) {
-  const view = useQuery({ queryKey: assistantKeys.settings, queryFn: assistantApi.settings });
+  const view = useQuery({
+    queryKey: assistantKeys.settings,
+    queryFn: assistantApi.settings,
+    refetchInterval: (query) => (query.state.data?.busy ? BUSY_POLL_MS : false),
+  });
   return (
     <>
       <p className="lede">

@@ -135,4 +135,14 @@ describe('Ask Spark idle compaction', { timeout: 240_000 }, () => {
     );
     expect(cards.rowCount).toBe(0);
   });
+
+  it('still compacts at the threshold when automatic compaction is off for chats', async () => {
+    await t.db.query('UPDATE profiles SET auto_compact = false WHERE workspace_id = $1', [
+      t.workspaceId,
+    ]);
+    await answered(await queue('a long answer please #ctx85'));
+    await answered(await queue('and another question'));
+    expect(await kinds()).toContain('compacted_threshold');
+    expect(prompts().slice(-2)[0]).toBe('/compact');
+  });
 });

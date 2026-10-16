@@ -84,6 +84,7 @@ export const assistantSettingsViewSchema = z.object({
   session: assistantSessionSchema.nullable(),
   facts: z.array(assistantFactSchema),
   notice: z.string().nullable(),
+  busy: z.boolean(),
 });
 export type AssistantSettingsView = z.infer<typeof assistantSettingsViewSchema>;
 

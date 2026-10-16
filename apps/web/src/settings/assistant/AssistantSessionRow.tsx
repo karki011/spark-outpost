@@ -7,6 +7,8 @@ import { BlobToggle } from '../../brand/BlobToggle.tsx';
 import { SettingRow } from '../SettingRow.tsx';
 import { sessionLine } from './assistant-hints.ts';
 
+const BUSY_HINT = 'Ask Spark is answering. Clear history once it finishes.';
+
 interface AssistantSessionRowProps {
   view: AssistantSettingsView;
   onOpenChat: (conversationId: string) => void;
@@ -28,7 +30,8 @@ export function AssistantSessionRow({ view, onOpenChat }: AssistantSessionRowPro
     },
   });
   const conversationId = view.conversationId;
-  const hint = clear.error?.message ?? view.notice ?? sessionLine(view.session);
+  const hint =
+    clear.error?.message ?? (view.busy ? BUSY_HINT : (view.notice ?? sessionLine(view.session)));
 
   return (
     <SettingRow label="Session" hint={hint} hintId={hintId}>
@@ -53,7 +56,7 @@ export function AssistantSessionRow({ view, onOpenChat }: AssistantSessionRowPro
           <button
             type="button"
             className="btn sm"
-            disabled={!conversationId}
+            disabled={!conversationId || view.busy}
             onClick={() => setConfirming(true)}
           >
             Clear history…
@@ -78,7 +81,7 @@ export function AssistantSessionRow({ view, onOpenChat }: AssistantSessionRowPro
             <button
               type="button"
               className="btn primary sm"
-              disabled={clear.isPending}
+              disabled={clear.isPending || view.busy}
               onClick={() => clear.mutate()}
             >
               Clear history

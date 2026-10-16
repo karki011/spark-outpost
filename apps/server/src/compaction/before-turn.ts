@@ -268,7 +268,6 @@ export async function compactBeforeTurn(
   });
   if (step === 'none') return keep;
   if (input.assistant) {
-    if (step !== 'compact') return keep;
     const compacted = await compactNow(deps, lease, input, append, control, candidate);
     await recordAssistantEvent(
       deps.db,

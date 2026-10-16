@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { assistantSettingsViewSchema, sparkAssistantSchema } from '@spark-outpost/contracts';
 import { resolveChatSettings, updateChatSettings } from '../src/persistence/chat-settings.ts';
@@ -207,6 +208,44 @@ describe('the hidden Ask Spark chat', () => {
       { kind: 'history_cleared', detail: 'key facts kept' },
       { kind: 'history_cleared', detail: 'key facts cleared too' },
     ]);
+  });
+
+  it('refuses Clear history while a question is queued or answered, then clears after', async () => {
+    const id = await assistantId();
+    const sent = await api().send('post', `/api/conversations/${id}/messages`, {
+      id: randomUUID(),
+      content: 'Who needs me?',
+    });
+    expect(sent.status).toBe(201);
+    expect((await view()).busy).toBe(true);
+
+    const refused = await api().send('post', '/api/spark-assistant/clear', { facts: false });
+    expect(refused.status).toBe(409);
+    expect(refused.body.error).toBe('Wait for Ask Spark to finish answering first.');
+    const { rows } = await t.db.query<{ cleared: Date | null }>(
+      'SELECT assistant_history_from AS cleared FROM profiles WHERE workspace_id = $1',
+      [t.workspaceId],
+    );
+    expect(rows[0]!.cleared).toBeNull();
+
+    await t.db.query(
+      `UPDATE runs SET status = 'succeeded', finished_at = now() WHERE conversation_id = $1`,
+      [id],
+    );
+    await t.db.query(
+      `INSERT INTO chat_queue (id, conversation_id, content, position)
+       VALUES (gen_random_uuid(), $1, 'and what is running?', 1)`,
+      [id],
+    );
+    expect((await api().send('post', '/api/spark-assistant/clear', { facts: false })).status).toBe(
+      409,
+    );
+
+    await t.db.query('DELETE FROM chat_queue WHERE conversation_id = $1', [id]);
+    expect((await view()).busy).toBe(false);
+    const cleared = await api().send('post', '/api/spark-assistant/clear', { facts: false });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.busy).toBe(false);
   });
 
   it('removes one key fact and records it', async () => {
