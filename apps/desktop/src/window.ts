@@ -2,6 +2,7 @@ import { BrowserWindow, session, shell } from 'electron';
 import { targetsApi, withApiToken } from './api-token.ts';
 import type { ChannelConfig } from './channel.ts';
 import { linkTarget } from './link-target.ts';
+import { guardSessionMedia } from './media-guard.ts';
 import { themeArgs } from './theme-arg.ts';
 
 export interface WindowOptions {
@@ -47,6 +48,7 @@ export function guardNavigation(window: BrowserWindow, origin: string): void {
 }
 
 export function openWindow({ config, preload, theme }: WindowOptions): BrowserWindow {
+  guardSessionMedia(session.defaultSession);
   const title = config.badge ? `${config.appName} — ${config.badge}` : config.appName;
   const window = new BrowserWindow({
     title,

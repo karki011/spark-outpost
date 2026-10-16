@@ -33,7 +33,7 @@ The usage string: "Spark Outpost listens only while you press the Voice shortcut
 
 **Which process macOS credits.** A child a signed app starts from its bundle should count as **Spark Outpost**, as [with Accessibility](MAC_CONTROL.md#how-macos-attributes-the-permissions); in dev it is **Electron**. **To verify** on a Developer ID build: the Microphone and Input Monitoring entries, and that the helper gets `audio-input` through `entitlementsInherit`.
 
-**Only the helper records.** Today only `browser/sessions.ts` sets permission handlers, so with the entitlement the app's own windows could ask for the mic: Phase 1 denies `media` on the app session too. The Browser pane keeps denying every permission ([Browser](BROWSER.md)).
+**Only the helper records.** Chromium asks macOS for the microphone before Electron's permission handlers run, so while the app's permission is undetermined a page's `getUserMedia` would raise the system prompt and wait. Phase 1 registers a session preload (`media-guard-page.ts`) on the app session and every Browser pane partition that makes `getUserMedia` and the legacy calls reject at once with `NotAllowedError`, in every frame of a pane page; the handlers still deny `media`.
 
 ## The shortcut
 

@@ -75,6 +75,13 @@ export class FakeSession extends EventEmitter {
     this.device = handler;
   }
 
+  readonly preloads: string[] = [];
+
+  registerPreloadScript(script: { filePath: string }): string {
+    this.preloads.push(script.filePath);
+    return script.filePath;
+  }
+
   requestCancelled(url: string): boolean {
     let cancelled = false;
     this.beforeRequest?.({ url }, (answer) => {

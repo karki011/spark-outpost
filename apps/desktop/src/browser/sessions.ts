@@ -1,5 +1,6 @@
 import { session, type Session } from 'electron';
 import type { SignedInSite } from '@spark-outpost/contracts';
+import { MEDIA_GUARD_ID, mediaGuardPreload } from '../media-guard.ts';
 import {
   isBrowserPartition,
   projectPartition,
@@ -25,6 +26,11 @@ export function browserSession(partition: string, guards: SessionGuards): Sessio
   configured.add(target);
   target.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   target.setPermissionCheckHandler(() => false);
+  target.registerPreloadScript({
+    type: 'frame',
+    filePath: mediaGuardPreload(),
+    id: MEDIA_GUARD_ID,
+  });
   target.setDevicePermissionHandler(() => false);
   target.webRequest.onBeforeRequest((details, callback) => {
     const allowed = requestAllowed(details.url, {

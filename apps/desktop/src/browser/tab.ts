@@ -163,6 +163,7 @@ export class PaneTab {
         sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
+        nodeIntegrationInSubFrames: true,
         webSecurity: true,
         spellcheck: false,
       },

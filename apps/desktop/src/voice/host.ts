@@ -6,7 +6,6 @@ import {
   globalShortcut,
   ipcMain,
   net,
-  session,
   shell,
   systemPreferences,
   webContents,
@@ -24,7 +23,6 @@ import {
   type VoiceStatus,
 } from '@spark-outpost/contracts';
 import { IPC } from '../ipc-channels.ts';
-import { denyAppRecording } from './app-microphone.ts';
 import { fakeVoiceHelper } from './fake-helper.ts';
 import { spawnVoiceBinary, startVoiceHelper } from './helper-process.ts';
 import { createVoice, type SettingsPatch } from './voice.ts';
@@ -93,7 +91,6 @@ function broadcast(status: VoiceStatus): void {
 }
 
 export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHost> {
-  denyAppRecording(session.defaultSession);
   const fake = !app.isPackaged && process.env.SPARK_FAKE_VOICE === '1';
   const allowFileInput = !app.isPackaged && process.env.SPARK_VOICE_FILE_INPUT === '1';
   const settingsPath = voiceSettingsFile(options.userData);
