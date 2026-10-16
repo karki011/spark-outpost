@@ -11,7 +11,6 @@ import { API_PORT, FAKE_TAILSCALE_STATE } from './stub-config.ts';
 
 export const PHONE_ADDRESS = `https://${FAKE_TAILSCALE_HOST}`;
 export const PHONE_PAGE = 'http://phone.test';
-const LIMIT_RETRY_MS = 5_000;
 export const WIDE = { width: 1280, height: 900 };
 export const NARROW = { width: 390, height: 844 };
 const THEME = path.resolve(import.meta.dirname, '../../apps/web/public/theme.css');
@@ -126,14 +125,7 @@ export async function startPairing(
   button: string | RegExp = 'Pair a device',
 ): Promise<string> {
   const code = page.locator('.ph-code-text');
-  const limited = page.locator('.ph-scene-line', { hasText: 'Too many pairing attempts' });
   await page.getByRole('button', { name: button }).click();
-  await expect(code.or(limited)).toBeVisible();
-  while (await limited.isVisible()) {
-    await page.waitForTimeout(LIMIT_RETRY_MS);
-    await page.getByRole('button', { name: 'Try again' }).click();
-    await expect(code.or(limited)).toBeVisible();
-  }
   await expect(code).toHaveText(/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
   return (await code.textContent()) ?? '';
 }

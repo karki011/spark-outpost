@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   startTicketResponseSchema,
@@ -9,7 +8,7 @@ import {
 } from '@spark-outpost/contracts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { syncTicketsAfterShip } from '../src/tickets/ship-sync.ts';
-import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
+import { createTestApp, localClient } from './app-support.ts';
 import { JIRA_EMAIL, JIRA_TOKEN } from './fake-jira.ts';
 import { LINEAR_KEY } from './fake-linear.ts';
 import { createTestDb, type TestDb } from './support.ts';
@@ -33,8 +32,8 @@ afterEach(async () => {
 });
 
 const send = (method: 'put' | 'patch' | 'post' | 'delete', url: string, body: object = {}) =>
-  request(app)[method](url).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
-const get = (url: string) => request(app).get(url).set(LOCAL_HEADERS);
+  localClient(app).send(method, url, body);
+const get = (url: string) => localClient(app).get(url);
 
 async function connectLinear() {
   const response = await send('put', '/api/tickets/connections/linear', {

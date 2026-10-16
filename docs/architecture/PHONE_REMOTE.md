@@ -82,6 +82,8 @@ A phone that is already paired can also sign in again with a passkey; see Passke
 3. The Mac lists waiting requests (`GET /api/remote/pairings`: device name, matching code) and answers with `POST /api/remote/pairings/:id/confirm` or `/deny`.
 4. The phone polls `POST /api/remote/pair/claim`: `202` while waiting, `403` once denied or expired, and after a confirm `200` once, with the session cookie.
 
+The browser test stack runs the fake agent runtime and sets `PAIRING_TEST_ATTEMPTS_PER_MINUTE` so that specs sharing one server don't share the five-a-minute windows. Any other runtime ignores it.
+
 Pairing again (the claim reads the device cookie the phone still carries; every case still needs the code, the matching code and a confirm on the Mac):
 
 - A valid cookie (known, not revoked, seen within 30 days): the same `remote_devices` row gets the new token hash, the typed name and `last_seen_at = now()`. The old token stops working. Audit `device_paired_again`.

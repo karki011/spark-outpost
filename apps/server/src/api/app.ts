@@ -80,6 +80,7 @@ export interface AppOptions
   apiToken: string;
   webRoot?: string;
   pushKeys?: PushKeys;
+  pairingAttemptsPerMinute?: number;
   diagnostics?: DiagnosticsPlaces;
   activeWork?: ActiveWork;
 }

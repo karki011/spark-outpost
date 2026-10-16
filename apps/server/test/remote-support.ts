@@ -1,10 +1,9 @@
-import request from 'supertest';
 import {
   REMOTE_DEVICE_COOKIE,
   REMOTE_ENTRY_PARAM,
   type RemoteSwitches,
 } from '@spark-outpost/contracts';
-import { localClient, type createTestApp } from './app-support.ts';
+import { appRequest, localClient, type createTestApp, type RequestMethod } from './app-support.ts';
 
 type TestApp = ReturnType<typeof createTestApp>;
 
@@ -27,9 +26,9 @@ export function remoteClient(
 ) {
   const headers = { Host: host, ...(cookie ? { Cookie: cookie } : {}) };
   return {
-    get: (path: string) => request(app).get(path).set(headers),
-    send: (method: 'post' | 'put' | 'patch' | 'delete', path: string, body: object = {}) =>
-      request(app)[method](path).set(headers).set('Origin', `https://${host}`).send(body),
+    get: (path: string) => appRequest(app, 'get', path).set(headers),
+    send: (method: Exclude<RequestMethod, 'get'>, path: string, body: object = {}) =>
+      appRequest(app, method, path).set(headers).set('Origin', `https://${host}`).send(body),
   };
 }
 

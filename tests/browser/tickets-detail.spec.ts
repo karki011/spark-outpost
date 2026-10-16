@@ -2,7 +2,13 @@ import { rmSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { seedFlowChats } from './ticket-flow-seed.ts';
-import { connectTickets, openTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
+import {
+  connectTickets,
+  hoverOnceSettled,
+  openTickets,
+  resetTicketFakes,
+  STUB_URL,
+} from './ticket-seed.ts';
 import { FAKE_GH_STATE } from './stub-config.ts';
 
 const main = (page: Page) => page.getByRole('main', { name: 'Tickets' });
@@ -82,7 +88,7 @@ test('a ticket shows its status badge, reporter, created date and pull requests'
     detailOf(page, 'ENG-1215').getByRole('region', { name: 'Development' }),
   ).toContainText('No pull request is linked');
 
-  await row(page, 'API-81').locator('.tk-key').hover();
+  await hoverOnceSettled(page, row(page, 'API-81').locator('.tk-key'));
   const preview = page.getByRole('tooltip', { name: /^API-81/ });
   await expect(preview).toContainText('Priya Nair · created 6 days ago');
   await expect(preview).toContainText('Alex Example');

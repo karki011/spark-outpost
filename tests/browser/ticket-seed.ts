@@ -1,10 +1,11 @@
-import type { Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { JIRA_EMAIL, JIRA_TOKEN } from '../../apps/server/test/fake-jira.ts';
 import type { DevStatusMode, FakeDevelopment } from '../../apps/server/test/fake-jira-dev.ts';
 import { LINEAR_KEY } from '../../apps/server/test/fake-linear.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import { createDb } from '../../apps/server/src/persistence/db.ts';
 import { testDatabaseUrl } from './database.ts';
+import { animationsSettled } from './settle.ts';
 import { STUB_PORT } from './stub-config.ts';
 
 export const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
@@ -88,4 +89,11 @@ export async function openTickets(page: Page): Promise<void> {
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button', { name: /^Tickets/ })
     .click();
+}
+
+export async function hoverOnceSettled(page: Page, target: Locator): Promise<void> {
+  const brief = page.getByRole('region', { name: 'What needs you today' });
+  await expect(brief.getByRole('list')).toBeVisible();
+  await animationsSettled(page);
+  await target.hover();
 }

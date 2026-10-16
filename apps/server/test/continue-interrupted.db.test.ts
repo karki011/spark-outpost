@@ -314,7 +314,8 @@ describe('Continue from here after a lease expired mid-turn', { timeout: 90_000 
     await expireLeases(t, second.run.id);
     await untilStatus(t, second.run.id, 'outcome_unknown');
     await worker.idle();
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await recoverExpiredLeases(t.db);
+    await worker.idle();
 
     const { rows } = await t.db.query<{ count: number }>(
       'SELECT count(*)::int AS count FROM runs WHERE conversation_id = $1',

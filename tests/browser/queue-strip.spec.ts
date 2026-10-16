@@ -35,12 +35,10 @@ async function allowEditsUntil(page: Page, done: () => Promise<boolean>, timeout
   const allow = card(page, /Change a file\?/)
     .filter({ has: page.getByRole('button', { name: 'Deny' }) })
     .getByRole('button', { name: 'Allow', exact: true });
-  const until = Date.now() + timeoutMs;
-  while (!(await done())) {
-    if (Date.now() > until) throw new Error('The queued messages were not all sent.');
+  await expect(async () => {
     if (await allow.first().isVisible()) await allow.first().click();
-    await page.waitForTimeout(250);
-  }
+    expect(await done(), 'The queued messages were not all sent.').toBe(true);
+  }).toPass({ timeout: timeoutMs });
 }
 
 async function queue(page: Page, text: string) {

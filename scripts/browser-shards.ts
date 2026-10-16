@@ -1,9 +1,10 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { createDb } from '../apps/server/src/persistence/db.ts';
 import { PERF_SPECS, specFile } from '../tests/browser/spec-map.ts';
-import { WEB_BUILD_ENV } from '../tests/browser/stub-config.ts';
+import { slotTmpdir, WEB_BUILD_ENV } from '../tests/browser/stub-config.ts';
+import { describeBlocked, inspectSlot, stopGroups, stopLeftovers } from './slot-host.ts';
 import {
   connectionShortfall,
   CONNECTIONS_PER_STACK,
@@ -15,6 +16,8 @@ if (!process.env.TEST_DATABASE_URL && existsSync('.local/credentials.env'))
   process.loadEnvFile('.local/credentials.env');
 
 const DEFAULT_SHARDS = 6;
+const ROOT = process.cwd();
+const SHUTDOWN_GRACE_MS = 20_000;
 
 interface Options {
   count: number;
@@ -98,6 +101,7 @@ function startShard(plan: ShardPlan, specs: string[]): ChildProcess {
   const child = spawn('pnpm', ['exec', 'playwright', 'test', `--shard=${plan.shard}`, ...specs], {
     env: { ...process.env, ...shardEnv(plan) },
     stdio: ['ignore', 'pipe', 'pipe'],
+    detached: true,
   });
   for (const stream of [child.stdout, child.stderr]) {
     createInterface({ input: stream }).on('line', (line) =>
@@ -109,6 +113,64 @@ function startShard(plan: ShardPlan, specs: string[]): ChildProcess {
 
 function exitCode(child: ChildProcess): Promise<number> {
   return new Promise((resolve) => child.on('close', (code) => resolve(code ?? 1)));
+}
+
+async function clearSlots(plans: ShardPlan[], dryRun: boolean): Promise<boolean> {
+  const decisions = plans.map((plan) => ({ plan, decision: inspectSlot(plan, ROOT) }));
+  const blocked = decisions.filter(({ decision }) => decision.blocked.length > 0);
+  for (const { plan, decision } of blocked) console.error(describeBlocked(plan, decision));
+  if (blocked.length > 0) {
+    console.error(
+      'Stop those processes yourself, or pick free slots with --first-slot=N. Nothing outside this checkout is stopped.',
+    );
+    return false;
+  }
+  for (const { plan, decision } of decisions) {
+    if (dryRun && decision.stop.length > 0)
+      console.log(
+        `[slot ${plan.slot}] ${decision.stop.length} leftover test server(s) would be stopped.`,
+      );
+    else await stopLeftovers(plan, decision);
+  }
+  return true;
+}
+
+async function tidyAfterRun(plans: ShardPlan[]): Promise<void> {
+  for (const plan of plans) {
+    const decision = inspectSlot(plan, ROOT);
+    await stopLeftovers(plan, { stop: decision.stop, blocked: [] });
+    rmSync(slotTmpdir(plan.slot), { recursive: true, force: true });
+  }
+}
+
+function forwardToGroups(pids: readonly number[], signal: NodeJS.Signals): void {
+  for (const pid of pids) {
+    try {
+      process.kill(-pid, signal);
+    } catch {
+      continue;
+    }
+  }
+}
+
+function stopOnSignal(children: ChildProcess[]): void {
+  const groups = children.map((child) => child.pid!);
+  let signalled = false;
+  let forced = false;
+  const force = () => {
+    if (forced) return;
+    forced = true;
+    void stopGroups(groups);
+  };
+  for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+    process.on(signal, () => {
+      if (signalled) return force();
+      signalled = true;
+      console.log(`Stopping every shard (${signal}); a second signal stops them at once.`);
+      forwardToGroups(groups, signal === 'SIGHUP' ? 'SIGTERM' : signal);
+      setTimeout(force, SHUTDOWN_GRACE_MS).unref();
+    });
+  }
 }
 
 async function main(): Promise<number> {
@@ -128,6 +190,7 @@ async function main(): Promise<number> {
   const plans = planShards(Math.min(options.count, specs.length), options.firstSlot, url);
   for (const plan of plans) describe(plan, specs);
   const shortage = await checkConnections(url, plans.length);
+  if (!(await clearSlots(plans, options.dryRun))) return 1;
   if (options.dryRun) {
     if (shortage) console.log(shortage);
     console.log('Dry run: nothing was built or started.');
@@ -139,10 +202,9 @@ async function main(): Promise<number> {
   }
   if (!buildWeb()) return 1;
   const children = plans.map((plan) => startShard(plan, specs));
-  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-    process.on(signal, () => children.forEach((child) => child.kill(signal)));
-  }
+  stopOnSignal(children);
   const codes = await Promise.all(children.map(exitCode));
+  await tidyAfterRun(plans);
   plans.forEach((plan, index) =>
     console.log(
       `[shard ${plan.shard}] ${codes[index] === 0 ? 'passed' : `failed (${codes[index]})`}`,

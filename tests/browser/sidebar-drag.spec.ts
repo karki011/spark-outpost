@@ -69,6 +69,12 @@ async function createProject(page: Page, name: string): Promise<{ id: string; na
   return (await response.json()) as { id: string; name: string };
 }
 
+async function keyboardPickUp(page: Page, key: string, announcement: string) {
+  await page.keyboard.press(key);
+  await expect(announcer(page)).toContainText(announcement);
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)));
+}
+
 async function pickUp(page: Page, source: Locator) {
   const from = await source.boundingBox();
   if (!from) throw new Error('Drag source is not visible.');
@@ -175,8 +181,7 @@ test('moves chats and projects with the keyboard and announces each step', async
   const grip = sidebar(page).getByRole('button', { name: 'Move Loose idea' });
   await grip.focus();
   await expect(grip).toHaveAttribute('aria-roledescription', 'sortable');
-  await page.keyboard.press('Space');
-  await expect(announcer(page)).toContainText('Picked up Loose idea. It is in Chats.');
+  await keyboardPickUp(page, 'Space', 'Picked up Loose idea. It is in Chats.');
   await page.keyboard.press('ArrowUp');
   await page.keyboard.press('ArrowUp');
   await expect(announcer(page)).toContainText('Loose idea will move to zeta, position 1 of 1.');
@@ -188,8 +193,7 @@ test('moves chats and projects with the keyboard and announces each step', async
   await expect(titles(block(page, 'web'))).toContainText(['Loose idea']);
   await expect(grip).toBeFocused();
 
-  await grip.press('Space');
-  await expect(announcer(page)).toContainText('Picked up Loose idea. It is in web');
+  await keyboardPickUp(page, 'Space', 'Picked up Loose idea. It is in web');
   await page.keyboard.press('ArrowDown');
   await expect(announcer(page)).toContainText('Loose idea will move');
   await page.keyboard.press('Escape');
@@ -198,8 +202,7 @@ test('moves chats and projects with the keyboard and announces each step', async
 
   const projectGrip = sidebar(page).getByRole('button', { name: 'Move project zeta' });
   await projectGrip.focus();
-  await page.keyboard.press('Space');
-  await expect(announcer(page)).toContainText('Picked up project zeta. It is in position 2 of 2.');
+  await keyboardPickUp(page, 'Space', 'Picked up project zeta. It is in position 2 of 2.');
   await page.keyboard.press('ArrowUp');
   await expect(announcer(page)).toContainText('project zeta will move to position 1 of 2.');
   await page.keyboard.press('Enter');
@@ -278,8 +281,14 @@ test('drags a chat out of and into a project sideways', async ({ page }) => {
   await expect(slot(group)).toContainText('Loose idea');
   await expect(sidebar(page).locator('.list')).toHaveAttribute('data-projection', 'in');
   await expectGhost(page, slot(group));
+  const orderSaved = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'PUT' &&
+      response.url().endsWith(`/api/projects/${web.id}/chat-order`),
+  );
   await page.mouse.up();
   await expect(titles(group)).toHaveText(['First', 'Loose idea']);
+  expect((await orderSaved).ok()).toBe(true);
   await page.reload();
   await expect(titles(block(page, web.name))).toHaveText(['First', 'Loose idea']);
 });
@@ -296,8 +305,7 @@ test('moves a chat into and out of a project with the side arrow keys', async ({
 
   const grip = sidebar(page).getByRole('button', { name: 'Move Loose idea' });
   await grip.focus();
-  await page.keyboard.press('Space');
-  await expect(announcer(page)).toContainText('Picked up Loose idea. It is in Chats.');
+  await keyboardPickUp(page, 'Space', 'Picked up Loose idea. It is in Chats.');
   await page.keyboard.press('ArrowRight');
   await expect(announcer(page)).toContainText('Loose idea will move into web-apps.');
   await expectGhost(page, slot(group));
@@ -311,8 +319,7 @@ test('moves a chat into and out of a project with the side arrow keys', async ({
   await expect(titles(group)).toHaveText(['Web chat', 'Loose idea']);
 
   await grip.focus();
-  await page.keyboard.press('Space');
-  await expect(announcer(page)).toContainText('Picked up Loose idea. It is in web-apps');
+  await keyboardPickUp(page, 'Space', 'Picked up Loose idea. It is in web-apps');
   await page.keyboard.press('ArrowLeft');
   await expect(announcer(page)).toContainText('Loose idea will move out to Chats.');
   await page.keyboard.press('Enter');
