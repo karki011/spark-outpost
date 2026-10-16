@@ -63,8 +63,12 @@ export function infoPlistEdits(): [string, string][] {
   ];
 }
 
-export function plutilStringEdits(plist: string, edits: [string, string][]): string[][] {
-  return edits.map(([key, value]) => ['-replace', key, '-string', value, plist]);
+export async function setInfoPlist(run: Run, plist: string, edits: [string, string][]) {
+  for (const [key, value] of edits) {
+    await run('plutil', ['-insert', key, '-string', value, plist]).catch(() =>
+      run('plutil', ['-replace', key, '-string', value, plist]),
+    );
+  }
 }
 
 export function withEntitlements(baseXml: string, keys: string[]): string {
@@ -95,30 +99,44 @@ export function codesignArgs(app: string, entitlements: string, identity: Signin
 export interface OpenOptions {
   app: string;
   appDir: string;
-  port: number;
+  port: number | null;
   dataDir?: string | undefined;
 }
 
 export function openArgs(options: OpenOptions): string[] {
   const env = options.dataDir ? ['--env', `SPARK_APP_DATA=${options.dataDir}`] : [];
-  return [
-    '-W',
-    '-n',
-    '-a',
-    options.app,
-    ...env,
-    '--args',
-    options.appDir,
-    `--remote-debugging-port=${options.port}`,
-  ];
+  const debug = options.port === null ? [] : [`--remote-debugging-port=${options.port}`];
+  return ['-W', '-n', '-a', options.app, ...env, '--args', options.appDir, ...debug];
 }
 
-export function parsePort(value: string | undefined): number {
-  if (value === undefined) return DEFAULT_DEBUG_PORT;
+export const DEBUG_PORT_WARNING =
+  'The debug port is on: any process on this Mac can drive Spark Outpost Dev through it and use its macOS permissions (Accessibility, Microphone, Input Monitoring, Calendar). Leave out --port and --debug unless a test needs it.';
+
+export function parsePort(value: string | undefined, debug: boolean): number | null {
+  if (value === undefined) return debug ? DEFAULT_DEBUG_PORT : null;
   const port = Number(value);
   if (!Number.isInteger(port) || port < 1024 || port > 65535)
     throw new Error(`--port must be a whole number from 1024 to 65535, not "${value}".`);
   return port;
+}
+
+export interface InterruptDeps {
+  quitApp: () => Promise<void>;
+  waitForExit: (timeoutMs: number) => Promise<boolean>;
+  removeLink: () => Promise<void>;
+  log: (line: string) => void;
+}
+
+export const QUIT_TIMEOUT_MS = 30_000;
+
+export async function stopOnInterrupt(link: string | null, deps: InterruptDeps): Promise<void> {
+  await deps.quitApp().catch(() => undefined);
+  if (await deps.waitForExit(QUIT_TIMEOUT_MS)) {
+    await deps.removeLink();
+    return;
+  }
+  const kept = link ? ` Its launch link stays at ${link}; remove it after quitting.` : '';
+  deps.log(`${DEV_APP_NAME} is still running.${kept}`);
 }
 
 function hasDotFolder(dir: string): boolean {
@@ -222,7 +240,7 @@ async function buildCopy(source: DevAppSource, deps: DevAppDeps, app: string, ba
   await deps.run('ditto', [source.electronApp, app]);
   await deps.run('xattr', ['-cr', app]);
   const plist = path.join(app, 'Contents/Info.plist');
-  for (const args of plutilStringEdits(plist, infoPlistEdits())) await deps.run('plutil', args);
+  await setInfoPlist(deps.run, plist, infoPlistEdits());
   await deps.writeText(entitlements, withEntitlements(base, DEV_ENTITLEMENTS));
   await deps.run('plutil', ['-lint', entitlements]);
   deps.log(`Signing with ${identityLabel(source.identity)}.`);

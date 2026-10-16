@@ -1,4 +1,8 @@
+import { execFile } from 'node:child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import { describe, expect, it } from 'vitest';
 import {
   appDirPlan,
@@ -10,8 +14,9 @@ import {
   openArgs,
   parsePort,
   pickIdentity,
-  plutilStringEdits,
   prepareDevApp,
+  setInfoPlist,
+  stopOnInterrupt,
   withEntitlements,
   type DevAppDeps,
   type DevAppSource,
@@ -72,12 +77,49 @@ describe('infoPlistEdits', () => {
       expect(edits.get(key)).toMatch(/^Spark Outpost Dev /);
     expect(edits.has('CFBundleExecutable')).toBe(false);
   });
+});
 
-  it('writes each value as a string replacement in the given plist', () => {
-    expect(plutilStringEdits('/x/Info.plist', [['CFBundleName', 'Spark Outpost Dev']])).toEqual([
+describe('setInfoPlist', () => {
+  it('inserts missing keys and replaces existing ones', async () => {
+    const existing = new Set(['CFBundleName']);
+    const calls: string[][] = [];
+    const run = (_command: string, args: string[]) => {
+      calls.push(args);
+      const fails = args[0] === '-insert' && existing.has(args[1]!);
+      return fails ? Promise.reject(new Error('exists')) : Promise.resolve('');
+    };
+    await setInfoPlist(run, '/x/Info.plist', [
+      ['CFBundleName', 'Spark Outpost Dev'],
+      ['NSAppleEventsUsageDescription', 'Why'],
+    ]);
+    expect(calls).toEqual([
+      ['-insert', 'CFBundleName', '-string', 'Spark Outpost Dev', '/x/Info.plist'],
       ['-replace', 'CFBundleName', '-string', 'Spark Outpost Dev', '/x/Info.plist'],
+      ['-insert', 'NSAppleEventsUsageDescription', '-string', 'Why', '/x/Info.plist'],
     ]);
   });
+
+  it.runIf(process.platform === 'darwin')(
+    'patches a real plist that lacks the usage keys with plutil',
+    async () => {
+      const dir = await mkdtemp(path.join(os.tmpdir(), 'spark-dev-app-'));
+      const plist = path.join(dir, 'Info.plist');
+      await writeFile(
+        plist,
+        '<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0"><dict><key>CFBundleName</key><string>Electron</string><key>CFBundleIdentifier</key><string>com.example.Electron</string></dict></plist>\n',
+      );
+      const run = (command: string, args: string[]) =>
+        promisify(execFile)(command, args).then(({ stdout }) => stdout);
+      try {
+        await setInfoPlist(run, plist, infoPlistEdits());
+        const json = await run('plutil', ['-convert', 'json', '-o', '-', plist]);
+        expect(JSON.parse(json)).toEqual(Object.fromEntries(infoPlistEdits()));
+        expect(await readFile(plist, 'utf8')).toContain('<key>NSAppleEventsUsageDescription</key>');
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+    },
+  );
 });
 
 const BASE_ENTITLEMENTS = `<?xml version="1.0" encoding="UTF-8"?>
@@ -107,6 +149,11 @@ describe('withEntitlements', () => {
 });
 
 describe('openArgs', () => {
+  it('opens no debug port unless one is asked for', () => {
+    const args = openArgs({ app: '/a.app', appDir: '/r/apps/desktop', port: null });
+    expect(args).toEqual(['-W', '-n', '-a', '/a.app', '--args', '/r/apps/desktop']);
+  });
+
   it('waits on a new instance, passes the data folder and the debug port', () => {
     expect(
       openArgs({
@@ -136,11 +183,59 @@ describe('openArgs', () => {
 });
 
 describe('parsePort', () => {
-  it('defaults and rejects ports that are not usable', () => {
-    expect(parsePort(undefined)).toBe(DEFAULT_DEBUG_PORT);
-    expect(parsePort('9401')).toBe(9401);
-    expect(() => parsePort('80')).toThrow(/--port/);
-    expect(() => parsePort('nine')).toThrow(/--port/);
+  it('turns the debug port on only for --port or --debug', () => {
+    expect(parsePort(undefined, false)).toBeNull();
+    expect(parsePort(undefined, true)).toBe(DEFAULT_DEBUG_PORT);
+    expect(parsePort('9401', false)).toBe(9401);
+  });
+
+  it('rejects ports that are not usable', () => {
+    expect(() => parsePort('80', false)).toThrow(/--port/);
+    expect(() => parsePort('nine', true)).toThrow(/--port/);
+  });
+});
+
+describe('stopOnInterrupt', () => {
+  function interrupt(quits: boolean) {
+    const steps: string[] = [];
+    const deps = {
+      quitApp: () => {
+        steps.push('quit');
+        return Promise.resolve();
+      },
+      waitForExit: (timeoutMs: number) => {
+        steps.push(`wait ${timeoutMs}`);
+        return Promise.resolve(quits);
+      },
+      removeLink: () => {
+        steps.push('unlink');
+        return Promise.resolve();
+      },
+      log: (line: string) => {
+        steps.push(line);
+      },
+    };
+    return { steps, deps };
+  }
+
+  it('quits the app and removes the link only after it exits', async () => {
+    const { steps, deps } = interrupt(true);
+    await stopOnInterrupt('/private/tmp/spark-dev-app-1', deps);
+    expect(steps).toEqual(['quit', 'wait 30000', 'unlink']);
+  });
+
+  it('keeps the link and says where it is when the app does not quit', async () => {
+    const { steps, deps } = interrupt(false);
+    await stopOnInterrupt('/private/tmp/spark-dev-app-1', deps);
+    expect(steps).not.toContain('unlink');
+    expect(steps.at(-1)).toMatch(/still running.*\/private\/tmp\/spark-dev-app-1/);
+  });
+
+  it('still waits when the quit request itself fails', async () => {
+    const { steps, deps } = interrupt(true);
+    deps.quitApp = () => Promise.reject(new Error('osascript failed'));
+    await stopOnInterrupt(null, deps);
+    expect(steps).toEqual(['wait 30000', 'unlink']);
   });
 });
 
@@ -252,7 +347,7 @@ describe('prepareDevApp', () => {
     expect(calls).toContainEqual(['ditto', '/repo/node_modules/electron/dist/Electron.app', app]);
     expect(calls).toContainEqual([
       'plutil',
-      '-replace',
+      '-insert',
       'CFBundleIdentifier',
       '-string',
       'com.sparkoutpost.dev',
