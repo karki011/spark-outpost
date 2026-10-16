@@ -163,3 +163,25 @@
 .tl-ev[data-short] .tl-meta {
   display: none;
 }
+
+.tl-allday {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.tl-allday-ev {
+  padding: 3px 9px;
+  border: 1px solid var(--line-strong);
+  border-left: 4px solid var(--cal-color, var(--line-strong));
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  font-size: 12.5px;
+}
+
+.tl-allday-ev[aria-expanded='true'] {
+  box-shadow: 0 0 0 2px var(--accent);
+}

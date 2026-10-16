@@ -96,20 +96,36 @@ describe('the calendar ticker', () => {
     expect(push.release).toHaveBeenCalledTimes(1);
   });
 
-  it('sends the meeting alert once, only with the switch on and not during a hold', async () => {
+  it('sends the meeting alert once, only with the switch on and once a hold has ended', async () => {
     await ticker.tick();
     expect(push.meeting).not.toHaveBeenCalled();
     await updateSettings(t.db, t.workspaceId, { phoneAlerts: true });
+    await ticker.tick();
+    expect(ticker.held()).toBe(true);
+    expect(push.meeting).not.toHaveBeenCalled();
     events = [helperEvent('Standup', 8, 23)];
     now = NOW + MINUTE;
-    await ticker.tick();
-    expect(push.meeting).not.toHaveBeenCalled();
-    events = [helperEvent('Review', 30, 45)];
-    now = NOW + 21 * MINUTE;
     await ticker.tick();
     await ticker.tick();
     expect(push.meeting).toHaveBeenCalledTimes(1);
     expect(push.meeting).toHaveBeenCalledWith(10);
+  });
+
+  it('sends nothing for a meeting that has started', async () => {
+    await updateSettings(t.db, t.workspaceId, { phoneAlerts: true });
+    events = [helperEvent('Late', -1, 20)];
+    await ticker.tick();
+    expect(push.meeting).not.toHaveBeenCalled();
+  });
+
+  it('keeps choices when two syncs run at once', async () => {
+    const before = await savedChoices(t.db, t.workspaceId);
+    const deps = { db: t.db, workspaceId: t.workspaceId, host };
+    await t.db.query('DELETE FROM calendar_calendars WHERE workspace_id = $1', [t.workspaceId]);
+    await Promise.all([syncCalendars(deps), syncCalendars(deps), syncCalendars(deps)]);
+    const after = await savedChoices(t.db, t.workspaceId);
+    expect(after).toHaveLength(1);
+    expect(before).toHaveLength(1);
   });
 
   it('checks again when the calendar changes', async () => {

@@ -91,7 +91,44 @@ function EventBlock(props: {
   );
 }
 
+function AllDayEvents(props: DayTimelineProps) {
+  const allDay = props.events.filter((event) => event.allDay);
+  if (allDay.length === 0) return null;
+  return (
+    <ul className="tl-allday" aria-label="All day">
+      {allDay.map((event) => {
+        const calendar = props.calendars.get(event.calendarKey);
+        const selected = props.selected === event.key;
+        return (
+          <li key={event.key}>
+            <button
+              type="button"
+              className="tl-allday-ev"
+              style={swatch(calendar?.color ?? '') as CSSProperties}
+              aria-expanded={selected}
+              aria-controls={selected ? props.panelId : undefined}
+              aria-label={`${event.title}, all day, ${calendar?.title ?? 'Calendar'}`}
+              onClick={() => props.onSelect(event.key)}
+            >
+              {event.title}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function DayTimeline(props: DayTimelineProps) {
+  return (
+    <>
+      <AllDayEvents {...props} />
+      <TimedEvents {...props} />
+    </>
+  );
+}
+
+function TimedEvents(props: DayTimelineProps) {
   const { span, now } = props;
   const height = offset(span.end, span);
   return (

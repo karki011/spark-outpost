@@ -104,6 +104,12 @@ function event(
   };
 }
 
+function dayStartOf(at: number): number {
+  const day = new Date(at);
+  day.setHours(0, 0, 0, 0);
+  return day.getTime();
+}
+
 function anchor(): number {
   return state().anchor ?? startedAt;
 }
@@ -142,6 +148,13 @@ function events(): HelperEvent[] {
     }),
     event('shared-work', 'Shared invite', 'fake-work', at(240), 30, { uid: 'uid-shared' }),
     event('shared-family', 'Shared invite', 'fake-family', at(240), 30, { uid: 'uid-shared' }),
+    event('holiday', 'Company holiday', 'fake-family', dayStartOf(start), 24 * 60, {
+      allDay: true,
+      attendeeCount: 0,
+      othersInvited: false,
+      myStatus: 'none',
+      availability: 'free',
+    }),
     event('demo', 'Demo day', 'fake-work', tomorrowAt(15), 60, {
       url: 'https://meet.google.com/xyz-abcd-efg',
     }),

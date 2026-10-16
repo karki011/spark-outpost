@@ -10,7 +10,7 @@ import {
   type CalendarSettingsPatch,
   type HelperCalendar,
 } from '@spark-outpost/contracts';
-import { withTransaction, type Db } from '../persistence/db.ts';
+import type { Db, Queryable } from '../persistence/db.ts';
 
 export interface CalendarConnection {
   connected: boolean;
@@ -55,7 +55,7 @@ export async function calendarConnection(db: Db, workspaceId: string): Promise<C
   return { connected: row.connected, notice: row.notice, settings: settingsOf(row) };
 }
 
-async function ensureConnection(db: Db, workspaceId: string): Promise<void> {
+async function ensureConnection(db: Queryable, workspaceId: string): Promise<void> {
   await db.query(
     'INSERT INTO calendar_connection (workspace_id) VALUES ($1) ON CONFLICT DO NOTHING',
     [workspaceId],
@@ -71,7 +71,7 @@ export async function setConnected(db: Db, workspaceId: string, connected: boole
   );
 }
 
-export async function setNotice(db: Db, workspaceId: string, notice: string | null) {
+export async function setNotice(db: Queryable, workspaceId: string, notice: string | null) {
   await ensureConnection(db, workspaceId);
   await db.query('UPDATE calendar_connection SET notice = $2 WHERE workspace_id = $1', [
     workspaceId,
@@ -140,7 +140,7 @@ function choiceOf(row: ChoiceRow): CalendarChoice {
   };
 }
 
-export async function savedChoices(db: Db, workspaceId: string): Promise<CalendarChoice[]> {
+export async function savedChoices(db: Queryable, workspaceId: string): Promise<CalendarChoice[]> {
   const { rows } = await db.query<ChoiceRow>(
     'SELECT * FROM calendar_calendars WHERE workspace_id = $1 ORDER BY position, title, key',
     [workspaceId],
@@ -156,40 +156,44 @@ export interface ChoiceWrite {
   busy: boolean;
 }
 
+export async function lockChoices(client: Queryable, workspaceId: string): Promise<void> {
+  await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+    `calendar_calendars:${workspaceId}`,
+  ]);
+}
+
 export async function replaceChoices(
-  db: Db,
+  client: Queryable,
   workspaceId: string,
   writes: readonly ChoiceWrite[],
 ): Promise<void> {
-  await withTransaction(db, async (client) => {
-    await client.query('DELETE FROM calendar_calendars WHERE workspace_id = $1', [workspaceId]);
-    for (const [position, write] of writes.entries()) {
-      const { calendar } = write;
-      await client.query(
-        `INSERT INTO calendar_calendars (key, workspace_id, calendar_id, title, source_id,
-           source_title, source_kind, color, writable, subscribed, ownership, include, nudges,
-           busy, position)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-        [
-          write.key ?? randomUUID(),
-          workspaceId,
-          calendar.id,
-          calendar.title,
-          calendar.sourceId,
-          calendar.sourceTitle,
-          calendar.sourceKind,
-          calendar.color,
-          calendar.writable,
-          calendar.subscribed,
-          calendar.ownership,
-          write.include,
-          write.nudges,
-          write.busy,
-          position,
-        ],
-      );
-    }
-  });
+  await client.query('DELETE FROM calendar_calendars WHERE workspace_id = $1', [workspaceId]);
+  for (const [position, write] of writes.entries()) {
+    const { calendar } = write;
+    await client.query(
+      `INSERT INTO calendar_calendars (key, workspace_id, calendar_id, title, source_id,
+         source_title, source_kind, color, writable, subscribed, ownership, include, nudges,
+         busy, position)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+      [
+        write.key ?? randomUUID(),
+        workspaceId,
+        calendar.id,
+        calendar.title,
+        calendar.sourceId,
+        calendar.sourceTitle,
+        calendar.sourceKind,
+        calendar.color,
+        calendar.writable,
+        calendar.subscribed,
+        calendar.ownership,
+        write.include,
+        write.nudges,
+        write.busy,
+        position,
+      ],
+    );
+  }
 }
 
 const CHOICE_COLUMNS: Record<keyof CalendarChoicePatch, string> = {

@@ -157,7 +157,7 @@ function captureOffer(
 
 export function upcomingMeetings(events: readonly CalendarEvent[], now: number): CalendarEvent[] {
   return events
-    .filter((event) => nudgeable(event, now) && spanOf(event).end > now)
+    .filter((event) => isMeeting(event) && isToday(event, now) && spanOf(event).end > now)
     .slice(0, CALENDAR_UPCOMING_COUNT);
 }
 

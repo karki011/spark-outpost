@@ -17,13 +17,14 @@ import {
   type CalendarNow,
   type CalendarStatus,
 } from '@spark-outpost/contracts';
-import type { Db } from '../persistence/db.ts';
+import { withTransaction, type Db } from '../persistence/db.ts';
 import type { CalendarHost } from './host-client.ts';
 import { planNudges, type PlannerChat } from './planner.ts';
 import { lostNotice, rematchCalendars } from './rematch.ts';
 import {
   calendarConnection,
   calendarMarks,
+  lockChoices,
   replaceChoices,
   savedChoices,
   setNotice,
@@ -95,14 +96,16 @@ function readable(reading: Reading): boolean {
 }
 
 export async function syncCalendars(deps: CalendarDeps): Promise<CalendarChoice[]> {
-  const saved = await savedChoices(deps.db, deps.workspaceId);
-  if (!deps.host) return saved;
+  if (!deps.host) return savedChoices(deps.db, deps.workspaceId);
   const { calendars } = await deps.host.request({ op: 'calendars' });
-  const match = rematchCalendars(saved, calendars);
-  if (!match.changed) return saved;
-  await replaceChoices(deps.db, deps.workspaceId, match.writes);
-  const notice = lostNotice(match.lost);
-  if (notice) await setNotice(deps.db, deps.workspaceId, notice);
+  await withTransaction(deps.db, async (client) => {
+    await lockChoices(client, deps.workspaceId);
+    const match = rematchCalendars(await savedChoices(client, deps.workspaceId), calendars);
+    if (!match.changed) return;
+    await replaceChoices(client, deps.workspaceId, match.writes);
+    const notice = lostNotice(match.lost);
+    if (notice) await setNotice(client, deps.workspaceId, notice);
+  });
   return savedChoices(deps.db, deps.workspaceId);
 }
 

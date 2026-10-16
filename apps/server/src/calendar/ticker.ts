@@ -43,9 +43,9 @@ export function startCalendarTicker(deps: CalendarTickerDeps): CalendarTicker {
     const state = await calendarState({ ...deps, now });
     const at = now();
     setHolding(activeHold(state.events, state.settings, at) !== null);
+    if (!state.settings.phoneAlerts || holding) return;
     for (const event of meetingPushDue(state.events, state.settings, at)) {
-      if (!sent.claim(event.key)) continue;
-      if (state.settings.phoneAlerts && !holding) deps.push.meeting(state.settings.beforeMinutes);
+      if (sent.claim(event.key)) deps.push.meeting(state.settings.beforeMinutes);
     }
   };
 

@@ -126,6 +126,16 @@ describe('planNudges', () => {
     expect(plan.upcoming.map((item) => item.title)).toEqual(['Now', 'A', 'B']);
   });
 
+  it('lists meetings in Upcoming whether or not their calendar nudges', () => {
+    const events = [
+      event('Quiet', 30, 60, { nudges: false }),
+      event('Focus: deep', 60, 90, { focus: true }),
+    ];
+    const plan = planNudges(events, NO_CHATS, settings(), NOW);
+    expect(plan.upcoming.map((item) => item.title)).toEqual(['Quiet']);
+    expect(plan.nudge).toBeNull();
+  });
+
   it('offers a capture line for 15 min after a meeting with notes ends', () => {
     const ended = event('Design review', -40, -5, { hasNotes: true });
     expect(planNudges([ended], NO_CHATS, settings(), NOW).capture).toMatchObject({

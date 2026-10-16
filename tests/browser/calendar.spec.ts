@@ -170,6 +170,13 @@ test('merges both calendars, filters one out and shows another day', async ({ pa
   await expect(event(page, 'Shared invite')).toHaveCount(1);
   await expect(event(page, 'Shared invite')).toHaveAccessibleName(/also on Spark Family/);
   await expect(event(page, 'School pickup')).toBeVisible();
+  await expect(
+    today(page)
+      .getByRole('list', { name: 'All day' })
+      .getByRole('button', {
+        name: /^Company holiday, all day/,
+      }),
+  ).toBeVisible();
   await expect(today(page).getByText('no gap: Microsoft Teams → Google Meet')).toBeVisible();
 
   const filters = today(page).getByRole('group', { name: 'Show calendars' });
