@@ -41,7 +41,11 @@ export function slotTmpdir(forSlot: number): string {
 
 export const TEST_TMPDIR = slotTmpdir(slot);
 
-export const SERVER_LOG_DIR = path.join(TEST_TMPDIR, 'server-logs');
+export const SERVER_LOG_DIR = path.resolve(
+  import.meta.dirname,
+  '../../test-results/server-logs',
+  `slot-${slot}`,
+);
 export const API_RESTART_FLAG = path.join(SERVER_LOG_DIR, 'restart-api');
 
 const ports = slotPorts(slot);
