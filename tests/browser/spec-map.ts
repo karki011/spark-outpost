@@ -184,6 +184,7 @@ export const SPEC_GROUPS = {
     'island-size',
     'island-states',
     'island-terminal',
+    'voice',
   ],
   phone: ['phone', 'phone-motion', 'phone-notify', 'phone-pair-again', 'phone-passkey'],
   'docs-help': ['docs', 'help'],

@@ -138,12 +138,15 @@ function PanelBody({ panel, props }: { panel: Panel; props: IslandShellProps }) 
     <div className="isl-body">
       <IslandBar panel={panel} waiting={props.waiting} actions={props.bar} onTab={props.onTab} />
       <div key={panel} className="isl-pane" data-dir={shown.direction}>
-        {props.speech ? (
+        {props.speech && !props.speech.keepsPanel ? (
           <div className="isl-panel">
             <SpeechScreen screen={props.speech} />
           </div>
         ) : (
-          <PanelPane panel={panel} props={props} />
+          <>
+            {props.speech && <SpeechScreen screen={props.speech} />}
+            <PanelPane panel={panel} props={props} />
+          </>
         )}
       </div>
     </div>

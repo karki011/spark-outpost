@@ -60,6 +60,7 @@ export interface SpeechScreenModel {
   onConfirm(index?: number): void;
   onStop(): void;
   onOpenSettings(): void;
+  keepsPanel: boolean;
 }
 
 function useLists(
@@ -366,6 +367,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
           dispatch({ type: 'stopping' });
         },
         onOpenSettings: () => void speech?.openSettings('microphone'),
+        keepsPanel: state.listen?.purpose === 'confirm' && shown === null,
       }
     : null;
 

@@ -34,8 +34,8 @@ function Listening({ screen }: { screen: SpeechScreenModel }) {
   const working = listen.phase === 'working';
   const confirming = listen.purpose === 'confirm';
   return (
-    <div className="spk">
-      <p className="spk-state">
+    <div className="speech-screen">
+      <p className="speech-state">
         {working
           ? 'Working it out…'
           : confirming
@@ -43,12 +43,12 @@ function Listening({ screen }: { screen: SpeechScreenModel }) {
             : 'Listening… Esc to cancel'}
       </p>
       {!working && (
-        <div className="spk-meter" aria-hidden="true">
+        <div className="speech-meter" aria-hidden="true">
           <span style={{ transform: `scaleX(${Math.max(0.04, listen.level)})` }} />
         </div>
       )}
       {!working && listen.id && (
-        <div className="spk-actions">
+        <div className="speech-actions">
           <button type="button" className="isl-btn" onClick={screen.onStop}>
             Done
           </button>
@@ -74,7 +74,7 @@ function Choices({ screen }: { screen: SpeechScreenModel }) {
   return (
     <ul
       ref={listRef}
-      className="spk-list"
+      className="speech-list"
       role="listbox"
       aria-label="Matches"
       onKeyDown={onKeyDown}
@@ -84,7 +84,7 @@ function Choices({ screen }: { screen: SpeechScreenModel }) {
           <button
             type="button"
             role="option"
-            className="spk-choice"
+            className="speech-choice"
             data-index={index}
             aria-selected={index === selected}
             tabIndex={index === selected ? 0 : -1}
@@ -112,27 +112,27 @@ export function SpeechScreen({ screen }: { screen: SpeechScreenModel }) {
   if (!shown) {
     const notice = state.notice ?? 'failed';
     return (
-      <div className="spk" role="status">
-        <p className="spk-state">{NOTICES[notice]}</p>
+      <div className="speech-screen" role="status">
+        <p className="speech-state">{NOTICES[notice]}</p>
         {notice === 'mic_denied' && (
-          <div className="spk-actions">
+          <div className="speech-actions">
             <button type="button" className="isl-btn" onClick={screen.onOpenSettings}>
               Open Microphone settings
             </button>
           </div>
         )}
-        {notice === 'missed' && <p className="spk-heard">Press the Voice shortcut to try again.</p>}
+        {notice === 'missed' && <p className="speech-heard">Press the Voice shortcut to try again.</p>}
       </div>
     );
   }
   return (
-    <div className="spk">
-      <p className="spk-heard">“{shown.transcript}”</p>
-      <p className="spk-state" aria-live="polite">
+    <div className="speech-screen">
+      <p className="speech-heard">“{shown.transcript}”</p>
+      <p className="speech-state" aria-live="polite">
         {heading(shown.command, screen.choices.length)}
       </p>
       {screen.choices.length > 0 && <Choices screen={screen} />}
-      <p className="spk-heard">
+      <p className="speech-heard">
         {screen.choices.length > 0
           ? 'Enter or a click to open. Press the Voice shortcut and say “yes” to confirm.'
           : 'Esc to close.'}

@@ -24,32 +24,32 @@
   background: var(--accent-soft);
 }
 
-.spk {
+.speech-screen {
   display: grid;
   gap: 10px;
   padding: 12px 14px;
 }
 
-.spk-state {
+.speech-state {
   margin: 0;
   font-weight: 600;
   color: var(--text);
 }
 
-.spk-heard {
+.speech-heard {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
 }
 
-.spk-meter {
+.speech-meter {
   height: 4px;
   overflow: hidden;
   border-radius: 2px;
   background: var(--raise);
 }
 
-.spk-meter > span {
+.speech-meter > span {
   display: block;
   height: 100%;
   background: var(--accent);
@@ -57,7 +57,7 @@
   transition: transform 80ms linear;
 }
 
-.spk-list {
+.speech-list {
   display: grid;
   gap: 4px;
   margin: 0;
@@ -65,7 +65,7 @@
   list-style: none;
 }
 
-.spk-choice {
+.speech-choice {
   display: flex;
   justify-content: space-between;
   gap: 8px;
@@ -80,21 +80,21 @@
   cursor: pointer;
 }
 
-.spk-choice[aria-selected='true'] {
+.speech-choice[aria-selected='true'] {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
 
-.spk-choice:focus-visible {
+.speech-choice:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
-.spk-choice small {
+.speech-choice small {
   color: var(--muted);
 }
 
-.spk-actions {
+.speech-actions {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
@@ -128,7 +128,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spk-meter > span {
+  .speech-meter > span {
     transition: none;
   }
 }
