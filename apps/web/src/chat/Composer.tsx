@@ -51,6 +51,8 @@ import { useDraftRequests } from './composer/use-draft-requests.ts';
 import { PlusMenu } from './composer/PlusMenu.tsx';
 import { SendButton } from './composer/SendButton.tsx';
 import { ComposerShell, composerRows } from './composer/ComposerShell.tsx';
+import { MicButton } from '../voice/MicButton.tsx';
+import { joinDictation } from '../voice/use-dictation.ts';
 import {
   composerHint,
   composerPlaceholder,
@@ -355,6 +357,12 @@ export function Composer({
             provider={settings?.provider ?? null}
             usageTotals={usageTotals}
             {...(onAudit ? { onAudit } : {})}
+          />
+          <MicButton
+            onText={(heard) => {
+              setDraft((now) => joinDictation(now, heard));
+              textareaRef.current?.focus();
+            }}
           />
           <SendButton
             busy={busy}

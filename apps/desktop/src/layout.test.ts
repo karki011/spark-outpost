@@ -15,6 +15,8 @@ describe('appLayout', () => {
       webRoot: '/repo/apps/web/dist',
       tmuxBin: '/repo/.local/tmux/arm64/bin/tmux',
       macControlBin: '/repo/.local/mac-control/arm64/spark-mac-control',
+      voiceBin: '/repo/.local/voice/arm64/spark-voice',
+      voiceModels: '/repo/.local/voice/arm64/models',
     });
   });
 
@@ -31,6 +33,8 @@ describe('appLayout', () => {
       tmuxBin: '/Applications/Spark Outpost.app/Contents/Resources/tmux/bin/tmux',
       macControlBin:
         '/Applications/Spark Outpost.app/Contents/Resources/mac-control/bin/spark-mac-control',
+      voiceBin: '/Applications/Spark Outpost.app/Contents/Resources/voice/bin/spark-voice',
+      voiceModels: '/Applications/Spark Outpost.app/Contents/Resources/voice/models',
     });
   });
 });

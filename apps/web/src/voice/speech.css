@@ -1,0 +1,134 @@
+.mic-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mic-status {
+  max-width: 260px;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mic-partial {
+  color: var(--faint);
+  font-style: italic;
+}
+
+.mic-btn[data-listening] {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.speech-screen {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.speech-state {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.speech-heard {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.speech-meter {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--raise);
+}
+
+.speech-meter > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  transition: transform 80ms linear;
+}
+
+.speech-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.speech-choice {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.speech-choice[aria-selected='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.speech-choice:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.speech-choice small {
+  color: var(--muted);
+}
+
+.speech-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.tdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tdict input {
+  width: min(360px, 40vw);
+  padding: 4px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+}
+
+.tdict input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.tdict-error {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speech-meter > span {
+    transition: none;
+  }
+}

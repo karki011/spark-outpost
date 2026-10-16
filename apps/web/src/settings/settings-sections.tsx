@@ -28,6 +28,7 @@ import { ProjectsSection } from './ProjectsSection.tsx';
 import { PULL_REQUEST_ROWS, PullRequestsSection } from './PullRequestSettings.tsx';
 import { TERMINAL_RECORD_LABEL } from './TerminalRecordSetting.tsx';
 import { UPDATE_ROWS, UpdatesSection, updatesAvailable } from './UpdatesSection.tsx';
+import { VOICE_ROWS, VoiceSection, voiceAvailable } from './VoiceSection.tsx';
 import { WIDE_WINDOW_LABEL } from './WideWindowSetting.tsx';
 import * as icons from './settings-icons.tsx';
 
@@ -100,6 +101,15 @@ export const SETTINGS_SECTIONS = [
     rows: () => ASSISTANT_ROWS,
     render: ({ setup, onOpenChat }) =>
       setup && <SparkAssistantSection setup={setup} onOpenChat={onOpenChat} />,
+  },
+  {
+    id: 'voice',
+    group: 'general',
+    label: 'Voice',
+    icon: icons.VOICE_ICON,
+    available: voiceAvailable,
+    rows: () => VOICE_ROWS,
+    render: () => <VoiceSection />,
   },
   {
     id: 'look',

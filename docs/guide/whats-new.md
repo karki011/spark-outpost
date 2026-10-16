@@ -10,13 +10,11 @@ What changed recently in Spark, newest first.
 
 ## October 2026
 
-| What changed                                                                                                                            | What to do                                                           |
-| --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Settings has six groups and a **Search settings** box.                                                                                  | See [Settings](settings.md).                                         |
-| Ask Spark is faster and remembers key facts.                                                                                            | See [Settings](settings.md#spark-assistant).                         |
-| When you allow a browser or Mac control card, the agent is told you allowed it, so it doesn't say the step ran unasked.                 | See [Mac control](mac-control.md).                                   |
-| In a chat without a project, Spark actions follow your picked mode, so **Auto** runs them at once. Mac-app sends and deletes still ask. | See [Spark tools](spark-tools.md#when-actions-ask-first).            |
-| Agents can read another Mac app and press its buttons and menus, one app per chat. Sends and deletes always ask.                        | See [Mac control](mac-control.md).                                   |
-| Chat list rows show only the title, with a dot for working, waiting for you, done or couldn't finish. Opening the chat clears it.       | See [statuses](statuses-and-limits.md#chat-list).                    |
-| Terminals use SF Mono when it's installed on your Mac, and Menlo otherwise.                                                             | Get it from [Apple](https://developer.apple.com/fonts/).             |
-| Agents read long pages controls first, read only an open dialog, and keep their place when a page redraws, so they reread less.         | See [the browser](use-the-browser.md#let-the-agent-look-and-browse). |
+| What changed                                                                        | What to do                                                |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Settings has six groups and a **Search settings** box.                              | See [Settings](settings.md).                              |
+| Push to talk: dictate, start a chat or ask who needs you. Speech stays on your Mac. | See [Talk to Spark](voice.md).                            |
+| Ask Spark is faster and remembers key facts.                                        | See [Settings](settings.md#spark-assistant).              |
+| After you allow a browser or Mac control card, the agent knows you allowed it.      | See [Mac control](mac-control.md).                        |
+| In a chat without a project, Spark actions follow your mode.                        | See [Spark tools](spark-tools.md#when-actions-ask-first). |
+| Agents can read and press in another Mac app. Sends and deletes always ask.         | See [Mac control](mac-control.md).                        |

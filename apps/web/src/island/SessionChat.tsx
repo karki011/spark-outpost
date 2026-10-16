@@ -30,6 +30,9 @@ import { projectLine, StateChip } from './session-bits.tsx';
 import { statusLine } from './session-summary.ts';
 import { SessionBlob } from './SessionBlob.tsx';
 import { chatAgent, pendingOf } from './use-island-data.ts';
+import { MicButton } from '../voice/MicButton.tsx';
+import { useSeed } from '../voice/speech-seed.tsx';
+import { joinDictation } from '../voice/use-dictation.ts';
 
 const TERMINAL_PARTS: readonly LinePart[] = ['step', 'steps', 'subagents', 'model'];
 
@@ -177,6 +180,15 @@ function Reply({ chat, detail }: { chat: ConversationSummary; detail?: Conversat
     event.preventDefault();
     submit(enterAction(event, preferred));
   };
+  useSeed(
+    'reply',
+    (seed) => {
+      if (seed.chatId !== chat.id) return;
+      setText(seed.text);
+      inputRef.current?.focus({ preventScroll: true });
+    },
+    () => submit(),
+  );
   const busyPlaceholder =
     preferred === 'now' ? 'Reply to the running turn…' : 'Queue a reply for when this turn ends…';
   return (
@@ -204,6 +216,10 @@ function Reply({ chat, detail }: { chat: ConversationSummary; detail?: Conversat
           {send.isPending ? 'Sending…' : replyHint(busy, queue.items.length, preferred, waitingOn)}
         </span>
         <span className="isl-sp" />
+        <MicButton
+          className="isl-chip"
+          onText={(heard) => setText((now) => joinDictation(now, heard))}
+        />
         <button
           type="button"
           className="isl-send"

@@ -70,6 +70,8 @@ import { useFastState } from './use-fast-state.ts';
 import { useIslandData } from './use-island-data.ts';
 import { useGreeting, useMoments } from './use-island-moments.ts';
 import { useThemeSync } from './use-theme-sync.ts';
+import { SpeechSeedContext } from '../voice/speech-seed.tsx';
+import { useSpeechIsland } from '../voice/use-speech-island.ts';
 
 const NOTE_MS = 1_500;
 const MINUTE_MS = 60_000;
@@ -336,6 +338,15 @@ export function IslandApp() {
     onEditSpark: settingsReady ? (id: string) => openSettings(`spark-edit:${id}`) : null,
   };
   const fast = useFastState(feed, panel === 'ask');
+  const speechIsland = useSpeechIsland({
+    chats: data.chats,
+    projects: data.projects,
+    fast,
+    panel,
+    openPanel,
+    selectChat: setSelected,
+    openChat,
+  });
 
   const openChatHere =
     panel === 'sessions' ? (data.chats.find((chat) => chat.id === selected) ?? null) : null;
@@ -395,65 +406,68 @@ export function IslandApp() {
       onPointerDownCapture={pin}
       onKeyDownCapture={pin}
     >
-      <IslandShell
-        islandRef={islandRef}
-        rowRef={rowRef}
-        compose={{ attachments, adder, added, note: dropNote }}
-        drop={{ grab, note: dropNote, replyingTo: followUp?.title ?? null, sceneRef }}
-        view={view}
-        geometry={geometry}
-        size={size}
-        mood={mood}
-        reduced={reduced}
-        wave={wave}
-        hover={hover}
-        greeting={greeting}
-        waiting={waiting}
-        asking={cards.length}
-        setAside={allCards.length - cards.length}
-        line={line}
-        voice={voice}
-        now={now}
-        note={note}
-        detailFor={(chatId) => data.detailById.get(chatId)}
-        focusSignal={focusSignal}
-        sessions={sessions}
-        home={home}
-        bar={{ sound, onSettings: settingsReady ? () => openSettings('island') : null }}
-        peek={row}
-        sleepy={sleepy}
-        projectNames={data.projectNames}
-        projects={data.projects}
-        selected={selected}
-        draftId={draftId}
-        draft={draft}
-        followUp={followUp}
-        fast={fast}
-        announcement={viewAnnouncement || announcement || spoken}
-        onDraft={setDraft}
-        onTab={openPanel}
-        onSelect={setSelected}
-        onOpenChat={openChat}
-        onDecided={setNote}
-        onLater={snooze}
-        onReview={openCard}
-        onLine={openLine}
-        onScout={() => {
-          if (panel) closePanel();
-          else if (view.kind === 'now' && view.card) openCard(view.card);
-          else openPanel('home');
-        }}
-        onPeekOpen={(id) => {
-          setSelected(id);
-          openPanel('sessions');
-        }}
-        onSent={(_id, title) => {
-          setAnnouncement(`Started ${followUp ? 'a follow-up' : 'a new chat'}: ${title}.`);
-          setDraftId(newDraftId());
-          setDropNote(null);
-          closePanel();
-        }}
-      />
+      <SpeechSeedContext.Provider value={speechIsland.seeds}>
+        <IslandShell
+          islandRef={islandRef}
+          speech={speechIsland.screen}
+          rowRef={rowRef}
+          compose={{ attachments, adder, added, note: dropNote }}
+          drop={{ grab, note: dropNote, replyingTo: followUp?.title ?? null, sceneRef }}
+          view={view}
+          geometry={geometry}
+          size={size}
+          mood={mood}
+          reduced={reduced}
+          wave={wave}
+          hover={hover}
+          greeting={greeting}
+          waiting={waiting}
+          asking={cards.length}
+          setAside={allCards.length - cards.length}
+          line={line}
+          voice={voice}
+          now={now}
+          note={note}
+          detailFor={(chatId) => data.detailById.get(chatId)}
+          focusSignal={focusSignal}
+          sessions={sessions}
+          home={home}
+          bar={{ sound, onSettings: settingsReady ? () => openSettings('island') : null }}
+          peek={row}
+          sleepy={sleepy}
+          projectNames={data.projectNames}
+          projects={data.projects}
+          selected={selected}
+          draftId={draftId}
+          draft={draft}
+          followUp={followUp}
+          fast={fast}
+          announcement={viewAnnouncement || announcement || spoken}
+          onDraft={setDraft}
+          onTab={openPanel}
+          onSelect={setSelected}
+          onOpenChat={openChat}
+          onDecided={setNote}
+          onLater={snooze}
+          onReview={openCard}
+          onLine={openLine}
+          onScout={() => {
+            if (panel) closePanel();
+            else if (view.kind === 'now' && view.card) openCard(view.card);
+            else openPanel('home');
+          }}
+          onPeekOpen={(id) => {
+            setSelected(id);
+            openPanel('sessions');
+          }}
+          onSent={(_id, title) => {
+            setAnnouncement(`Started ${followUp ? 'a follow-up' : 'a new chat'}: ${title}.`);
+            setDraftId(newDraftId());
+            setDropNote(null);
+            closePanel();
+          }}
+        />
+      </SpeechSeedContext.Provider>
     </div>
   );
 }
