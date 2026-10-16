@@ -24,7 +24,9 @@ import {
   speechHint,
   type Command,
   type Confirmation,
+  resolveTicketSource,
   type OpenTarget,
+  type TicketRef,
   type SpeechLists,
 } from './commands.ts';
 import { desktopSpeech, useSpeechEvents, useSpeechStatus } from './speech-bridge.ts';
@@ -67,8 +69,9 @@ function useLists(
   chats: readonly ConversationSummary[],
   projects: readonly Project[],
 ): SpeechLists {
-  const { connected, inbox } = useTicketInbox();
+  const { connected, connections, inbox } = useTicketInbox();
   const tickets = connected ? inbox.data?.tickets : undefined;
+  const sources = connections.data?.connections;
   return useMemo(
     () => ({
       projects: projects.map((project) => ({
@@ -85,8 +88,9 @@ function useLists(
         key: ticket.key,
         title: ticket.title,
       })),
+      sources: (sources ?? []).filter((entry) => entry.keySaved).map((entry) => entry.source),
     }),
-    [chats, projects, tickets],
+    [chats, projects, tickets, sources],
   );
 }
 
@@ -146,6 +150,8 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
       setHanded(null);
     }
   }
+  const starts = useRef(0);
+  const escapedStart = useRef(0);
   const latest = useRef({ state, options, lists, seed, handed, selected, status });
   useEffect(() => {
     latest.current = { state, options, lists, seed, handed, selected, status };
@@ -155,6 +161,15 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
     if (speech && latest.current.status?.settings.speakAnswers) void speech.speak(text);
   };
 
+  const resolve = (ticket: TicketRef) =>
+    resolveTicketSource(ticket, latest.current.lists.sources, async (source, key) => {
+      await queryClient.fetchQuery({
+        queryKey: ticketKeys.view(source as TicketSourceId, key),
+        queryFn: () => ticketsApi.view(source as TicketSourceId, key),
+      });
+      return true;
+    });
+
   const hand = (next: SpeechSeed) => {
     setSeed(next);
     setHanded(next.id);
@@ -163,7 +178,9 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
   const answerTicket = async (
     command: Extract<Command, { intent: 'ask_fast' }>,
   ): Promise<InstantAnswer> => {
-    const ref = command.ticket!;
+    const ref = await resolve(command.ticket!);
+    if (ref.source === null)
+      return { text: `${ref.key} isn’t in a connected ticket tracker.`, chats: [] };
     const cached = queryClient
       .getQueryData<{ tickets: { key: string }[] }>(ticketKeys.inbox)
       ?.tickets.find((ticket) => ticket.key === ref.key);
@@ -213,7 +230,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
           id: result.id,
           text: command.task,
           projectId: project.id,
-          ticket: command.ticket,
+          ticket: command.ticket ? await resolve(command.ticket) : null,
         });
         openPanel('quick');
         return;
@@ -251,6 +268,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
       case 'ask_fast': {
         const answer = await instant(command);
         hand({ kind: 'ask', id: result.id, question: result.transcript, answer });
+        dispatch({ type: 'close' });
         openPanel('ask');
         speak(answer.text);
         return;
@@ -271,7 +289,8 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
       return;
     }
     if (given === result.id) {
-      if (answer.answer === 'yes' && current?.id === result.id)
+      const answered = current?.kind === 'ask' && current.answer !== null;
+      if (answer.answer === 'yes' && current?.id === result.id && !answered)
         setConfirmed((last) => ({ id: result.id, count: last.count + 1 }));
       return;
     }
@@ -305,6 +324,8 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
     const { state: now, lists: names, options: opts } = latest.current;
     if (!speech || now.listen) return;
     const purpose = nextPurpose(now);
+    starts.current += 1;
+    const start = starts.current;
     dispatch({ type: 'start', purpose });
     if (purpose === 'command') {
       setSeed(null);
@@ -313,6 +334,10 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
     if (opts.panel === null || purpose === 'command') opts.openPanel(opts.panel ?? 'ask');
     const hint = speechHint(names);
     const answer = await (file ? speech.listen(purpose, hint, file) : speech.listen(purpose, hint));
+    if (escapedStart.current === start) {
+      if (answer.ok) void speech.cancel(answer.id);
+      return;
+    }
     dispatch(
       answer.ok ? { type: 'started', id: answer.id } : { type: 'refused', error: answer.error },
     );
@@ -344,6 +369,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
       void speech.hush();
       if (!now.listen) return;
       if (now.listen.id) void speech.cancel(now.listen.id);
+      else escapedStart.current = starts.current;
       dispatch({ type: 'escape' });
       event.preventDefault();
     };

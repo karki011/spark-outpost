@@ -53,6 +53,7 @@ export function createVoice(effects: VoiceEffects) {
   let fnSetting: VoiceFnSetting = 'emoji';
   const listens = new Map<string, number>();
   let speaking: { id: string; owner: number } | null = null;
+  let disposed = false;
 
   const snapshot = (): VoiceStatus => ({
     supported: true,
@@ -244,6 +245,7 @@ export function createVoice(effects: VoiceEffects) {
     listens.clear();
     speaking = null;
     fnActive = false;
+    if (!disposed && settings.enabled && settings.shortcutMode === 'fn') void applyKeys();
   });
 
   return {
@@ -323,7 +325,10 @@ export function createVoice(effects: VoiceEffects) {
     },
 
     cancel(owner: number, id: unknown) {
-      if (typeof id === 'string' && listens.get(id) === owner) helper.send({ op: 'cancel', id });
+      if (typeof id !== 'string' || listens.get(id) !== owner) return;
+      listens.delete(id);
+      helper.send({ op: 'cancel', id });
+      effects.sendTo(owner, { kind: 'cancelled', id });
     },
 
     speak(owner: number, text: unknown): string | null {
@@ -345,6 +350,7 @@ export function createVoice(effects: VoiceEffects) {
     },
 
     dispose() {
+      disposed = true;
       if (registered) effects.unregister(registered);
       registered = null;
       helper.kill();

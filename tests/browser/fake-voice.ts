@@ -5,6 +5,7 @@ export interface FakeVoiceOptions {
   speakAnswers?: boolean;
   mic?: 'granted' | 'denied' | 'not_determined';
   listenError?: string;
+  listenDelayMs?: number;
 }
 
 export interface VoiceCall {
@@ -103,7 +104,11 @@ export async function installFakeVoice(page: Page, options: FakeVoiceOptions = {
             record('listen', purpose, hint);
             if (settings.listenError) return { ok: false, error: settings.listenError };
             counter += 1;
-            return { ok: true, id: `listen-${counter}` };
+            const id = `listen-${counter}`;
+            if (settings.listenDelayMs)
+              await new Promise((resolve) => setTimeout(resolve, settings.listenDelayMs));
+            record('resolved', id);
+            return { ok: true, id };
           },
           stop: async (id: string) => record('stop', id),
           cancel: async (id: string) => {

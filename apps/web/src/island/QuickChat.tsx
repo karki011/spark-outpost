@@ -108,7 +108,7 @@ export function QuickChat(props: QuickChatProps) {
         await api.sendMessage(followUp.id, crypto.randomUUID(), content, attachmentIds);
         return { id: followUp.id, title: followUp.title };
       }
-      if (ticket) {
+      if (ticket?.source) {
         const started = await ticketsApi.start(ticket.source as TicketSourceId, ticket.key, {
           conversationId: draftId,
           messageId: crypto.randomUUID(),
@@ -219,14 +219,18 @@ export function QuickChat(props: QuickChatProps) {
                 ×
               </button>
             </span>
-            <label>
-              <input
-                type="checkbox"
-                checked={moveTicket}
-                onChange={(event) => setMoveTicket(event.target.checked)}
-              />{' '}
-              Move to In Progress
-            </label>
+            {ticket.source ? (
+              <label>
+                <input
+                  type="checkbox"
+                  checked={moveTicket}
+                  onChange={(event) => setMoveTicket(event.target.checked)}
+                />{' '}
+                Move to In Progress
+              </label>
+            ) : (
+              <span className="isl-sub">Not in a connected tracker; sends as a plain chat</span>
+            )}
           </div>
         )}
         <label className="sr-only" htmlFor="isl-qc-text">

@@ -114,6 +114,47 @@ test('Esc while listening cancels with no transcript and no result', async ({ pa
   expect((await voiceCalls(page)).map((call) => call.op)).toContain('cancel');
 });
 
+test('Esc while the first listen is still starting cancels it once it resolves', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await installFakeVoice(page, { listenDelayMs: 600 });
+  await openIsland(page);
+  await emitVoice(page, { kind: 'press' });
+  await expect(island(page).getByText('Listening… Esc to cancel')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(island(page).getByText('Listening… Esc to cancel')).toHaveCount(0);
+  await expect
+    .poll(async () => (await voiceCalls(page)).filter((call) => call.op !== 'hush'))
+    .toEqual([
+      { op: 'listen', args: ['command', expect.any(String)] },
+      { op: 'resolved', args: ['listen-1'] },
+      { op: 'cancel', args: ['listen-1'] },
+    ]);
+  await emitVoice(page, { kind: 'press' });
+  await expect(island(page).getByRole('button', { name: 'Done', exact: true })).toBeVisible();
+  const listens = (await voiceCalls(page)).filter((call) => call.op === 'listen');
+  expect(listens).toHaveLength(2);
+});
+
+test('an instant answer arms no confirmation: "yes" afterwards sends no draft', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await installFakeVoice(page);
+  await openIsland(page);
+  await say(page, 'What did I spend today?');
+  const ask = island(page).getByRole('textbox', { name: 'Ask Spark' });
+  await ask.fill('Delete every branch I have');
+  const before = await userMessages();
+  await say(page, 'Who needs me?');
+  await expect(island(page).getByText('Nothing needs you right now.')).toBeVisible();
+  const next = await say(page, 'yes');
+  expect(next.purpose).toBe('command');
+  await page.waitForTimeout(400);
+  expect(await userMessages()).toBe(before);
+});
+
 test('open shows a result card with the best match preselected, and Enter opens it', async ({
   page,
 }) => {
@@ -233,5 +274,6 @@ test('dictation fills the chat composer and is never sent', async ({ page }) => 
   );
   await page.waitForTimeout(400);
   expect(await userMessages()).toBe(before);
-  expect((await voiceCalls(page)).map((call) => call.op)).toEqual(['listen', 'stop']);
+  const ops = (await voiceCalls(page)).map((call) => call.op);
+  expect(ops.filter((op) => op !== 'resolved')).toEqual(['listen', 'stop']);
 });

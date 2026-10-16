@@ -8,6 +8,7 @@ import {
   VOICE_WHISPER_BASE,
   type VoiceEvent,
   type VoiceMicPermission,
+  type VoiceStatus,
 } from '@spark-outpost/contracts';
 import { fakeVoiceHelper } from './fake-helper.ts';
 import { startVoiceHelper } from './helper-process.ts';
@@ -33,6 +34,7 @@ async function setup(
   const island: VoiceEvent[] = [];
   const registered = new Map<string, () => void>();
   const saved: unknown[] = [];
+  const published: VoiceStatus[] = [];
   let mic: VoiceMicPermission = options.mic ?? 'granted';
   const helper = startVoiceHelper({ spawn: fakeVoiceHelper, log: () => undefined });
   const voice = createVoice({
@@ -58,10 +60,10 @@ async function setup(
     voiceOver: () => false,
     language: 'en',
     allowFileInput: false,
-    changed: () => undefined,
+    changed: (status) => published.push(status),
     log: () => undefined,
   });
-  return { voice, sent, island, registered, saved, helper, dir };
+  return { voice, sent, island, registered, saved, helper, dir, published };
 }
 
 const settle = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -141,6 +143,31 @@ describe('Voice', () => {
     scene.voice.cancel(1, first.id);
     await settle(50);
     expect(scene.sent.at(-1)).toEqual({ owner: 1, event: { kind: 'cancelled', id: first.id } });
+    scene.voice.dispose();
+  });
+
+  it('a cancel drops the listen at once, so the next press opens a fresh one', async () => {
+    const scene = await setup({ enabled: true });
+    const orphan = await scene.voice.listen(5, 'command', '', undefined);
+    if (!orphan.ok) throw new Error('not listening');
+    scene.voice.cancel(5, orphan.id);
+    expect(scene.sent.at(-1)).toEqual({ owner: 5, event: { kind: 'cancelled', id: orphan.id } });
+    scene.voice.press();
+    expect(scene.island).toEqual([{ kind: 'press' }]);
+    const fresh = await scene.voice.listen(5, 'command', '', undefined);
+    expect(fresh.ok).toBe(true);
+    scene.voice.dispose();
+  });
+
+  it('Fn twice is watched again after the helper exits and comes back', async () => {
+    const scene = await setup({ enabled: true });
+    await scene.voice.update({ shortcutMode: 'fn' });
+    expect((await scene.voice.status()).fnActive).toBe(true);
+    scene.published.length = 0;
+    scene.helper.kill();
+    await settle(100);
+    expect(scene.published.at(-1)?.fnActive).toBe(true);
+    expect(scene.helper.running()).toBe(true);
     scene.voice.dispose();
   });
 

@@ -14,7 +14,7 @@ export interface ChatRef {
 }
 
 export interface TicketRef {
-  source: string;
+  source: string | null;
   key: string;
   title: string | null;
   known: boolean;
@@ -24,6 +24,7 @@ export interface SpeechLists {
   projects: readonly ProjectRef[];
   chats: readonly ChatRef[];
   tickets: readonly { source: string; key: string; title: string }[];
+  sources: readonly string[];
 }
 
 export type FastQuestion = 'needs' | 'running' | 'spend' | 'tickets' | 'ticket_status';
@@ -97,7 +98,8 @@ function findTicket(heard: string[], lists: SpeechLists): TicketRef | null {
   const known = lists.tickets.find((ticket) => keyForm(ticket.key) === keyForm(key));
   if (known) return { source: known.source, key: known.key, title: known.title, known: true };
   const source = lists.tickets.find((ticket) => ticket.key.split('-')[0] === key.split('-')[0]);
-  return { source: source?.source ?? 'jira', key, title: null, known: false };
+  const only = lists.sources.length === 1 ? lists.sources[0]! : null;
+  return { source: source?.source ?? only, key, title: null, known: false };
 }
 
 function spoken(words: string[] | undefined): string {
@@ -196,6 +198,18 @@ export function matchCommand(transcript: string, lists: SpeechLists): Command {
   }
   if (best && best.score > 0) return best.command;
   return { intent: 'none', text: original.replace(/[.!?]+$/, '') };
+}
+
+export async function resolveTicketSource(
+  ticket: TicketRef,
+  sources: readonly string[],
+  exists: (source: string, key: string) => Promise<boolean>,
+): Promise<TicketRef> {
+  if (ticket.source !== null) return ticket;
+  for (const source of sources) {
+    if (await exists(source, ticket.key).catch(() => false)) return { ...ticket, source };
+  }
+  return ticket;
 }
 
 export function matchConfirmation(transcript: string): Confirmation | null {

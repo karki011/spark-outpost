@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { matchCommand, matchConfirmation, speechHint, type SpeechLists } from './commands.ts';
+import {
+  matchCommand,
+  matchConfirmation,
+  resolveTicketSource,
+  speechHint,
+  type SpeechLists,
+} from './commands.ts';
 import { similarity } from './fuzzy.ts';
 import { ticketKey, tokens } from './normalise.ts';
 
@@ -20,6 +26,7 @@ const lists: SpeechLists = {
     { source: 'jira', key: 'CP-12', title: 'Old one' },
     { source: 'linear', key: 'ENG-7', title: 'Faster boot' },
   ],
+  sources: ['jira', 'linear'],
 };
 
 describe('ticket keys', () => {
@@ -151,6 +158,34 @@ describe('matchCommand', () => {
       intent: 'none',
       text: 'Why did the billing build fail yesterday',
     });
+  });
+});
+
+describe('ticket sources', () => {
+  const unknownKey = (sources: string[]) =>
+    matchCommand('work on ABC 12 in spark outpost', { ...lists, tickets: [], sources });
+
+  it('uses the one connected tracker for a key it has not cached', () => {
+    expect(unknownKey(['linear'])).toMatchObject({ ticket: { key: 'ABC-12', source: 'linear' } });
+  });
+
+  it('never guesses a tracker: none connected, or several, leaves the key unresolved', () => {
+    expect(unknownKey([])).toMatchObject({ ticket: { key: 'ABC-12', source: null } });
+    expect(unknownKey(['jira', 'linear'])).toMatchObject({ ticket: { source: null } });
+  });
+
+  it('with several trackers, looks the key up in each and keeps the one that has it', async () => {
+    const asked: string[] = [];
+    const ticket = { key: 'ABC-12', source: null, title: null, known: false };
+    const found = await resolveTicketSource(ticket, ['jira', 'linear'], async (source) => {
+      asked.push(source);
+      if (source === 'jira') throw new Error('404');
+      return true;
+    });
+    expect(found.source).toBe('linear');
+    expect(asked).toEqual(['jira', 'linear']);
+    const missing = await resolveTicketSource(ticket, ['jira'], async () => false);
+    expect(missing.source).toBeNull();
   });
 });
 

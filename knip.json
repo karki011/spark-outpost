@@ -30,7 +30,12 @@
       "ignoreDependencies": ["@fontsource-variable/geist", "@fontsource-variable/geist-mono"]
     },
     "apps/desktop": {
-      "entry": ["src/server-entry.ts", "src/boot-preload.ts", "src/runtime-host.ts"],
+      "entry": [
+        "src/server-entry.ts",
+        "src/boot-preload.ts",
+        "src/media-guard-preload.ts",
+        "src/runtime-host.ts"
+      ],
       "project": ["src/**/*.ts", "scripts/**/*.ts"]
     },
     "packages/contracts": {
