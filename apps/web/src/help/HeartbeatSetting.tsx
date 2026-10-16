@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { ProfileSwitchSetting } from '../settings/ProfileSwitchSetting.tsx';
 
+export const HEARTBEAT_LABEL = 'Send anonymous heartbeat';
+
 const HEARTBEAT_HINT =
   'Once a day Spark sends a random install ID, app version and OS. Cloudflare adds the country. No chats, code, names or IP addresses.';
 
@@ -14,7 +16,7 @@ export function HeartbeatSetting() {
   return (
     <ProfileSwitchSetting
       enabled={setup.data.profile.heartbeat}
-      label="Send anonymous heartbeat"
+      label={HEARTBEAT_LABEL}
       info={HEARTBEAT_INFO}
       doc={{ page: 'mac-privacy', heading: 'anonymous-heartbeat' }}
       hint={HEARTBEAT_HINT}

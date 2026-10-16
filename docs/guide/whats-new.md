@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                        | What to do                                                |
 | ----------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Settings has six groups and a **Search settings** box.                              | See [Settings](settings.md).                              |
 | Push to talk: dictate, start a chat or ask who needs you. Speech stays on your Mac. | See [Talk to Spark](voice.md).                            |
 | Ask Spark is faster and remembers key facts.                                        | See [Settings](settings.md#spark-assistant).              |
 | After you allow a browser or Mac control card, the agent knows you allowed it.      | See [Mac control](mac-control.md).                        |

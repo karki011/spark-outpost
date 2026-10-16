@@ -40,7 +40,9 @@ import {
   leaveProviderRoute,
   onProviderRoute,
 } from '../providers/provider-route.ts';
-import { revealIslandSettings } from '../settings/DesktopCompanionSetting.tsx';
+import { SHOW_ISLAND_LABEL } from '../settings/DesktopCompanionSetting.tsx';
+import { requestSettingFocus } from '../settings/setting-focus.ts';
+import { LEVEL_LABEL } from '../spark/LevelSetting.tsx';
 import { requestFeedback } from '../help/feedback-request.ts';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { FreezeWhileHidden } from '../ui/FreezeWhileHidden.tsx';
@@ -63,7 +65,6 @@ import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
 import { DefaultLevelNotice } from '../spark/DefaultLevelNotice.tsx';
-import { revealWorkflowOptions } from '../spark/SparkSection.tsx';
 import { PasskeyOffer } from '../phone/PasskeyOffer.tsx';
 import { openTeammateSheet } from '../teammates/teammate-store.ts';
 import { useAttentionTitle } from './use-attention-title.ts';
@@ -219,8 +220,8 @@ function ChatShell({ entering }: { entering: boolean }) {
           openTeammateSheet({ kind: 'edit', id: target.slice('spark-edit:'.length) });
           return;
         }
-        revealIslandSettings();
-        setSettings('spark');
+        requestSettingFocus(SHOW_ISLAND_LABEL);
+        setSettings('notifications');
       }),
     [setSettings],
   );
@@ -376,8 +377,8 @@ function ChatShell({ entering }: { entering: boolean }) {
           {live.paused && !connection.lost && <LivePausedHint />}
           <DefaultLevelNotice
             onSettings={() => {
-              revealWorkflowOptions();
-              setSettings('spark');
+              requestSettingFocus(LEVEL_LABEL);
+              setSettings('chats');
             }}
           />
           <PasskeyOffer />

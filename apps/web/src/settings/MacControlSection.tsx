@@ -8,6 +8,8 @@ import '../providers/providers.css';
 import './full-disk-access.css';
 import './mac-control.css';
 
+export const MAC_CONTROL_LABEL = 'Let agents control other Mac apps';
+
 const STATUS_KEY = ['mac-control', 'status'] as const;
 
 const SWITCH_INFO = {
@@ -124,7 +126,7 @@ export function MacControlSection({ profile }: { profile: Profile }) {
     <div className="mac-control">
       <ProfileSwitchSetting
         enabled={profile.macControl}
-        label="Let agents control other Mac apps"
+        label={MAC_CONTROL_LABEL}
         info={SWITCH_INFO}
         doc={{ page: 'mac-control', heading: 'turn-it-on' }}
         hint={(on) =>

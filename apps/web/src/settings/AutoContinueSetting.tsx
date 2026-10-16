@@ -13,7 +13,7 @@ import {
 } from './auto-continue-model.ts';
 import { useProfileSetting } from './use-profile-setting.ts';
 
-const LABEL = 'Wait before going on without your answer';
+export const AUTO_CONTINUE_LABEL = 'Wait before going on without your answer';
 
 const WAIT_INFO =
   'Covers the "This chat is almost full" question: if you do not answer, Spark keeps going without compacting. Typing in the card stops the countdown. Approvals always wait for you.';
@@ -50,7 +50,7 @@ export function AutoContinueSetting({ seconds }: { seconds: number | null }) {
 
   return (
     <SettingRow
-      label={LABEL}
+      label={AUTO_CONTINUE_LABEL}
       hint={setting.error ?? (invalid ? WAIT_RANGE_HINT : waitHint(saved))}
       hintId={hintId}
       info={WAIT_INFO}
@@ -58,7 +58,7 @@ export function AutoContinueSetting({ seconds }: { seconds: number | null }) {
     >
       <span className="set-wait">
         <Segmented
-          ariaLabel={LABEL}
+          ariaLabel={AUTO_CONTINUE_LABEL}
           describedBy={hintId}
           options={WAIT_OPTIONS}
           value={custom ? CUSTOM_WAIT_ID : waitChoiceId(saved)}

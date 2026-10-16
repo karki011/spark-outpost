@@ -54,7 +54,7 @@ export const navButton = (page: Page, name: string) =>
 export async function openSettings(page: Page, phone: boolean): Promise<Locator> {
   if (phone) await navButton(page, 'More').click();
   await navButton(page, 'Settings').click();
-  const dialog = page.getByRole('dialog', { name: 'Spark' });
+  const dialog = page.getByRole('dialog', { name: 'Profile & personality' });
   await expect(dialog).toBeVisible();
   return dialog;
 }

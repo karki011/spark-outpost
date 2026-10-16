@@ -34,6 +34,8 @@ const SPEAK_INFO = {
   items: [{ label: 'Stop', text: 'Esc or a new press stops it before the mic opens.' }],
 };
 
+export const VOICE_ROWS = ['Voice', 'Shortcut', 'Hold to talk', 'Speak answers'] as const;
+
 export function voiceAvailable(): boolean {
   return desktopSpeech() !== null;
 }

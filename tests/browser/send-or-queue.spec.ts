@@ -59,8 +59,12 @@ async function noAxeViolations(page: Page, selector: string) {
 
 async function setBusyEnter(page: Page, choice: string) {
   await page.getByRole('button', { name: 'Settings' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Chats & autonomy' })
+    .click();
   const group = page
-    .getByRole('dialog', { name: 'Spark' })
+    .getByRole('dialog', { name: 'Chats & autonomy' })
     .getByRole('radiogroup', { name: 'While the agent is working, Enter' });
   await group.scrollIntoViewIfNeeded();
   const saved = page.waitForResponse(

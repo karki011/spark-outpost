@@ -11,7 +11,7 @@ test.beforeEach(async () => {
 test('settings opens from the sidebar and lets a CLI provider sign in again', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Spark' });
+  const dialog = page.getByRole('dialog', { name: 'Profile & personality' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByLabel('What should Spark call you?', { exact: true })).toHaveValue(
     'Test User',
@@ -50,7 +50,7 @@ test('settings opens from the sidebar and lets a CLI provider sign in again', as
 test('the name saves from Spark settings and Spark greets you by first name', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  const spark = page.getByRole('dialog', { name: 'Spark' });
+  const spark = page.getByRole('dialog', { name: 'Profile & personality' });
   await spark.getByLabel('What should Spark call you?', { exact: true }).fill('Hazel Moss');
   await expect(spark.locator('.spark-preview')).toContainText('Hi Hazel 👋');
   await expect(page.getByText('Changes save automatically.')).toBeVisible();
@@ -62,21 +62,16 @@ test('the name saves from Spark settings and Spark greets you by first name', as
   await expect(profile).toBeVisible();
 });
 
-test('personality and the wait save, and the moved settings live in Spark only', async ({
-  page,
-}) => {
+test('personality and the wait save, each in its own section', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  const spark = page.getByRole('dialog', { name: 'Spark' });
-  await expect(spark.getByRole('tab', { name: 'Spark', exact: true })).toHaveAttribute(
+  const spark = page.getByRole('dialog', { name: 'Profile & personality' });
+  await expect(spark.getByRole('tab', { name: 'Profile & personality' })).toHaveAttribute(
     'aria-selected',
     'true',
   );
-  await expect(spark.getByRole('tab', { name: 'Profile' })).toHaveCount(0);
 
   await expect(spark.getByRole('switch', { name: 'Use Spark workflow' })).toHaveCount(0);
-  await expect(spark.locator('.spark-options')).not.toHaveAttribute('open');
-  await spark.getByText('Workflow options', { exact: true }).click();
   for (const removed of ['Call me by name', 'Work like a team', 'Critic']) {
     await expect(spark.getByText(removed, { exact: true })).toHaveCount(0);
   }
@@ -89,8 +84,13 @@ test('personality and the wait save, and the moved settings live in Spark only',
     .poll(async () => (await (await page.request.get('/api/setup')).json()).profile)
     .toMatchObject({ personality: 'facts' });
 
-  await expect(spark.getByRole('radiogroup', { name: 'Status companion' })).toBeVisible();
-  const wait = spark.getByRole('radiogroup', { name: 'Wait before going on without your answer' });
+  await expect(spark.getByRole('radiogroup', { name: 'Status companion' })).toHaveCount(0);
+  await spark.getByRole('tab', { name: 'Notifications' }).click();
+  const notifications = page.getByRole('dialog', { name: 'Notifications' });
+  await expect(notifications.getByRole('radiogroup', { name: 'Status companion' })).toBeVisible();
+  await notifications.getByRole('tab', { name: 'Chats & autonomy' }).click();
+  const chats = page.getByRole('dialog', { name: 'Chats & autonomy' });
+  const wait = chats.getByRole('radiogroup', { name: 'Wait before going on without your answer' });
   await expect(wait.getByRole('radio')).toHaveText([
     '30s',
     '60s',
@@ -107,7 +107,7 @@ test('personality and the wait save, and the moved settings live in Spark only',
   await expect(wait).toHaveAccessibleDescription('Spark waits for your answer.');
   await expect.poll(savedWait).toBeNull();
   await wait.getByRole('radio', { name: 'Custom' }).click();
-  const custom = spark.getByRole('textbox', { name: 'Custom wait in seconds' });
+  const custom = chats.getByRole('textbox', { name: 'Custom wait in seconds' });
   await custom.fill('3');
   await custom.press('Enter');
   await expect(custom).toHaveAttribute('aria-invalid', 'true');
@@ -119,16 +119,16 @@ test('personality and the wait save, and the moved settings live in Spark only',
   await expect.poll(savedWait).toBe(45);
   await page.reload();
   await page.getByRole('button', { name: 'Settings' }).click();
-  await spark.getByText('Workflow options', { exact: true }).click();
+  await spark.getByRole('tab', { name: 'Chats & autonomy' }).click();
   await expect(wait.getByRole('radio', { name: 'Custom' })).toBeChecked();
   await expect(custom).toHaveValue('45');
   await wait.getByRole('radio', { name: '2 min' }).click();
   await expect.poll(savedWait).toBe(120);
   await expect(custom).toHaveCount(0);
-  const level = spark.getByRole('radiogroup', { name: 'How much Spark does alone' });
+  const level = chats.getByRole('radiogroup', { name: 'How much Spark does alone' });
   await expect(level.getByRole('radio', { name: 'Full auto → PR' })).toBeChecked();
 
-  await spark.getByRole('tab', { name: 'Appearance' }).click();
+  await chats.getByRole('tab', { name: 'Appearance' }).click();
   const appearance = page.getByRole('dialog', { name: 'Appearance' });
   await expect(appearance.locator('.tcard').first()).toBeVisible();
   await expect(appearance.getByRole('radiogroup', { name: 'Status companion' })).toHaveCount(0);
@@ -154,7 +154,10 @@ test('settings shows usage per provider', async ({ page }) => {
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Usage' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Usage' })
+    .click();
   const dialog = page.getByRole('dialog', { name: 'Usage' });
   const claude = dialog.getByRole('listitem', { name: 'Claude' });
   await expect(claude).toContainText('$0.004');
@@ -170,7 +173,7 @@ test('provider setting dropdowns return focus to their trigger after a keyboard 
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Spark' })
+    .getByRole('dialog', { name: 'Profile & personality' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
@@ -210,7 +213,7 @@ test('the Jev screen has no settings of its own', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Spark' })
+    .getByRole('dialog', { name: 'Profile & personality' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
@@ -231,7 +234,7 @@ test('a failed test message makes the provider blob wobble and shows the error',
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Spark' })
+    .getByRole('dialog', { name: 'Profile & personality' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
@@ -261,8 +264,11 @@ test('context compaction thresholds validate inline and save from Spark settings
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  const spark = page.getByRole('dialog', { name: 'Spark' });
-  await spark.getByText('Workflow options', { exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Chats & autonomy' })
+    .click();
+  const spark = page.getByRole('dialog', { name: 'Chats & autonomy' });
   const warn = spark.getByRole('textbox', { name: 'Warn when context is, in percent' });
   const compact = spark.getByRole('textbox', { name: 'Compact automatically at, in percent' });
   const saved = () =>

@@ -89,6 +89,14 @@ async function fakeDesktop(page: Page) {
   });
 }
 
+async function openNotifications(page: Page) {
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Notifications' })
+    .click();
+}
+
 const desktopCalls = (page: Page) =>
   page.evaluate(() => (window as unknown as { desktopCalls: unknown[] }).desktopCalls);
 
@@ -96,8 +104,8 @@ test('the desktop companion shows its shortcuts only while it is on', async ({ p
   await resetTestDatabase({ onboarded: true });
   await fakeDesktop(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  const spark = page.getByRole('dialog', { name: 'Spark' });
+  await openNotifications(page);
+  const spark = page.getByRole('dialog', { name: 'Notifications' });
   const toggle = spark.getByRole('switch', { name: 'Show Spark Island' });
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
   await expect(spark.getByRole('button', { name: 'Change Quick chat shortcut' })).toHaveCount(0);
@@ -128,7 +136,7 @@ test('the desktop companion shows its shortcuts only while it is on', async ({ p
     ['size', 'xlarge'],
   ]);
   await page.reload();
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await openNotifications(page);
   await toggle.click();
   await expect(sizes.getByRole('radio', { name: 'Extra large' })).toHaveAttribute(
     'aria-checked',
@@ -156,11 +164,34 @@ test('the desktop companion shows its shortcuts only while it is on', async ({ p
 test('the browser build hides the desktop companion settings', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  const spark = page.getByRole('dialog', { name: 'Spark' });
+  await openNotifications(page);
+  const spark = page.getByRole('dialog', { name: 'Notifications' });
   await expect(spark.getByRole('radiogroup', { name: 'Status companion' })).toBeVisible();
   await expect(spark.getByRole('switch', { name: 'Show Spark Island' })).toHaveCount(0);
   await expect(spark.getByRole('switch', { name: 'Dock badge and notifications' })).toHaveCount(0);
+});
+
+test('searching an island row while the island is off focuses Show Spark Island', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await fakeDesktop(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const search = page.getByRole('combobox', { name: 'Search settings' });
+  await search.fill('chimes');
+  await expect(page.getByRole('option')).toHaveText([/^Island chimes/]);
+  await search.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Notifications' });
+  const show = dialog.getByRole('switch', { name: 'Show Spark Island' });
+  await expect(show).toBeFocused();
+  await expect(dialog.locator('.set-row[data-found]')).toContainText('Show Spark Island');
+  await search.fill('quick chat');
+  await search.press('Enter');
+  await expect(show).toBeFocused();
+  await show.click();
+  await expect(dialog.getByRole('switch', { name: 'Island chimes' })).toBeVisible();
+  await expect(show).toBeFocused();
 });
 
 test('the Dock badge and notifications switch works with the island off', async ({ page }) => {
@@ -172,8 +203,8 @@ test('the Dock badge and notifications switch works with the island off', async 
       page.evaluate(() => (window as unknown as { attentionReports: unknown[] }).attentionReports),
     )
     .toEqual([{ count: 0, requests: [] }]);
-  await page.getByRole('button', { name: 'Settings' }).click();
-  const spark = page.getByRole('dialog', { name: 'Spark' });
+  await openNotifications(page);
+  const spark = page.getByRole('dialog', { name: 'Notifications' });
   await expect(spark.getByRole('switch', { name: 'Show Spark Island' })).toHaveAttribute(
     'aria-checked',
     'false',
@@ -206,7 +237,7 @@ test('the island opens these settings, and its chimes stay off until switched on
       target,
     );
   await fromIsland('island');
-  const spark = page.getByRole('dialog', { name: 'Spark' });
+  const spark = page.getByRole('dialog', { name: 'Notifications' });
   const show = spark.getByRole('switch', { name: 'Show Spark Island' });
   await expect(show).toBeFocused();
   await expect(spark.getByRole('switch', { name: 'Island chimes' })).toHaveCount(0);

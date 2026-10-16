@@ -60,7 +60,10 @@ async function linkProjects(page: Page, names: readonly string[]) {
 async function openSection(page: Page, tab: string | RegExp) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: tab }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: tab })
+    .click();
   return page.getByRole('dialog');
 }
 
@@ -87,14 +90,13 @@ async function inEveryTheme(page: Page, screen: string) {
 const row = (dialog: Locator, name: string) =>
   dialog.getByRole('button', { name: new RegExp(`^${name}\\b`) });
 
-test('Settings names the teammates section Crew and keeps Spark for app behaviour', async ({
-  page,
-}) => {
+test('Settings names the teammates section Crew under Agents', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   const dialog = await openSection(page, 'Crew');
-  const tabs = dialog.getByRole('tablist', { name: 'Settings sections' }).getByRole('tab');
-  await expect(tabs.nth(0)).toHaveText('Spark');
-  await expect(tabs.nth(1)).toHaveText('Crew');
+  const crew = dialog.getByRole('tablist', { name: 'Settings sections' }).getByRole('tab', {
+    name: 'Crew',
+  });
+  await expect(crew).toHaveAccessibleDescription('Agents');
   await expect(dialog.getByRole('tab', { name: 'Sparks' })).toHaveCount(0);
   const teammates = page.getByRole('dialog', { name: 'Crew' });
   await expect(teammates.getByRole('heading', { name: 'Crew' })).toBeVisible();

@@ -281,7 +281,10 @@ test('Settings, Projects lists trust and can stop trusting a folder', async ({ p
   await page.keyboard.press('Escape');
 
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Projects' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Projects' })
+    .click();
   const projects = page.getByRole('dialog', { name: 'Projects' });
   const row = projects.getByRole('listitem').filter({ hasText: 'app' });
   await expect(row).toContainText('Trusted');

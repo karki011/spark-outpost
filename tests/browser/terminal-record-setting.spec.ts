@@ -7,7 +7,11 @@ test('Record Terminal sessions like chats starts off and stays as the user leave
   await resetTestDatabase({ onboarded: true });
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  const settings = page.getByRole('dialog', { name: 'Spark' });
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Chats & autonomy' })
+    .click();
+  const settings = page.getByRole('dialog', { name: 'Chats & autonomy' });
   const toggle = settings.getByRole('switch', { name: 'Record Terminal sessions like chats' });
   await expect(toggle).not.toBeChecked();
   await expect(
@@ -25,6 +29,10 @@ test('Record Terminal sessions like chats starts off and stays as the user leave
   ).toBeVisible();
   await page.reload();
   await page.getByRole('button', { name: 'Settings' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Chats & autonomy' })
+    .click();
   await expect(toggle).toBeChecked();
   const profile = (await (await page.request.get('/api/setup')).json()).profile;
   expect(profile.terminalRecordLikeChat).toBe(true);

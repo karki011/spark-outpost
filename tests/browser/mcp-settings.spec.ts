@@ -30,7 +30,7 @@ async function openMcpSettings(page: Page) {
   await openChats(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Spark' })
+    .getByRole('dialog', { name: 'Profile & personality' })
     .getByRole('tab', { name: 'MCP servers' })
     .click();
   const dialog = page.getByRole('dialog', { name: 'MCP servers' });

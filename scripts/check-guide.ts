@@ -15,9 +15,9 @@ import {
 } from './guide-rules.ts';
 
 const GUIDE = path.resolve(import.meta.dirname, '../docs/guide');
-const SETTINGS_DIALOG = path.resolve(
+const SETTINGS_SECTIONS = path.resolve(
   import.meta.dirname,
-  '../apps/web/src/settings/SettingsDialog.tsx',
+  '../apps/web/src/settings/settings-sections.tsx',
 );
 
 function readPages(): GuidePage[] {
@@ -29,8 +29,9 @@ function readPages(): GuidePage[] {
 }
 
 function settingsSections(): string[] {
-  const source = readFileSync(SETTINGS_DIALOG, 'utf8');
-  const list = source.slice(source.indexOf('const SECTIONS'), source.indexOf('];'));
+  const source = readFileSync(SETTINGS_SECTIONS, 'utf8');
+  const start = source.indexOf('const SETTINGS_SECTIONS');
+  const list = source.slice(start, source.indexOf('] as const', start));
   return [...list.matchAll(/label: '([^']+)'/g)].map((match) => `**${match[1]}**`);
 }
 

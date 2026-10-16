@@ -4,6 +4,8 @@ import type { AssistantFact } from '@spark-outpost/contracts';
 import { assistantApi, assistantKeys } from '../../api/assistant.ts';
 import { SettingRow } from '../SettingRow.tsx';
 
+export const KEY_FACTS_LABEL = 'Key facts';
+
 export function AssistantFacts({ facts }: { facts: AssistantFact[] }) {
   const hintId = useId();
   const queryClient = useQueryClient();
@@ -15,7 +17,7 @@ export function AssistantFacts({ facts }: { facts: AssistantFact[] }) {
     remove.error?.message ??
     'Things you asked Ask Spark to remember, in your own words. They survive every new session.';
   return (
-    <SettingRow label="Key facts" hint={hint} hintId={hintId}>
+    <SettingRow label={KEY_FACTS_LABEL} hint={hint} hintId={hintId}>
       {facts.length === 0 ? (
         <span className="muted">None yet. Say “remember …” to add one.</span>
       ) : (
