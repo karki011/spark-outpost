@@ -18,7 +18,10 @@ test.beforeEach(async () => {
 async function openModels(page: Page) {
   await openChats(page);
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Models' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Models' })
+    .click();
   const dialog = page.getByRole('dialog', { name: 'Models' });
   await expect(dialog).toBeVisible();
   return dialog;

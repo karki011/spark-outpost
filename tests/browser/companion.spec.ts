@@ -182,7 +182,7 @@ test('hiding the companion and bringing it back from Settings', async ({ page })
   await expect(companion(page)).toHaveCount(0);
   await expect(
     page.locator('[aria-live="polite"]').filter({
-      hasText: 'companion hidden. Turn it back on in Settings, Spark, Around the app.',
+      hasText: 'companion hidden. Turn it back on in Settings, Notifications.',
     }),
   ).toHaveCount(1);
 
@@ -194,7 +194,11 @@ test('hiding the companion and bringing it back from Settings', async ({ page })
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button', { name: 'Settings' })
     .click();
-  const settings = page.getByRole('dialog', { name: 'Spark' });
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Notifications' })
+    .click();
+  const settings = page.getByRole('dialog', { name: 'Notifications' });
   await settings
     .getByRole('radiogroup', { name: 'Status companion' })
     .getByRole('radio', { name: 'Show' })

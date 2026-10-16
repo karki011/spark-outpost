@@ -163,8 +163,11 @@ test('Search finds a task, shows the page type and opens the matching section', 
 test('a Settings info link opens the guide at the page for that setting', async ({ page }) => {
   await page.goto('/');
   await rail(page).getByRole('button', { name: 'Settings' }).click();
-  const settings = page.getByRole('dialog', { name: 'Spark' });
-  await settings.getByText('Workflow options', { exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Chats & autonomy' })
+    .click();
+  const settings = page.getByRole('dialog', { name: 'Chats & autonomy' });
   await settings
     .getByRole('link', { name: 'Read about How much Spark does alone in Docs' })
     .click();

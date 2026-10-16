@@ -3,6 +3,8 @@ import { modifiedEnter } from '../chat/queue/send-choice.ts';
 import { MAC } from '../ui/shortcuts.ts';
 import { ProfileChoiceSetting, type ProfileChoice } from './ProfileChoiceSetting.tsx';
 
+export const BUSY_ENTER_LABEL = 'While the agent is working, Enter';
+
 const CHOICES: ProfileChoice<BusyEnterAction>[] = [
   { id: 'queue', label: 'Queues the message', value: 'queue' },
   { id: 'now', label: 'Sends it now', value: 'now' },
@@ -20,7 +22,7 @@ export function BusyEnterSetting({ action }: { action: BusyEnterAction }) {
     <ProfileChoiceSetting
       saved={action}
       choices={CHOICES}
-      label="While the agent is working, Enter"
+      label={BUSY_ENTER_LABEL}
       hint={(value) => HINTS[value]}
       doc={{ page: 'follow-a-turn', heading: 'queue-messages' }}
       toUpdate={(value) => ({ busyEnter: value })}

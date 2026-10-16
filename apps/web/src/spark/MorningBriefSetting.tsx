@@ -3,6 +3,8 @@ import { morningBriefTimeSchema } from '@spark-outpost/contracts';
 import { useProfileSetting } from '../settings/use-profile-setting.ts';
 import { SwitchValueSetting } from './SwitchValueSetting.tsx';
 
+export const MORNING_BRIEF_LABEL = 'Morning brief';
+
 const INFO = {
   items: [
     { label: 'What', text: 'Spark refreshes your tickets and writes a brief on Home.' },
@@ -36,7 +38,7 @@ export function MorningBriefSetting({ enabled, time }: MorningBriefSettingProps)
       : 'No brief each morning.');
   return (
     <SwitchValueSetting
-      label="Morning brief"
+      label={MORNING_BRIEF_LABEL}
       blob="sun"
       info={INFO}
       hint={hint}

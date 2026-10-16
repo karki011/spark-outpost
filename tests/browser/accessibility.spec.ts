@@ -104,7 +104,7 @@ for (const theme of THEMES) {
     const found = await blockingViolations(page, 'chat with work panel');
 
     await page.getByRole('button', { name: 'Settings' }).click();
-    const settings = page.getByRole('dialog', { name: 'Spark' });
+    const settings = page.getByRole('dialog', { name: 'Profile & personality' });
     await expect(settings).toBeVisible();
     found.push(...(await blockingViolations(page, 'settings spark')));
     await settings.getByRole('tab', { name: 'Appearance' }).click();

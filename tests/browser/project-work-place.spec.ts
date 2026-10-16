@@ -33,7 +33,10 @@ async function savedPlace(): Promise<string | undefined> {
 
 async function openProjects(page: Page, name: string) {
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Projects' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Projects' })
+    .click();
   const row = page
     .getByRole('list', { name: 'Linked folders' })
     .getByRole('button', { name: new RegExp(`^${name}\\b`) });

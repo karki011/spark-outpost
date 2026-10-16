@@ -21,6 +21,10 @@ const CHANNEL_HINTS: Record<UpdateChannel, string> = {
 };
 
 const AUTO_DOWNLOAD = 'Download updates automatically';
+const CHANNEL = 'Channel';
+const CHECK = 'Check for updates';
+
+export const UPDATE_ROWS = [CHANNEL, AUTO_DOWNLOAD, CHECK];
 
 export function updatesAvailable(): boolean {
   return Boolean(sparkDesktop()?.updates);
@@ -153,7 +157,7 @@ function UpdateRows({ status }: { status: UpdateStatus }) {
         <>
           {offering && <GetUpdateRow status={status} />}
           <SettingRow
-            label="Channel"
+            label={CHANNEL}
             doc={{ page: 'updates', heading: 'stable-or-beta' }}
             hint={CHANNEL_HINTS[status.channel]}
             hintId={channelHint}
@@ -186,7 +190,7 @@ function UpdateRows({ status }: { status: UpdateStatus }) {
               onChange={(on) => void updates.setAutoDownload(on)}
             />
           </SettingRow>
-          <SettingRow label="Check for updates" hint={checkedText(status)} hintId={checkHint}>
+          <SettingRow label={CHECK} hint={checkedText(status)} hintId={checkHint}>
             <button
               type="button"
               className="btn line sm"

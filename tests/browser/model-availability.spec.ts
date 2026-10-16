@@ -130,7 +130,7 @@ test('a default the sign-in cannot use is flagged on the provider screen with a 
   await openChats(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Spark' })
+    .getByRole('dialog', { name: 'Profile & personality' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });

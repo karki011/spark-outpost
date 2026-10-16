@@ -1,5 +1,7 @@
 import { ProfileSwitchSetting } from './ProfileSwitchSetting.tsx';
 
+export const TERMINAL_RECORD_LABEL = 'Record Terminal sessions like chats';
+
 const RECORD_INFO = {
   lead: 'For Claude Code Terminal sessions with Spark’s mod loaded. Off, Spark keeps only state, tool names and times, tokens and cost.',
   items: [
@@ -22,7 +24,7 @@ export function TerminalRecordSetting({ enabled }: { enabled: boolean }) {
   return (
     <ProfileSwitchSetting
       enabled={enabled}
-      label="Record Terminal sessions like chats"
+      label={TERMINAL_RECORD_LABEL}
       info={RECORD_INFO}
       doc={{ page: 'settings', heading: 'record-terminal-sessions' }}
       hint={(on) =>

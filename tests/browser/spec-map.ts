@@ -146,6 +146,7 @@ export const SPEC_GROUPS = {
     'provider-effort',
     'reset',
     'settings',
+    'settings-groups',
     'settings-lists',
     'terminal-record-setting',
     'zai',

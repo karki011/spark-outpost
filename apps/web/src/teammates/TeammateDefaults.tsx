@@ -25,7 +25,7 @@ interface TeammateDefaultsProps {
 }
 
 const LEVEL_CHOICES: PickerChoice[] = [
-  { id: DEFAULT, label: 'Spark default', description: 'Follows Settings → Spark.' },
+  { id: DEFAULT, label: 'Spark default', description: 'Follows Settings → Chats & autonomy.' },
   ...AUTONOMY_LEVELS.map((level) => ({
     id: level.id,
     label: level.label,

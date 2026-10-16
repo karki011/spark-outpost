@@ -10,12 +10,12 @@ You'll answer agents from Spark Island. About 2 minutes.
 
 ## Turn it on and size it
 
-1. Open **Settings → Spark**, **Around the app**.
+1. Open **Settings → Notifications**, **Spark Island**.
 2. Switch **Show Spark Island** on or off.
 3. Pick a **Spark Island size**.
 4. **Island chimes** play when a chat needs you, finishes or fails, except needs and failures in the chat you're viewing.
 
-![The Around the app settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
+![The Spark Island settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 
 Drag Scout to place it. At top centre it docks, half hidden while nothing happens.
 

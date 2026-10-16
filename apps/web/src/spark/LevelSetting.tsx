@@ -1,6 +1,8 @@
 import { AUTONOMY_LEVELS, type InvolvementLevel } from '@spark-outpost/contracts';
 import { ProfileChoiceSetting } from '../settings/ProfileChoiceSetting.tsx';
 
+export const LEVEL_LABEL = 'How much Spark does alone';
+
 const INFO = {
   items: AUTONOMY_LEVELS.map((level) => ({ label: level.label, text: level.hint })),
   footer: 'Each chat can pick its own in its Work panel.',
@@ -16,7 +18,7 @@ export function LevelSetting({ level }: { level: InvolvementLevel }) {
     <ProfileChoiceSetting
       saved={level}
       choices={CHOICES}
-      label="How much Spark does alone"
+      label={LEVEL_LABEL}
       info={INFO}
       doc={{ page: 'spark-autonomy' }}
       hint="The default for new chats, whichever agent they use."

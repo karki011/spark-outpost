@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type KeyboardEvent } from 'react';
+import { useId, useState, type KeyboardEvent } from 'react';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import {
   companionAvailable,
@@ -10,10 +10,10 @@ import { acceleratorFromKey, shortcutKeys } from '../desktop/shortcut-keys.ts';
 import { useCompanionStatus } from '../desktop/use-companion-status.ts';
 import type { DocTarget } from '../ui/DocLink.tsx';
 import { Keys } from '../ui/Keys.tsx';
-import { IslandSizeSetting } from './IslandSizeSetting.tsx';
+import { ISLAND_SIZE_LABEL, IslandSizeSetting } from './IslandSizeSetting.tsx';
 import { SettingRow } from './SettingRow.tsx';
 
-const LABEL = 'Show Spark Island';
+export const SHOW_ISLAND_LABEL = 'Show Spark Island';
 const CHIMES = 'Island chimes';
 const AUTO_EXPAND = 'Open requests by themselves';
 const NOTIFY = 'Dock badge and notifications';
@@ -25,20 +25,26 @@ function notifyHint(status: CompanionStatus): string {
   return 'The Dock icon counts chats that need you. With Spark Island off, a notification names the chat.';
 }
 
-let revealPending = false;
-const revealers = new Set<() => void>();
-
-export function revealIslandSettings(): void {
-  revealPending = true;
-  revealers.forEach((reveal) => reveal());
-}
-
 const SHORTCUTS: { action: IslandAction; label: string; hint: string }[] = [
   { action: 'quick', label: 'Quick chat shortcut', hint: 'Opens a new chat from anywhere.' },
   { action: 'sessions', label: 'Sessions shortcut', hint: 'Finds a chat and asks for an update.' },
 ];
 
+const SHOWN_WITH_ISLAND = [ISLAND_SIZE_LABEL, AUTO_EXPAND, CHIMES];
+
 const DEFAULTS: Record<IslandAction, string> = { quick: 'Alt+Space', sessions: 'Alt+Shift+Space' };
+
+export function islandRows(): string[] {
+  if (!companionAvailable()) return [];
+  return [
+    SHOW_ISLAND_LABEL,
+    NOTIFY,
+    ISLAND_SIZE_LABEL,
+    AUTO_EXPAND,
+    ...SHORTCUTS.map((shortcut) => shortcut.label),
+    CHIMES,
+  ];
+}
 
 function ShortcutSetting({
   action,
@@ -123,6 +129,7 @@ function SwitchRow({
   hint,
   checked,
   onChange,
+  standsFor,
 }: {
   id: string;
   label: string;
@@ -130,10 +137,18 @@ function SwitchRow({
   hint: string;
   checked: boolean;
   onChange: (on: boolean) => void;
+  standsFor?: readonly string[] | undefined;
 }) {
   const hintId = useId();
   return (
-    <SettingRow label={label} controlId={id} doc={doc} hint={hint} hintId={hintId}>
+    <SettingRow
+      label={label}
+      controlId={id}
+      doc={doc}
+      hint={hint}
+      hintId={hintId}
+      standsFor={standsFor}
+    >
       <BlobToggle
         id={id}
         label={label}
@@ -152,29 +167,14 @@ export function DesktopCompanionSetting() {
   const chimesId = useId();
   const expandId = useId();
   const notifyId = useId();
-  const loaded = status !== null;
-  useEffect(() => {
-    if (!loaded) return;
-    const reveal = () => {
-      const toggle = document.getElementById(showId);
-      if (!revealPending || !toggle) return;
-      revealPending = false;
-      toggle.scrollIntoView({ block: 'center' });
-      toggle.focus({ preventScroll: true });
-    };
-    revealers.add(reveal);
-    reveal();
-    return () => {
-      revealers.delete(reveal);
-    };
-  }, [loaded, showId]);
   if (!companionAvailable() || !status?.supported) return null;
   const desktop = sparkDesktop()!;
   return (
-    <>
+    <section className="spark-group" aria-labelledby="set-island">
+      <h4 id="set-island">Spark Island</h4>
       <SwitchRow
         id={showId}
-        label={LABEL}
+        label={SHOW_ISLAND_LABEL}
         doc={{ page: 'desktop-companion' }}
         hint={
           status.enabled
@@ -182,6 +182,7 @@ export function DesktopCompanionSetting() {
             : 'Off. Turn it on to see Spark Island at the top of your screen.'
         }
         checked={status.enabled}
+        standsFor={status.enabled ? undefined : SHOWN_WITH_ISLAND}
         onChange={(on) => void desktop.companion.setEnabled(on)}
       />
       {desktop.companion.setNotify && (
@@ -235,6 +236,6 @@ export function DesktopCompanionSetting() {
           )}
         </>
       )}
-    </>
+    </section>
   );
 }

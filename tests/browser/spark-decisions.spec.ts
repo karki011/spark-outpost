@@ -5,10 +5,14 @@ test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
 });
 
-async function openSpark(page: Page) {
+async function openSettingsAt(page: Page, section: string) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  return page.getByRole('dialog', { name: 'Spark' });
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: section })
+    .click();
+  return page.getByRole('dialog', { name: section });
 }
 
 function profileSaved(page: Page) {
@@ -26,8 +30,7 @@ test('new chats start at Full auto → PR, and one click in Settings puts the de
 }) => {
   const before = await (await page.request.get('/api/chat-settings/defaults')).json();
   expect(before.level).toBe('full-auto');
-  const spark = await openSpark(page);
-  await spark.getByText('Workflow options', { exact: true }).click();
+  const spark = await openSettingsAt(page, 'Chats & autonomy');
   const level = spark.getByRole('radiogroup', { name: 'How much Spark does alone' });
   await expect(level.getByRole('radio', { name: 'Full auto → PR' })).toBeChecked();
   await expect(level).toHaveAccessibleDescription(
@@ -42,14 +45,13 @@ test('new chats start at Full auto → PR, and one click in Settings puts the de
 });
 
 test('Spark settings offer no spend cap or budget', async ({ page }) => {
-  const spark = await openSpark(page);
-  await spark.getByText('Workflow options', { exact: true }).click();
+  const spark = await openSettingsAt(page, 'Chats & autonomy');
   await expect(spark.getByRole('radiogroup', { name: 'How much Spark does alone' })).toBeVisible();
   await expect(spark.getByText(/spend cap|budget/i)).toHaveCount(0);
 });
 
 test('the morning brief saves its time and can be turned off', async ({ page }) => {
-  const spark = await openSpark(page);
+  const spark = await openSettingsAt(page, 'Notifications');
   const brief = spark.getByRole('switch', { name: 'Morning brief' });
   const time = spark.getByLabel('Morning brief time');
   await expect(brief).toHaveAttribute('aria-checked', 'true');
@@ -111,9 +113,10 @@ test('the notice links to the setting, where Automatic is one click away', async
   const notice = page.getByRole('complementary', { name: 'Default for new chats changed' });
   await notice.getByRole('button', { name: 'Change the default in Settings' }).click();
 
-  const spark = page.getByRole('dialog', { name: 'Spark' });
+  const spark = page.getByRole('dialog', { name: 'Chats & autonomy' });
   const level = spark.getByRole('radiogroup', { name: 'How much Spark does alone' });
   await expect(level.getByRole('radio', { name: 'Full auto → PR' })).toBeChecked();
+  await expect(level.getByRole('radio', { name: 'Full auto → PR' })).toBeFocused();
   await expect(notice).toHaveCount(0);
   const saved = profileSaved(page);
   await level.getByRole('radio', { name: 'Automatic' }).click();

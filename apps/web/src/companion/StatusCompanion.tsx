@@ -19,8 +19,7 @@ import { companionPrefs, useCompanionPrefs } from './companion-prefs.ts';
 import { useCornerDrag } from './use-corner-drag.ts';
 import { useCelebration, useThrottledAnnouncement } from './use-companion-signals.ts';
 
-const HIDDEN_NOTICE =
-  'Status companion hidden. Turn it back on in Settings, Spark, Around the app.';
+const HIDDEN_NOTICE = 'Status companion hidden. Turn it back on in Settings, Notifications.';
 
 interface StatusCompanionProps {
   chats: readonly ConversationSummary[];

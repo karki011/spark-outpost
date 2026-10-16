@@ -1,10 +1,13 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { ResetBlob } from './ResetBlob.tsx';
 import { setResetState, useResetState } from './reset-store.ts';
 import { useResetBlobMood } from './use-reset-blob-mood.ts';
 import './reset.css';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { useSettingFocus } from '../settings/setting-focus.ts';
+
+export const KEEP_KEYS_LABEL = 'Keep my API keys';
 
 const REMOVED = [
   'Chats, projects, plans, tasks and tickets',
@@ -26,6 +29,9 @@ export function ResetSection() {
   const keepHintId = useId();
   const busy = state.phase === 'counting' || state.phase === 'resetting';
   const [mood, onHoldChange] = useResetBlobMood(state.phase);
+  const keepRow = useRef<HTMLDivElement>(null);
+  const keepControl = useRef<HTMLLabelElement>(null);
+  useSettingFocus(KEEP_KEYS_LABEL, keepRow, keepControl);
 
   return (
     <>
@@ -51,17 +57,17 @@ export function ResetSection() {
           </ul>
         </section>
       </div>
-      <div className="field reset-keep">
-        <label className="check-row">
+      <div ref={keepRow} className="field reset-keep">
+        <label ref={keepControl} className="check-row">
           <BlobToggle
             size="sm"
-            label="Keep my API keys"
+            label={KEEP_KEYS_LABEL}
             checked={keepApiKeys}
             disabled={busy}
             describedBy={keepHintId}
             onChange={setKeepApiKeys}
           />
-          <span>Keep my API keys</span>
+          <span>{KEEP_KEYS_LABEL}</span>
         </label>
         <p id={keepHintId} className="set-hint">
           Claude, Codex, Z.ai and Jev keys stay in your keychain. GitHub, ticket and MCP tokens are

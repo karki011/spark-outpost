@@ -25,7 +25,7 @@ Neither level waits on a plan. The agent's [Plan mode](plan-card.md) does.
 
 ## For every new chat
 
-Open **Settings → Spark → Workflow options** and change **How much Spark does alone**.
+Open **Settings → Chats & autonomy** and change **How much Spark does alone**.
 
 ## What doesn't change
 

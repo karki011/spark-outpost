@@ -42,7 +42,7 @@ test.afterEach(() => {
 async function openSettings(page: Page, tab?: RegExp) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.getByRole('dialog', { name: 'Spark' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Profile & personality' })).toBeVisible();
   if (tab) await page.getByRole('tab', { name: tab }).click();
 }
 

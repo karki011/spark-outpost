@@ -44,7 +44,7 @@ Who needs you, what's running and today's spend are answered right away. Other q
 
 ## Change a shortcut
 
-1. Open **Settings → Spark** and scroll to **Around the app**.
+1. Open **Settings → Notifications** and scroll to **Spark Island**.
 2. Select **Change** next to **Quick chat shortcut** or **Sessions shortcut**.
 3. Press the new keys: at least one modifier with a letter, number or Space. **Reset** restores the default.
 
