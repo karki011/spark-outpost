@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { animationsSettled } from './settle.ts';
 
 const SHOTS = 'test-results/sparks';
 
@@ -305,12 +306,14 @@ test('the roster and the sheet pass axe and fit a phone', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openHome(page);
   await expect(sparks(page).getByRole('button', { name: /^Open Pip's chat/ })).toBeVisible();
+  await animationsSettled(page);
   const axe = () =>
     new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).include('.tm-section');
   expect((await axe().analyze()).violations).toEqual([]);
 
   await sparks(page).getByRole('button', { name: 'New Spark' }).click();
   await expect(sheet(page, 'New Spark')).toBeVisible();
+  await animationsSettled(page);
   const sheetScan = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
     .include('.tm-sheet')

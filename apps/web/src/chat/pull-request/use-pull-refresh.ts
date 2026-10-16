@@ -14,7 +14,8 @@ export function usePullRefresh(watch: Pick<PrWatch, 'id' | 'conversationId'>): P
   const { conversationId, id } = watch;
   const press = useMutation({
     mutationFn: () => prFollowUpApi.refreshOne(conversationId, id),
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
+      await queryClient.cancelQueries({ queryKey: prWatchesKey(conversationId), exact: true });
       queryClient.setQueryData(prWatchesKey(conversationId), { watches: result.watches });
     },
   });

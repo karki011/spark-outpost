@@ -74,6 +74,28 @@ describe('the refresh button of a pull request', () => {
     );
   });
 
+  it('keeps the refreshed state when a list read before the refresh answers after it', async () => {
+    let answerStale: (list: PrWatchList) => void = () => undefined;
+    const staleRead = client
+      .fetchQuery({
+        queryKey: KEY,
+        queryFn: () =>
+          new Promise<PrWatchList>((resolve) => {
+            answerStale = resolve;
+          }),
+      })
+      .catch(() => undefined);
+    const answer = answerLater();
+    const button = mount();
+
+    fireEvent.click(button);
+    answer({ watches: [{ ...closed, prState: 'open', phase: 'watching' }], problem: null });
+    await waitFor(() => expect(button.getAttribute('aria-busy')).toBe('false'));
+    answerStale({ watches: [closed] });
+    await staleRead;
+    expect(client.getQueryData<PrWatchList>(KEY)?.watches[0]?.prState).toBe('open');
+  });
+
   it('says why in one plain line when GitHub could not be read', async () => {
     api.refreshOne.mockResolvedValueOnce({ watches: [closed], problem: 'not_connected' });
     const button = mount();

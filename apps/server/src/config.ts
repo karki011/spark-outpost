@@ -104,6 +104,7 @@ const configSchema = z.object({
   BACKUP_DIR: z.string().min(1).optional(),
   MAP_ROOT_PREFIX: z.string().min(1).optional(),
   CLONE_TEST_ROOT: z.string().min(1).optional(),
+  PAIRING_TEST_ATTEMPTS_PER_MINUTE: z.coerce.number().int().positive().optional(),
   WEB_ROOT: z.string().min(1).optional(),
   SPARK_APP_VERSION: z.string().min(1).optional(),
   SPARK_LOG_DIR: z.string().min(1).optional(),

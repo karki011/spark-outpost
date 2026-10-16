@@ -65,10 +65,13 @@ export class Pairings {
   private readonly starts: AttemptWindow;
   private readonly submits: AttemptWindow;
 
-  constructor(private readonly now: () => number = Date.now) {
+  constructor(
+    private readonly now: () => number = Date.now,
+    attemptsPerMinute?: number,
+  ) {
     const refusal = () => new PairingRateLimitError();
-    this.starts = new AttemptWindow(START_LIMIT, now, refusal);
-    this.submits = new AttemptWindow(SUBMIT_LIMIT, now, refusal);
+    this.starts = new AttemptWindow(attemptsPerMinute ?? START_LIMIT, now, refusal);
+    this.submits = new AttemptWindow(attemptsPerMinute ?? SUBMIT_LIMIT, now, refusal);
   }
 
   start(): PairingStart {
