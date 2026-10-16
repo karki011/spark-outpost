@@ -124,39 +124,29 @@ export function devAppBinary(app: string): string {
   return path.join(app, 'Contents/MacOS/Electron');
 }
 
-export interface Instances {
-  ours: number[];
-  total: number;
-}
-
 const DEBUG_PORT_ARG = / --remote-debugging-port=\d+$/;
 
-export function runningInstances(psOutput: string, binary: string, launchDir: string): Instances {
-  const ours: number[] = [];
-  let total = 0;
+export function launchedFrom(psOutput: string, binary: string, launchDir: string): number[] {
+  const pids: number[] = [];
   for (const line of psOutput.split('\n')) {
     const match = /^\s*(\d+) (.*)$/.exec(line);
     if (!match || !match[2]!.startsWith(`${binary} `)) continue;
     const appDir = match[2]!.slice(binary.length + 1).replace(DEBUG_PORT_ARG, '');
-    if (!appDir.endsWith(`${path.sep}apps${path.sep}desktop`)) continue;
-    total += 1;
-    if (appDir === launchDir) ours.push(Number(match[1]));
+    if (appDir === launchDir) pids.push(Number(match[1]));
   }
-  return { ours, total };
+  return pids;
 }
 
-export type StopTarget = { kind: 'pid'; pid: number } | { kind: 'bundle' } | { kind: 'none' };
-
-export function stopTarget(instances: Instances): StopTarget {
-  if (instances.ours.length === 1) return { kind: 'pid', pid: instances.ours[0]! };
-  if (instances.total === 1) return { kind: 'bundle' };
-  return { kind: 'none' };
+export function stopRefusal(pids: number[], launchDir: string): string | null {
+  if (pids.length === 1) return null;
+  if (pids.length === 0) return `no running copy was launched from ${launchDir}`;
+  return `${pids.length} running copies were launched from ${launchDir}, so none is stopped`;
 }
 
 export interface InterruptDeps {
-  findInstances: () => Promise<Instances>;
+  launchDir: string;
+  findOurs: () => Promise<number[]>;
   terminate: (pid: number) => void;
-  quitApp: () => Promise<void>;
   waitForExit: (timeoutMs: number) => Promise<boolean>;
   removeLink: () => Promise<void>;
   log: (line: string) => void;
@@ -164,22 +154,20 @@ export interface InterruptDeps {
 
 export const QUIT_TIMEOUT_MS = 30_000;
 
-async function requestStop(deps: InterruptDeps): Promise<boolean> {
-  const target = stopTarget(await deps.findInstances());
-  if (target.kind === 'pid') deps.terminate(target.pid);
-  if (target.kind === 'bundle') await deps.quitApp().catch(() => undefined);
-  return target.kind !== 'none';
-}
-
 export async function stopOnInterrupt(link: string | null, deps: InterruptDeps): Promise<void> {
-  const requested = await requestStop(deps).catch(() => false);
-  if (requested && (await deps.waitForExit(QUIT_TIMEOUT_MS))) {
+  const kept = link ? ` Its launch link stays at ${link}; remove it after quitting.` : '';
+  const pids = await deps.findOurs().catch(() => []);
+  const refusal = stopRefusal(pids, deps.launchDir);
+  if (refusal) {
+    deps.log(`Not stopping ${DEV_APP_NAME}: ${refusal}.${kept}`);
+    return;
+  }
+  deps.terminate(pids[0]!);
+  if (await deps.waitForExit(QUIT_TIMEOUT_MS)) {
     await deps.removeLink();
     return;
   }
-  const why = requested ? '' : ' It could not be told apart from other running copies.';
-  const kept = link ? ` Its launch link stays at ${link}; remove it after quitting.` : '';
-  deps.log(`${DEV_APP_NAME} is still running.${why}${kept}`);
+  deps.log(`${DEV_APP_NAME} is still running.${kept}`);
 }
 
 function hasDotFolder(dir: string): boolean {

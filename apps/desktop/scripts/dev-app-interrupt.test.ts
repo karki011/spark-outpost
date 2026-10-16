@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  devAppBinary,
-  runningInstances,
-  stopOnInterrupt,
-  stopTarget,
-  type Instances,
-} from './dev-app.ts';
+import { devAppBinary, launchedFrom, stopOnInterrupt, stopRefusal } from './dev-app.ts';
 
 const BINARY = devAppBinary('/main/.local/dev-app/Spark Outpost Dev.app');
 const OURS = '/private/tmp/spark-dev-app-aaa/apps/desktop';
@@ -20,42 +14,32 @@ const PS = [
   `  801 /bin/zsh -c echo ${BINARY} ${OURS}`,
 ].join('\n');
 
-describe('runningInstances', () => {
-  it('finds this launch by its app folder among other dev app windows', () => {
-    expect(runningInstances(PS, BINARY, OURS)).toEqual({ ours: [501], total: 2 });
-    expect(runningInstances(PS, BINARY, OTHER)).toEqual({ ours: [601], total: 2 });
+describe('launchedFrom', () => {
+  it('finds only the dev app window launched from this app folder', () => {
+    expect(launchedFrom(PS, BINARY, OURS)).toEqual([501]);
+    expect(launchedFrom(PS, BINARY, OTHER)).toEqual([601]);
   });
 
-  it('counts nothing when no dev app runs', () => {
-    expect(runningInstances(`  701 /Applications/x\n`, BINARY, OURS)).toEqual({
-      ours: [],
-      total: 0,
-    });
+  it('finds nothing when this launch is not running, even if another copy is', () => {
+    expect(launchedFrom(`  601 ${BINARY} ${OTHER}\n`, BINARY, OURS)).toEqual([]);
   });
 });
 
-describe('stopTarget', () => {
-  it('stops this launch by pid when it is the only match', () => {
-    expect(stopTarget({ ours: [501], total: 2 })).toEqual({ kind: 'pid', pid: 501 });
-  });
-
-  it('quits by bundle id only when one dev app runs at all', () => {
-    expect(stopTarget({ ours: [], total: 1 })).toEqual({ kind: 'bundle' });
-    expect(stopTarget({ ours: [], total: 2 })).toEqual({ kind: 'none' });
-    expect(stopTarget({ ours: [501, 502], total: 2 })).toEqual({ kind: 'none' });
+describe('stopRefusal', () => {
+  it('allows a stop only for exactly one matching copy', () => {
+    expect(stopRefusal([501], OURS)).toBeNull();
+    expect(stopRefusal([], OURS)).toMatch(/no running copy/);
+    expect(stopRefusal([501, 502], OURS)).toMatch(/2 running copies/);
   });
 });
 
-function interrupt(instances: Instances, exits: boolean) {
+function interrupt(ours: number[], exits: boolean) {
   const steps: string[] = [];
   const deps = {
-    findInstances: () => Promise.resolve(instances),
+    launchDir: OURS,
+    findOurs: () => Promise.resolve(ours),
     terminate: (pid: number) => {
       steps.push(`term ${pid}`);
-    },
-    quitApp: () => {
-      steps.push('quit');
-      return Promise.resolve();
     },
     waitForExit: (timeoutMs: number) => {
       steps.push(`wait ${timeoutMs}`);
@@ -76,35 +60,35 @@ describe('stopOnInterrupt', () => {
   const link = '/private/tmp/spark-dev-app-aaa';
 
   it('terminates only this launch and removes the link after it exits', async () => {
-    const { steps, deps } = interrupt({ ours: [501], total: 2 }, true);
+    const { steps, deps } = interrupt([501], true);
     await stopOnInterrupt(link, deps);
     expect(steps).toEqual(['term 501', 'wait 30000', 'unlink']);
   });
 
-  it('falls back to quitting by bundle id when one dev app runs', async () => {
-    const { steps, deps } = interrupt({ ours: [], total: 1 }, true);
-    await stopOnInterrupt(link, deps);
-    expect(steps).toEqual(['quit', 'wait 30000', 'unlink']);
-  });
-
-  it('touches no app and keeps the link when this launch cannot be told apart', async () => {
-    const { steps, deps } = interrupt({ ours: [], total: 2 }, true);
+  it('stops nothing and keeps the link when no copy matches this launch', async () => {
+    const { steps, deps } = interrupt([], true);
     await stopOnInterrupt(link, deps);
     expect(steps).toHaveLength(1);
-    expect(steps[0]).toMatch(/still running.*other running copies.*spark-dev-app-aaa/);
+    expect(steps[0]).toMatch(/Not stopping.*no running copy.*spark-dev-app-aaa;/);
+  });
+
+  it('stops nothing when several copies match this launch', async () => {
+    const { steps, deps } = interrupt([501, 502], true);
+    await stopOnInterrupt(null, deps);
+    expect(steps).toEqual([expect.stringMatching(/Not stopping.*2 running copies/)]);
+  });
+
+  it('stops nothing when the process list cannot be read', async () => {
+    const { steps, deps } = interrupt([501], true);
+    deps.findOurs = () => Promise.reject(new Error('ps failed'));
+    await stopOnInterrupt(link, deps);
+    expect(steps).toEqual([expect.stringMatching(/Not stopping.*spark-dev-app-aaa/)]);
   });
 
   it('keeps the link when the app does not exit in time', async () => {
-    const { steps, deps } = interrupt({ ours: [501], total: 1 }, false);
+    const { steps, deps } = interrupt([501], false);
     await stopOnInterrupt(link, deps);
     expect(steps).not.toContain('unlink');
     expect(steps.at(-1)).toMatch(/still running.*spark-dev-app-aaa/);
-  });
-
-  it('still waits when the bundle quit request fails', async () => {
-    const { steps, deps } = interrupt({ ours: [], total: 1 }, true);
-    deps.quitApp = () => Promise.reject(new Error('osascript failed'));
-    await stopOnInterrupt(null, deps);
-    expect(steps).toEqual(['wait 30000', 'unlink']);
   });
 });
