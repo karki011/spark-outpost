@@ -37,7 +37,10 @@ async function link(page: Page): Promise<string> {
 async function openSignIns(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Projects' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Projects' })
+    .click();
   await page
     .getByRole('list', { name: 'Linked folders' })
     .getByRole('button', { name: new RegExp(`^${name}\\b`) })

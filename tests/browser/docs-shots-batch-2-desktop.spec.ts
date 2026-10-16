@@ -183,8 +183,12 @@ test('Companion settings and updates screenshots', async ({ page }) => {
   await seedDemo(page, repo);
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  const spark = page.getByRole('dialog', { name: 'Spark' });
-  const around = spark.getByRole('region', { name: 'Around the app' });
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Notifications' })
+    .click();
+  const spark = page.getByRole('dialog', { name: 'Notifications' });
+  const around = spark.getByRole('region', { name: 'Spark Island' });
   await expect(around.getByRole('button', { name: 'Change Quick chat shortcut' })).toBeVisible();
   await around.scrollIntoViewIfNeeded();
   await shoot(page, IMAGES, 'companion-settings', around);

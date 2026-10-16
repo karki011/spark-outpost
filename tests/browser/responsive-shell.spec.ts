@@ -29,15 +29,19 @@ test.describe.configure({ timeout: 120_000 });
 const PRIMARY = ['Home', 'Chats', 'Analytics', 'Tickets', 'Docs'];
 const UNDER_MORE = ['Remote control'];
 const SECTIONS = [
-  'Spark',
-  'Crew',
+  'Profile & personality',
+  'Spark assistant',
+  'Appearance',
   'AI providers',
   'Models',
+  'Crew',
   'Usage',
   'Projects',
+  'Chats & autonomy',
+  'Pull requests',
   'Connectors',
   'MCP servers',
-  'Appearance',
+  'Notifications',
   'Help',
   'Reset',
 ];
@@ -126,7 +130,7 @@ for (const size of TOUCH_SIZES) {
       const strip = await tabs.boundingBox();
       expect(strip!.height).toBeLessThan(80);
     }
-    await tabs.getByRole('tab', { name: 'Spark', exact: true }).click();
+    await tabs.getByRole('tab', { name: 'Profile & personality' }).click();
     await expect(page.locator('.set-body .seg').first()).toBeVisible();
     expect(await smallTextInputs(page)).toEqual([]);
     const body = page.locator('.set-body');

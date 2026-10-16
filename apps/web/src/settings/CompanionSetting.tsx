@@ -3,7 +3,7 @@ import { companionPrefs, useCompanionPrefs } from '../companion/companion-prefs.
 import { Segmented } from '../ui/Segmented.tsx';
 import { SettingRow } from './SettingRow.tsx';
 
-const LABEL = 'Status companion';
+export const COMPANION_LABEL = 'Status companion';
 
 const OPTIONS = [
   { id: 'show', label: 'Show' },
@@ -15,12 +15,12 @@ export function CompanionSetting() {
   const { hidden } = useCompanionPrefs();
   return (
     <SettingRow
-      label={LABEL}
+      label={COMPANION_LABEL}
       hint="Scout floats in a corner outside open chats and shows what needs you and what’s running."
       hintId={hintId}
     >
       <Segmented
-        ariaLabel={LABEL}
+        ariaLabel={COMPANION_LABEL}
         describedBy={hintId}
         options={OPTIONS}
         value={hidden ? 'hide' : 'show'}

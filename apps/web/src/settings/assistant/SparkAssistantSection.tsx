@@ -13,10 +13,18 @@ import { ChoicePicker, type PickerChoice } from '../../ui/ChoicePicker.tsx';
 import { QueryWait } from '../../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 import { SettingRow } from '../SettingRow.tsx';
-import { AssistantFacts } from './AssistantFacts.tsx';
-import { AssistantSessionRow } from './AssistantSessionRow.tsx';
+import { AssistantFacts, KEY_FACTS_LABEL } from './AssistantFacts.tsx';
+import { AssistantSessionRow, SESSION_LABEL } from './AssistantSessionRow.tsx';
 import { effortHint, modelHint } from './assistant-hints.ts';
 import './assistant.css';
+
+const PROVIDER = 'Provider';
+const MODEL = 'Model';
+const EFFORT = 'Effort';
+
+export const ASSISTANT_ROWS = [PROVIDER, MODEL, EFFORT, SESSION_LABEL, KEY_FACTS_LABEL];
+
+const EFFORT_HIDDEN = [EFFORT];
 
 const SAME_PROVIDER = 'same';
 const FAST = 'fast';
@@ -106,7 +114,7 @@ function AssistantRows({ view, setup, onOpenChat }: AssistantRowsProps) {
   return (
     <>
       <SettingRow
-        label="Provider"
+        label={PROVIDER}
         hint="Ask Spark keeps its read-only mode."
         hintId={providerHintId}
         doc={DOC}
@@ -124,7 +132,8 @@ function AssistantRows({ view, setup, onOpenChat }: AssistantRowsProps) {
         />
       </SettingRow>
       <SettingRow
-        label="Model"
+        label={MODEL}
+        standsFor={efforts.length > 0 ? undefined : EFFORT_HIDDEN}
         hint={save.error?.message ?? modelHint(view, provider?.name ?? 'This provider')}
         hintId={modelHintId}
       >
@@ -146,7 +155,7 @@ function AssistantRows({ view, setup, onOpenChat }: AssistantRowsProps) {
         />
       </SettingRow>
       {efforts.length > 0 && (
-        <SettingRow label="Effort" hint={effortHint(view)} hintId={effortHintId}>
+        <SettingRow label={EFFORT} hint={effortHint(view)} hintId={effortHintId}>
           <ChoicePicker
             label="Ask Spark effort"
             choices={[

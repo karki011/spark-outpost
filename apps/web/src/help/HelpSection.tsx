@@ -7,9 +7,18 @@ import { SettingRow } from '../settings/SettingRow.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { exportDiagnostics, outcomeText } from './export-diagnostics.ts';
 import { FeedbackForm } from './FeedbackForm.tsx';
-import { HeartbeatSetting } from './HeartbeatSetting.tsx';
+import { HEARTBEAT_LABEL, HeartbeatSetting } from './HeartbeatSetting.tsx';
 import '../desktop/updates.css';
 import './help.css';
+
+const DIAGNOSTICS = 'Diagnostics';
+const VERSION = 'Version';
+const LOGS = 'Logs folder';
+
+export function helpRows({ remote }: { remote: boolean }): string[] {
+  const desktop = sparkDesktop()?.help ? [VERSION, LOGS, HEARTBEAT_LABEL] : [];
+  return remote ? desktop : [...desktop, DIAGNOSTICS];
+}
 
 const DIAGNOSTICS_HINT =
   'A zip with versions, settings and recent logs, for you to attach to a bug report. It never holds chats, prompts, file contents, keys or tokens.';
@@ -36,7 +45,7 @@ function DiagnosticsRow() {
 
   return (
     <SettingRow
-      label="Diagnostics"
+      label={DIAGNOSTICS}
       doc={{ page: 'trouble-setup-and-reset', heading: 'send-diagnostics-with-a-bug-report' }}
       hint={message ?? DIAGNOSTICS_HINT}
       hintId={hintId}
@@ -61,7 +70,7 @@ function AppRows({ info }: { info: DesktopHelpInfo }) {
   return (
     <>
       <SettingRow
-        label="Version"
+        label={VERSION}
         hint={info.beta ? 'A beta build. Thanks for trying it early.' : 'A stable build.'}
         hintId={versionHint}
       >
@@ -70,7 +79,7 @@ function AppRows({ info }: { info: DesktopHelpInfo }) {
           <BetaBadge version={info.version} />
         </span>
       </SettingRow>
-      <SettingRow label="Logs folder" hint={info.logsFolder} hintId={logsHint}>
+      <SettingRow label={LOGS} hint={info.logsFolder} hintId={logsHint}>
         <button
           type="button"
           className="btn line sm"

@@ -1,163 +1,22 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
-import type { RemoteSwitch } from '@spark-outpost/contracts';
 import { setupApi, setupKey } from '../api/setup.ts';
-import { ModelsSection } from '../models/ModelsSection.tsx';
 import { PHONE_SWITCH_OFF, useRemoteClient } from '../phone/use-remote-client.ts';
-import { ConnectorGrid } from '../onboarding/ToolsStep.tsx';
-import { ProviderSetupView } from '../providers/ProviderSetupView.tsx';
-import { routeToProvider, useRoutedProvider } from '../providers/provider-route.ts';
-import { ThemeCards } from '../theme/ThemeCards.tsx';
 import { reveal } from '../ui/transitions.tsx';
-import { UsageSection } from '../usage/UsageSection.tsx';
-import { SparkSection } from '../spark/SparkSection.tsx';
-import { SparksSection } from '../teammates/SparksSection.tsx';
-import { SparkAssistantSection } from './assistant/SparkAssistantSection.tsx';
-import { ProjectsSection } from './ProjectsSection.tsx';
-import { MacControlSection, macControlAvailable } from './MacControlSection.tsx';
-import { ResetSection } from '../reset/ResetSection.tsx';
-import { McpSection } from './mcp/McpSection.tsx';
-import { UpdatesSection, updatesAvailable } from './UpdatesSection.tsx';
-import { HelpSection } from '../help/HelpSection.tsx';
+import { clearSettingFocus, requestSettingFocus } from './setting-focus.ts';
+import {
+  SETTINGS_GROUPS,
+  availableSections,
+  groupTitle,
+  type SettingsSection,
+  type SettingsSectionEntry,
+} from './settings-sections.tsx';
+import { SettingsSearch } from './SettingsSearch.tsx';
 import './settings.css';
 import './settings-cards.css';
 
-export type SettingsSection =
-  | 'spark'
-  | 'sparks'
-  | 'assistant'
-  | 'ai'
-  | 'models'
-  | 'usage'
-  | 'projects'
-  | 'mac'
-  | 'tools'
-  | 'mcp'
-  | 'look'
-  | 'updates'
-  | 'help'
-  | 'reset';
-
-const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
-  {
-    id: 'spark',
-    label: 'Spark',
-    icon: (
-      <>
-        <path d="M4 15.5C4 11 7.4 8.5 12 8.5s8 2.5 8 7-3.4 5.5-8 5.5-8-1-8-5.5Z" />
-        <path d="M13.5 8.5c.4-2 1.6-3.3 3.5-3.7" />
-      </>
-    ),
-  },
-  {
-    id: 'sparks',
-    label: 'Crew',
-    icon: (
-      <>
-        <circle cx="9" cy="10" r="3.2" />
-        <path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6" />
-        <path d="M16 6.5c.3 1.6 1 2.3 2.6 2.6-1.6.3-2.3 1-2.6 2.6-.3-1.6-1-2.3-2.6-2.6 1.6-.3 2.3-1 2.6-2.6Z" />
-      </>
-    ),
-  },
-  {
-    id: 'assistant',
-    label: 'Spark assistant',
-    icon: (
-      <>
-        <path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
-        <path d="M9 11h.01M12 11h.01M15 11h.01" />
-      </>
-    ),
-  },
-  {
-    id: 'ai',
-    label: 'AI providers',
-    icon: <path d="M12 3 13.6 10.4 21 12l-7.4 1.6L12 21l-1.6-7.4L3 12l7.4-1.6Z" />,
-  },
-  {
-    id: 'models',
-    label: 'Models',
-    icon: (
-      <>
-        <rect x="4" y="4" width="16" height="16" rx="2" />
-        <path d="M8 9h8M8 13h8M8 17h5" />
-      </>
-    ),
-  },
-  {
-    id: 'usage',
-    label: 'Usage',
-    icon: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
-  },
-  {
-    id: 'projects',
-    label: 'Projects',
-    icon: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
-  },
-  {
-    id: 'mac',
-    label: 'Mac control',
-    icon: (
-      <>
-        <rect x="3" y="4" width="18" height="12" rx="2" />
-        <path d="M8 20h8M12 16v4M10.5 8.5l4 2-4 2z" />
-      </>
-    ),
-  },
-  {
-    id: 'tools',
-    label: 'Connectors',
-    icon: <path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5" />,
-  },
-  {
-    id: 'mcp',
-    label: 'MCP servers',
-    icon: (
-      <>
-        <rect x="3" y="4" width="18" height="6" rx="1.5" />
-        <rect x="3" y="14" width="18" height="6" rx="1.5" />
-        <path d="M7 7h.01M7 17h.01" />
-      </>
-    ),
-  },
-  {
-    id: 'look',
-    label: 'Appearance',
-    icon: (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" />
-      </>
-    ),
-  },
-  {
-    id: 'updates',
-    label: 'Updates',
-    icon: (
-      <>
-        <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
-        <path d="M21 3v5h-5M12 8v5l3 2" />
-      </>
-    ),
-  },
-  {
-    id: 'help',
-    label: 'Help',
-    icon: (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.4M12 16.8h.01" />
-      </>
-    ),
-  },
-  {
-    id: 'reset',
-    label: 'Reset',
-    icon: <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8M3 3v5h5" />,
-  },
-];
+export type { SettingsSection } from './settings-sections.tsx';
 
 interface SettingsDialogProps {
   section: SettingsSection;
@@ -166,38 +25,37 @@ interface SettingsDialogProps {
   onOpenChat: (conversationId: string) => void;
 }
 
-const SECTION_SWITCH: Partial<Record<SettingsSection, RemoteSwitch>> = {
-  spark: 'settings',
-  sparks: 'settings',
-  assistant: 'settings',
-  models: 'settings',
-  projects: 'settings',
-  ai: 'connections',
-  tools: 'connections',
-  mcp: 'connections',
-  reset: 'reset',
-};
+function searchable(sections: readonly SettingsSectionEntry[], remote: boolean) {
+  return sections.map((entry) => ({
+    id: entry.id,
+    label: entry.label,
+    groupLabel: groupTitle(entry.group),
+    rows: entry.rows?.({ remote }) ?? [],
+  }));
+}
 
 export function SettingsDialog({ section, onSection, onClose, onOpenChat }: SettingsDialogProps) {
   const phone = useRemoteClient();
-  const gate = SECTION_SWITCH[section];
+  const [sections] = useState(availableSections);
+  const index = useMemo(() => searchable(sections, phone.remote), [sections, phone.remote]);
+  const current = sections.find((entry) => entry.id === section);
+  const gate = current?.remoteSwitch;
   const off = gate !== undefined && !phone.allows(gate);
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const closeRef = useRef<HTMLButtonElement>(null);
+  const [query, setQuery] = useState('');
   const connected = setup.data?.providers.filter((provider) => provider.connection).length ?? 0;
-  const sections = SECTIONS.filter(
-    (entry) =>
-      (entry.id !== 'updates' || updatesAvailable()) &&
-      (entry.id !== 'mac' || macControlAvailable()),
-  );
-  const title = sections.find((entry) => entry.id === section)?.label ?? '';
+  const title = current?.label ?? '';
 
-  const onCloseRef = useRef(onClose);
-  const routedProvider = useRoutedProvider();
+  const close = () => {
+    clearSettingFocus();
+    onClose();
+  };
+  const onCloseRef = useRef(close);
 
   useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
+    onCloseRef.current = close;
+  });
 
   useEffect(() => {
     const panel = closeRef.current?.closest('.set-panel');
@@ -209,6 +67,11 @@ export function SettingsDialog({ section, onSection, onClose, onOpenChat }: Sett
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  const openSection = (next: SettingsSection) => {
+    clearSettingFocus();
+    onSection(next);
+  };
+
   return (
     <motion.div
       className="set"
@@ -217,7 +80,7 @@ export function SettingsDialog({ section, onSection, onClose, onOpenChat }: Sett
       exit={{ opacity: 0 }}
       transition={reveal}
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) close();
       }}
     >
       <motion.div
@@ -232,40 +95,67 @@ export function SettingsDialog({ section, onSection, onClose, onOpenChat }: Sett
       >
         <div className="set-nav">
           <h2>Settings</h2>
-          <div role="tablist" aria-label="Settings sections" aria-orientation="vertical">
-            {sections.map((entry) => (
-              <button
-                key={entry.id}
-                type="button"
-                role="tab"
-                aria-selected={entry.id === section}
-                onClick={() => onSection(entry.id)}
-              >
-                {entry.id === section && (
-                  <motion.span
-                    layoutId="set-nav-highlight"
-                    className="set-nav-highlight"
-                    transition={reveal}
-                  />
-                )}
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  {entry.icon}
-                </svg>
-                <span>{entry.label}</span>
-                {entry.id === 'ai' && connected > 0 && <span className="badge">{connected}</span>}
-              </button>
-            ))}
-          </div>
+          <SettingsSearch
+            sections={index}
+            query={query}
+            onQuery={setQuery}
+            onChoose={(match) => {
+              if (match.row) requestSettingFocus(match.row);
+              else clearSettingFocus();
+              onSection(match.section);
+            }}
+          />
+          {query.trim() === '' && (
+            <div role="tablist" aria-label="Settings sections" aria-orientation="vertical">
+              {SETTINGS_GROUPS.map((group) => {
+                const entries = sections.filter((entry) => entry.group === group.id);
+                if (entries.length === 0) return null;
+                const groupId = `set-group-${group.id}`;
+                return (
+                  <Fragment key={group.id}>
+                    <span id={groupId} className="set-nav-group" aria-hidden="true">
+                      {group.title}
+                    </span>
+                    {entries.map((entry) => (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={entry.id === section}
+                        aria-describedby={groupId}
+                        onClick={() => openSection(entry.id)}
+                      >
+                        {entry.id === section && (
+                          <motion.span
+                            layoutId="set-nav-highlight"
+                            className="set-nav-highlight"
+                            transition={reveal}
+                          />
+                        )}
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          {entry.icon}
+                        </svg>
+                        <span>{entry.label}</span>
+                        {entry.id === 'ai' && connected > 0 && (
+                          <span className="badge">{connected}</span>
+                        )}
+                      </button>
+                    ))}
+                  </Fragment>
+                );
+              })}
+            </div>
+          )}
         </div>
         <div className="set-main">
           <div className="set-head">
@@ -275,7 +165,7 @@ export function SettingsDialog({ section, onSection, onClose, onOpenChat }: Sett
               type="button"
               className="icon-btn"
               aria-label="Close settings"
-              onClick={onClose}
+              onClick={close}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
                 <path
@@ -304,53 +194,7 @@ export function SettingsDialog({ section, onSection, onClose, onOpenChat }: Sett
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ ...reveal, duration: 0.15 }}
               >
-                {setup.data && section === 'spark' && <SparkSection setup={setup.data} />}
-                {section === 'sparks' && <SparksSection />}
-                {setup.data && section === 'assistant' && (
-                  <SparkAssistantSection setup={setup.data} onOpenChat={onOpenChat} />
-                )}
-                {setup.data && section === 'ai' && (
-                  <>
-                    <p className="lede">
-                      Connect Claude, Codex or both. Open one to set it up, test it or change its
-                      defaults.
-                    </p>
-                    <ProviderSetupView
-                      density="compact"
-                      providers={setup.data.providers}
-                      advisors={setup.data.advisors}
-                      defaultProvider={setup.data.profile.defaultProvider}
-                      openId={routedProvider}
-                      onOpenChange={routeToProvider}
-                    />
-                  </>
-                )}
-                {section === 'models' && <ModelsSection />}
-                {section === 'usage' && <UsageSection />}
-                {section === 'projects' && <ProjectsSection />}
-                {setup.data && section === 'mac' && macControlAvailable() && (
-                  <MacControlSection profile={setup.data.profile} />
-                )}
-                {section === 'tools' && (
-                  <>
-                    <p className="lede">
-                      GitHub lets Ship open pull requests and Spark follow up on them. Jira and
-                      Linear bring your tickets into Spark. Slack notifies you, shares threads as
-                      context and takes updates.
-                    </p>
-                    <ConnectorGrid />
-                  </>
-                )}
-                {section === 'mcp' && !off && <McpSection />}
-                {section === 'look' && (
-                  <>
-                    <p className="lede">Pick a theme. It applies everywhere right away.</p>
-                    <ThemeCards />
-                  </>
-                )}
-                {section === 'updates' && updatesAvailable() && <UpdatesSection />}
-                {section === 'help' && <HelpSection />}
-                {section === 'reset' && <ResetSection />}
+                {current?.render({ setup: setup.data, off, onOpenChat })}
               </motion.div>
             </AnimatePresence>
           </div>

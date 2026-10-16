@@ -28,7 +28,7 @@ Agents can still look up earlier turns with `spark_chat_history`.
 
 ## Change when Spark compacts
 
-1. Open **Settings → Spark** and find **Context compaction**.
+1. Open **Settings → Chats & autonomy** and find **Context compaction**.
 2. Set **Warn when context is** (30% to 90%). It only colours the ring.
 3. Set **Compact automatically at** (40% to 95%), or turn its switch off to be asked each time.
 

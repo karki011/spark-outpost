@@ -5,7 +5,7 @@ async function openSection(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Spark' })
+    .getByRole('dialog', { name: 'Profile & personality' })
     .getByRole('tab', { name: /Spark assistant/ })
     .click();
   return page.getByRole('dialog', { name: 'Spark assistant' });

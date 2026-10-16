@@ -1,8 +1,11 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Profile } from '@spark-outpost/contracts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
+import { useSettingFocus } from '../settings/setting-focus.ts';
+
+export const INSTRUCTIONS_LABEL = 'Custom instructions';
 
 export function AgentInstructionsSetting({ profile }: { profile: Profile }) {
   const id = useId();
@@ -12,6 +15,9 @@ export function AgentInstructionsSetting({ profile }: { profile: Profile }) {
   const [text, setText] = useState(profile.agentInstructions ?? '');
   const [file, setFile] = useState(profile.agentInstructionsFile ?? '');
   const [fileOpen, setFileOpen] = useState(Boolean(profile.agentInstructionsFile));
+  const form = useRef<HTMLFormElement>(null);
+  const field = useRef<HTMLTextAreaElement>(null);
+  useSettingFocus(INSTRUCTIONS_LABEL, form, field);
   const save = useMutation({
     mutationFn: () =>
       setupApi.updateProfile({
@@ -26,6 +32,7 @@ export function AgentInstructionsSetting({ profile }: { profile: Profile }) {
     text !== (profile.agentInstructions ?? '') || file !== (profile.agentInstructionsFile ?? '');
   return (
     <form
+      ref={form}
       className="spark-instructions"
       onSubmit={(event) => {
         event.preventDefault();
@@ -33,8 +40,9 @@ export function AgentInstructionsSetting({ profile }: { profile: Profile }) {
       }}
     >
       <fieldset disabled={save.isPending} aria-label="Agent instructions">
-        <label htmlFor={id}>Custom instructions</label>
+        <label htmlFor={id}>{INSTRUCTIONS_LABEL}</label>
         <textarea
+          ref={field}
           id={id}
           className="inp"
           rows={3}

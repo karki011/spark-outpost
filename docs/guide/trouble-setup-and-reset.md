@@ -15,7 +15,7 @@ For provider errors, see [Providers and keys](trouble-providers.md). For stuck r
 | **Taking a quick nap** or **Reconnecting…** | The server stopped answering.                             | Wait for **Back online!**, or select **Try now**.                                                                         |
 | "Spark Outpost could not continue"          | The database or server didn't start, or an update failed. | Quit and reopen. After an update, select [**Open previous version instructions**](updates.md#your-data-during-an-update). |
 | "Git is not installed"                      | The Mac app needs Git.                                    | Run `xcode-select --install` in Terminal.                                                                                 |
-| "Another app is using this shortcut"        | Another app uses the same keys.                           | In **Settings → Spark → Around the app**, select **Change** or **Reset**.                                                 |
+| "Another app is using this shortcut"        | Another app uses the same keys.                           | In **Settings → Notifications**, select **Change** or **Reset**.                                                          |
 | "You have 12 terminals open"                | 12 is the limit across all chats.                         | Close a terminal tab, or reload the page to end them all.                                                                 |
 
 > **Important:** Don't delete `~/Library/Application Support/Spark Outpost` to fix a start-up problem. It holds your chats and backups.

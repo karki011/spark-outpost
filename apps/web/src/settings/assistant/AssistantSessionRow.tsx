@@ -7,6 +7,8 @@ import { BlobToggle } from '../../brand/BlobToggle.tsx';
 import { SettingRow } from '../SettingRow.tsx';
 import { sessionLine } from './assistant-hints.ts';
 
+export const SESSION_LABEL = 'Session';
+
 const BUSY_HINT = 'Ask Spark is answering. Clear history once it finishes.';
 
 interface AssistantSessionRowProps {
@@ -34,7 +36,7 @@ export function AssistantSessionRow({ view, onOpenChat }: AssistantSessionRowPro
     clear.error?.message ?? (view.busy ? BUSY_HINT : (view.notice ?? sessionLine(view.session)));
 
   return (
-    <SettingRow label="Session" hint={hint} hintId={hintId}>
+    <SettingRow label={SESSION_LABEL} hint={hint} hintId={hintId}>
       <div className="assistant-session">
         <button
           type="button"

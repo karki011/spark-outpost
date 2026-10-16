@@ -6,7 +6,7 @@ Since October 1, 2026 (`apps/server/src/compaction/`, migration `0088_compaction
 
 - Checked only between turns: before a chat turn starts (`prepareTurn` in the chat turn), never mid-turn, and never while any approval card in the chat is pending.
 - The reading is the context the agent reported on the session's last turn (`provider_sessions.context_used` / `context_size`, written when the turn finishes). Only a session the coming turn would resume counts.
-- Thresholds are settings (Settings → Spark → Context compaction, `profiles.compact_warn_percent`, `compact_at_percent`, `auto_compact`, migration `0090_compaction_settings.sql`), read by `compactionThresholds` before each turn:
+- Thresholds are settings (Settings → Chats & autonomy → Context compaction, `profiles.compact_warn_percent`, `compact_at_percent`, `auto_compact`, migration `0090_compaction_settings.sql`), read by `compactionThresholds` before each turn:
   - **Warn when context is** (default 60%, range 30–90): the ring turns amber and shows a quiet note.
   - **Compact automatically at** (default 80%, range 40–95): compaction starts here. The warning must be at least 5 points below it. The server (`compactionThresholdError` in `@spark-outpost/contracts` `compaction.ts`, a 400 with the message) and the database both reject other values; the settings rows show the same message inline.
   - Rows saved before the settings existed get the defaults.
