@@ -1,11 +1,20 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
+import { assistantSettingsSchema, clearAssistantRequestSchema } from '@spark-outpost/contracts';
 import { AssistantUnavailableError, ensureAssistantChat } from '../companion/assistant.ts';
+import { listAssistantEvents } from '../companion/assistant-events.ts';
+import { removeFact } from '../companion/assistant-facts.ts';
+import {
+  AssistantSettingsError,
+  assistantView,
+  clearAssistantHistory,
+  saveAssistantSettings,
+} from '../companion/assistant-settings.ts';
 import { chatUpdate } from '../companion/chat-update.ts';
 import { chatFileView } from '../companion/file-view.ts';
-import type { Db } from '../persistence/db.ts';
+import { withTransaction, type Db } from '../persistence/db.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import type { ApiEndpoints } from '../setup/verify.ts';
-import { paramId } from './validation.ts';
+import { paramId, parseBody } from './validation.ts';
 
 export interface CompanionRouteDeps {
   db: Db;
@@ -39,13 +48,48 @@ export function companionRoutes(deps: CompanionRouteDeps): Router {
     res.json(await chatFileView(deps.db, deps.workspaceId, paramId(req)));
   });
 
-  router.post('/spark-assistant', async (_req, res) => {
+  const answer = async (res: Response, work: () => Promise<unknown>) => {
     try {
-      res.json({ conversationId: await ensureAssistantChat(deps.db, deps.workspaceId) });
+      res.json(await work());
     } catch (error) {
-      if (!(error instanceof AssistantUnavailableError)) throw error;
+      const unavailable =
+        error instanceof AssistantUnavailableError || error instanceof AssistantSettingsError;
+      if (!unavailable) throw error;
       res.status(409).json({ error: error.message });
     }
+  };
+
+  router.post('/spark-assistant', async (_req, res) => {
+    await answer(res, async () => ({
+      conversationId: await ensureAssistantChat(deps.db, deps.workspaceId),
+    }));
+  });
+
+  router.get('/spark-assistant/settings', async (_req, res) => {
+    await answer(res, () => assistantView(deps.db, deps.workspaceId));
+  });
+
+  router.put('/spark-assistant/settings', async (req, res) => {
+    const settings = parseBody(assistantSettingsSchema, req);
+    await answer(res, () =>
+      withTransaction(deps.db, (client) =>
+        saveAssistantSettings(client, deps.workspaceId, settings),
+      ),
+    );
+  });
+
+  router.post('/spark-assistant/clear', async (req, res) => {
+    const options = parseBody(clearAssistantRequestSchema, req);
+    await answer(res, () => clearAssistantHistory(deps.db, deps.workspaceId, options));
+  });
+
+  router.delete('/spark-assistant/facts/:id', async (req, res) => {
+    await removeFact(deps.db, deps.workspaceId, paramId(req));
+    await answer(res, () => assistantView(deps.db, deps.workspaceId));
+  });
+
+  router.get('/spark-assistant/events', async (_req, res) => {
+    res.json({ events: await listAssistantEvents(deps.db, deps.workspaceId) });
   });
 
   return router;

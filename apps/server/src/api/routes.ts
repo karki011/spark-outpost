@@ -23,7 +23,8 @@ import { stopRun } from '../workflow/stop-run.ts';
 import { isTerminalRun } from '../persistence/native-terminal-turns.ts';
 import { loadOrchestration } from '../persistence/orchestrations.ts';
 import { advisorUsageSummary } from '../persistence/advice.ts';
-import { usageSummary } from '../persistence/usage.ts';
+import { EMPTY_USAGE_SUMMARY, usageSummary } from '../persistence/usage.ts';
+import { assistantConversationId } from '../companion/assistant-settings.ts';
 import { categoryUsage } from '../persistence/category-usage.ts';
 import { ConversationMissingError } from '../persistence/chat-settings.ts';
 import { InvalidDefaultError } from '../persistence/setup.ts';
@@ -118,11 +119,17 @@ export function apiRoutes(deps: RouteDeps): Router {
     res.json({ annotations: await listAnnotations(db, paramId(req)) });
   });
 
-  router.get('/usage/summary', async (_req, res) => {
+  router.get('/usage/summary', async (req, res) => {
+    const assistant = req.query.scope === 'assistant';
+    const only = assistant ? await assistantConversationId(db, workspaceId) : null;
+    if (assistant && !only) {
+      res.json(EMPTY_USAGE_SUMMARY);
+      return;
+    }
     const [summary, advisors, byCategory] = await Promise.all([
-      usageSummary(db, workspaceId),
-      advisorUsageSummary(db, workspaceId),
-      categoryUsage(db, workspaceId),
+      usageSummary(db, workspaceId, only),
+      assistant ? EMPTY_USAGE_SUMMARY.advisors : advisorUsageSummary(db, workspaceId),
+      categoryUsage(db, workspaceId, only),
     ]);
     res.json({ ...summary, advisors, byCategory });
   });

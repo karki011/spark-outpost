@@ -33,6 +33,7 @@ function toTotals(row: CategoryRow): CategoryTotals {
 export async function categoryUsage(
   db: Queryable,
   workspaceId: string,
+  onlyConversation: string | null = null,
 ): Promise<{ last30Days: CategoryTotals[]; allTime: CategoryTotals[] }> {
   const query = (recentOnly: boolean) =>
     db.query<CategoryRow>(
@@ -48,11 +49,11 @@ export async function categoryUsage(
        FROM runs r
        JOIN conversations c ON c.id = r.conversation_id
        LEFT JOIN runs p ON p.id = r.parent_run_id
-       WHERE c.workspace_id = $1
+       WHERE c.workspace_id = $1 AND ($3::uuid IS NULL OR c.id = $3)
          AND ($2::boolean IS FALSE OR COALESCE(p.created_at, r.created_at) >= now() - interval '30 days')
        GROUP BY 1
        ORDER BY sum(r.cost_usd) DESC NULLS LAST, 2 DESC`,
-      [workspaceId, recentOnly],
+      [workspaceId, recentOnly, onlyConversation],
     );
   const [recent, all] = await Promise.all([query(true), query(false)]);
   return { last30Days: recent.rows.map(toTotals), allTime: all.rows.map(toTotals) };

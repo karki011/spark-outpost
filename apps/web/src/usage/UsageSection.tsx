@@ -7,6 +7,7 @@ import {
   type AdvisorUsage,
   type CategoryTotals,
   type ProviderTotals,
+  type UsageSummary,
 } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { categoryName } from '../categories/category-usage.ts';
@@ -14,6 +15,7 @@ import { ProviderBlob } from '../brand/ProviderBlob.tsx';
 import { providerName } from '../chat/provider-name.ts';
 import { formatTokens } from '../chat/composer/model-options.ts';
 import { Segmented } from '../ui/Segmented.tsx';
+import { assistantApi, assistantKeys } from '../api/assistant.ts';
 import { CostText } from './CostText.tsx';
 import './usage.css';
 import { EmptyScene } from '../brand/EmptyScene.tsx';
@@ -103,9 +105,20 @@ function CategoryRow({ row }: { row: CategoryTotals }) {
   );
 }
 
+type Scope = 'all' | 'assistant';
+
+const SCOPES: { id: Scope; label: string }[] = [
+  { id: 'all', label: 'Everything' },
+  { id: 'assistant', label: 'Spark assistant' },
+];
+
 export function UsageSection() {
   const [range, setRange] = useState<Range>('last30Days');
-  const summary = useQuery({ queryKey: queryKeys.usageSummary, queryFn: api.getUsageSummary });
+  const [scope, setScope] = useState<Scope>('all');
+  const summary = useQuery<UsageSummary>({
+    queryKey: scope === 'assistant' ? assistantKeys.usage : queryKeys.usageSummary,
+    queryFn: scope === 'assistant' ? assistantApi.usage : api.getUsageSummary,
+  });
   const rows = summary.data?.[range] ?? [];
   const advisors = summary.data?.advisors?.[range] ?? [];
   const categories = summary.data?.byCategory?.[range] ?? [];
@@ -122,6 +135,12 @@ export function UsageSection() {
           options={RANGES}
           value={range}
           onChange={(id) => setRange(id as Range)}
+        />
+        <Segmented
+          ariaLabel="Usage of"
+          options={SCOPES}
+          value={scope}
+          onChange={(id) => setScope(id as Scope)}
         />
       </div>
       {summary.isError && <p className="usage-empty">{summary.error.message}</p>}

@@ -88,6 +88,7 @@ const worker = startWorker({
     idleMs: config.SESSION_IDLE_MINUTES * 60_000,
   },
   concurrency: config.WORKER_CONCURRENCY,
+  assistantIdleMs: config.ASSISTANT_IDLE_COMPACT_SECONDS * 1000,
   parked: parkedTurns,
   branchPrefix: config.BRANCH_PREFIX,
   shipAccess: {

@@ -39,6 +39,10 @@ With **Record Terminal sessions like chats** on, new Claude turns in a [Terminal
 
 A push of another branch, a force push, a protected file or a write outside the project gets a flag; nothing is stopped. Codex sessions don't change.
 
+## Spark assistant
+
+**Spark assistant** sets [Ask Spark](companion-quick-chat.md#ask-spark)'s **Provider**, **Model** (**Fast (recommended)**: Sonnet 5.5, low effort), **Effort** and **Key facts**.
+
 ## Other sections
 
 | Section          | Holds                                                                                                                         | Read more                                                   |

@@ -47,6 +47,9 @@ export const summaryQuery = `
       false
     ) AS unread,
     c.seen_at, r.finished_at AS latest_run_finished_at,
+    EXISTS (
+      SELECT 1 FROM profiles apf WHERE apf.assistant_conversation_id = c.id
+    ) AS assistant,
     COALESCE(p.pending_created_at, fl.flag_created_at) AS waiting_since,
     COALESCE(
       r.status = 'awaiting_approval' OR p.pending_id IS NOT NULL OR fl.flag_id IS NOT NULL, false

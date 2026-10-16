@@ -4,6 +4,7 @@ import {
   type CompactionThresholds,
   type RunMode,
 } from '@spark-outpost/contracts';
+import { recordAssistantEvent } from '../companion/assistant-events.ts';
 import { insertCompaction, pendingCardInChat } from '../persistence/compactions.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import {
@@ -26,7 +27,7 @@ import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { SESSION_IDLE_MS, decideResume } from '../workflow/session-decision.ts';
 import { HISTORY_TOOL_NOTE } from '../workflow/session-brief.ts';
-import { compactInSession, offersCompact, type CompactTarget } from './agent-compact.ts';
+import { compactInSession, leaseLog, offersCompact, type CompactTarget } from './agent-compact.ts';
 import { startFreshChat, type FreshChat } from './fresh-chat.ts';
 import { agentCompactWorked, compactStep, readingOf, usedPercent } from './policy.ts';
 import { buildChatSummary } from './summary.ts';
@@ -153,7 +154,14 @@ async function compactWithAgent(
 ): Promise<RunInput | null> {
   if (!offersCompact(candidate.commands)) return null;
   await notice(append, `Sent /compact to the agent (${kilo(candidate.reading.used)} tokens)`);
-  const compacted = await compactInSession(deps, lease, input, candidate, append, control.signal);
+  const compacted = await compactInSession(
+    deps,
+    leaseLog(deps, lease),
+    input,
+    candidate,
+    append,
+    control.signal,
+  );
   if (!compacted || !agentCompactWorked(candidate.reading, compacted.after)) return null;
   const { after } = compacted;
   await recordCompacted(deps.db, candidate.session.id, after);
@@ -247,7 +255,8 @@ export async function compactBeforeTurn(
   control: Pick<RunControl, 'signal'>,
 ): Promise<BeforeTurn> {
   const keep: BeforeTurn = { kind: 'continue', input };
-  if (input.parentRunId !== null || input.assistant) return keep;
+  if (input.parentRunId !== null) return keep;
+  if (input.assistant) await deps.assistantIdle?.wait(input.identity.threadId);
   const candidate = await candidateFor(deps, input);
   if (!candidate) return keep;
   const thresholds = await compactionThresholds(deps.db, input.workspaceId);
@@ -258,6 +267,18 @@ export async function compactBeforeTurn(
     cardPending: await pendingCardInChat(deps.db, input.identity.threadId),
   });
   if (step === 'none') return keep;
+  if (input.assistant) {
+    if (step !== 'compact') return keep;
+    const compacted = await compactNow(deps, lease, input, append, control, candidate);
+    await recordAssistantEvent(
+      deps.db,
+      input.workspaceId,
+      'compacted_threshold',
+      `${usedPercent(candidate.reading)}% full`,
+      lease.runId,
+    );
+    return compacted;
+  }
   if (step === 'compact') return compactNow(deps, lease, input, append, control, candidate);
   const answer = await askFirst(deps, lease, input, append, control, candidate.reading, thresholds);
   if (answer.type === 'stopped') return { kind: 'stopped' };

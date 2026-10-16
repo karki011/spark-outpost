@@ -105,6 +105,7 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   pinned_order: number | null;
   project_order: number | null;
   unread: boolean;
+  assistant?: boolean;
   seen_at?: Date | null;
   latest_run_finished_at?: Date | null;
   waiting_since?: Date | null;
@@ -258,6 +259,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
     pinnedOrder: row.pinned_order,
     projectOrder: row.project_order,
     unread: row.unread,
+    ...(row.assistant ? { assistant: true } : {}),
     seenAt: iso(row.seen_at ?? null),
     waitingSince: row.needs_input ? iso(row.waiting_since ?? null) : null,
     needsInput: row.needs_input,
