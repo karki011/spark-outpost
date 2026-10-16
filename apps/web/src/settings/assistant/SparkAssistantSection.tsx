@@ -24,6 +24,8 @@ const EFFORT = 'Effort';
 
 export const ASSISTANT_ROWS = [PROVIDER, MODEL, EFFORT, SESSION_LABEL, KEY_FACTS_LABEL];
 
+const EFFORT_HIDDEN = [EFFORT];
+
 const SAME_PROVIDER = 'same';
 const FAST = 'fast';
 const SAME_MODEL = 'default';
@@ -131,6 +133,7 @@ function AssistantRows({ view, setup, onOpenChat }: AssistantRowsProps) {
       </SettingRow>
       <SettingRow
         label={MODEL}
+        standsFor={efforts.length > 0 ? undefined : EFFORT_HIDDEN}
         hint={save.error?.message ?? modelHint(view, provider?.name ?? 'This provider')}
         hintId={modelHintId}
       >

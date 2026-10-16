@@ -112,6 +112,31 @@ test('search finds a Spark assistant row under General', async ({ page }) => {
   await expect(dialog.locator('.set-row[data-found]')).toContainText('Key facts');
 });
 
+test('a row whose control is off still takes focus, and Help rows are found', async ({ page }) => {
+  await openSettingsDialog(page);
+  await search(page).fill('follow up on');
+  await search(page).press('Enter');
+  const pulls = page.getByRole('dialog', { name: 'Pull requests' });
+  const followUp = pulls.getByRole('switch', { name: 'Follow up on pull requests' });
+  await expect(followUp).toBeFocused();
+  await followUp.click();
+  await expect(followUp).not.toBeChecked();
+
+  await search(page).fill('fix failing');
+  await search(page).press('Enter');
+  const row = pulls.locator('.set-row[data-found]');
+  await expect(row).toContainText('Fix failing checks');
+  await expect(row).toBeFocused();
+  await search(page).focus();
+  await expect(pulls.locator('[data-found]')).toHaveCount(0);
+  await expect(pulls.locator('.set-row[tabindex]')).toHaveCount(0);
+
+  await search(page).fill('diagnostics');
+  await expect(results(page).getByRole('option', { name: /^Diagnostics/ })).toContainText(
+    'App · Help',
+  );
+});
+
 test('the search works from the keyboard', async ({ page }) => {
   await openSettingsDialog(page);
   await search(page).focus();

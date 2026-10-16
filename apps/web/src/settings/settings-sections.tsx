@@ -15,7 +15,7 @@ import { INSTRUCTIONS_LABEL } from '../spark/AgentInstructionsSetting.tsx';
 import { MORNING_BRIEF_LABEL } from '../spark/MorningBriefSetting.tsx';
 import { SparksSection } from '../teammates/SparksSection.tsx';
 import { ResetSection, KEEP_KEYS_LABEL } from '../reset/ResetSection.tsx';
-import { HelpSection } from '../help/HelpSection.tsx';
+import { HelpSection, helpRows } from '../help/HelpSection.tsx';
 import { AUTO_CONTINUE_LABEL } from './AutoContinueSetting.tsx';
 import { BUSY_ENTER_LABEL } from './BusyEnterSetting.tsx';
 import { ChatsSection } from './ChatsSection.tsx';
@@ -55,7 +55,7 @@ interface SectionEntry {
   icon: ReactNode;
   remoteSwitch?: RemoteSwitch;
   available?: () => boolean;
-  rows?: () => readonly string[];
+  rows?: (client: { remote: boolean }) => readonly string[];
   render: (props: SectionBodyProps) => ReactNode;
 }
 
@@ -232,6 +232,7 @@ export const SETTINGS_SECTIONS = [
     group: 'app',
     label: 'Help',
     icon: icons.HELP_ICON,
+    rows: helpRows,
     render: () => <HelpSection />,
   },
   {

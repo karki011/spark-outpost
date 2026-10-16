@@ -18,23 +18,27 @@ export function clearSettingFocus(): void {
 }
 
 function controlToFocus(scope: HTMLElement): HTMLElement | null {
-  const enabled = [...scope.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-    (element) => !element.matches(':disabled'),
-  );
+  const candidates = scope.matches(FOCUSABLE)
+    ? [scope]
+    : [...scope.querySelectorAll<HTMLElement>(FOCUSABLE)];
+  const enabled = candidates.filter((element) => !element.matches(':disabled'));
   return enabled.find((element) => element.matches(PRIMARY)) ?? enabled[0] ?? null;
 }
 
 function reveal(row: HTMLElement, control: HTMLElement | null): void {
+  const target = (control ? controlToFocus(control) : null) ?? row;
+  const borrowsTabIndex = target === row && !row.hasAttribute('tabindex');
+  if (borrowsTabIndex) row.setAttribute('tabindex', '-1');
   row.setAttribute('data-found', '');
   const clear = (event: FocusEvent) => {
     if (event.relatedTarget instanceof Node && row.contains(event.relatedTarget)) return;
     row.removeAttribute('data-found');
+    if (borrowsTabIndex) row.removeAttribute('tabindex');
     row.removeEventListener('focusout', clear);
   };
   row.addEventListener('focusout', clear);
   row.scrollIntoView({ block: 'center' });
-  const target = control ? controlToFocus(control) : null;
-  target?.focus({ preventScroll: true });
+  target.focus({ preventScroll: true });
 }
 
 export function useSettingFocus(

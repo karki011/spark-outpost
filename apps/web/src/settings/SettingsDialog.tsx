@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
@@ -25,19 +25,19 @@ interface SettingsDialogProps {
   onOpenChat: (conversationId: string) => void;
 }
 
-function searchable(sections: readonly SettingsSectionEntry[]) {
+function searchable(sections: readonly SettingsSectionEntry[], remote: boolean) {
   return sections.map((entry) => ({
     id: entry.id,
     label: entry.label,
     groupLabel: groupTitle(entry.group),
-    rows: entry.rows?.() ?? [],
+    rows: entry.rows?.({ remote }) ?? [],
   }));
 }
 
 export function SettingsDialog({ section, onSection, onClose, onOpenChat }: SettingsDialogProps) {
   const phone = useRemoteClient();
   const [sections] = useState(availableSections);
-  const [index] = useState(() => searchable(sections));
+  const index = useMemo(() => searchable(sections, phone.remote), [sections, phone.remote]);
   const current = sections.find((entry) => entry.id === section);
   const gate = current?.remoteSwitch;
   const off = gate !== undefined && !phone.allows(gate);

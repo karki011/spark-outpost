@@ -30,9 +30,14 @@ const SHORTCUTS: { action: IslandAction; label: string; hint: string }[] = [
   { action: 'sessions', label: 'Sessions shortcut', hint: 'Finds a chat and asks for an update.' },
 ];
 
-const SHOWN_WITH_ISLAND = [ISLAND_SIZE_LABEL, AUTO_EXPAND, CHIMES];
-
 const DEFAULTS: Record<IslandAction, string> = { quick: 'Alt+Space', sessions: 'Alt+Shift+Space' };
+
+const SHOWN_WITH_ISLAND = [
+  ISLAND_SIZE_LABEL,
+  AUTO_EXPAND,
+  ...SHORTCUTS.map((shortcut) => shortcut.label),
+  CHIMES,
+];
 
 export function islandRows(): string[] {
   if (!companionAvailable()) return [];

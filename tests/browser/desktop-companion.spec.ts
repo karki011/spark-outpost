@@ -186,6 +186,9 @@ test('searching an island row while the island is off focuses Show Spark Island'
   const show = dialog.getByRole('switch', { name: 'Show Spark Island' });
   await expect(show).toBeFocused();
   await expect(dialog.locator('.set-row[data-found]')).toContainText('Show Spark Island');
+  await search.fill('quick chat');
+  await search.press('Enter');
+  await expect(show).toBeFocused();
   await show.click();
   await expect(dialog.getByRole('switch', { name: 'Island chimes' })).toBeVisible();
   await expect(show).toBeFocused();
