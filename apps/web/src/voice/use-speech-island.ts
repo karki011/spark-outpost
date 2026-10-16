@@ -158,6 +158,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
   }
   const starts = useRef(0);
   const escapedStart = useRef(0);
+  const freshProjects = useRef<Promise<SpeechLists['projects'] | null>>(Promise.resolve(null));
   const latest = useRef({ state, options, lists, seed, handed, selected, status });
   useEffect(() => {
     latest.current = { state, options, lists, seed, handed, selected, status };
@@ -304,9 +305,8 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
     void act(result, index);
   };
 
-  const heard = (event: Extract<VoiceEvent, { kind: 'final' }>) => {
-    const { state: now, lists: names } = latest.current;
-    const listen = now.listen;
+  const heard = async (event: Extract<VoiceEvent, { kind: 'final' }>) => {
+    const listen = latest.current.state.listen;
     if (!listen || listen.id !== event.id) return;
     const text = event.text.trim();
     const answer = listen.purpose === 'confirm' && text ? matchConfirmation(text) : null;
@@ -315,6 +315,10 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
       if (answer) confirm(answer);
       return;
     }
+    const projects = await freshProjects.current;
+    const { state: now, lists } = latest.current;
+    if (now.listen?.id !== event.id) return;
+    const names = projects ? { ...lists, projects } : lists;
     const command = text ? matchCommand(text, names) : null;
     dispatch({ type: 'heard', id: event.id, text, command });
     if (!command) {
@@ -326,7 +330,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
     void act(result, null);
   };
 
-  const withFreshProjects = async (names: SpeechLists): Promise<SpeechLists> => {
+  const refreshProjects = async (): Promise<SpeechLists['projects'] | null> => {
     const fresh = queryClient
       .fetchQuery({
         queryKey: projectKeys.all,
@@ -337,7 +341,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
       .catch(() => null);
     const late = new Promise<null>((resolve) => setTimeout(() => resolve(null), PROJECTS_WAIT_MS));
     const projects = await Promise.race([fresh, late]);
-    return projects ? { ...names, projects: projectRefs(projects) } : names;
+    return projects ? projectRefs(projects) : null;
   };
 
   const begin = async (file?: string) => {
@@ -350,9 +354,10 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
     if (purpose === 'command') {
       setSeed(null);
       setHanded(null);
+      freshProjects.current = refreshProjects();
     }
     if (opts.panel === null || purpose === 'command') opts.openPanel(opts.panel ?? 'ask');
-    const hint = speechHint(purpose === 'command' ? await withFreshProjects(names) : names);
+    const hint = speechHint(names);
     const answer = await (file ? speech.listen(purpose, hint, file) : speech.listen(purpose, hint));
     if (escapedStart.current === start) {
       if (answer.ok) void speech.cancel(answer.id);
@@ -372,7 +377,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
       case 'speech':
         return dispatch({ type: 'speech', id: event.id });
       case 'final':
-        return heard(event);
+        return void heard(event);
       case 'cancelled':
         return dispatch({ type: 'cancelled', id: event.id });
       case 'error':

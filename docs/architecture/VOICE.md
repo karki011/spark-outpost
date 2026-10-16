@@ -233,7 +233,7 @@ On 2026-10-16, in the same signed **Spark Outpost Dev** shell with Microphone, I
 
 Still open: Fn twice (it needs **Press 🌐 key to** set to Do Nothing and Dictation off or on another shortcut); ticket matching by voice (no tracker was connected, so phrase 1's CP-49084 was not run); and short phrases spoken into the mic. "who needs me" was never heard right through the speaker, so the spoken instant answer was checked with "what's running". The WAV `testPress` path can't run in the signed shell, because `dev-app.ts` passes only the calendar variables; it last ran on 2026-10-15.
 
-The run found that the island kept the project list it loaded at start, so a project linked later was missing from spoken commands and the hint until a restart; a `command` listen now fetches the projects before it builds the hint.
+The run found that the island kept the project list it loaded at start, so a project linked later was missing from spoken commands and the hint until a restart. A `command` listen now starts at once with the cached hint and fetches the projects alongside; the transcript is matched against the fresh list (or the cached one after 500 ms), so a hold-to-talk release is never held back by the fetch.
 
 ## Phases
 
