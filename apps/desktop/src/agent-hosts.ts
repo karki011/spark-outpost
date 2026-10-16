@@ -1,5 +1,6 @@
 import type { BridgePort, WorkerBridge } from './browser/bridge.ts';
 import { startBrowserHost, type BrowserHostOptions } from './browser/host.ts';
+import { startCalendarHost, type CalendarHostOptions } from './calendar/host.ts';
 import { joinBridges } from './mac-control/bridge.ts';
 import { startMacControlHost, type MacControlHostOptions } from './mac-control/host.ts';
 
@@ -12,15 +13,23 @@ export interface AgentHosts {
 export async function startAgentHosts(
   browserOptions: BrowserHostOptions,
   macOptions: MacControlHostOptions,
+  calendarOptions: CalendarHostOptions,
 ): Promise<AgentHosts> {
   const browser = await startBrowserHost(browserOptions);
   const mac = startMacControlHost(macOptions);
+  const calendar = startCalendarHost(calendarOptions);
   return {
-    connectWorker: (port) => joinBridges([browser.connectWorker(port), mac.connectWorker(port)]),
+    connectWorker: (port) =>
+      joinBridges([
+        browser.connectWorker(port),
+        mac.connectWorker(port),
+        calendar.connectWorker(port),
+      ]),
     windowClosed: () => browser.windowClosed(),
     dispose() {
       browser.dispose();
       mac.dispose();
+      calendar.dispose();
     },
   };
 }

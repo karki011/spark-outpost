@@ -76,6 +76,9 @@ const RESET_TABLES = [
   'map_overrides',
   'teammates',
   'outposts',
+  'calendar_connection',
+  'calendar_calendars',
+  'calendar_marks',
 ];
 const LEFTOVER_RUN_WAIT_MS = 5000;
 

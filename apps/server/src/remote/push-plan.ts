@@ -77,6 +77,17 @@ export function pushMessage(
   };
 }
 
+export interface MeetingPush {
+  title: string;
+  body: '';
+  chatId: null;
+  tag: 'spark-meeting';
+}
+
+export function meetingPush(minutes: 5 | 10 | 15): MeetingPush {
+  return { title: `Meeting in ${minutes} min`, body: '', chatId: null, tag: 'spark-meeting' };
+}
+
 export function quietDevice(deviceId: string, focusedClients: readonly string[]): boolean {
   return focusedClients.includes(`device:${deviceId}`);
 }

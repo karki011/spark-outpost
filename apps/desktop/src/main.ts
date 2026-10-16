@@ -72,7 +72,6 @@ const layout = appLayout({
   appPath: app.getAppPath(),
   resourcesPath: process.resourcesPath,
 });
-const serverDir = layout.serverDir;
 const bootstrap = path.join(import.meta.dirname, 'server-entry.js');
 const preload = path.join(import.meta.dirname, 'preload.cjs');
 const bootPreload = path.join(import.meta.dirname, 'boot-preload.cjs');
@@ -132,7 +131,7 @@ function supervise(
       name,
       bootstrap,
       entry,
-      cwd: serverDir,
+      cwd: layout.serverDir,
       env,
       log: log(name),
       ...(connect ? { connect } : {}),
@@ -207,7 +206,7 @@ function fail(message: string, detail: string): void {
 async function migrateBeforeStart(launchInfo: ServerLaunch, options: DatabaseOptions) {
   const effects = startupMigrationEffects({
     paths,
-    migrationsDir: path.join(serverDir, 'migrations'),
+    migrationsDir: path.join(layout.serverDir, 'migrations'),
     toolDirs: [path.join(process.resourcesPath, 'postgres-tools/bin'), ...DUMP_TOOL_DIRS],
     databaseUrl: () => launchInfo.databaseUrl,
     stopDatabase: async () => {
@@ -221,8 +220,8 @@ async function migrateBeforeStart(launchInfo: ServerLaunch, options: DatabaseOpt
       services!.once({
         name: 'Spark Outpost Migrate',
         bootstrap,
-        entry: serverEntry(serverDir, 'migrate'),
-        cwd: serverDir,
+        entry: serverEntry(layout.serverDir, 'migrate'),
+        cwd: layout.serverDir,
         env: workerEnv(launchInfo),
         log: log('migrate'),
       }),
@@ -268,7 +267,7 @@ async function launch(): Promise<void> {
   runtime = await LocalRuntime.connect({
     userData: paths.userData,
     version: app.getVersion(),
-    serverDir,
+    serverDir: layout.serverDir,
     bootstrap: path.join(import.meta.dirname, 'runtime-host.js'),
     log: (name, line) => log(name)(line),
   });
@@ -331,12 +330,13 @@ async function launch(): Promise<void> {
       log: log('browser'),
     },
     { helperPath: layout.macControlBin, origin: () => origin, preload, trusted, log: log('mac') },
+    { helperPath: layout.calendarBin, seedPath: layout.calendarSeedBin, log: log('calendar') },
   );
   browser = browserHost;
   let apiReady = false;
   supervise(
     'Spark Outpost API',
-    serverEntry(serverDir, 'api'),
+    serverEntry(layout.serverDir, 'api'),
     { ...apiEnv(launchInfo), [BROWSER_HOST_ENV]: '1' },
     () => apiReady,
     (port) => browserHost.connectWorker(port),
@@ -345,7 +345,7 @@ async function launch(): Promise<void> {
   apiReady = true;
   supervise(
     'Spark Outpost Worker',
-    serverEntry(serverDir, 'worker'),
+    serverEntry(layout.serverDir, 'worker'),
     browserWorkerEnv(launchInfo),
     () => true,
     (port) => browserHost.connectWorker(port),

@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import {
   builderConfig,
+  CALENDARS_USAGE,
   MICROPHONE_USAGE,
   packagedGitHubApp,
   packagedSlackClientId,
@@ -100,14 +101,21 @@ describe('builderConfig', () => {
     });
   });
 
-  it('says why the app asks for the microphone and lets the voice helper record', async () => {
+  it('says why the app asks for the microphone and calendars, and grants both entitlements', async () => {
     const config = builderConfig({ ...base, archs: ['arm64'], env: {} });
-    expect(config.mac?.extendInfo).toEqual({ NSMicrophoneUsageDescription: MICROPHONE_USAGE });
+    expect(config.mac?.extendInfo).toEqual({
+      NSMicrophoneUsageDescription: MICROPHONE_USAGE,
+      NSCalendarsFullAccessUsageDescription: CALENDARS_USAGE,
+      NSCalendarsUsageDescription: CALENDARS_USAGE,
+    });
     const plist = await readFile(
       new URL('../build/entitlements.mac.plist', import.meta.url),
       'utf8',
     );
     expect(plist).toMatch(/<key>com\.apple\.security\.device\.audio-input<\/key>\s*<true\/>/);
+    expect(plist).toMatch(
+      /<key>com\.apple\.security\.personal-information\.calendars<\/key>\s*<true\/>/,
+    );
     expect(config.mac?.entitlementsInherit).toBe(config.mac?.entitlements);
   });
 

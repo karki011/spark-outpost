@@ -3,6 +3,7 @@ import { useId, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import type { Digest } from '@spark-outpost/contracts';
 import { AuditDialog } from '../audit/AuditDialog.tsx';
+import { CalendarBriefBlock } from '../calendar/CalendarBriefBlock.tsx';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { briefOffLine, nothingFlagged, type Voice } from '../spark/voice.ts';
 import { readDetailsOpen, writeDetailsOpen } from './digest-details.ts';
@@ -147,6 +148,7 @@ export function BriefPanel(props: BriefPanelProps) {
           </p>
         </div>
         <BriefSkeleton />
+        <CalendarBriefBlock now={now} />
       </div>
     );
   }
@@ -194,6 +196,7 @@ export function BriefPanel(props: BriefPanelProps) {
           <Away digest={current} onOpenChat={props.onOpenChat} />
         </>
       )}
+      <CalendarBriefBlock now={now} />
       {brief.error && <p className="home-error">{brief.error}</p>}
       <AnimatePresence>
         {auditOpen && current?.conversationId && (

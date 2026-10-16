@@ -1,5 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import type { ConnectorId } from '../brand/ConnectorBlob.tsx';
+import { takeCalendarCardRequest, useCalendarCardRequests } from '../calendar/calendar-open.ts';
+import { CalendarCard } from '../calendar/CalendarCard.tsx';
+import { CALENDAR_PATH } from '../ui/icons.tsx';
 import { GitHubCard } from '../ship/GitHubCard.tsx';
 import { SLACK_DESCRIPTION, SlackCard } from '../slack/SlackCard.tsx';
 import { TicketSourceCard } from '../tickets/TicketSourceCard.tsx';
@@ -78,8 +81,17 @@ export const connectors: Connector[] = [
   },
 ];
 
+const CALENDAR_ICON = (
+  <ToolIcon>
+    <path d={CALENDAR_PATH} />
+  </ToolIcon>
+);
+
 export function ConnectorGrid() {
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(() =>
+    takeCalendarCardRequest() ? 'calendar' : null,
+  );
+  useCalendarCardRequests(useCallback(() => setOpenId('calendar'), []));
   const toggle = (id: string) => setOpenId((current) => (current === id ? null : id));
   return (
     <ul className="cgrid">
@@ -115,6 +127,11 @@ export function ConnectorGrid() {
           />
         );
       })}
+      <CalendarCard
+        icon={CALENDAR_ICON}
+        open={openId === 'calendar'}
+        onToggle={() => toggle('calendar')}
+      />
     </ul>
   );
 }

@@ -1,0 +1,126 @@
+.upc-hint {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.upc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+
+.upc {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  gap: 2px 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.upc:first-child {
+  border-top: 0;
+}
+
+.upc-cd {
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.upc-what {
+  min-width: 0;
+}
+
+.upc-what b {
+  display: block;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upc-what small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.upc-ov {
+  grid-column: 2 / 4;
+  color: var(--warn);
+  font-size: 12px;
+}
+
+.cal-brief {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-sm);
+}
+
+.cal-brief h3 {
+  margin: 10px 0 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cal-brief-note {
+  margin: 0;
+  color: var(--faint);
+  font-size: 11.5px;
+}
+
+.cal-brief-list {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+}
+
+.cal-brief-list li {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.cal-brief-list li:first-child {
+  border-top: 0;
+}
+
+.cal-brief-list time {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.cal-brief-list .cal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cal-brief-line {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .upc {
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+  }
+
+  .cal-brief-list li {
+    grid-template-columns: 1fr auto;
+  }
+
+  .cal-brief-list time {
+    grid-column: 1 / -1;
+  }
+}

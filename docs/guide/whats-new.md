@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                        | What to do                                                |
 | ----------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Calendar: see your day on **Today**, join meetings and keep focus time quiet.       | See [See your day](calendar.md).                          |
 | Settings has six groups and a **Search settings** box.                              | See [Settings](settings.md).                              |
 | Push to talk: dictate, start a chat or ask who needs you. Speech stays on your Mac. | See [Talk to Spark](voice.md).                            |
 | Ask Spark is faster and remembers key facts.                                        | See [Settings](settings.md#spark-assistant).              |

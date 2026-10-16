@@ -26,13 +26,9 @@ Drag Scout to place it. At top centre it docks, half hidden while nothing happen
 
 ![Spark Island Home with the Now card showing a chat's latest steps and the Sparks tiles](images/companion-island-home-light.png)
 
-A quiet chat shows its last reply and project, with **Open** and **Reply**.
-
 Select a Spark to chat, right-click to edit, or select **New Spark**. Without Sparks, tiles start a chat and **Needs you** opens waiting chats.
 
 Steps show verbs and file names, never secrets. See [Spark Island states](statuses-and-limits.md#spark-island-states).
-
-Select an edit to see it; **Open chat** jumps to that turn.
 
 ## Answer a card
 

@@ -15,6 +15,8 @@ describe('appLayout', () => {
       webRoot: '/repo/apps/web/dist',
       tmuxBin: '/repo/.local/tmux/arm64/bin/tmux',
       macControlBin: '/repo/.local/mac-control/arm64/spark-mac-control',
+      calendarBin: '/repo/.local/calendar/arm64/spark-calendar',
+      calendarSeedBin: '/repo/.local/calendar/arm64/spark-calendar-seed',
       voiceBin: '/repo/.local/voice/arm64/spark-voice',
       voiceModels: '/repo/.local/voice/arm64/models',
     });
@@ -33,6 +35,8 @@ describe('appLayout', () => {
       tmuxBin: '/Applications/Spark Outpost.app/Contents/Resources/tmux/bin/tmux',
       macControlBin:
         '/Applications/Spark Outpost.app/Contents/Resources/mac-control/bin/spark-mac-control',
+      calendarBin: '/Applications/Spark Outpost.app/Contents/Resources/calendar/bin/spark-calendar',
+      calendarSeedBin: null,
       voiceBin: '/Applications/Spark Outpost.app/Contents/Resources/voice/bin/spark-voice',
       voiceModels: '/Applications/Spark Outpost.app/Contents/Resources/voice/models',
     });

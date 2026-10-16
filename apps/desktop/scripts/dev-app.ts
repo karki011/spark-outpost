@@ -101,10 +101,22 @@ export interface OpenOptions {
   appDir: string;
   port: number | null;
   dataDir?: string | undefined;
+  passEnv?: Record<string, string | undefined>;
+}
+
+export const PASSED_ENV = ['SPARK_CALENDAR_SEED', 'SPARK_CALENDAR_SEED_STATE'] as const;
+
+function envArgs(options: OpenOptions): string[] {
+  const data = options.dataDir ? [`SPARK_APP_DATA=${options.dataDir}`] : [];
+  const passed = PASSED_ENV.flatMap((name) => {
+    const value = options.passEnv?.[name];
+    return value ? [`${name}=${value}`] : [];
+  });
+  return [...data, ...passed].flatMap((entry) => ['--env', entry]);
 }
 
 export function openArgs(options: OpenOptions): string[] {
-  const env = options.dataDir ? ['--env', `SPARK_APP_DATA=${options.dataDir}`] : [];
+  const env = envArgs(options);
   const debug = options.port === null ? [] : [`--remote-debugging-port=${options.port}`];
   return ['-W', '-n', '-a', options.app, ...env, '--args', options.appDir, ...debug];
 }

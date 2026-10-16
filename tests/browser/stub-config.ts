@@ -62,6 +62,10 @@ export const FAKE_GH_STATE = path.join(
   slot === 0 ? 'spark-outpost-fake-gh-login' : `spark-outpost-fake-gh-login-${slot}`,
 );
 
+export const FAKE_CALENDAR_STATE = path.join(
+  os.tmpdir(),
+  slot === 0 ? 'spark-outpost-fake-calendar.json' : `spark-outpost-fake-calendar-${slot}.json`,
+);
 export const FAKE_TAILSCALE_STATE = path.join(
   os.tmpdir(),
   slot === 0 ? 'spark-outpost-fake-tailscale.json' : `spark-outpost-fake-tailscale-${slot}.json`,

@@ -12,6 +12,7 @@ import { greeting, quietSummary } from '../spark/voice.ts';
 import { ticketKeys, ticketsApi } from '../tickets/tickets-api.ts';
 import { prefersReducedMotion } from '../ui/motion.ts';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
+import { UpcomingCard } from '../calendar/UpcomingCard.tsx';
 import { HomeComposer } from './HomeComposer.tsx';
 import { RecentChats, RecentSkeleton, RunningNow } from './HomeCards.tsx';
 import { needsYou, recentChats, runningNow, summaryParts } from './home-model.ts';
@@ -179,6 +180,7 @@ export function Home(props: HomeProps) {
               onConnect={() => props.onTickets(null)}
               onDismissHint={hint.dismiss}
             />
+            <UpcomingCard chats={chats} now={now} />
             <RunningNow
               items={running}
               offset={need.length}

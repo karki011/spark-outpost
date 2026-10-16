@@ -6,8 +6,6 @@ order: 714
 summary: Fixes for a run that seems stuck, a run that stopped with the app, an expired card, a blocked step and a failed push.
 ---
 
-Still stuck? Ask in any chat: "Why did my last run fail?". The agent reads your chats and runs with [Spark's tools](spark-tools.md).
-
 ## A run seems stuck
 
 - **You see:** a chat that doesn't move.

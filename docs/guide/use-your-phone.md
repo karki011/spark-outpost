@@ -24,9 +24,9 @@ A paired device can answer an agent's browser cards; the Browser pane stays on t
 
 **Send now** stops the turn first; in Claude an earlier queued message goes first. **Deny** takes an optional reason the agent reads. Claude's terminal shows **Spark · phone connected**.
 
-Messages shown aren't stored; sessions start on the Mac.
+Messages shown aren't stored.
 
-**Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device**. It names the chat, never a command. Push services see the **Sender contact** under the switch; refusals show there.
+**Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device**. It names the chat, never a command; [meeting alerts](calendar.md) say only "Meeting in 10 min". Push services see the **Sender contact**.
 
 A device you're using gets none. iPhone needs iOS 16.4 or later and Spark on the Home Screen: save a passkey first, then sign in with it there.
 

@@ -6,12 +6,14 @@ import type { BlobExpression } from '../brand/blob-expression.ts';
 import { UserBlob } from '../brand/UserBlob.tsx';
 import { SIDEBAR_HINT, useSidebarLayout } from '../conversations/sidebar-layout.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
+import { CALENDAR_PATH } from '../ui/icons.tsx';
 import { useSparkPause } from './pause/use-spark-pause.ts';
 import { RailMore } from './RailMore.tsx';
 import { UpdateBlob } from './UpdateBlob.tsx';
 import './rail.css';
 
-export type AppView = 'home' | 'chats' | 'analytics' | 'tickets' | 'map' | 'docs' | 'phone';
+export type AppView =
+  'home' | 'chats' | 'today' | 'analytics' | 'tickets' | 'map' | 'docs' | 'phone';
 
 interface RailProps {
   view: AppView;
@@ -53,6 +55,15 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
     icon: (
       <svg {...ICON}>
         <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'today',
+    label: 'Today',
+    icon: (
+      <svg {...ICON}>
+        <path d={CALENDAR_PATH} />
       </svg>
     ),
   },
@@ -100,7 +111,8 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
   },
 ];
 
-const PHONE_VIEWS = VIEWS.filter((item) => item.id !== 'map');
+const PHONE_VIEWS = VIEWS.filter((item) => item.id !== 'map' && item.id !== 'today');
+const REMOTE_VIEWS = VIEWS.filter((item) => item.id !== 'today');
 
 const REMOTE_ICON = (
   <svg {...ICON}>
@@ -171,7 +183,7 @@ export function Rail({
   const phone = layout?.narrow ?? false;
   const { remote } = useRemoteClient();
   const reopens = layout?.collapsed && !phone;
-  const primary = phone ? PHONE_VIEWS : VIEWS;
+  const primary = phone ? PHONE_VIEWS : remote ? REMOTE_VIEWS : VIEWS;
   const pause = useSparkPause();
   const pauseLabel = pause.paused ? 'Resume Spark' : 'Pause Spark';
   const pauseIcon = pause.paused ? RESUME_ICON : PAUSE_ICON;

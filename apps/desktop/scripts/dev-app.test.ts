@@ -148,6 +148,31 @@ describe('withEntitlements', () => {
 });
 
 describe('openArgs', () => {
+  it('passes the calendar test seed variables and nothing else from the environment', () => {
+    const args = openArgs({
+      app: '/a.app',
+      appDir: '/r/apps/desktop',
+      port: null,
+      passEnv: {
+        SPARK_CALENDAR_SEED: 'seed',
+        SPARK_CALENDAR_SEED_STATE: '/tmp/s.json',
+        HOME: '/u',
+      },
+    });
+    expect(args).toEqual([
+      '-W',
+      '-n',
+      '-a',
+      '/a.app',
+      '--env',
+      'SPARK_CALENDAR_SEED=seed',
+      '--env',
+      'SPARK_CALENDAR_SEED_STATE=/tmp/s.json',
+      '--args',
+      '/r/apps/desktop',
+    ]);
+  });
+
   it('opens no debug port unless one is asked for', () => {
     const args = openArgs({ app: '/a.app', appDir: '/r/apps/desktop', port: null });
     expect(args).toEqual(['-W', '-n', '-a', '/a.app', '--args', '/r/apps/desktop']);

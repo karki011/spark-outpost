@@ -45,6 +45,8 @@ import { FOCUS_TTL_MS, startSlackNotifier } from '../slack/notifier.ts';
 import { ClientFocus } from '../slack/client-focus.ts';
 import { pushKeys } from '../remote/push-keys.ts';
 import { startPushNotifier } from '../remote/push-notifier.ts';
+import { connectDesktopCalendar } from '../calendar/host-client.ts';
+import { startCalendarTicker, type CalendarTicker } from '../calendar/ticker.ts';
 import { generateVapidKeys, webPushSend } from '../remote/push-send.ts';
 import { slackSignInConfig } from '../slack/sign-in-config.ts';
 import { startSlackSocket } from '../slack/socket.ts';
@@ -98,13 +100,19 @@ const slackNotifier = startSlackNotifier(slackDeps, {
   focus,
 });
 const remotePushKeys = pushKeys(secrets, generateVapidKeys);
+const desktopCalendar = connectDesktopCalendar(process.env, process);
+let calendarTicker: CalendarTicker | null = null;
 const pushNotifier = startPushNotifier({
   db,
   workspaceId,
   keys: remotePushKeys,
   focus,
   send: webPushSend,
+  held: () => calendarTicker?.held() ?? false,
 });
+calendarTicker = desktopCalendar
+  ? startCalendarTicker({ db, workspaceId, host: desktopCalendar, push: pushNotifier })
+  : null;
 const slackSocket = startSlackSocket({
   ...slackDeps,
   runTarget: (conversationId) => resolveRunTarget({ db, workspaceId }, conversationId),
@@ -265,6 +273,7 @@ const { app, reconcileRemote } = createAppParts({
   slackNotifier,
   slackSocket,
   pushKeys: remotePushKeys,
+  calendarHost: desktopCalendar,
   ...(config.WEB_ROOT ? { webRoot: config.WEB_ROOT } : {}),
   diagnostics: {
     appVersion: config.SPARK_APP_VERSION ?? null,
@@ -321,6 +330,7 @@ const shutdown = async (keepTerminals = false) => {
   morningBrief?.stop();
   slackSocket.stop();
   await slackNotifier.stop();
+  calendarTicker?.stop();
   await pushNotifier.stop();
   await outposts.close();
   server.close();

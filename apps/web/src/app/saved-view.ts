@@ -1,7 +1,16 @@
 import type { AppView } from './Rail.tsx';
 
 const VIEW_KEY = 'spark-outpost.view';
-const VIEWS: readonly AppView[] = ['home', 'chats', 'analytics', 'tickets', 'map', 'docs', 'phone'];
+const VIEWS: readonly AppView[] = [
+  'home',
+  'chats',
+  'today',
+  'analytics',
+  'tickets',
+  'map',
+  'docs',
+  'phone',
+];
 
 function isAppView(value: string | null): value is AppView {
   return VIEWS.some((view) => view === value);

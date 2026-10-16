@@ -6,6 +6,7 @@ import { NotifyBatcher } from '../slack/notify-plan.ts';
 import type { PushKeys, VapidKeys } from './push-keys.ts';
 import {
   isPushEndpoint,
+  meetingPush,
   pushMessage,
   quietDevice,
   SentKeys,
@@ -26,6 +27,7 @@ export interface PushNotifierDeps {
   keys: PushKeys;
   focus: Pick<ClientFocus, 'focusedClients'>;
   send: PushSend;
+  held?: () => boolean;
 }
 
 export interface PushNotifierOptions {
@@ -35,6 +37,8 @@ export interface PushNotifierOptions {
 
 export interface PushNotifier {
   changed(event: AppEvent): void;
+  meeting(minutes: 5 | 10 | 15): void;
+  release(): void;
   settled(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -60,6 +64,7 @@ export function startPushNotifier(
   const sent = new SentKeys();
   const terminals = new TerminalWaits();
   const scanning = new Set<string>();
+  const heldChats = new Map<string, PushCandidate[]>();
   let stopped = false;
   let work: Promise<void> = Promise.resolve();
 
@@ -111,24 +116,43 @@ export function startPushNotifier(
     });
   }
 
-  async function deliver(conversationId: string, items: PushCandidate[]): Promise<void> {
-    const still = new Set((await waiting(conversationId)).map((item) => item.source));
-    const live = items.filter((item) => still.has(item.source));
-    if (live.length === 0) return;
+  async function sender(): Promise<{ targets: PushTarget[]; sender: Sender } | null> {
     const access = await remoteAccess(db, workspaceId);
-    if (!access.hostname || !access.switches.notifications) return;
-    const chat = await chatOf({ db, workspaceId }, conversationId);
-    if (!chat) return;
+    if (!access.hostname || !access.switches.notifications) return null;
     const focused = deps.focus.focusedClients();
     const targets = (await pushTargets(db, workspaceId, access.hostname)).filter(
       (target) => !quietDevice(target.deviceId, focused),
     );
-    if (targets.length === 0) return;
+    if (targets.length === 0) return null;
     const keys = await deps.keys.get();
     const subject = pushSubject(await pushContact(db, workspaceId), access.hostname);
+    return {
+      targets: targets.filter((target) => target.serverKey === keys.publicKey),
+      sender: { keys, subject },
+    };
+  }
+
+  async function sendMeeting(minutes: 5 | 10 | 15): Promise<void> {
+    const ready = await sender();
+    if (!ready) return;
+    const payload = JSON.stringify(meetingPush(minutes));
+    await Promise.all(ready.targets.map((target) => sendTo(target, payload, ready.sender)));
+  }
+
+  async function deliver(conversationId: string, items: PushCandidate[]): Promise<void> {
+    if (deps.held?.()) {
+      heldChats.set(conversationId, [...(heldChats.get(conversationId) ?? []), ...items]);
+      return;
+    }
+    const still = new Set((await waiting(conversationId)).map((item) => item.source));
+    const live = items.filter((item) => still.has(item.source));
+    if (live.length === 0) return;
+    const ready = await sender();
+    if (!ready) return;
+    const chat = await chatOf({ db, workspaceId }, conversationId);
+    if (!chat) return;
     const payload = JSON.stringify(pushMessage(chat, live));
-    const current = targets.filter((target) => target.serverKey === keys.publicKey);
-    await Promise.all(current.map((target) => sendTo(target, payload, { keys, subject })));
+    await Promise.all(ready.targets.map((target) => sendTo(target, payload, ready.sender)));
   }
 
   const batcher = new NotifyBatcher<PushCandidate>(
@@ -152,6 +176,18 @@ export function startPushNotifier(
       if (scanning.has(conversationId)) return;
       scanning.add(conversationId);
       enqueue(() => scan(conversationId));
+    },
+    meeting(minutes) {
+      if (stopped || deps.held?.()) return;
+      enqueue(() => sendMeeting(minutes));
+    },
+    release() {
+      if (stopped) return;
+      const waiting = [...heldChats];
+      heldChats.clear();
+      for (const [conversationId, items] of waiting) {
+        enqueue(() => deliver(conversationId, items));
+      }
     },
     async settled() {
       await work;

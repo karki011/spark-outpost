@@ -60,7 +60,8 @@ import { ReconnectBanner } from './connection/ReconnectBanner.tsx';
 import { LivePausedHint } from './live/LivePausedHint.tsx';
 import { useAppEvents } from './live/use-app-events.ts';
 import { useFirstContent } from './first-content.ts';
-import { Analytics, OutpostView, Phone, preloadView, Tickets } from './lazy-views.tsx';
+import { Analytics, OutpostView, Phone, preloadView, Tickets, Today } from './lazy-views.tsx';
+import { useCalendarShell } from '../calendar/use-calendar-shell.ts';
 import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
@@ -143,7 +144,9 @@ function ChatShell({ entering }: { entering: boolean }) {
   ).length;
   const ticketNotices = unseenNotices(inbox.data?.tickets ?? []);
   const layout = useSidebarLayoutState(waiting > 0);
-  const view: AppView = layout.narrow && storedView === 'map' ? 'home' : storedView;
+  const { remote } = useRemoteClient();
+  const hiddenView = (layout.narrow && storedView === 'map') || (remote && storedView === 'today');
+  const view: AppView = hiddenView ? 'home' : storedView;
   useAttentionTitle(waiting);
   useAttentionReport(conversations.data);
   const finished = chats.some((chat) => rowState(chat, false).tone === 'done');
@@ -197,7 +200,7 @@ function ChatShell({ entering }: { entering: boolean }) {
     [],
   );
   useChatRequests(openChat);
-  const { remote } = useRemoteClient();
+  const startCalendarChat = useCalendarShell(remote, (text) => queueDraft(startDraft(), text));
   useSlackPresence(remote);
   useNotificationChats(remote, openChat);
   useEffect(() => sparkDesktop()?.help?.onOpenFeedback(requestFeedback), []);
@@ -322,6 +325,11 @@ function ChatShell({ entering }: { entering: boolean }) {
               onUsage={() => setSettings('usage')}
               onProviders={() => setSettings('ai')}
             />
+          )}
+          {view === 'today' && (
+            <Suspense fallback={<main className="page" aria-label="Today" aria-busy="true" />}>
+              <Today chats={chats} onStartChat={startCalendarChat} onOpenChat={openChat} />
+            </Suspense>
           )}
           {view === 'analytics' && (
             <Suspense fallback={<AnalyticsSkeleton />}>

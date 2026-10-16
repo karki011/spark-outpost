@@ -15,6 +15,7 @@ import {
   FAKE_ACP_MODELS,
   FAKE_CLAUDE_BIN,
   FAKE_ACP_MODES,
+  FAKE_CALENDAR_STATE,
   FAKE_CODEX_STATE,
   FAKE_GH_STATE,
   FAKE_TAILSCALE_STATE,
@@ -42,6 +43,7 @@ const serverEnv = {
   FAKE_CODEX_STATE,
   FAKE_GH_STATE,
   FAKE_TAILSCALE_STATE,
+  SPARK_FAKE_CALENDAR_STATE: FAKE_CALENDAR_STATE,
   FAKE_GH_NODE: process.execPath,
   FAKE_GH_API: `${STUB_URL}/github`,
   GITHUB_API_URL: `${STUB_URL}/github`,
@@ -89,6 +91,10 @@ const workerCommand =
   process.env.SPARK_FAKE_BROWSER === '1'
     ? `${node} --import tsx --import ../../tests/browser/fake-browser-host.ts src/workflow/main.ts`
     : serverCommand('src/workflow/main.ts');
+const apiCommand =
+  process.env.SPARK_FAKE_CALENDAR === '1'
+    ? `${node} --import tsx --import ../../tests/browser/fake-calendar-host.ts src/api/main.ts`
+    : serverCommand('src/api/main.ts');
 const logged = (command: string, name: string) =>
   `mkdir -p ${JSON.stringify(SERVER_LOG_DIR)} && { ${command}; } 2>&1 | tee -a ${JSON.stringify(path.join(SERVER_LOG_DIR, `${name}.log`))}`;
 const restartFlag = JSON.stringify(API_RESTART_FLAG);
@@ -142,7 +148,7 @@ export default defineConfig({
       gracefulShutdown: shutdown,
     },
     {
-      command: `${packagedBuild}${node} --import tsx ../../tests/browser/ensure-database.ts && ${serverCommand('src/persistence/migrate-cli.ts')} && ${logged(restartable(serverCommand('src/api/main.ts')), 'api')}`,
+      command: `${packagedBuild}${node} --import tsx ../../tests/browser/ensure-database.ts && ${serverCommand('src/persistence/migrate-cli.ts')} && ${logged(restartable(apiCommand), 'api')}`,
       cwd: 'apps/server',
       env: {
         ...serverEnv,

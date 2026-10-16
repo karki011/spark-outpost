@@ -68,34 +68,53 @@ export function momentChime(moment: Moment, watchedChat: string | null): Chime |
   return moment.chatId === watchedChat ? null : 'failed';
 }
 
+export interface ChimeHold {
+  held: boolean;
+  onHeld: (chime: Chime) => void;
+}
+
+const NOT_HELD: ChimeHold = { held: false, onHeld: () => undefined };
+
+export function routeChime(held: boolean, on: boolean): 'hold' | 'play' | 'skip' {
+  if (held) return 'hold';
+  return on ? 'play' : 'skip';
+}
+
+function sound(chime: Chime, facts: { on: boolean; hold: ChimeHold }): void {
+  const route = routeChime(facts.hold.held, facts.on);
+  if (route === 'hold') facts.hold.onHeld(chime);
+  if (route === 'play') playChime(chime);
+}
+
 export function useChimes(
   on: boolean,
   chats: readonly ConversationSummary[] | null,
   moment: Moment | null,
   sparkFocused: boolean,
+  hold: ChimeHold = NOT_HELD,
 ): void {
   const onScreenChat = useOnScreenChat();
   const watchedChat = sparkFocused ? onScreenChat : null;
-  const facts = useRef({ on, watchedChat });
+  const facts = useRef({ on, watchedChat, hold });
   const seen = useRef<ReadonlySet<string> | null>(null);
   const chimedRun = useRef<string | null>(null);
   const waiting = useMemo(() => (chats ? waitingChats(chats) : null), [chats]);
 
   useEffect(() => {
-    facts.current = { on, watchedChat };
-  }, [on, watchedChat]);
+    facts.current = { on, watchedChat, hold };
+  }, [on, watchedChat, hold]);
 
   useEffect(() => {
     const before = seen.current;
     seen.current = waiting ? new Set(waiting) : null;
-    if (!facts.current.on || !before || !waiting) return;
-    if (needsChime(before, waiting, facts.current.watchedChat)) playChime('needs');
+    if (!before || !waiting) return;
+    if (needsChime(before, waiting, facts.current.watchedChat)) sound('needs', facts.current);
   }, [waiting]);
 
   useEffect(() => {
     if (!moment || chimedRun.current === moment.runId) return;
     chimedRun.current = moment.runId;
-    const chime = facts.current.on ? momentChime(moment, facts.current.watchedChat) : null;
-    if (chime) playChime(chime);
+    const chime = momentChime(moment, facts.current.watchedChat);
+    if (chime) sound(chime, facts.current);
   }, [moment]);
 }

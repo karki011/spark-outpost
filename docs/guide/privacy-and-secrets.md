@@ -19,14 +19,13 @@ Your chats, settings and code stay on your computer; keys live in your keychain.
 | **Apple or Google push**              | Encrypted notifications; sender contact.                                             | **Notify this device**                                           |
 | **Slack**                             | Notifications, confirmed posts; never direct messages.                               | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
 | **Hugging Face**                      | The speech model, once.                                                              | [Voice](voice.md)                                                |
+| **Meeting services**                  | The meeting you **Join**.                                                            | [See your day](calendar.md)                                      |
 | **Spark Outpost team**                | Anonymous heartbeat.                                                                 | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
-
-Without Jev, nothing goes to TypeSafe.
 
 ## Where your keys live
 
 - Keys and tokens are in your Keychain, under **Spark Outpost**: provider, Jev, connector and MCP keys, saved sign-ins.
-- Spark stores only a masked hint; logs never hold keys.
+- Logs never hold keys.
 - A **Local CLI** sign-in stays in that CLI, unread by Spark.
 
 See [Keep keys out of chats](sparkignore.md#keep-keys-out-of-chats).
