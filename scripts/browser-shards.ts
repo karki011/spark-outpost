@@ -196,7 +196,8 @@ async function main(): Promise<number> {
   });
   if (ready.kind === 'blocked') return 1;
   if (options.dryRun) {
-    if (ready.kind === 'short') console.log(ready.shortage);
+    if (ready.kind === 'short')
+      console.log(`${ready.shortage} (measured before stopping any leftover test servers)`);
     console.log('Dry run: nothing was built or started.');
     return 0;
   }
