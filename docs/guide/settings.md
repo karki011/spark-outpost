@@ -62,10 +62,10 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 
 ## Connections
 
-| Section         | Holds                                                     | Read more                             |
-| --------------- | --------------------------------------------------------- | ------------------------------------- |
-| **Connectors**  | GitHub, Jira, Linear and [Slack](connect-slack.md).       | [Connect them](tickets-and-github.md) |
-| **MCP servers** | Off until turned on for all chats, a project or one chat. | [Glossary](glossary.md)               |
+| Section         | Holds                                                      | Read more                             |
+| --------------- | ---------------------------------------------------------- | ------------------------------------- |
+| **Connectors**  | GitHub, Jira, Linear, [Slack](connect-slack.md), Calendar. | [Connect them](tickets-and-github.md) |
+| **MCP servers** | Off until turned on for all chats, a project or one chat.  | [Glossary](glossary.md)               |
 
 ## Mac
 
@@ -73,14 +73,15 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 
 **Notifications**:
 
-| Row                                                   | Default         | Read more                                                      |
-| ----------------------------------------------------- | --------------- | -------------------------------------------------------------- |
-| **Morning brief**                                     | 7:00            | A daily summary on **Home**                                    |
-| **Status companion**                                  | **Show**        | [Spark Island](desktop-companion.md#inside-the-app)            |
-| Mac app: **Show Spark Island**, **Spark Island size** | On, **Full**    | [Spark Island](desktop-companion.md)                           |
-| **Dock badge and notifications**                      | On              | [Spark Island](desktop-companion.md#when-spark-island-is-off)  |
-| **Open requests by themselves**, **Island chimes**    | On, off         | [Spark Island](desktop-companion.md#answer-a-card)             |
-| **Quick chat shortcut**, **Sessions shortcut**        | ⌥Space, ⌥⇧Space | [Change a shortcut](companion-quick-chat.md#change-a-shortcut) |
+| Row                                                                                                                        | Default                           | Read more                                                      |
+| -------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | -------------------------------------------------------------- |
+| **Morning brief**                                                                                                          | 7:00                              | A daily summary on **Home**                                    |
+| **Status companion**                                                                                                       | **Show**                          | [Spark Island](desktop-companion.md#inside-the-app)            |
+| Mac app: **Show Spark Island**, **Spark Island size**                                                                      | On, **Full**                      | [Spark Island](desktop-companion.md)                           |
+| **Dock badge and notifications**                                                                                           | On                                | [Spark Island](desktop-companion.md#when-spark-island-is-off)  |
+| **Open requests by themselves**, **Island chimes**                                                                         | On, off                           | [Spark Island](desktop-companion.md#answer-a-card)             |
+| **Quick chat shortcut**, **Sessions shortcut**                                                                             | ⌥Space, ⌥⇧Space                   | [Change a shortcut](companion-quick-chat.md#change-a-shortcut) |
+| Mac app: **Add today’s calendar to the brief**, **Meetings**, **Hold chimes during**, **Meeting alerts on paired devices** | On, 10 min, **Focus blocks**, off | [See your day](calendar.md)                                    |
 
 ## App
 

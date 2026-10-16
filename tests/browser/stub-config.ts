@@ -60,6 +60,7 @@ export const FAKE_CODEX_STATE = path.join(TEST_TMPDIR, 'fake-codex-logged-in');
 export const FAKE_CLAUDE_BIN = path.join(TEST_TMPDIR, 'fake-claude-bin');
 export const FAKE_GH_STATE = path.join(TEST_TMPDIR, 'fake-gh-login');
 export const FAKE_TAILSCALE_STATE = path.join(TEST_TMPDIR, 'fake-tailscale.json');
+export const FAKE_CALENDAR_STATE = path.join(TEST_TMPDIR, 'fake-calendar.json');
 
 export const CREW_CATALOG = {
   claude: [

@@ -19,6 +19,7 @@ import {
   terminalStartKey,
 } from '../../terminal/terminal-api.ts';
 import { ticketKeys } from '../../tickets/tickets-api.ts';
+import { calendarKeys } from '../../calendar/calendar-api.ts';
 import { sparkPauseKey } from '../pause/spark-pause-api.ts';
 
 interface Invalidation {
@@ -40,6 +41,7 @@ export const LIVE_ROOTS: readonly string[] = [
   previewKeys.all[0],
   outpostKeys.all[0],
   agentTerminalKeys.all[0],
+  calendarKeys.all[0],
 ];
 
 export function isLiveQueryKey(key: QueryKey): boolean {
@@ -152,6 +154,8 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
         : [];
     case 'spark_pause':
       return [{ queryKey: sparkPauseKey, exact: true }];
+    case 'calendar':
+      return [{ queryKey: calendarKeys.all }];
   }
 }
 

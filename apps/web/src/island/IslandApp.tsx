@@ -28,6 +28,7 @@ import {
   type IslandSettingsTarget,
 } from '../desktop/desktop-bridge.ts';
 import { useChatListAttentionReport } from '../desktop/use-attention-report.ts';
+import { useIslandCalendar } from '../calendar/use-island-calendar.ts';
 import { useVoice } from '../spark/use-voice.ts';
 import { useReducedMotion } from '../ui/motion.ts';
 import type { Decided } from './CardView.tsx';
@@ -198,6 +199,13 @@ export function IslandApp() {
     setFollowUp(null);
   };
 
+  const calendar = useIslandCalendar(now, waiting, (text) => {
+    setFollowUp(null);
+    setDraft((current) => ({ ...current, text }));
+    openPanel('quick');
+  });
+  const calendarLine = view.kind === 'peek' && !sparkFocused && !line ? calendar.line : null;
+
   const openChat = (id: string, runId?: string) => {
     closePanel();
     if (moment?.chatId === id) dismiss();
@@ -260,7 +268,7 @@ export function IslandApp() {
     zoneRects: (docked) => zoneRects(islandRef.current, restMetrics(size).reach, docked),
     peek: resting,
     hovered: hover,
-    restKey: `${row.sessions.length}:${row.more}:${size}:${waiting}:${restsQuietly(mood)}:${line?.key}:${line?.more}`,
+    restKey: `${row.sessions.length}:${row.more}:${size}:${waiting}:${restsQuietly(mood)}:${line?.key}:${line?.more}:${calendarLine?.key}`,
     onHover,
     onCommand: command,
     onBlur: () => {
@@ -309,7 +317,13 @@ export function IslandApp() {
 
   const sessions = useMemo(() => rankedSessions(data.chats, NO_HIDDEN), [data.chats]);
   const sound = useIslandSound();
-  useChimes(sound?.on ?? false, data.loaded ? data.chats : null, moment, sparkFocused);
+  useChimes(
+    sound?.on ?? false,
+    data.loaded ? data.chats : null,
+    moment,
+    sparkFocused,
+    calendar.hold,
+  );
   const desktop = sparkDesktop();
   const openSettings = (target: IslandSettingsTarget) => {
     closePanel();
@@ -425,6 +439,8 @@ export function IslandApp() {
           asking={cards.length}
           setAside={allCards.length - cards.length}
           line={line}
+          calendar={calendar}
+          calendarLine={calendarLine}
           voice={voice}
           now={now}
           note={note}

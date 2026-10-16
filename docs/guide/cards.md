@@ -21,11 +21,11 @@ These come from the agent's mode or a [protected path](protected-paths.md). They
 | **Force push?**                              | A push that rewrites history on the remote.                           | **Hold to force push**, **Deny**                                        |
 | **Send a secret value?**                     | A push, upload or text typed into a site holds a secret file's value. | **Hold to allow once**, **Deny** or **Don't**                           |
 
-Spark asks nothing of its own before or after a build. The agent's [plan card](plan-card.md) is an approval card, and when the agent needs something it says so in its reply.
+Spark asks nothing of its own before or after a build; the agent's [plan card](plan-card.md) is an approval card.
 
 ## Around the result
 
-Kept changes show as a **Changes kept** record with **Revert**, not as a card. Chats from before October 2026 still show their decided **Keep these changes?** cards.
+Kept changes show as a **Changes kept** record with **Revert**, not as a card.
 
 | Card                                           | Means                                                                                                                                   | Buttons                                                                | By itself?                                                            |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------- |

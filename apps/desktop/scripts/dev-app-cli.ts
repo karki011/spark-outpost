@@ -143,10 +143,20 @@ if (plan.link) {
 const removeLink = () => (plan.link ? rm(plan.link.path, { force: true }) : Promise.resolve());
 
 let exited = false;
-const child = spawn('open', openArgs({ app: result.app, appDir: plan.launchDir, port, dataDir }), {
-  stdio: 'inherit',
-  detached: true,
-});
+const child = spawn(
+  'open',
+  openArgs({
+    app: result.app,
+    appDir: plan.launchDir,
+    port,
+    dataDir,
+    passEnv: process.env,
+  }),
+  {
+    stdio: 'inherit',
+    detached: true,
+  },
+);
 const exit = new Promise<void>((resolve) =>
   child.once('exit', () => {
     exited = true;

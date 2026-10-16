@@ -156,6 +156,17 @@ POST /api/tickets/:source/:key/transition
 `;
 
 const NEVER = `
+GET /api/calendar/status
+POST /api/calendar/connect
+POST /api/calendar/disconnect
+POST /api/calendar/open-settings
+PATCH /api/calendar/calendars/:key
+PATCH /api/calendar/settings
+GET /api/calendar/day
+GET /api/calendar/now
+PUT /api/calendar/marks
+POST /api/calendar/open
+POST /api/calendar/event
 GET /api/remote/access
 PUT /api/remote/access
 PATCH /api/remote/switches

@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
+import { useCalendarStatus } from '../calendar/use-calendar.ts';
 import { PHONE_SWITCH_OFF, useRemoteClient } from '../phone/use-remote-client.ts';
 import { reveal } from '../ui/transitions.tsx';
 import { clearSettingFocus, requestSettingFocus } from './setting-focus.ts';
@@ -10,6 +11,7 @@ import {
   availableSections,
   groupTitle,
   type SettingsSection,
+  type SettingsClient,
   type SettingsSectionEntry,
 } from './settings-sections.tsx';
 import { SettingsSearch } from './SettingsSearch.tsx';
@@ -25,19 +27,23 @@ interface SettingsDialogProps {
   onOpenChat: (conversationId: string) => void;
 }
 
-function searchable(sections: readonly SettingsSectionEntry[], remote: boolean) {
+function searchable(sections: readonly SettingsSectionEntry[], client: SettingsClient) {
   return sections.map((entry) => ({
     id: entry.id,
     label: entry.label,
     groupLabel: groupTitle(entry.group),
-    rows: entry.rows?.({ remote }) ?? [],
+    rows: entry.rows?.(client) ?? [],
   }));
 }
 
 export function SettingsDialog({ section, onSection, onClose, onOpenChat }: SettingsDialogProps) {
   const phone = useRemoteClient();
   const [sections] = useState(availableSections);
-  const index = useMemo(() => searchable(sections, phone.remote), [sections, phone.remote]);
+  const calendar = useCalendarStatus().data?.supported === true;
+  const index = useMemo(
+    () => searchable(sections, { remote: phone.remote, calendar }),
+    [sections, phone.remote, calendar],
+  );
   const current = sections.find((entry) => entry.id === section);
   const gate = current?.remoteSwitch;
   const off = gate !== undefined && !phone.allows(gate);

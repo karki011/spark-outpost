@@ -40,8 +40,6 @@ Spark builds the map in the background. See [Map status](statuses-and-limits.md#
 
 ![Focus view showing what breaks if db.ts changes, with its imports and the files that import it](images/map-focus-light.png)
 
-Agents ask the same with `spark_map`, and find code with `spark_find`: ranked files and functions, never file contents or secret files.
-
 ## Correct area labels
 
 1. Select **Review areas**. **Check this** marks a label Jev is less than 0.70 sure of.

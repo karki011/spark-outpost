@@ -12,6 +12,7 @@
     "desktop:package": "pnpm --filter @spark-outpost/web build && pnpm --filter @spark-outpost/desktop build && pnpm --filter @spark-outpost/desktop package",
     "desktop:tmux": "pnpm --filter @spark-outpost/desktop tmux",
     "desktop:mac-control": "pnpm --filter @spark-outpost/desktop mac-control",
+    "desktop:calendar": "pnpm --filter @spark-outpost/desktop calendar",
     "desktop:voice": "pnpm --filter @spark-outpost/desktop voice",
     "desktop:dev-app": "pnpm --filter @spark-outpost/desktop dev-app",
     "desktop:release": "pnpm --filter @spark-outpost/desktop release",

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { RemoteSwitch, SetupState } from '@spark-outpost/contracts';
+import { CALENDAR_BRIEF_LABEL, CALENDAR_NOTIFY_ROWS } from '../calendar/CalendarNotifySettings.tsx';
 import { ModelsSection } from '../models/ModelsSection.tsx';
 import { ConnectorGrid } from '../onboarding/ToolsStep.tsx';
 import { ProviderSetupView } from '../providers/ProviderSetupView.tsx';
@@ -49,6 +50,11 @@ interface SectionBodyProps {
   onOpenChat: (conversationId: string) => void;
 }
 
+export interface SettingsClient {
+  remote: boolean;
+  calendar: boolean;
+}
+
 interface SectionEntry {
   id: string;
   group: SettingsGroup;
@@ -56,7 +62,7 @@ interface SectionEntry {
   icon: ReactNode;
   remoteSwitch?: RemoteSwitch;
   available?: () => boolean;
-  rows?: (client: { remote: boolean }) => readonly string[];
+  rows?: (client: SettingsClient) => readonly string[];
   render: (props: SectionBodyProps) => ReactNode;
 }
 
@@ -225,7 +231,13 @@ export const SETTINGS_SECTIONS = [
     label: 'Notifications',
     icon: icons.NOTIFICATIONS_ICON,
     remoteSwitch: 'settings',
-    rows: () => [MORNING_BRIEF_LABEL, COMPANION_LABEL, ...islandRows()],
+    rows: ({ calendar }) => [
+      MORNING_BRIEF_LABEL,
+      ...(calendar ? [CALENDAR_BRIEF_LABEL] : []),
+      COMPANION_LABEL,
+      ...(calendar ? CALENDAR_NOTIFY_ROWS : []),
+      ...islandRows(),
+    ],
     render: ({ setup }) => setup && <NotificationsSection profile={setup.profile} />,
   },
   {

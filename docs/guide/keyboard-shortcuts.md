@@ -23,6 +23,7 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **⌘D**                      | Open the **Changes** drawer                               |
 | **⌘⇧A**                     | Add selected text to the chat or prompt                   |
 | **⌘⇧B**                     | Show or hide the Browser pane (Mac app)                   |
+| **⌘J**                      | Join the next meeting that has started or starts in 5 min |
 | **⌃\`**                     | Show or hide the terminal                                 |
 | **⌘⇧F**                     | Focus a Terminal session, or leave it                     |
 | **⌥Tab** / **⌥⇧Tab**        | Leave a Terminal session for the next or previous control |

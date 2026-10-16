@@ -338,3 +338,22 @@ export function SoundIcon({ on }: { on: boolean }) {
     />
   );
 }
+
+export const CALENDAR_PATH =
+  'M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 10h16M8 3v4M16 3v4';
+
+export function BellIcon() {
+  return <StrokeIcon path="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4" />;
+}
+
+export function BellOffIcon() {
+  return <StrokeIcon path="M6 16v-5a6 6 0 0 1 9-5.2M18 11v5l2 2H4M10 21h4M3 3l18 18" />;
+}
+
+export function ChatPlusIcon() {
+  return <StrokeIcon path="M4 5h16v11H8l-4 4zM12 8v5M9.5 10.5h5" />;
+}
+
+export function WarnIcon() {
+  return <StrokeIcon path="M12 3l9 16H3zM12 10v4M12 17h.01" />;
+}

@@ -152,7 +152,7 @@ export const SPEC_GROUPS = {
     'terminal-record-setting',
     'zai',
   ],
-  home: ['companion', 'digest', 'home', 'live-updates', 'today'],
+  home: ['calendar', 'companion', 'digest', 'home', 'live-updates', 'today'],
   'analytics-audit': ['analytics', 'audit'],
   map: ['project-map', 'project-map-states', 'project-map-views'],
   outposts: [
@@ -232,6 +232,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/web/src/analytics/', groups: ['analytics-audit'] },
   { prefix: 'apps/web/src/audit/', groups: ['analytics-audit', 'chat'] },
   { prefix: 'apps/web/src/browser/', groups: ['terminal-preview-browser'] },
+  { prefix: 'apps/web/src/calendar/', groups: ['home', 'island-desktop'] },
   { prefix: 'apps/web/src/categories/', groups: ['chat', 'sidebar-projects'] },
   {
     prefix: 'apps/web/src/chat/',
@@ -304,6 +305,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   },
   { prefix: 'apps/server/src/audit/', groups: ['analytics-audit', 'approvals'] },
   { prefix: 'apps/server/src/browser/', groups: ['terminal-preview-browser'] },
+  { prefix: 'apps/server/src/calendar/', groups: ['home'] },
   { prefix: 'apps/server/src/mac-control/', groups: ['settings-providers'] },
   { prefix: 'apps/server/src/chat-share/', groups: ['chat'] },
   { prefix: 'apps/server/src/checks/', groups: ['ship-pr'] },

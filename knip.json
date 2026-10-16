@@ -11,6 +11,7 @@
         "tests/browser/provider-stub.ts",
         "tests/browser/ensure-database.ts",
         "tests/browser/fake-browser-host.ts",
+        "tests/browser/fake-calendar-host.ts",
         "tests/browser/bin/gh-fake.ts",
         "tests/browser/terminal-usage-cli.ts",
         "tests/browser/bin/tailscale-fake.ts",

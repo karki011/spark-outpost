@@ -21,6 +21,7 @@ let result: PushResult;
 let focused: string[];
 let chat: { conversationId: string; runId: string };
 let phone: string;
+let holding: boolean;
 
 async function addDevice(name: string): Promise<string> {
   const id = randomUUID();
@@ -45,6 +46,7 @@ beforeEach(async () => {
   sent = [];
   result = { outcome: 'sent', status: null, reason: null };
   focused = [];
+  holding = false;
   const secrets = memorySecretStore({ 'remote:push': JSON.stringify(KEYS) });
   notifier = startPushNotifier(
     {
@@ -58,6 +60,7 @@ beforeEach(async () => {
         sent.push(delivery);
         return result;
       },
+      held: () => holding,
     },
     { since: SINCE, batchMs: 60_000 },
   );
@@ -307,6 +310,52 @@ describe('a Terminal session waiting', () => {
     notifier.changed({ kind: 'conversation', conversationId: chat.conversationId, runId: null });
     await scanned();
     await setState('working');
+    await notifier.settled();
+    expect(sent).toEqual([]);
+  });
+});
+
+describe('calendar', () => {
+  it('sends a meeting alert with no title, chat, prep or link', async () => {
+    notifier.meeting(10);
+    await notifier.settled();
+    expect(payloads()).toEqual([
+      { title: 'Meeting in 10 min', body: '', chatId: null, tag: 'spark-meeting' },
+    ]);
+  });
+
+  it('sends no meeting alert while the notify switch is off or alerts are held', async () => {
+    holding = true;
+    notifier.meeting(10);
+    await notifier.settled();
+    await saveRemoteSwitches(t.db, t.workspaceId, { notifications: false });
+    holding = false;
+    notifier.meeting(5);
+    await notifier.settled();
+    expect(sent).toEqual([]);
+  });
+
+  it('holds chat pushes during focus and sends them once the hold ends', async () => {
+    holding = true;
+    await ask('execute');
+    await changed();
+    expect(sent).toEqual([]);
+    holding = false;
+    notifier.release();
+    await notifier.settled();
+    expect(payloads()).toEqual([expect.objectContaining({ body: 'Needs your approval' })]);
+  });
+
+  it('drops a held push whose card was answered during the hold', async () => {
+    holding = true;
+    const approval = await ask('execute');
+    await changed();
+    await t.db.query(
+      "UPDATE approvals SET status = 'cancelled', decided_by = 'stop', decided_at = now() WHERE id = $1",
+      [approval.id],
+    );
+    holding = false;
+    notifier.release();
     await notifier.settled();
     expect(sent).toEqual([]);
   });

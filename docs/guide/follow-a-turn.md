@@ -17,7 +17,7 @@ You'll follow a running turn, stop it and queue more messages. About 2 minutes.
 
 When the agent needs you, the line says **Waiting for you**. Select it or press **⌘⇧Y**.
 
-Commands show output in the reply: passing ones fold, failed ones stay open. Codex output is live; Claude's appears when the command ends. **Open in terminal** shows it in a [dock tab](terminals.md#watch-an-agents-command).
+Commands show output in the reply: passing ones fold, failed ones stay open. **Open in terminal** shows it in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 
@@ -37,7 +37,7 @@ Commands show output in the reply: passing ones fold, failed ones stay open. Cod
 | You stop the turn, or it fails | Pauses the queue until you select **Send now**.                |
 | You reload or restart          | Keeps the queue.                                               |
 
-Only text can be queued. Swap the keys in [Settings](settings.md#work).
+Only text can be queued.
 
 ## Delete a running chat
 

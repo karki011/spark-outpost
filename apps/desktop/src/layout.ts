@@ -5,6 +5,8 @@ export interface AppLayout {
   webRoot: string;
   tmuxBin: string;
   macControlBin: string;
+  calendarBin: string;
+  calendarSeedBin: string | null;
   voiceBin: string;
   voiceModels: string;
 }
@@ -24,6 +26,8 @@ export function appLayout(source: LayoutSource): AppLayout {
       webRoot: path.join(resourcesPath, 'web'),
       tmuxBin: path.join(resourcesPath, 'tmux/bin/tmux'),
       macControlBin: path.join(resourcesPath, 'mac-control/bin/spark-mac-control'),
+      calendarBin: path.join(resourcesPath, 'calendar/bin/spark-calendar'),
+      calendarSeedBin: null,
       voiceBin: path.join(resourcesPath, 'voice/bin/spark-voice'),
       voiceModels: path.join(resourcesPath, 'voice/models'),
     };
@@ -34,6 +38,8 @@ export function appLayout(source: LayoutSource): AppLayout {
     webRoot: path.join(repoRoot, 'apps/web/dist'),
     tmuxBin: path.join(repoRoot, '.local/tmux', arch, 'bin/tmux'),
     macControlBin: path.join(repoRoot, '.local/mac-control', arch, 'spark-mac-control'),
+    calendarBin: path.join(repoRoot, '.local/calendar', arch, 'spark-calendar'),
+    calendarSeedBin: path.join(repoRoot, '.local/calendar', arch, 'spark-calendar-seed'),
     voiceBin: path.join(repoRoot, '.local/voice', arch, 'spark-voice'),
     voiceModels: path.join(repoRoot, '.local/voice', arch, 'models'),
   };

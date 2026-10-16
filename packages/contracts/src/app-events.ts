@@ -20,6 +20,7 @@ export const appEventKindSchema = z.enum([
   'agent_terminal',
   'terminal_start',
   'spark_pause',
+  'calendar',
 ]);
 export type AppEventKind = z.infer<typeof appEventKindSchema>;
 

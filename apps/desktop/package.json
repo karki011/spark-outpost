@@ -11,6 +11,7 @@
     "package": "node --import tsx scripts/package.ts",
     "tmux": "node --import tsx scripts/build-tmux-cli.ts",
     "mac-control": "node --import tsx scripts/build-mac-control-cli.ts",
+    "calendar": "node --import tsx scripts/build-calendar-cli.ts",
     "voice": "node --import tsx scripts/build-voice-cli.ts",
     "dev-app": "node --import tsx scripts/dev-app-cli.ts",
     "e2e:update": "node --import tsx scripts/e2e-update.ts",

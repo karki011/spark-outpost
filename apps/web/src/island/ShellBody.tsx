@@ -1,4 +1,6 @@
 import { useState, type RefObject } from 'react';
+import type { CalendarLine } from '../calendar/island-calendar.ts';
+import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
 import type { ConversationDetail, ConversationSummary, Project } from '@spark-outpost/contracts';
 import type { ScoutMood } from '../brand/BlobScout.tsx';
 import type { IslandGeometry, IslandSize } from '../desktop/desktop-bridge.ts';
@@ -40,6 +42,8 @@ export interface IslandShellProps {
   asking: number;
   setAside: number;
   line: RestLine | null;
+  calendar: IslandCalendar;
+  calendarLine: CalendarLine | null;
   voice: Voice;
   speech: SpeechScreenModel | null;
   now: number;

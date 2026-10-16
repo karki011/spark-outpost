@@ -1,6 +1,6 @@
 # Calendar
 
-> **Status: designed, not built (2026-10-16).** A connector (Connections → Connectors) that brings every calendar synced to the Mac into the Mac app: **Today** beside the user's chats, **Upcoming** on Home, one-click **Join**, island nudges, quiet focus time, **meeting prep** from the Spark assistant, and Spark tools for agents. Off until the user connects it. Mock: [`docs/design/mocks/calendar-mock.html`](../design/mocks/calendar-mock.html). The owner's defaults are in [Decided](#decided).
+> **Status: Phase 1a built (2026-10-16): see and join.** A connector (Connections → Connectors) that brings every calendar synced to the Mac into the Mac app: **Today** beside the user's chats, **Upcoming** on Home, one-click **Join**, island nudges and quiet focus time. Changing events, **Protect this free block** and agent tools (1b) and **meeting prep** (1c) are designed below and not built; Phase 1a ships no `spark_calendar` tool, and **Let agents read my calendar** is shown off. 1a names a running chat or one that needs you in the wrap-up line (Spark has no cheap unpushed-work signal), and the Ask Spark fast path is not built. Mock: [`docs/design/mocks/calendar-mock.html`](../design/mocks/calendar-mock.html). The owner's defaults are in [Decided](#decided).
 
 ## Pieces
 

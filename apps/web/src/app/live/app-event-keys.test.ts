@@ -208,6 +208,13 @@ describe('app event invalidation', () => {
     ).toEqual([]);
   });
 
+  it('refetches every calendar query when the calendar changes', () => {
+    expect(mergeInvalidations([{ kind: 'calendar', conversationId: null, runId: null }])).toEqual([
+      { queryKey: ['calendar'] },
+    ]);
+    expect(isLiveQueryKey(['calendar', 'day', '2026-10-16'])).toBe(true);
+  });
+
   it('refetches the pause state when Spark is paused or resumed elsewhere', () => {
     expect(
       mergeInvalidations([{ kind: 'spark_pause', conversationId: null, runId: null }]),

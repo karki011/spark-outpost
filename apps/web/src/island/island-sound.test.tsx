@@ -185,4 +185,28 @@ describe('useChimes', () => {
     });
     expect(played()).toEqual([]);
   });
+
+  it('holds every chime during a calendar hold, even with chimes off, and plays again after', () => {
+    const held: string[] = [];
+    const hold = { held: true, onHeld: (chime: string) => held.push(chime) };
+    const hook = renderHook(
+      (props: Props & { held: boolean }) =>
+        useChimes(props.on, props.chats, props.moment, props.focused, {
+          ...hold,
+          held: props.held,
+        }),
+      { initialProps: { ...QUIET, on: false, chats: asking(), held: true } },
+    );
+    hook.rerender({
+      ...QUIET,
+      on: false,
+      chats: asking(FE_CHAT),
+      moment: { kind: 'done', chatId: API_CHAT, runId: RUN_A },
+      held: true,
+    });
+    expect(played()).toEqual([]);
+    expect(held.toSorted()).toEqual(['done', 'needs']);
+    hook.rerender({ ...QUIET, chats: asking(FE_CHAT, API_CHAT), moment: null, held: false });
+    expect(played()).toEqual(['needs']);
+  });
 });

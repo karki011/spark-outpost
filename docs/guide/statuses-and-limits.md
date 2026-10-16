@@ -69,17 +69,17 @@ A dot says what happened since you last opened the chat; opening it clears the d
 
 ## Spark Island states
 
-| You see                                           | Means                                                                                                                                                                |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scout's eyes scan; a blob has a spinning ring     | **Working…**                                                                                                                                                         |
-| A number badge on Scout; a blob pulses with **!** | **Needs you**                                                                                                                                                        |
-| A dashed count on Scout                           | Set aside                                                                                                                                                            |
-| A happy face; a blob pops a star once             | **Done**                                                                                                                                                             |
-| A worried face; a grey blob with a red badge      | **Failed**                                                                                                                                                           |
-| A dimmed blob                                     | **Quiet**                                                                                                                                                            |
-| **Terminal session** on the card                  | **Open terminal** or **Open terminal in Spark** opens the agent. Answer its questions there. The card shows its step and sub-agent counts and model, never commands. |
+| You see                                           | Means                                                                              |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Scout's eyes scan; a blob has a spinning ring     | **Working…**                                                                       |
+| A number badge on Scout; a blob pulses with **!** | **Needs you**                                                                      |
+| A dashed count on Scout                           | Set aside                                                                          |
+| A happy face; a blob pops a star once             | **Done**                                                                           |
+| A worried face; a grey blob with a red badge      | **Failed**                                                                         |
+| A dimmed blob                                     | **Quiet**                                                                          |
+| **Terminal session** on the card                  | **Open terminal** opens the agent; answer it there. The card never shows commands. |
 
-Up to five session blobs show; **+N** opens the rest. With **Reduce motion** on, only faces change.
+With **Reduce motion** on, only faces change.
 
 ## Limits
 
