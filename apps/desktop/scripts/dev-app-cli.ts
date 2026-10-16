@@ -9,6 +9,7 @@ import {
   DEBUG_PORT_WARNING,
   DEV_APP_ID,
   DEV_APP_NAME,
+  devAppBinary,
   desktopDir,
   identityLabel,
   missingPrerequisites,
@@ -16,6 +17,7 @@ import {
   parsePort,
   pickIdentity,
   prepareDevApp,
+  runningInstances,
   stopOnInterrupt,
   type DevAppDeps,
 } from './dev-app.ts';
@@ -161,6 +163,13 @@ function waitForExit(timeoutMs: number): Promise<boolean> {
 process.once('SIGINT', () => {
   console.log(`Quitting ${DEV_APP_NAME}.`);
   void stopOnInterrupt(plan.link?.path ?? null, {
+    findInstances: async () =>
+      runningInstances(
+        await run('ps', ['-axww', '-o', 'pid=,args=']),
+        devAppBinary(result.app),
+        plan.launchDir,
+      ),
+    terminate: (pid) => process.kill(pid, 'SIGTERM'),
     quitApp: () => run('osascript', ['-e', `quit app id "${DEV_APP_ID}"`]).then(() => undefined),
     waitForExit,
     removeLink,

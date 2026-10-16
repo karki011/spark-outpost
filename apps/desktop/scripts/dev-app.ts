@@ -120,7 +120,42 @@ export function parsePort(value: string | undefined, debug: boolean): number | n
   return port;
 }
 
+export function devAppBinary(app: string): string {
+  return path.join(app, 'Contents/MacOS/Electron');
+}
+
+export interface Instances {
+  ours: number[];
+  total: number;
+}
+
+const DEBUG_PORT_ARG = / --remote-debugging-port=\d+$/;
+
+export function runningInstances(psOutput: string, binary: string, launchDir: string): Instances {
+  const ours: number[] = [];
+  let total = 0;
+  for (const line of psOutput.split('\n')) {
+    const match = /^\s*(\d+) (.*)$/.exec(line);
+    if (!match || !match[2]!.startsWith(`${binary} `)) continue;
+    const appDir = match[2]!.slice(binary.length + 1).replace(DEBUG_PORT_ARG, '');
+    if (!appDir.endsWith(`${path.sep}apps${path.sep}desktop`)) continue;
+    total += 1;
+    if (appDir === launchDir) ours.push(Number(match[1]));
+  }
+  return { ours, total };
+}
+
+export type StopTarget = { kind: 'pid'; pid: number } | { kind: 'bundle' } | { kind: 'none' };
+
+export function stopTarget(instances: Instances): StopTarget {
+  if (instances.ours.length === 1) return { kind: 'pid', pid: instances.ours[0]! };
+  if (instances.total === 1) return { kind: 'bundle' };
+  return { kind: 'none' };
+}
+
 export interface InterruptDeps {
+  findInstances: () => Promise<Instances>;
+  terminate: (pid: number) => void;
   quitApp: () => Promise<void>;
   waitForExit: (timeoutMs: number) => Promise<boolean>;
   removeLink: () => Promise<void>;
@@ -129,14 +164,22 @@ export interface InterruptDeps {
 
 export const QUIT_TIMEOUT_MS = 30_000;
 
+async function requestStop(deps: InterruptDeps): Promise<boolean> {
+  const target = stopTarget(await deps.findInstances());
+  if (target.kind === 'pid') deps.terminate(target.pid);
+  if (target.kind === 'bundle') await deps.quitApp().catch(() => undefined);
+  return target.kind !== 'none';
+}
+
 export async function stopOnInterrupt(link: string | null, deps: InterruptDeps): Promise<void> {
-  await deps.quitApp().catch(() => undefined);
-  if (await deps.waitForExit(QUIT_TIMEOUT_MS)) {
+  const requested = await requestStop(deps).catch(() => false);
+  if (requested && (await deps.waitForExit(QUIT_TIMEOUT_MS))) {
     await deps.removeLink();
     return;
   }
+  const why = requested ? '' : ' It could not be told apart from other running copies.';
   const kept = link ? ` Its launch link stays at ${link}; remove it after quitting.` : '';
-  deps.log(`${DEV_APP_NAME} is still running.${kept}`);
+  deps.log(`${DEV_APP_NAME} is still running.${why}${kept}`);
 }
 
 function hasDotFolder(dir: string): boolean {

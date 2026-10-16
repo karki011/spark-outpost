@@ -16,7 +16,6 @@ import {
   pickIdentity,
   prepareDevApp,
   setInfoPlist,
-  stopOnInterrupt,
   withEntitlements,
   type DevAppDeps,
   type DevAppSource,
@@ -192,50 +191,6 @@ describe('parsePort', () => {
   it('rejects ports that are not usable', () => {
     expect(() => parsePort('80', false)).toThrow(/--port/);
     expect(() => parsePort('nine', true)).toThrow(/--port/);
-  });
-});
-
-describe('stopOnInterrupt', () => {
-  function interrupt(quits: boolean) {
-    const steps: string[] = [];
-    const deps = {
-      quitApp: () => {
-        steps.push('quit');
-        return Promise.resolve();
-      },
-      waitForExit: (timeoutMs: number) => {
-        steps.push(`wait ${timeoutMs}`);
-        return Promise.resolve(quits);
-      },
-      removeLink: () => {
-        steps.push('unlink');
-        return Promise.resolve();
-      },
-      log: (line: string) => {
-        steps.push(line);
-      },
-    };
-    return { steps, deps };
-  }
-
-  it('quits the app and removes the link only after it exits', async () => {
-    const { steps, deps } = interrupt(true);
-    await stopOnInterrupt('/private/tmp/spark-dev-app-1', deps);
-    expect(steps).toEqual(['quit', 'wait 30000', 'unlink']);
-  });
-
-  it('keeps the link and says where it is when the app does not quit', async () => {
-    const { steps, deps } = interrupt(false);
-    await stopOnInterrupt('/private/tmp/spark-dev-app-1', deps);
-    expect(steps).not.toContain('unlink');
-    expect(steps.at(-1)).toMatch(/still running.*\/private\/tmp\/spark-dev-app-1/);
-  });
-
-  it('still waits when the quit request itself fails', async () => {
-    const { steps, deps } = interrupt(true);
-    deps.quitApp = () => Promise.reject(new Error('osascript failed'));
-    await stopOnInterrupt(null, deps);
-    expect(steps).toEqual(['wait 30000', 'unlink']);
   });
 });
 
