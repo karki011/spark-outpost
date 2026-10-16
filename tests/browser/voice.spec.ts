@@ -5,6 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { emitVoice, installFakeVoice, press, say, voiceCalls } from './fake-voice.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { connectTickets, resetTicketFakes } from './ticket-seed.ts';
 
 let base = '';
 
@@ -100,6 +101,47 @@ test('a spoken new chat opens prefilled and starts nothing until "send"', async 
   const confirm = await say(page, 'send it');
   expect(confirm.purpose).toBe('confirm');
   await expect.poll(userMessages).toBe(before + 1);
+});
+
+test('a spoken ticket start keeps the autonomy level and project picked in the composer', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await resetTestDatabase({ onboarded: true });
+  await resetTicketFakes();
+  await installFakeVoice(page);
+  await linkProject(page);
+  await connectTickets(page, ['linear']);
+  await openIsland(page);
+  await say(page, 'Work on E N G one two one zero in feature web apps fix the copy');
+  await expect(island(page).getByText('ENG-1210')).toBeVisible();
+  await expect(island(page).getByRole('button', { name: 'feature-web-apps' })).toBeVisible();
+  const level = island(page).getByRole('button', { name: /^Spark autonomy:/ });
+  await expect(level).toHaveAccessibleName('Spark autonomy: Full auto → PR');
+  await level.click();
+  await expect(level).toHaveAccessibleName('Spark autonomy: Automatic');
+  await island(page).getByRole('button', { name: 'Send', exact: true }).click();
+  const db = openTestDb();
+  try {
+    await expect
+      .poll(
+        async () =>
+          (
+            await db.query(
+              `SELECT c.overrides->c.provider->>'level' AS level, p.name AS project
+                 FROM conversation_tickets t
+                 JOIN conversations c ON c.id = t.conversation_id
+                 LEFT JOIN conversation_projects cp ON cp.conversation_id = c.id
+                 LEFT JOIN projects p ON p.id = cp.project_id
+                WHERE t.ticket_key = 'ENG-1210'`,
+            )
+          ).rows[0],
+        { timeout: 20_000 },
+      )
+      .toEqual({ level: 'hands-off', project: 'feature-web-apps' });
+  } finally {
+    await db.end();
+  }
 });
 
 test('Esc while listening cancels with no transcript and no result', async ({ page }) => {

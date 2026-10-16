@@ -108,6 +108,10 @@ export function QuickChat(props: QuickChatProps) {
         await api.sendMessage(followUp.id, crypto.randomUUID(), content, attachmentIds);
         return { id: followUp.id, title: followUp.title };
       }
+      await api.updateChatSettings(draftId, {
+        projectIds: draft.projectId ? [draft.projectId] : [],
+        level,
+      });
       if (ticket?.source) {
         const started = await ticketsApi.start(ticket.source as TicketSourceId, ticket.key, {
           conversationId: draftId,
@@ -119,10 +123,6 @@ export function QuickChat(props: QuickChatProps) {
         });
         return { id: started.conversationId, title: `${ticket.key} ${started.ticket.title}` };
       }
-      await api.updateChatSettings(draftId, {
-        projectIds: draft.projectId ? [draft.projectId] : [],
-        level,
-      });
       await api.sendMessage(draftId, crypto.randomUUID(), content, attachmentIds);
       return { id: draftId, title: titleFromMessage(content) };
     },
