@@ -4,6 +4,7 @@ import { createInterface } from 'node:readline';
 import { createDb } from '../apps/server/src/persistence/db.ts';
 import { PERF_SPECS, specFile } from '../tests/browser/spec-map.ts';
 import { slotTmpdir, WEB_BUILD_ENV } from '../tests/browser/stub-config.ts';
+import { preflight } from './shard-preflight.ts';
 import { describeBlocked, inspectSlot, stopGroups, stopLeftovers } from './slot-host.ts';
 import {
   connectionShortfall,
@@ -189,15 +190,18 @@ async function main(): Promise<number> {
   }
   const plans = planShards(Math.min(options.count, specs.length), options.firstSlot, url);
   for (const plan of plans) describe(plan, specs);
-  const shortage = await checkConnections(url, plans.length);
-  if (!(await clearSlots(plans, options.dryRun))) return 1;
+  const ready = await preflight({
+    clearSlots: () => clearSlots(plans, options.dryRun),
+    connectionShortage: () => checkConnections(url, plans.length),
+  });
+  if (ready.kind === 'blocked') return 1;
   if (options.dryRun) {
-    if (shortage) console.log(shortage);
+    if (ready.kind === 'short') console.log(ready.shortage);
     console.log('Dry run: nothing was built or started.');
     return 0;
   }
-  if (shortage) {
-    console.error(`${shortage} Use fewer shards or stop other test runs.`);
+  if (ready.kind === 'short') {
+    console.error(`${ready.shortage} Use fewer shards or stop other test runs.`);
     return 1;
   }
   if (!buildWeb()) return 1;
