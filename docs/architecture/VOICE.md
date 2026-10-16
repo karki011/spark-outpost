@@ -1,6 +1,6 @@
 # Voice
 
-> **Status: designed, not built (2026-10-15).** Push-to-talk speech on the Mac: dictation into Spark drafts, spoken commands that open a prefilled, confirmable screen ("Spark, start a chat in spark-outpost for CP-49084 to fix the login redirect"), and questions about Spark that it can answer out loud. Speech becomes text, and answers become speech, on this Mac; audio never leaves it. Mac app only, off until the user turns it on. The owner's decisions are in [Decided](#decided).
+> **Status: Phase 1 built (2026-10-15); see [Built in Phase 1](#built-in-phase-1) for what it settled and which real tests wait on the microphone grant.** Push-to-talk speech on the Mac: dictation into Spark drafts, spoken commands that open a prefilled, confirmable screen ("Spark, start a chat in spark-outpost for CP-49084 to fix the login redirect"), and questions about Spark that it can answer out loud. Speech becomes text, and answers become speech, on this Mac; audio never leaves it. Mac app only, off until the user turns it on. The owner's decisions are in [Decided](#decided).
 
 ## Pieces
 
@@ -190,6 +190,32 @@ No Phase 1 PR is done until each check below has run on this Mac and the PR repo
 | Real Claude, chat              | A dictated message sent in a Spark chat; Claude answers                              |
 | Real Claude, Terminal session  | A dictated message reaches a Claude Terminal session through the message route       |
 | Ask Spark                      | A spoken free-form question, sent, answered and spoken                               |
+
+## Built in Phase 1
+
+| Piece  | Where                                                                                                                                       |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Helper | `apps/desktop/voice/`: `VoiceCore` (end rules, Fn twice, protocol, engine; Swift tests), `spark-voice` (mic, whisper, VAD, voices, key tap) |
+| Build  | `scripts/voice-bundle.ts`: whisper.cpp v1.9.5 tarball (sha256 pinned), static cmake build, Silero, notices; `afterPack` checks              |
+| Host   | `apps/desktop/src/voice/`: `helper-process.ts`, `voice.ts` (controller), `model.ts` (download), `host.ts`, `fake-helper.ts`                 |
+| Web    | `apps/web/src/voice/`: `commands.ts`, `normalise.ts`, `fuzzy.ts`, `templates.ts`, `speech-machine.ts`, `use-speech-island.ts`               |
+| UI     | `SpeechScreen.tsx` in the island, `MicButton.tsx` (composer, quick chat, Ask Spark, reply), `TerminalDictation.tsx`, `VoiceSection.tsx`     |
+
+How Phase 1 settles what the design left open:
+
+- **Settings live in Electron main** (`voice-settings.json` beside `companion.json`), reached over IPC only: no route, no migration, nothing a paired device can reach.
+- **The shortcut is ⌥⇧V**, fixed for now; the island's shortcuts refuse it. Changing it waits for the Settings regrouping.
+- **Protocol:** every message carries `id` and `event`; `load` also takes the bundled VAD path; `stop` and `cancel` name the listen's id; a third `listen` purpose, `confirm`, ends like a command.
+- **File input** is accepted only when the host starts the helper with `--allow-file-input`, which only an unpackaged app with `SPARK_VOICE_FILE_INPUT=1` does; that app also exposes `testPress(wav)`, which presses the shortcut with a WAV in place of the mic.
+- **Fn twice is offered** when `AppleFnUsageType` in `com.apple.HIToolbox` is 0 and `Dictation Enabled` in `com.apple.assistant.support` is off. An absent `AppleFnUsageType` counts as Emoji (the macOS default). Dictation's own shortcut key is not read, so Dictation on with another shortcut still blocks Fn twice. **Hold to talk** listens while the second Fn press is held.
+- **Ticket starts** from a voice chat use the ticket start route with **Move to In Progress** on by default; a spoken `open` of a ticket shows its status in Ask Spark (the island has no ticket page).
+- **A phrase that isn't yes, no or a pick** while a result is open is matched as a new command.
+- **Partial dictation** shows dimmed beside the mic button, not at the caret.
+- **Terminal sessions:** **Dictate** fills a one-line box, sent with **Send to <agent>** through `POST /conversations/:id/terminal/message`, its refusals shown as returned.
+
+### Verified, and not
+
+On 2026-10-15 (Apple silicon, macOS 26.5, Electron 44.4.5 in the Developer ID signed **Spark Outpost Dev** shell, throwaway data folder, Claude Code CLI signed in): the helper built for arm64 and x64 (minos 12.0, system libraries only) and its Swift tests passed. Through the helper's file input, `say` WAVs gave: 1 "Start a chat and feature, web apps, for CP49084, at Creator Email.", 2 "Open the Dashboards Chat.", 3 "What tickets do I have pending?", 4 "Who needs me?", 5 as a command "please check the login redirect." (`paused` after the first 2 s gap) and as a dictation all three sentences through both pauses (`stopped`). In the app with `testPress`, 1 opened **New chat** with feature-web-apps, CP-49084 and the task and started nothing; 2 showed **Found Dashboards** preselected; 3 and 4 answered at once and were spoken; Esc and a new press each stopped a spoken answer; Esc during a listen gave `cancelled` and no result; a spoken free-form question went to Ask Spark, "send it" sent it, real Claude answered in 19 s and the answer was spoken. `nettop` over the session showed no socket for `spark-voice`. **Not yet verified, waiting on the microphone and Input Monitoring grant:** `say` through the speakers into the mic, Fn twice and the 🌐 check, the model download on **Turn on Voice**, a dictated message in a chat and in a Claude Terminal session with real Claude, and `getUserMedia` being refused rather than left pending in the app's windows and the Browser pane.
 
 ## Phases
 
