@@ -53,6 +53,7 @@ A push of another branch, a force push, a protected file or a write outside the 
 | **Usage**        | Tokens and cost per reply, by provider. Codex costs are estimates, marked **~**.                                              | [Jev's cost](jev.md#what-it-costs)                          |
 | **Projects**     | Linked folders; open one for trust, **Where Spark works**, **Keep sign-ins in the browser**, **Saved sign-ins**, **Preview**. | [Where a chat works](where-spark-works.md)                  |
 | **Mac control**  | Mac app: **Let agents control other Mac apps** and the Accessibility permission.                                              | [Let agents use Mac apps](mac-control.md)                   |
+| **Voice**        | Mac app: push to talk.                                                                                                        | [Talk to Spark](voice.md)                                   |
 | **Connectors**   | GitHub, Jira, Linear and [Slack](connect-slack.md).                                                                           | [Connect them](tickets-and-github.md)                       |
 | **MCP servers**  | Servers start off. Turn one on for all chats, projects, or one chat. Fill values an agent's server needs.                     | [Glossary](glossary.md)                                     |
 | **Appearance**   | The theme. **Graphite** is the default. Terminals use [SF Mono](https://developer.apple.com/fonts/) if installed, else Menlo. | [Set up](getting-started.md#meet-spark-and-pick-a-theme)    |

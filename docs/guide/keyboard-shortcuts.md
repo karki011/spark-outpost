@@ -67,6 +67,7 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | --------------- | ------------------------------------------ |
 | **⌥Space**      | Quick chat, or the card that waits for you |
 | **⌥⇧Space**     | Chats                                      |
+| **⌥⇧V**         | Voice: talk, or stop talking               |
 | **⌘1** – **⌘4** | Home, Chats, New chat, Ask Spark           |
 | **Y** / **N**   | Allow once / deny the focused card         |
 | **Esc**         | Close the panel, or leave a change         |
