@@ -14,7 +14,10 @@ final class KeyMonitor {
 
     func watch(hold: Bool, onKey: @escaping (KeyEvent) -> Void) -> Bool {
         stop()
-        guard Self.allowed() else { return false }
+        guard Self.allowed() else {
+            _ = CGRequestListenEventAccess()
+            return false
+        }
         detector = FnTwice(hold: hold)
         self.onKey = onKey
         let mask = (1 << CGEventType.flagsChanged.rawValue) | (1 << CGEventType.keyDown.rawValue)

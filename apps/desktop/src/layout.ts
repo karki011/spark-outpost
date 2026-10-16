@@ -5,6 +5,8 @@ export interface AppLayout {
   webRoot: string;
   tmuxBin: string;
   macControlBin: string;
+  voiceBin: string;
+  voiceModels: string;
 }
 
 export interface LayoutSource {
@@ -22,6 +24,8 @@ export function appLayout(source: LayoutSource): AppLayout {
       webRoot: path.join(resourcesPath, 'web'),
       tmuxBin: path.join(resourcesPath, 'tmux/bin/tmux'),
       macControlBin: path.join(resourcesPath, 'mac-control/bin/spark-mac-control'),
+      voiceBin: path.join(resourcesPath, 'voice/bin/spark-voice'),
+      voiceModels: path.join(resourcesPath, 'voice/models'),
     };
   }
   const repoRoot = path.resolve(appPath, '../..');
@@ -30,5 +34,7 @@ export function appLayout(source: LayoutSource): AppLayout {
     webRoot: path.join(repoRoot, 'apps/web/dist'),
     tmuxBin: path.join(repoRoot, '.local/tmux', arch, 'bin/tmux'),
     macControlBin: path.join(repoRoot, '.local/mac-control', arch, 'spark-mac-control'),
+    voiceBin: path.join(repoRoot, '.local/voice', arch, 'spark-voice'),
+    voiceModels: path.join(repoRoot, '.local/voice', arch, 'models'),
   };
 }

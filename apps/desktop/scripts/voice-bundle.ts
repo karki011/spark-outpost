@@ -211,6 +211,32 @@ export async function testVoice(repoRoot: string): Promise<void> {
   );
 }
 
+export const VOICE_LICENSES = [
+  'whisper.cpp-LICENSE',
+  'whisper-weights-LICENSE',
+  'silero-vad-LICENSE',
+] as const;
+
+export async function stagedVoiceProblems(voiceDir: string): Promise<string[]> {
+  const problems: string[] = [];
+  const model = await readFile(path.join(voiceDir, 'models', VOICE_SILERO.file)).catch(() => null);
+  if (!model) problems.push(`${VOICE_SILERO.file} is missing`);
+  else if (createHash('sha256').update(model).digest('hex') !== VOICE_SILERO.sha256)
+    problems.push(`${VOICE_SILERO.file} does not match its pinned sha256`);
+  for (const license of VOICE_LICENSES) {
+    const found = await readFile(path.join(voiceDir, 'licenses', license)).catch(() => null);
+    if (!found) problems.push(`the ${license} notice is missing`);
+  }
+  return problems;
+}
+
+export async function checkStagedVoice(voiceDir: string, arch: MacArch): Promise<void> {
+  await voiceCheck(path.join(voiceDir, 'bin', VOICE_HELPER_NAME), arch);
+  const problems = await stagedVoiceProblems(voiceDir);
+  if (problems.length > 0)
+    throw new Error(`The voice bundle for ${arch} can't ship: ${problems.join('; ')}.`);
+}
+
 export async function stageVoice(builtDir: string, arch: MacArch, resources: string): Promise<void> {
   await voiceCheck(path.join(builtDir, VOICE_HELPER_NAME), arch);
   const target = path.join(resources, 'voice');

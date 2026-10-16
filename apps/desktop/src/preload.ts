@@ -86,6 +86,23 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     onIndicator: (callback: (state: unknown) => void) =>
       listen(IPC.macControlIndicatorChanged, callback),
   },
+  speech: {
+    status: () => ipcRenderer.invoke(IPC.voiceStatus),
+    turnOn: () => ipcRenderer.invoke(IPC.voiceTurnOn),
+    turnOff: () => ipcRenderer.invoke(IPC.voiceTurnOff),
+    update: (patch: unknown) => ipcRenderer.invoke(IPC.voiceUpdate, patch),
+    setShortcut: (accelerator: string | null) =>
+      ipcRenderer.invoke(IPC.voiceSetShortcut, accelerator),
+    listen: (purpose: string, hint: string, file?: string) =>
+      ipcRenderer.invoke(IPC.voiceListen, purpose, hint, file),
+    stop: (id: string) => ipcRenderer.invoke(IPC.voiceStop, id),
+    cancel: (id: string) => ipcRenderer.invoke(IPC.voiceCancel, id),
+    speak: (text: string) => ipcRenderer.invoke(IPC.voiceSpeak, text),
+    hush: () => ipcRenderer.invoke(IPC.voiceHush),
+    openSettings: (page: string) => ipcRenderer.invoke(IPC.voiceOpenSettings, page),
+    onEvent: (callback: (event: unknown) => void) => listen(IPC.voiceEvent, callback),
+    onChange: (callback: (status: unknown) => void) => listen(IPC.voiceChanged, callback),
+  },
   browser: {
     state: (chatId: string) => ipcRenderer.invoke(IPC.browserState, chatId),
     place: (placement: unknown) => ipcRenderer.invoke(IPC.browserPlace, placement),

@@ -63,6 +63,19 @@ export const IPC = {
   macControlResume: 'mac-control:resume',
   macControlIndicator: 'mac-control:indicator',
   macControlIndicatorChanged: 'mac-control:indicator-changed',
+  voiceStatus: 'voice:status',
+  voiceTurnOn: 'voice:turn-on',
+  voiceTurnOff: 'voice:turn-off',
+  voiceUpdate: 'voice:update',
+  voiceSetShortcut: 'voice:set-shortcut',
+  voiceListen: 'voice:listen',
+  voiceStop: 'voice:stop',
+  voiceCancel: 'voice:cancel',
+  voiceSpeak: 'voice:speak',
+  voiceHush: 'voice:hush',
+  voiceOpenSettings: 'voice:open-settings',
+  voiceEvent: 'voice:event',
+  voiceChanged: 'voice:changed',
 } as const;
 
 export type DragPhase = 'start' | 'lift' | 'move' | 'end';

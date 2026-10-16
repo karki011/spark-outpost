@@ -1,3 +1,4 @@
+import path from 'node:path';
 import {
   app,
   BrowserWindow,
@@ -25,6 +26,8 @@ import { IPC, type DragPhase } from './ipc-channels.ts';
 import { isSize } from './island-geometry.ts';
 import { trayTemplate } from './island-options.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
+import { appLayout } from './layout.ts';
+import { startVoiceHost, type VoiceHost } from './voice/host.ts';
 
 interface CompanionHostOptions {
   appName: string;
@@ -181,6 +184,9 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     if (accelerator !== null && typeof accelerator !== 'string') {
       return { ok: false, error: 'Not allowed.' };
     }
+    if (accelerator !== null && accelerator === voice?.shortcut()) {
+      return { ok: false, error: 'This shortcut already starts Voice.' };
+    }
     return companion.setShortcut(action, accelerator);
   });
   ipcMain.handle(IPC.companionSetSound, (event, on: unknown) =>
@@ -254,6 +260,24 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     log: options.log,
   });
 
+  const layout = appLayout({
+    isPackaged: app.isPackaged,
+    appPath: app.getAppPath(),
+    resourcesPath: process.resourcesPath,
+  });
+  const voice: VoiceHost | null = await startVoiceHost({
+    helperPath: layout.voiceBin,
+    modelsDir: layout.voiceModels,
+    userData: path.dirname(options.settingsPath),
+    trusted: fromSpark,
+    island: () =>
+      BrowserWindow.getAllWindows().find(
+        (window) => !window.isDestroyed() && island?.owns(window.webContents.id),
+      )?.webContents ?? null,
+    takenShortcuts: () => Object.values(companion.status().shortcuts),
+    log: options.log,
+  });
+
   ipcMain.on(IPC.islandOpenChat, (event, id: unknown, runId: unknown) => {
     if (!fromIsland(event)) return;
     const turn = typeof runId === 'string' && CHAT_ID.test(runId) ? runId : null;
@@ -273,6 +297,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     openChat,
     dispose: () => {
       attention?.dispose();
+      voice?.dispose();
       companion.shutdown();
       globalShortcut.unregisterAll();
       for (const channel of [
