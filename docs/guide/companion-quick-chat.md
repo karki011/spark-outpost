@@ -40,7 +40,7 @@ An update is written from what Spark already tracks. It doesn't interrupt the ag
 1. In the panel, select **New chat**, then **Ask Spark**, or press **⌘4**.
 2. Type a question, such as "Who needs me?" or "What did I spend today?", and press **Enter**.
 
-Who needs you, what's running and today's spend are answered right away. Other questions go to a chat called **Ask Spark**.
+Who needs you, what's running and today's spend are answered right away. Other questions use a [fast model](settings.md#spark-assistant).
 
 ## Change a shortcut
 

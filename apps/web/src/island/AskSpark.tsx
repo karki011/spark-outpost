@@ -9,6 +9,7 @@ import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import { fastAnswer, type FastChat, type FastState } from './ask-fast-path.ts';
 import { AskThinking } from './AskThinking.tsx';
 import { islandApi, islandKeys } from './island-api.ts';
+import { queueApi } from '../chat/queue/queue-api.ts';
 import { plainLine } from './plain-line.ts';
 
 interface Exchange {
@@ -17,6 +18,18 @@ interface Exchange {
   answer: string | null;
   chats: FastChat[];
   instant: boolean;
+}
+
+interface Waiting {
+  id: string;
+  question: string;
+}
+
+function stillWaiting(waiting: readonly Waiting[], asked: readonly Exchange[]): Exchange[] {
+  const sent = new Set(asked.map((exchange) => exchange.id));
+  return waiting
+    .filter((entry) => !sent.has(entry.id))
+    .map((entry) => ({ ...entry, answer: null, chats: [], instant: false }));
 }
 
 interface AskSparkProps {
@@ -84,6 +97,7 @@ export function AskSpark({ fast, voice, focusDelay, onOpenChat }: AskSparkProps)
   const assistant = useAssistant();
   const [text, setText] = useState('');
   const [instant, setInstant] = useState<Exchange[]>([]);
+  const [waiting, setWaiting] = useState<Waiting[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const secrets = useSecretGuard(text);
   const run = assistant.detail?.conversation.latestRun;
@@ -101,10 +115,12 @@ export function AskSpark({ fast, voice, focusDelay, onOpenChat }: AskSparkProps)
   }, [assistant.detail, thinking]);
 
   const ask = useMutation({
-    mutationFn: async (question: string) => {
+    mutationFn: async ({ id, question }: Waiting) => {
       if (!assistant.id) throw new Error('Spark isn’t ready to answer yet.');
-      await api.sendMessage(assistant.id, crypto.randomUUID(), question);
+      setWaiting((list) => [...list, { id, question }]);
+      await queueApi.add(assistant.id, id, question);
     },
+    onError: (_error, { id }) => setWaiting((list) => list.filter((entry) => entry.id !== id)),
     onSuccess: () => {
       if (assistant.id)
         void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(assistant.id) });
@@ -113,7 +129,7 @@ export function AskSpark({ fast, voice, focusDelay, onOpenChat }: AskSparkProps)
 
   const submit = () => {
     const question = text.trim();
-    if (!question || ask.isPending || thinking || secrets.blocks(text)) return;
+    if (!question || secrets.blocks(text)) return;
     setText('');
     const answer = fastAnswer(question, fast);
     if (answer) {
@@ -129,7 +145,7 @@ export function AskSpark({ fast, voice, focusDelay, onOpenChat }: AskSparkProps)
       ]);
       return;
     }
-    ask.mutate(question);
+    ask.mutate({ id: crypto.randomUUID(), question });
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -138,7 +154,8 @@ export function AskSpark({ fast, voice, focusDelay, onOpenChat }: AskSparkProps)
     submit();
   };
 
-  const shown = [...modelExchanges(assistant.detail), ...instant].slice(-HISTORY);
+  const asked = modelExchanges(assistant.detail);
+  const shown = [...asked, ...stillWaiting(waiting, asked), ...instant].slice(-HISTORY);
   const cheer = useCheer(thinking, shown.at(-1)?.answer ? shown.at(-1)!.id : null);
   const step = run?.step ? plainLine(run.step) : null;
   return (
@@ -203,13 +220,13 @@ export function AskSpark({ fast, voice, focusDelay, onOpenChat }: AskSparkProps)
           onKeyDown={onKeyDown}
         />
         <div className="isl-qc-bar">
-          <span className="isl-qc-hint">Answers use your default model</span>
+          <span className="isl-qc-hint">Answers use the Spark assistant model</span>
           <span className="isl-sp" />
           <button
             type="button"
             className="isl-send"
             aria-label="Ask"
-            disabled={!text.trim() || ask.isPending || thinking}
+            disabled={!text.trim()}
             onClick={submit}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">

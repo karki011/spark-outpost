@@ -25,6 +25,8 @@ async function recentMessages(db: Queryable, input: RunInput): Promise<MissedMes
     `SELECT role, content FROM (
        SELECT m.role, m.content, m.created_at, m.id FROM messages m
        WHERE m.conversation_id = $1
+         AND m.created_at > COALESCE((SELECT pf.assistant_history_from FROM profiles pf
+           WHERE pf.assistant_conversation_id = $1), '-infinity'::timestamptz)
          AND m.id <> (SELECT user_message_id FROM runs WHERE id = $2)
          AND m.created_at < (SELECT created_at FROM runs WHERE id = $2)
        ORDER BY m.created_at DESC, m.id DESC LIMIT $3

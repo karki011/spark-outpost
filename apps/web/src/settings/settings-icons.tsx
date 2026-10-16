@@ -5,6 +5,13 @@ export const PROFILE_ICON = (
   </>
 );
 
+export const ASSISTANT_ICON = (
+  <>
+    <path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+    <path d="M9 11h.01M12 11h.01M15 11h.01" />
+  </>
+);
+
 export const APPEARANCE_ICON = (
   <>
     <circle cx="12" cy="12" r="9" />

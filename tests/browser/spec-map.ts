@@ -148,6 +148,7 @@ export const SPEC_GROUPS = {
     'settings',
     'settings-groups',
     'settings-lists',
+    'spark-assistant-settings',
     'terminal-record-setting',
     'zai',
   ],

@@ -1,38 +1,20 @@
 import { randomUUID } from 'node:crypto';
-import { modeForLegacy } from '@spark-outpost/contracts';
-import {
-  draftChatSettings,
-  resolveChatSettings,
-  updateChatSettings,
-} from '../persistence/chat-settings.ts';
 import { createConversation } from '../persistence/conversations.ts';
-import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
+import { withTransaction, type Db } from '../persistence/db.ts';
+import { followAssistantSettings } from './assistant-settings.ts';
 
 export const ASSISTANT_TITLE = 'Ask Spark';
 
 export const ASSISTANT_PREAMBLE = [
   'You are Spark, answering questions about Spark Outpost itself: the chats, what is running or waiting, spend, providers and settings.',
   'Look things up with the Spark tools and never guess.',
+  'The state of chats, runs, approvals, spend, tickets and the calendar changes all the time: look it up with the Spark tools for every question, even when this conversation answered it before, and never answer it from memory.',
+  'Use what you remember only for the conversation itself and the preferences the user told you.',
   'Answer in one to three short, plain sentences and name chats by their title.',
   'You cannot change files, run commands or take actions from here.',
 ].join(' ');
 
 export class AssistantUnavailableError extends Error {}
-
-async function followDefaults(db: Queryable, workspaceId: string, id: string): Promise<void> {
-  const [defaults, current] = await Promise.all([
-    draftChatSettings(db, workspaceId),
-    resolveChatSettings(db, id),
-  ]);
-  const provider = defaults.provider;
-  if (!provider) return;
-  const readOnly = modeForLegacy(provider, null, null);
-  if (provider === current.provider && current.agentMode === readOnly) return;
-  await updateChatSettings(db, id, {
-    provider,
-    ...(readOnly ? { agentMode: readOnly } : {}),
-  }).catch(() => null);
-}
 
 export async function ensureAssistantChat(db: Db, workspaceId: string): Promise<string> {
   return withTransaction(db, async (client) => {
@@ -43,7 +25,7 @@ export async function ensureAssistantChat(db: Db, workspaceId: string): Promise<
     const profile = rows[0];
     if (!profile) throw new AssistantUnavailableError('Finish setting up Spark first.');
     if (profile.id) {
-      await followDefaults(client, workspaceId, profile.id);
+      await followAssistantSettings(client, workspaceId, profile.id);
       return profile.id;
     }
     const id = randomUUID();
@@ -52,11 +34,11 @@ export async function ensureAssistantChat(db: Db, workspaceId: string): Promise<
       id,
       ASSISTANT_TITLE,
     ]);
-    await followDefaults(client, workspaceId, id);
     await client.query(
       'UPDATE profiles SET assistant_conversation_id = $2 WHERE workspace_id = $1',
       [workspaceId, id],
     );
+    await followAssistantSettings(client, workspaceId, id);
     return id;
   });
 }

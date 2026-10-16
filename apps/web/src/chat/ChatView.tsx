@@ -75,6 +75,7 @@ import { NativeTerminalWorkspace } from '../terminal/NativeTerminalWorkspace.tsx
 import { TerminalComposer } from '../terminal/TerminalComposer.tsx';
 import { SessionTypePicker, type SessionChoice } from '../terminal/SessionTypePicker.tsx';
 import { ChatTeammate } from '../teammates/ChatTeammate.tsx';
+import { AssistantReadOnly } from '../settings/assistant/AssistantReadOnly.tsx';
 
 const NO_REPOS: string[] = [];
 const NO_TASKS: TaskOverview[] = [];
@@ -214,6 +215,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const firstRepo = repos[0] ?? null;
   const view = sessionView(detail.data, terminalLaunching);
   const terminalSession = view === 'terminal';
+  const assistantChat = detail.data?.conversation.assistant === true;
   useBrowserInput(conversationId, terminalSession, attachments.addPick, quotes.requestFocus);
   const newSession = view === 'draft';
   const chooseSession = (choice: SessionChoice) => {
@@ -366,7 +368,8 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   )}
                 </div>
               )}
-              {!terminalSession && !terminalDraft && (
+              {assistantChat && <AssistantReadOnly />}
+              {!terminalSession && !terminalDraft && !assistantChat && (
                 <>
                   <ComposerStatus
                     store={status}

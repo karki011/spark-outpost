@@ -22,6 +22,7 @@ interface SettingsDialogProps {
   section: SettingsSection;
   onSection: (section: SettingsSection) => void;
   onClose: () => void;
+  onOpenChat: (conversationId: string) => void;
 }
 
 function searchable(sections: readonly SettingsSectionEntry[]) {
@@ -33,7 +34,7 @@ function searchable(sections: readonly SettingsSectionEntry[]) {
   }));
 }
 
-export function SettingsDialog({ section, onSection, onClose }: SettingsDialogProps) {
+export function SettingsDialog({ section, onSection, onClose, onOpenChat }: SettingsDialogProps) {
   const phone = useRemoteClient();
   const [sections] = useState(availableSections);
   const [index] = useState(() => searchable(sections));
@@ -193,7 +194,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ ...reveal, duration: 0.15 }}
               >
-                {current?.render({ setup: setup.data, off })}
+                {current?.render({ setup: setup.data, off, onOpenChat })}
               </motion.div>
             </AnimatePresence>
           </div>

@@ -7,6 +7,7 @@ import { routeToProvider, useRoutedProvider } from '../providers/provider-route.
 import { ThemeCards } from '../theme/ThemeCards.tsx';
 import { UsageSection } from '../usage/UsageSection.tsx';
 import { ProfileSection } from '../spark/ProfileSection.tsx';
+import { ASSISTANT_ROWS, SparkAssistantSection } from './assistant/SparkAssistantSection.tsx';
 import { NAME_LABEL, PERSONALITY_LABEL } from '../spark/SparkSettings.tsx';
 import { LEVEL_LABEL } from '../spark/LevelSetting.tsx';
 import { COMPACT_LABEL, WARN_LABEL } from '../spark/CompactionSettings.tsx';
@@ -44,6 +45,7 @@ type SettingsGroup = (typeof SETTINGS_GROUPS)[number]['id'];
 interface SectionBodyProps {
   setup: SetupState | undefined;
   off: boolean;
+  onOpenChat: (conversationId: string) => void;
 }
 
 interface SectionEntry {
@@ -88,6 +90,16 @@ export const SETTINGS_SECTIONS = [
     remoteSwitch: 'settings',
     rows: () => [NAME_LABEL, PERSONALITY_LABEL],
     render: ({ setup }) => setup && <ProfileSection setup={setup} />,
+  },
+  {
+    id: 'assistant',
+    group: 'general',
+    label: 'Spark assistant',
+    icon: icons.ASSISTANT_ICON,
+    remoteSwitch: 'settings',
+    rows: () => ASSISTANT_ROWS,
+    render: ({ setup, onOpenChat }) =>
+      setup && <SparkAssistantSection setup={setup} onOpenChat={onOpenChat} />,
   },
   {
     id: 'look',

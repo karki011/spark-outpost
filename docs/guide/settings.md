@@ -6,7 +6,7 @@ order: 610
 summary: Every Settings section by group, its rows and defaults, and the page that explains each one.
 ---
 
-Select **Settings** at the bottom of the rail. **Search settings** finds a section or row: ↑, ↓ and Enter open it at that row, Esc clears. A row's book icon opens its guide page.
+Select **Settings** at the bottom of the rail. **Search settings** finds a section or row: ↑, ↓ and Enter open it at that row, Esc clears.
 
 ## General
 
@@ -14,6 +14,10 @@ Select **Settings** at the bottom of the rail. **Search settings** finds a secti
 | ------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | **Profile & personality** | **What should Spark call you?** and **Personality** (**Friendly**).                                       | [Set up](getting-started.md#meet-spark-and-pick-a-theme) |
 | **Appearance**            | The theme, **Graphite** by default. Terminals use [SF Mono](https://developer.apple.com/fonts/) or Menlo. | [Set up](getting-started.md#meet-spark-and-pick-a-theme) |
+
+### Spark assistant
+
+**Spark assistant** sets [Ask Spark](companion-quick-chat.md#ask-spark)'s **Provider**, **Model** (**Fast (recommended)**: Sonnet 5.5), **Effort** and **Key facts**. **View conversation** opens its hidden chat.
 
 ## Agents
 
@@ -40,13 +44,13 @@ Select **Settings** at the bottom of the rail. **Search settings** finds a secti
 | **On wide windows**                          | **Context rail**       | Rail, panel or nothing                                         |
 | **Record Terminal sessions like chats**      | Off                    | [Record Terminal sessions](#record-terminal-sessions)          |
 
-**Custom instructions** takes text or a UTF-8 file on your Mac, up to 16 KB; select **Save instructions**. New sessions send both and skip an unreadable file.
+**Custom instructions** takes text or a UTF-8 file on your Mac (16 KB at most); select **Save instructions**. Unreadable files are skipped.
 
 ### Record Terminal sessions
 
 With **Record Terminal sessions like chats** on, new Claude turns in a [Terminal session](terminals.md) keep tool calls with input and output, replies, changed files and an audit, like a chat. Secret-file values are hidden.
 
-A push of another branch, a force push, a protected file or a write outside the project gets a flag; nothing is stopped. Codex sessions don't change.
+Pushes to other branches, force pushes, protected files and writes outside the project get a flag; nothing is stopped. Not for Codex.
 
 **Pull requests**:
 

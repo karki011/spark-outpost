@@ -391,6 +391,10 @@ function ChatShell({ entering }: { entering: boolean }) {
                 section={settings}
                 onSection={setSettings}
                 onClose={() => setSettings(null)}
+                onOpenChat={(id) => {
+                  setSettings(null);
+                  openChat(id);
+                }}
               />
             )}
           </AnimatePresence>
