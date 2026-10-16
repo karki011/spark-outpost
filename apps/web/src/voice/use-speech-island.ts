@@ -6,6 +6,7 @@ import type {
   TicketSourceId,
   VoiceEvent,
 } from '@spark-outpost/contracts';
+import { projectKeys, projectsApi } from '../api/projects.ts';
 import { homeApi, homeKeys } from '../home/home-api.ts';
 import type { FastState } from '../island/ask-fast-path.ts';
 import type { Panel } from '../island/island-model.ts';
@@ -40,6 +41,7 @@ import {
 import type { SpeechSeed, SpeechSeeds } from './speech-seed.tsx';
 
 const CHAT_LIMIT = 200;
+const PROJECTS_WAIT_MS = 500;
 
 export interface SpeechIslandOptions {
   chats: readonly ConversationSummary[];
@@ -65,6 +67,14 @@ export interface SpeechScreenModel {
   keepsPanel: boolean;
 }
 
+function projectRefs(projects: readonly Project[]): SpeechLists['projects'] {
+  return projects.map((project) => ({
+    id: project.id,
+    name: project.name,
+    folder: project.rootPath,
+  }));
+}
+
 function useLists(
   chats: readonly ConversationSummary[],
   projects: readonly Project[],
@@ -74,11 +84,7 @@ function useLists(
   const sources = connections.data?.connections;
   return useMemo(
     () => ({
-      projects: projects.map((project) => ({
-        id: project.id,
-        name: project.name,
-        folder: project.rootPath,
-      })),
+      projects: projectRefs(projects),
       chats: chats
         .filter((chat) => !chat.archivedAt)
         .slice(0, CHAT_LIMIT)
@@ -152,6 +158,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
   }
   const starts = useRef(0);
   const escapedStart = useRef(0);
+  const freshProjects = useRef<Promise<SpeechLists['projects'] | null>>(Promise.resolve(null));
   const latest = useRef({ state, options, lists, seed, handed, selected, status });
   useEffect(() => {
     latest.current = { state, options, lists, seed, handed, selected, status };
@@ -298,9 +305,8 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
     void act(result, index);
   };
 
-  const heard = (event: Extract<VoiceEvent, { kind: 'final' }>) => {
-    const { state: now, lists: names } = latest.current;
-    const listen = now.listen;
+  const heard = async (event: Extract<VoiceEvent, { kind: 'final' }>) => {
+    const listen = latest.current.state.listen;
     if (!listen || listen.id !== event.id) return;
     const text = event.text.trim();
     const answer = listen.purpose === 'confirm' && text ? matchConfirmation(text) : null;
@@ -309,6 +315,10 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
       if (answer) confirm(answer);
       return;
     }
+    const projects = await freshProjects.current;
+    const { state: now, lists } = latest.current;
+    if (now.listen?.id !== event.id) return;
+    const names = projects ? { ...lists, projects } : lists;
     const command = text ? matchCommand(text, names) : null;
     dispatch({ type: 'heard', id: event.id, text, command });
     if (!command) {
@@ -318,6 +328,20 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
     const result = { id: now.results + 1, transcript: text, command };
     setSelected(pickedIndex(command));
     void act(result, null);
+  };
+
+  const refreshProjects = async (): Promise<SpeechLists['projects'] | null> => {
+    const fresh = queryClient
+      .fetchQuery({
+        queryKey: projectKeys.all,
+        queryFn: projectsApi.list,
+        staleTime: 0,
+        retry: false,
+      })
+      .catch(() => null);
+    const late = new Promise<null>((resolve) => setTimeout(() => resolve(null), PROJECTS_WAIT_MS));
+    const projects = await Promise.race([fresh, late]);
+    return projects ? projectRefs(projects) : null;
   };
 
   const begin = async (file?: string) => {
@@ -330,6 +354,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
     if (purpose === 'command') {
       setSeed(null);
       setHanded(null);
+      freshProjects.current = refreshProjects();
     }
     if (opts.panel === null || purpose === 'command') opts.openPanel(opts.panel ?? 'ask');
     const hint = speechHint(names);
@@ -352,7 +377,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
       case 'speech':
         return dispatch({ type: 'speech', id: event.id });
       case 'final':
-        return heard(event);
+        return void heard(event);
       case 'cancelled':
         return dispatch({ type: 'cancelled', id: event.id });
       case 'error':

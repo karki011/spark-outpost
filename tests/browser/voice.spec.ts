@@ -150,6 +150,67 @@ test('a spoken new chat opens prefilled and starts nothing until "send"', async 
   await expect.poll(userMessages).toBe(before + 1);
 });
 
+async function openIslandWithProjects(page: Page) {
+  const projectsLoaded = page.waitForResponse((response) =>
+    response.url().endsWith('/api/projects'),
+  );
+  await openIsland(page);
+  await projectsLoaded;
+}
+
+test('a project linked after the island loaded is matched by a spoken command', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await installFakeVoice(page);
+  await openIslandWithProjects(page);
+  await linkProject(page);
+  const listen = await press(page);
+  await emitVoice(page, {
+    kind: 'final',
+    id: listen.id,
+    text: 'Start a chat in feature web apps to add creator email.',
+    reason: 'paused',
+  });
+  await expect(island(page).getByRole('textbox', { name: 'Message' })).toHaveValue(
+    'add creator email',
+  );
+  await expect(island(page).getByRole('button', { name: 'feature-web-apps' })).toBeVisible();
+});
+
+test('listening starts at once and a release before the project list loads still matches', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await installFakeVoice(page);
+  await page.clock.install();
+  await openIslandWithProjects(page);
+  await linkProject(page);
+  let answerProjects = () => {};
+  const held = new Promise<void>((resolve) => {
+    answerProjects = resolve;
+  });
+  await page.route('**/api/projects', async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.clock.pauseAt(Date.now() + 1_000);
+  const listen = await press(page);
+  await emitVoice(page, { kind: 'speech', id: listen.id });
+  await emitVoice(page, {
+    kind: 'final',
+    id: listen.id,
+    text: 'Start a chat in feature web apps to add creator email.',
+    reason: 'stopped',
+  });
+  answerProjects();
+  await expect(island(page).getByRole('textbox', { name: 'Message' })).toHaveValue(
+    'add creator email',
+  );
+  await expect(island(page).getByRole('button', { name: 'feature-web-apps' })).toBeVisible();
+  await page.unroute('**/api/projects');
+});
+
 test('a spoken ticket start keeps the autonomy level and project picked in the composer', async ({
   page,
 }) => {

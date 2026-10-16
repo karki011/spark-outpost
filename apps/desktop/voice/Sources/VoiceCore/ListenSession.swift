@@ -30,6 +30,7 @@ public struct ListenRules: Sendable {
     public var commandPause: Double = 1.5
     public var dictationPause: Double = 0.8
     public var noSpeechLimit: Double = 30
+    public var commandNoSpeechLimit: Double = 3
     public var segmentLimit: Double = 30
     public var preRoll: Double = 0.3
 
@@ -56,6 +57,10 @@ public final class ListenSession {
         Double(ListenRules.frameSamples) / Double(ListenRules.sampleRate)
     }
 
+    private var noSpeechLimit: Double {
+        purpose.endsOnPause ? rules.commandNoSpeechLimit : rules.noSpeechLimit
+    }
+
     private var preRollSamples: Int {
         Int(rules.preRoll * Double(ListenRules.sampleRate))
     }
@@ -74,7 +79,7 @@ public final class ListenSession {
         } else {
             keepRecent(frame)
             sinceSpeech += frameSeconds
-            if sinceSpeech >= rules.noSpeechLimit {
+            if sinceSpeech >= noSpeechLimit {
                 actions.append(finish(.silence))
             }
         }
