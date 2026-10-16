@@ -41,6 +41,7 @@ import {
 import type { SpeechSeed, SpeechSeeds } from './speech-seed.tsx';
 
 const CHAT_LIMIT = 200;
+const PROJECTS_WAIT_MS = 500;
 
 export interface SpeechIslandOptions {
   chats: readonly ConversationSummary[];
@@ -326,9 +327,16 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
   };
 
   const withFreshProjects = async (names: SpeechLists): Promise<SpeechLists> => {
-    const projects = await queryClient
-      .fetchQuery({ queryKey: projectKeys.all, queryFn: projectsApi.list, staleTime: 0 })
+    const fresh = queryClient
+      .fetchQuery({
+        queryKey: projectKeys.all,
+        queryFn: projectsApi.list,
+        staleTime: 0,
+        retry: false,
+      })
       .catch(() => null);
+    const late = new Promise<null>((resolve) => setTimeout(() => resolve(null), PROJECTS_WAIT_MS));
+    const projects = await Promise.race([fresh, late]);
     return projects ? { ...names, projects: projectRefs(projects) } : names;
   };
 
