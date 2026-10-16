@@ -114,11 +114,23 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
   return createApp(testAppOptions(t, options));
 }
 
+const OWN_LOOPBACK = '::1';
+
+export type RequestMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
+
+export function appRequest(
+  app: ReturnType<typeof createTestApp>,
+  method: RequestMethod,
+  path: string,
+) {
+  return request(app)[method](path).connect(OWN_LOOPBACK);
+}
+
 export function localClient(app: ReturnType<typeof createTestApp>) {
   return {
-    get: (path: string) => request(app).get(path).set(LOCAL_HEADERS),
-    send: (method: 'post' | 'put' | 'patch' | 'delete', path: string, body: object = {}) =>
-      request(app)[method](path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body),
+    get: (path: string) => appRequest(app, 'get', path).set(LOCAL_HEADERS),
+    send: (method: Exclude<RequestMethod, 'get'>, path: string, body: object = {}) =>
+      appRequest(app, method, path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body),
   };
 }
 

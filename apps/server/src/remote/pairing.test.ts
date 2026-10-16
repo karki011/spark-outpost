@@ -103,6 +103,16 @@ describe('pairing', () => {
     expect(pairings.submit(fresh.code, 'Phone')).not.toBeNull();
   });
 
+  it('takes a different limit for both windows when one is given', () => {
+    const pairings = new Pairings(() => 1_000_000, 8);
+    for (let again = 0; again < 7; again += 1) pairings.start();
+    const last = pairings.start();
+    expect(() => pairings.start()).toThrow(PairingRateLimitError);
+    for (let guess = 0; guess < 7; guess += 1) pairings.submit('WRONG', 'Phone');
+    expect(pairings.submit(last.code, 'Phone')).not.toBeNull();
+    expect(() => pairings.submit(last.code, 'Phone')).toThrow(PairingRateLimitError);
+  });
+
   it('issues codes of twelve unambiguous characters', () => {
     const { pairings } = clocked();
     expect(pairings.start().code).toMatch(

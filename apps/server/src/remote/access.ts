@@ -21,6 +21,7 @@ export interface RemoteAccessDeps {
   loginShell: string | null;
   secrets: SecretStore;
   pushKeys?: PushKeys;
+  pairingAttemptsPerMinute?: number;
 }
 
 export interface RemoteAccessParts {
@@ -46,7 +47,7 @@ export function remoteAccessParts(deps: RemoteAccessDeps): RemoteAccessParts {
     routes: remoteRoutes({
       db: deps.db,
       workspaceId: deps.workspaceId,
-      pairings: new Pairings(),
+      pairings: new Pairings(Date.now, deps.pairingAttemptsPerMinute),
       challenges: new PasskeyChallenges(),
       streams,
       tailscale,

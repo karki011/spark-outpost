@@ -16,6 +16,7 @@ import {
   VIEWPORT,
   type NotchSetup,
 } from './island-notch-desktop.ts';
+import { animationsSettled } from './settle.ts';
 import { seedChats } from './sidebar-seed.ts';
 
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
@@ -187,10 +188,15 @@ for (const notch of [true, false]) {
       }
       expect(await takesClicks(page)).toEqual([]);
       await tuckedUnder(page, size, edge);
+      await animationsSettled(page);
 
       expect(await pressAndPull(page, CENTRE + blob / 2 + reach - INSIDE, low)).toBe(false);
       expect(await pressAndPull(page, CENTRE, edge + shown + reach - INSIDE)).toBe(false);
       expect(await dragPhases(page)).toEqual([]);
+      await page.mouse.move(5, 600);
+      await animationsSettled(page);
+      await expect(island(page)).toHaveAttribute('data-view', 'peek');
+      await tuckedUnder(page, size, edge);
       expect(await pressAndPull(page, CENTRE, edge + shown / 2)).toBe(true);
       expect(await dragPhases(page)).toEqual(['lift', 'move', 'end']);
     });

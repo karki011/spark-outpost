@@ -274,6 +274,9 @@ const { app, reconcileRemote } = createAppParts({
   slackSocket,
   pushKeys: remotePushKeys,
   calendarHost: desktopCalendar,
+  ...(config.AGENT_RUNTIME === 'fake' && config.PAIRING_TEST_ATTEMPTS_PER_MINUTE
+    ? { pairingAttemptsPerMinute: config.PAIRING_TEST_ATTEMPTS_PER_MINUTE }
+    : {}),
   ...(config.WEB_ROOT ? { webRoot: config.WEB_ROOT } : {}),
   diagnostics: {
     appVersion: config.SPARK_APP_VERSION ?? null,

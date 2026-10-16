@@ -72,9 +72,8 @@ describe('Jev breaker', () => {
       expect(errors.every((error) => error instanceof kind)).toBe(true);
       expect(state.calls).toBe(JEV_PAUSE_AFTER);
 
-      const started = Date.now();
-      await expect(askSystemOne(ask, body, signal())).rejects.toThrow(JEV_PAUSED);
-      expect(Date.now() - started).toBeLessThan(20);
+      const wouldWaitAMinute = options(fetcher, { breaker, timeoutMs: 60_000 });
+      await expect(askSystemOne(wouldWaitAMinute, body, signal())).rejects.toThrow(JEV_PAUSED);
       expect(state.calls).toBe(JEV_PAUSE_AFTER);
 
       now += JEV_PAUSE_MS;

@@ -10,7 +10,13 @@ import {
   setPullChecks,
   watchPull,
 } from './ticket-flow-seed.ts';
-import { connectTickets, openTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
+import {
+  connectTickets,
+  hoverOnceSettled,
+  openTickets,
+  resetTicketFakes,
+  STUB_URL,
+} from './ticket-seed.ts';
 import { FAKE_GH_STATE } from './stub-config.ts';
 
 const main = (page: Page) => page.getByRole('main', { name: 'Tickets' });
@@ -196,7 +202,7 @@ test('rows move with the keyboard, Enter opens one, and focus shows a preview', 
     page.getByRole('complementary', { name: `${below!.split(':')[1]} details` }),
   ).toBeVisible();
 
-  await row(page, 'API-77').hover();
+  await hoverOnceSettled(page, row(page, 'API-77'));
   const preview = page.getByRole('tooltip', { name: /^API-77/ });
   await expect(preview).toContainText('API-77 · Rate limit headers missing on 429 responses');
   await expect(preview).toContainText('#341 in acme/widgets');

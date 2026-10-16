@@ -83,6 +83,7 @@ export interface AppOptions
   webRoot?: string;
   pushKeys?: PushKeys;
   calendarHost?: CalendarHost | null;
+  pairingAttemptsPerMinute?: number;
   diagnostics?: DiagnosticsPlaces;
   activeWork?: ActiveWork;
 }

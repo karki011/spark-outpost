@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { send } from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
+import { animationsSettled } from './settle.ts';
 import {
   NAME,
   TURN_TIMEOUT,
@@ -38,7 +39,7 @@ async function inBothThemes(
   const before = await root.getAttribute('data-skin');
   for (const [scheme, skin] of THEMES) {
     await root.evaluate((html, value) => (html.dataset.skin = value), skin);
-    await page.waitForTimeout(300);
+    await animationsSettled(page);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}-${name}-${scheme}.png` });
     await check();
     const results = await new AxeBuilder({ page })

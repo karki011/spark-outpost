@@ -26,12 +26,15 @@ import {
   slot,
   STUB_PORT,
   TEST_DATABASE_URL,
+  TEST_TMPDIR,
   WEB_BUILD_ENV,
   WEB_PORT,
 } from './tests/browser/stub-config.ts';
+import { FRESH_TEST_TMPDIR } from './tests/browser/test-tmpdir.ts';
 
 if (existsSync('.local/credentials.env')) process.loadEnvFile('.local/credentials.env');
 delete process.env.BACKUP_DIR;
+process.env.TMPDIR = TEST_TMPDIR;
 
 const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
 process.env.SPARK_BROWSER_API_TOKEN ??= randomBytes(32).toString('base64url');
@@ -51,6 +54,7 @@ const serverEnv = {
   SPARK_GITHUB_APP_CLIENT_ID: APP_CLIENT_ID,
   SPARK_GITHUB_APP_SLUG: APP_SLUG,
   SHELL: '/bin/sh',
+  TMPDIR: TEST_TMPDIR,
   DATABASE_URL: TEST_DATABASE_URL ?? '',
   API_PORT: String(API_PORT),
   ALLOWED_ORIGINS: APP_ORIGIN,
@@ -71,6 +75,7 @@ const serverEnv = {
   MORNING_BRIEF: 'false',
   MAP_ROOT_PREFIX,
   CLONE_TEST_ROOT,
+  PAIRING_TEST_ATTEMPTS_PER_MINUTE: '1000',
   LINEAR_API_URL: `${STUB_URL}/linear/graphql`,
   SLACK_API_URL: `${STUB_URL}/slack/api`,
   SPARK_SLACK_CLIENT_ID: SLACK_CLIENT_ID,
@@ -128,7 +133,7 @@ const viteServer = {
 export default defineConfig({
   testDir: 'tests/browser',
   globalSetup: './tests/browser/single-worker.ts',
-  globalTeardown: './tests/browser/stop-terminals.ts',
+  globalTeardown: ['./tests/browser/stop-terminals.ts', './tests/browser/test-tmpdir.ts'],
   outputDir: slot === 0 ? 'test-results' : `test-results/slot-${slot}`,
   timeout: 30_000,
   retries: 0,
@@ -142,7 +147,7 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
-      command: `${node} --import tsx tests/browser/provider-stub.ts`,
+      command: `${FRESH_TEST_TMPDIR} && ${node} --import tsx tests/browser/provider-stub.ts`,
       url: `${STUB_URL}/health`,
       reuseExistingServer: false,
       gracefulShutdown: shutdown,

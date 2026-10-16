@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
 import { existsSync, realpathSync } from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { FAKE_CLAUDE_MODES } from '../../apps/server/src/providers/fake.ts';
 
@@ -36,7 +35,17 @@ export const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL
   ? slotDatabaseUrl(process.env.TEST_DATABASE_URL, slot)
   : null;
 
-export const SERVER_LOG_DIR = path.join(os.tmpdir(), `spark-outpost-server-logs-${slot}`);
+export function slotTmpdir(forSlot: number): string {
+  return path.join(realpathSync('/var/tmp'), `spark-outpost-test-slot${forSlot}`);
+}
+
+export const TEST_TMPDIR = slotTmpdir(slot);
+
+export const SERVER_LOG_DIR = path.resolve(
+  import.meta.dirname,
+  '../../test-results/server-logs',
+  `slot-${slot}`,
+);
 export const API_RESTART_FLAG = path.join(SERVER_LOG_DIR, 'restart-api');
 
 const ports = slotPorts(slot);
@@ -47,29 +56,11 @@ export const WEB_BUILD_ENV = { VITE_SPARK_FEEDBACK_EMAIL: 'beta-feedback@example
 export const PACKAGED = process.env.SPARK_PACKAGED === '1';
 export const APP_ORIGIN = `http://127.0.0.1:${PACKAGED ? API_PORT : WEB_PORT}`;
 export const REJECTED_KEY_MARKER = 'rejected';
-export const FAKE_CODEX_STATE = path.join(
-  os.tmpdir(),
-  slot === 0 ? 'spark-outpost-fake-codex-logged-in' : `spark-outpost-fake-codex-logged-in-${slot}`,
-);
-
-export const FAKE_CLAUDE_BIN = path.join(
-  os.tmpdir(),
-  slot === 0 ? 'spark-outpost-fake-claude-bin' : `spark-outpost-fake-claude-bin-${slot}`,
-);
-
-export const FAKE_GH_STATE = path.join(
-  os.tmpdir(),
-  slot === 0 ? 'spark-outpost-fake-gh-login' : `spark-outpost-fake-gh-login-${slot}`,
-);
-
-export const FAKE_CALENDAR_STATE = path.join(
-  os.tmpdir(),
-  slot === 0 ? 'spark-outpost-fake-calendar.json' : `spark-outpost-fake-calendar-${slot}.json`,
-);
-export const FAKE_TAILSCALE_STATE = path.join(
-  os.tmpdir(),
-  slot === 0 ? 'spark-outpost-fake-tailscale.json' : `spark-outpost-fake-tailscale-${slot}.json`,
-);
+export const FAKE_CODEX_STATE = path.join(TEST_TMPDIR, 'fake-codex-logged-in');
+export const FAKE_CLAUDE_BIN = path.join(TEST_TMPDIR, 'fake-claude-bin');
+export const FAKE_GH_STATE = path.join(TEST_TMPDIR, 'fake-gh-login');
+export const FAKE_TAILSCALE_STATE = path.join(TEST_TMPDIR, 'fake-tailscale.json');
+export const FAKE_CALENDAR_STATE = path.join(TEST_TMPDIR, 'fake-calendar.json');
 
 export const CREW_CATALOG = {
   claude: [
@@ -116,8 +107,8 @@ export const FAKE_ACP_MODES: Record<string, FakeAcpMode[]> = {
   ],
 };
 
-export const MAP_ROOT_PREFIX = path.join(realpathSync(os.tmpdir()), 'spark-map-real-');
-export const CLONE_TEST_ROOT = path.join(realpathSync(os.tmpdir()), `spark-clone-home-${slot}`);
+export const MAP_ROOT_PREFIX = path.join(TEST_TMPDIR, 'spark-map-real-');
+export const CLONE_TEST_ROOT = path.join(TEST_TMPDIR, 'spark-clone-home');
 
 export const SIGN_IN_FIXTURE = {
   id: '0199b1c2-7a10-7c3e-9f41-5d2e8a6b4c01',

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import request from 'supertest';
+import type request from 'supertest';
 import { expect, vi, type MockInstance } from 'vitest';
 import { z } from 'zod';
 import {
@@ -21,7 +21,7 @@ import type { GitHubAppConfig } from '../src/ship/github/app-config.ts';
 import { forgetAppTokens } from '../src/ship/github/app-tokens.ts';
 import { forgetPrRoutes } from '../src/ship/route-check.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
-import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
+import { createTestApp, localClient } from './app-support.ts';
 import { APP_CLIENT_ID, APP_SLUG, APP_USER_CODE } from './fake-github-app.ts';
 import {
   FAKE_GH,
@@ -84,7 +84,7 @@ export async function startAppWorld(options: { configured?: boolean } = {}): Pro
     },
   });
   const send = (method: 'post' | 'delete', url: string, body: object) =>
-    request(app)[method](url).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
+    localClient(app).send(method, url, body);
   return {
     t,
     stub,
@@ -104,7 +104,7 @@ export async function startAppWorld(options: { configured?: boolean } = {}): Pro
       app: appConfig,
       now,
     }),
-    get: (url) => request(app).get(url).set(LOCAL_HEADERS),
+    get: (url) => localClient(app).get(url),
     post: (url, body = {}) => send('post', url, body),
     del: (url) => send('delete', url, {}),
     async close() {
