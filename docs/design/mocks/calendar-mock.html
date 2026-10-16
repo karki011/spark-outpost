@@ -490,11 +490,14 @@ function setAct(name,on,a,b){var x=document.querySelector('[data-act="'+name+'"]
 document.querySelectorAll(".act").forEach(function(b){b.addEventListener("click",function(){
   var ev=findEvent(state.sel);if(!ev)return;var a=b.dataset.act;
   if(a==="open")toast("Opens "+ev.t+" in Calendar.app");
-  if(a==="chat"){document.getElementById("mText").value=ev.t+(ev.notes?"\n\n"+ev.notes:"");document.getElementById("modal").classList.add("on");document.getElementById("mText").focus()}
+  if(a==="chat")openModal(ev,b);
   if(a==="remind"){state.remind[ev.id]=!state.remind[ev.id];setAct("remind",state.remind[ev.id],"Set","Off");toast(state.remind[ev.id]?"Island will remind you at "+hm(ev.s-5):"Reminder removed")}
   if(a==="hold"){state.hold[ev.id]=!state.hold[ev.id];setAct("hold",state.hold[ev.id],"Held","Off");buildTimeline();toast(state.hold[ev.id]?"Non-urgent chimes held during "+ev.t:"Alerts on during "+ev.t)}
 })});
-function closeModal(){document.getElementById("modal").classList.remove("on")}
+var opener=null;
+function setInert(on){document.querySelectorAll(".app,.island-wrap,.sample").forEach(function(n){n.inert=on;if(on)n.setAttribute("aria-hidden","true");else n.removeAttribute("aria-hidden")})}
+function openModal(ev,from){opener=from;document.getElementById("mText").value=ev.t+(ev.notes?"\n\n"+ev.notes:"");document.getElementById("modal").classList.add("on");setInert(true);document.getElementById("mText").focus()}
+function closeModal(){var m=document.getElementById("modal");if(!m.classList.contains("on"))return;m.classList.remove("on");setInert(false);if(opener)opener.focus();opener=null}
 document.getElementById("mCancel").addEventListener("click",closeModal);
 document.getElementById("mStart").addEventListener("click",function(){closeModal();toast("Chat started (mock): the normal New chat confirm")});
 document.addEventListener("keydown",function(e){if(e.key==="Escape")closeModal()});
