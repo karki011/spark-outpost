@@ -13,6 +13,7 @@ import { api, queryKeys } from '../api/client.ts';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
 
 export const NEAR_LIMIT = 90;
+export const RING_SHOWN_FROM_PERCENT = 70;
 
 export interface ShownPlan {
   provider: PlanUsage['provider'];

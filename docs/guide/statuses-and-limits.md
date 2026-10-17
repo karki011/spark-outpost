@@ -83,7 +83,7 @@ With **Reduce motion** on, only faces change.
 
 ## Limits
 
-Spark caps no time, tool calls or cost for a turn. A Claude subscription gets a ring above **Pause** with each plan window's use and reset.
+Spark caps no time, tool calls or cost for a turn. A ring above **Pause** shows Claude plan use and resets once a window reaches 70%.
 
 | Limit                                | Value                                    |
 | ------------------------------------ | ---------------------------------------- |

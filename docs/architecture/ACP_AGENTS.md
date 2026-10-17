@@ -103,7 +103,7 @@ A chat linked to a project runs in Do mode when its agent mode (`overrides[provi
 
 ## Plan limits (October 16, 2026)
 
-The left bar's ring and the Work panel's **Cost** tab show how much of a Claude subscription's windows is used and when each resets. Display only: nothing waits, retries or stops on it.
+The Work panel's **Cost** tab shows how much of a Claude subscription's windows is used and when each resets; the left bar's ring shows the same once any window reaches 70% (`RING_SHOWN_FROM_PERCENT`, a display threshold, not a budget). Display only: nothing waits, retries or stops on it.
 
 - **Source.** The SDK's `rate_limit_event` (`SDKRateLimitInfo`), which claude-agent-acp 0.81.2 forwards as `_meta["_claude/rateLimit"]` on `usage_update`, and with Spark's patch on `session_info_update` when the turn has no usage yet ([PATCHES.md](PATCHES.md#a-plan-reading-is-never-dropped)). No other network call; `/api/oauth/usage` is never called.
 - **Fields.** Documented: `status`, `resetsAt` (unix seconds), `rateLimitType` (`five_hour`, `seven_day`, `seven_day_opus`, `seven_day_sonnet`, `seven_day_overage_included`, `overage`), `utilization`, `overageStatus`, `overageResetsAt`, `overageDisabledReason`, `isUsingOverage`, `overageInUse`, `surpassedThreshold`, `limitScope` (`service`, `channel`, `group_pool`), `errorCode`, `canUserPurchaseCredits`. Not in the `.d.ts` but in the CLI's own schema and in every live reading: `unifiedWindows` with `five_hour`, `seven_day` and, for some accounts, `seven_day_overage_included`, each `{ utilization, resetsAt }`. `utilization` is a fraction and may pass 1. The CLI says the windows are absent for API-key, Bedrock and Vertex sessions.

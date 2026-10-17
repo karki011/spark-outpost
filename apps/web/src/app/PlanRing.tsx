@@ -1,7 +1,14 @@
 import { useId } from 'react';
 import { providerName } from '@spark-outpost/contracts';
 import { tipText, useTooltip, type RichTip } from '../ui/Tooltip.tsx';
-import { asOfText, mostUsed, NEAR_LIMIT, planItems, usePlanUsage } from '../usage/plan-usage.ts';
+import {
+  asOfText,
+  mostUsed,
+  NEAR_LIMIT,
+  planItems,
+  RING_SHOWN_FROM_PERCENT,
+  usePlanUsage,
+} from '../usage/plan-usage.ts';
 import './plan-ring.css';
 
 const RADIUS = 8;
@@ -26,7 +33,7 @@ function Ring({ percent, full }: { percent: number; full: boolean }) {
 
 export function PlanRing() {
   const { plans, now } = usePlanUsage();
-  const plan = plans[0] ?? null;
+  const plan = plans.find((shown) => mostUsed(shown) >= RING_SHOWN_FROM_PERCENT) ?? null;
   const tip: RichTip = plan
     ? {
         lead: `${providerName(plan.provider)} plan`,
