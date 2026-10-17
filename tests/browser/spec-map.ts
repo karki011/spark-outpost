@@ -1,6 +1,7 @@
 export const SHELL_SPECS = [
   'accessibility',
   'connection',
+  'content-security-policy',
   'first-paint',
   'launch-token',
   'lazy-ui',
