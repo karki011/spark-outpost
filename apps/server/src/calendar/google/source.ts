@@ -50,7 +50,10 @@ export interface GoogleSource {
   signInFlow(): GoogleSignInFlow;
   cancelSignIn(): GoogleSignInFlow;
   signInSettled(): Promise<void>;
-  disconnect(accountId: string): Promise<{ found: boolean; revoked: boolean }>;
+  disconnect(
+    accountId: string,
+    shownElsewhere?: readonly string[],
+  ): Promise<{ found: boolean; revoked: boolean }>;
   refresh(): void;
   syncNow(): Promise<void>;
   onChanged(listener: () => void): void;
@@ -231,14 +234,19 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     signInFlow: () => signIn?.flow() ?? IDLE_FLOW,
     cancelSignIn: () => signIn?.cancel() ?? IDLE_FLOW,
     signInSettled: () => signIn?.settled() ?? Promise.resolve(),
-    async disconnect(accountId) {
+    async disconnect(accountId, shownElsewhere = []) {
       const account = accounts.get(accountId);
       const rows = account ? [account.row] : await googleAccounts(deps.db, deps.workspaceId);
       const row = rows.find((candidate) => candidate.id === accountId);
       if (!row) return { found: false, revoked: false };
       schedule(accountId, null);
       accounts.delete(accountId);
-      await forgetMarksOf(deps.db, deps.workspaceId, account ? accountUids(account) : []);
+      const kept = new Set([
+        ...shownElsewhere,
+        ...[...accounts.values()].flatMap((other) => accountUids(other)),
+      ]);
+      const gone = account ? accountUids(account).filter((uid) => !kept.has(uid)) : [];
+      await forgetMarksOf(deps.db, deps.workspaceId, gone);
       const secret = googleCalendarSecret(row.subject);
       const token = await deps.secrets.get(secret).catch(() => null);
       const revoked =

@@ -12,11 +12,15 @@ import {
   EMAIL,
   SUBJECT,
   googleHarness,
+  at,
+  macCopy,
   meeting,
   signIn,
+  soon,
   startSignIn,
   status,
   today,
+  upcoming,
   type Harness,
 } from './google-calendar-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
@@ -209,6 +213,43 @@ describe('Google tokens and disconnect', () => {
     const after = await status(h);
     expect(after.google.accounts).toEqual([]);
     expect(after.accounts).toEqual([]);
+  });
+
+  it('keeps a mark on an event macOS Calendar still shows when Google is disconnected', async () => {
+    h = googleHarness(t, { mac: true });
+    h.host.calendars = [
+      {
+        id: 'ek-google',
+        title: EMAIL,
+        sourceId: 'ek-src',
+        sourceTitle: 'Google',
+        sourceKind: 'caldav',
+        color: '#336699',
+        subscribed: false,
+        writable: true,
+        ownership: 'mine',
+      },
+    ];
+    const [start, end, later, last] = [at(60), at(90), at(120), at(150)];
+    h.host.events = [macCopy('shared@google.com', start, end)];
+    await h.client.send('post', '/api/calendar/connect');
+    h.fake.putEvent(SUBJECT, EMAIL, soon('shared', start, end));
+    h.fake.putEvent(SUBJECT, EMAIL, soon('google-only', later, last));
+    await signIn(h);
+    for (const event of await upcoming(h)) {
+      await h.client.send('put', '/api/calendar/marks', {
+        eventKey: event.key,
+        end: event.end,
+        kind: 'remind_5',
+        on: true,
+      });
+    }
+    const [account] = (await status(h)).google.accounts;
+    const removed = await h.client.send('delete', `/api/calendar/google/accounts/${account!.id}`);
+    expect(removed.body).toMatchObject({ message: null });
+    const { rows } = await t.db.query<{ uid: string }>('SELECT uid FROM calendar_marks');
+    expect(rows.map((row) => row.uid)).toEqual(['shared@google.com']);
+    expect((await upcoming(h)).find((event) => event.title === 'Shared')?.remind).toBe(true);
   });
 
   it('purges the Spark marks on its events when an account is disconnected', async () => {

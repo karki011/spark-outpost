@@ -61,7 +61,7 @@ Decided with the owner, 2026-10-16. Code in `apps/server/src/calendar/google/`; 
 
 **The card.** **Connections → Connectors → Calendar** lists sources: **macOS Calendar** (Connect, its accounts, **Disconnect macOS Calendar**) and **Google Calendar**, each account with its calendars and the same **Include**, **Use for nudges** and **Counts as busy** switches, **Sign in again** when needed, **Disconnect**, then **Add Google account**. While the build's Google app is unverified the card says "Google sign-in expires every 7 days until Spark's Google app is verified."
 
-**Disconnect** stops polling, posts the refresh token to `oauth2.googleapis.com/revoke`, deletes the keychain entry whatever Google answers, and deletes the account and its calendar choices; if Google didn't confirm, the card says to remove Spark at myaccount.google.com/permissions. **Settings → Reset** deletes every account's keychain entry, found by `sub` before the wipe.
+**Disconnect** stops polling, posts the refresh token to `oauth2.googleapis.com/revoke`, deletes the keychain entry whatever Google answers, deletes the account and its calendar choices, and deletes Spark's marks on its events unless macOS Calendar or another Google account still shows the same event; if Google didn't confirm, the card says to remove Spark at myaccount.google.com/permissions. **Settings → Reset** deletes every account's keychain entry, found by `sub` before the wipe.
 
 **Trust.** Google's answers are untrusted data: each is validated with zod, an invalid item is dropped, not the page, and titles and notes are shown as text. **Paired devices** get no route: every `/api/calendar/google/*` route is in `route-rules.ts`'s never list.
 

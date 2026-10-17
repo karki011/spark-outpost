@@ -132,6 +132,45 @@ export async function today(harness: Harness) {
   return calendarDaySchema.parse(response.body);
 }
 
+export function soon(id: string, start: string, end: string) {
+  return {
+    id,
+    iCalUID: `${id}@google.com`,
+    summary: id === 'shared' ? 'Shared' : id,
+    start: { dateTime: start },
+    end: { dateTime: end },
+  };
+}
+
+export async function upcoming(harness: Harness) {
+  const day = (start: number) => harness.client.get(`/api/calendar/day?date=${dateKey(start)}`);
+  const days = await Promise.all([day(Date.now()), day(Date.now() + 24 * 60 * MINUTE)]);
+  return days
+    .flatMap((response) => calendarDaySchema.parse(response.body).events)
+    .filter((event, index, all) => all.findIndex((other) => other.key === event.key) === index);
+}
+
+export function macCopy(uid: string, start: string, end: string): HelperEvent {
+  return {
+    id: `ek-${uid}`,
+    uid,
+    start,
+    end,
+    allDay: false,
+    title: 'Shared',
+    calendarId: 'ek-google',
+    url: null,
+    location: null,
+    noteLinks: [],
+    hasNotes: false,
+    attendeeCount: 2,
+    othersInvited: true,
+    myStatus: 'accepted',
+    availability: 'busy',
+    recurring: false,
+  };
+}
+
 export function meeting(id: string, afterNoon: number, extra: object = {}) {
   return {
     id,

@@ -158,7 +158,11 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
     }),
   );
 
-  router.use(googleCalendarRoutes({ google, status: () => calendarStatus(service) }));
+  const macUids = async () => {
+    const mac = await calendarState({ ...service, google: null });
+    return mac.events.map((event) => event.uid ?? event.id);
+  };
+  router.use(googleCalendarRoutes({ google, status: () => calendarStatus(service), macUids }));
 
   return router;
 }
