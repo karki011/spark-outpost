@@ -2,6 +2,15 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.19
+
+- Calendar: Today, in the left bar, shows your day from macOS Calendar next to your chats, with free blocks and a countdown to the next meeting. Home lists Upcoming meetings, and Join opens a Zoom, Google Meet, Microsoft Teams or Webex link in your browser; ⌘J joins the next one. Connect it under Settings → Connections → Connectors, then allow Spark Outpost under Privacy & Security → Calendars. Your calendar stays on this Mac.
+- Calendar: Spark Island reminds you before a meeting, can hold chimes during focus blocks or meetings and tells you afterwards what happened. Set it under Settings → Notifications.
+- Voice: push to talk with ⌥⇧V or the mic button, or Fn twice when macOS isn't using the 🌐 key. Dictate into a chat or Terminal session, start a chat in a project, or ask who needs you or what's running. Nothing is sent until you confirm. Turn it on under Settings → Voice; speech is turned into text on this Mac and audio is never stored.
+- Ask Spark: answers come from a fast model by default and Spark keeps one conversation with it, even after a restart. Pick its provider, model and effort under Settings → Spark assistant, where View conversation shows it.
+- Settings: sections sit in six groups, and Search settings finds any setting by name.
+- Fixes: pull request Refresh no longer reverts.
+
 ## 0.1.0-beta.18
 
 - Mac control: an agent can read another Mac app and press its buttons and menus, in one app per chat. Turn on Let agents control other Mac apps under Settings → Mac control, then allow Spark Outpost under Privacy & Security → Accessibility.
