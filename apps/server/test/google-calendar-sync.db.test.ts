@@ -95,6 +95,7 @@ describe('Google sync', () => {
   });
 
   it('backs off on rate limits and server errors, honouring Retry-After, then recovers', async () => {
+    h.fake.putEvent(SUBJECT, EMAIL, meeting('kept', 0));
     await signIn(h);
     h.fake.failNext('/calendar/v3/users/me/calendarList', {
       status: 403,
@@ -105,6 +106,7 @@ describe('Google sync', () => {
       state: 'error',
       message: 'Google asked Spark to slow down. Trying again soon.',
     });
+    expect(await titles()).toEqual(['kept']);
     await h.google.syncNow();
     expect((await status(h)).google.accounts[0]?.state).toBe('ready');
     expect(backoffMs(1, null, 0.5)).toBe(30_000);

@@ -34,6 +34,7 @@ export interface LiveAccount {
   state: GoogleAccountState;
   message: string | null;
   failures: number;
+  synced: boolean;
 }
 
 export function liveAccount(row: GoogleAccountRow): LiveAccount {
@@ -45,6 +46,7 @@ export function liveAccount(row: GoogleAccountRow): LiveAccount {
     state: row.needsSignIn ? 'sign_in_again' : 'syncing',
     message: row.needsSignIn ? SIGN_IN_AGAIN : null,
     failures: 0,
+    synced: false,
   };
 }
 
@@ -143,6 +145,7 @@ function failureMessage(error: unknown): string {
 async function signInAgain(deps: AccountDeps, account: LiveAccount): Promise<PollOutcome> {
   account.accessToken = null;
   account.calendars = new Map();
+  account.synced = false;
   account.state = 'sign_in_again';
   account.message = SIGN_IN_AGAIN;
   await markGoogleSignIn(deps.db, deps.workspaceId, account.row.id, true);
@@ -169,6 +172,7 @@ export async function pollAccount(
     account.state = 'ready';
     account.message = null;
     account.failures = 0;
+    account.synced = true;
     return { changed: changed || recovered, nextInMs: GOOGLE_POLL_MS };
   } catch (error) {
     if (error instanceof SignInAgain) return signInAgain(deps, account);

@@ -180,7 +180,8 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
         signIn: signIn?.flow() ?? IDLE_FLOW,
       };
     },
-    ready: () => [...accounts.values()].some((account) => account.state === 'ready'),
+    ready: () =>
+      [...accounts.values()].some((account) => account.synced && account.state !== 'sign_in_again'),
     window() {
       const window = googleWindow(now());
       const events: HelperEvent[] = [];

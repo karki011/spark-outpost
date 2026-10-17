@@ -16,12 +16,13 @@ const POLL_MS = 1500;
 
 export const ADD_GOOGLE_LABEL = 'Add Google account';
 
-function useGoogleSignIn(initial: GoogleSignInFlow) {
+function useGoogleSignIn(initial: GoogleSignInFlow, enabled: boolean) {
   const queryClient = useQueryClient();
   const flow = useQuery({
     queryKey: calendarKeys.googleSignIn,
     queryFn: calendarApi.googleSignIn,
     initialData: initial,
+    enabled,
     refetchInterval: (query) => (query.state.data?.status === 'waiting' ? POLL_MS : false),
   });
   const state = flow.data.status;
@@ -140,7 +141,7 @@ interface GoogleAccountsProps {
 
 export function GoogleAccounts({ status, accounts, onChange }: GoogleAccountsProps) {
   const google = status.google;
-  const { flow, start, cancel } = useGoogleSignIn(google.signIn);
+  const { flow, start, cancel } = useGoogleSignIn(google.signIn, google.available);
   const disconnect = useDisconnectGoogle();
   const [note, setNote] = useState<string | null>(null);
   if (!google.available && google.accounts.length === 0) return null;
