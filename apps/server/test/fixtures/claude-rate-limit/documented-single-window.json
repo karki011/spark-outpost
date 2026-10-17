@@ -1,0 +1,20 @@
+{
+  "sessionId": "redacted",
+  "update": {
+    "sessionUpdate": "usage_update",
+    "used": 41000,
+    "size": 1000000,
+    "cost": {
+      "amount": 0.27,
+      "currency": "USD"
+    },
+    "_meta": {
+      "_claude/rateLimit": {
+        "status": "allowed_warning",
+        "resetsAt": 1792425600,
+        "rateLimitType": "seven_day",
+        "utilization": 0.82
+      }
+    }
+  }
+}

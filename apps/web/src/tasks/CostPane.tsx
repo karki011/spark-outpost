@@ -6,6 +6,7 @@ import { CrewBlob } from '../crew/CrewBlob.tsx';
 import type { CrewAgent } from '../crew/crew-model.ts';
 import { CostText } from '../usage/CostText.tsx';
 import { formatCost } from '../usage/format.ts';
+import { PlanMeter } from '../usage/PlanMeter.tsx';
 import { costSummary, runIdentities, type CostRow, type CostSlice } from './cost-model.ts';
 import { useModelNamer } from './model-names.ts';
 import { SubagentCosts } from './SubagentCosts.tsx';
@@ -149,6 +150,7 @@ export function CostPane({ task, runs = [], agents = [], onAudit, conversationId
       {summary.slices.length > 0 && summary.costUsd !== null && summary.costUsd > 0 && (
         <CostBar slices={summary.slices} total={summary.costUsd} />
       )}
+      <PlanMeter providers={task.runs.map((run) => run.provider)} />
       <div className="wsec-h cost-h">
         <h3>By agent</h3>
         {onAudit && (

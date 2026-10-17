@@ -20,6 +20,7 @@ import {
   subagentsTurn,
 } from './fake-acp-subagents.ts';
 import { commandTurn, reportContext } from './fake-acp-context.ts';
+import { rateLimitTurn } from './fake-acp-rate-limit.ts';
 import {
   createFakeSession,
   legacySession,
@@ -230,6 +231,8 @@ async function turn(
   const commanded = await commandTurn(params.prompt, update, say);
   if (commanded) return commanded;
   if (text.includes('#silent')) return 'end_turn';
+  const limited = await rateLimitTurn(text, update, say);
+  if (limited) return limited;
   if (text.includes('#orphan ')) return orphanedCommandTurn(client, sessionId, text, signal);
   if (text.includes('#heldtitle')) return heldTitleTurn(say);
   if (text.includes('#subagentsask')) return subagentAsksTurn(client, sessionId, say);

@@ -92,6 +92,8 @@ describe('other common provider errors in plain words', () => {
     expect(kind("You've hit your usage limit. Try again at 4pm.", { category: 'limit' })).toBe(
       'quota',
     );
+    expect(kind('The Claude account has no available quota.', { category: 'limit' })).toBe('quota');
+    expect(kind('Claude is temporarily rate limited.', { category: 'limit' })).toBe('rate_limited');
     expect(kind(JSON.stringify({ error: { code: '1113', message: 'Insufficient balance' } }))).toBe(
       'quota',
     );

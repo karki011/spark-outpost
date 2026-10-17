@@ -36,6 +36,7 @@ export const LIVE_ROOTS: readonly string[] = [
   outcomeKeys.all[0],
   analyticsKeys.all[0],
   queryKeys.usageSummary[0],
+  queryKeys.planUsage[0],
   teammateKeys.all[0],
   ticketKeys.all[0],
   previewKeys.all[0],
@@ -57,6 +58,7 @@ const health: Invalidation = { queryKey: homeKeys.health, exact: true };
 const digest: Invalidation = { queryKey: homeKeys.digest, exact: true };
 const today: Invalidation = { queryKey: homeKeys.today, exact: true };
 const usage: Invalidation = { queryKey: queryKeys.usageSummary, exact: true };
+const planUsage: Invalidation = { queryKey: queryKeys.planUsage, exact: true };
 const analytics: Invalidation = { queryKey: analyticsKeys.all };
 const teammates: Invalidation = { queryKey: teammateKeys.all };
 const ticketInbox: Invalidation = { queryKey: ticketKeys.inbox, exact: true };
@@ -108,6 +110,7 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
         today,
         health,
         usage,
+        planUsage,
         analytics,
         outposts,
         ...outcome(event),

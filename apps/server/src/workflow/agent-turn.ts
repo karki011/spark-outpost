@@ -52,6 +52,7 @@ import { createCommandRecorder } from './command-recorder.ts';
 import { sparkCommandScope } from './command-scope.ts';
 import { createTurnEvents } from './turn-events.ts';
 import { createLiveCost } from '../usage/live-cost.ts';
+import { recordPlan, withResetTime } from '../usage/plan-limits.ts';
 import { turnSessionFor, type TurnSession } from './turn-session.ts';
 import { asAgentReads } from '../outposts/agent-prompt.ts';
 import { preambleDeps } from '../outposts/preamble-stores.ts';
@@ -423,6 +424,7 @@ export async function runAgentTurn(
       if (output.kind === 'account') {
         await recordAccount(deps.db, input.workspaceId, input.provider, output.account);
       }
+      if (output.kind === 'plan_limits') await recordPlan(deps.db, input, output);
       if (output.kind === 'text_delta') {
         const finalStarts = reply.mark(output.phase, replySoFar().held);
         if (output.newMessage) titles?.endMessage(redaction.pending());
@@ -466,7 +468,12 @@ export async function runAgentTurn(
     const reason = control.reason();
     if (reason === 'cancelled') return ended(result('cancelled'));
     await recordErrorDetails(deps.db, lease.runId, error).catch(() => undefined);
-    return ended(result('failed', failureMessage(error, reason)));
+    const failed = failureMessage(error, reason);
+    const { workspaceId, provider } = input;
+    const shown = await withResetTime(deps.db, workspaceId, provider, error, failed).catch(
+      () => failed,
+    );
+    return ended(result('failed', shown));
   } finally {
     modeWatch?.dispose();
     await inbox

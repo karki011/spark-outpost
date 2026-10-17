@@ -5,7 +5,9 @@ import type {
   ConfigValues,
   FileFocus,
   PlanDocumentSource,
+  LimitStatus,
   PlanEntry,
+  PlanWindowId,
   ProviderAccount,
   ProtocolDirection,
   RunMode,
@@ -155,6 +157,26 @@ export interface ProviderCapabilityReport {
 
 export type UsageReadings = 'start_and_end' | 'end';
 
+export interface PlanReading {
+  window: PlanWindowId;
+  used: number;
+  resetsAt: Date;
+  limited: boolean;
+}
+
+export interface ExtraUsageReading {
+  status: LimitStatus;
+  inUse: boolean;
+  disabledReason: string | null;
+  limitScope: string | null;
+  resetsAt: Date | null;
+}
+
+export interface PlanReport {
+  windows: PlanReading[];
+  extraUsage: ExtraUsageReading | null;
+}
+
 export interface SubagentReportedUsage {
   tokens?: number | undefined;
   toolUses?: number | undefined;
@@ -212,6 +234,7 @@ export type ProviderOutput =
       readings?: UsageReadings;
     }
   | { kind: 'tokens'; tokens: TokenUsage }
+  | ({ kind: 'plan_limits' } & PlanReport)
   | {
       kind: 'session_settings';
       model: string | null;
@@ -250,6 +273,15 @@ export class ProviderError extends Error {
   constructor(message: string, details: string | null = null) {
     super(message);
     this.details = details;
+  }
+}
+
+export class UsageLimitError extends ProviderError {
+  readonly agentName: string;
+
+  constructor(agentName: string, message: string, details: string | null) {
+    super(message, details);
+    this.agentName = agentName;
   }
 }
 

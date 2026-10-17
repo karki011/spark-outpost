@@ -9,6 +9,8 @@ import {
   UNTITLED_CONVERSATION,
   usageSummarySchema,
   type UsageSummary,
+  planUsageListSchema,
+  type PlanUsageList,
   chatSettingsSchema,
   providerCapabilitiesSchema,
   type ChatSettings,
@@ -195,6 +197,7 @@ export const api = {
       `/providers/${provider}/capabilities${refresh ? '?refresh=1' : ''}`,
     ),
   getUsageSummary: (): Promise<UsageSummary> => request(usageSummarySchema, '/usage/summary'),
+  getPlanUsage: (): Promise<PlanUsageList> => request(planUsageListSchema, '/usage/plan-limits'),
 };
 
 function draftConversation(id: string, settings: ChatSettings): ConversationDetail {
@@ -235,6 +238,7 @@ export const queryKeys = {
   allCapabilities: ['capabilities'] as const,
   capabilities: (provider: ProviderId) => ['capabilities', provider] as const,
   usageSummary: ['usage-summary'] as const,
+  planUsage: ['plan-usage'] as const,
 };
 
 export const CAPABILITIES_STALE_MS = 60 * 60 * 1000;

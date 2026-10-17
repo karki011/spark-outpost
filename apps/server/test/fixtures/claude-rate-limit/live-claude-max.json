@@ -1,0 +1,29 @@
+{
+  "sessionId": "redacted",
+  "update": {
+    "size": 200000,
+    "used": 17687,
+    "_meta": {
+      "_claude/model": "claude-opus-5-5",
+      "_claude/rateLimit": {
+        "status": "allowed",
+        "resetsAt": 1792212600,
+        "overageStatus": "rejected",
+        "rateLimitType": "five_hour",
+        "isUsingOverage": false,
+        "unifiedWindows": {
+          "five_hour": {
+            "resetsAt": 1792212600,
+            "utilization": 0.12
+          },
+          "seven_day": {
+            "resetsAt": 1792425600,
+            "utilization": 0.48
+          }
+        },
+        "overageDisabledReason": "out_of_credits"
+      }
+    },
+    "sessionUpdate": "usage_update"
+  }
+}

@@ -56,6 +56,8 @@ const RESET_TABLES = [
   'provider_connections',
   'provider_capabilities',
   'provider_model_access',
+  'provider_plan_limits',
+  'provider_extra_usage',
   'advisor_connections',
   'profiles',
   'github_tokens',

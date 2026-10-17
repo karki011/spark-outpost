@@ -5,6 +5,7 @@ import {
   createConversationRequestSchema,
   sendMessageRequestSchema,
   type ActiveRuns,
+  type PlanUsageList,
 } from '@spark-outpost/contracts';
 import { withTransaction, type Db } from '../persistence/db.ts';
 import {
@@ -24,6 +25,7 @@ import { isTerminalRun } from '../persistence/native-terminal-turns.ts';
 import { loadOrchestration } from '../persistence/orchestrations.ts';
 import { advisorUsageSummary } from '../persistence/advice.ts';
 import { EMPTY_USAGE_SUMMARY, usageSummary } from '../persistence/usage.ts';
+import { planUsage } from '../usage/plan-limits.ts';
 import { assistantConversationId } from '../companion/assistant-settings.ts';
 import { categoryUsage } from '../persistence/category-usage.ts';
 import { ConversationMissingError } from '../persistence/chat-settings.ts';
@@ -132,6 +134,11 @@ export function apiRoutes(deps: RouteDeps): Router {
       categoryUsage(db, workspaceId, only),
     ]);
     res.json({ ...summary, advisors, byCategory });
+  });
+
+  router.get('/usage/plan-limits', async (_req, res) => {
+    const list: PlanUsageList = { plans: await planUsage(db, workspaceId) };
+    res.json(list);
   });
 
   router.get('/runs/active', async (_req, res) => {

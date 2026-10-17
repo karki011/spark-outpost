@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ConnectableId, ConnectionMethod } from '@spark-outpost/contracts';
-import { ApiError } from '../api/client.ts';
+import { ApiError, queryKeys } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { GracePeriodBar } from '../ui/GracePeriodBar.tsx';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
@@ -24,6 +24,7 @@ function useGracefulDisconnect(providerId: ConnectableId, onRefused: () => void)
   const disconnect = async () => {
     try {
       queryClient.setQueryData(setupKey, await setupApi.disconnect(providerId));
+      void queryClient.invalidateQueries({ queryKey: queryKeys.planUsage, exact: true });
       setError(null);
     } catch (failure) {
       if (!(failure instanceof ApiError)) throw failure;

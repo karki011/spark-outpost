@@ -1,12 +1,13 @@
 import { PROTOCOL_VERSION, RequestError, type InitializeResponse } from '@agentclientprotocol/sdk';
 import { redactText } from '../../audit/redact.ts';
-import { ModelRejectedError, ProviderError } from '../../providers/provider.ts';
+import { ModelRejectedError, ProviderError, UsageLimitError } from '../../providers/provider.ts';
 import { AgentExitedError } from './agent-process.ts';
 import { objectFields } from './object-fields.ts';
 import {
   classifyFailure,
   failureText,
   plainDetail,
+  type FailureKind,
   type FailureSignal,
 } from './provider-failures.ts';
 import type { AgentFailure } from './session-updates.ts';
@@ -14,6 +15,7 @@ import type { AgentFailure } from './session-updates.ts';
 const AUTH_REQUIRED = -32000;
 const MAX_DETAIL = 300;
 const MAX_RAW = 2000;
+const LIMIT_KINDS = new Set<FailureKind>(['quota', 'rate_limited']);
 
 function errorText(error: unknown): string {
   if (!(error instanceof Error)) return String(error);
@@ -55,7 +57,9 @@ function classified(
   if (found.kind === 'model_unsupported') {
     return new ModelRejectedError(agentName, found.model, details);
   }
-  return new ProviderError(failureText(found.kind, agentName), details);
+  const message = failureText(found.kind, agentName);
+  if (LIMIT_KINDS.has(found.kind)) return new UsageLimitError(agentName, message, details);
+  return new ProviderError(message, details);
 }
 
 export function namesCause(error: unknown): boolean {

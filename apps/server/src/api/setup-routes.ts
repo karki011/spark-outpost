@@ -3,6 +3,7 @@ import { isRemote } from '../remote/principal.ts';
 import { AgentInstructionsError } from '../setup/agent-instructions.ts';
 import { Router, type Request, type Response } from 'express';
 import { forgetRejectedModels } from '../model-access/store.ts';
+import { forgetPlanUsage } from '../usage/plan-limits.ts';
 import {
   advisorIdSchema,
   connectableIdSchema,
@@ -159,6 +160,7 @@ export function setupRoutes(deps: SetupDeps): Router {
         else await secrets.delete(provider);
         const connection = await saveVerified(provider, verified);
         await forgetRejectedModels(db, workspaceId, provider);
+        await forgetPlanUsage(db, workspaceId, provider);
         writeEvent(res, { type: 'connected', connection });
       } catch (error) {
         if (!(error instanceof KeychainWaitingError)) throw error;
@@ -188,6 +190,7 @@ export function setupRoutes(deps: SetupDeps): Router {
     const advisor = advisorIdSchema.safeParse(provider);
     if (advisor.success) await disconnectAdvisor(db, workspaceId, advisor.data);
     else await disconnectProvider(db, workspaceId, providerIdSchema.parse(provider));
+    await forgetPlanUsage(db, workspaceId, provider);
     await secrets.delete(provider);
     res.json(setupStateFor(res, await setupState()));
   });

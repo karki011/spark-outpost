@@ -1,0 +1,87 @@
+.plan-meters {
+  margin: 16px 0 0;
+}
+
+.pm-h {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.plan-meter + .plan-meter {
+  margin-top: 14px;
+}
+
+.pm-rows {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pm-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.pm-name {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.pm-used {
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-bar {
+  grid-column: 1 / -1;
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--raise);
+  overflow: hidden;
+}
+
+.pm-bar i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transform-origin: left;
+  transition: transform 0.25s var(--out);
+}
+
+.pm-row.full .pm-bar i {
+  background: var(--warn);
+}
+
+.pm-reset {
+  grid-column: 1 / -1;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-extra {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.pm-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pm-bar i {
+    transition: none;
+  }
+}
