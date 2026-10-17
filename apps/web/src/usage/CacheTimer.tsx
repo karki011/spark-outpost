@@ -11,7 +11,7 @@ function useCacheClock(last: PromptCacheLast): number {
   useEffect(() => {
     const next = nextCacheChange(last, now);
     if (next === null) return;
-    const timer = setTimeout(() => setNow(Date.now()), Math.max(0, next - Date.now()) + 50);
+    const timer = setTimeout(() => setNow(Date.now()), Math.max(0, next - Date.now()));
     return () => clearTimeout(timer);
   }, [last, now]);
   return now;

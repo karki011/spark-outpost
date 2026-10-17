@@ -76,6 +76,7 @@ describe('the Spark mod’s turn facts', () => {
         cacheRead: 900,
         cacheWrite: 100,
         costUsd: 0.25,
+        at: FACT_AT,
       },
       {
         kind: 'turn_end',

@@ -1,0 +1,12 @@
+{
+  "session_id": "redacted",
+  "transcript_path": "/fixture/projects/redacted.jsonl",
+  "cwd": "/fixture/work",
+  "scratchpad_dir": "/fixture/scratchpad",
+  "hook_event_name": "SessionStart",
+  "source": "resume",
+  "seconds_since_last_response": 1245,
+  "context_tokens": 38693,
+  "prompt_cache_likely_expired": false,
+  "estimated_cache_write_usd": 0.0077
+}
