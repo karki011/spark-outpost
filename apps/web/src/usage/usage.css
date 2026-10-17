@@ -235,7 +235,10 @@
 }
 
 .cache-timer {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   padding: 2px 6px;
   border-radius: var(--r-sm);
   font-size: 12px;
