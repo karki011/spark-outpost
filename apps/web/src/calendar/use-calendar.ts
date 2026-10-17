@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   CalendarChoicePatch,
+  CalendarEvent,
   CalendarSettingsPatch,
   CalendarStatus,
 } from '@spark-outpost/contracts';
@@ -49,6 +50,31 @@ export function useCalendarDay(date: string, enabled: boolean) {
     queryFn: () => calendarApi.day(date),
     enabled,
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useCalendarRange(from: string, to: string) {
+  return useQuery({
+    queryKey: calendarKeys.range(from, to),
+    queryFn: () => calendarApi.range(from, to),
+    placeholderData: keepPreviousData,
+  });
+}
+
+const DETAIL_STALE_MS = 5 * 60_000;
+
+export function wantsDetail(event: CalendarEvent): boolean {
+  return event.hasNotes || event.attendeeCount > 1;
+}
+
+export function useEventDetail(event: CalendarEvent, enabled = true) {
+  const occurrence = { eventId: event.id, start: event.start };
+  return useQuery({
+    queryKey: calendarKeys.detail(occurrence),
+    queryFn: () => calendarApi.detail(occurrence),
+    enabled: enabled && wantsDetail(event),
+    staleTime: DETAIL_STALE_MS,
+    retry: false,
   });
 }
 

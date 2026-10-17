@@ -47,8 +47,8 @@ func seed(store: EKEventStore, statePath: String, oneIn: Int?) throws -> [String
     for calendar in store.calendars(for: .event) where calendar.source?.sourceIdentifier == source.sourceIdentifier && isSeededCalendar(calendar) {
         try store.removeCalendar(calendar, commit: false)
     }
-    let test = try makeCalendar(testCalendarTitle, source: source, store: store)
-    let family = try makeCalendar(familyCalendarTitle, source: source, store: store)
+    let test = try makeCalendar(testCalendarTitle, color: testColor, source: source, store: store)
+    let family = try makeCalendar(familyCalendarTitle, color: familyColor, source: source, store: store)
     let now = Date()
     if let minutes = oneIn {
         let standup = SeedEvent(title: "Standup", from: minutes, to: minutes + 15, notes: "Daily sync https://acme.zoom.us/j/123456789")
@@ -58,6 +58,7 @@ func seed(store: EKEventStore, statePath: String, oneIn: Int?) throws -> [String
         for event in familyEvents { try save(event, in: family, now: now, store: store) }
         try saveAllDay(in: test, now: now, store: store)
         try saveDailyCheckIn(in: test, now: now, store: store)
+        try saveSpread(test: test, family: family, now: now, store: store)
     }
     try store.commit()
     let calendars = [test, family]
@@ -66,9 +67,13 @@ func seed(store: EKEventStore, statePath: String, oneIn: Int?) throws -> [String
     return ["ok": true, "calendars": calendars.map { ["id": $0.calendarIdentifier, "title": $0.title] }]
 }
 
-private func makeCalendar(_ title: String, source: EKSource, store: EKEventStore) throws -> EKCalendar {
+private let testColor = CGColor(red: 0.16, green: 0.45, blue: 0.95, alpha: 1)
+private let familyColor = CGColor(red: 0.95, green: 0.55, blue: 0.16, alpha: 1)
+
+private func makeCalendar(_ title: String, color: CGColor, source: EKSource, store: EKEventStore) throws -> EKCalendar {
     let calendar = EKCalendar(for: .event, eventStore: store)
     calendar.title = title
+    calendar.cgColor = color
     calendar.source = source
     try store.saveCalendar(calendar, commit: false)
     return calendar

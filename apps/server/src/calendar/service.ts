@@ -1,4 +1,5 @@
 import {
+  CALENDAR_ATTENDEES_MAX,
   CALENDAR_DEFAULT_SETTINGS,
   addLocalDays,
   dayShape,
@@ -7,6 +8,7 @@ import {
   isMeeting,
   localDayStart,
   mergeEvents,
+  spanOf,
   type CalendarAccount,
   type CalendarAuthorization,
   type CalendarChoice,
@@ -16,12 +18,15 @@ import {
   type CalendarGoogleStatus,
   type CalendarHelperState,
   type CalendarNow,
+  type CalendarRange,
+  type CalendarSpan,
   type CalendarStatus,
 } from '@spark-outpost/contracts';
 import { withTransaction, type Db } from '../persistence/db.ts';
 import type { CalendarHost } from './host-client.ts';
 import { googleSourceId } from './google/map.ts';
 import type { GoogleSource } from './google/source.ts';
+import { GOOGLE_WINDOW_DAYS_AFTER, GOOGLE_WINDOW_DAYS_BEFORE } from './google/sync.ts';
 import { planNudges, type PlannerChat } from './planner.ts';
 import { lostNotice, rematchCalendars } from './rematch.ts';
 import {
@@ -171,22 +176,44 @@ function googleAccountOf(
   );
 }
 
-async function macEvents(deps: CalendarDeps, reading: Reading) {
+async function macEvents(deps: CalendarDeps, reading: Reading, range: CalendarSpan | null) {
   if (!readable(reading) || !deps.host) return { choices: [], events: [], truncated: false };
   const choices = await syncCalendars(deps);
-  const window = await deps.host.request({ op: 'window' });
+  const window = range
+    ? await deps.host.request({
+        op: 'range',
+        from: new Date(range.start).toISOString(),
+        to: new Date(range.end).toISOString(),
+      })
+    : await deps.host.request({ op: 'window' });
   return { choices, events: window.events, truncated: window.truncated };
 }
 
-export async function calendarState(deps: CalendarDeps): Promise<CalendarState> {
+async function googleEvents(deps: CalendarDeps, range: CalendarSpan | null) {
+  if (!deps.google) return { events: [], truncated: false };
+  return range ? deps.google.range(range.start, range.end) : deps.google.window();
+}
+
+export function inEventWindow(range: CalendarSpan, now: number): boolean {
+  const today = localDayStart(now);
+  return (
+    range.start >= addLocalDays(today, -GOOGLE_WINDOW_DAYS_BEFORE) &&
+    range.end <= addLocalDays(today, GOOGLE_WINDOW_DAYS_AFTER)
+  );
+}
+
+export async function calendarState(
+  deps: CalendarDeps,
+  range: CalendarSpan | null = null,
+): Promise<CalendarState> {
   await deps.google?.reconcile();
   const now = deps.now?.() ?? Date.now();
   const connection = await calendarConnection(deps.db, deps.workspaceId);
   const reading = connection.connected
     ? await readHost(deps)
     : { connected: false, authorization: null, helper: null };
-  const mac = await macEvents(deps, reading);
-  const google = deps.google?.window() ?? { events: [], truncated: false };
+  const mac = await macEvents(deps, reading, range);
+  const google = await googleEvents(deps, range);
   const googleReady = deps.google?.ready() ?? false;
   const choices = [...mac.choices, ...(googleReady ? await googleChoices(deps) : [])];
   const active = readable(reading) || googleReady;
@@ -213,8 +240,13 @@ export async function calendarState(deps: CalendarDeps): Promise<CalendarState> 
 
 const WEEK_DAYS = 7;
 
-export function calendarDay(state: CalendarState, dayStart: number, now: number): CalendarDay {
-  const events = eventsOnDay(state.events, dayStart);
+export function calendarDay(
+  state: CalendarState,
+  dayStart: number,
+  now: number,
+  dayState: CalendarState = state,
+): CalendarDay {
+  const events = eventsOnDay(dayState.events, dayStart);
   const today = localDayStart(now);
   const week = Array.from({ length: WEEK_DAYS }, (_, index) => {
     const start = addLocalDays(today, index);
@@ -232,6 +264,27 @@ export function calendarDay(state: CalendarState, dayStart: number, now: number)
     free: freeBlocks(events, dayStart),
     shape: dayShape(events, dayStart),
     week,
+    calendars: state.choices.filter((choice) => choice.include),
+    truncated: state.truncated || dayState.truncated,
+  };
+}
+
+export function calendarRange(
+  state: CalendarState,
+  range: CalendarSpan,
+  now: number,
+): CalendarRange {
+  const events = state.events
+    .filter((event) => {
+      const span = spanOf(event);
+      return span.start < range.end && span.end > range.start;
+    })
+    .toSorted((a, b) => spanOf(a).start - spanOf(b).start);
+  return {
+    from: dateKey(range.start),
+    to: dateKey(range.end),
+    today: dateKey(localDayStart(now)),
+    events,
     calendars: state.choices.filter((choice) => choice.include),
     truncated: state.truncated,
   };
@@ -274,5 +327,9 @@ export async function eventDetail(
   occurrence: { eventId: string; start: string },
 ): Promise<CalendarEventDetail> {
   const detail = await host.request({ op: 'event', ...occurrence });
-  return { title: detail.event.title, notes: detail.notes, link: null };
+  const attendees = detail.attendees
+    .filter((attendee) => !attendee.isMe && attendee.name.trim())
+    .map((attendee) => attendee.name.trim())
+    .slice(0, CALENDAR_ATTENDEES_MAX);
+  return { title: detail.event.title, notes: detail.notes, link: null, attendees };
 }

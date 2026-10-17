@@ -54,6 +54,7 @@ export function macHost(connected: boolean): MacHost {
       if (request.op === 'window') {
         return { events: host.events, truncated: false, from: at(-3000), to: at(15000) };
       }
+      if (request.op === 'range') return { events: [], truncated: false };
       return { stopped: true };
     },
   };

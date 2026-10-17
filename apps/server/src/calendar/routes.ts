@@ -1,5 +1,7 @@
 import { Router, type Response } from 'express';
 import {
+  CALENDAR_RANGE_MAX_DAYS,
+  addLocalDays,
   calendarChoicePatchSchema,
   calendarMarkRequestSchema,
   calendarOccurrenceSchema,
@@ -15,10 +17,12 @@ import { CalendarHostError, type CalendarHost } from './host-client.ts';
 import {
   calendarDay,
   calendarNow,
+  calendarRange,
   calendarState,
   calendarStatus,
   dayFromKey,
   eventDetail,
+  inEventWindow,
   plannerChats,
   syncCalendars,
 } from './service.ts';
@@ -41,6 +45,22 @@ const HOST_STATUS: Record<CalendarHostError['code'], number> = {
   failed: 502,
   timeout: 504,
 };
+
+function dateParam(raw: unknown, name: string): number {
+  const day = typeof raw === 'string' ? dayFromKey(raw) : null;
+  if (day === null) throw new BadRequestError(`${name} must be YYYY-MM-DD.`);
+  return day;
+}
+
+function rangeParams(query: Record<string, unknown>): { start: number; end: number } {
+  const start = dateParam(query.from, 'from');
+  const end = dateParam(query.to, 'to');
+  if (end <= start) throw new BadRequestError('to must be after from.');
+  if (end > addLocalDays(start, CALENDAR_RANGE_MAX_DAYS)) {
+    throw new BadRequestError(`A range is at most ${CALENDAR_RANGE_MAX_DAYS} days.`);
+  }
+  return { start, end };
+}
 
 async function guarded(res: Response, work: () => Promise<unknown>): Promise<void> {
   try {
@@ -120,7 +140,20 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
       const raw = typeof req.query.date === 'string' ? req.query.date : null;
       const day = raw === null ? localDayStart(now()) : dayFromKey(raw);
       if (day === null) throw new BadRequestError('The date must be YYYY-MM-DD.');
-      return calendarDay(await calendarState(service), day, now());
+      const state = await calendarState(service);
+      const span = { start: day, end: addLocalDays(day, 1) };
+      if (inEventWindow(span, now())) return calendarDay(state, day, now());
+      return calendarDay(state, day, now(), await calendarState(service, span));
+    }),
+  );
+
+  router.get('/calendar/range', (req, res) =>
+    guarded(res, async () => {
+      const range = rangeParams(req.query);
+      const state = inEventWindow(range, now())
+        ? await calendarState(service)
+        : await calendarState(service, range);
+      return calendarRange(state, range, now());
     }),
   );
 

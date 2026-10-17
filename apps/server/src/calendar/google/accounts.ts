@@ -3,12 +3,18 @@ import { withTransaction, type Db } from '../../persistence/db.ts';
 import { googleCalendarSecret, type SecretStore } from '../../setup/secrets.ts';
 import { rematchCalendars } from '../rematch.ts';
 import { lockChoices, replaceChoices, savedChoices } from '../store.ts';
-import { GoogleApiError, listGoogleCalendars } from './api.ts';
+import { GoogleApiError, listGoogleCalendars, type GoogleApiDeps } from './api.ts';
 import type { GoogleClientConfig } from './config.ts';
 import { mapGoogleCalendar } from './map.ts';
 import { GoogleAuthError, refreshGoogleAccess } from './oauth.ts';
 import { markGoogleSignIn, type GoogleAccountRow } from './store.ts';
-import { googleWindow, syncCalendar, type CalendarSync } from './sync.ts';
+import {
+  fullSync,
+  googleWindow,
+  syncCalendar,
+  type CalendarSync,
+  type GoogleWindow,
+} from './sync.ts';
 
 export const GOOGLE_POLL_MS = 3 * 60_000;
 export const GOOGLE_BACKOFF_START_MS = 30_000;
@@ -119,6 +125,39 @@ async function pollWith(deps: AccountDeps, account: LiveAccount, token: string) 
   changed ||= [...account.calendars.keys()].some((calendarId) => !next.has(calendarId));
   account.calendars = next;
   return changed;
+}
+
+async function rangeWith(account: LiveAccount, api: GoogleApiDeps, range: GoogleWindow) {
+  const found = new Map<string, CalendarSync>();
+  for (const calendarId of account.calendars.keys()) {
+    try {
+      found.set(calendarId, await fullSync(api, { accountId: account.row.id, calendarId }, range));
+    } catch (error) {
+      const skip =
+        error instanceof GoogleApiError && ['forbidden', 'not_found'].includes(error.kind);
+      if (!skip) throw error;
+    }
+  }
+  return found;
+}
+
+export async function accountRange(
+  deps: AccountDeps,
+  account: LiveAccount,
+  range: GoogleWindow,
+): Promise<Map<string, CalendarSync>> {
+  const api = (token: string) => ({
+    fetch: deps.fetch,
+    apiUrl: deps.client.apiUrl,
+    accessToken: token,
+  });
+  try {
+    return await rangeWith(account, api(await accessToken(deps, account)), range);
+  } catch (error) {
+    if (!(error instanceof GoogleApiError) || error.kind !== 'unauthorized') throw error;
+    account.accessToken = null;
+    return rangeWith(account, api(await accessToken(deps, account)), range);
+  }
 }
 
 export function backoffMs(failures: number, retryAfterMs: number | null, random: number): number {

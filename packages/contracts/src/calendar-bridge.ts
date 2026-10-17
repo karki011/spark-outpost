@@ -19,6 +19,11 @@ export const calendarHostRequestSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('request') }),
   z.object({ op: z.literal('calendars') }),
   z.object({ op: z.literal('window') }),
+  z.object({
+    op: z.literal('range'),
+    from: z.iso.datetime({ offset: true }),
+    to: z.iso.datetime({ offset: true }),
+  }),
   z.object({ op: z.literal('event'), ...occurrence }),
   z.object({ op: z.literal('open'), ...occurrence }),
   z.object({ op: z.literal('open_settings') }),
@@ -42,6 +47,10 @@ export const calendarHostResultSchemas = {
     truncated: z.boolean(),
     from: z.iso.datetime({ offset: true }),
     to: z.iso.datetime({ offset: true }),
+  }),
+  range: z.object({
+    events: z.array(helperEventSchema).max(CALENDAR_EVENTS_MAX),
+    truncated: z.boolean(),
   }),
   event: helperEventDetailSchema,
   open: z.object({ opened: z.boolean() }),

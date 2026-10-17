@@ -166,6 +166,7 @@ POST /api/calendar/open-settings
 PATCH /api/calendar/calendars/:key
 PATCH /api/calendar/settings
 GET /api/calendar/day
+GET /api/calendar/range
 GET /api/calendar/now
 PUT /api/calendar/marks
 POST /api/calendar/open

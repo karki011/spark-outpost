@@ -76,6 +76,12 @@ async function openToday(page: Page) {
   await expect(today(page)).toBeVisible();
 }
 
+async function openTodayDay(page: Page) {
+  await openToday(page);
+  await today(page).getByRole('radio', { name: 'Day' }).click();
+  await expect(today(page).getByRole('group', { name: 'This week' })).toBeVisible();
+}
+
 async function recordOpens(page: Page) {
   await page.addInitScript(() => {
     const opened: string[] = [];
@@ -170,7 +176,7 @@ test('asks to choose calendars when none is included', async ({ page }) => {
 
 test('merges both calendars, filters one out and shows another day', async ({ page }) => {
   await connect(page);
-  await openToday(page);
+  await openTodayDay(page);
   await expect(today(page).getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   await expect(today(page)).toContainText(/(Heavy|Balanced|Light|Clear) day · meetings/);
   await expect(event(page, 'Shared invite')).toHaveCount(1);
@@ -218,7 +224,7 @@ test('joins only an open meeting, from the panel and with ⌘J', async ({ page }
   const customer = events.find((item) => item.title === 'Customer call')!;
   expect(joinOpen(spanOf(standup), fakeNow())).toBe(true);
   expect(joinOpen(spanOf(customer), fakeNow())).toBe(false);
-  await openToday(page);
+  await openTodayDay(page);
 
   await event(page, 'Customer call').focus();
   await page.keyboard.press('Enter');
@@ -250,7 +256,7 @@ test('the resting island names the next meeting and joins it', async ({ page }) 
 
 test('sets Remind me and Hold alerts as Spark marks', async ({ page }) => {
   await connect(page);
-  await openToday(page);
+  await openTodayDay(page);
   await event(page, 'Customer call').click();
   const panel = today(page).getByRole('region', { name: 'Customer call' });
   const remind = panel.getByRole('button', { name: /^Remind me 5 min before/ });
@@ -261,6 +267,7 @@ test('sets Remind me and Hold alerts as Spark marks', async ({ page }) => {
   await expect(hold).toHaveAttribute('aria-pressed', 'true');
   await expect(event(page, 'Customer call')).toHaveAccessibleName(/alerts held, reminder/);
   await page.reload();
+  await today(page).getByRole('radio', { name: 'Day' }).click();
   await event(page, 'Customer call').click();
   await expect(remind).toHaveAttribute('aria-pressed', 'true');
   await hold.click();
@@ -269,7 +276,7 @@ test('sets Remind me and Hold alerts as Spark marks', async ({ page }) => {
 
 test('starts a prefilled New chat for an event and sends nothing', async ({ page }) => {
   await connect(page);
-  await openToday(page);
+  await openTodayDay(page);
   await event(page, 'Standup').click();
   await today(page)
     .getByRole('button', { name: /^Start a chat for this/ })
@@ -347,7 +354,7 @@ test('lists the calendar rows in Notifications and in Settings search', async ({
 
 test('has no serious accessibility problems on Today', async ({ page }) => {
   await connect(page);
-  await openToday(page);
+  await openTodayDay(page);
   await expect(today(page).getByRole('group', { name: 'This week' })).toBeVisible();
   const first = today(page).locator('.tl-ev').first();
   if (await first.count()) await first.click();

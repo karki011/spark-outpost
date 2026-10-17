@@ -3,6 +3,7 @@ import {
   calendarDaySchema,
   calendarEventDetailSchema,
   calendarNowSchema,
+  calendarRangeSchema,
   calendarSettingsSchema,
   calendarStatusSchema,
   googleSignInFlowSchema,
@@ -12,6 +13,7 @@ import {
   type CalendarMarkRequest,
   type CalendarNow,
   type CalendarOccurrence,
+  type CalendarRange,
   type CalendarSettings,
   type CalendarSettingsPatch,
   type CalendarStatus,
@@ -24,6 +26,9 @@ export const calendarKeys = {
   status: ['calendar', 'status'] as const,
   now: ['calendar', 'now'] as const,
   day: (date: string) => ['calendar', 'day', date] as const,
+  range: (from: string, to: string) => ['calendar', 'range', from, to] as const,
+  detail: (occurrence: CalendarOccurrence) =>
+    ['calendar', 'detail', occurrence.eventId, occurrence.start] as const,
   googleSignIn: ['calendar', 'google-sign-in'] as const,
 };
 
@@ -53,6 +58,8 @@ export const calendarApi = {
     }),
   day: (date: string): Promise<CalendarDay> =>
     request(calendarDaySchema, `/calendar/day?${new URLSearchParams({ date }).toString()}`),
+  range: (from: string, to: string): Promise<CalendarRange> =>
+    request(calendarRangeSchema, `/calendar/range?${new URLSearchParams({ from, to }).toString()}`),
   now: (): Promise<CalendarNow> => request(calendarNowSchema, '/calendar/now'),
   mark: (mark: CalendarMarkRequest): Promise<{ ok: true }> =>
     request(ok, '/calendar/marks', { method: 'PUT', body: JSON.stringify(mark) }),

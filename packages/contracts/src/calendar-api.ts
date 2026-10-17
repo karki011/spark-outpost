@@ -10,6 +10,8 @@ export const CALENDAR_REMIND_MINUTES = 5;
 export const CALENDAR_CAPTURE_WINDOW_MS = 15 * 60_000;
 export const CALENDAR_UPCOMING_COUNT = 3;
 export const CALENDAR_GROUP_MAX = 20;
+export const CALENDAR_RANGE_MAX_DAYS = 62;
+export const CALENDAR_ATTENDEES_MAX = 100;
 
 export const calendarHoldRuleSchema = z.enum(['never', 'focus', 'meetings']);
 export type CalendarHoldRule = z.infer<typeof calendarHoldRuleSchema>;
@@ -91,6 +93,16 @@ export const calendarDaySchema = z.object({
   truncated: z.boolean(),
 });
 export type CalendarDay = z.infer<typeof calendarDaySchema>;
+
+export const calendarRangeSchema = z.object({
+  from: z.iso.date(),
+  to: z.iso.date(),
+  today: z.iso.date(),
+  events: z.array(calendarEventSchema),
+  calendars: z.array(calendarChoiceSchema),
+  truncated: z.boolean(),
+});
+export type CalendarRange = z.infer<typeof calendarRangeSchema>;
 
 const nudgeBase = {
   eventKey: z.string().max(600),
@@ -177,5 +189,6 @@ export const calendarEventDetailSchema = z.object({
   title: z.string().max(1_000),
   notes: z.string().max(20_000),
   link: z.url().nullable(),
+  attendees: z.array(z.string().max(300)).max(CALENDAR_ATTENDEES_MAX),
 });
 export type CalendarEventDetail = z.infer<typeof calendarEventDetailSchema>;

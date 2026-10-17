@@ -45,6 +45,8 @@ const when = z.object({
 });
 
 const attendee = z.object({
+  displayName: z.string().max(1000).optional(),
+  email: z.string().max(1000).optional(),
   self: z.boolean().optional(),
   resource: z.boolean().optional(),
   responseStatus: z.string().optional(),

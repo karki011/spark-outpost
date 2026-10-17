@@ -59,6 +59,12 @@ const CALENDARS: HelperCalendar[] = [
   },
 ];
 
+const STANDUP_ATTENDEES = [
+  { name: 'Spark Tester', isMe: true, status: 'accepted' as const },
+  { name: 'Alex Wong', isMe: false, status: 'accepted' as const },
+  { name: 'Ivan Marsh', isMe: false, status: 'tentative' as const },
+];
+
 function state(): FakeState {
   const file = process.env.SPARK_FAKE_CALENDAR_STATE;
   if (!file) return {};
@@ -219,13 +225,21 @@ function answer(request: CalendarHostRequest): unknown {
     };
   }
   if (request.op === 'window') return window();
+  if (request.op === 'range') {
+    const from = Date.parse(request.from);
+    const to = Date.parse(request.to);
+    const inside = events().filter(
+      (item) => Date.parse(item.start) < to && Date.parse(item.end) > from,
+    );
+    return { events: inside, truncated: false };
+  }
   if (request.op === 'open') return { opened: true };
   const found = events().find((item) => item.id === request.eventId);
   if (!found) return failure('not_found', 'That event is gone.');
   return {
     event: found,
     notes: found.hasNotes ? 'Daily sync: what changed since yesterday.' : '',
-    attendees: [],
+    attendees: found.id === 'standup' ? STANDUP_ATTENDEES : [],
     organizerIsMe: false,
   };
 }

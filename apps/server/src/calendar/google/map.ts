@@ -1,4 +1,5 @@
 import {
+  CALENDAR_ATTENDEES_MAX,
   CALENDAR_NOTE_LINKS_MAX,
   GOOGLE_EVENT_ID_PREFIX,
   type CalendarMyStatus,
@@ -154,6 +155,16 @@ export function mapGoogleEvent(
     availability: event.transparency === 'transparent' ? 'free' : 'busy',
     recurring: Boolean(event.recurringEventId || event.recurrence?.length),
   };
+}
+
+export function attendeeNames(attendees: GoogleEvent['attendees']): string[] {
+  return (attendees ?? [])
+    .filter((attendee) => !attendee.resource && !attendee.self)
+    .flatMap((attendee) => {
+      const name = (attendee.displayName ?? attendee.email ?? '').trim();
+      return name ? [name.slice(0, 300)] : [];
+    })
+    .slice(0, CALENDAR_ATTENDEES_MAX);
 }
 
 export function googleHtmlLink(raw: string | undefined): string | null {

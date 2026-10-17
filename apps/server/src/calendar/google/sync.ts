@@ -1,6 +1,6 @@
 import { addLocalDays, localDayStart, type HelperEvent } from '@spark-outpost/contracts';
 import { GoogleApiError, listGoogleEvents, type GoogleApiDeps, type GoogleEvent } from './api.ts';
-import { googleEventId, googleHtmlLink, mapGoogleEvent, notesText } from './map.ts';
+import { attendeeNames, googleEventId, googleHtmlLink, mapGoogleEvent, notesText } from './map.ts';
 
 export const GOOGLE_WINDOW_DAYS_BEFORE = 1;
 export const GOOGLE_WINDOW_DAYS_AFTER = 8;
@@ -21,6 +21,7 @@ export interface StoredEvent {
   event: HelperEvent;
   notes: string;
   link: string | null;
+  attendees: string[];
 }
 
 export interface CalendarSync {
@@ -30,7 +31,7 @@ export interface CalendarSync {
   events: Map<string, StoredEvent>;
 }
 
-interface SyncTarget {
+export interface SyncTarget {
   accountId: string;
   calendarId: string;
 }
@@ -38,7 +39,12 @@ interface SyncTarget {
 function stored(target: SyncTarget, raw: GoogleEvent): StoredEvent | null {
   const event = mapGoogleEvent(target.accountId, target.calendarId, raw);
   if (!event) return null;
-  return { event, notes: notesText(raw.description), link: googleHtmlLink(raw.htmlLink) };
+  return {
+    event,
+    notes: notesText(raw.description),
+    link: googleHtmlLink(raw.htmlLink),
+    attendees: attendeeNames(raw.attendees),
+  };
 }
 
 function apply(target: SyncTarget, events: Map<string, StoredEvent>, changes: GoogleEvent[]) {
@@ -50,7 +56,7 @@ function apply(target: SyncTarget, events: Map<string, StoredEvent>, changes: Go
   }
 }
 
-async function fullSync(
+export async function fullSync(
   api: GoogleApiDeps,
   target: SyncTarget,
   window: GoogleWindow,
@@ -107,7 +113,14 @@ export async function syncCalendar(
   }
 }
 
-export function eventsInWindow(sync: CalendarSync, window: GoogleWindow): StoredEvent[] {
+export function covers(outer: GoogleWindow, inner: { from: number; to: number }): boolean {
+  return outer.from <= inner.from && inner.to <= outer.to;
+}
+
+export function eventsInWindow(
+  sync: CalendarSync,
+  window: { from: number; to: number },
+): StoredEvent[] {
   return [...sync.events.values()].filter((entry) => {
     const start = Date.parse(entry.event.start);
     const end = Date.parse(entry.event.end);

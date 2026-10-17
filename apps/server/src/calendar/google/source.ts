@@ -12,7 +12,8 @@ import { splitGoogleEventId } from './map.ts';
 import { revokeGoogleToken, type GoogleGrant } from './oauth.ts';
 import { GoogleAccountMismatch, createGoogleSignIn, type GoogleSignIn } from './sign-in.ts';
 import { deleteGoogleAccount, googleAccounts, saveGoogleAccount } from './store.ts';
-import { eventsInWindow, googleWindow } from './sync.ts';
+import { createGoogleRangeCache } from './range.ts';
+import { covers, eventsInWindow, googleWindow, type StoredEvent } from './sync.ts';
 import { forgetMarksOf } from '../store.ts';
 
 function accountUids(account: LiveAccount): string[] {
@@ -45,6 +46,7 @@ export interface GoogleSource {
   status(): CalendarGoogleStatus;
   ready(): boolean;
   window(): GoogleWindowEvents;
+  range(from: number, to: number): Promise<GoogleWindowEvents>;
   detail(occurrence: { eventId: string; start: string }): CalendarEventDetail | null;
   signIn(request: { accountId: string | null }): Promise<GoogleSignInFlow>;
   signInFlow(): GoogleSignInFlow;
@@ -91,8 +93,33 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       }
     : null;
 
+  const ranges = accountDeps ? createGoogleRangeCache(accountDeps) : null;
+  const usable = () =>
+    [...accounts.values()].filter((account) => account.state !== 'sign_in_again');
+
   const emit = () => {
+    ranges?.clear();
     for (const listener of listeners) listener();
+  };
+
+  const windowEvents = (bounds: { from: number; to: number }): GoogleWindowEvents => {
+    const events: HelperEvent[] = [];
+    let truncated = false;
+    for (const account of usable()) {
+      for (const sync of account.calendars.values()) {
+        truncated ||= sync.truncated;
+        events.push(...eventsInWindow(sync, bounds).map((entry) => entry.event));
+      }
+    }
+    return { events, truncated };
+  };
+
+  const storedEvent = (accountId: string, eventId: string, at: number): StoredEvent | null => {
+    for (const sync of accounts.get(accountId)?.calendars.values() ?? []) {
+      const found = sync.events.get(eventId);
+      if (found && Date.parse(found.event.start) === at) return found;
+    }
+    return ranges?.find(accountId, eventId, at) ?? null;
   };
 
   const schedule = (accountId: string, delayMs: number | null) => {
@@ -197,31 +224,24 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     },
     ready: () =>
       [...accounts.values()].some((account) => account.synced && account.state !== 'sign_in_again'),
-    window() {
+    window: () => windowEvents(googleWindow(now())),
+    async range(from, to) {
       const window = googleWindow(now());
-      const events: HelperEvent[] = [];
-      let truncated = false;
-      for (const account of accounts.values()) {
-        if (account.state === 'sign_in_again') continue;
-        for (const sync of account.calendars.values()) {
-          truncated ||= sync.truncated;
-          events.push(...eventsInWindow(sync, window).map((entry) => entry.event));
-        }
-      }
-      return { events, truncated };
+      if (covers(window, { from, to })) return windowEvents({ from, to });
+      if (!ranges) return { events: [], truncated: false };
+      return ranges.read({ key: `${from}|${to}`, from, to }, usable());
     },
     detail(occurrence) {
       const parts = splitGoogleEventId(occurrence.eventId);
-      const account = parts ? accounts.get(parts.accountId) : undefined;
-      if (!account) return null;
-      const at = Date.parse(occurrence.start);
-      for (const sync of account.calendars.values()) {
-        const found = sync.events.get(occurrence.eventId);
-        if (found && Date.parse(found.event.start) === at) {
-          return { title: found.event.title, notes: found.notes, link: found.link };
-        }
-      }
-      return null;
+      if (!parts || !accounts.has(parts.accountId)) return null;
+      const found = storedEvent(parts.accountId, occurrence.eventId, Date.parse(occurrence.start));
+      if (!found) return null;
+      return {
+        title: found.event.title,
+        notes: found.notes,
+        link: found.link,
+        attendees: found.attendees,
+      };
     },
     async signIn(request) {
       if (!signIn) throw new GoogleUnavailable();
@@ -257,6 +277,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       return { found: true, revoked };
     },
     refresh() {
+      ranges?.clear();
       for (const accountId of accounts.keys()) schedule(accountId, 0);
     },
     async syncNow() {
