@@ -1,5 +1,6 @@
 import { RequestError } from '@agentclientprotocol/sdk';
 import { describe, expect, it, vi } from 'vitest';
+import { UsageLimitError } from '../../providers/provider.ts';
 import { failureError, toProviderError } from './errors.ts';
 
 const message = (error: unknown) => toProviderError('Fake', error, '').message;
@@ -27,6 +28,22 @@ describe('agent error messages', () => {
     expect(failureError('Fake', { category: 'provider_error', title: 'Boom' }).message).toBe(
       'Fake stopped with an error: Boom',
     );
+  });
+
+  it('marks the Claude adapter limit failures as usage limits', () => {
+    const quota = failureError('Fake', {
+      category: 'limit',
+      title: 'The Claude account has no available quota.',
+    });
+    expect(quota).toBeInstanceOf(UsageLimitError);
+    expect(quota.message).toBe(
+      "Fake has reached this account's usage limit. Wait for it to reset or check your plan, then try again.",
+    );
+    const rate = failureError('Fake', {
+      category: 'limit',
+      title: 'Claude is temporarily rate limited.',
+    });
+    expect(rate).toBeInstanceOf(UsageLimitError);
   });
 
   it('maps the session failure categories codex-acp sends', () => {
