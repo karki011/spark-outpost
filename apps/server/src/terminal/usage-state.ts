@@ -1,7 +1,9 @@
 import { statSync } from 'node:fs';
+import type { CacheTtlSeconds } from '@spark-outpost/contracts';
 import type { LiveSession } from './native-runtime-types.ts';
 import type { TranscriptWatcher } from './native-tail.ts';
 import type { ReportedUsage, TranscriptParser, TranscriptRecord } from './native-transcript.ts';
+import { cacheTtlOf } from '../usage/prompt-cache.ts';
 import { createTurnUsage, type TurnUsage } from './turn-usage.ts';
 
 const KEPT_TURNS = 64;
@@ -29,6 +31,8 @@ export interface SessionTranscript {
   agents: Map<string, TranscriptWatcher>;
   reported: ReportedUsage | null;
   model: string | null;
+  cacheTtl: CacheTtlSeconds | null;
+  savedTtl: CacheTtlSeconds | null;
   previous: SessionTranscript | null;
 }
 
@@ -94,6 +98,14 @@ export function count(
   }
   if (!turn.usage.add(response)) return false;
   turn.changed = true;
+  return true;
+}
+
+export function noteCacheTtl(transcript: SessionTranscript, record: TranscriptRecord): boolean {
+  if (record.kind !== 'response') return false;
+  const ttl = cacheTtlOf(record.buckets ?? null);
+  if (ttl === null || ttl === transcript.cacheTtl) return false;
+  transcript.cacheTtl = ttl;
   return true;
 }
 

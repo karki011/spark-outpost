@@ -47,6 +47,7 @@ export * from './native-terminal-remote.ts';
 export * from './service-stop.ts';
 export * from './usage.ts';
 export * from './native-terminal-usage.ts';
+export * from './prompt-cache.ts';
 export * from './lean.ts';
 export * from './model-cards.ts';
 export * from './home.ts';

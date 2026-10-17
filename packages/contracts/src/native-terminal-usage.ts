@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { costSourceSchema } from './audit.ts';
 import { nativeTerminalProviderSchema, type NativeTerminalProvider } from './native-terminal.ts';
+import { promptCacheSchema } from './prompt-cache.ts';
 import { runStatusSchema } from './runs.ts';
 import { tokenUsageSchema } from './usage.ts';
 
@@ -53,6 +54,7 @@ export const nativeTerminalUsageSchema = z.object({
   turns: z.array(nativeTerminalTurnSchema),
   reported: z.array(nativeTerminalReportedSchema),
   stopped: z.boolean().default(false),
+  promptCache: promptCacheSchema.optional(),
 });
 export type NativeTerminalUsage = z.infer<typeof nativeTerminalUsageSchema>;
 

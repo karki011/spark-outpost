@@ -14,7 +14,12 @@ import {
   isCancelRequested,
   type AppendOptions,
 } from '../persistence/run-events.ts';
-import { ProviderError, type Provider, type ProviderOutput } from '../providers/provider.ts';
+import {
+  ProviderError,
+  type Provider,
+  type ProviderOutput,
+  type RequestUsage,
+} from '../providers/provider.ts';
 import { createTitleFilter, hidesTitleLine } from '../titles/title-line.ts';
 import { createRedactionFilter } from '../audit/redact-stream.ts';
 import { projectSecretValues, withoutSecretValues } from '../audit/secret-values.ts';
@@ -53,6 +58,7 @@ import { sparkCommandScope } from './command-scope.ts';
 import { createTurnEvents } from './turn-events.ts';
 import { createLiveCost } from '../usage/live-cost.ts';
 import { recordPlan, withResetTime } from '../usage/plan-limits.ts';
+import { recordRequestUsage } from '../persistence/prompt-cache.ts';
 import { turnSessionFor, type TurnSession } from './turn-session.ts';
 import { asAgentReads } from '../outposts/agent-prompt.ts';
 import { preambleDeps } from '../outposts/preamble-stores.ts';
@@ -308,6 +314,8 @@ export async function runAgentTurn(
       const counted = session ? await session.usage(output) : output;
       await recordUsage(deps.db, lease.runId, counted);
     };
+    const recordRequest = (request: RequestUsage) =>
+      recordRequestUsage(deps.db, lease.runId, request, new Date());
     const userMcp = input.assistant
       ? []
       : await loadUserMcp(
@@ -396,6 +404,7 @@ export async function runAgentTurn(
       if (control.signal.aborted) {
         live.observe(output);
         if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
+        if (output.kind === 'request_usage') await recordRequest(output.request);
         if (output.kind === 'usage') await recordSpend(output);
         if (output.kind === 'subagent_finished') await events.observe(output);
         continue;
@@ -405,6 +414,7 @@ export async function runAgentTurn(
       if (output.kind === 'capabilities') await recordCapabilities(deps.db, input, output.report);
       if (output.kind === 'usage') await recordSpend(output);
       if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
+      if (output.kind === 'request_usage') await recordRequest(output.request);
       live.observe(output);
       await tasks.observe(output);
       await observeSession({ audit, input, session }, output);

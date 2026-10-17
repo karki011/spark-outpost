@@ -278,6 +278,7 @@ export function nativeObserver({
         (prompt) => usage.promptRun(session, prompt),
         items,
         (runId) => chatRecordFor(db, session, runId),
+        session.row.id,
       );
     });
     for (const prompt of aborted ?? []) void interruptedTwice(session, prompt);

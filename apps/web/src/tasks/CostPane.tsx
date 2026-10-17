@@ -4,6 +4,7 @@ import { AgentBlob } from '../brand/AgentBlob.tsx';
 import { formatTokens } from '../chat/composer/model-options.ts';
 import { CrewBlob } from '../crew/CrewBlob.tsx';
 import type { CrewAgent } from '../crew/crew-model.ts';
+import { cacheHitText } from '../usage/cache-view.ts';
 import { CostText } from '../usage/CostText.tsx';
 import { formatCost } from '../usage/format.ts';
 import { PlanMeter } from '../usage/PlanMeter.tsx';
@@ -135,6 +136,11 @@ export function CostPane({ task, runs = [], agents = [], onAudit, conversationId
           <span>
             Cached <b>{formatTokens(split.cached)}</b>
           </span>
+          {split.cacheHit !== null && (
+            <span>
+              Cache hit <b>{cacheHitText(split.cacheHit)}</b>
+            </span>
+          )}
           {split.cacheWrites > 0 && (
             <span>
               Cache writes <b>{formatTokens(split.cacheWrites)}</b>

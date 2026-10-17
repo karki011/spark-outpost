@@ -26,6 +26,7 @@ export type TranscriptRecord =
       responseId: string;
       model: string | null;
       tokens: TokenCounts;
+      buckets?: { short: number; long: number } | null;
     }
   | { kind: 'agent'; agentId: string; turnId: string }
   | {

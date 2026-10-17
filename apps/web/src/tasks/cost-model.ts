@@ -1,5 +1,7 @@
 import {
   advisorLabel,
+  cacheHitCounts,
+  cacheHitRate,
   agentRoleLabel,
   agentRoleSchema,
   mergeCostSource,
@@ -46,6 +48,7 @@ export interface TokenSplit {
   cached: number;
   cacheWrites: number;
   subagents: number;
+  cacheHit: number | null;
 }
 
 export interface CostSummary {
@@ -206,16 +209,18 @@ function modelSlices(rows: readonly CostRow[]): CostSlice[] {
 
 function tokenSplit(task: TaskDetail, runs: readonly Run[]): TokenSplit | null {
   const ids = new Set(task.runs.map((run) => run.id));
-  const usages = runs.flatMap((run) =>
-    ids.has(run.id) && run.usage?.tokens ? [run.usage.tokens] : [],
+  const counted = runs.flatMap((run) =>
+    ids.has(run.id) && run.usage?.tokens ? [{ provider: run.provider, tokens: run.usage.tokens }] : [],
   );
-  if (usages.length === 0) return null;
+  if (counted.length === 0) return null;
+  const usages = counted.map((entry) => entry.tokens);
   return {
     input: usages.reduce((sum, tokens) => sum + tokens.input, 0),
     output: usages.reduce((sum, tokens) => sum + tokens.output, 0),
     cached: usages.reduce((sum, tokens) => sum + (tokens.cachedRead ?? 0), 0),
     cacheWrites: usages.reduce((sum, tokens) => sum + (tokens.cachedWrite ?? 0), 0),
     subagents: usages.reduce((sum, tokens) => sum + (tokens.subagents ?? 0), 0),
+    cacheHit: cacheHitRate(counted.map((entry) => cacheHitCounts(entry.provider, entry.tokens))),
   };
 }
 

@@ -118,6 +118,10 @@ export function register(on) {
     facts.prompted(e.prompt_id);
     return next(e);
   }).catch(($, e, next) => next(e));
+  on('classic.SessionStart', async ($, e, next) => {
+    facts.resumed(e, Math.round(await $.clock.now()));
+    return next(e);
+  }).catch(($, e, next) => next(e));
   on('classic.PermissionRequest', async ($, e, next) => {
     facts.asked(e.tool_name, e.tool_input);
     return next(e);
@@ -140,7 +144,8 @@ export function register(on) {
     const result = yield* next(e);
     if (!fromEngine(next.origin)) return result;
     facts.answered(e, result.answer);
-    if (result.usage) facts.stepped(e, result.usage, await costed($, link));
+    if (result.usage)
+      facts.stepped(e, result.usage, await costed($, link), Math.round(await $.clock.now()));
     return result;
   });
   on('turn.complete', async ($, e, next) => {

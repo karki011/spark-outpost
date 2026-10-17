@@ -9,6 +9,7 @@ import {
   type Run,
   type TerminalRunStatus,
 } from '@spark-outpost/contracts';
+import { CacheRebuildNote } from '../usage/CacheRebuildNote.tsx';
 import { RunUsageMeta } from '../usage/RunUsageMeta.tsx';
 import { AiTurn, type TurnState } from './AiTurn.tsx';
 import { ApprovalCard } from './approvals/ApprovalCard.tsx';
@@ -296,6 +297,7 @@ export function SoloTurn({
       {finished && (
         <div className="turn-foot">
           <RunUsageMeta run={child?.usage ? child : run} />
+          <CacheRebuildNote rebuild={detail.promptCache?.rebuilds[run.id]} />
           <BrowserCheckMeta
             detail={detail}
             run={run}

@@ -9,6 +9,7 @@ import { useOutpostSeam } from '../outpost/outpost-seam.ts';
 import { AgentSetup } from './AgentSetup.tsx';
 import { AutonomyChip, type AutonomyControl } from './AutonomyChip.tsx';
 import { ChatBranch } from './ChatBranch.tsx';
+import { ChatCache } from './ChatCache.tsx';
 import { ProjectFolders } from './ProjectFolders.tsx';
 import { WorkPlaceMenu } from './WorkPlaceMenu.tsx';
 import { useProjectBranch } from './use-chat-repos.ts';
@@ -72,6 +73,7 @@ export function ContextBar({
       <MemberChip conversationId={conversationId} />
       {primary && autonomy && <AutonomyChip {...autonomy} />}
       {primary && <AgentSetup key={primary.id} repos={repos} />}
+      <ChatCache conversationId={conversationId} />
       {suggestion}
     </ProjectFolders>
   );
