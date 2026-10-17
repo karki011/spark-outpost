@@ -221,6 +221,7 @@ function ChatShell({ entering }: { entering: boolean }) {
           return;
         }
         if (target.startsWith('today:')) {
+          setSettings(null);
           setView('today');
           requestTodayEvent(target.slice('today:'.length));
           return;
