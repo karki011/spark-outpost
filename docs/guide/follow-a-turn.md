@@ -41,7 +41,7 @@ Only text can be queued.
 
 ## Delete a running chat
 
-1. Open the chat's **…** menu and select **Delete**, then **Confirm delete**. Running work stops.
+1. In the chat's **…** menu, select **Delete**, then **Confirm delete**. Running work stops.
 2. To restore it, select **Undo**.
 
 ## After a turn

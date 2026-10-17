@@ -13,7 +13,7 @@ Every connection is optional. Committing and pushing work without GitHub connect
 ## Connect GitHub
 
 1. Open **Settings → Connectors** and select the **GitHub** card.
-2. For **GitHub sign-in**, select **Sign in with GitHub**, then **Open GitHub**, and enter the code shown. This option appears only in builds set up for it.
+2. For **GitHub sign-in**, select **Sign in with GitHub**, then **Open GitHub**, and enter the code shown. Only builds set up for it offer this.
 3. For **gh CLI**, run `gh auth login` in a terminal, then select **Check again**.
 4. For **Personal token**, paste it into **Personal access token** and select **Verify token**. Add an **Enterprise host** if you use one.
 5. Select **Test** to check each project's remote and sign-in without changing anything.
@@ -30,7 +30,7 @@ Access renews itself; if it ends, select **Sign in again**. Sign-in needs github
 2. For Jira, enter the **Site URL**, **Email** and an **API token**. For Linear, enter an **API key**.
 3. Select **Save and check**.
 
-Keys and tokens are stored in your system keychain and never shown again. To stop, select **Disconnect** or **Remove token**.
+Keys and tokens stay in your system keychain, never shown again. To stop, select **Disconnect** or **Remove token**.
 
 ## Keep tickets in sync with pull requests
 

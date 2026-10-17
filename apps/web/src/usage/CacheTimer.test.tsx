@@ -44,7 +44,9 @@ describe('CacheTimer', () => {
     expect(screen.getByText('Cache warm · 1 min left')).toBeTruthy();
     expect(status().textContent).toBe('');
     act(() => void vi.advanceTimersByTime(MINUTE));
-    expect(screen.getByText('Cache cold · next message re-writes ~182K tokens (~$2.28)')).toBeTruthy();
+    expect(
+      screen.getByText('Cache cold · next message re-writes ~182K tokens (~$2.28)'),
+    ).toBeTruthy();
     expect(status().textContent).toBe('Prompt cache expired');
   });
 

@@ -210,7 +210,9 @@ function modelSlices(rows: readonly CostRow[]): CostSlice[] {
 function tokenSplit(task: TaskDetail, runs: readonly Run[]): TokenSplit | null {
   const ids = new Set(task.runs.map((run) => run.id));
   const counted = runs.flatMap((run) =>
-    ids.has(run.id) && run.usage?.tokens ? [{ provider: run.provider, tokens: run.usage.tokens }] : [],
+    ids.has(run.id) && run.usage?.tokens
+      ? [{ provider: run.provider, tokens: run.usage.tokens }]
+      : [],
   );
   if (counted.length === 0) return null;
   const usages = counted.map((entry) => entry.tokens);

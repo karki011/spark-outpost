@@ -16,7 +16,9 @@ import { FAKE_ACP_LAUNCH as launch } from './fake-acp-support.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 import { connectCliProvider, createTestDb, eventually, type TestDb } from './support.ts';
 
-const recorded = fileURLToPath(new URL('./fixtures/prompt-cache/sdk-messages.json', import.meta.url));
+const recorded = fileURLToPath(
+  new URL('./fixtures/prompt-cache/sdk-messages.json', import.meta.url),
+);
 const AT = new Date('2026-10-17T12:00:00Z');
 const later = (seconds: number) => new Date(AT.getTime() + seconds * 1000);
 

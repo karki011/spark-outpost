@@ -42,7 +42,7 @@ In any chat, type `@` and pick a Spark, or select the **Ask Pip (Code reviewer)?
 ## Change or delete one
 
 1. On **Home**, point at the card and select **Edit**, or open **Settings → Crew**.
-2. Change what you need and select **Save**.
+2. Make changes and select **Save**.
 3. To delete it, select **Delete** in **Settings → Crew**, then hold **Hold to delete**. You get 10 seconds to **Undo**. Its chats stay.
 
 **Next:** [Choose where a chat works](where-spark-works.md)

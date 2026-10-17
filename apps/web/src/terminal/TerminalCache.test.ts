@@ -16,7 +16,9 @@ const chat = (extra: Partial<ConversationSummary> = {}) =>
 const native = (state: NativeTerminalSession['state']) =>
   ({ provider: 'claude', state }) as NativeTerminalSession;
 const usage = (subagentsWorking: number) =>
-  ({ promptCache: { last: null, rebuilds: {}, subagentsWorking } }) as unknown as NativeTerminalUsage;
+  ({
+    promptCache: { last: null, rebuilds: {}, subagentsWorking },
+  }) as unknown as NativeTerminalUsage;
 
 describe('terminalIdle', () => {
   it('is idle at the prompt with nothing running', () => {
@@ -25,7 +27,7 @@ describe('terminalIdle', () => {
 
   it('is busy while a turn runs', () => {
     expect(terminalIdle(chat(), native('working'), usage(0))).toBe(false);
-    const running = chat({ latestRun: { id: 'r1', status: 'running', step: null, provider: 'claude' } });
+    const running = chat({ latestRun: { ...chat().latestRun!, status: 'running' } });
     expect(terminalIdle(running, native('ready'), usage(0))).toBe(false);
   });
 

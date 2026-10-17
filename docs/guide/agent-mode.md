@@ -12,7 +12,7 @@ You'll choose the model, effort and permissions for one chat. About 1 minute.
 
 1. Select the model button in the message box. The picker opens on **Model**.
 2. With several providers connected, switch **AI provider** at the top.
-3. Pick a model to pin it, or **Auto** for the provider's default model.
+3. Pick a model to pin it, or **Auto** for the provider's default.
 
 ![The model picker open on the Model tab](images/chats-and-modes-picker-light.png)
 

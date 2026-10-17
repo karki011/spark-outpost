@@ -15,7 +15,7 @@ Open **Settings → AI providers** and select the provider's tile. The message u
 | "The `claude` CLI isn't installed or isn't on your PATH" | `npm i -g @anthropic-ai/claude-code`, or `npm i -g @openai/codex` for Codex, then **Try again**. |
 | "API key mode also needs the `claude` CLI installed"     | Install the CLI as above. Z.ai and API keys run through it.                                      |
 | "You're not logged in to the `claude` CLI"               | Run `claude auth login`, or `codex login`, then **Try again**.                                   |
-| "Couldn't reach …"                                       | Check your internet connection.                                                                  |
+| "Couldn't reach …"                                       | Check your connection.                                                                           |
 | In a chat: "… isn't signed in" or "… couldn't sign in"   | Reconnect on the provider's screen, then resend.                                                 |
 
 Still stuck? **Detect and verify** on **Local CLI** reruns every check.
@@ -40,7 +40,7 @@ Still stuck? **Detect and verify** on **Local CLI** reruns every check.
 
 | You see                                                                          | Fix                                                                 |
 | -------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| "rejected the stored key (401)" or "the stored key is missing from the keychain" | Paste the key again and select **Verify key**.                      |
+| "rejected the stored key (401)" or "the stored key is missing from the keychain" | Paste it again and **Verify key**.                                  |
 | "is rate limiting this key (429)"                                                | Wait a minute.                                                      |
 | "no default model is selected"                                                   | Pick a **Model** under **Defaults for new chats**.                  |
 | "`claude` is no longer on your PATH"                                             | Reinstall the CLI, then **Detect and verify**.                      |

@@ -60,15 +60,13 @@ test('the Terminal bar counts down from the last request with the lifetime the s
 
   await expect(timer(page)).toHaveText('Cache warm · 2 min left');
   await page.clock.fastForward(2 * MINUTE);
-  await expect(timer(page)).toHaveText(
-    'Cache cold · next message re-writes ~182K tokens (~$0.91)',
-  );
+  await expect(timer(page)).toHaveText('Cache cold · next message re-writes ~182K tokens (~$0.91)');
 });
 
 test('the Terminal bar says only when the cache was last used when the lifetime is unknown', async ({
   page,
 }) => {
-  const { chatId } = await terminalChat('ready', 12);
+  await terminalChat('ready', 12);
   await open(page);
 
   await expect(timer(page)).toHaveText('Cache last used 12 min ago');
@@ -91,9 +89,7 @@ test('a Claude Code resume that says the cache expired shows cold at once', asyn
   );
   await open(page);
 
-  await expect(timer(page)).toHaveText(
-    'Cache cold · next message re-writes ~330K tokens (~$6.60)',
-  );
+  await expect(timer(page)).toHaveText('Cache cold · next message re-writes ~330K tokens (~$6.60)');
 });
 
 test('no timer while the agent works, waits on a card, or sub-agents still run', async ({

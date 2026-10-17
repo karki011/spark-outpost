@@ -9,7 +9,9 @@ import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 import { FAKE_ACP_LAUNCH as launch } from './fake-acp-support.ts';
 
 const definition: AgentDefinition = { ...agentDefinitions.claude, ...FAKE_AGENT_MODES };
-const recorded = fileURLToPath(new URL('./fixtures/prompt-cache/sdk-messages.json', import.meta.url));
+const recorded = fileURLToPath(
+  new URL('./fixtures/prompt-cache/sdk-messages.json', import.meta.url),
+);
 
 async function requestOutputs(prompt: string) {
   const provider = createAcpProvider({

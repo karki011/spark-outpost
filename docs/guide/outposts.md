@@ -6,7 +6,7 @@ order: 232
 summary: Put several chats in one outpost, ask each for work with @ and its handle, and read every answer in one thread.
 ---
 
-Ask several chats from one thread. About 3 minutes. See also [When to use an outpost](when-to-use-an-outpost.md).
+Ask several chats from one thread. About 3 minutes. See [When to use an outpost](when-to-use-an-outpost.md).
 
 ## Create an outpost
 

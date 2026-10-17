@@ -50,7 +50,7 @@ test.beforeEach(async () => {
 test('the context bar counts the cache down, then says what the next message re-writes', async ({
   page,
 }) => {
-  const { chatId, runId } = await claudeChat('succeeded');
+  const { runId } = await claudeChat('succeeded');
   await cached(runId, 3600, 18);
   await open(page);
 
@@ -63,14 +63,12 @@ test('the context bar counts the cache down, then says what the next message re-
   await page.clock.fastForward(MINUTE);
   await expect(timer(page)).toHaveText('Cache warm · 41 min left');
   await page.clock.fastForward(41 * MINUTE);
-  await expect(timer(page)).toHaveText(
-    'Cache cold · next message re-writes ~182K tokens (~$1.46)',
-  );
+  await expect(timer(page)).toHaveText('Cache cold · next message re-writes ~182K tokens (~$1.46)');
   await expect(page.getByRole('status').filter({ hasText: 'Prompt cache expired' })).toHaveCount(1);
 });
 
 test('without a known lifetime it shows only when the cache was last used', async ({ page }) => {
-  const { chatId, runId } = await claudeChat('succeeded');
+  const { runId } = await claudeChat('succeeded');
   await cached(runId, null, 12);
   await open(page);
 
@@ -80,7 +78,7 @@ test('without a known lifetime it shows only when the cache was last used', asyn
 });
 
 test('a running turn shows no timer', async ({ page }) => {
-  const { chatId, runId } = await claudeChat('running');
+  const { runId } = await claudeChat('running');
   await cached(runId, 3600, 2);
   await open(page);
 

@@ -117,7 +117,11 @@ describe('a Terminal session’s prompt cache from the Spark mod', () => {
   it('notes a turn whose first request re-wrote the previous context', async () => {
     await f.launch();
     await prompt('first');
-    await f.modFacts([turnStart('first'), request('first', 0, { read: 180_000 }), turnEnd('first')]);
+    await f.modFacts([
+      turnStart('first'),
+      request('first', 0, { read: 180_000 }),
+      turnEnd('first'),
+    ]);
     await f.hook('Stop', { prompt_id: 'first' });
     await prompt('second');
     await f.modFacts([turnStart('second'), request('second', 0, { read: 0, write: 181_000 })]);

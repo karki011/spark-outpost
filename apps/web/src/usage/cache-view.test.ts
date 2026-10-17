@@ -34,7 +34,10 @@ describe('cacheView', () => {
   });
 
   it('is cold at once when Claude Code said the resumed cache had expired', () => {
-    const view = cacheView(last({ ttlSeconds: null, expired: true, estimateBy: 'claude-code' }), AT);
+    const view = cacheView(
+      last({ ttlSeconds: null, expired: true, estimateBy: 'claude-code' }),
+      AT,
+    );
     expect(view.state).toBe('cold');
     expect(view.tip).toContain('Claude Code’s estimate');
   });

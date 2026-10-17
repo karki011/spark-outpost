@@ -26,7 +26,10 @@ export function TerminalCache({
   chat: ConversationSummary;
   native: NativeTerminalSession | null;
 }) {
-  const usage = useQuery({ ...terminalUsageQuery(chat.id), enabled: native?.provider === 'claude' });
+  const usage = useQuery({
+    ...terminalUsageQuery(chat.id),
+    enabled: native?.provider === 'claude',
+  });
   const last = usage.data?.promptCache?.last ?? null;
   return <CacheTimer last={last} idle={terminalIdle(chat, native, usage.data)} />;
 }

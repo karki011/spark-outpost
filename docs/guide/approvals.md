@@ -6,7 +6,7 @@ order: 512
 summary: The agent's mode and Spark autonomy, why an approval card appears, what never goes on without you, and what happens when nobody answers.
 ---
 
-The **agent's mode** decides what the agent may do without asking. **Spark autonomy** decides what Spark does with the result. Spark follows the mode and adds only a few hard rails.
+The **agent's mode** decides what the agent may do without asking. **Spark autonomy** decides what Spark does with the result. Spark follows the mode, adding only a few hard rails.
 
 | Layer              | Decides                                | Details                                                                                  |
 | ------------------ | -------------------------------------- | ---------------------------------------------------------------------------------------- |
@@ -15,7 +15,7 @@ The **agent's mode** decides what the agent may do without asking. **Spark auton
 | Hard rails         | What asks or is refused in every mode  | [Protected paths](protected-paths.md)                                                    |
 | The project's list | Commands that skip the card            | [Let a command run without asking](answer-approvals.md#let-a-command-run-without-asking) |
 
-The checks run in Spark, not in the model, so nothing an agent says can approve its own request.
+Checks run in Spark, not the model, so nothing an agent says can approve its own request.
 
 ![An approval card showing a file diff](images/approvals-edit-light.png)
 
@@ -41,6 +41,6 @@ Sending a secret file's value [always asks](protected-paths.md#what-always-asks)
 
 ## If you don't answer
 
-Approval cards wait up to 30 minutes, then the request is declined.
+Approval cards wait up to 30 minutes, then are declined.
 
 **This chat is almost full** follows **Wait before going on without your answer** in **Settings → Chats & autonomy**: **30s**, **60s** (default), **2 min**, **5 min**, **Never** or **Custom**. Then Spark keeps going.

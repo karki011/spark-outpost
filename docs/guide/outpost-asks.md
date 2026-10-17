@@ -30,6 +30,6 @@ In the receiving chat the turn is headed **From @fe** · **not from you**.
 | While the outpost is paused, an agent can't ask.      | **Resume** first.                                                                              |
 | What a turn read travels with its request and answer. | A later send off this computer is [flagged](privacy-and-secrets.md) in the receiving chat too. |
 
-There are no caps or timers. Every request is in the thread, and you can **Cancel** it or stop its turn.
+There are no caps or timers. Every request is in the thread; **Cancel** it or stop its turn.
 
 See [What an outpost request may do](outpost-permissions.md) and the [outpost tools](spark-tools.md#outpost-tools).
