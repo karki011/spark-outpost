@@ -1,4 +1,9 @@
-import { addLocalDays, localDayStart, type HelperEvent } from '@spark-outpost/contracts';
+import {
+  addLocalDays,
+  eventsInSpan,
+  localDayStart,
+  type HelperEvent,
+} from '@spark-outpost/contracts';
 import type { CalendarHelper } from './helper-process.ts';
 
 export const WINDOW_REFRESH_MS = 15 * 60_000;
@@ -24,8 +29,14 @@ export interface EventWindowOptions {
   timers?: Timers;
 }
 
+export interface RangeEvents {
+  events: HelperEvent[];
+  truncated: boolean;
+}
+
 export interface EventWindow {
   read(): Promise<WindowSnapshot>;
+  range(from: string, to: string): Promise<RangeEvents>;
   invalidate(): void;
   stop(): void;
 }
@@ -77,21 +88,33 @@ export function createEventWindow(options: EventWindowOptions): EventWindow {
     options.changed();
   }
 
+  function read(): Promise<WindowSnapshot> {
+    if (cached) return cached;
+    const mine = generation;
+    const loading = load();
+    cached = loading;
+    loading.then(
+      () => {
+        if (mine === generation) schedule();
+      },
+      () => {
+        if (cached === loading) cached = null;
+      },
+    );
+    return loading;
+  }
+
   return {
-    read() {
-      if (cached) return cached;
-      const mine = generation;
-      const loading = load();
-      cached = loading;
-      loading.then(
-        () => {
-          if (mine === generation) schedule();
-        },
-        () => {
-          if (cached === loading) cached = null;
-        },
-      );
-      return loading;
+    read,
+    async range(from, to) {
+      const start = Date.parse(from);
+      const end = Date.parse(to);
+      const stored = await read();
+      if (Date.parse(stored.from) <= start && end <= Date.parse(stored.to)) {
+        return { events: eventsInSpan(stored.events, start, end), truncated: stored.truncated };
+      }
+      const answer = await options.helper.call({ op: 'events', from, to });
+      return { events: answer.events, truncated: answer.truncated };
     },
     invalidate,
     stop() {

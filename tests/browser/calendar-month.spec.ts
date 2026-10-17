@@ -3,7 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { readCalendarClock } from './fake-calendar-clock.ts';
 import { resetTestDatabase } from './database.ts';
-import { FAKE_CALENDAR_STATE } from './stub-config.ts';
+import { FAKE_CALENDAR_FAR_DAYS, FAKE_CALENDAR_STATE } from './stub-config.ts';
 
 test.skip(process.env.SPARK_FAKE_CALENDAR !== '1', 'needs SPARK_FAKE_CALENDAR=1');
 test.describe.configure({ mode: 'serial' });
@@ -136,13 +136,32 @@ test('steps the rail by day and opens the event popover, which Esc closes', asyn
 
 test('reads past months through the range and mutes past days', async ({ page }) => {
   await openToday(page);
-  const range = page.waitForResponse((response) => response.url().includes('/api/calendar/range?'));
-  await today(page).getByRole('button', { name: 'Previous month' }).click();
-  expect((await range).ok()).toBe(true);
-  const selected = grid(page).locator('[aria-selected="true"]');
-  await expect(selected).toHaveAttribute('data-past');
+  const now = fakeNow();
+  const past = now - FAKE_CALENDAR_FAR_DAYS * DAY;
+  if (new Date(past).getMonth() !== new Date(now).getMonth()) {
+    const range = page.waitForResponse((response) =>
+      response.url().includes('/api/calendar/range?'),
+    );
+    await today(page).getByRole('button', { name: 'Previous month' }).click();
+    expect((await range).ok()).toBe(true);
+  }
+  await expect(cell(page, past)).toHaveAttribute('data-past');
+  await expect(cell(page, past)).toContainText('Quarterly review');
+  await cell(page, past).click();
+  const review = scheduled(page).locator('.rl-card', { hasText: 'Quarterly review' });
+  await expect(review).toHaveAttribute('data-past');
   await today(page).getByRole('button', { name: 'Today', exact: true }).click();
   await expect(cell(page, fakeNow())).toHaveAttribute('aria-selected', 'true');
+});
+
+test('keeps Day across a reload in the same session', async ({ page }) => {
+  await openToday(page);
+  await today(page).getByRole('radio', { name: 'Day' }).click();
+  await page.reload();
+  await expect(today(page).getByRole('radio', { name: 'Day' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
 });
 
 test('stacks the rail under the grid at a narrow width', async ({ page }) => {

@@ -2,6 +2,7 @@ import { expect } from 'vitest';
 import {
   calendarDaySchema,
   calendarStatusSchema,
+  eventsInSpan,
   googleSignInFlowSchema,
   type CalendarHostRequest,
   type HelperCalendar,
@@ -54,7 +55,10 @@ export function macHost(connected: boolean): MacHost {
       if (request.op === 'window') {
         return { events: host.events, truncated: false, from: at(-3000), to: at(15000) };
       }
-      if (request.op === 'range') return { events: [], truncated: false };
+      if (request.op === 'range') {
+        const events = eventsInSpan(host.events, Date.parse(request.from), Date.parse(request.to));
+        return { events, truncated: false };
+      }
       return { stopped: true };
     },
   };

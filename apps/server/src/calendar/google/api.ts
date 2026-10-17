@@ -161,6 +161,17 @@ export async function listGoogleCalendars(deps: GoogleApiDeps): Promise<GoogleCa
   return found.filter((entry) => !entry.deleted && entry.accessRole !== 'freeBusyReader');
 }
 
+export async function getGoogleEvent(
+  deps: GoogleApiDeps,
+  calendarId: string,
+  eventId: string,
+): Promise<GoogleEvent> {
+  const path = `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`;
+  const parsed = googleEventSchema.safeParse(await getJson(deps, path, new URLSearchParams()));
+  if (!parsed.success) throw new GoogleApiError('bad_response', 'Google sent an odd event.');
+  return parsed.data;
+}
+
 export type GoogleEventsRequest =
   { kind: 'full'; timeMin: string; timeMax: string } | { kind: 'changes'; syncToken: string };
 

@@ -1,6 +1,8 @@
 import {
+  memo,
   useEffect,
   useId,
+  useMemo,
   useRef,
   type CSSProperties,
   type KeyboardEvent,
@@ -9,9 +11,9 @@ import {
 import type { CalendarChoice, CalendarEvent } from '@spark-outpost/contracts';
 import { ChoicePicker, type PickerChoice } from '../ui/ChoicePicker.tsx';
 import { countLabel } from '../ui/count-label.ts';
-import { ChevronIcon } from '../ui/icons.tsx';
 import { clock, dayTitle } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
+import { StepButtons } from './StepButtons.tsx';
 import {
   keyMove,
   preview,
@@ -82,24 +84,7 @@ function MonthBar(props: Pick<MonthGridProps, 'grid' | 'date' | 'onDate'> & { ti
         <button type="button" className="btn line sm" onClick={() => onDate(localDate(Date.now()))}>
           Today
         </button>
-        <button
-          type="button"
-          className="mo-step"
-          aria-label="Previous month"
-          onClick={() => onDate(shiftMonth(date, -1))}
-        >
-          <span className="mo-back">
-            <ChevronIcon />
-          </span>
-        </button>
-        <button
-          type="button"
-          className="mo-step"
-          aria-label="Next month"
-          onClick={() => onDate(shiftMonth(date, 1))}
-        >
-          <ChevronIcon />
-        </button>
+        <StepButtons unit="month" onStep={(delta) => onDate(shiftMonth(date, delta))} />
       </span>
     </div>
   );
@@ -128,7 +113,13 @@ interface CellProps {
   onOpenEvent: (event: CalendarEvent, anchor: HTMLElement) => void;
 }
 
-function DayCell({ cell, events, selected, calendars, ...actions }: CellProps) {
+const DayCell = memo(function DayCell({
+  cell,
+  events,
+  selected,
+  calendars,
+  ...actions
+}: CellProps) {
   const { shown, more } = preview(events);
   const openEvent = (event: CalendarEvent) => (click: MouseEvent<HTMLButtonElement>) => {
     click.stopPropagation();
@@ -172,6 +163,19 @@ function DayCell({ cell, events, selected, calendars, ...actions }: CellProps) {
       </span>
     </div>
   );
+});
+
+const NO_EVENTS: readonly CalendarEvent[] = [];
+
+function weekdayLabels(week: readonly MonthCell[]) {
+  return week.map((cell) => {
+    const day = new Date(cell.dayStart);
+    return {
+      key: cell.date,
+      short: day.toLocaleDateString(undefined, { weekday: 'short' }),
+      long: day.toLocaleDateString(undefined, { weekday: 'long' }),
+    };
+  });
 }
 
 export function MonthGrid(props: MonthGridProps) {
@@ -179,6 +183,7 @@ export function MonthGrid(props: MonthGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const moved = useRef(false);
   const titleId = useId();
+  const weekdays = useMemo(() => weekdayLabels(grid.weeks[0]!), [grid]);
 
   useEffect(() => {
     if (!moved.current) return;
@@ -214,13 +219,9 @@ export function MonthGrid(props: MonthGridProps) {
         onKeyDown={onKeyDown}
       >
         <div role="row" className="mo-row mo-head">
-          {grid.weeks[0]!.map((cell) => (
-            <span key={cell.date} role="columnheader" className="mo-wd">
-              <abbr
-                title={new Date(cell.dayStart).toLocaleDateString(undefined, { weekday: 'long' })}
-              >
-                {new Date(cell.dayStart).toLocaleDateString(undefined, { weekday: 'short' })}
-              </abbr>
+          {weekdays.map((weekday) => (
+            <span key={weekday.key} role="columnheader" className="mo-wd">
+              <abbr title={weekday.long}>{weekday.short}</abbr>
             </span>
           ))}
         </div>
@@ -230,7 +231,7 @@ export function MonthGrid(props: MonthGridProps) {
               <DayCell
                 key={cell.date}
                 cell={cell}
-                events={props.byDay.get(cell.date) ?? []}
+                events={props.byDay.get(cell.date) ?? NO_EVENTS}
                 selected={cell.date === date}
                 calendars={props.calendars}
                 onDate={onDate}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  dayEvents,
+  eventsByDay,
   initials,
   keyMove,
   monthGrid,
@@ -66,7 +66,10 @@ describe('what a day shows', () => {
     const holiday = event('Holiday', at(0), at(24), { allDay: true });
     const other = event('Tomorrow', at(33), at(34));
     const extra = event('Lunch', at(12), at(13));
-    const day = dayEvents([late, early, holiday, other, extra], '2026-10-16');
+    const cells = monthGrid('2026-10-16', '2026-10-16', SUNDAY).weeks.flat();
+    const byDay = eventsByDay([late, early, holiday, other, extra], cells);
+    const day = byDay.get('2026-10-16')!;
+    expect(byDay.get('2026-10-17')!.map((item) => item.title)).toEqual(['Tomorrow']);
     expect(day.map((item) => item.title)).toEqual(['Holiday', 'Early', 'Lunch', 'Late']);
     expect(preview(day)).toMatchObject({ more: 1 });
     expect(preview(day).shown.map((item) => item.title)).toEqual(['Holiday', 'Early', 'Lunch']);
@@ -87,6 +90,16 @@ describe('what a day shows', () => {
       ['9:00', ['Nine', 'Half past']],
       ['10:00', ['Ten']],
     ]);
+  });
+
+  it('puts an event that spans days in every day it covers', () => {
+    const cells = monthGrid('2026-10-16', '2026-10-16', SUNDAY).weeks.flat();
+    const offsite = event('Offsite', at(9), at(9 + 48), { allDay: true });
+    const byDay = eventsByDay([offsite], cells);
+    expect(
+      ['2026-10-16', '2026-10-17', '2026-10-18'].map((date) => byDay.get(date)!.length),
+    ).toEqual([1, 1, 1]);
+    expect(byDay.get('2026-10-19')).toEqual([]);
   });
 
   it('shows initials for names and email addresses', () => {

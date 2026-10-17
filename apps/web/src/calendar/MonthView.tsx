@@ -1,11 +1,12 @@
 import './month.css';
-import { useMemo, useState, type ReactNode } from 'react';
-import { clashList, type CalendarChoice, type CalendarEvent } from '@spark-outpost/contracts';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import type { CalendarEvent } from '@spark-outpost/contracts';
 import { dayTitle } from './calendar-format.ts';
 import { EventPopover } from './EventPopover.tsx';
 import { MonthGrid } from './MonthGrid.tsx';
-import { dayEvents, eventsByDay, monthGrid, weekStartDay } from './month-model.ts';
+import { eventsByDay, monthGrid, weekStartDay } from './month-model.ts';
 import { ScheduledRail } from './ScheduledRail.tsx';
+import { calendarMap, clashMap } from './today-model.ts';
 import { useCalendarRange } from './use-calendar.ts';
 
 interface MonthViewProps {
@@ -27,38 +28,31 @@ interface OpenEvent {
 const NO_EVENTS: readonly CalendarEvent[] = [];
 
 export function MonthView(props: MonthViewProps) {
-  const { date, today, now } = props;
+  const { date, today, now, onDate } = props;
   const weekStart = useMemo(() => weekStartDay(), []);
-  const grid = useMemo(() => monthGrid(date, today, weekStart), [date, today, weekStart]);
+  const month = date.slice(0, 7);
+  const grid = useMemo(() => monthGrid(`${month}-01`, today, weekStart), [month, today, weekStart]);
   const query = useCalendarRange(grid.from, grid.to);
   const [open, setOpen] = useState<OpenEvent | null>(null);
   const events = query.data?.events ?? NO_EVENTS;
   const byDay = useMemo(() => eventsByDay(events, grid.weeks.flat()), [events, grid]);
-  const calendars = useMemo(
-    () =>
-      new Map<string, CalendarChoice>(
-        (query.data?.calendars ?? []).map((choice) => [choice.key, choice]),
-      ),
-    [query.data],
+  const calendars = useMemo(() => calendarMap(query.data?.calendars), [query.data]);
+  const selectedEvents = byDay.get(date) ?? NO_EVENTS;
+  const clashes = useMemo(() => clashMap(selectedEvents), [selectedEvents]);
+  const openEvent = useCallback(
+    (event: CalendarEvent, anchor: HTMLElement) =>
+      setOpen((current) => ({ key: event.key, anchor, opened: (current?.opened ?? 0) + 1 })),
+    [],
   );
-  const selectedEvents = useMemo(
-    () => byDay.get(date) ?? dayEvents(events, date),
-    [byDay, events, date],
+  const pickDate = useCallback(
+    (next: string) => {
+      setOpen(null);
+      onDate(next);
+    },
+    [onDate],
   );
-  const clashes = useMemo(
-    () =>
-      new Map(
-        clashList(selectedEvents, selectedEvents).map((clash) => [clash.eventKey, clash.titles]),
-      ),
-    [selectedEvents],
-  );
-  const openEvent = (event: CalendarEvent, anchor: HTMLElement) =>
-    setOpen((current) => ({ key: event.key, anchor, opened: (current?.opened ?? 0) + 1 }));
+  const closePopover = useCallback(() => setOpen(null), []);
   const shown = open ? (events.find((event) => event.key === open.key) ?? null) : null;
-  const pickDate = (next: string) => {
-    setOpen(null);
-    props.onDate(next);
-  };
 
   return (
     <>
@@ -108,7 +102,7 @@ export function MonthView(props: MonthViewProps) {
           today={today}
           now={now}
           onStartChat={props.onStartChat}
-          onClose={() => setOpen(null)}
+          onClose={closePopover}
         />
       )}
     </>

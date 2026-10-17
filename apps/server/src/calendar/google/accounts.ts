@@ -89,8 +89,44 @@ function prefixOf(accountId: string) {
   return `google:${accountId}:`;
 }
 
-async function pollWith(deps: AccountDeps, account: LiveAccount, token: string) {
-  const api = { fetch: deps.fetch, apiUrl: deps.client.apiUrl, accessToken: token };
+export function isSkippable(error: unknown): boolean {
+  return error instanceof GoogleApiError && ['forbidden', 'not_found'].includes(error.kind);
+}
+
+export async function withFreshToken<T>(
+  deps: AccountDeps,
+  account: LiveAccount,
+  work: (api: GoogleApiDeps) => Promise<T>,
+): Promise<T> {
+  const api = async (): Promise<GoogleApiDeps> => ({
+    fetch: deps.fetch,
+    apiUrl: deps.client.apiUrl,
+    accessToken: await accessToken(deps, account),
+  });
+  try {
+    return await work(await api());
+  } catch (error) {
+    if (!(error instanceof GoogleApiError) || error.kind !== 'unauthorized') throw error;
+    account.accessToken = null;
+    return work(await api());
+  }
+}
+
+const RANGE_CONCURRENCY = 4;
+
+async function settleAll<T, R>(
+  items: readonly T[],
+  limit: number,
+  work: (item: T) => Promise<R>,
+): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = [];
+  for (let index = 0; index < items.length; index += limit) {
+    results.push(...(await Promise.allSettled(items.slice(index, index + limit).map(work))));
+  }
+  return results;
+}
+
+async function pollWith(deps: AccountDeps, account: LiveAccount, api: GoogleApiDeps) {
   const entries = await listGoogleCalendars(api);
   const mapped = entries.flatMap((entry) => {
     const calendar = mapGoogleCalendar(account.row.id, account.row.email, entry);
@@ -116,9 +152,7 @@ async function pollWith(deps: AccountDeps, account: LiveAccount, token: string) 
       next.set(calendarId, result.sync);
       changed ||= result.changed;
     } catch (error) {
-      const skip =
-        error instanceof GoogleApiError && ['forbidden', 'not_found'].includes(error.kind);
-      if (!skip) throw error;
+      if (!isSkippable(error)) throw error;
       changed ||= previous !== null;
     }
   }
@@ -127,37 +161,23 @@ async function pollWith(deps: AccountDeps, account: LiveAccount, token: string) 
   return changed;
 }
 
-async function rangeWith(account: LiveAccount, api: GoogleApiDeps, range: GoogleWindow) {
-  const found = new Map<string, CalendarSync>();
-  for (const calendarId of account.calendars.keys()) {
-    try {
-      found.set(calendarId, await fullSync(api, { accountId: account.row.id, calendarId }, range));
-    } catch (error) {
-      const skip =
-        error instanceof GoogleApiError && ['forbidden', 'not_found'].includes(error.kind);
-      if (!skip) throw error;
-    }
-  }
-  return found;
-}
-
 export async function accountRange(
   deps: AccountDeps,
   account: LiveAccount,
   range: GoogleWindow,
 ): Promise<Map<string, CalendarSync>> {
-  const api = (token: string) => ({
-    fetch: deps.fetch,
-    apiUrl: deps.client.apiUrl,
-    accessToken: token,
+  return withFreshToken(deps, account, async (api) => {
+    const calendarIds = [...account.calendars.keys()];
+    const results = await settleAll(calendarIds, RANGE_CONCURRENCY, (calendarId) =>
+      fullSync(api, { accountId: account.row.id, calendarId }, range),
+    );
+    const found = new Map<string, CalendarSync>();
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') found.set(calendarIds[index]!, result.value);
+      else if (!isSkippable(result.reason)) throw result.reason;
+    });
+    return found;
   });
-  try {
-    return await rangeWith(account, api(await accessToken(deps, account)), range);
-  } catch (error) {
-    if (!(error instanceof GoogleApiError) || error.kind !== 'unauthorized') throw error;
-    account.accessToken = null;
-    return rangeWith(account, api(await accessToken(deps, account)), range);
-  }
 }
 
 export function backoffMs(failures: number, retryAfterMs: number | null, random: number): number {
@@ -198,14 +218,7 @@ export async function pollAccount(
 ): Promise<PollOutcome> {
   if (account.row.needsSignIn) return { changed: false, nextInMs: null };
   try {
-    let changed: boolean;
-    try {
-      changed = await pollWith(deps, account, await accessToken(deps, account));
-    } catch (error) {
-      if (!(error instanceof GoogleApiError) || error.kind !== 'unauthorized') throw error;
-      account.accessToken = null;
-      changed = await pollWith(deps, account, await accessToken(deps, account));
-    }
+    const changed = await withFreshToken(deps, account, (api) => pollWith(deps, account, api));
     const recovered = account.state !== 'ready';
     account.state = 'ready';
     account.message = null;

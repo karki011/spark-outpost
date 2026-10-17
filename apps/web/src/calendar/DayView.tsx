@@ -1,9 +1,7 @@
 import { useId, useMemo, useState, type ReactNode } from 'react';
 import {
   addLocalDays,
-  clashList,
   localDayStart,
-  type CalendarChoice,
   type CalendarDay,
   type ConversationSummary,
 } from '@spark-outpost/contracts';
@@ -14,7 +12,14 @@ import { DayTimeline } from './DayTimeline.tsx';
 import { EventPanel } from './EventPanel.tsx';
 import { NextRow } from './NextRow.tsx';
 import { TodayChats, type Overlap } from './TodayChats.tsx';
-import { noGaps, overlapChat, timelineSpan, visibleEvents } from './today-model.ts';
+import {
+  calendarMap,
+  clashMap,
+  noGaps,
+  overlapChat,
+  timelineSpan,
+  visibleEvents,
+} from './today-model.ts';
 import { useCalendarDay } from './use-calendar.ts';
 import { CalendarFilters, WeekStrip } from './WeekStrip.tsx';
 
@@ -67,21 +72,8 @@ export function DayView({
   const day = query.data;
   const isToday = day?.date === today;
   const overlaps = useOverlaps(day, isToday, now, chats);
-  const calendars = useMemo(
-    () =>
-      new Map<string, CalendarChoice>((day?.calendars ?? []).map((choice) => [choice.key, choice])),
-    [day],
-  );
-  const clashes = useMemo(
-    () =>
-      new Map(
-        clashList(day?.events ?? [], day?.events ?? []).map((clash) => [
-          clash.eventKey,
-          clash.titles,
-        ]),
-      ),
-    [day],
-  );
+  const calendars = useMemo(() => calendarMap(day?.calendars), [day]);
+  const clashes = useMemo(() => clashMap(day?.events), [day]);
   const pick = (next: string) => {
     onDate(next);
     onSelect(null);

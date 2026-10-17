@@ -26,8 +26,8 @@ import { withTransaction, type Db } from '../persistence/db.ts';
 import type { CalendarHost } from './host-client.ts';
 import { googleSourceId } from './google/map.ts';
 import type { GoogleSource } from './google/source.ts';
-import { GOOGLE_WINDOW_DAYS_AFTER, GOOGLE_WINDOW_DAYS_BEFORE } from './google/sync.ts';
 import { planNudges, type PlannerChat } from './planner.ts';
+import { linkFreeSnippet } from './snippet.ts';
 import { lostNotice, rematchCalendars } from './rematch.ts';
 import {
   EVENTKIT_OWNER,
@@ -194,14 +194,6 @@ async function googleEvents(deps: CalendarDeps, range: CalendarSpan | null) {
   return range ? deps.google.range(range.start, range.end) : deps.google.window();
 }
 
-export function inEventWindow(range: CalendarSpan, now: number): boolean {
-  const today = localDayStart(now);
-  return (
-    range.start >= addLocalDays(today, -GOOGLE_WINDOW_DAYS_BEFORE) &&
-    range.end <= addLocalDays(today, GOOGLE_WINDOW_DAYS_AFTER)
-  );
-}
-
 export async function calendarState(
   deps: CalendarDeps,
   range: CalendarSpan | null = null,
@@ -212,8 +204,10 @@ export async function calendarState(
   const reading = connection.connected
     ? await readHost(deps)
     : { connected: false, authorization: null, helper: null };
-  const mac = await macEvents(deps, reading, range);
-  const google = await googleEvents(deps, range);
+  const [mac, google] = await Promise.all([
+    macEvents(deps, reading, range),
+    googleEvents(deps, range),
+  ]);
   const googleReady = deps.google?.ready() ?? false;
   const choices = [...mac.choices, ...(googleReady ? await googleChoices(deps) : [])];
   const active = readable(reading) || googleReady;
@@ -240,13 +234,16 @@ export async function calendarState(
 
 const WEEK_DAYS = 7;
 
-export function calendarDay(
-  state: CalendarState,
-  dayStart: number,
-  now: number,
-  dayState: CalendarState = state,
-): CalendarDay {
-  const events = eventsOnDay(dayState.events, dayStart);
+export function dayAndWeek(dayStart: number, now: number): CalendarSpan {
+  const today = localDayStart(now);
+  return {
+    start: Math.min(dayStart, today),
+    end: Math.max(addLocalDays(dayStart, 1), addLocalDays(today, WEEK_DAYS)),
+  };
+}
+
+export function calendarDay(state: CalendarState, dayStart: number, now: number): CalendarDay {
+  const events = eventsOnDay(state.events, dayStart);
   const today = localDayStart(now);
   const week = Array.from({ length: WEEK_DAYS }, (_, index) => {
     const start = addLocalDays(today, index);
@@ -265,7 +262,7 @@ export function calendarDay(
     shape: dayShape(events, dayStart),
     week,
     calendars: state.choices.filter((choice) => choice.include),
-    truncated: state.truncated || dayState.truncated,
+    truncated: state.truncated,
   };
 }
 
@@ -275,11 +272,10 @@ export function calendarRange(
   now: number,
 ): CalendarRange {
   const events = state.events
-    .filter((event) => {
-      const span = spanOf(event);
-      return span.start < range.end && span.end > range.start;
-    })
-    .toSorted((a, b) => spanOf(a).start - spanOf(b).start);
+    .map((event) => ({ event, span: spanOf(event) }))
+    .filter(({ span }) => span.start < range.end && span.end > range.start)
+    .toSorted((a, b) => a.span.start - b.span.start)
+    .map(({ event }) => event);
   return {
     from: dateKey(range.start),
     to: dateKey(range.end),
@@ -331,5 +327,11 @@ export async function eventDetail(
     .filter((attendee) => !attendee.isMe && attendee.name.trim())
     .map((attendee) => attendee.name.trim())
     .slice(0, CALENDAR_ATTENDEES_MAX);
-  return { title: detail.event.title, notes: detail.notes, link: null, attendees };
+  return {
+    title: detail.event.title,
+    notes: detail.notes,
+    snippet: linkFreeSnippet(detail.notes),
+    link: null,
+    attendees,
+  };
 }

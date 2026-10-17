@@ -7,11 +7,11 @@ import {
   type CalendarEvent,
   type CalendarSpan,
 } from '@spark-outpost/contracts';
-import { ChevronIcon } from '../ui/icons.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { dateOf, span } from './calendar-format.ts';
 import { EventCard } from './EventCard.tsx';
-import { dayStartOf, shiftDay, timeGroups, type TimeGroup } from './month-model.ts';
+import { StepButtons } from './StepButtons.tsx';
+import { shiftDay, timeGroups, type TimeGroup } from './month-model.ts';
 
 interface ScheduledRailProps {
   date: string;
@@ -65,7 +65,8 @@ export function ScheduledRail(props: ScheduledRailProps) {
   const headingId = useId();
   const isToday = date === today;
   const items = useMemo(() => {
-    const free = date >= today ? upcomingFree(freeBlocks([...events], dayStartOf(date)), now) : [];
+    const free =
+      date >= today ? upcomingFree(freeBlocks([...events], dateOf(date).getTime()), now) : [];
     return railItems(timeGroups(events, date), free);
   }, [events, date, today, now]);
   return (
@@ -78,24 +79,7 @@ export function ScheduledRail(props: ScheduledRailProps) {
           </p>
         </div>
         <span className="rl-nav">
-          <button
-            type="button"
-            className="mo-step"
-            aria-label="Previous day"
-            onClick={() => props.onDate(shiftDay(date, -1))}
-          >
-            <span className="mo-back">
-              <ChevronIcon />
-            </span>
-          </button>
-          <button
-            type="button"
-            className="mo-step"
-            aria-label="Next day"
-            onClick={() => props.onDate(shiftDay(date, 1))}
-          >
-            <ChevronIcon />
-          </button>
+          <StepButtons unit="day" onStep={(delta) => props.onDate(shiftDay(date, delta))} />
         </span>
       </header>
       <button type="button" className="btn line sm rl-day" onClick={() => props.onOpenDay(date)}>

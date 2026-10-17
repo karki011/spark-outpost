@@ -1,10 +1,12 @@
 import {
   CALENDAR_DAY_END_HOUR,
   CALENDAR_SERVICE_NAMES,
+  clashList,
   isMeeting,
   joinOpen,
   JOIN_LEAD_MS,
   spanOf,
+  type CalendarChoice,
   type CalendarEvent,
   type CalendarStatus,
   type ConversationSummary,
@@ -18,6 +20,19 @@ export type TodayState = 'web' | 'helper' | 'denied' | 'connect' | 'none' | 'rea
 const OVERLAP_LEAD_MS = 60 * 60_000;
 const HOUR_MS = 60 * 60_000;
 const TIMELINE_START_HOUR = 8;
+
+export function calendarMap(
+  choices: readonly CalendarChoice[] | undefined,
+): Map<string, CalendarChoice> {
+  return new Map((choices ?? []).map((choice) => [choice.key, choice]));
+}
+
+export function clashMap(
+  events: readonly CalendarEvent[] | undefined,
+): Map<string, readonly string[]> {
+  const day = events ?? [];
+  return new Map(clashList(day, day).map((clash) => [clash.eventKey, clash.titles]));
+}
 
 export function includedCalendars(status: CalendarStatus): number {
   return status.accounts.reduce(

@@ -267,7 +267,6 @@ test('sets Remind me and Hold alerts as Spark marks', async ({ page }) => {
   await expect(hold).toHaveAttribute('aria-pressed', 'true');
   await expect(event(page, 'Customer call')).toHaveAccessibleName(/alerts held, reminder/);
   await page.reload();
-  await today(page).getByRole('radio', { name: 'Day' }).click();
   await event(page, 'Customer call').click();
   await expect(remind).toHaveAttribute('aria-pressed', 'true');
   await hold.click();

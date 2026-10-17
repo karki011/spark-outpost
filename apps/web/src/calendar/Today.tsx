@@ -20,10 +20,33 @@ const VIEWS = [
   { id: 'day', label: 'Day' },
 ];
 
+const VIEW_KEY = 'spark.today.view';
+
+function savedView(): CalendarView {
+  try {
+    return sessionStorage.getItem(VIEW_KEY) === 'day' ? 'day' : 'month';
+  } catch {
+    return 'month';
+  }
+}
+
+function useCalendarView() {
+  const [view, setView] = useState<CalendarView>(savedView);
+  const choose = useCallback((next: CalendarView) => {
+    setView(next);
+    try {
+      sessionStorage.setItem(VIEW_KEY, next);
+    } catch {
+      return;
+    }
+  }, []);
+  return [view, choose] as const;
+}
+
 function TodayViews(props: TodayProps) {
   const now = useMinuteClock();
   const today = localDate(now);
-  const [view, setView] = useState<CalendarView>('month');
+  const [view, setView] = useCalendarView();
   const [picked, setPicked] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const date = picked ?? today;
@@ -37,13 +60,16 @@ function TodayViews(props: TodayProps) {
       setSelected(null);
       setView('day');
     },
-    [pickDate],
+    [pickDate, setView],
   );
-  const showEvent = useCallback((eventKey: string) => {
-    setPicked(null);
-    setSelected(eventKey);
-    setView('day');
-  }, []);
+  const showEvent = useCallback(
+    (eventKey: string) => {
+      setPicked(null);
+      setSelected(eventKey);
+      setView('day');
+    },
+    [setView],
+  );
   useTodayEventRequests(showEvent);
   const switcher = (
     <div className="td-views">

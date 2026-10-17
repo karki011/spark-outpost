@@ -77,9 +77,10 @@ describe('a Google range outside the synced window', () => {
     expect(synced.query.syncToken).toBeDefined();
   });
 
-  it('gives the details of an event found only by the range, with attendee names', async () => {
+  it('fetches the details of an event outside the synced window by id, with attendee names', async () => {
     const month = await range(dayKey(-7), dayKey(35));
     const planning = month.events.find((event) => event.title === 'planning')!;
+    const before = h.fake.requests.length;
     const response = await h.client.send('post', '/api/calendar/event', {
       eventId: planning.id,
       start: planning.start,
@@ -88,8 +89,12 @@ describe('a Google range outside the synced window', () => {
     expect(calendarEventDetailSchema.parse(response.body)).toEqual({
       title: 'planning',
       notes: 'Agenda\nJoin: https://meet.google.com/abc-defg-hij',
+      snippet: 'Agenda Join:',
       link: 'https://www.google.com/calendar/event?eid=plan',
       attendees: ['Alex Wong', 'ivan@example.com'],
     });
+    expect(h.fake.requests.slice(before).map((request) => request.path)).toContain(
+      `/calendar/v3/calendars/${encodeURIComponent(EMAIL)}/events/planning`,
+    );
   });
 });

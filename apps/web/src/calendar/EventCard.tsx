@@ -7,12 +7,12 @@ import {
   type CalendarEvent,
 } from '@spark-outpost/contracts';
 import { VideoIcon } from '../ui/icons.tsx';
-import { clock, duration, span } from './calendar-format.ts';
+import { duration, span } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
 import { ClashTag } from './ClashTag.tsx';
 import { JoinButton } from './JoinButton.tsx';
-import { durationMinutes, initials, isPastEvent } from './month-model.ts';
-import { notesSnippet, peopleLine } from './event-text.ts';
+import { durationMinutes, initials } from './month-model.ts';
+import { peopleLine } from './event-text.ts';
 import { joinHint } from './today-model.ts';
 import { useEventDetail } from './use-calendar.ts';
 
@@ -74,8 +74,8 @@ interface EventCardProps {
 export function EventCard({ event, calendar, clashes, now, isToday, onOpen }: EventCardProps) {
   const detail = useEventDetail(event);
   const { start, end } = spanOf(event);
-  const notes = detail.data ? notesSnippet(detail.data.notes) : '';
-  const past = isPastEvent(event, now);
+  const notes = detail.data?.snippet ?? '';
+  const past = end <= now;
   const when = event.allDay ? 'All day' : span(start, end);
   const length = event.allDay ? null : duration(durationMinutes(event));
   return (
@@ -98,7 +98,7 @@ export function EventCard({ event, calendar, clashes, now, isToday, onOpen }: Ev
       </button>
       {notes && <p className="rl-notes">{notes}</p>}
       <p className="rl-time">
-        <span>{event.allDay ? 'All day' : `${clock(start)} – ${clock(end)}`}</span>
+        <span>{when}</span>
         {length && <span>{length}</span>}
       </p>
       {clashes && (

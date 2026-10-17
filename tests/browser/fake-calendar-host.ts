@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import {
   BROWSER_HOST_ENV,
   calendarBridgeToHostSchema,
+  eventsInSpan,
   type CalendarAuthorization,
   type CalendarHostRequest,
   type HelperCalendar,
@@ -12,6 +13,7 @@ import {
   saveCalendarClock,
   shiftProcessClock,
 } from './fake-calendar-clock.ts';
+import { FAKE_CALENDAR_FAR_DAYS } from './stub-config.ts';
 
 type Listener = (event: { data: unknown }) => void;
 
@@ -59,11 +61,20 @@ const CALENDARS: HelperCalendar[] = [
   },
 ];
 
-const STANDUP_ATTENDEES = [
-  { name: 'Spark Tester', isMe: true, status: 'accepted' as const },
-  { name: 'Alex Wong', isMe: false, status: 'accepted' as const },
-  { name: 'Ivan Marsh', isMe: false, status: 'tentative' as const },
-];
+const DAY_MINUTES = 24 * 60;
+
+interface FakeAttendee {
+  name: string;
+  isMe: boolean;
+  status: 'accepted' | 'tentative';
+}
+
+interface FakeDetail {
+  notes: string;
+  attendees: FakeAttendee[];
+}
+
+const details = new Map<string, FakeDetail>();
 
 function state(): FakeState {
   const file = process.env.SPARK_FAKE_CALENDAR_STATE;
@@ -89,8 +100,10 @@ function event(
   calendarId: string,
   start: number,
   minutes: number,
-  extra: Partial<HelperEvent> = {},
+  extra: Partial<HelperEvent> & Partial<FakeDetail> = {},
 ): HelperEvent {
+  const { notes = '', attendees = [], ...fields } = extra;
+  details.set(id, { notes, attendees });
   return {
     id,
     uid: `uid-${id}`,
@@ -102,13 +115,13 @@ function event(
     url: null,
     location: null,
     noteLinks: [],
-    hasNotes: false,
+    hasNotes: notes !== '',
     attendeeCount: 3,
     othersInvited: true,
     myStatus: 'accepted',
     availability: 'busy',
     recurring: false,
-    ...extra,
+    ...fields,
   };
 }
 
@@ -155,7 +168,12 @@ function events(): HelperEvent[] {
   return [
     event('standup', 'Standup', 'fake-work', at(4), 15, {
       noteLinks: ['https://acme.zoom.us/j/123456789'],
-      hasNotes: true,
+      notes: 'Daily sync: what changed since yesterday.',
+      attendees: [
+        { name: 'Spark Tester', isMe: true, status: 'accepted' },
+        { name: 'Alex Wong', isMe: false, status: 'accepted' },
+        { name: 'Ivan Marsh', isMe: false, status: 'tentative' },
+      ],
     }),
     event('customer', 'Customer call', 'fake-work', at(60), 30, { noteLinks: [safeLinks] }),
     event('vendor', 'Vendor sync', 'fake-work', at(90), 30, {
@@ -183,13 +201,20 @@ function events(): HelperEvent[] {
     event('demo', 'Demo day', 'fake-work', tomorrowAt(15), 60, {
       url: 'https://meet.google.com/xyz-abcd-efg',
     }),
+    event('review', 'Quarterly review', 'fake-work', at(-FAKE_CALENDAR_FAR_DAYS * DAY_MINUTES), 60),
+    event('board', 'Board prep', 'fake-family', at(FAKE_CALENDAR_FAR_DAYS * DAY_MINUTES), 60),
   ];
 }
 
 function window() {
-  const from = anchor() - 2 * 24 * 60 * MINUTE;
-  const to = anchor() + 8 * 24 * 60 * MINUTE;
-  return { events: events(), truncated: false, from: iso(from), to: iso(to) };
+  const from = anchor() - 2 * DAY_MINUTES * MINUTE;
+  const to = anchor() + 8 * DAY_MINUTES * MINUTE;
+  return {
+    events: eventsInSpan(events(), from, to),
+    truncated: false,
+    from: iso(from),
+    to: iso(to),
+  };
 }
 
 function failure(code: string, message: string) {
@@ -226,20 +251,17 @@ function answer(request: CalendarHostRequest): unknown {
   }
   if (request.op === 'window') return window();
   if (request.op === 'range') {
-    const from = Date.parse(request.from);
-    const to = Date.parse(request.to);
-    const inside = events().filter(
-      (item) => Date.parse(item.start) < to && Date.parse(item.end) > from,
-    );
+    const inside = eventsInSpan(events(), Date.parse(request.from), Date.parse(request.to));
     return { events: inside, truncated: false };
   }
   if (request.op === 'open') return { opened: true };
   const found = events().find((item) => item.id === request.eventId);
   if (!found) return failure('not_found', 'That event is gone.');
+  const detail = details.get(found.id);
   return {
     event: found,
-    notes: found.hasNotes ? 'Daily sync: what changed since yesterday.' : '',
-    attendees: found.id === 'standup' ? STANDUP_ATTENDEES : [],
+    notes: detail?.notes ?? '',
+    attendees: detail?.attendees ?? [],
     organizerIsMe: false,
   };
 }

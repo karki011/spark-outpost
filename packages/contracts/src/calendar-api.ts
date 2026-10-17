@@ -12,6 +12,7 @@ export const CALENDAR_UPCOMING_COUNT = 3;
 export const CALENDAR_GROUP_MAX = 20;
 export const CALENDAR_RANGE_MAX_DAYS = 62;
 export const CALENDAR_ATTENDEES_MAX = 100;
+export const CALENDAR_SNIPPET_MAX = 160;
 
 export const calendarHoldRuleSchema = z.enum(['never', 'focus', 'meetings']);
 export type CalendarHoldRule = z.infer<typeof calendarHoldRuleSchema>;
@@ -188,6 +189,7 @@ export type CalendarOccurrence = z.infer<typeof calendarOccurrenceSchema>;
 export const calendarEventDetailSchema = z.object({
   title: z.string().max(1_000),
   notes: z.string().max(20_000),
+  snippet: z.string().max(CALENDAR_SNIPPET_MAX),
   link: z.url().nullable(),
   attendees: z.array(z.string().max(300)).max(CALENDAR_ATTENDEES_MAX),
 });

@@ -3,10 +3,8 @@ import { calendarDaySchema, calendarRangeSchema } from '@spark-outpost/contracts
 import { createApp } from '../src/api/app.ts';
 import { dateKey } from '../src/calendar/service.ts';
 import { localClient, testAppOptions } from './app-support.ts';
-import { fakeHost, helperEvent, MINUTE, type FakeHost } from './calendar-host-support.ts';
+import { fakeHost, helperEvent, type FakeHost } from './calendar-host-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
-
-const DAY = 24 * 60 * MINUTE;
 
 let t: TestDb;
 let host: FakeHost;
@@ -68,14 +66,6 @@ describe('the calendar range', () => {
     ]);
   });
 
-  it('reads the stored window, not the helper, for a range inside it', async () => {
-    const response = await range(dayKey(0), dayKey(2));
-    expect(calendarRangeSchema.parse(response.body).events.map((event) => event.title)).toEqual([
-      'Standup',
-    ]);
-    expect(host.ranges).toEqual([]);
-  });
-
   it('refuses bad dates, a reversed range and one longer than 62 days', async () => {
     expect((await range('2026-13-01', dayKey(1))).status).toBe(400);
     expect((await range(dayKey(3), dayKey(1))).status).toBe(400);
@@ -85,15 +75,18 @@ describe('the calendar range', () => {
     expect((await client.get('/api/calendar/range')).status).toBe(400);
   });
 
-  it('shows a day outside the stored window from the helper, keeping this week', async () => {
+  it('shows a far day and this week from one range', async () => {
     const response = await client.get(`/api/calendar/day?date=${dayKey(25)}`);
     const day = calendarDaySchema.parse(response.body);
     expect(day.events.map((event) => event.title)).toEqual(['Next month']);
     expect(day.week[0]!.date).toBe(dayKey(0));
     expect(day.week[0]!.meetings).toBe(1);
-    expect(host.ranges).toHaveLength(1);
-    expect(Date.parse(host.ranges[0]!.to) - Date.parse(host.ranges[0]!.from)).toBeLessThan(
-      DAY + 2 * 60 * MINUTE,
-    );
+    expect(host.ranges).toEqual([
+      {
+        from: new Date(Date.parse(`${dayKey(0)}T00:00:00`)).toISOString(),
+        to: new Date(Date.parse(`${dayKey(26)}T00:00:00`)).toISOString(),
+      },
+    ]);
+    expect((await client.get('/api/calendar/day?date=16-10-2026')).status).toBe(400);
   });
 });

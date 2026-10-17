@@ -1,11 +1,12 @@
-import { useEffect, useId, useMemo, useRef, type CSSProperties, type RefObject } from 'react';
+import { useEffect, useId, useMemo, useRef, type CSSProperties } from 'react';
 import type { CalendarChoice, CalendarEvent } from '@spark-outpost/contracts';
 import { XIcon } from '../ui/icons.tsx';
-import { useKeepInViewport } from '../ui/viewport-clamp.ts';
+import { useDismiss } from '../ui/use-dismiss.ts';
+import { clampStart, useKeepInViewport } from '../ui/viewport-clamp.ts';
 import { ClashTag } from './ClashTag.tsx';
-import { notesSnippet, peopleLine } from './event-text.ts';
+import { peopleLine } from './event-text.ts';
 import { EventActions, EventMeta } from './EventPanel.tsx';
-import { useEventDetail, localDate } from './use-calendar.ts';
+import { localDate, useEventDetail } from './use-calendar.ts';
 
 const GAP = 10;
 const WIDTH = 340;
@@ -25,33 +26,10 @@ function placeBeside(anchor: HTMLElement): CSSProperties {
   const rect = anchor.getBoundingClientRect();
   const right = rect.right + GAP;
   const left = right + WIDTH <= window.innerWidth ? right : rect.left - GAP - WIDTH;
-  return { left: Math.max(GAP, left), top: Math.max(GAP, rect.top - GAP) };
-}
-
-function useDismiss(
-  panel: RefObject<HTMLElement | null>,
-  anchor: HTMLElement,
-  onClose: () => void,
-) {
-  useEffect(() => {
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (panel.current?.contains(target) || anchor.contains(target)) return;
-      onClose();
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented) return;
-      event.preventDefault();
-      onClose();
-      if (anchor.isConnected) anchor.focus();
-    };
-    window.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('keydown', onKeyDown, true);
-    return () => {
-      window.removeEventListener('pointerdown', onPointerDown);
-      window.removeEventListener('keydown', onKeyDown, true);
-    };
-  }, [panel, anchor, onClose]);
+  return {
+    left: clampStart(left, WIDTH, window.innerWidth, GAP),
+    top: Math.max(GAP, rect.top - GAP),
+  };
 }
 
 export function EventPopover(props: EventPopoverProps) {
@@ -61,12 +39,18 @@ export function EventPopover(props: EventPopoverProps) {
   const place = useMemo(() => placeBeside(anchor), [anchor]);
   const detail = useEventDetail(event);
   useKeepInViewport(panelRef, true);
-  useDismiss(panelRef, anchor, onClose);
+  useDismiss({
+    open: true,
+    panelRef,
+    anchor: () => anchor,
+    focusBack: () => anchor,
+    onClose,
+  });
   useEffect(() => {
     panelRef.current?.focus();
   }, [event.key]);
   const date = localDate(Date.parse(event.start));
-  const notes = detail.data ? notesSnippet(detail.data.notes) : '';
+  const snippet = detail.data?.snippet ?? '';
   const people = peopleLine(detail.data?.attendees ?? [], event.attendeeCount);
   const close = () => {
     onClose();
@@ -93,7 +77,7 @@ export function EventPopover(props: EventPopoverProps) {
           <ClashTag titles={props.clashes} />
         </p>
       )}
-      {notes && <p className="mo-pop-notes">{notes}</p>}
+      {snippet && <p className="mo-pop-notes">{snippet}</p>}
       {people && <p className="mo-pop-people">{people}</p>}
       <EventActions
         event={event}

@@ -1,8 +1,9 @@
-import type {
-  CalendarAuthorization,
-  CalendarHostRequest,
-  HelperCalendar,
-  HelperEvent,
+import {
+  eventsInSpan,
+  type CalendarAuthorization,
+  type CalendarHostRequest,
+  type HelperCalendar,
+  type HelperEvent,
 } from '@spark-outpost/contracts';
 import { CalendarHostError, type CalendarHost } from '../src/calendar/host-client.ts';
 
@@ -95,11 +96,7 @@ export function fakeHost(): FakeHost {
       }
       if (request.op === 'range') {
         host.ranges.push({ from: request.from, to: request.to });
-        const from = Date.parse(request.from);
-        const to = Date.parse(request.to);
-        const events = host.events.filter(
-          (event) => Date.parse(event.start) < to && Date.parse(event.end) > from,
-        );
+        const events = eventsInSpan(host.events, Date.parse(request.from), Date.parse(request.to));
         return { events, truncated: false };
       }
       if (request.op === 'stop') return { stopped: true };
