@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { AGENT_COMPACTED_NOTE } from '../src/compaction/before-turn.ts';
 import { IDENTIFIERS_TITLE } from '../src/compaction/anchors.ts';
+import { chatIdentifiers } from '../src/compaction/identifiers.ts';
 import {
   compactionsOf,
   newChat,
@@ -25,24 +26,24 @@ afterEach(async () => {
   await h.stop();
 });
 
+async function addToolResult(runId: string, content: string): Promise<void> {
+  await h.t.db.query(
+    `INSERT INTO run_events (run_id, seq, type, payload)
+     SELECT $1, COALESCE(max(seq), 0) + 1, 'TOOL_CALL_RESULT', $2::jsonb
+     FROM run_events WHERE run_id = $1`,
+    [runId, JSON.stringify({ messageId: 'tool-result', toolCallId: 'tool-call', content })],
+  );
+}
+
 async function earlyWork(conversationId: string): Promise<void> {
   const first = await say(h, conversationId, 'Start the export work');
   await h.t.db.query(`UPDATE messages SET content = $2 WHERE run_id = $1 AND role = 'assistant'`, [
     first.run.id,
     `Pushed ${BRANCH} and opened pull request ${PR} for ${TICKET}.`,
   ]);
-  await h.t.db.query(
-    `INSERT INTO run_events (run_id, seq, type, payload)
-     SELECT $1, COALESCE(max(seq), 0) + 1, 'TOOL_CALL_RESULT', $2::jsonb
-     FROM run_events WHERE run_id = $1`,
-    [
-      first.run.id,
-      JSON.stringify({
-        messageId: 'tool-result',
-        toolCallId: 'tool-call',
-        content: `[${BRANCH} ${SHA}] Add CSV export\npnpm test\n${ERROR}\n    at parse (src/parse.ts:12:3)`,
-      }),
-    ],
+  await addToolResult(
+    first.run.id,
+    `[${BRANCH} ${SHA}] Add CSV export\npnpm test\n${ERROR}\n    at parse (src/parse.ts:12:3)`,
   );
   for (let step = 1; step <= 7; step += 1) {
     await say(h, conversationId, `Keep going, step ${step}`);
@@ -96,5 +97,26 @@ describe('exact identifiers after compaction', { timeout: 120_000 }, () => {
     expect(
       compaction!.summary!.startsWith(`${FAKE_ACP_COMPACT_REPLY}\n\n${IDENTIFIERS_HEADING}`),
     ).toBe(true);
+  });
+
+  it('reads at most two million characters, cutting the text that crosses the limit', async () => {
+    h = await startCompactionHarness([]);
+    const id = await newChat(h, 'full-auto');
+    const first = await say(h, id, 'Dump the log');
+    const filler = 'log line\n'.repeat(100_000);
+    await addToolResult(
+      first.run.id,
+      `Opened #11\n${filler}Opened #22\n${filler}${filler}Opened #33`,
+    );
+    const next = await say(h, id, 'Next');
+
+    const text = await chatIdentifiers(h.t.db, {
+      identity: { threadId: id, runId: next.run.id },
+      projectRoots: [],
+    });
+
+    expect(text).toContain('`#11`');
+    expect(text).toContain('`#22`');
+    expect(text).not.toContain('#33');
   });
 });

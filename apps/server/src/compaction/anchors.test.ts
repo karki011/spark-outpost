@@ -45,16 +45,31 @@ describe('extractAnchors', () => {
 
   it('finds error messages and cuts long ones', () => {
     const anchors = extractAnchors([
-      `TypeError: Cannot read properties of undefined (reading 'id')\nENOENT: no such file or directory, open 'a.txt'\nerror TS2322: Type 'string' is not assignable\nfatal: not a git repository\nRangeError: ${'x'.repeat(300)}`,
+      `TypeError: Cannot read properties of undefined (reading 'id')\nENOENT: no such file or directory, open 'src/a.txt'\nerror TS2322: Type 'string' is not assignable\nfatal: not a git repository\nRangeError: ${'too many steps '.repeat(20)}`,
     ]);
     expect(anchors.error).toContain(
       "TypeError: Cannot read properties of undefined (reading 'id')",
     );
-    expect(anchors.error).toContain("ENOENT: no such file or directory, open 'a.txt'");
+    expect(anchors.error).toContain("ENOENT: no such file or directory, open 'src/a.txt'");
     expect(anchors.error).toContain("error TS2322: Type 'string' is not assignable");
     expect(anchors.error).toContain('fatal: not a git repository');
     const long = anchors.error.find((line) => line.startsWith('RangeError'));
-    expect(long?.length).toBe(161);
+    expect(long?.length).toBe(121);
+  });
+
+  it('keeps only the error type when the message mentions a credential', () => {
+    const anchors = extractAnchors([
+      'TypeError: authentication failed for hunter2-value\nfatal: could not read Password for repo: correcthorse',
+    ]);
+    expect(anchors.error).toEqual(['fatal', 'TypeError']);
+  });
+
+  it('elides words in an error message that it cannot read as plain text', () => {
+    const anchors = extractAnchors([
+      'ConnectError: rejected q9X2-vLm8_Zr4pT by gateway at 10.0.0.12:8443 after 3 tries',
+    ]);
+    expect(anchors.error).toEqual(['ConnectError: rejected … by gateway at … after 3 tries']);
+    expect(identifiersText(anchors)).not.toContain('q9X2');
   });
 
   it('finds links and drops their query strings', () => {

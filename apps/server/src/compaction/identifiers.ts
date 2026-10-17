@@ -15,7 +15,7 @@ async function chatTexts(db: Queryable, conversationId: string, runId: string): 
        SELECT COALESCE((SELECT pf.assistant_history_from FROM profiles pf
          WHERE pf.assistant_conversation_id = $1), '-infinity'::timestamptz) AS at
      )
-     SELECT text FROM (
+     SELECT left(text, ($4 - (read - length(text)))::int) AS text FROM (
      SELECT text, at, seq,
        sum(length(text)) OVER (ORDER BY at DESC, seq DESC ROWS UNBOUNDED PRECEDING) AS read
      FROM (
