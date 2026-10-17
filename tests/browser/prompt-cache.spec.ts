@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
-import { seedChats } from './sidebar-seed.ts';
+import { seedChats, type SeedApproval } from './sidebar-seed.ts';
 
 const MINUTE = 60_000;
 const NOW = new Date('2026-10-17T15:00:00Z').getTime();
@@ -15,8 +15,10 @@ async function sql(text: string, values: unknown[] = []) {
   }
 }
 
-async function claudeChat(status: string) {
-  const [chatId] = await seedChats([{ title: 'Cache chat', run: { status } }]);
+async function claudeChat(status: string, approval?: SeedApproval) {
+  const [chatId] = await seedChats([
+    { title: 'Cache chat', run: { status }, ...(approval ? { approval } : {}) },
+  ]);
   const [run] = await sql(
     `UPDATE runs SET provider = 'claude', used_model = 'claude-opus-5-5',
        finished_at = CASE WHEN $2 THEN now() END
@@ -83,6 +85,40 @@ test('a running turn shows no timer', async ({ page }) => {
   await open(page);
 
   await expect(page.locator('.ctx-unlinked')).toBeVisible();
+  await expect(timer(page)).toHaveCount(0);
+});
+
+test('no timer while the agent waits on a card', async ({ page }) => {
+  const { runId } = await claudeChat('awaiting_approval', {
+    kind: 'command',
+    title: 'Run pnpm test?',
+    command: 'pnpm test',
+  });
+  await cached(runId, 3600, 2);
+  await open(page);
+
+  await expect(page.getByRole('group', { name: /Run pnpm test\?/ })).toBeVisible();
+  await expect(timer(page)).toHaveCount(0);
+});
+
+test('no timer while background sub-agents still work', async ({ page }) => {
+  const { runId } = await claudeChat('running');
+  await cached(runId, 3600, 2);
+  await sql(
+    `INSERT INTO run_events (run_id, seq, type, payload) VALUES ($1, 1, 'ACTIVITY_SNAPSHOT', $2)`,
+    [
+      runId,
+      JSON.stringify({
+        type: 'ACTIVITY_SNAPSHOT',
+        messageId: 'subagents',
+        activityType: 'subagents',
+        content: { waitingOn: 2 },
+      }),
+    ],
+  );
+  await open(page);
+
+  await expect(page.getByText('Waiting on 2 sub-agents').first()).toBeVisible();
   await expect(timer(page)).toHaveCount(0);
 });
 

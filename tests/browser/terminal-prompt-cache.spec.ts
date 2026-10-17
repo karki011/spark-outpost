@@ -63,6 +63,21 @@ test('the Terminal bar counts down from the last request with the lifetime the s
   await expect(timer(page)).toHaveText('Cache cold · next message re-writes ~182K tokens (~$0.91)');
 });
 
+test('the Terminal Cost tab shows the cache hit rate', async ({ page }) => {
+  const { runId } = await terminalChat('ready', 3);
+  await sql(
+    `UPDATE runs SET input_tokens = 100, output_tokens = 50, cached_read_tokens = 900,
+       cached_write_tokens = 0, total_tokens = 1050 WHERE id = $1`,
+    [runId],
+  );
+  await open(page);
+  const panel = page.getByRole('complementary', { name: 'Work panel' });
+  const show = page.getByRole('button', { name: 'Show work panel' });
+  if (await show.isVisible()) await show.click();
+  await panel.getByRole('tab', { name: 'Cost' }).click();
+  await expect(panel.locator('.tu-hit')).toHaveText('Cache hit 90%');
+});
+
 test('the Terminal bar says only when the cache was last used when the lifetime is unknown', async ({
   page,
 }) => {
