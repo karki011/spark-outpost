@@ -30,7 +30,7 @@ Spark keeps changes by itself, in a **Changes kept** record: files, lines, commi
 | Copy kept changes into your checkout | **Bring changes into** _branch_, expanded                   |
 | Commit, push or open a pull request  | See [Ship a change](ship-and-pull-requests.md)              |
 
-**Revert file** restores one file, or deletes one the run created. It refuses a file changed since. Commits and pushes stay.
+**Revert file** restores one file, or deletes one the run created. It refuses a file changed since. Commits and pushes stay. The agent is told next turn.
 
 Only the agent's own edits are counted and reverted, not changes it pulls in from the main branch. In a folder without git, only what its edit tools changed counts; a command's changes go unseen.
 

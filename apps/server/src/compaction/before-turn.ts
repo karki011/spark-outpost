@@ -22,6 +22,7 @@ import { askCheckpoint, compactCard } from '../workflow/kept-record.ts';
 import { kilo } from '../agents/acp/long-context.ts';
 import type { Append, RunControl, TurnDeps } from '../workflow/agent-turn.ts';
 import { APPROVAL_POLL_MS, APPROVAL_TIMEOUT_MS } from '../workflow/approval-gate.ts';
+import { withAgentNote } from '../workflow/agent-note.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
@@ -139,11 +140,6 @@ async function askFirst(
   );
 }
 
-function withAgentNote(input: RunInput): RunInput {
-  if (input.prompt.trimStart().startsWith('/')) return input;
-  return { ...input, followUp: `${AGENT_COMPACTED_NOTE}\n\n${input.followUp ?? input.prompt}` };
-}
-
 async function compactWithAgent(
   deps: TurnDeps,
   lease: Lease,
@@ -181,7 +177,7 @@ async function compactWithAgent(
     append,
     `Compacted the chat: ${kilo(candidate.reading.used)} tokens → a ~${kilo(after.used)} summary; the size with the system prompt and tools shows after the next reply`,
   );
-  return withAgentNote(input);
+  return withAgentNote(input, AGENT_COMPACTED_NOTE);
 }
 
 async function compactWithSpark(

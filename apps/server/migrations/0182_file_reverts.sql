@@ -6,6 +6,7 @@ CREATE TABLE run_file_reverts (
   before_blob text,
   after_blob text,
   reverted_at timestamptz NOT NULL DEFAULT now(),
+  noted_at timestamptz,
   PRIMARY KEY (run_id, path)
 );
 
