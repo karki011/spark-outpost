@@ -1,6 +1,7 @@
 export const SHELL_SPECS = [
   'accessibility',
   'connection',
+  'content-security-policy',
   'first-paint',
   'launch-token',
   'lazy-ui',
@@ -80,7 +81,7 @@ export const SPEC_GROUPS = {
     'pr-watching',
     'ship',
   ],
-  diff: ['diff-drawer', 'diff-shortcut', 'files-changed'],
+  diff: ['diff-drawer', 'diff-shortcut', 'files-changed', 'revert-file'],
   'terminal-preview-browser': [
     'browser-agent',
     'browser-pane',
@@ -109,6 +110,7 @@ export const SPEC_GROUPS = {
     'project-clone',
     'project-work-place',
     'projects',
+    'plan-ring',
     'rail-badges-live',
     'search-jump',
     'session-palette',

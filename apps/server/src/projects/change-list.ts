@@ -15,6 +15,7 @@ export interface FileContents {
 export interface ListedFile {
   file: ChangedFile;
   revision?: string;
+  blobs?: { before: string | null; after: string | null };
   contents(): Promise<FileContents>;
 }
 
@@ -183,6 +184,7 @@ export async function gitRangeFiles(range: GitRange): Promise<ListedFile[]> {
   return raws.map((raw) => ({
     file: describeRaw(raw, counts.get(raw.path), sizes),
     revision: `${raw.oldBlob ?? '-'}..${raw.newBlob ?? '-'}`,
+    blobs: { before: raw.oldBlob, after: raw.newBlob },
     contents: async () => {
       const [before, after] = await Promise.all([
         readBlob(root, raw.oldBlob),

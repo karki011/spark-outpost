@@ -3,7 +3,14 @@ import type { ClientRequest, IncomingMessage, ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
-import { API_TOKEN_ENV, API_TOKEN_HEADER, DEV_API_TOKEN_FILE } from '@spark-outpost/contracts';
+import {
+  API_TOKEN_ENV,
+  API_TOKEN_HEADER,
+  APP_CONTENT_SECURITY_POLICY,
+  CONTENT_SECURITY_POLICY_HEADER,
+  DEV_API_TOKEN_FILE,
+  DEV_CONTENT_SECURITY_POLICY,
+} from '@spark-outpost/contracts';
 import { bundledFontsPlugin } from './bundled-fonts.ts';
 
 const webPort = Number(process.env.SPARK_WEB_PORT ?? 5173);
@@ -38,6 +45,7 @@ export default defineConfig({
     host: '127.0.0.1',
     port: webPort,
     strictPort: true,
+    headers: { [CONTENT_SECURITY_POLICY_HEADER]: DEV_CONTENT_SECURITY_POLICY },
     watch: { useFsEvents: false },
     proxy: {
       '/api': {
@@ -51,5 +59,8 @@ export default defineConfig({
         },
       },
     },
+  },
+  preview: {
+    headers: { [CONTENT_SECURITY_POLICY_HEADER]: APP_CONTENT_SECURITY_POLICY },
   },
 });

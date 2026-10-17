@@ -1,4 +1,5 @@
 import { openIssues, sessionHandoffPrompt, taskDiff } from './session-brief.ts';
+import { chatIdentifiers } from '../compaction/identifiers.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { currentPieceList } from '../persistence/pieces.ts';
 import { agreedPlanFor } from '../plans/plan-staleness.ts';
@@ -73,13 +74,14 @@ export async function loadSessionHandoff(
   const conversationId = input.identity.threadId;
   const root = input.projectRoots[0];
   const task = await latestTask(db, conversationId);
-  const [history, agreedPlan, diff, issues, subtasks, totals] = await Promise.all([
+  const [history, agreedPlan, diff, issues, subtasks, totals, identifiers] = await Promise.all([
     recentMessages(db, input),
     agreedPlanFor(db, conversationId, root ?? null).catch(() => null),
     taskDiff(root),
     openIssues(db, task?.id ?? null),
     openSubtasks(db, task?.id ?? null),
     chatTotals(db, conversationId, input.identity.runId),
+    chatIdentifiers(db, input),
   ]);
   return sessionHandoffPrompt({
     reason,
@@ -90,6 +92,7 @@ export async function loadSessionHandoff(
     changes: diff.files,
     openIssues: issues,
     totals,
+    identifiers,
   });
 }
 

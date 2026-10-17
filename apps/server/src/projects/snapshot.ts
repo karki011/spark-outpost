@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtemp, rm, unlink } from 'node:fs/promises';
+import { lstat, mkdtemp, readlink, rm, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -16,6 +16,7 @@ const GIT_TIMEOUT_MS = 60_000;
 const MAX_BUFFER = 64 * 1024 * 1024;
 
 const SNAPSHOT_REF_PREFIX = 'refs/spark-outpost/runs/';
+const END_REF_PREFIX = 'refs/spark-outpost/run-ends/';
 
 export async function git(
   root: string,
@@ -148,6 +149,50 @@ export async function takeGitSnapshot(root: string, runId: string): Promise<stri
   return commit;
 }
 
+export async function takeGitEndSnapshot(
+  root: string,
+  runId: string,
+  start: string,
+): Promise<string> {
+  const commit = await commitWorkingTree(root, [start], `Spark Outpost: after run ${runId}`);
+  await git(root, ['update-ref', `${END_REF_PREFIX}${runId}`, commit]);
+  return commit;
+}
+
+export async function blobAt(root: string, ref: string, relative: string): Promise<string | null> {
+  try {
+    return (
+      (await git(root, ['rev-parse', '--verify', '-q', `${ref}:./${relative}`])).trim() || null
+    );
+  } catch {
+    return null;
+  }
+}
+
+function hashLinkText(root: string, text: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = execFile(
+      'git',
+      ['-C', root, 'hash-object', '--stdin'],
+      { timeout: GIT_TIMEOUT_MS, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } },
+      (error, stdout) => (error ? reject(error) : resolve(stdout.trim())),
+    );
+    child.stdin?.end(text);
+  });
+}
+
+export async function worktreeBlob(root: string, relative: string): Promise<string | null> {
+  try {
+    const target = path.join(root, relative);
+    if ((await lstat(target)).isSymbolicLink()) {
+      return (await hashLinkText(root, await readlink(target))) || null;
+    }
+    return (await git(root, ['hash-object', '--', relative])).trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 const CHANGE_CODES: Record<string, RunChange['change']> = {
   A: 'added',
   M: 'modified',
@@ -190,14 +235,14 @@ export async function revertGitChanges(
 ): Promise<void> {
   const restored = changes.filter((change) => change.change !== 'added').map((c) => c.path);
   const added = changes.filter((change) => change.change === 'added').map((c) => c.path);
-  if (restored.length > 0) {
-    const literal = restored.map((relative) => `:(literal)${relative}`);
-    await git(root, ['restore', `--source=${snapshot}`, '--worktree', '--', ...literal]);
-  }
   for (const relative of added) {
     await unlink(path.join(root, relative)).catch((error: NodeJS.ErrnoException) => {
       if (error.code !== 'ENOENT') throw error;
     });
+  }
+  if (restored.length > 0) {
+    const literal = restored.map((relative) => `:(literal)${relative}`);
+    await git(root, ['restore', `--source=${snapshot}`, '--worktree', '--', ...literal]);
   }
 }
 

@@ -10,6 +10,7 @@ import { CALENDAR_PATH } from '../ui/icons.tsx';
 import { useSparkPause } from './pause/use-spark-pause.ts';
 import { RailMore } from './RailMore.tsx';
 import { UpdateBlob } from './UpdateBlob.tsx';
+import { PlanRing } from './PlanRing.tsx';
 import './rail.css';
 
 export type AppView =
@@ -279,6 +280,7 @@ export function Rail({
         <>
           <span className="rail-sp" />
           {!remote && <UpdateBlob />}
+          <PlanRing />
           <button
             type="button"
             className="rail-btn"

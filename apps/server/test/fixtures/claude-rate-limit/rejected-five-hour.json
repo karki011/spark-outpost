@@ -1,0 +1,32 @@
+{
+  "sessionId": "redacted",
+  "update": {
+    "sessionUpdate": "usage_update",
+    "used": 41000,
+    "size": 1000000,
+    "cost": {
+      "amount": 0.27,
+      "currency": "USD"
+    },
+    "_meta": {
+      "_claude/rateLimit": {
+        "status": "rejected",
+        "resetsAt": 1792212600,
+        "rateLimitType": "five_hour",
+        "overageStatus": "rejected",
+        "overageDisabledReason": "org_level_disabled_until",
+        "isUsingOverage": false,
+        "unifiedWindows": {
+          "five_hour": {
+            "utilization": 1.02,
+            "resetsAt": 1792212600
+          },
+          "seven_day": {
+            "utilization": 0.71,
+            "resetsAt": 1792425600
+          }
+        }
+      }
+    }
+  }
+}

@@ -40,7 +40,6 @@ export const CHECKPOINT_OPTION = {
   makeChange: 'make_change',
   finishUnverified: 'finish_unverified',
   keepInPiece: 'keep_in_piece',
-  revertFile: 'revert_file',
   buildInOrder: 'build_in_order',
   useDefaults: 'defaults',
   onePr: 'one_pr',

@@ -22,6 +22,7 @@ import { askCheckpoint, compactCard } from '../workflow/kept-record.ts';
 import { kilo } from '../agents/acp/long-context.ts';
 import type { Append, RunControl, TurnDeps } from '../workflow/agent-turn.ts';
 import { APPROVAL_POLL_MS, APPROVAL_TIMEOUT_MS } from '../workflow/approval-gate.ts';
+import { startsWithCommand, withAgentNote } from '../workflow/agent-note.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
@@ -29,6 +30,7 @@ import { SESSION_IDLE_MS, decideResume } from '../workflow/session-decision.ts';
 import { HISTORY_TOOL_NOTE } from '../workflow/session-brief.ts';
 import { compactInSession, leaseLog, offersCompact, type CompactTarget } from './agent-compact.ts';
 import { startFreshChat, type FreshChat } from './fresh-chat.ts';
+import { chatIdentifiers } from './identifiers.ts';
 import { agentCompactWorked, compactStep, readingOf, usedPercent } from './policy.ts';
 import { buildChatSummary } from './summary.ts';
 
@@ -139,9 +141,12 @@ async function askFirst(
   );
 }
 
-function withAgentNote(input: RunInput): RunInput {
-  if (input.prompt.trimStart().startsWith('/')) return input;
-  return { ...input, followUp: `${AGENT_COMPACTED_NOTE}\n\n${input.followUp ?? input.prompt}` };
+function compactedNote(identifiers: string): string {
+  return [AGENT_COMPACTED_NOTE, identifiers].filter(Boolean).join('\n\n');
+}
+
+function withIdentifiers(summary: string, identifiers: string): string | null {
+  return [summary, identifiers].filter(Boolean).join('\n\n') || null;
 }
 
 async function compactWithAgent(
@@ -164,6 +169,7 @@ async function compactWithAgent(
   );
   if (!compacted || !agentCompactWorked(candidate.reading, compacted.after)) return null;
   const { after } = compacted;
+  const identifiers = startsWithCommand(input) ? '' : await chatIdentifiers(deps.db, input);
   await recordCompacted(deps.db, candidate.session.id, after);
   await insertCompaction(deps.db, {
     conversationId: input.identity.threadId,
@@ -174,14 +180,14 @@ async function compactWithAgent(
     tokensBefore: candidate.reading.used,
     tokensAfter: null,
     contextSize: after.size,
-    summary: compacted.text || null,
+    summary: withIdentifiers(compacted.text, identifiers),
     lastMessageId: input.previousMessageId ?? null,
   });
   await notice(
     append,
     `Compacted the chat: ${kilo(candidate.reading.used)} tokens → a ~${kilo(after.used)} summary; the size with the system prompt and tools shows after the next reply`,
   );
-  return withAgentNote(input);
+  return withAgentNote(input, compactedNote(identifiers));
 }
 
 async function compactWithSpark(

@@ -1,0 +1,29 @@
+.plan-ring {
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-ring-track,
+.plan-ring-fill {
+  fill: none;
+  stroke-width: 2.4;
+}
+
+.plan-ring-track {
+  stroke: var(--raise);
+}
+
+.plan-ring-fill {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.25s var(--out);
+}
+
+.plan-ring-fill.full {
+  stroke: var(--warn);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-ring-fill {
+    transition: none;
+  }
+}

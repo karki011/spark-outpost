@@ -116,6 +116,7 @@ function otherKind(signal: FailureSignal, body: ErrorBody | null): FailureKind |
   ) {
     return 'rate_limited';
   }
+  if (category === 'limit') return 'quota';
   if (CONTEXT_TEXT.test(described)) return 'context_too_long';
   if (
     status === 401 ||
