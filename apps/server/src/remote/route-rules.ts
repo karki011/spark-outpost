@@ -22,6 +22,8 @@ POST /api/approvals/:id/decision
 POST /api/approvals/:id/hold
 POST /api/approvals/:id/retry
 POST /api/runs/:id/revert
+GET /api/tasks/:id/changes/revert-file
+POST /api/tasks/:id/changes/revert-file
 GET /api/attachments/:id/content
 POST /api/attachments
 GET /api/conversations/:id/audit/export.csv

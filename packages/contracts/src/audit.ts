@@ -15,6 +15,7 @@ export const protocolEntryKindSchema = z.enum([
   'stderr',
   'check',
   'ship',
+  'revert',
 ]);
 export type ProtocolEntryKind = z.infer<typeof protocolEntryKindSchema>;
 

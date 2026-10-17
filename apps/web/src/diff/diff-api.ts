@@ -2,9 +2,14 @@ import {
   changeDiffSchema,
   changePageSchema,
   changeSummarySchema,
+  fileRevertCheckSchema,
+  fileRevertResponseSchema,
   type ChangeDiff,
   type ChangePage,
   type ChangeSummary,
+  type FileRevertCheck,
+  type FileRevertQuery,
+  type FileRevertResponse,
 } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
 import { taskKeys } from '../tasks/task-api.ts';
@@ -48,6 +53,8 @@ export const diffKeys = {
       params.path,
       params.lines,
     ] as const,
+  revertCheck: (taskId: string, params: FileRevertQuery) =>
+    [...taskKeys.changes(taskId), 'revert-file', params.runId, params.path] as const,
 };
 
 function query(values: Record<string, string | number | undefined>): string {
@@ -82,4 +89,11 @@ export const diffApi = {
         lines: params.lines ?? undefined,
       })}`,
     ),
+  revertCheck: (taskId: string, params: FileRevertQuery): Promise<FileRevertCheck> =>
+    request(fileRevertCheckSchema, `/tasks/${taskId}/changes/revert-file?${query({ ...params })}`),
+  revertFile: (taskId: string, params: FileRevertQuery): Promise<FileRevertResponse> =>
+    request(fileRevertResponseSchema, `/tasks/${taskId}/changes/revert-file`, {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
 };

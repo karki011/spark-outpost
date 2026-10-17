@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { DIFF_FIRST_LINES, type ChangeEntry } from '@spark-outpost/contracts';
 import { BlobScout } from '../../brand/BlobScout.tsx';
@@ -9,12 +9,14 @@ import {
   type FileView,
 } from '../../chat/changes/change-rules.ts';
 import { Counts, changeTag, splitPath } from '../../chat/changes/FileChangeList.tsx';
+import { RestoreIcon } from '../../ui/icons.tsx';
 import { Segmented } from '../../ui/Segmented.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 import { diffApi, diffKeys } from '../diff-api.ts';
 import { CodeDiff } from './CodeDiff.tsx';
 import { usePhone } from '../../ui/breakpoints.ts';
 import type { DiffMode } from './code-view.ts';
+import { RevertFileButton, RevertFileConfirm } from './RevertFile.tsx';
 
 const MODES = [
   { id: 'unified', label: 'Unified' },
@@ -115,20 +117,47 @@ interface DiffPaneProps {
   wrap: boolean;
   onMode(mode: DiffMode): void;
   onWrap(wrap: boolean): void;
+  reverted: string | null;
+  onReverted(path: string): void;
 }
 
-export function DiffPane({ taskId, version, entry, mode, wrap, onMode, onWrap }: DiffPaneProps) {
+export function DiffPane({
+  taskId,
+  version,
+  entry,
+  mode,
+  wrap,
+  onMode,
+  onWrap,
+  reverted,
+  onReverted,
+}: DiffPaneProps) {
   const phone = usePhone();
+  const confirmId = useId();
+  const revertButton = useRef<HTMLButtonElement>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
   if (!entry) {
     return (
       <section className="dd-pane" aria-label="Diff">
         <div className="dd-state">
           <BlobScout size={40} />
+          {reverted && (
+            <p className="dd-reverted" role="status">
+              <RestoreIcon />
+              Reverted {reverted}.
+            </p>
+          )}
           <p>Pick a file to see what changed.</p>
         </div>
       </section>
     );
   }
+  const key = `${entry.runId}:${entry.path}`;
+  const open = confirming === key;
+  const cancel = () => {
+    setConfirming(null);
+    revertButton.current?.focus();
+  };
   const [dir, name] = splitPath(entry.path);
   const tag = changeTag(entry);
   return (
@@ -158,10 +187,30 @@ export function DiffPane({ taskId, version, entry, mode, wrap, onMode, onWrap }:
           >
             Wrap
           </button>
+          <RevertFileButton
+            open={open}
+            controls={confirmId}
+            onOpen={() => setConfirming(open ? null : key)}
+            buttonRef={revertButton}
+          />
         </span>
       </header>
+      {open && (
+        <RevertFileConfirm
+          key={`revert:${key}`}
+          id={confirmId}
+          taskId={taskId}
+          version={version}
+          entry={entry}
+          onCancel={cancel}
+          onReverted={(path) => {
+            setConfirming(null);
+            onReverted(path);
+          }}
+        />
+      )}
       <DiffBody
-        key={`${entry.runId}:${entry.path}`}
+        key={key}
         taskId={taskId}
         version={version}
         entry={entry}

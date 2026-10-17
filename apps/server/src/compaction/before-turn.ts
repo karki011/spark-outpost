@@ -22,6 +22,7 @@ import { askCheckpoint, compactCard } from '../workflow/kept-record.ts';
 import { kilo } from '../agents/acp/long-context.ts';
 import type { Append, RunControl, TurnDeps } from '../workflow/agent-turn.ts';
 import { APPROVAL_POLL_MS, APPROVAL_TIMEOUT_MS } from '../workflow/approval-gate.ts';
+import { startsWithCommand, withAgentNote } from '../workflow/agent-note.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
@@ -140,14 +141,8 @@ async function askFirst(
   );
 }
 
-function takesNote(input: RunInput): boolean {
-  return !input.prompt.trimStart().startsWith('/');
-}
-
-function withAgentNote(input: RunInput, identifiers: string): RunInput {
-  if (!takesNote(input)) return input;
-  const note = [AGENT_COMPACTED_NOTE, identifiers, input.followUp ?? input.prompt];
-  return { ...input, followUp: note.filter(Boolean).join('\n\n') };
+function compactedNote(identifiers: string): string {
+  return [AGENT_COMPACTED_NOTE, identifiers].filter(Boolean).join('\n\n');
 }
 
 function withIdentifiers(summary: string, identifiers: string): string | null {
@@ -174,7 +169,7 @@ async function compactWithAgent(
   );
   if (!compacted || !agentCompactWorked(candidate.reading, compacted.after)) return null;
   const { after } = compacted;
-  const identifiers = takesNote(input) ? await chatIdentifiers(deps.db, input) : '';
+  const identifiers = startsWithCommand(input) ? '' : await chatIdentifiers(deps.db, input);
   await recordCompacted(deps.db, candidate.session.id, after);
   await insertCompaction(deps.db, {
     conversationId: input.identity.threadId,
@@ -192,7 +187,7 @@ async function compactWithAgent(
     append,
     `Compacted the chat: ${kilo(candidate.reading.used)} tokens → a ~${kilo(after.used)} summary; the size with the system prompt and tools shows after the next reply`,
   );
-  return withAgentNote(input, identifiers);
+  return withAgentNote(input, compactedNote(identifiers));
 }
 
 async function compactWithSpark(

@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import type { TaskOverview } from '@spark-outpost/contracts';
+import type { RevertedFile, TaskOverview } from '@spark-outpost/contracts';
+import { RestoreIcon } from '../../ui/icons.tsx';
 import { CoreImpactNote } from '../../map/CoreImpactNote.tsx';
 import { useViewChanges } from '../../tasks/view-changes.ts';
 import { diffApi, diffKeys } from '../../diff/diff-api.ts';
@@ -13,6 +14,19 @@ export function taskForRuns(
   runIds: readonly string[],
 ): TaskOverview | null {
   return tasks.find((task) => runIds.some((runId) => task.runIds.includes(runId))) ?? null;
+}
+
+function RevertedFiles({ files }: { files: readonly RevertedFile[] }) {
+  return (
+    <ul className="fchg-reverted" aria-label="Reverted files">
+      {files.map((file) => (
+        <li key={file.path}>
+          <RestoreIcon />
+          Reverted <code>{file.path}</code>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 interface FilesChangedProps {
@@ -30,7 +44,10 @@ export function FilesChanged({ taskId, runIds, listed = runIds }: FilesChangedPr
   const live = (summary.data?.runs ?? []).filter(
     (run) => runIds.includes(run.runId) && !run.revertedAt,
   );
-  const listable = live.filter((run) => listed.includes(run.runId)).map((run) => run.runId);
+  const reverted = live.flatMap((run) => run.reverted ?? []);
+  const listable = live
+    .filter((run) => run.files > 0 && listed.includes(run.runId))
+    .map((run) => run.runId);
   const params = { version: summary.data?.version, q: '', runs: listable, page: 0 };
   const page = useQuery({
     queryKey: diffKeys.page(taskId, params),
@@ -40,6 +57,13 @@ export function FilesChanged({ taskId, runIds, listed = runIds }: FilesChangedPr
   });
   if (live.length === 0) return null;
   const { files, added, removed } = runTotals(live);
+  if (files === 0) {
+    return (
+      <section className="fchg bare" aria-label="Reverted files">
+        <RevertedFiles files={reverted} />
+      </section>
+    );
+  }
   const shown = page.data?.files.slice(0, FIRST_FILES) ?? [];
   const more = (page.data?.total ?? 0) - shown.length;
   const list = listable.length > 0;
@@ -57,6 +81,7 @@ export function FilesChanged({ taskId, runIds, listed = runIds }: FilesChangedPr
       </div>
       <CoreImpactNote impact={summary.data?.core} />
       {list && <FileChangeList taskId={taskId} entries={shown} />}
+      {reverted.length > 0 && <RevertedFiles files={reverted} />}
       {more > 0 && viewChanges && (
         <button type="button" className="fchg-more" onClick={() => viewChanges(taskId)}>
           Show {filesLabel(more)} more
