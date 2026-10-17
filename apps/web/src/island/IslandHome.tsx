@@ -1,15 +1,19 @@
+import './island-home-side.css';
 import { useQuery } from '@tanstack/react-query';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { homeApi, homeKeys } from '../home/home-api.ts';
-import type { Panel } from './island-model.ts';
+import type { Card, Panel } from './island-model.ts';
 import { NowCard } from './NowCard.tsx';
 import type { QuickStart } from './now-parts.tsx';
-import { SparkTiles } from './SparkTiles.tsx';
 import { IslandMeetings } from './IslandMeetings.tsx';
+import { IslandNeedsYou } from './IslandNeedsYou.tsx';
+import { needsYou } from './needs-you.ts';
 import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
 
 export interface HomeBundle {
   sessions: readonly ConversationSummary[];
+  chats: readonly ConversationSummary[];
+  cards: readonly Card[];
   quickStart: QuickStart | null;
   onOpenHere: (id: string) => void;
   onNewIn: (projectId: string | null) => void;
@@ -21,7 +25,6 @@ export interface HomeBundle {
 interface IslandHomeProps {
   home: HomeBundle;
   calendar: IslandCalendar;
-  waiting: number;
   sleepy: boolean;
   reduced: boolean;
   onTab: (panel: Panel) => void;
@@ -31,7 +34,6 @@ interface IslandHomeProps {
 export function IslandHome({
   home,
   calendar,
-  waiting,
   sleepy,
   reduced,
   onTab,
@@ -62,15 +64,11 @@ export function IslandHome({
       />
       <div className="isl-home-side">
         <IslandMeetings calendar={calendar} />
-        <SparkTiles
-          waiting={waiting}
-          quickStart={home.quickStart}
-          onOpenHere={home.onOpenHere}
-          onNewIn={home.onNewIn}
-          onAsk={() => onTab('ask')}
+        <IslandNeedsYou
+          needs={needsYou(home.cards, home.chats, calendar.line)}
+          calendar={calendar}
+          onOpenChat={home.onOpenHere}
           onChats={() => onTab('sessions')}
-          onMakeSpark={home.onMakeSpark}
-          onEditSpark={home.onEditSpark}
         />
       </div>
     </div>

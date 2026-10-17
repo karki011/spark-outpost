@@ -104,7 +104,14 @@ test('Home leads with what needs you, streams the live steps and opens a chat in
   await expect.poll(async () => (await fakeState(page)).openedChats).toEqual([deploy]);
 });
 
-test('Spark tiles start a chat with that Spark right in the island', async ({ page }) => {
+async function openNewChatTab(page: Page) {
+  await openHome(page);
+  await island(page).getByRole('tab', { name: 'New chat' }).click();
+}
+
+test('Spark tiles in the New chat tab start a chat with that Spark right in the island', async ({
+  page,
+}) => {
   await resetTestDatabase({ onboarded: true });
   await fakeHomeDesktop(page);
   await openIsland(page);
@@ -125,6 +132,8 @@ test('Spark tiles start a chat with that Spark right in the island', async ({ pa
     expect(response.status()).toBe(201);
   }
   await openHome(page);
+  await expect(island(page).getByRole('region', { name: 'Your Sparks' })).toHaveCount(0);
+  await island(page).getByRole('tab', { name: 'New chat' }).click();
   const tiles = island(page).getByRole('region', { name: 'Your Sparks' }).getByRole('button');
   await expect(tiles).toHaveCount(6);
   await expect(tiles.first()).toHaveAccessibleName('Chat with Stripe, Helper');
@@ -142,17 +151,16 @@ test('Spark tiles start a chat with that Spark right in the island', async ({ pa
   expect(
     await grid.evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(' ').length),
   ).toBeGreaterThanOrEqual(2);
-  await expect(nowCard(page)).toContainText('All quiet');
-  await shot(page, 'home-sparks');
+  await shot(page, 'new-chat-sparks');
 
   await tiles.last().click();
   await expect.poll(async () => (await fakeState(page)).settings).toEqual(['spark-new']);
-  await openHome(page);
+  await openNewChatTab(page);
   await tiles.filter({ hasText: 'Stripe' }).click({ button: 'right' });
   await expect
     .poll(async () => (await fakeState(page)).settings.at(-1))
     .toMatch(/^spark-edit:[0-9a-f-]{36}$/);
-  await openHome(page);
+  await openNewChatTab(page);
 
   await tiles.filter({ hasText: 'GitHub' }).click();
   await expect(island(page).getByRole('button', { name: 'Back to chats' })).toBeVisible();
@@ -164,7 +172,7 @@ test('Spark tiles start a chat with that Spark right in the island', async ({ pa
   expect(rows.map((row) => row.name)).toEqual(['GitHub']);
 });
 
-test('an empty Home offers Ask and quick starts, and the bar reaches settings', async ({
+test('an empty Home says nothing needs you, and Ask, New Spark and settings stay reachable', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -172,9 +180,10 @@ test('an empty Home offers Ask and quick starts, and the bar reaches settings', 
   await openIsland(page);
   await openHome(page);
   await expect(nowCard(page)).toHaveAccessibleName('Now');
-  const quick = island(page).getByRole('region', { name: 'Quick start' });
-  await expect(quick.getByRole('button')).toHaveText(['New chat', 'Ask Spark', 'New Spark']);
-  await expect(quick).toContainText('Nothing needs you');
+  await expect(island(page).getByRole('region', { name: 'Quick start' })).toHaveCount(0);
+  const needs = island(page).getByRole('region', { name: 'Needs you' });
+  await expect(needs).toHaveText('Needs youNothing needs you');
+  await expect(island(page).getByRole('region', { name: 'Next meetings' })).toHaveCount(0);
   await shot(page, 'home-empty');
 
   await nowCard(page).getByRole('button', { name: 'Ask Spark…' }).click();
@@ -187,8 +196,8 @@ test('an empty Home offers Ask and quick starts, and the bar reaches settings', 
   ).toHaveAttribute('aria-pressed', 'true');
   await expect(island(page).getByRole('textbox', { name: 'Ask Spark' })).toBeFocused();
 
-  await page.keyboard.press('Meta+1');
-  await island(page).getByRole('region', { name: 'Quick start' }).getByText('New Spark').click();
+  await page.keyboard.press('Meta+3');
+  await island(page).getByRole('region', { name: 'Your Sparks' }).getByText('New Spark').click();
   await expect.poll(async () => (await fakeState(page)).settings).toEqual(['spark-new']);
   await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
 

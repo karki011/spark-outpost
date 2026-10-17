@@ -254,7 +254,7 @@ for (const theme of ['graphite', 'apricot']) {
     await openHome(page);
     await expect(log(page).getByRole('listitem')).toHaveText(['Done: Ran · pnpm test']);
     await expect(nowCard(page).getByRole('figure')).toHaveCount(0);
-    const tiles = island(page).getByRole('region', { name: 'Quick start' });
+    const tiles = island(page).getByRole('region', { name: 'Needs you' });
     const besideTiles = (await nowCard(page).boundingBox())!;
     expect(besideTiles.x + besideTiles.width).toBeLessThanOrEqual((await tiles.boundingBox())!.x);
 

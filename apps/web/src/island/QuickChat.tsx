@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { TicketSourceId } from '@spark-outpost/contracts';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
@@ -50,6 +50,7 @@ interface QuickChatProps {
   focusDelay: number;
   onDraft: (draft: QuickDraft) => void;
   onSent: (chatId: string, title: string, project: string | null) => void;
+  footer?: ReactNode;
 }
 
 function useDefaults() {
@@ -343,6 +344,7 @@ export function QuickChat(props: QuickChatProps) {
           {send.error.message}
         </p>
       )}
+      {props.footer}
     </div>
   );
 }
