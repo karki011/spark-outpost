@@ -1,8 +1,19 @@
-import { mkdir, mkdtemp, realpath, rm, symlink } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { revertTargets, staysInside } from './file-revert.ts';
+import { revertGitChanges } from './snapshot.ts';
 
 let base: string;
 let root: string;
@@ -54,5 +65,22 @@ describe('what reverting one listed file touches', () => {
       { path: 'old.ts', change: 'deleted' },
       { path: 'new.ts', change: 'added' },
     ]);
+  });
+});
+
+describe('undoing a rename that only changed case', () => {
+  it('removes the new name before restoring the old one, so the file survives', async () => {
+    const run = (...args: string[]) =>
+      execFileSync('git', ['-C', root, '-c', 'user.email=t@t', '-c', 'user.name=t', ...args]);
+    await writeFile(path.join(root, 'foo.txt'), 'original\n');
+    run('init', '-q');
+    run('add', 'foo.txt');
+    run('commit', '-qm', 'base');
+    await rename(path.join(root, 'foo.txt'), path.join(root, 'Foo.txt'));
+
+    const targets = revertTargets({ path: 'Foo.txt', change: 'modified', oldPath: 'foo.txt' });
+    await revertGitChanges(root, 'HEAD', targets);
+
+    expect(await readFile(path.join(root, 'foo.txt'), 'utf8')).toBe('original\n');
   });
 });

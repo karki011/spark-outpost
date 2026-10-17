@@ -209,6 +209,12 @@ describe('reverting one file of a kept run', { timeout: 60_000 }, () => {
       gitIn(root, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'agent work');
       const branch = gitIn(root, 'branch', '--show-current').trim();
       gitIn(root, 'remote', 'add', 'origin', remote);
+      gitIn(root, 'push', '-q', 'origin', 'HEAD~1:refs/heads/older');
+      gitIn(root, 'fetch', '-q', 'origin');
+      expect(await check(t, taskId, runId, 'notes.txt')).toMatchObject({
+        committed: true,
+        pushed: false,
+      });
       gitIn(root, 'push', '-q', 'origin', `HEAD:refs/heads/${branch}`);
       gitIn(root, 'fetch', '-q', 'origin');
       const head = gitIn(root, 'rev-parse', 'HEAD');
@@ -228,6 +234,18 @@ describe('reverting one file of a kept run', { timeout: 60_000 }, () => {
     } finally {
       await rm(remote, { recursive: true, force: true });
     }
+  });
+
+  it('reverts a link the run made, without following it', async () => {
+    const { runId, taskId, root } = await firstTurn({
+      link: { 'shortcut.txt': 'notes.txt' },
+    });
+    const listed = await listedPaths(t, taskId);
+    expect(listed).toContain('shortcut.txt');
+
+    await revert(t, taskId, runId, 'shortcut.txt');
+    expect(await exists(path.join(root, 'shortcut.txt'))).toBe(false);
+    expect(await readFile(path.join(root, 'notes.txt'), 'utf8')).toBe('start\n');
   });
 
   it('waits while the chat is working', async () => {
@@ -266,6 +284,10 @@ describe('reverting one file in a folder that is not a git repository', { timeou
       expect(await readFile(path.join(folder, 'notes.txt'), 'utf8')).toBe('final\n');
       expect(await listedPaths(t, taskId)).toEqual(['notes.txt']);
       await expect(revert(t, taskId, runId, 'new.txt')).rejects.toThrow(/no changes in this run/);
+
+      await writeFile(path.join(folder, 'notes.txt'), 'my own edit\n');
+      await expect(revert(t, taskId, runId, 'notes.txt')).rejects.toThrow(/changed after this run/);
+      expect(await readFile(path.join(folder, 'notes.txt'), 'utf8')).toBe('my own edit\n');
     } finally {
       await rm(folder, { recursive: true, force: true });
     }

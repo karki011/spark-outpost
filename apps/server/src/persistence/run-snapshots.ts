@@ -97,3 +97,31 @@ export async function clearReverted(db: Queryable, runId: string): Promise<void>
 export async function saveSnapshotEnd(db: Queryable, runId: string, ref: string): Promise<void> {
   await db.query('UPDATE runs SET snapshot_end_ref = $2 WHERE id = $1', [runId, ref]);
 }
+
+export interface BackupEnd {
+  path: string;
+  content: Buffer | null;
+}
+
+export async function saveBackupEnds(
+  db: Queryable,
+  runId: string,
+  ends: readonly BackupEnd[],
+): Promise<void> {
+  for (const end of ends) {
+    await db.query(
+      `UPDATE run_file_backups SET end_recorded = true, end_content = $3
+       WHERE run_id = $1 AND path = $2`,
+      [runId, end.path, end.content],
+    );
+  }
+}
+
+export async function listBackupEnds(db: Queryable, runId: string): Promise<BackupEnd[]> {
+  const { rows } = await db.query<{ path: string; end_content: Buffer | null }>(
+    `SELECT path, end_content FROM run_file_backups WHERE run_id = $1 AND end_recorded
+     ORDER BY path`,
+    [runId],
+  );
+  return rows.map((row) => ({ path: row.path, content: row.end_content }));
+}

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { expect } from 'vitest';
 import type { FileRevertCheck } from '@spark-outpost/contracts';
@@ -14,6 +14,7 @@ export interface Ops {
   write?: Record<string, string | Buffer>;
   remove?: string[];
   move?: [string, string][];
+  link?: Record<string, string>;
 }
 
 async function apply(root: string, ops: Ops): Promise<void> {
@@ -24,6 +25,9 @@ async function apply(root: string, ops: Ops): Promise<void> {
   for (const name of ops.remove ?? []) await rm(path.join(root, name));
   for (const [from, to] of ops.move ?? []) {
     await rename(path.join(root, from), path.join(root, to));
+  }
+  for (const [name, target] of Object.entries(ops.link ?? {})) {
+    await symlink(target, path.join(root, name));
   }
 }
 
@@ -37,6 +41,7 @@ export function scriptedAgent(queue: Ops[]): Provider {
         ...Object.keys(ops.write ?? {}),
         ...(ops.remove ?? []),
         ...(ops.move ?? []).flat(),
+        ...Object.keys(ops.link ?? {}),
       ];
       for (const name of touched) {
         const seen: ProviderOutput = {

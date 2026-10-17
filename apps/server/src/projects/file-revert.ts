@@ -10,7 +10,12 @@ import {
   saveFileReverts,
   type NewFileRevert,
 } from '../persistence/file-reverts.ts';
-import { getSnapshot, listBackups, type FileBackup } from '../persistence/run-snapshots.ts';
+import {
+  getSnapshot,
+  listBackupEnds,
+  listBackups,
+  type FileBackup,
+} from '../persistence/run-snapshots.ts';
 import { getTaskDetail } from '../persistence/task-views.ts';
 import { TaskNotFoundError } from '../persistence/tasks.ts';
 import { findEntry, type ChangeSet, type SetEntry } from './change-sets.ts';
@@ -46,7 +51,6 @@ interface GitSource {
   base: string;
   current: ReadonlyMap<string, string | null>;
   original: ReadonlyMap<string, string | null>;
-  snapshotRef: string;
 }
 
 interface FilesSource {
@@ -136,7 +140,7 @@ async function gitSource(
   const ended = end ? await blobsAt(root, end, targets) : null;
   const current = new Map<string, string | null>();
   for (const target of targets) current.set(target.path, await worktreeBlob(root, target.path));
-  const source: GitSource = { kind: 'git', base, current, original, snapshotRef };
+  const source: GitSource = { kind: 'git', base, current, original };
   const restored = targets.every((t) => current.get(t.path) === original.get(t.path));
   if (restored) return { source, reason: REASONS.already };
   const moved = targets.some((target) => {
@@ -156,17 +160,38 @@ async function filesSource(
   const wanted = new Set(targets.map((target) => path.join(root, target.path)));
   const backups = (await listBackups(db, run.runId)).filter((backup) => wanted.has(backup.path));
   if (backups.length !== wanted.size) return { source: null, reason: REASONS.gone };
+  const current = new Map<string, Buffer | null>();
+  for (const backup of backups) current.set(backup.path, await readIfPresent(backup.path));
+  const restored = backups.every((backup) =>
+    sameContent(current.get(backup.path) ?? null, backup.existed ? backup.content : null),
+  );
+  const source: FilesSource = { kind: 'files', backups };
+  if (restored) return { source, reason: REASONS.already };
+  const moved = await changedSinceRun(db, run.runId, later, wanted, current);
+  return { source, reason: moved ? REASONS.changedAfter : null };
+}
+
+function sameContent(left: Buffer | null, right: Buffer | null): boolean {
+  if (left === null || right === null) return left === right;
+  return left.equals(right);
+}
+
+async function changedSinceRun(
+  db: Queryable,
+  runId: string,
+  later: readonly RunState[],
+  wanted: ReadonlySet<string>,
+  current: ReadonlyMap<string, Buffer | null>,
+): Promise<boolean> {
+  const ends = (await listBackupEnds(db, runId)).filter((end) => wanted.has(end.path));
+  if (ends.length === wanted.size) {
+    return ends.some((end) => !sameContent(current.get(end.path) ?? null, end.content));
+  }
   for (const other of later) {
     const touched = (await listBackups(db, other.runId)).some((backup) => wanted.has(backup.path));
-    if (touched) return { source: null, reason: REASONS.changedAfter };
+    if (touched) return true;
   }
-  let restored = true;
-  for (const backup of backups) {
-    const current = await readIfPresent(backup.path);
-    const same = current === null ? !backup.existed : Boolean(backup.content?.equals(current));
-    restored &&= same;
-  }
-  return { source: { kind: 'files', backups }, reason: restored ? REASONS.already : null };
+  return false;
 }
 
 const folderExists = (target: string) =>
@@ -229,10 +254,9 @@ async function protectedKindOf(
 }
 
 async function planFacts(plan: RevertPlan) {
-  const paths = plan.targets.map((target) => target.path);
   const published =
     plan.source?.kind === 'git'
-      ? await publishedState(plan.root, plan.source.snapshotRef, paths)
+      ? await publishedState(plan.root, plan.source.current)
       : { committed: false, pushed: false };
   return { protectedKind: await protectedKindOf(plan.root, plan.targets), ...published };
 }

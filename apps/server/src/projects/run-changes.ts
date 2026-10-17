@@ -221,11 +221,12 @@ export async function revertRun(
 }
 
 export async function restoreBackups(changes: readonly { backup: FileBackup }[]): Promise<void> {
-  for (const { backup } of changes) {
-    if (!backup.existed || !backup.content) {
-      await unlink(backup.path).catch(() => undefined);
-      continue;
-    }
+  const backups = changes.map((change) => change.backup);
+  for (const backup of backups) {
+    if (!backup.existed || !backup.content) await unlink(backup.path).catch(() => undefined);
+  }
+  for (const backup of backups) {
+    if (!backup.existed || !backup.content) continue;
     await mkdir(path.dirname(backup.path), { recursive: true });
     await writeFile(backup.path, backup.content);
   }

@@ -1,5 +1,9 @@
 ALTER TABLE runs ADD COLUMN snapshot_end_ref text;
 
+ALTER TABLE run_file_backups
+  ADD COLUMN end_recorded boolean NOT NULL DEFAULT false,
+  ADD COLUMN end_content bytea;
+
 CREATE TABLE run_file_reverts (
   run_id uuid NOT NULL REFERENCES runs (id) ON DELETE CASCADE,
   path text NOT NULL,
