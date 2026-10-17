@@ -23,7 +23,8 @@ const TEXT = [
   '.isl-hhead',
   '.isl-who',
   '.isl-now-title',
-  '.isl-tile-name',
+  '.isl-needs-text',
+  '.isl-meet-row span',
 ];
 
 const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
@@ -145,7 +146,7 @@ async function expectClean(page: Page, label: string) {
         if (rect.width > 0 && overlaps(scout, rect)) found.push(`the blob covers ${selector}`);
       }
       for (const { selector, element } of visible(
-        '.isl-st, .isl-wlabel, .isl-restline-text, .isl-now-title, .isl-tile-name',
+        '.isl-st, .isl-wlabel, .isl-restline-text, .isl-now-title, .isl-needs-text',
       )) {
         if (
           getComputedStyle(element).textOverflow !== 'ellipsis' &&

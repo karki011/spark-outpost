@@ -63,16 +63,20 @@ function ChooseMeeting({
 
 export function IslandMeetings({ calendar }: { calendar: IslandCalendar }) {
   if (calendar.choosing) return <ChooseMeeting calendar={calendar} meetings={calendar.choosing} />;
+  if (!calendar.connected) return null;
   const meetings = calendar.upcoming.slice(0, ISLAND_MEETINGS);
-  if (meetings.length === 0) return null;
   return (
     <section className="isl-hcard isl-meet" aria-labelledby="isl-meet-h">
       <h3 id="isl-meet-h">Next meetings</h3>
-      <ul>
-        {meetings.map((event) => (
-          <MeetingRow key={event.key} event={event} calendar={calendar} />
-        ))}
-      </ul>
+      {meetings.length === 0 ? (
+        <p className="isl-meet-quiet">No more meetings today</p>
+      ) : (
+        <ul>
+          {meetings.map((event) => (
+            <MeetingRow key={event.key} event={event} calendar={calendar} />
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

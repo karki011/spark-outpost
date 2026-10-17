@@ -45,6 +45,7 @@ function saveDismissed(keys: ReadonlySet<string>): void {
 }
 
 export interface IslandCalendar {
+  connected: boolean;
   line: CalendarLine | null;
   hold: ChimeHold;
   at: number;
@@ -137,6 +138,7 @@ export function useIslandCalendar(
     [live],
   );
   return {
+    connected: ready,
     line,
     hold: held.hold,
     at,

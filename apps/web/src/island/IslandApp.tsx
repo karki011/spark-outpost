@@ -345,6 +345,8 @@ export function IslandApp() {
   const homeChats = useMemo(() => homeSessions(data.chats), [data.chats]);
   const home = {
     sessions: homeChats,
+    chats: data.chats,
+    cards: allCards,
     quickStart: quickStart ? { id: quickStart.id, name: quickStart.name } : null,
     onOpenHere: (id: string) => {
       setSelected(id);
