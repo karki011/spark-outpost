@@ -21,6 +21,10 @@ describe('the note about reverted files', () => {
   it('goes before the message, after any earlier note, and never before a slash command', () => {
     const input = { prompt: 'Fix it', followUp: 'Compacted.\n\nFix it' } as RunInput;
     expect(withAgentNote(input, 'Reverted.').followUp).toBe('Reverted.\n\nCompacted.\n\nFix it');
+    const compacted = withAgentNote({ prompt: 'Fix it' } as RunInput, 'Compacted.\n\nPR #12');
+    expect(withAgentNote(compacted, 'Reverted.').followUp).toBe(
+      'Reverted.\n\nCompacted.\n\nPR #12\n\nFix it',
+    );
     const command = { prompt: ' /compact' } as RunInput;
     expect(withAgentNote(command, 'Reverted.')).toBe(command);
   });
