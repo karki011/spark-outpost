@@ -2,6 +2,7 @@ import type { Db } from '../persistence/db.ts';
 import { agreedPlanFor } from '../plans/plan-staleness.ts';
 import { chatSummaryPrompt, openIssues, taskDiff } from '../workflow/session-brief.ts';
 import type { RunInput } from '../workflow/run-input.ts';
+import { chatIdentifiers } from './identifiers.ts';
 
 async function latestTaskId(db: Db, conversationId: string): Promise<string | null> {
   const { rows } = await db.query<{ id: string }>(
@@ -17,10 +18,11 @@ export async function buildChatSummary(
 ): Promise<string> {
   const conversationId = input.identity.threadId;
   const root = input.projectRoots[0] ?? null;
-  const [agreedPlan, diff, issues] = await Promise.all([
+  const [agreedPlan, diff, issues, identifiers] = await Promise.all([
     agreedPlanFor(db, conversationId, root).catch(() => null),
     taskDiff(root ?? undefined),
     latestTaskId(db, conversationId).then((taskId) => openIssues(db, taskId)),
+    chatIdentifiers(db, input),
   ]);
   return chatSummaryPrompt({
     history: input.history,
@@ -28,5 +30,6 @@ export async function buildChatSummary(
     changes: diff.files,
     patch: diff.patch,
     openIssues: issues,
+    identifiers,
   });
 }

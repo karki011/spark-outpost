@@ -47,6 +47,7 @@ export interface ChatSummaryContext {
   changes: readonly ChangedFile[];
   patch: string;
   openIssues: readonly string[];
+  identifiers: string;
 }
 
 function requestsText(history: readonly HistoryTurn[]): string {
@@ -82,6 +83,7 @@ export function chatSummaryPrompt(context: ChatSummaryContext): string {
   if (context.openIssues.length > 0) {
     parts.push(section('Open issues', context.openIssues.join('\n\n')));
   }
+  if (context.identifiers) parts.push(context.identifiers);
   return parts.join('\n\n');
 }
 
@@ -137,6 +139,7 @@ export interface SessionHandoffContext {
   changes: readonly ChangedFile[];
   openIssues: readonly string[];
   totals: string | null;
+  identifiers: string;
 }
 
 function lastExchanges(history: readonly HistoryTurn[]): string {
@@ -176,5 +179,6 @@ export function sessionHandoffPrompt(context: SessionHandoffContext): string {
   );
   parts.push(section('Last three exchanges, verbatim', lastExchanges(context.history)));
   if (context.totals) parts.push(section('Chat totals', context.totals));
+  if (context.identifiers) parts.push(context.identifiers);
   return parts.join('\n\n');
 }
