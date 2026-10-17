@@ -1,0 +1,24 @@
+.dd-revert-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.dd-revert-btn svg {
+  width: 13px;
+  height: 13px;
+}
+.dd-revert {
+  margin: 10px 16px 0;
+}
+.dd-reverted {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.dd-reverted svg {
+  width: 14px;
+  height: 14px;
+}

@@ -32,7 +32,7 @@ export class RunNotFoundError extends Error {
 
 export class RevertConflictError extends Error {}
 
-const REMOVED_FOLDER_REASON =
+export const REMOVED_FOLDER_REASON =
   'The folder this run worked in was removed, so it cannot be reverted on its own.';
 
 export interface SnapshotSource {
@@ -220,7 +220,7 @@ export async function revertRun(
   return { restored: changes.files, revertedAt: revertedAt.toISOString() };
 }
 
-async function restoreBackups(changes: readonly { backup: FileBackup }[]): Promise<void> {
+export async function restoreBackups(changes: readonly { backup: FileBackup }[]): Promise<void> {
   for (const { backup } of changes) {
     if (!backup.existed || !backup.content) {
       await unlink(backup.path).catch(() => undefined);

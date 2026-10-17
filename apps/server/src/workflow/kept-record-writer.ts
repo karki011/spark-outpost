@@ -7,10 +7,15 @@ import {
 } from '@spark-outpost/contracts';
 import { insertApproval } from '../persistence/approvals.ts';
 import type { Queryable } from '../persistence/db.ts';
-import { getSnapshot } from '../persistence/run-snapshots.ts';
+import { getSnapshot, saveSnapshotEnd } from '../persistence/run-snapshots.ts';
 import { changedFiles, currentBranch } from '../projects/chat-worktrees.ts';
 import { liveRunBase } from '../projects/run-base.ts';
-import { gitDiffSince, headCommit, type FileStat } from '../projects/snapshot.ts';
+import {
+  gitDiffSince,
+  headCommit,
+  takeGitEndSnapshot,
+  type FileStat,
+} from '../projects/snapshot.ts';
 import type { Append } from './agent-turn.ts';
 import {
   acceptCard,
@@ -77,6 +82,16 @@ async function keptAtIn(root: string): Promise<KeptAt> {
   return { branch, commit: committed ? head.slice(0, SHORT_COMMIT) : null };
 }
 
+async function recordRunEnd(
+  db: Queryable,
+  runId: string,
+  root: string,
+  start: string,
+): Promise<void> {
+  const end = await takeGitEndSnapshot(root, runId, start).catch(() => null);
+  if (end) await saveSnapshotEnd(db, runId, end);
+}
+
 async function whereKept(
   db: Queryable,
   run: KeptRun,
@@ -84,6 +99,7 @@ async function whereKept(
   const state = await getSnapshot(db, run.workspaceId, run.runId);
   const snapshot = state?.snapshot;
   if (!snapshot || snapshot.kind !== 'git' || !snapshot.ref) return { lines: null, keptAt: null };
+  await recordRunEnd(db, run.runId, snapshot.root, snapshot.ref);
   const [lines, keptAt] = await Promise.all([
     linesSince(snapshot.root, snapshot.ref),
     keptAtIn(snapshot.root).catch(() => null),

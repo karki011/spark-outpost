@@ -80,7 +80,7 @@ export const SPEC_GROUPS = {
     'pr-watching',
     'ship',
   ],
-  diff: ['diff-drawer', 'diff-shortcut', 'files-changed'],
+  diff: ['diff-drawer', 'diff-shortcut', 'files-changed', 'revert-file'],
   'terminal-preview-browser': [
     'browser-agent',
     'browser-pane',

@@ -188,6 +188,7 @@ const CHECK_CAUSES: Record<string, string> = {
 export function entrySummary(entry: ProtocolLogEntry, subagent: string | null = null): string {
   const payload = record(entry.payload) ?? {};
   if (entry.kind === 'stderr') return text(payload.text) ?? 'stderr output';
+  if (entry.kind === 'revert') return `reverted file · ${text(payload.path) ?? 'a file'}`;
   if (entry.kind === 'check') {
     const outcome = text(payload.outcome)?.replace(/_/g, ' ') ?? 'ran';
     if (entry.method === 'deps/prepare') {

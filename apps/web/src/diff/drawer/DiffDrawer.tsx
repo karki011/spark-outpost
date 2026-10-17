@@ -34,6 +34,18 @@ export function DiffDrawer({ taskId, target, onClose }: DiffDrawerProps) {
     setSeenTarget(target);
     if (target) setSelected(target);
   }
+  const panel = useRef<HTMLElement>(null);
+  const tree = useRef<HTMLDivElement>(null);
+  const [reverted, setReverted] = useState<string | null>(null);
+  const select = useCallback((entry: ChangeEntry) => {
+    setReverted(null);
+    setSelected(entry);
+  }, []);
+  const onReverted = useCallback((path: string) => {
+    setReverted(path);
+    setSelected(null);
+    (tree.current ?? panel.current)?.focus();
+  }, []);
   const refresh = useCallback((fresh: ChangeEntry) => {
     setSelected((current) =>
       current && current !== fresh && entryKey(current) === entryKey(fresh) ? fresh : current,
@@ -42,8 +54,6 @@ export function DiffDrawer({ taskId, target, onClose }: DiffDrawerProps) {
   const [mode, setMode] = usePref<DiffMode>('spark-outpost.diff-drawer.mode', MODES, 'unified');
   const [wrap, setWrap] = usePref('spark-outpost.diff-drawer.wrap', WRAPS, 'off');
   const [width, setWidth] = useDrawerWidth();
-  const panel = useRef<HTMLElement>(null);
-  const tree = useRef<HTMLDivElement>(null);
   const shown = width ?? DRAWER_DEFAULT_WIDTH;
   const data = summary.data;
   const empty = taskId === null || data?.files === 0;
@@ -82,6 +92,9 @@ export function DiffDrawer({ taskId, target, onClose }: DiffDrawerProps) {
       style={{ '--dd-w': `${shown}px` } as CSSProperties}
     >
       <DrawerResizer width={shown} onWidth={setWidth} />
+      <p className="sr-only" role="status">
+        {reverted ? `Reverted ${reverted}.` : ''}
+      </p>
       <header className="dd-head">
         <h2>Changes</h2>
         {data && !empty && (
@@ -114,7 +127,7 @@ export function DiffDrawer({ taskId, target, onClose }: DiffDrawerProps) {
             version={data?.version}
             runs={data?.runs ?? []}
             selected={selected ? entryKey(selected) : null}
-            onSelect={setSelected}
+            onSelect={select}
             onFresh={refresh}
             treeRef={tree}
           />
@@ -126,6 +139,8 @@ export function DiffDrawer({ taskId, target, onClose }: DiffDrawerProps) {
             wrap={wrap === 'on'}
             onMode={setMode}
             onWrap={(next) => setWrap(next ? 'on' : 'off')}
+            reverted={reverted}
+            onReverted={onReverted}
           />
         </div>
       )}

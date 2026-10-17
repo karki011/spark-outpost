@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                 | What to do                                                |
 | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| **Revert file** in the Changes drawer undoes one file.                                                       | See [Review changes](review-changes.md#keep-or-revert).   |
 | Calendar: see your day on **Today**, join meetings and keep focus time quiet.                                | See [See your day](calendar.md).                          |
 | Pull request **Refresh** no longer reverts.                                                                  | None.                                                     |
 | Settings has six groups and a **Search settings** box.                                                       | See [Settings](settings.md).                              |

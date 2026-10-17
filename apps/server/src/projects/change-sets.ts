@@ -46,6 +46,9 @@ function contentVersion(taskId: string, runs: readonly ListedRun[]): string {
     for (const { file, revision } of run.files) {
       hash.update(`\0${file.path}\0${file.oldPath ?? ''}\0${file.change}\0${revision}`);
     }
+    for (const reverted of run.reverted ?? []) {
+      hash.update(`\0reverted\0${reverted.path}\0${reverted.revertedAt}`);
+    }
   }
   return hash.digest('hex');
 }
@@ -97,6 +100,7 @@ export async function summarize(set: ChangeSet, contents: EntryContents) {
     ...(run.name ? { name: run.name } : {}),
     ...(run.copy ? { copy: run.copy } : {}),
     ...sums(run.files.map((listed) => listed.file)),
+    reverted: run.reverted ?? [],
   }));
   const top = [...set.entries]
     .sort((a, b) => churn(b.listed.file) - churn(a.listed.file))

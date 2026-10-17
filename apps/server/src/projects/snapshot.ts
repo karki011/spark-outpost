@@ -16,6 +16,7 @@ const GIT_TIMEOUT_MS = 60_000;
 const MAX_BUFFER = 64 * 1024 * 1024;
 
 const SNAPSHOT_REF_PREFIX = 'refs/spark-outpost/runs/';
+const END_REF_PREFIX = 'refs/spark-outpost/run-ends/';
 
 export async function git(
   root: string,
@@ -146,6 +147,34 @@ export async function takeGitSnapshot(root: string, runId: string): Promise<stri
   );
   await git(root, ['update-ref', `${SNAPSHOT_REF_PREFIX}${runId}`, commit]);
   return commit;
+}
+
+export async function takeGitEndSnapshot(
+  root: string,
+  runId: string,
+  start: string,
+): Promise<string> {
+  const commit = await commitWorkingTree(root, [start], `Spark Outpost: after run ${runId}`);
+  await git(root, ['update-ref', `${END_REF_PREFIX}${runId}`, commit]);
+  return commit;
+}
+
+export async function blobAt(root: string, ref: string, relative: string): Promise<string | null> {
+  try {
+    return (
+      (await git(root, ['rev-parse', '--verify', '-q', `${ref}:./${relative}`])).trim() || null
+    );
+  } catch {
+    return null;
+  }
+}
+
+export async function worktreeBlob(root: string, relative: string): Promise<string | null> {
+  try {
+    return (await git(root, ['hash-object', '--', relative])).trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 const CHANGE_CODES: Record<string, RunChange['change']> = {

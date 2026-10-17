@@ -1,8 +1,9 @@
 import { setImmediate as nextTurn } from 'node:timers/promises';
 import { diffLines } from 'diff';
-import type { ChangedFile, RunChange, TaskChanges } from '@spark-outpost/contracts';
+import type { ChangedFile, RevertedFile, RunChange, TaskChanges } from '@spark-outpost/contracts';
 import { branchesStackedOn } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
+import { listFileReverts, type FileRevert } from '../persistence/file-reverts.ts';
 import { getSnapshot, listBackups, type RunSnapshot } from '../persistence/run-snapshots.ts';
 import { getTaskDetail } from '../persistence/task-views.ts';
 import { TaskNotFoundError } from '../persistence/tasks.ts';
@@ -11,6 +12,7 @@ import { gitRangeFiles, shownFor, type FileContents, type ListedFile } from './c
 import { copyChanges } from './copy-changes.ts';
 import { countChangedLines, lineCount, type LineCounts } from './line-counts.ts';
 import { relativeInside } from './path-policy.ts';
+import { revertedFiles, revertsByPath, withoutReverted } from './revert-filter.ts';
 import {
   changesWhilePresent,
   readIfPresent,
@@ -28,6 +30,7 @@ export interface ListedRun {
   name?: string;
   copy?: string;
   files: ListedFile[];
+  reverted?: RevertedFile[];
 }
 
 interface FileVersions extends FileContents {
@@ -84,7 +87,7 @@ function withoutText(file: ChangedFile): ChangedFile {
 
 const DIFF_TIMEOUT_MS = 50;
 
-interface RunState {
+export interface RunState {
   runId: string;
   snapshot: RunSnapshot;
   revertedAt: Date | null;
@@ -96,30 +99,49 @@ function changeKind(before: Buffer | null, after: Buffer | null): RunChange['cha
   return before.equals(after) ? null : 'modified';
 }
 
+export interface GitRunBounds {
+  gitRoot: string;
+  until: string | null;
+  gone: boolean;
+}
+
+export async function gitRunBounds(
+  db: Queryable,
+  run: RunState,
+  next: RunState | undefined,
+): Promise<GitRunBounds | null> {
+  const { root, ref } = run.snapshot;
+  if (!ref) return null;
+  const source = await snapshotSource(db, run.runId, root);
+  const until = next?.snapshot.ref ?? source.end;
+  if (source.gone && !until) return null;
+  return { gitRoot: source.gitRoot, until, gone: source.gone };
+}
+
 async function gitListed(
   db: Queryable,
   run: RunState,
   next: RunState | undefined,
   listings: RunListingCache | undefined,
-): Promise<ListedFile[]> {
-  const { root, ref } = run.snapshot;
-  if (!ref) return [];
-  const source = await snapshotSource(db, run.runId, root);
-  const until = next?.snapshot.ref ?? source.end;
-  if (source.gone && !until) return [];
-  const gitRoot = source.gitRoot;
+): Promise<{ files: ListedFile[]; fixedRange: boolean }> {
+  const ref = run.snapshot.ref;
+  const bounds = await gitRunBounds(db, run, next);
+  if (!ref || !bounds) return { files: [], fixedRange: false };
+  const { gitRoot, until } = bounds;
+  const fixedRange = until !== null;
   const range = { root: gitRoot, from: ref, until };
   const signature = listings ? await rangeSignature(range) : null;
   const known = signature === null ? undefined : listings?.get(signature);
-  if (known) return known;
-  const base = await runBaseUntil(gitRoot, ref, until, await branchesStackedOn(db, root));
+  if (known) return { files: known, fixedRange };
+  const stacked = await branchesStackedOn(db, run.snapshot.root);
+  const base = await runBaseUntil(gitRoot, ref, until, stacked);
   const files = await changesWhilePresent(gitRoot, async () =>
     gitRangeFiles({ root: gitRoot, from: base, to: until ?? (await workingTree(gitRoot)) }),
   );
   if (files && signature !== null && (await rangeSignature(range)) === signature) {
     listings?.set(signature, files);
   }
-  return files ?? [];
+  return { files: files ?? [], fixedRange };
 }
 
 async function laterBackup(
@@ -185,7 +207,7 @@ async function backupListed(
   }));
 }
 
-async function runStates(
+export async function runStates(
   db: Queryable,
   workspaceId: string,
   runIds: readonly string[],
@@ -198,28 +220,46 @@ async function runStates(
   );
 }
 
+interface RunContext {
+  later: readonly RunState[];
+  earlier: readonly RunState[];
+  reverts: readonly FileRevert[];
+}
+
+function revertsOf(reverts: readonly FileRevert[], runs: readonly RunState[]): FileRevert[] {
+  const ids = new Set(runs.map((run) => run.runId));
+  return reverts.filter((revert) => ids.has(revert.runId));
+}
+
 async function runFiles(
   db: Queryable,
   run: RunState,
-  later: readonly RunState[],
+  context: RunContext,
   listings: RunListingCache | undefined,
 ): Promise<ListedRun | null> {
-  const sameRoot = later.filter((other) => other.snapshot.root === run.snapshot.root);
-  const files =
-    run.snapshot.kind === 'git'
-      ? await gitListed(
-          db,
-          run,
-          sameRoot.find((other) => other.snapshot.kind === 'git'),
-          listings,
-        )
-      : await backupListed(db, run, sameRoot);
-  if (files.length === 0) return null;
+  const sameRoot = (other: RunState) => other.snapshot.root === run.snapshot.root;
+  const later = context.later.filter(sameRoot);
+  const own = revertsOf(context.reverts, [run]);
+  let files: ListedFile[];
+  if (run.snapshot.kind === 'git') {
+    const listed = await gitListed(
+      db,
+      run,
+      later.find((other) => other.snapshot.kind === 'git'),
+      listings,
+    );
+    const earlier = revertsByPath(revertsOf(context.reverts, context.earlier.filter(sameRoot)));
+    files = withoutReverted(listed.files, { own, earlier, fixedRange: listed.fixedRange });
+  } else {
+    files = await backupListed(db, run, later);
+  }
+  if (files.length === 0 && own.length === 0) return null;
   return {
     runId: run.runId,
     root: run.snapshot.root,
     revertedAt: run.revertedAt?.toISOString() ?? null,
     files,
+    ...(own.length > 0 ? { reverted: revertedFiles(own) } : {}),
   };
 }
 
@@ -236,9 +276,20 @@ export async function taskChangeSet(
     (state) =>
       !copies.has(state.runId) || copies.get(state.runId)?.mergedInto === state.snapshot.root,
   );
+  const reverts = await listFileReverts(
+    db,
+    states.map((state) => state.runId),
+  );
   const main = await Promise.all(
     states.map((run, index) =>
-      copies.has(run.runId) ? null : runFiles(db, run, states.slice(index + 1), listings),
+      copies.has(run.runId)
+        ? null
+        : runFiles(
+            db,
+            run,
+            { later: states.slice(index + 1), earlier: states.slice(0, index), reverts },
+            listings,
+          ),
     ),
   );
   const byRun = new Map(
