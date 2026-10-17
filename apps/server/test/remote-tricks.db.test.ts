@@ -4,7 +4,8 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createTestApp } from './app-support.ts';
+import { APP_CONTENT_SECURITY_POLICY } from '@spark-outpost/contracts';
+import { createTestApp, localClient } from './app-support.ts';
 import {
   ENTERED,
   REMOTE_HOST,
@@ -94,7 +95,7 @@ describe('path tricks from a paired phone', () => {
 });
 
 describe('the web app over the remote host', () => {
-  it('gives an unpaired device the theme and the pairing page, a paired one the app', async () => {
+  it('gives an unpaired device the theme and the pairing page, a paired one the app with its policy', async () => {
     const webRoot = await mkdtemp(join(tmpdir(), 'spark-remote-web-'));
     await writeFile(join(webRoot, 'theme.css'), ':root { --bg: #fff; }');
     await writeFile(join(webRoot, 'index.html'), '<title>Spark Outpost app</title>');
@@ -120,9 +121,16 @@ describe('the web app over the remote host', () => {
       );
       expect((await stranger.get(`/${ENTERED}`).expect(200)).text).toContain('Pair this device');
 
+      const local = await localClient(app).get('/').expect(200);
+      expect(local.headers['content-security-policy']).toBe(APP_CONTENT_SECURITY_POLICY);
+
       const device = await pairDevice(app);
       const phone = remoteClient(app, device.cookie);
-      expect((await phone.get('/').expect(200)).text).toContain('Spark Outpost app');
+      const shell = await phone.get('/').expect(200);
+      expect(shell.text).toContain('Spark Outpost app');
+      expect(shell.headers['content-security-policy']).toBe(APP_CONTENT_SECURITY_POLICY);
+      const deepLink = await phone.get('/chats/anything').expect(200);
+      expect(deepLink.headers['content-security-policy']).toBe(APP_CONTENT_SECURITY_POLICY);
       expect((await phone.get('/app.js').expect(200)).text).toContain('window.app');
     } finally {
       await rm(webRoot, { recursive: true, force: true });
