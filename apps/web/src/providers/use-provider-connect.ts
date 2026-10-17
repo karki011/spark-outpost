@@ -102,6 +102,7 @@ export function useProviderConnect(
   async function handleConnected() {
     setTerminalOpen(false);
     await queryClient.invalidateQueries({ queryKey: setupKey });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.planUsage, exact: true });
     refreshModels();
     setVerifying(false);
     setChanging(false);

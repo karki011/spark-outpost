@@ -124,6 +124,32 @@ describe('stored plan readings', { timeout: 30_000 }, () => {
     expect(await shown()).toEqual([]);
   });
 
+  it('forgets the readings when the provider is disconnected, so another account never sees them', async () => {
+    const report = {
+      windows: [reading('five_hour', 0.8, new Date(Date.now() + HOUR))],
+      extraUsage: {
+        status: 'allowed' as const,
+        inUse: true,
+        disabledReason: null,
+        limitScope: null,
+        resetsAt: null,
+      },
+    };
+    await recordPlanReport(t.db, t.workspaceId, 'claude', report);
+    await request(createTestApp(t))
+      .delete('/api/providers/claude/connection')
+      .set(LOCAL_HEADERS)
+      .set('Origin', ORIGIN)
+      .expect(200);
+    await connectCliProvider(t, 'claude');
+    await recordAccount(t.db, t.workspaceId, 'claude', MAX);
+    expect(await shown()).toEqual([]);
+    const { rows } = await t.db.query(
+      'SELECT 1 FROM provider_plan_limits UNION ALL SELECT 1 FROM provider_extra_usage',
+    );
+    expect(rows).toEqual([]);
+  });
+
   it('records nothing for Z.ai or an API-key sign-in', async () => {
     await connectCliProvider(t, 'zai');
     const report = {

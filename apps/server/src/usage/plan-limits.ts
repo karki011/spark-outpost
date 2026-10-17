@@ -206,3 +206,18 @@ export async function recordPlan(
     console.error('Could not save the plan usage reading', error),
   );
 }
+
+export async function forgetPlanUsage(
+  db: Queryable,
+  workspaceId: string,
+  provider: string,
+): Promise<void> {
+  await db.query('DELETE FROM provider_plan_limits WHERE workspace_id = $1 AND provider = $2', [
+    workspaceId,
+    provider,
+  ]);
+  await db.query('DELETE FROM provider_extra_usage WHERE workspace_id = $1 AND provider = $2', [
+    workspaceId,
+    provider,
+  ]);
+}
