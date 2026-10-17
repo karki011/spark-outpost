@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                 | What to do                                                |
 | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| Claude plan ring.                                                                                            | See [Limits](statuses-and-limits.md#limits).              |
 | Calendar: see your day on **Today**, join meetings and keep focus time quiet.                                | See [See your day](calendar.md).                          |
 | Pull request **Refresh** no longer reverts.                                                                  | None.                                                     |
 | Settings has six groups and a **Search settings** box.                                                       | See [Settings](settings.md).                              |

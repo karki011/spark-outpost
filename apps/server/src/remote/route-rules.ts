@@ -59,6 +59,7 @@ GET /api/home/today
 GET /api/providers/health
 GET /api/usage/spend
 GET /api/usage/summary
+GET /api/usage/plan-limits
 POST /api/home/digest
 POST /api/runs/:id/continue
 POST /api/runs/:id/start-fresh

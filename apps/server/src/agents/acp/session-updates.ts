@@ -13,6 +13,7 @@ import { agentCommands } from './slash-commands.ts';
 import { objectFields } from './object-fields.ts';
 import { exitPlanText, planFileText } from '../../plans/plan-mode.ts';
 import { shortWindowNote } from './long-context.ts';
+import { usageOutputs } from './plan-limits.ts';
 import { createFocusTracker } from './file-focus.ts';
 import { messagePhase } from './message-phase.ts';
 
@@ -446,19 +447,14 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
         case 'available_commands_update':
           return [{ kind: 'commands', commands: agentCommands(update.availableCommands) }];
         case 'usage_update': {
-          const usage: ProviderOutput = {
-            kind: 'usage',
-            contextUsed: update.used,
-            contextSize: update.size,
-            costUsd: update.cost?.currency === 'USD' ? update.cost.amount : null,
-          };
+          const outputs = usageOutputs(update);
           const short =
             checksWindow && !windowNoted && update.cost
               ? shortWindowNote(update._meta, update.size)
               : null;
-          if (!short) return [usage];
+          if (!short) return outputs;
           windowNoted = true;
-          return [usage, ...note(short)];
+          return [...outputs, ...note(short)];
         }
         default:
           return [];

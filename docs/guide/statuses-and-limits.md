@@ -18,7 +18,7 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 
 ## Chat list
 
-A dot says what happened since you last opened the chat; opening it clears the dot, on paired devices too. Point at the row for detail, such as **Asking permission**.
+A dot shows what happened since you last opened the chat, on paired devices too. Point at it for detail.
 
 | Dot                         | Means                                                                      |
 | --------------------------- | -------------------------------------------------------------------------- |
@@ -38,14 +38,14 @@ A dot says what happened since you last opened the chat; opening it clears the d
 
 ## Outpost requests
 
-| Status        | Means                                                                                                                    |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **Sent**      | The chat is busy, its last turn failed or was stopped, the outpost or Spark is paused, or it reads **Waiting for @api**. |
-| **Working**   | Its turn is running; the line under it says what the chat is doing.                                                      |
-| **Needs you** | An approval card waits, or the reply ends **Needs you: …**.                                                              |
-| **Answered**  | The answer is under the request.                                                                                         |
-| **Failed**    | The turn failed and the line says why, or **Not delivered: …**.                                                          |
-| **Cancelled** | You cancelled it or stopped its turn.                                                                                    |
+| Status        | Means                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| **Sent**      | The chat is busy, failed or stopped, something is paused, or it reads **Waiting for @api**. |
+| **Working**   | Its turn is running; the line under it says what the chat is doing.                         |
+| **Needs you** | An approval card waits, or the reply ends **Needs you: …**.                                 |
+| **Answered**  | The answer is under the request.                                                            |
+| **Failed**    | The turn failed and the line says why, or **Not delivered: …**.                             |
+| **Cancelled** | You cancelled it or stopped its turn.                                                       |
 
 ## Ticket groups
 
@@ -69,21 +69,21 @@ A dot says what happened since you last opened the chat; opening it clears the d
 
 ## Spark Island states
 
-| You see                                           | Means                                                                              |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Scout's eyes scan; a blob has a spinning ring     | **Working…**                                                                       |
-| A number badge on Scout; a blob pulses with **!** | **Needs you**                                                                      |
-| A dashed count on Scout                           | Set aside                                                                          |
-| A happy face; a blob pops a star once             | **Done**                                                                           |
-| A worried face; a grey blob with a red badge      | **Failed**                                                                         |
-| A dimmed blob                                     | **Quiet**                                                                          |
-| **Terminal session** on the card                  | **Open terminal** opens the agent; answer it there. The card never shows commands. |
+| You see                                           | Means                                                       |
+| ------------------------------------------------- | ----------------------------------------------------------- |
+| Scout's eyes scan; a blob has a spinning ring     | **Working…**                                                |
+| A number badge on Scout; a blob pulses with **!** | **Needs you**                                               |
+| A dashed count on Scout                           | Set aside                                                   |
+| A happy face; a blob pops a star once             | **Done**                                                    |
+| A worried face; a grey blob with a red badge      | **Failed**                                                  |
+| A dimmed blob                                     | **Quiet**                                                   |
+| **Terminal session** on the card                  | Answer in **Open terminal**. The card never shows commands. |
 
 With **Reduce motion** on, only faces change.
 
 ## Limits
 
-Spark caps no time, tool calls or cost for a turn.
+Spark caps no time, tool calls or cost for a turn. A Claude subscription gets a ring above **Pause** with each plan window's use and reset.
 
 | Limit                                | Value                                    |
 | ------------------------------------ | ---------------------------------------- |
