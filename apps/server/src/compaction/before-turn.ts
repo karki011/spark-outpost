@@ -29,6 +29,7 @@ import { SESSION_IDLE_MS, decideResume } from '../workflow/session-decision.ts';
 import { HISTORY_TOOL_NOTE } from '../workflow/session-brief.ts';
 import { compactInSession, leaseLog, offersCompact, type CompactTarget } from './agent-compact.ts';
 import { startFreshChat, type FreshChat } from './fresh-chat.ts';
+import { chatIdentifiers } from './identifiers.ts';
 import { agentCompactWorked, compactStep, readingOf, usedPercent } from './policy.ts';
 import { buildChatSummary } from './summary.ts';
 
@@ -139,9 +140,14 @@ async function askFirst(
   );
 }
 
-function withAgentNote(input: RunInput): RunInput {
+function withAgentNote(input: RunInput, identifiers: string): RunInput {
   if (input.prompt.trimStart().startsWith('/')) return input;
-  return { ...input, followUp: `${AGENT_COMPACTED_NOTE}\n\n${input.followUp ?? input.prompt}` };
+  const note = [AGENT_COMPACTED_NOTE, identifiers, input.followUp ?? input.prompt];
+  return { ...input, followUp: note.filter(Boolean).join('\n\n') };
+}
+
+function withIdentifiers(summary: string, identifiers: string): string | null {
+  return [summary, identifiers].filter(Boolean).join('\n\n') || null;
 }
 
 async function compactWithAgent(
@@ -164,6 +170,7 @@ async function compactWithAgent(
   );
   if (!compacted || !agentCompactWorked(candidate.reading, compacted.after)) return null;
   const { after } = compacted;
+  const identifiers = await chatIdentifiers(deps.db, input);
   await recordCompacted(deps.db, candidate.session.id, after);
   await insertCompaction(deps.db, {
     conversationId: input.identity.threadId,
@@ -174,14 +181,14 @@ async function compactWithAgent(
     tokensBefore: candidate.reading.used,
     tokensAfter: null,
     contextSize: after.size,
-    summary: compacted.text || null,
+    summary: withIdentifiers(compacted.text, identifiers),
     lastMessageId: input.previousMessageId ?? null,
   });
   await notice(
     append,
     `Compacted the chat: ${kilo(candidate.reading.used)} tokens → a ~${kilo(after.used)} summary; the size with the system prompt and tools shows after the next reply`,
   );
-  return withAgentNote(input);
+  return withAgentNote(input, identifiers);
 }
 
 async function compactWithSpark(
