@@ -119,4 +119,23 @@ describe('exact identifiers after compaction', { timeout: 120_000 }, () => {
     expect(text).toContain('`#22`');
     expect(text).not.toContain('#33');
   });
+
+  it('never keeps an identifier cut in half at the limit', async () => {
+    h = await startCompactionHarness([]);
+    const id = await newChat(h, 'full-auto');
+    const first = await say(h, id, 'Dump the log');
+    const numbers = Array.from({ length: 4_000 }, (_, index) => `#${100_000 + index}`);
+    await addToolResult(first.run.id, `log\n${'log line\n'.repeat(220_000)}${numbers.join(' ')}`);
+    const next = await say(h, id, 'Next');
+
+    const text = await chatIdentifiers(h.t.db, {
+      identity: { threadId: id, runId: next.run.id },
+      projectRoots: [],
+    });
+
+    const kept = [...text.matchAll(/`#(\d+)`/g)].map((match) => match[1]!);
+    expect(kept.length).toBeGreaterThan(0);
+    expect(kept.every((digits) => digits.length === 6)).toBe(true);
+    expect(text).not.toContain(`\`${numbers.at(-1)}\``);
+  });
 });
