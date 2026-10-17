@@ -231,6 +231,11 @@ test('groups a Google account with one Nudge switch per row and folds a long lis
   await addGoogle(page);
   const account = card(page).getByRole('region', { name: GOOGLE_STUB_EMAIL });
   await expect(account.getByRole('listitem')).toHaveCount(5);
+  await expect(
+    card(page)
+      .getByRole('region', { name: 'Google Calendar' })
+      .getByRole('button', { name: 'Add Google account' }),
+  ).toBeVisible();
   await expect(account.getByRole('switch', { name: 'Nudge, Team 1' })).toHaveAttribute(
     'aria-checked',
     'true',

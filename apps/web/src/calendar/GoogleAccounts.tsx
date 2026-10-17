@@ -170,10 +170,10 @@ export function GoogleAccounts({ status, accounts, onChange }: GoogleAccountsPro
           onDisconnect={() => remove(account.id)}
         />
       ))}
-      <section className="cal-source" aria-labelledby="cal-google-h">
+      <section className="cal-source" aria-label="Google Calendar">
         {google.accounts.length === 0 && (
           <div className="cal-src-h">
-            <h3 id="cal-google-h">Google Calendar</h3>
+            <h3>Google Calendar</h3>
             <small>Read straight from Google</small>
           </div>
         )}
