@@ -90,14 +90,14 @@ test('a running turn shows no timer', async ({ page }) => {
 
 test('no timer while the agent waits on a card', async ({ page }) => {
   const { runId } = await claudeChat('awaiting_approval', {
-    kind: 'command',
-    title: 'Run pnpm test?',
+    kind: 'execute',
+    title: 'Run a command?',
     command: 'pnpm test',
   });
   await cached(runId, 3600, 2);
   await open(page);
 
-  await expect(page.getByRole('group', { name: /Run pnpm test\?/ })).toBeVisible();
+  await expect(page.getByRole('group', { name: /Run a command\?/ })).toBeVisible();
   await expect(timer(page)).toHaveCount(0);
 });
 
