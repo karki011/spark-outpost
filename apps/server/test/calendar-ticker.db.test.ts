@@ -127,6 +127,16 @@ describe('the calendar ticker', () => {
     expect(push.meeting).toHaveBeenCalledTimes(2);
   });
 
+  it('keeps a clashing meeting that comes due a few minutes later in the same alert', async () => {
+    await updateSettings(t.db, t.workspaceId, { phoneAlerts: true });
+    events = [helperEvent('Standup', 8, 23), helperEvent('Design sync', 12, 40)];
+    await ticker.tick();
+    expect(push.meeting).toHaveBeenCalledTimes(1);
+    now = NOW + 3 * MINUTE;
+    await ticker.tick();
+    expect(push.meeting).toHaveBeenCalledTimes(1);
+  });
+
   it('sends nothing for a meeting that has started', async () => {
     await updateSettings(t.db, t.workspaceId, { phoneAlerts: true });
     events = [helperEvent('Late', -1, 20)];
