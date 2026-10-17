@@ -3,6 +3,8 @@ import { existsSync } from 'node:fs';
 
 export const CALENDAR_SEED_ENV = 'SPARK_CALENDAR_SEED';
 export const CALENDAR_SEED_STATE_ENV = 'SPARK_CALENDAR_SEED_STATE';
+const CALENDAR_SEED_ONE_ENV = 'SPARK_CALENDAR_SEED_ONE';
+const ONE_MEETING = /^[0-9]{1,3}$/;
 
 export interface CalendarSeedOptions {
   seedPath: string | null;
@@ -10,7 +12,12 @@ export interface CalendarSeedOptions {
   log(line: string): void;
 }
 
-export type SeedPlan = { mode: 'seed' | 'remove'; binary: string; state: string } | null;
+export type SeedPlan = {
+  mode: 'seed' | 'remove';
+  binary: string;
+  state: string;
+  one: string | null;
+} | null;
 
 export function seedPlan(
   options: CalendarSeedOptions,
@@ -20,7 +27,8 @@ export function seedPlan(
   const state = options.env[CALENDAR_SEED_STATE_ENV];
   if (!options.seedPath || (mode !== 'seed' && mode !== 'remove') || !state) return null;
   if (!exists(options.seedPath)) return null;
-  return { mode, binary: options.seedPath, state };
+  const one = options.env[CALENDAR_SEED_ONE_ENV];
+  return { mode, binary: options.seedPath, state, one: one && ONE_MEETING.test(one) ? one : null };
 }
 
 export function runCalendarSeed(options: CalendarSeedOptions): void {
@@ -29,7 +37,7 @@ export function runCalendarSeed(options: CalendarSeedOptions): void {
   options.log(`Running the calendar test seed (${plan.mode}).`);
   execFile(
     plan.binary,
-    [plan.mode, '--state', plan.state],
+    [plan.mode, '--state', plan.state, ...(plan.one ? ['--one', plan.one] : [])],
     { env: {}, timeout: 60_000 },
     (error, stdout) => {
       const line = stdout.split('\n')[0]?.slice(0, 500) ?? '';

@@ -100,6 +100,9 @@ test('⌘J opens Choose when several meetings are open to join, and joins nothin
   await page.keyboard.press('ControlOrMeta+j');
   const dialog = page.getByRole('dialog', { name: 'Choose a meeting' });
   await expect(dialog).toBeVisible();
+  expect(
+    await dialog.evaluate((element) => getComputedStyle(element.parentElement!).position),
+  ).toBe('fixed');
   await expect(dialog.getByRole('button', { name: 'Join Standup' })).toBeFocused();
   await expect(dialog.getByRole('button', { name: 'Open Room booking' })).toBeVisible();
   const results = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
@@ -126,6 +129,10 @@ test('Today tags clashing meetings on the timeline and in the event panel', asyn
   const today = page.getByRole('main', { name: 'Today' });
   const customer = today.getByRole('button', { name: /^Customer call, / });
   await expect(customer).toHaveAccessibleName(/clashes with Vendor sync/);
+  await expect(customer.locator('.tl-tags')).toBeVisible();
+  const standup = today.getByRole('button', { name: /^Standup, / });
+  await expect(standup).toHaveAccessibleName(/clashes with 2 meetings/);
+  await expect(standup.locator('.tl-tags')).toBeHidden();
   await customer.click();
   await expect(today.getByRole('region', { name: 'Customer call' })).toContainText(
     'clashes with Vendor sync',

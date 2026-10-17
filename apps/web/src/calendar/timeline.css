@@ -123,6 +123,10 @@
   color: var(--warn);
 }
 
+.tl-ev[data-narrow] .tl-tags {
+  display: none;
+}
+
 .tl-gap {
   position: absolute;
   right: 10px;

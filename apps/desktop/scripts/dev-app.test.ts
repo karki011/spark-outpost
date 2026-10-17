@@ -156,6 +156,7 @@ describe('openArgs', () => {
       passEnv: {
         SPARK_CALENDAR_SEED: 'seed',
         SPARK_CALENDAR_SEED_STATE: '/tmp/s.json',
+        SPARK_CALENDAR_SEED_ONE: '12',
         HOME: '/u',
       },
     });
@@ -168,6 +169,8 @@ describe('openArgs', () => {
       'SPARK_CALENDAR_SEED=seed',
       '--env',
       'SPARK_CALENDAR_SEED_STATE=/tmp/s.json',
+      '--env',
+      'SPARK_CALENDAR_SEED_ONE=12',
       '--args',
       '/r/apps/desktop',
     ]);

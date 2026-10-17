@@ -104,7 +104,11 @@ export interface OpenOptions {
   passEnv?: Record<string, string | undefined>;
 }
 
-export const PASSED_ENV = ['SPARK_CALENDAR_SEED', 'SPARK_CALENDAR_SEED_STATE'] as const;
+export const PASSED_ENV = [
+  'SPARK_CALENDAR_SEED',
+  'SPARK_CALENDAR_SEED_STATE',
+  'SPARK_CALENDAR_SEED_ONE',
+] as const;
 
 function envArgs(options: OpenOptions): string[] {
   const data = options.dataDir ? [`SPARK_APP_DATA=${options.dataDir}`] : [];

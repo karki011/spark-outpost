@@ -1,3 +1,4 @@
+import './choose-meeting.css';
 import { useEffect, useId, type KeyboardEvent } from 'react';
 import type { CalendarEvent } from '@spark-outpost/contracts';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
@@ -31,17 +32,17 @@ export function ChooseMeetingDialog(props: ChooseMeetingDialogProps) {
   };
   return (
     <div
-      className="dlg"
+      className="cal-choose-scrim"
       onMouseDown={(event) => event.target === event.currentTarget && props.onClose()}
     >
       <div
-        className="dlg-panel cal-choose"
+        className="cal-choose"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         onKeyDown={onKeyDown}
       >
-        <div className="dlg-head">
+        <div className="cal-choose-head">
           <div>
             <h3 id={titleId}>Choose a meeting</h3>
             <small>They overlap. Nothing joins until you pick one.</small>
@@ -50,7 +51,7 @@ export function ChooseMeetingDialog(props: ChooseMeetingDialogProps) {
             <CloseIcon />
           </button>
         </div>
-        <div className="dlg-body">
+        <div className="cal-choose-body">
           <MeetingChoices
             meetings={props.meetings}
             now={props.now}

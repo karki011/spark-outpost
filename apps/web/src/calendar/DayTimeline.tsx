@@ -14,6 +14,7 @@ import type { NoGap, TimelineSpan } from './today-model.ts';
 import { CalendarName } from './CalendarName.tsx';
 
 const NO_CLASHES: readonly string[] = [];
+const NARROW_LANES = 3;
 
 interface DayTimelineProps {
   span: TimelineSpan;
@@ -78,6 +79,7 @@ function EventBlock(props: {
       data-kind={kind}
       data-overlap={props.overlap || undefined}
       data-short={end - start < 30 * 60_000 || undefined}
+      data-narrow={props.lanes >= NARROW_LANES || undefined}
       style={style}
       aria-expanded={props.selected}
       aria-controls={props.selected ? props.panelId : undefined}
