@@ -1,6 +1,6 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { GOOGLE_TESTING_LINE, calendarStatusSchema } from '../../packages/contracts/src/index.ts';
 import { resetTestDatabase } from './database.ts';
 import { readCalendarClock } from './fake-calendar-clock.ts';
@@ -159,6 +159,52 @@ test('asks to sign in again when Google ends the sign-in, and Disconnect revokes
   };
   expect(revoked.issued).toBe(revoked.revoked);
   expect((await status(page)).google.accounts).toEqual([]);
+});
+
+const LONG_GOOGLE =
+  'Find out more about this very long subscribed calendar https://docs.google.com/drawings/d/1I-ChMlOhrqGjMPll4cO70WbRn2wjyZ9kTVBM30EX9nM/preview';
+const LONG_MAC = 'Family and friends shared calendar with a name far too long to fit on one line';
+
+async function expectClipped(name: string, where: Locator) {
+  const label = where.locator(`[title="${name}"]`).first();
+  await expect(label).toHaveText(name);
+  const box = await label.evaluate((element) => ({
+    clipped: element.scrollWidth > element.clientWidth,
+    height: element.getBoundingClientRect().height,
+    lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight) || 20,
+  }));
+  expect(box.clipped).toBe(true);
+  expect(box.height).toBeLessThanOrEqual(box.lineHeight * 1.5);
+}
+
+test('cuts long macOS and Google calendar names to one line, with the full name kept', async ({
+  page,
+}) => {
+  writeFileSync(
+    FAKE_CALENDAR_STATE,
+    JSON.stringify({ authorization: 'notDetermined', anchor, familyTitle: LONG_MAC }),
+  );
+  await fetch(`${STUB_URL}/google-test/calendar`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ id: 'long@group.calendar.google.com', summary: LONG_GOOGLE }),
+  });
+  await openCard(page);
+  await card(page).getByRole('button', { name: 'Connect', exact: true }).click();
+  await addGoogle(page);
+  await expectClipped(LONG_MAC, card(page));
+  await expectClipped(LONG_GOOGLE, card(page));
+  await expect(card(page).getByRole('checkbox', { name: `Include ${LONG_GOOGLE}` })).toBeChecked();
+
+  await page.keyboard.press('Escape');
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Today/ })
+    .click();
+  const filters = today(page).getByRole('group', { name: 'Show calendars' });
+  await expectClipped(LONG_MAC, filters);
+  await expectClipped(LONG_GOOGLE, filters);
+  await expect(filters.getByRole('button', { name: LONG_GOOGLE })).toBeVisible();
 });
 
 test('has no serious accessibility problems in the Calendar card with Google', async ({ page }) => {

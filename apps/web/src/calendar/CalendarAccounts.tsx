@@ -6,6 +6,7 @@ import type {
   CalendarChoicePatch,
   CalendarSourceKind,
 } from '@spark-outpost/contracts';
+import { CalendarName } from './CalendarName.tsx';
 
 const SOURCE_LABEL: Record<CalendarSourceKind, string> = {
   local: 'On this Mac',
@@ -39,7 +40,7 @@ function CalendarRow({ calendar, onChange }: ChoiceProps) {
           onChange={(event) => onChange(calendar.key, { include: event.target.checked })}
         />
         <i className="cal-sw" style={swatch(calendar.color)} aria-hidden="true" />
-        <span className="cal-title">{calendar.title}</span>
+        <CalendarName name={calendar.title} className="cal-title" />
         {calendar.ownership !== 'mine' && <span className="cal-chip">shared</span>}
       </label>
       <label className="cal-mini">
@@ -77,7 +78,9 @@ export function CalendarAccounts({ accounts, onChange }: CalendarAccountsProps) 
       {accounts.map((account) => (
         <section key={account.id} className="cal-acct" aria-label={account.title}>
           <div className="cal-acct-h">
-            <b>{account.title}</b>
+            <b>
+              <CalendarName name={account.title} />
+            </b>
             <small>{SOURCE_LABEL[account.kind]}</small>
           </div>
           <ul className="cal-rows">

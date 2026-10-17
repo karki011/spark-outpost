@@ -50,6 +50,11 @@ export async function handleGoogle(req: IncomingMessage, res: ServerResponse, pa
     for (const event of events) google.putEvent(GOOGLE_STUB_SUBJECT, GOOGLE_STUB_EMAIL, event);
     return send(res, 200, { ok: true });
   }
+  if (path === '/google-test/calendar' && req.method === 'POST') {
+    const entry = JSON.parse(await body(req)) as { id: string; summary: string };
+    google.addCalendar(GOOGLE_STUB_SUBJECT, { ...entry, accessRole: 'reader' });
+    return send(res, 200, { ok: true });
+  }
   if (path === '/google-test/expire') {
     google.expireRefreshTokens();
     return send(res, 200, { ok: true });

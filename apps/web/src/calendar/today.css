@@ -153,6 +153,10 @@
   font-weight: 400;
 }
 
+.td-panel-cal {
+  max-width: 14rem;
+}
+
 .td-filters {
   display: flex;
   flex-wrap: wrap;
@@ -163,6 +167,8 @@
 .td-filter {
   display: inline-flex;
   align-items: center;
+  max-width: min(100%, 18rem);
+  min-width: 0;
   gap: 6px;
   padding: 2px 10px;
   border: 1px solid var(--line);

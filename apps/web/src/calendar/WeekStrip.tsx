@@ -2,6 +2,7 @@ import type { CalendarChoice, CalendarWeekDay } from '@spark-outpost/contracts';
 import { countLabel } from '../ui/count-label.ts';
 import { weekdayShort } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
+import { CalendarName } from './CalendarName.tsx';
 
 interface WeekStripProps {
   week: readonly CalendarWeekDay[];
@@ -62,7 +63,7 @@ export function CalendarFilters({ calendars, hidden, onToggle }: CalendarFilters
           onClick={() => onToggle(calendar.key)}
         >
           <i className="cal-sw" style={swatch(calendar.color)} aria-hidden="true" />
-          {calendar.title}
+          <CalendarName name={calendar.title} />
         </button>
       ))}
     </div>

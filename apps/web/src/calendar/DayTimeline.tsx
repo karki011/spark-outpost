@@ -10,6 +10,7 @@ import { clock, span as spanText } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
 import { block, HOUR_PX, hourMarks, offset, placeEvents } from './timeline-model.ts';
 import type { NoGap, TimelineSpan } from './today-model.ts';
+import { CalendarName } from './CalendarName.tsx';
 
 interface DayTimelineProps {
   span: TimelineSpan;
@@ -84,7 +85,7 @@ function EventBlock(props: {
       )}
       <b>{event.title}</b>
       <span className="tl-meta">
-        {spanText(start, end)} · {calendar?.title ?? 'Calendar'}
+        {spanText(start, end)} · <CalendarName name={calendar?.title ?? 'Calendar'} />
         {service}
       </span>
     </button>

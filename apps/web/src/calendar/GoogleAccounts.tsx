@@ -11,6 +11,7 @@ import {
 import { ExternalLinkIcon } from '../ui/icons.tsx';
 import { CalendarAccounts } from './CalendarAccounts.tsx';
 import { calendarApi, calendarKeys } from './calendar-api.ts';
+import { CalendarName } from './CalendarName.tsx';
 
 const POLL_MS = 1500;
 
@@ -104,7 +105,9 @@ function GoogleAccount({
         <CalendarAccounts accounts={[calendars]} onChange={onChange} />
       ) : (
         <p className="cal-acct-h">
-          <b>{account.email}</b>
+          <b>
+            <CalendarName name={account.email} />
+          </b>
           <small>Google</small>
         </p>
       )}
