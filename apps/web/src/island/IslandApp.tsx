@@ -346,7 +346,7 @@ export function IslandApp() {
   const home = {
     sessions: homeChats,
     chats: data.chats,
-    cards,
+    cards: allCards,
     quickStart: quickStart ? { id: quickStart.id, name: quickStart.name } : null,
     onOpenHere: (id: string) => {
       setSelected(id);

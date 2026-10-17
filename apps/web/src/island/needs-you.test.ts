@@ -24,10 +24,11 @@ function chat(id: string, patch: Partial<ConversationSummary> = {}): Conversatio
   };
 }
 
-const run = (status: string) =>
+const run = (status: string, finishedAt: string | null = null) =>
   ({
     id: `run-${status}`,
     status,
+    finishedAt,
     error: null,
     step: null,
     provider: 'claude',
@@ -58,12 +59,16 @@ describe('needsYou', () => {
   it('lists waiting cards, then the meeting line, then failed and finished chats not yet seen', () => {
     const chats = [
       chat('done', { unread: true, latestRun: run('succeeded') }),
-      chat('failed', { unread: true, latestRun: run('failed') }),
-      chat('seen', { unread: false, latestRun: run('failed') }),
+      chat('failed', { latestRun: run('failed', '2026-09-30T10:05:00Z'), seenAt: null }),
+      chat('seen', {
+        latestRun: run('failed', '2026-09-30T10:05:00Z'),
+        seenAt: '2026-09-30T10:06:00Z',
+      }),
+      chat('done-seen', { unread: false, latestRun: run('succeeded') }),
       chat('running', { unread: true, latestRun: run('running') }),
       chat('archived', {
         unread: true,
-        latestRun: run('failed'),
+        latestRun: run('failed', '2026-09-30T10:05:00Z'),
         archivedAt: '2026-09-30T10:00:00Z',
       }),
     ];

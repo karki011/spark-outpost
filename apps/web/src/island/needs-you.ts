@@ -17,11 +17,17 @@ export interface NeedsYou {
 
 const CALENDAR_KINDS: ReadonlySet<CalendarLine['kind']> = new Set(['nudge', 'capture', 'catch-up']);
 
+function failedUnseen(chat: ConversationSummary): boolean {
+  const finishedAt = chat.latestRun?.finishedAt;
+  if (!finishedAt) return false;
+  return !chat.seenAt || Date.parse(finishedAt) > Date.parse(chat.seenAt);
+}
+
 function finished(chat: ConversationSummary): 'done' | 'failed' | null {
-  if (chat.archivedAt || chat.needsInput || !chat.unread) return null;
+  if (chat.archivedAt || chat.needsInput) return null;
   const status = chat.latestRun?.status;
-  if (status === 'failed') return 'failed';
-  if (status === 'succeeded') return 'done';
+  if (status === 'failed') return failedUnseen(chat) ? 'failed' : null;
+  if (status === 'succeeded') return chat.unread ? 'done' : null;
   return null;
 }
 
