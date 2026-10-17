@@ -95,7 +95,6 @@ export function DayView({
   const shown = visibleEvents(day.events, hidden);
   const span = timelineSpan(dayStart, addLocalDays(dayStart, 1), shown);
   const event = day.events.find((item) => item.key === selected) ?? null;
-  const shownEvent = event ? (shown.find((item) => item.key === event.key) ?? event) : null;
   return (
     <>
       <header className="td-head">
@@ -142,14 +141,14 @@ export function DayView({
           />
         </section>
         <div className="td-side">
-          {shownEvent ? (
+          {event ? (
             <EventPanel
-              key={shownEvent.key}
+              key={event.key}
               id={panelId}
-              event={shownEvent}
+              event={event}
               date={day.date}
               calendars={calendars}
-              clashes={clashes.get(shownEvent.key)}
+              clashes={clashes.get(event.key)}
               isToday={isToday}
               now={now}
               onStartChat={onStartChat}
