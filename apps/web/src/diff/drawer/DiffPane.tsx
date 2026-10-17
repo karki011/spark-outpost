@@ -142,7 +142,7 @@ export function DiffPane({
         <div className="dd-state">
           <BlobScout size={40} />
           {reverted && (
-            <p className="dd-reverted">
+            <p className="dd-reverted" role="status">
               <RestoreIcon />
               Reverted {reverted}.
             </p>

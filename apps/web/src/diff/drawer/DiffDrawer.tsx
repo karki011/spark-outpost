@@ -92,9 +92,6 @@ export function DiffDrawer({ taskId, target, onClose }: DiffDrawerProps) {
       style={{ '--dd-w': `${shown}px` } as CSSProperties}
     >
       <DrawerResizer width={shown} onWidth={setWidth} />
-      <p className="sr-only" role="status">
-        {reverted ? `Reverted ${reverted}.` : ''}
-      </p>
       <header className="dd-head">
         <h2>Changes</h2>
         {data && !empty && (
