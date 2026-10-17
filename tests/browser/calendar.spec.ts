@@ -51,7 +51,7 @@ async function connect(page: Page, nudgeWork = true) {
   for (const calendar of (await status(page)).accounts.flatMap((account) => account.calendars)) {
     const nudges = nudgeWork && calendar.title === 'Spark Work';
     await page.request.patch(`/api/calendar/calendars/${calendar.key}`, {
-      data: { include: true, busy: true, nudges },
+      data: { include: true, nudges },
     });
   }
 }
@@ -95,7 +95,7 @@ test.beforeEach(async ({ page }) => {
   anchor = Math.floor(fakeNow() / MINUTE) * MINUTE;
   writeFakeCalendar(null);
   if (clockOffset() !== 0) await page.clock.install({ time: new Date(fakeNow()) });
-  await connect(page, false);
+  await page.request.post('/api/calendar/connect', { data: {} });
   await page.request.post('/api/calendar/disconnect', { data: {} });
 });
 
@@ -120,11 +120,17 @@ test('connects from Today through the Calendar connector card', async ({ page })
   const agents = card.getByRole('switch', { name: 'Let agents read my calendar' });
   await expect(agents).toBeDisabled();
   await expect(agents).toHaveAttribute('aria-checked', 'false');
-  const nudges = card.getByRole('checkbox', { name: 'Use for nudges, Spark Work' });
-  await nudges.check();
-  await expect(nudges).toBeChecked();
+  await expect(card.getByRole('switch', { name: 'Nudge, Spark Work' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(card).not.toContainText('Counts as busy');
   await card.getByRole('checkbox', { name: 'Include Spark Family' }).uncheck();
-  await expect(card.getByRole('checkbox', { name: 'Counts as busy, Spark Family' })).toBeDisabled();
+  await expect(card.getByRole('switch', { name: 'Nudge, Spark Family' })).toBeDisabled();
+  await expect(card.getByRole('switch', { name: 'Nudge, Spark Family' })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
 });
 
 test('shows the denied state with Open Calendar settings', async ({ page }) => {
@@ -199,7 +205,9 @@ test('merges both calendars, filters one out and shows another day', async ({ pa
   await expect(event(page, 'Demo day')).toBeVisible();
   await expect(today(page).getByText('Join and the now line appear on the day')).toBeVisible();
   await event(page, 'Demo day').click();
-  await expect(today(page).getByRole('button', { name: 'Join Google Meet' })).toBeDisabled();
+  await expect(
+    today(page).getByRole('button', { name: /^Demo day at \d+:\d+, Join opens at / }),
+  ).toBeDisabled();
 });
 
 test('joins only an open meeting, from the panel and with ⌘J', async ({ page }) => {
@@ -216,7 +224,7 @@ test('joins only an open meeting, from the panel and with ⌘J', async ({ page }
   await page.keyboard.press('Enter');
   await expect(event(page, 'Customer call')).toHaveAttribute('aria-expanded', 'true');
   const panel = today(page).getByRole('region', { name: 'Customer call' });
-  const teams = panel.getByRole('button', { name: 'Join Microsoft Teams' });
+  const teams = panel.getByRole('button', { name: /^Customer call at \d+:\d+, Join opens at / });
   await expect(teams).toBeDisabled();
   await expect(panel).toContainText('teams.microsoft.com, unwrapped from Outlook SafeLinks');
 
@@ -236,7 +244,7 @@ test('the resting island names the next meeting and joins it', async ({ page }) 
   await openNotchIsland(page, { size: 'large', autoExpand: false });
   const calendarLine = island(page).locator('.isl-calline');
   await expect(calendarLine).toContainText(/^Standup in [1-5] min/);
-  await calendarLine.getByRole('button', { name: 'Join' }).click();
+  await calendarLine.getByRole('button', { name: 'Join Standup' }).click();
   await expect.poll(() => opened(page)).toEqual(['https://acme.zoom.us/j/123456789']);
 });
 
@@ -291,7 +299,9 @@ test('shows Upcoming and the calendar block beside the brief on Home', async ({ 
   await expect(card).toContainText('⌘J joins the next');
   await expect(card).toContainText('Standup');
   await expect(card.getByRole('button', { name: 'Join Standup' })).toBeEnabled();
-  await expect(card.getByRole('button', { name: 'Join Customer call' })).toBeDisabled();
+  await expect(
+    card.getByRole('button', { name: /^Customer call at \d+:\d+, Join opens at / }),
+  ).toBeDisabled();
 });
 
 test('lists the calendar rows in Notifications and in Settings search', async ({ page }) => {
@@ -328,6 +338,10 @@ test('lists the calendar rows in Notifications and in Settings search', async ({
     .getByRole('radio', { name: '15 min' })
     .click();
   await expect.poll(async () => (await status(page)).settings.beforeMinutes).toBe(15);
+  const nudges = dialog.getByRole('group', { name: 'Calendars that nudge' });
+  await expect(nudges.getByRole('switch', { name: 'Nudge, Spark Work' })).toBeVisible();
+  await expect(nudges.getByRole('checkbox', { name: 'Include Spark Family' })).toBeVisible();
+  await expect(dialog).not.toContainText('Counts as busy');
   await expect(dialog).not.toContainText('Prepare meetings');
 });
 

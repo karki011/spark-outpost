@@ -1,8 +1,8 @@
 import type {
   CalendarCapture,
+  CalendarEvent,
   CalendarNow,
   CalendarNudge,
-  JoinLink,
 } from '@spark-outpost/contracts';
 import type { Chime } from '../island/island-sound.ts';
 import { countLabel } from '../ui/count-label.ts';
@@ -25,7 +25,7 @@ export interface CatchUp {
 export interface CalendarLine {
   key: string;
   text: string;
-  join: JoinLink | null;
+  join: CalendarEvent | null;
   capture: CalendarCapture | null;
   dismiss: 'catch_up' | 'capture' | null;
 }
@@ -72,7 +72,7 @@ export function nudgeText(nudge: CalendarNudge, at: number, waiting: number): st
   return `${line} · the ${chat.title} chat ${state}`;
 }
 
-function holdLine(now: CalendarNow, join: JoinLink | null): CalendarLine | null {
+function holdLine(now: CalendarNow, join: CalendarEvent | null): CalendarLine | null {
   const hold = now.hold;
   if (!hold) return null;
   const label = hold.focus ? 'Focus' : hold.title;
@@ -103,10 +103,20 @@ function joinLine(now: CalendarNow, at: number): CalendarLine | null {
   return {
     key: `join:${target.key}`,
     text: startsIn(target.title, target.start, at),
-    join: target.link,
+    join: target,
     capture: null,
     dismiss: null,
   };
+}
+
+function meetingOf(now: CalendarNow, eventKey: string): CalendarEvent | null {
+  return now.upcoming.find((event) => event.key === eventKey) ?? null;
+}
+
+export function hopKey(now: CalendarNow | null): string | null {
+  const nudge = now?.active ? now.nudge : null;
+  if (!nudge || nudge.kind === 'wrap_up') return null;
+  return `${nudge.kind}:${nudge.eventKey}`;
 }
 
 export function calendarLine(input: CalendarLineInput): CalendarLine | null {
@@ -117,7 +127,17 @@ export function calendarLine(input: CalendarLineInput): CalendarLine | null {
       ? { key: 'catch-up', text: caughtUp, join: null, capture: null, dismiss: 'catch_up' }
       : null;
   }
-  const join = joinTarget(now.upcoming, at)?.link ?? null;
+  const join = joinTarget(now.upcoming, at);
+  if (now.nudge) {
+    const nudged = meetingOf(now, now.nudge.eventKey);
+    return {
+      key: `${now.nudge.kind}:${now.nudge.eventKey}`,
+      text: nudgeText(now.nudge, at, input.waiting),
+      join: nudged?.link ? nudged : join,
+      capture: null,
+      dismiss: null,
+    };
+  }
   const held = holdLine(now, join);
   if (held) return held;
   if (caughtUp) {
@@ -125,14 +145,5 @@ export function calendarLine(input: CalendarLineInput): CalendarLine | null {
   }
   const capture = captureLine(now, input.dismissed);
   if (capture) return capture;
-  if (now.nudge) {
-    return {
-      key: `${now.nudge.kind}:${now.nudge.eventKey}`,
-      text: nudgeText(now.nudge, at, input.waiting),
-      join,
-      capture: null,
-      dismiss: null,
-    };
-  }
   return joinLine(now, at);
 }

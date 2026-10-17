@@ -77,6 +77,7 @@ import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { useShareOnScreenChat } from '../island/on-screen-chat.ts';
 import { startIdleMotion } from './idle-motion.ts';
 import '../ui/controls.css';
+import { requestTodayEvent } from '../calendar/today-request.ts';
 
 const StableChatView = memo(ChatView);
 
@@ -219,6 +220,11 @@ function ChatShell({ entering }: { entering: boolean }) {
           openTeammateSheet({ kind: 'create' });
           return;
         }
+        if (target.startsWith('today:')) {
+          setView('today');
+          requestTodayEvent(target.slice('today:'.length));
+          return;
+        }
         if (target.startsWith('spark-edit:')) {
           openTeammateSheet({ kind: 'edit', id: target.slice('spark-edit:'.length) });
           return;
@@ -226,7 +232,7 @@ function ChatShell({ entering }: { entering: boolean }) {
         requestSettingFocus(SHOW_ISLAND_LABEL);
         setSettings('notifications');
       }),
-    [setSettings],
+    [setSettings, setView],
   );
 
   const openAtCard = (chat: ConversationSummary) => {

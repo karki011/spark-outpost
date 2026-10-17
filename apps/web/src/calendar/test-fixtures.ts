@@ -66,7 +66,6 @@ export function choice(key: string, overrides: Partial<CalendarChoice> = {}): Ca
     ownership: 'mine',
     include: true,
     nudges: true,
-    busy: true,
     ...overrides,
   };
 }

@@ -1,8 +1,13 @@
 import { useId, useState } from 'react';
-import type { CalendarSettings, CalendarSettingsPatch } from '@spark-outpost/contracts';
+import type {
+  CalendarSettings,
+  CalendarSettingsPatch,
+  CalendarStatus,
+} from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
+import { CalendarNudgeList, NUDGE_CALENDARS_LABEL } from './CalendarNudgeList.tsx';
 import { parseFocusNames } from './focus-names.ts';
 import { useCalendarActions, useCalendarStatus } from './use-calendar.ts';
 
@@ -16,6 +21,7 @@ const PHONE_LABEL = 'Meeting alerts on paired devices';
 
 export const CALENDAR_NOTIFY_ROWS = [
   BEFORE_LABEL,
+  NUDGE_CALENDARS_LABEL,
   WRAP_UP_LABEL,
   CAPTURE_LABEL,
   HOLD_LABEL,
@@ -42,6 +48,7 @@ const HOLD = [
 type Save = (patch: CalendarSettingsPatch) => void;
 
 function useCalendarSettings(): {
+  status: CalendarStatus;
   settings: CalendarSettings;
   save: Save;
   error: string | null;
@@ -51,6 +58,7 @@ function useCalendarSettings(): {
   if (!status.data?.supported) return null;
   const pending = settings.isPending ? settings.variables : null;
   return {
+    status: status.data,
     settings: { ...status.data.settings, ...pending } as CalendarSettings,
     save: (patch) => settings.mutate(patch),
     error: settings.error?.message ?? null,
@@ -161,13 +169,14 @@ export function CalendarMeetingSettings() {
         <h4 id="notify-meetings">Meetings</h4>
         <ChoiceRow
           label={BEFORE_LABEL}
-          hint="A Spark Island line with what needs you, and Join from 5 min before."
+          hint="Spark Island hops, plays a short sound unless chimes are held or off, and shows Join."
           options={BEFORE}
           value={String(settings.beforeMinutes)}
           onChange={(id) =>
             save({ beforeMinutes: Number(id) as CalendarSettings['beforeMinutes'] })
           }
         />
+        <CalendarNudgeList status={calendar.status} />
         <ChoiceRow
           label={WRAP_UP_LABEL}
           hint="Names a chat that is still running or needs you before a meeting."

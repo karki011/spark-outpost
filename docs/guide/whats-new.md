@@ -12,11 +12,11 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                 | What to do                                                |
 | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
-| Calendar: **Add Google account**.                                                                            | See [Google sign-in](calendar.md#google-sign-in).         |
+| Calendar: all calendars nudge; Scout hops; **Join** opens at 10 min.                                         | See [Use it](calendar.md#use-it).                         |
 | Claude plan ring.                                                                                            | See [Limits](statuses-and-limits.md#limits).              |
 | **Revert file** in the Changes drawer undoes one file.                                                       | See [Review changes](review-changes.md#keep-or-revert).   |
 | Compaction keeps exact PR numbers and commits.                                                               | See [Manage a long chat](compaction.md#read-the-summary). |
-| Calendar: see your day on **Today**, join meetings and keep focus time quiet.                                | See [See your day](calendar.md).                          |
+| Calendar: **Today** from macOS or Google.                                                                    | See [See your day](calendar.md).                          |
 | Pull request **Refresh** no longer reverts.                                                                  | None.                                                     |
 | Settings has six groups and a **Search settings** box.                                                       | See [Settings](settings.md).                              |
 | Push to talk: dictate, start chats or ask who needs you. Silent commands stop after 3 s. Speech stays local. | See [Talk to Spark](voice.md).                            |

@@ -119,7 +119,6 @@ interface ChoiceRow {
   ownership: CalendarChoice['ownership'];
   include: boolean;
   nudges: boolean;
-  busy: boolean;
 }
 
 function choiceOf(row: ChoiceRow): CalendarChoice {
@@ -136,7 +135,6 @@ function choiceOf(row: ChoiceRow): CalendarChoice {
     ownership: row.ownership,
     include: row.include,
     nudges: row.nudges,
-    busy: row.busy,
   };
 }
 
@@ -165,7 +163,6 @@ export interface ChoiceWrite {
   calendar: HelperCalendar;
   include: boolean;
   nudges: boolean;
-  busy: boolean;
 }
 
 export async function lockChoices(
@@ -194,8 +191,8 @@ export async function replaceChoices(
     await client.query(
       `INSERT INTO calendar_calendars (key, workspace_id, calendar_id, title, source_id,
          source_title, source_kind, color, writable, subscribed, ownership, include, nudges,
-         busy, position, google_account_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+         position, google_account_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [
         write.key ?? randomUUID(),
         workspaceId,
@@ -210,7 +207,6 @@ export async function replaceChoices(
         calendar.ownership,
         write.include,
         write.nudges,
-        write.busy,
         position,
         owner.googleAccountId,
       ],
@@ -221,7 +217,6 @@ export async function replaceChoices(
 const CHOICE_COLUMNS: Record<keyof CalendarChoicePatch, string> = {
   include: 'include',
   nudges: 'nudges',
-  busy: 'busy',
 };
 
 export async function updateChoice(

@@ -22,6 +22,7 @@ import { TodayStatePage } from './TodayStates.tsx';
 import { noGaps, overlapChat, timelineSpan, todayState, visibleEvents } from './today-model.ts';
 import { localDate, useCalendarDay, useCalendarStatus } from './use-calendar.ts';
 import { CalendarFilters, WeekStrip } from './WeekStrip.tsx';
+import { useTodayEventRequests } from './today-request.ts';
 
 interface TodayProps {
   chats: readonly ConversationSummary[];
@@ -68,6 +69,11 @@ function TodayDay({ chats, onStartChat, onOpenChat }: TodayProps) {
     },
     [today],
   );
+  const showEvent = useCallback((eventKey: string) => {
+    setPicked(null);
+    setSelected(eventKey);
+  }, []);
+  useTodayEventRequests(showEvent);
   const toggleCalendar = (key: string) =>
     setHidden((current) => {
       const next = new Set(current);

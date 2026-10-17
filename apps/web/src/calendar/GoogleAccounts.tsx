@@ -9,7 +9,7 @@ import {
   type GoogleSignInFlow,
 } from '@spark-outpost/contracts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
-import { CalendarAccounts } from './CalendarAccounts.tsx';
+import { CalendarRows, RowsHeader } from './CalendarAccounts.tsx';
 import { calendarApi, calendarKeys } from './calendar-api.ts';
 import { CalendarName } from './CalendarName.tsx';
 
@@ -99,24 +99,27 @@ function GoogleAccount({
   onSignIn,
   onDisconnect,
 }: AccountProps) {
+  const rows = calendars?.calendars ?? [];
   return (
-    <div className="cal-google-acct">
-      {calendars && calendars.calendars.length > 0 ? (
-        <CalendarAccounts accounts={[calendars]} onChange={onChange} />
-      ) : (
-        <p className="cal-acct-h">
-          <b>
-            <CalendarName name={account.email} />
-          </b>
-          <small>Google</small>
-        </p>
+    <section className="cal-source" aria-label={account.email}>
+      <div className="cal-src-h">
+        <h3>Google</h3>
+        <small>
+          <CalendarName name={account.email} />
+        </small>
+      </div>
+      {rows.length > 0 && (
+        <>
+          <RowsHeader />
+          <CalendarRows calendars={rows} onChange={onChange} />
+        </>
       )}
       {account.message && (
         <p className={account.state === 'sign_in_again' ? 'gh-err' : 'gh-state warn'} role="status">
           {account.message}
         </p>
       )}
-      <div className="cx-actions">
+      <div className="cal-foot">
         {account.state === 'sign_in_again' && (
           <button type="button" className="btn primary sm" disabled={busy} onClick={onSignIn}>
             Sign in again
@@ -132,7 +135,7 @@ function GoogleAccount({
           Disconnect
         </button>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -155,12 +158,7 @@ export function GoogleAccounts({ status, accounts, onChange }: GoogleAccountsPro
   };
   const error = start.error ?? disconnect.error;
   return (
-    <section className="cal-source" aria-labelledby="cal-google-h">
-      <h3 id="cal-google-h">Google Calendar</h3>
-      <p>
-        Read straight from Google, on this Mac. An event that is also in macOS Calendar shows once.
-      </p>
-      {google.testing && <p className="cal-notice">{GOOGLE_TESTING_LINE}</p>}
+    <>
       {google.accounts.map((account) => (
         <GoogleAccount
           key={account.id}
@@ -172,34 +170,43 @@ export function GoogleAccounts({ status, accounts, onChange }: GoogleAccountsPro
           onDisconnect={() => remove(account.id)}
         />
       ))}
-      {waiting && <Waiting flow={flow} onCancel={() => cancel.mutate()} />}
-      {flow.status === 'failed' && flow.message && (
-        <p className="gh-err" role="alert">
-          {flow.message}
-        </p>
-      )}
-      {note && (
-        <p className="gh-err" role="alert">
-          {note}
-        </p>
-      )}
-      {error && (
-        <p className="gh-err" role="alert">
-          {error.message}
-        </p>
-      )}
-      {google.available && !waiting && (
-        <div className="cx-actions">
-          <button
-            type="button"
-            className="btn line sm"
-            disabled={start.isPending}
-            onClick={() => start.mutate(null)}
-          >
-            {ADD_GOOGLE_LABEL}
-          </button>
-        </div>
-      )}
-    </section>
+      <section className="cal-source" aria-labelledby="cal-google-h">
+        {google.accounts.length === 0 && (
+          <div className="cal-src-h">
+            <h3 id="cal-google-h">Google Calendar</h3>
+            <small>Read straight from Google</small>
+          </div>
+        )}
+        {waiting && <Waiting flow={flow} onCancel={() => cancel.mutate()} />}
+        {flow.status === 'failed' && flow.message && (
+          <p className="gh-err" role="alert">
+            {flow.message}
+          </p>
+        )}
+        {note && (
+          <p className="gh-err" role="alert">
+            {note}
+          </p>
+        )}
+        {error && (
+          <p className="gh-err" role="alert">
+            {error.message}
+          </p>
+        )}
+        {google.available && !waiting && (
+          <div className="cal-foot">
+            {google.testing && <p className="cal-muted">{GOOGLE_TESTING_LINE}</p>}
+            <button
+              type="button"
+              className="btn line sm"
+              disabled={start.isPending}
+              onClick={() => start.mutate(null)}
+            >
+              {ADD_GOOGLE_LABEL}
+            </button>
+          </div>
+        )}
+      </section>
+    </>
   );
 }

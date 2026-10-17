@@ -13,6 +13,7 @@ import { BellIcon, BellOffIcon, ChatPlusIcon, ExternalLinkIcon } from '../ui/ico
 import { calendarApi, calendarKeys } from './calendar-api.ts';
 import { CalendarName } from './CalendarName.tsx';
 import { dateOf, span } from './calendar-format.ts';
+import { JoinButton } from './JoinButton.tsx';
 import { joinHint, openJoin } from './today-model.ts';
 
 interface EventPanelProps {
@@ -59,14 +60,11 @@ function JoinRow({ event, isToday, now }: { event: CalendarEvent; isToday: boole
   const when = open ? ' · opens in your browser or app' : hint ? ` · ${hint}` : '';
   return (
     <div className="td-join">
-      <button
-        type="button"
-        className={open ? 'btn primary sm' : 'btn line sm'}
-        disabled={!open}
-        onClick={() => openJoin(link.url)}
-      >
-        Join {CALENDAR_SERVICE_NAMES[link.service]}
-      </button>
+      <JoinButton
+        event={event}
+        now={isToday ? now : 0}
+        label={`Join ${CALENDAR_SERVICE_NAMES[link.service]}`}
+      />
       <small>
         {host}
         {when}

@@ -1,16 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CalendarEvent } from '@spark-outpost/contracts';
+import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import type { Chime, ChimeHold } from '../island/island-sound.ts';
 import { calendarApi } from './calendar-api.ts';
 import {
   calendarLine,
+  hopKey,
   NO_HELD,
   tallyHeld,
   type CalendarLine,
   type CatchUp,
   type HeldTally,
 } from './island-calendar.ts';
-import { openJoin, todayState } from './today-model.ts';
+import { todayState } from './today-model.ts';
 import { useCalendarNow, useCalendarStatus } from './use-calendar.ts';
+
+const NO_MEETINGS: readonly CalendarEvent[] = [];
+
+function openToday(eventKey: string): void {
+  const desktop = sparkDesktop();
+  if (desktop?.island.openSettings) desktop.island.openSettings(`today:${eventKey}`);
+  else window.open('/', '_blank', 'noopener');
+}
 
 const DISMISSED_KEY = 'spark-outpost.calendar-capture-dismissed';
 const DISMISSED_MAX = 50;
@@ -35,7 +46,10 @@ function saveDismissed(keys: ReadonlySet<string>): void {
 export interface IslandCalendar {
   line: CalendarLine | null;
   hold: ChimeHold;
-  onJoin: (line: CalendarLine) => void;
+  at: number;
+  upcoming: readonly CalendarEvent[];
+  hopKey: string | null;
+  onOpenEvent: (eventKey: string) => void;
   onCapture: (line: CalendarLine) => void;
   onDismiss: (line: CalendarLine) => void;
 }
@@ -89,9 +103,10 @@ export function useIslandCalendar(
   return {
     line,
     hold: held.hold,
-    onJoin: (shown) => {
-      if (shown.join) openJoin(shown.join.url);
-    },
+    at,
+    upcoming: live?.upcoming ?? NO_MEETINGS,
+    hopKey: hopKey(live),
+    onOpenEvent: (eventKey) => openToday(eventKey),
     onDismiss: (shown) => {
       if (shown.dismiss === 'catch_up') held.clearCatchUp();
       if (shown.capture) dismiss(shown.capture.eventKey);

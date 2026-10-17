@@ -1,17 +1,12 @@
 import './upcoming.css';
 import { useMemo } from 'react';
-import {
-  joinOpen,
-  JOIN_LEAD_MS,
-  spanOf,
-  type CalendarEvent,
-  type ConversationSummary,
-} from '@spark-outpost/contracts';
+import { spanOf, type CalendarEvent, type ConversationSummary } from '@spark-outpost/contracts';
 import { HomeSection } from '../home/HomeCards.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { MAC } from '../ui/shortcuts.ts';
-import { clock, span } from './calendar-format.ts';
-import { countdown, openJoin, overlapChat } from './today-model.ts';
+import { span } from './calendar-format.ts';
+import { JoinButton } from './JoinButton.tsx';
+import { countdown, overlapChat } from './today-model.ts';
 import { useCalendarNow, useCalendarState } from './use-calendar.ts';
 
 interface UpcomingCardProps {
@@ -28,7 +23,6 @@ function UpcomingRow(props: {
   const { event, now } = props;
   const { start, end } = spanOf(event);
   const link = event.link;
-  const open = link !== null && joinOpen({ start, end }, now);
   const overlap = overlapChat(event, now, props.chats);
   const where = [span(start, end), props.calendar, link?.host].filter(Boolean).join(' · ');
   return (
@@ -38,18 +32,7 @@ function UpcomingRow(props: {
         <b>{event.title}</b>
         <small>{where}</small>
       </span>
-      {link && (
-        <button
-          type="button"
-          className={open ? 'btn primary sm' : 'btn line sm'}
-          disabled={!open}
-          title={open ? undefined : `From ${clock(start - JOIN_LEAD_MS)}`}
-          aria-label={`Join ${event.title}`}
-          onClick={() => openJoin(link.url)}
-        >
-          Join
-        </button>
-      )}
+      <JoinButton event={event} now={now} />
       {overlap && <span className="upc-ov">Overlaps “{overlap.title}”, still running</span>}
     </li>
   );

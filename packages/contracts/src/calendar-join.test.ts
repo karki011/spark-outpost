@@ -91,8 +91,8 @@ describe('joinOpen', () => {
   const end = start + 15 * 60_000;
 
   it('opens five minutes before the start and closes at the end', () => {
-    expect(joinOpen({ start, end }, start - 5 * 60_000 - 1)).toBe(false);
-    expect(joinOpen({ start, end }, start - 5 * 60_000)).toBe(true);
+    expect(joinOpen({ start, end }, start - 10 * 60_000 - 1)).toBe(false);
+    expect(joinOpen({ start, end }, start - 10 * 60_000)).toBe(true);
     expect(joinOpen({ start, end }, end - 1)).toBe(true);
     expect(joinOpen({ start, end }, end)).toBe(false);
   });

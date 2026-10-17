@@ -65,7 +65,7 @@ export const calendarStatusSchema = z.object({
 export type CalendarStatus = z.infer<typeof calendarStatusSchema>;
 
 export const calendarChoicePatchSchema = z
-  .object({ include: z.boolean(), nudges: z.boolean(), busy: z.boolean() })
+  .object({ include: z.boolean(), nudges: z.boolean() })
   .partial()
   .strict();
 export type CalendarChoicePatch = z.infer<typeof calendarChoicePatchSchema>;

@@ -85,6 +85,7 @@ function PanelPane({ panel, props }: { panel: Panel; props: IslandShellProps }) 
       return (
         <IslandHome
           home={props.home}
+          calendar={props.calendar}
           waiting={props.waiting}
           sleepy={props.sleepy}
           reduced={props.reduced}

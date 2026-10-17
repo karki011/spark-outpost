@@ -8,7 +8,10 @@ import { useOnScreenChat } from './on-screen-chat.ts';
 
 export type Chime = 'needs' | 'done' | 'failed';
 
-const NOTES: Record<Chime, number[]> = {
+type Tune = Chime | 'meeting';
+
+const NOTES: Record<Tune, number[]> = {
+  meeting: [783.99, 1046.5, 783.99, 1174.66],
   needs: [659.25, 880],
   done: [523.25, 659.25, 783.99],
   failed: [392, 293.66],
@@ -18,7 +21,7 @@ const PEAK = 0.07;
 
 let audio: AudioContext | null = null;
 
-function playChime(chime: Chime): void {
+function playChime(chime: Tune): void {
   if (typeof AudioContext === 'undefined') return;
   audio ??= new AudioContext();
   const context = audio;
@@ -36,6 +39,10 @@ function playChime(chime: Chime): void {
     tone.start(at);
     tone.stop(at + 0.5);
   });
+}
+
+export function playMeetingChime(): void {
+  playChime('meeting');
 }
 
 export interface IslandSound {

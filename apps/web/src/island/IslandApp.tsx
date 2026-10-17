@@ -29,6 +29,7 @@ import {
 } from '../desktop/desktop-bridge.ts';
 import { useChatListAttentionReport } from '../desktop/use-attention-report.ts';
 import { useIslandCalendar } from '../calendar/use-island-calendar.ts';
+import { useMeetingHop } from '../calendar/use-meeting-hop.ts';
 import { useVoice } from '../spark/use-voice.ts';
 import { useReducedMotion } from '../ui/motion.ts';
 import type { Decided } from './CardView.tsx';
@@ -249,16 +250,19 @@ export function IslandApp() {
     else openPanel('quick');
   };
 
-  const mood = wave
-    ? 'happy'
-    : scoutMoodFor(view, {
-        waiting: cards.length,
-        hour: new Date(now).getHours(),
-        idleMinutes: 0,
-        running: running.length,
-        moment,
-        failed: row.sessions.some((chat) => sessionState(chat) === 'failed'),
-      });
+  const sound = useIslandSound();
+  const hopping = useMeetingHop(calendar.hopKey, sound?.on ?? false, calendar.hold.held);
+  const mood =
+    wave || hopping
+      ? 'happy'
+      : scoutMoodFor(view, {
+          waiting: cards.length,
+          hour: new Date(now).getHours(),
+          idleMinutes: 0,
+          running: running.length,
+          moment,
+          failed: row.sessions.some((chat) => sessionState(chat) === 'failed'),
+        });
 
   const geometry = useIslandBridge({
     islandRef,
@@ -316,7 +320,6 @@ export function IslandApp() {
   };
 
   const sessions = useMemo(() => rankedSessions(data.chats, NO_HIDDEN), [data.chats]);
-  const sound = useIslandSound();
   useChimes(
     sound?.on ?? false,
     data.loaded ? data.chats : null,

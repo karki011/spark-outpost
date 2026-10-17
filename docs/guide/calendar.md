@@ -10,7 +10,7 @@ You'll connect your calendars. About 2 minutes.
 
 1. Open **Settings → Connectors → Calendar**.
 2. Select **Connect** for macOS Calendar, or **Add Google account** per Google account.
-3. Per calendar, set **Include**, **Use for nudges** and **Counts as busy**.
+3. Per calendar, set **Include** and **Nudge** (on by default).
 
 Events in both show once. Spark never changes events; no AI provider sees them.
 
@@ -23,6 +23,6 @@ Events in both show once. Spark never changes events; no AI provider sees them.
 - **Today** (left bar) shows your day, week and free blocks; **Home** shows **Upcoming**.
 - Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before** or **Hold alerts during this**.
 
-**Join** appears 5 minutes before a Zoom, Meet, Teams or Webex call; **⌘J** joins the next. Spark Island nudges before meetings and holds chimes during focus blocks (**Settings → Notifications**).
+**Join** opens 10 minutes before a Zoom, Meet, Teams or Webex call; **⌘J** joins the next. Before a meeting, Scout hops and offers **Join**; focus blocks hold chimes (**Settings → Notifications**).
 
 **Next:** [Talk to Spark](voice.md)
