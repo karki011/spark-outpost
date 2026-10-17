@@ -66,7 +66,9 @@ test('the context bar counts the cache down, then says what the next message re-
   await expect(timer(page)).toHaveText('Cache warm · 41 min left');
   await page.clock.fastForward(41 * MINUTE);
   await expect(timer(page)).toHaveText('Cache cold · next message re-writes ~182K tokens (~$1.46)');
-  await expect(page.getByRole('status').filter({ hasText: 'Prompt cache expired' })).toHaveCount(1);
+  await expect(
+    page.locator('[aria-live="polite"]').filter({ hasText: 'Prompt cache expired' }),
+  ).toHaveCount(1);
 });
 
 test('without a known lifetime it shows only when the cache was last used', async ({ page }) => {

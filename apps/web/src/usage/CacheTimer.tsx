@@ -51,11 +51,12 @@ export function CacheTimer({ last, idle }: { last: PromptCacheLast | null; idle:
   const [onChange] = useState(() => (at: string, from: CacheState, to: CacheState) => {
     if (from === 'warm' && to === 'cold') setExpiredAt(at);
   });
-  const announcement = last && expiredAt === last.at ? EXPIRED : '';
+  if (!last) return null;
+  const announcement = expiredAt === last.at ? EXPIRED : '';
   return (
     <>
-      {idle && last && <CacheClock key={last.at} last={last} onChange={onChange} />}
-      <span className="sr-only" role="status" aria-live="polite">
+      {idle && <CacheClock key={last.at} last={last} onChange={onChange} />}
+      <span className="sr-only" aria-live="polite">
         {announcement}
       </span>
     </>

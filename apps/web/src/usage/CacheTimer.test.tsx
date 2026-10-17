@@ -25,7 +25,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const status = () => screen.getByRole('status');
+const status = () => document.querySelector('.sr-only[aria-live="polite"]')!;
 
 describe('CacheTimer', () => {
   it('shows nothing while the session is busy, but keeps its live region', () => {
@@ -48,6 +48,11 @@ describe('CacheTimer', () => {
       screen.getByText('Cache cold · next message re-writes ~182K tokens (~$2.28)'),
     ).toBeTruthy();
     expect(status().textContent).toBe('Prompt cache expired');
+  });
+
+  it('adds nothing, not even a live region, without cache figures', () => {
+    const { container } = render(<CacheTimer last={null} idle />);
+    expect(container.innerHTML).toBe('');
   });
 
   it('does not tick every second', () => {
