@@ -10,6 +10,8 @@ import { googleCalendarSecret, type SecretStore } from '../../setup/secrets.ts';
 import {
   isSkippable,
   liveAccount,
+  markSignInAgain,
+  needsSignInAgain,
   pollAccount,
   withFreshToken,
   type AccountDeps,
@@ -39,6 +41,18 @@ function accountUids(account: LiveAccount): string[] {
   return [...uids];
 }
 
+export interface GoogleOccurrence {
+  eventId: string;
+  start: string;
+  calendarId: string | null;
+}
+
+export class GoogleSignInNeeded extends Error {
+  constructor() {
+    super('Sign in to Google again to see this event.');
+  }
+}
+
 export interface GoogleSourceDeps {
   db: Db;
   workspaceId: string;
@@ -62,7 +76,7 @@ export interface GoogleSource {
   ready(): boolean;
   window(): GoogleWindowEvents;
   range(from: number, to: number): Promise<GoogleWindowEvents>;
-  detail(occurrence: { eventId: string; start: string }): Promise<CalendarEventDetail | null>;
+  detail(occurrence: GoogleOccurrence): Promise<CalendarEventDetail | null>;
   signIn(request: { accountId: string | null }): Promise<GoogleSignInFlow>;
   signInFlow(): GoogleSignInFlow;
   cancelSignIn(): GoogleSignInFlow;
@@ -124,24 +138,28 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
 
   const fetchEvent = async (
     account: LiveAccount,
-    eventId: string,
-    at: number,
+    occurrence: GoogleOccurrence,
   ): Promise<StoredEvent | null> => {
-    if (!accountDeps) return null;
-    const googleId = splitGoogleEventId(eventId)?.eventId;
-    if (!googleId) return null;
-    return withFreshToken(accountDeps, account, async (api) => {
-      for (const calendarId of account.calendars.keys()) {
-        try {
-          const raw = await getGoogleEvent(api, calendarId, googleId);
-          const found = storedEvent({ accountId: account.row.id, calendarId }, raw);
-          if (found && Date.parse(found.event.start) === at) return found;
-        } catch (error) {
-          if (!isSkippable(error)) throw error;
-        }
-      }
-      return null;
-    });
+    const googleId = splitGoogleEventId(occurrence.eventId)?.eventId;
+    const prefix = `google:${account.row.id}:`;
+    const calendarId = occurrence.calendarId?.startsWith(prefix)
+      ? occurrence.calendarId.slice(prefix.length)
+      : null;
+    if (!accountDeps || !googleId || !calendarId) return null;
+    try {
+      const raw = await withFreshToken(accountDeps, account, (api) =>
+        getGoogleEvent(api, calendarId, googleId),
+      );
+      const found = storedEvent({ accountId: account.row.id, calendarId }, raw);
+      return found && Date.parse(found.event.start) === Date.parse(occurrence.start) ? found : null;
+    } catch (error) {
+      if (isSkippable(error)) return null;
+      if (!needsSignInAgain(error)) throw error;
+      await markSignInAgain(accountDeps, account);
+      schedule(account.row.id, null);
+      emit();
+      throw new GoogleSignInNeeded();
+    }
   };
 
   const schedule = (accountId: string, delayMs: number | null) => {
@@ -253,7 +271,10 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     window: () => windowEvents(googleWindow(now())),
     async range(from, to) {
       const window = googleWindow(now());
-      if (covers(window, { from, to })) return windowEvents({ from, to });
+      const storedCovers = usable().every((account) =>
+        [...account.calendars.values()].every((sync) => sync.windowKey === window.key),
+      );
+      if (storedCovers && covers(window, { from, to })) return windowEvents({ from, to });
       if (!ranges) return { events: [], truncated: false };
       return ranges.read({ key: `${from}|${to}`, from, to }, usable());
     },
@@ -262,9 +283,9 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       const account = parts ? accounts.get(parts.accountId) : undefined;
       if (!account) return null;
       const at = Date.parse(occurrence.start);
-      const found =
-        findStored(account.calendars.values(), occurrence.eventId, at) ??
-        (await fetchEvent(account, occurrence.eventId, at));
+      const stored = findStored(account.calendars.values(), occurrence.eventId, at);
+      if (!stored && account.state === 'sign_in_again') throw new GoogleSignInNeeded();
+      const found = stored ?? (await fetchEvent(account, occurrence));
       if (!found) return null;
       return {
         title: found.event.title,

@@ -102,6 +102,17 @@ describe('what a day shows', () => {
     expect(byDay.get('2026-10-19')).toEqual([]);
   });
 
+  it('keeps a zero-length event at local midnight on its day, in the cell and the rail', () => {
+    const cells = monthGrid('2026-10-16', '2026-10-16', SUNDAY).weeks.flat();
+    const marker = event('Release day', at(0), at(0), { allDay: true });
+    const byDay = eventsByDay([marker], cells);
+    expect(byDay.get('2026-10-16')!.map((item) => item.title)).toEqual(['Release day']);
+    expect(byDay.get('2026-10-15')).toEqual([]);
+    expect(timeGroups(byDay.get('2026-10-16')!, '2026-10-16')).toEqual([
+      { label: 'All day', events: [marker] },
+    ]);
+  });
+
   it('shows initials for names and email addresses', () => {
     expect(initials('Alex Wong')).toBe('AW');
     expect(initials('ivan.marsh@example.com')).toBe('IM');

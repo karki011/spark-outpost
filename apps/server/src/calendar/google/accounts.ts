@@ -201,13 +201,24 @@ function failureMessage(error: unknown): string {
   return 'Couldn’t read this Google account. Trying again soon.';
 }
 
-async function signInAgain(deps: AccountDeps, account: LiveAccount): Promise<PollOutcome> {
+export function needsSignInAgain(error: unknown): boolean {
+  return (
+    error instanceof SignInAgain ||
+    (error instanceof GoogleApiError && error.kind === 'unauthorized')
+  );
+}
+
+export async function markSignInAgain(deps: AccountDeps, account: LiveAccount): Promise<void> {
   account.accessToken = null;
   account.synced = false;
   account.state = 'sign_in_again';
   account.message = SIGN_IN_AGAIN;
   await markGoogleSignIn(deps.db, deps.workspaceId, account.row.id, true);
   account.row = { ...account.row, needsSignIn: true };
+}
+
+async function signInAgain(deps: AccountDeps, account: LiveAccount): Promise<PollOutcome> {
+  await markSignInAgain(deps, account);
   return { changed: true, nextInMs: null };
 }
 
@@ -226,10 +237,7 @@ export async function pollAccount(
     account.synced = true;
     return { changed: changed || recovered, nextInMs: GOOGLE_POLL_MS };
   } catch (error) {
-    if (error instanceof SignInAgain) return signInAgain(deps, account);
-    if (error instanceof GoogleApiError && error.kind === 'unauthorized') {
-      return signInAgain(deps, account);
-    }
+    if (needsSignInAgain(error)) return signInAgain(deps, account);
     account.failures += 1;
     const wasError = account.state === 'error';
     account.state = 'error';

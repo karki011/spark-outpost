@@ -6,13 +6,16 @@ import {
   calendarMarkRequestSchema,
   calendarOccurrenceSchema,
   calendarSettingsPatchSchema,
+  type CalendarOccurrence,
   isGoogleEventId,
   localDayStart,
 } from '@spark-outpost/contracts';
 import { BadRequestError, paramId, parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import { googleCalendarRoutes } from './google/routes.ts';
-import type { GoogleSource } from './google/source.ts';
+import { GoogleApiError } from './google/api.ts';
+import { GoogleAuthError } from './google/oauth.ts';
+import { GoogleSignInNeeded, type GoogleSource } from './google/source.ts';
 import { CalendarHostError, type CalendarHost } from './host-client.ts';
 import {
   calendarDay,
@@ -26,7 +29,14 @@ import {
   plannerChats,
   syncCalendars,
 } from './service.ts';
-import { forgetMarks, setConnected, setMark, updateChoice, updateSettings } from './store.ts';
+import {
+  forgetMarks,
+  savedChoices,
+  setConnected,
+  setMark,
+  updateChoice,
+  updateSettings,
+} from './store.ts';
 
 export interface CalendarRouteDeps {
   db: Db;
@@ -146,7 +156,7 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
   router.get('/calendar/range', (req, res) =>
     guarded(res, async () => {
       const range = rangeParams(req.query);
-      return calendarRange(await calendarState(service, range), range, now());
+      return calendarRange(await calendarState(service, [range]), range, now());
     }),
   );
 
@@ -170,7 +180,11 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
     guarded(res, async () => {
       const occurrence = parseBody(calendarOccurrenceSchema, req);
       if (isGoogleEventId(occurrence.eventId)) return { opened: false };
-      return needHost().request({ op: 'open', ...occurrence });
+      return needHost().request({
+        op: 'open',
+        eventId: occurrence.eventId,
+        start: occurrence.start,
+      });
     }),
   );
 
@@ -178,11 +192,33 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
     guarded(res, async () => {
       const occurrence = parseBody(calendarOccurrenceSchema, req);
       if (!isGoogleEventId(occurrence.eventId)) return eventDetail(needHost(), occurrence);
-      const detail = await google?.detail(occurrence);
+      const detail = await googleDetail(occurrence);
       if (!detail) throw new CalendarHostError('not_found', 'That event is gone.');
       return detail;
     }),
   );
+
+  const googleDetail = async (occurrence: CalendarOccurrence) => {
+    if (!google) return null;
+    const choices = occurrence.calendarKey ? await savedChoices(deps.db, deps.workspaceId) : [];
+    const calendarId =
+      choices.find((choice) => choice.key === occurrence.calendarKey)?.calendarId ?? null;
+    try {
+      return await google.detail({
+        eventId: occurrence.eventId,
+        start: occurrence.start,
+        calendarId,
+      });
+    } catch (error) {
+      if (error instanceof GoogleSignInNeeded) {
+        throw new CalendarHostError('not_authorized', error.message);
+      }
+      if (error instanceof GoogleApiError || error instanceof GoogleAuthError) {
+        throw new CalendarHostError('failed', error.message);
+      }
+      throw error;
+    }
+  };
 
   const macUids = async () => {
     const mac = await calendarState({ ...service, google: null });

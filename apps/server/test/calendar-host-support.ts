@@ -1,5 +1,7 @@
 import {
+  CALENDAR_EVENTS_MAX,
   eventsInSpan,
+  type HelperEventDetail,
   type CalendarAuthorization,
   type CalendarHostRequest,
   type HelperCalendar,
@@ -54,6 +56,7 @@ export function helperEvent(
 export interface FakeHost extends CalendarHost {
   calls: CalendarHostRequest['op'][];
   ranges: { from: string; to: string }[];
+  detail: HelperEventDetail | null;
   authorization: CalendarAuthorization;
   grant: CalendarAuthorization;
   calendars: HelperCalendar[];
@@ -72,6 +75,7 @@ export function fakeHost(): FakeHost {
       helperCalendar('fam-1', 'Family', 'iCloud'),
     ],
     events: [] as HelperEvent[],
+    detail: null as HelperEventDetail | null,
     helper: 'ready' as 'ready' | 'missing',
     onChanged: () => undefined,
     request: async (request: CalendarHostRequest) => {
@@ -96,12 +100,20 @@ export function fakeHost(): FakeHost {
       }
       if (request.op === 'range') {
         host.ranges.push({ from: request.from, to: request.to });
-        const events = eventsInSpan(host.events, Date.parse(request.from), Date.parse(request.to));
-        return { events, truncated: false };
+        const inside = eventsInSpan(
+          host.events,
+          Date.parse(request.from),
+          Date.parse(request.to),
+        ).toSorted((a, b) => Date.parse(a.start) - Date.parse(b.start));
+        return {
+          events: inside.slice(0, CALENDAR_EVENTS_MAX),
+          truncated: inside.length > CALENDAR_EVENTS_MAX,
+        };
       }
       if (request.op === 'stop') return { stopped: true };
       if (request.op === 'open') return { opened: true };
       if (request.op === 'event') {
+        if (host.detail) return host.detail;
         throw new CalendarHostError('not_found', 'That event is gone.');
       }
       return { opened: true };

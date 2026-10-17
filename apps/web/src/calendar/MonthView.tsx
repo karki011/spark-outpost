@@ -33,6 +33,7 @@ export function MonthView(props: MonthViewProps) {
   const month = date.slice(0, 7);
   const grid = useMemo(() => monthGrid(`${month}-01`, today, weekStart), [month, today, weekStart]);
   const query = useCalendarRange(grid.from, grid.to);
+  const loading = query.isPending || query.isPlaceholderData;
   const [open, setOpen] = useState<OpenEvent | null>(null);
   const events = query.data?.events ?? NO_EVENTS;
   const byDay = useMemo(() => eventsByDay(events, grid.weeks.flat()), [events, grid]);
@@ -73,7 +74,7 @@ export function MonthView(props: MonthViewProps) {
           date={date}
           byDay={byDay}
           calendars={calendars}
-          loading={query.isPending}
+          loading={loading}
           weekStart={weekStart}
           onDate={pickDate}
           onOpenDay={props.onOpenDay}
@@ -86,7 +87,7 @@ export function MonthView(props: MonthViewProps) {
           events={selectedEvents}
           calendars={calendars}
           clashes={clashes}
-          loading={query.isPending}
+          loading={loading}
           onDate={pickDate}
           onOpenDay={props.onOpenDay}
           onOpenEvent={openEvent}

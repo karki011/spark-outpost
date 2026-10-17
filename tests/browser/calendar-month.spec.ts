@@ -126,6 +126,13 @@ test('steps the rail by day and opens the event popover, which Esc closes', asyn
     await expect(popover.getByRole('button', { name })).toBeVisible();
   }
   await expect(popover).toContainText('Alex Wong and Ivan Marsh');
+  await expect(popover).toHaveAttribute('aria-modal', 'true');
+  await page.keyboard.press('Shift+Tab');
+  await expect(popover.getByRole('button', { name: /^Hold alerts during this/ })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(popover.getByRole('button', { name: 'Close' })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(popover.getByRole('button', { name: /^Hold alerts during this/ })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(popover).toBeHidden();
   await expect(opener).toBeFocused();

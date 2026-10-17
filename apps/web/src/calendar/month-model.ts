@@ -83,7 +83,8 @@ export function eventsByDay(
   const last = addLocalDays(cells.at(-1)?.dayStart ?? 0, 1);
   for (const event of events) {
     const { start, end } = spanOf(event);
-    for (let day = localDayStart(Math.max(start, first)); day < end && day < last;) {
+    const stop = Math.max(end, start + 1);
+    for (let day = localDayStart(Math.max(start, first)); day < stop && day < last;) {
       buckets.get(localDate(day))?.push({ event, start });
       day = addLocalDays(day, 1);
     }

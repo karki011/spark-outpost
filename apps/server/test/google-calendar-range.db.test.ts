@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { calendarEventDetailSchema, calendarRangeSchema } from '@spark-outpost/contracts';
 import { dateKey } from '../src/calendar/service.ts';
 import {
@@ -8,6 +8,7 @@ import {
   googleHarness,
   meeting,
   signIn,
+  status,
   type Harness,
 } from './google-calendar-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
@@ -84,6 +85,7 @@ describe('a Google range outside the synced window', () => {
     const response = await h.client.send('post', '/api/calendar/event', {
       eventId: planning.id,
       start: planning.start,
+      calendarKey: planning.calendarKey,
     });
     expect(response.status).toBe(200);
     expect(calendarEventDetailSchema.parse(response.body)).toEqual({
@@ -93,8 +95,44 @@ describe('a Google range outside the synced window', () => {
       link: 'https://www.google.com/calendar/event?eid=plan',
       attendees: ['Alex Wong', 'ivan@example.com'],
     });
-    expect(h.fake.requests.slice(before).map((request) => request.path)).toContain(
+    expect(h.fake.requests.slice(before).map((request) => request.path)).toEqual([
       `/calendar/v3/calendars/${encodeURIComponent(EMAIL)}/events/planning`,
-    );
+    ]);
+  });
+
+  it('asks to sign in again when the token refresh is refused while fetching an event', async () => {
+    const month = await range(dayKey(-7), dayKey(35));
+    const planning = month.events.find((event) => event.title === 'planning')!;
+    h.fake.expireRefreshTokens();
+    h.fake.failNext(`/calendar/v3/calendars/${encodeURIComponent(EMAIL)}/events/planning`, {
+      status: 401,
+    });
+    const response = await h.client.send('post', '/api/calendar/event', {
+      eventId: planning.id,
+      start: planning.start,
+      calendarKey: planning.calendarKey,
+    });
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({ error: 'Sign in to Google again to see this event.' });
+    expect((await status(h)).google.accounts[0]).toMatchObject({ state: 'sign_in_again' });
+  });
+});
+
+describe('a Google range just after midnight', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('reads the range from Google until the next poll moves the stored window', async () => {
+    const lateEvening = new Date();
+    lateEvening.setHours(23, 50, 0, 0);
+    vi.useFakeTimers({ toFake: ['Date'], now: lateEvening });
+    h.fake.putEvent(SUBJECT, EMAIL, meeting('edge', 8 * DAY_MINUTES));
+    await signIn(h);
+    vi.setSystemTime(lateEvening.getTime() + 15 * MINUTE);
+    const before = eventCalls().length;
+    const edgeDay = await range(dayKey(7), dayKey(8));
+    expect(edgeDay.events.map((event) => event.title)).toEqual(['edge']);
+    expect(eventCalls().slice(before)[0]!.query.timeMin).toBeDefined();
   });
 });

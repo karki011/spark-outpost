@@ -1,6 +1,7 @@
-import { useEffect, useId, useMemo, useRef, type CSSProperties } from 'react';
+import { useEffect, useId, useMemo, useRef, type CSSProperties, type KeyboardEvent } from 'react';
 import type { CalendarChoice, CalendarEvent } from '@spark-outpost/contracts';
 import { XIcon } from '../ui/icons.tsx';
+import { wrapTabFocus } from '../ui/focus-trap.ts';
 import { useDismiss } from '../ui/use-dismiss.ts';
 import { clampStart, useKeepInViewport } from '../ui/viewport-clamp.ts';
 import { ClashTag } from './ClashTag.tsx';
@@ -10,6 +11,7 @@ import { localDate, useEventDetail } from './use-calendar.ts';
 
 const GAP = 10;
 const WIDTH = 340;
+const FOCUSABLE = 'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
 interface EventPopoverProps {
   event: CalendarEvent;
@@ -56,14 +58,26 @@ export function EventPopover(props: EventPopoverProps) {
     onClose();
     if (anchor.isConnected) anchor.focus();
   };
+  const keepFocusInside = (event: KeyboardEvent<HTMLDivElement>) => {
+    const panel = event.currentTarget;
+    const focusables = () => [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)];
+    if (event.key === 'Tab' && event.shiftKey && document.activeElement === panel) {
+      event.preventDefault();
+      focusables().at(-1)?.focus();
+      return;
+    }
+    wrapTabFocus(event, focusables);
+  };
   return (
     <div
       ref={panelRef}
       className="mo-pop"
       role="dialog"
+      aria-modal="true"
       aria-labelledby={headingId}
       tabIndex={-1}
       style={place}
+      onKeyDown={keepFocusInside}
     >
       <div className="mo-pop-head">
         <h2 id={headingId}>{event.title}</h2>

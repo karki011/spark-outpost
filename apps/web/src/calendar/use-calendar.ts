@@ -68,7 +68,7 @@ function wantsDetail(event: CalendarEvent): boolean {
 }
 
 export function useEventDetail(event: CalendarEvent) {
-  const occurrence = { eventId: event.id, start: event.start };
+  const occurrence = { eventId: event.id, start: event.start, calendarKey: event.calendarKey };
   return useQuery({
     queryKey: calendarKeys.detail(occurrence),
     queryFn: () => calendarApi.detail(occurrence),

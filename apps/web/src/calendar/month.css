@@ -195,6 +195,10 @@
   font-size: 11px;
 }
 
+.mo-panel[aria-busy='true'] .mo-evs {
+  opacity: 0.4;
+}
+
 .mo-keys {
   margin-top: 10px;
 }

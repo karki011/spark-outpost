@@ -3,6 +3,7 @@ import { connectCalendarBridge } from './bridge.ts';
 import {
   createEventWindow,
   nextRefreshMs,
+  RANGE_KEEP_MS,
   windowRange,
   WINDOW_REFRESH_MS,
   type Timers,
@@ -80,9 +81,10 @@ describe('the event window', () => {
       truncated: false,
     }));
     const { timers } = manualTimers();
+    let clock = NOW;
     const window = createEventWindow({
       helper: { call } as never,
-      now: () => NOW,
+      now: () => clock,
       changed: vi.fn(),
       timers,
     });
@@ -99,6 +101,14 @@ describe('the event window', () => {
     await window.range(far.from, far.to);
     expect(call).toHaveBeenLastCalledWith({ op: 'events', ...far });
     expect(call).toHaveBeenCalledTimes(2);
+    await window.range(far.from, far.to);
+    expect(call).toHaveBeenCalledTimes(2);
+    clock += RANGE_KEEP_MS;
+    await window.range(far.from, far.to);
+    expect(call).toHaveBeenCalledTimes(3);
+    window.invalidate();
+    await window.range(far.from, far.to);
+    expect(call).toHaveBeenCalledTimes(5);
   });
 
   it('says nothing before the first read and stops refreshing when stopped', async () => {

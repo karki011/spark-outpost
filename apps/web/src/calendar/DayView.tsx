@@ -70,6 +70,7 @@ export function DayView({
   const panelId = useId();
   const query = useCalendarDay(date, true);
   const day = query.data;
+  const stale = query.isPlaceholderData;
   const isToday = day?.date === today;
   const overlaps = useOverlaps(day, isToday, now, chats);
   const calendars = useMemo(() => calendarMap(day?.calendars), [day]);
@@ -114,7 +115,7 @@ export function DayView({
       </header>
       <WeekStrip week={day.week} date={date} onPick={pick} />
       <div className="td-grid">
-        <section className="hpanel td-main" aria-label="Events">
+        <section className="hpanel td-main" aria-label="Events" aria-busy={stale}>
           <NextRow
             events={day.events}
             calendars={calendars}
@@ -123,7 +124,7 @@ export function DayView({
             count={shown.length}
           />
           <CalendarFilters calendars={day.calendars} hidden={hidden} onToggle={toggleCalendar} />
-          {shown.length === 0 && (
+          {shown.length === 0 && !stale && (
             <p className="hquiet">Light day: nothing on the calendars you show.</p>
           )}
           <DayTimeline

@@ -120,7 +120,7 @@ interface EventActionsProps {
 
 export function EventActions({ event, isToday, now, onStartChat }: EventActionsProps) {
   const mark = useMark(event);
-  const occurrence = { eventId: event.id, start: event.start };
+  const occurrence = { eventId: event.id, start: event.start, calendarKey: event.calendarKey };
   const google = isGoogleEventId(event.id);
   const openInCalendar = useMutation({
     mutationFn: async () => {

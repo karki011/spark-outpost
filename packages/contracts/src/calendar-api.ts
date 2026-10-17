@@ -182,7 +182,11 @@ export const calendarMarkRequestSchema = z
 export type CalendarMarkRequest = z.infer<typeof calendarMarkRequestSchema>;
 
 export const calendarOccurrenceSchema = z
-  .object({ eventId: z.string().min(1).max(500), start: z.iso.datetime({ offset: true }) })
+  .object({
+    eventId: z.string().min(1).max(500),
+    start: z.iso.datetime({ offset: true }),
+    calendarKey: z.uuid().optional(),
+  })
   .strict();
 export type CalendarOccurrence = z.infer<typeof calendarOccurrenceSchema>;
 
