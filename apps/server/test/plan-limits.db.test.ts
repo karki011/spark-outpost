@@ -101,6 +101,7 @@ describe('stored plan readings', { timeout: 30_000 }, () => {
         status: 'rejected' as const,
         inUse: false,
         disabledReason: null,
+        limitScope: null,
         resetsAt: null,
       },
     };
@@ -140,14 +141,12 @@ describe('stored plan readings', { timeout: 30_000 }, () => {
   });
 });
 
-function writeFixture(meta: Record<string, unknown>): string {
+function writeFixture(meta: Record<string, unknown>, beforeUsage = false): string {
   const file = join(folder, `${randomUUID()}.json`);
-  const update = {
-    sessionUpdate: 'usage_update',
-    used: 1_000,
-    size: 1_000_000,
-    _meta: { '_claude/rateLimit': meta },
-  };
+  const _meta = { '_claude/rateLimit': meta };
+  const update = beforeUsage
+    ? { sessionUpdate: 'session_info_update', _meta }
+    : { sessionUpdate: 'usage_update', used: 1_000, size: 1_000_000, _meta };
   writeFileSync(file, JSON.stringify({ sessionId: 'redacted', update }));
   return file;
 }
@@ -231,12 +230,15 @@ describe('a Claude turn that reports its plan', { timeout: 60_000 }, () => {
   it('names the reset time when the turn fails on the limit', async () => {
     const reset = new Date(Date.now() + 2 * HOUR);
     startClaude(
-      writeFixture({
-        status: 'rejected',
-        rateLimitType: 'five_hour',
-        resetsAt: seconds(reset),
-        unifiedWindows: { five_hour: { utilization: 1, resetsAt: seconds(reset) } },
-      }),
+      writeFixture(
+        {
+          status: 'rejected',
+          rateLimitType: 'five_hour',
+          resetsAt: seconds(reset),
+          unifiedWindows: { five_hour: { utilization: 1, resetsAt: seconds(reset) } },
+        },
+        true,
+      ),
     );
     const run = await send('#ratelimit #usagelimit');
     expect(run.status).toBe('failed');

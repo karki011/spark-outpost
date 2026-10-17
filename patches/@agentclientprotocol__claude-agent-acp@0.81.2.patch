@@ -1,5 +1,5 @@
 diff --git a/dist/acp-agent.js b/dist/acp-agent.js
-index beba2ff4f21e6805099c55215345a95a046c608a..1c87da1b6e102cd4642048ba80ba9c137e3bda37 100644
+index beba2ff4f21e6805099c55215345a95a046c608a..1fce6bda6774e803e2ca4b43b3a780bcad233506 100644
 --- a/dist/acp-agent.js
 +++ b/dist/acp-agent.js
 @@ -3311,6 +3311,7 @@ export class ClaudeAcpAgent {
@@ -19,6 +19,22 @@ index beba2ff4f21e6805099c55215345a95a046c608a..1c87da1b6e102cd4642048ba80ba9c13
                                  await asyncTasks.taskNotification({
                                      task_id: message.task_id,
                                      status: message.status,
+@@ -4654,6 +4655,15 @@ export class ClaudeAcpAgent {
+                                 }),
+                             });
+                         }
++                        else {
++                            await sendUpdate({
++                                sessionId: message.session_id,
++                                update: {
++                                    sessionUpdate: "session_info_update",
++                                    _meta: { "_claude/rateLimit": message.rate_limit_info },
++                                },
++                            });
++                        }
+                         break;
+                     }
+                     case "conversation_reset": {
 diff --git a/dist/native-subagents.js b/dist/native-subagents.js
 index 4ac38b00cea1883fd197e998b39ba6eccf304ccb..182ad84b115a721d4380bd71c0c87269004db052 100644
 --- a/dist/native-subagents.js

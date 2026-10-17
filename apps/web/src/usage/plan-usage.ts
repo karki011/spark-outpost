@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import {
+  shortClock,
   extraUsageText,
   planWindowName,
   shownPercent,
@@ -48,10 +49,7 @@ export function planItems(plan: ShownPlan, now: Date): { label: string; text: st
 }
 
 export function asOfText(plan: ShownPlan): string {
-  return `As of the last reply at ${plan.asOf.toLocaleTimeString([], {
-    hour: 'numeric',
-    minute: '2-digit',
-  })}`;
+  return `As of the last reply at ${shortClock(plan.asOf)}`;
 }
 
 export function usePlanUsage(providers?: readonly string[]): { plans: ShownPlan[]; now: Date } {

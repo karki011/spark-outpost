@@ -37,6 +37,7 @@ interface ExtraRow {
   status: string;
   in_use: boolean;
   disabled_reason: string | null;
+  limit_scope: string | null;
   resets_at: Date | null;
   observed_at: Date;
 }
@@ -81,15 +82,24 @@ async function saveExtraUsage(
 ): Promise<void> {
   await db.query(
     `INSERT INTO provider_extra_usage
-       (workspace_id, provider, account_label, status, in_use, disabled_reason, resets_at,
-        observed_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       (workspace_id, provider, account_label, status, in_use, disabled_reason, limit_scope,
+        resets_at, observed_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      ON CONFLICT (workspace_id, provider) DO UPDATE SET
        account_label = EXCLUDED.account_label, status = EXCLUDED.status,
        in_use = EXCLUDED.in_use, disabled_reason = EXCLUDED.disabled_reason,
+       limit_scope = EXCLUDED.limit_scope,
        resets_at = EXCLUDED.resets_at, observed_at = EXCLUDED.observed_at
      WHERE provider_extra_usage.observed_at <= EXCLUDED.observed_at`,
-    [...key, extra.status, extra.inUse, extra.disabledReason, extra.resetsAt, now],
+    [
+      ...key,
+      extra.status,
+      extra.inUse,
+      extra.disabledReason,
+      extra.limitScope,
+      extra.resetsAt,
+      now,
+    ],
   );
 }
 
@@ -127,6 +137,7 @@ function toExtraUsage(row: ExtraRow | undefined): ExtraUsage | null {
     status: status.data,
     inUse: row.in_use,
     disabledReason: row.disabled_reason,
+    limitScope: row.limit_scope,
     resetsAt: row.resets_at?.toISOString() ?? null,
     observedAt: row.observed_at.toISOString(),
   };
@@ -146,7 +157,7 @@ export async function planUsage(
       params,
     ),
     db.query<ExtraRow>(
-      `SELECT l.status, l.in_use, l.disabled_reason, l.resets_at, l.observed_at
+      `SELECT l.status, l.in_use, l.disabled_reason, l.limit_scope, l.resets_at, l.observed_at
        FROM provider_extra_usage l ${SAME_SIGN_IN} AND (l.resets_at IS NULL OR l.resets_at > $3)`,
       params,
     ),

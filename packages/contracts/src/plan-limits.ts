@@ -28,6 +28,7 @@ export const extraUsageSchema = z.object({
   status: limitStatusSchema,
   inUse: z.boolean(),
   disabledReason: z.string().max(60).nullable(),
+  limitScope: z.string().max(60).nullable(),
   resetsAt: z.string().nullable(),
   observedAt: z.string(),
 });
@@ -74,22 +75,22 @@ const sameDay = (a: Date, b: Date) =>
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
 
-function clock(at: Date): string {
+export function shortClock(at: Date): string {
   const time = at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   return time.replace(/\b([AP])\.?M\.?$/i, (_match, half: string) => `${half.toLowerCase()}m`);
 }
 
 export function resetTimeText(resetsAt: Date, now: Date): string {
   const day = resetsAt.toLocaleDateString([], { weekday: 'short' });
-  if (sameDay(resetsAt, now)) return clock(resetsAt);
-  if (resetsAt.getTime() - now.getTime() < DAY_MS) return `${day} ${clock(resetsAt)}`;
+  if (sameDay(resetsAt, now)) return shortClock(resetsAt);
+  if (resetsAt.getTime() - now.getTime() < DAY_MS) return `${day} ${shortClock(resetsAt)}`;
   return day;
 }
 
 export function resetPhrase(resetsAt: Date, now: Date): string {
   const day = resetsAt.toLocaleDateString([], { weekday: 'long' });
-  if (sameDay(resetsAt, now)) return `at ${clock(resetsAt)}`;
-  return `on ${day} at ${clock(resetsAt)}`;
+  if (sameDay(resetsAt, now)) return `at ${shortClock(resetsAt)}`;
+  return `on ${day} at ${shortClock(resetsAt)}`;
 }
 
 export function shownPercent(usedPercent: number): number {
@@ -109,14 +110,19 @@ const DISABLED_REASONS: Record<string, string> = {
   org_level_disabled_until: 'organization spend limit reached',
   member_level_disabled: 'turned off for your account',
   seat_tier_level_disabled: 'turned off for your seat',
+  member_zero_credit_limit: 'no credit limit set',
+  group_zero_credit_limit: 'no credit limit set',
+  seat_tier_zero_credit_limit: 'no credit limit set',
 };
 
 export function extraUsageText(extra: ExtraUsage, now: Date): string {
   const state = extra.inUse ? 'in use' : extra.status === 'rejected' ? 'not available' : 'on';
   const reason =
-    extra.status === 'rejected' && extra.disabledReason
-      ? DISABLED_REASONS[extra.disabledReason]
-      : undefined;
+    extra.status !== 'rejected'
+      ? undefined
+      : extra.limitScope === 'group_pool'
+        ? "your team's shared budget is used up"
+        : DISABLED_REASONS[extra.disabledReason ?? ''];
   const reset =
     extra.resetsAt && extra.status !== 'rejected'
       ? `resets ${resetTimeText(new Date(extra.resetsAt), now)}`

@@ -60,6 +60,7 @@ describe('extra usage text', () => {
     status: 'allowed',
     inUse: false,
     disabledReason: null,
+    limitScope: null,
     resetsAt: null,
     observedAt: now.toISOString(),
     ...fields,
@@ -79,6 +80,11 @@ describe('extra usage text', () => {
   it('names a known reason it is not available', () => {
     const off = extra({ status: 'rejected', disabledReason: 'out_of_credits' });
     expect(extraUsageText(off, now)).toBe('not available · out of credits');
+  });
+
+  it("names a team's pooled budget", () => {
+    const off = extra({ status: 'rejected', limitScope: 'group_pool' });
+    expect(extraUsageText(off, now)).toBe("not available · your team's shared budget is used up");
   });
 
   it('says only not available for an unknown reason', () => {

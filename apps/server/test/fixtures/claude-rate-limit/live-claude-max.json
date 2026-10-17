@@ -1,23 +1,29 @@
 {
   "sessionId": "redacted",
   "update": {
-    "sessionUpdate": "usage_update",
-    "used": 41000,
-    "size": 1000000,
-    "cost": { "amount": 0.27, "currency": "USD" },
+    "size": 200000,
+    "used": 17687,
     "_meta": {
+      "_claude/model": "claude-opus-5-5",
       "_claude/rateLimit": {
         "status": "allowed",
         "resetsAt": 1792212600,
-        "rateLimitType": "five_hour",
         "overageStatus": "rejected",
-        "overageDisabledReason": "out_of_credits",
+        "rateLimitType": "five_hour",
         "isUsingOverage": false,
         "unifiedWindows": {
-          "five_hour": { "utilization": 0.06, "resetsAt": 1792212600 },
-          "seven_day": { "utilization": 0.46, "resetsAt": 1792425600 }
-        }
+          "five_hour": {
+            "resetsAt": 1792212600,
+            "utilization": 0.12
+          },
+          "seven_day": {
+            "resetsAt": 1792425600,
+            "utilization": 0.48
+          }
+        },
+        "overageDisabledReason": "out_of_credits"
       }
-    }
+    },
+    "sessionUpdate": "usage_update"
   }
 }

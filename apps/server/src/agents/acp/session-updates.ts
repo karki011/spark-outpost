@@ -13,7 +13,7 @@ import { agentCommands } from './slash-commands.ts';
 import { objectFields } from './object-fields.ts';
 import { exitPlanText, planFileText } from '../../plans/plan-mode.ts';
 import { shortWindowNote } from './long-context.ts';
-import { usageOutputs } from './plan-limits.ts';
+import { planOutputs, usageOutputs } from './plan-limits.ts';
 import { createFocusTracker } from './file-focus.ts';
 import { messagePhase } from './message-phase.ts';
 
@@ -432,7 +432,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
           return tracked ? changeSettings(settingsFrom(update.configOptions, tracked)) : [];
         case 'session_info_update': {
           const reported = sessionFailure(update._meta);
-          if (!reported) return [];
+          if (!reported) return planOutputs(update._meta);
           if (reported.severity === 'error') {
             failure = { category: reported.category, title: reported.title };
             return [];

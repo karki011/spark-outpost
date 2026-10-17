@@ -44,13 +44,14 @@ describe('Claude plan limits from recorded adapter payloads', { timeout: 20_000 
       {
         kind: 'plan_limits',
         windows: [
-          { window: 'five_hour', used: 0.06, resetsAt: FIVE_HOUR_RESET, limited: false },
-          { window: 'seven_day', used: 0.46, resetsAt: WEEK_RESET, limited: false },
+          { window: 'five_hour', used: 0.12, resetsAt: FIVE_HOUR_RESET, limited: false },
+          { window: 'seven_day', used: 0.48, resetsAt: WEEK_RESET, limited: false },
         ],
         extraUsage: {
           status: 'rejected',
           inUse: false,
           disabledReason: 'out_of_credits',
+          limitScope: null,
           resetsAt: null,
         },
       },
@@ -83,6 +84,24 @@ describe('Claude plan limits from recorded adapter payloads', { timeout: 20_000 
     const { plans } = await planOutputs('extra-usage-in-use');
     expect(plans[0]).toMatchObject({
       extraUsage: { status: 'allowed', inUse: true, resetsAt: new Date(1793491200 * 1000) },
+    });
+  });
+
+  it('reads a reading sent before the turn has usage, without a usage reading', async () => {
+    const { plans, usage } = await planOutputs('before-usage');
+    expect(usage).toEqual([]);
+    expect(plans[0]).toMatchObject({
+      windows: [
+        { window: 'five_hour', limited: false },
+        { window: 'seven_day', limited: false },
+      ],
+    });
+  });
+
+  it('keeps the scope of a pooled team budget', async () => {
+    const { plans } = await planOutputs('team-pool');
+    expect(plans[0]).toMatchObject({
+      extraUsage: { status: 'rejected', limitScope: 'group_pool' },
     });
   });
 

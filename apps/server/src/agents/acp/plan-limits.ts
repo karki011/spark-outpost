@@ -29,10 +29,13 @@ const rateLimitSchema = z.object({
   overageStatus: limitStatusSchema.optional(),
   overageResetsAt: epochSeconds.optional(),
   overageDisabledReason: z.string().optional(),
+  limitScope: z.string().optional(),
   isUsingOverage: z.boolean().optional(),
   overageInUse: z.boolean().optional(),
 });
 type RateLimit = z.infer<typeof rateLimitSchema>;
+
+const shortText = (text: string | undefined) => (text && text.length <= REASON_MAX ? text : null);
 
 const toDate = (seconds: number) => new Date(seconds * 1000);
 
@@ -54,11 +57,11 @@ function reading(info: RateLimit, window: PlanWindowId): PlanReading | null {
 
 function extraUsage(info: RateLimit): ExtraUsageReading | null {
   if (!info.overageStatus) return null;
-  const reason = info.overageDisabledReason;
   return {
     status: info.overageStatus,
     inUse: info.isUsingOverage === true || info.overageInUse === true,
-    disabledReason: reason && reason.length <= REASON_MAX ? reason : null,
+    disabledReason: shortText(info.overageDisabledReason),
+    limitScope: shortText(info.limitScope),
     resetsAt: info.overageResetsAt === undefined ? null : toDate(info.overageResetsAt),
   };
 }
@@ -74,6 +77,11 @@ export function planReport(meta: unknown): PlanReport | null {
   return { windows, extraUsage: extra };
 }
 
+export function planOutputs(meta: unknown): ProviderOutput[] {
+  const report = planReport(meta);
+  return report ? [{ kind: 'plan_limits', ...report }] : [];
+}
+
 type UsageUpdate = Extract<SessionUpdate, { sessionUpdate: 'usage_update' }>;
 
 export function usageOutputs(update: UsageUpdate): ProviderOutput[] {
@@ -83,6 +91,5 @@ export function usageOutputs(update: UsageUpdate): ProviderOutput[] {
     contextSize: update.size,
     costUsd: update.cost?.currency === 'USD' ? update.cost.amount : null,
   };
-  const report = planReport(update._meta);
-  return report ? [usage, { kind: 'plan_limits', ...report }] : [usage];
+  return [usage, ...planOutputs(update._meta)];
 }

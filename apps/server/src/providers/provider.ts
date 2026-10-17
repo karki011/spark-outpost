@@ -168,6 +168,7 @@ export interface ExtraUsageReading {
   status: LimitStatus;
   inUse: boolean;
   disabledReason: string | null;
+  limitScope: string | null;
   resetsAt: Date | null;
 }
 

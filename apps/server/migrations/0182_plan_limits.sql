@@ -20,6 +20,7 @@ CREATE TABLE provider_extra_usage (
   status text NOT NULL CHECK (status IN ('allowed', 'allowed_warning', 'rejected')),
   in_use boolean NOT NULL,
   disabled_reason text,
+  limit_scope text,
   resets_at timestamptz,
   observed_at timestamptz NOT NULL,
   PRIMARY KEY (workspace_id, provider)
