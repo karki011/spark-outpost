@@ -1,4 +1,3 @@
-import { timingSafeEqual } from 'node:crypto';
 import {
   parseSlackCallbackLink,
   slackSignInScopes,
@@ -13,7 +12,8 @@ import {
 } from '../persistence/slack.ts';
 import { SLACK_SECRET_IDS } from '../setup/secrets.ts';
 import { clientFor, slackAuthTest, slackMemberName, type SlackDeps } from './connection.ts';
-import { exchangeSlackCode, newSlackPkce, slackAuthorizeUrl } from './oauth.ts';
+import { newPkce, sameText } from '../setup/pkce.ts';
+import { exchangeSlackCode, slackAuthorizeUrl } from './oauth.ts';
 import type { SlackSignInConfig } from './sign-in-config.ts';
 import { slackTokenTimes, storeSlackSignInTokens } from './user-token.ts';
 import { SlackApiError } from './web-api.ts';
@@ -57,12 +57,6 @@ const ended = (status: SlackSignInFlow['status'], message: string | null): Slack
   status,
   message,
 });
-
-function sameText(left: string, right: string): boolean {
-  const a = Buffer.from(left);
-  const b = Buffer.from(right);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
 
 function refusedInSlack(error: string): string {
   if (error === 'access_denied') return SIGN_IN_DENIED;
@@ -138,7 +132,7 @@ export function createSlackSignIn(deps: SlackSignInDeps, onConnected?: () => voi
       if (before?.method === 'own_app' && !request.replace) {
         throw new SlackApiError('method_switch', SWITCH_TO_SIGN_IN);
       }
-      const pkce = newSlackPkce();
+      const pkce = newPkce();
       const expiresAt = now() + SIGN_IN_TTL_MS;
       pending = { state: pkce.state, verifier: pkce.verifier, expiresAt };
       flow = {

@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                 | What to do                                                |
 | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| Calendar: **Add Google account**.                                                                            | See [Google sign-in](calendar.md#google-sign-in).         |
 | Calendar: see your day on **Today**, join meetings and keep focus time quiet.                                | See [See your day](calendar.md).                          |
 | Pull request **Refresh** no longer reverts.                                                                  | None.                                                     |
 | Settings has six groups and a **Search settings** box.                                                       | See [Settings](settings.md).                              |

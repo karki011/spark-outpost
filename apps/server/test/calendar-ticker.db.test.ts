@@ -71,6 +71,7 @@ beforeEach(async () => {
   const [work] = await savedChoices(t.db, t.workspaceId);
   await updateChoice(t.db, t.workspaceId, work!.key, { nudges: true });
   ticker = startCalendarTicker({
+    google: null,
     db: t.db,
     workspaceId: t.workspaceId,
     host,

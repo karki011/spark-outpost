@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { cp } from 'node:fs/promises';
 import path from 'node:path';
 import { Arch, type AfterPackContext, type Configuration } from 'electron-builder';
@@ -10,6 +11,7 @@ import {
 } from '../src/github-app.ts';
 import { HEARTBEAT_URL_ENV, heartbeatUrl } from '../src/heartbeat.ts';
 import { SLACK_CLIENT_ID_ENV, slackClientId } from '../src/slack-sign-in.ts';
+import { googleClientFromDownload, type GoogleClient } from '../src/google-client.ts';
 import { checkTmuxBinary } from './tmux-bundle.ts';
 import { MAC_CONTROL_BINARY, macControlCheck } from './mac-control-bundle.ts';
 import { checkStagedCalendar } from './calendar-bundle.ts';
@@ -66,6 +68,24 @@ export function packagedGitHubApp(env: Env): GitHubAppIds | null {
     );
   }
   return ids;
+}
+
+export const GOOGLE_CLIENT_FILE_ENV = 'SPARK_GOOGLE_CLIENT_FILE';
+export const GOOGLE_APP_VERIFIED_ENV = 'SPARK_GOOGLE_APP_VERIFIED';
+
+export function packagedGoogleClient(
+  env: Env,
+  read: (file: string) => string = (file) => readFileSync(file, 'utf8'),
+): GoogleClient | null {
+  const file = (env[GOOGLE_CLIENT_FILE_ENV] ?? '').trim();
+  if (file === '') return null;
+  const client = googleClientFromDownload(read(file));
+  if (!client) {
+    throw new Error(
+      `${GOOGLE_CLIENT_FILE_ENV} must name the JSON file Google Cloud gives for a Desktop app OAuth client ({"installed": {"client_id", "client_secret"}}).`,
+    );
+  }
+  return { ...client, verified: env[GOOGLE_APP_VERIFIED_ENV] === '1' };
 }
 
 export function packagedSlackClientId(env: Env): string | null {
@@ -166,6 +186,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
   const heartbeat = packagedHeartbeatUrl(options.env);
   const githubApp = packagedGitHubApp(options.env);
   const slackApp = packagedSlackClientId(options.env);
+  const google = packagedGoogleClient(options.env);
   return {
     appId: options.appId ?? prod.appId,
     productName: prod.appName,
@@ -176,6 +197,15 @@ export function builderConfig(options: BuilderOptions): Configuration {
       ...(heartbeat ? { heartbeatUrl: heartbeat } : {}),
       ...(githubApp ? { githubApp } : {}),
       ...(slackApp ? { slackApp: { clientId: slackApp } } : {}),
+      ...(google
+        ? {
+            googleApp: {
+              client_id: google.clientId,
+              client_secret: google.clientSecret,
+              verified: google.verified,
+            },
+          }
+        : {}),
     },
     directories: { output: options.outputDir },
     npmRebuild: false,

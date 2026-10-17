@@ -14,6 +14,7 @@ const SOURCE_LABEL: Record<CalendarSourceKind, string> = {
   mobileme: 'iCloud',
   subscribed: 'Subscribed',
   birthdays: 'Birthdays',
+  google: 'Google',
   other: 'Other',
 };
 

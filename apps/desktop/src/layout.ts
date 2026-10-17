@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { GOOGLE_CLIENT_FILE_NAME } from './google-client.ts';
 
 export interface AppLayout {
   serverDir: string;
@@ -9,6 +10,7 @@ export interface AppLayout {
   calendarSeedBin: string | null;
   voiceBin: string;
   voiceModels: string;
+  googleClientFile: string | null;
 }
 
 export interface LayoutSource {
@@ -30,6 +32,7 @@ export function appLayout(source: LayoutSource): AppLayout {
       calendarSeedBin: null,
       voiceBin: path.join(resourcesPath, 'voice/bin/spark-voice'),
       voiceModels: path.join(resourcesPath, 'voice/models'),
+      googleClientFile: null,
     };
   }
   const repoRoot = path.resolve(appPath, '../..');
@@ -42,5 +45,6 @@ export function appLayout(source: LayoutSource): AppLayout {
     calendarSeedBin: path.join(repoRoot, '.local/calendar', arch, 'spark-calendar-seed'),
     voiceBin: path.join(repoRoot, '.local/voice', arch, 'spark-voice'),
     voiceModels: path.join(repoRoot, '.local/voice', arch, 'models'),
+    googleClientFile: path.join(repoRoot, '.local', GOOGLE_CLIENT_FILE_NAME),
   };
 }

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CALENDAR_SERVICE_NAMES,
+  isGoogleEventId,
   joinOpen,
   spanOf,
   type CalendarChoice,
@@ -93,7 +94,16 @@ export function EventPanel({
 }: EventPanelProps) {
   const mark = useMark(event);
   const occurrence = { eventId: event.id, start: event.start };
-  const openInCalendar = useMutation({ mutationFn: () => calendarApi.open(occurrence) });
+  const google = isGoogleEventId(event.id);
+  const openInCalendar = useMutation({
+    mutationFn: async () => {
+      if (!google) return calendarApi.open(occurrence);
+      const { link } = await calendarApi.detail(occurrence);
+      if (!link) throw new Error('Google gave no link for this event.');
+      openJoin(link);
+      return { opened: true };
+    },
+  });
   const startChat = useMutation({
     mutationFn: () => calendarApi.detail(occurrence),
     onSuccess: (detail) => {
@@ -123,8 +133,8 @@ export function EventPanel({
       <JoinRow event={event} isToday={isToday} now={now} />
       <Act
         icon={<ExternalLinkIcon />}
-        label="Open in Calendar"
-        note="Calendar.app"
+        label={google ? 'Open in Google Calendar' : 'Open in Calendar'}
+        note={google ? 'Your browser' : 'Calendar.app'}
         onClick={() => openInCalendar.mutate()}
       />
       <Act

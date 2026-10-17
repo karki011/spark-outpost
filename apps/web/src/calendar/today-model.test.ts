@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { duration, shapeWords } from './calendar-format.ts';
-import { at, event, FAMILY, link, status, WORK } from './test-fixtures.ts';
+import { at, choice, event, FAMILY, link, status, WORK } from './test-fixtures.ts';
 import {
   connectorLine,
   countdown,
@@ -74,6 +74,44 @@ describe('todayState', () => {
     }));
     expect(todayState(none)).toBe('none');
     expect(todayState(status())).toBe('ready');
+  });
+});
+
+describe('with a Google account', () => {
+  const google = (state: 'ready' | 'sign_in_again') =>
+    status({
+      helper: 'missing',
+      connected: false,
+      accounts: [
+        {
+          id: 'google:a',
+          title: 'me@example.com',
+          kind: 'google',
+          calendars: [choice(WORK, { sourceKind: 'google' })],
+        },
+      ],
+      google: {
+        ...status().google,
+        accounts: [
+          {
+            id: '00000000-0000-4000-8000-00000000000a',
+            email: 'me@example.com',
+            state,
+            message: null,
+          },
+        ],
+      },
+    });
+
+  it('is ready without macOS Calendar, whatever its helper says', () => {
+    expect(todayState(google('ready'))).toBe('ready');
+    expect(connectorLine(google('ready')).text).toBe('1 Google account · 1 of 1 calendar');
+  });
+
+  it('says to sign in again when Google refused the sign-in', () => {
+    expect(connectorLine(google('sign_in_again')).text).toBe(
+      '1 Google account · 1 of 1 calendar · Sign in again',
+    );
   });
 });
 

@@ -1,6 +1,6 @@
 # Calendar
 
-> **Status: Phase 1a built (2026-10-16): see and join.** A connector (Connections → Connectors) that brings every calendar synced to the Mac into the Mac app: **Today** beside the user's chats, **Upcoming** on Home, one-click **Join**, island nudges and quiet focus time. Changing events, **Protect this free block** and agent tools (1b) and **meeting prep** (1c) are designed below and not built; Phase 1a ships no `spark_calendar` tool, and **Let agents read my calendar** is shown off. 1a names a running chat or one that needs you in the wrap-up line (Spark has no cheap unpushed-work signal), and the Ask Spark fast path is not built. Mock: [`docs/design/mocks/calendar-mock.html`](../design/mocks/calendar-mock.html). The owner's defaults are in [Decided](#decided).
+> **Status: Phase 1a built (2026-10-16): see and join, from macOS Calendar and, directly, from Google Calendar accounts.** A connector (Connections → Connectors) that brings every calendar synced to the Mac, and each Google account the user adds, into the Mac app: **Today** beside the user's chats, **Upcoming** on Home, one-click **Join**, island nudges and quiet focus time. Changing events, **Protect this free block** and agent tools (1b) and **meeting prep** (1c) are designed below and not built; Phase 1a ships no `spark_calendar` tool, and **Let agents read my calendar** is shown off. 1a names a running chat or one that needs you in the wrap-up line (Spark has no cheap unpushed-work signal), and the Ask Spark fast path is not built. Mock: [`docs/design/mocks/calendar-mock.html`](../design/mocks/calendar-mock.html). The owner's defaults are in [Decided](#decided).
 
 ## Pieces
 
@@ -11,15 +11,19 @@
 | Contracts | `packages/contracts/src/calendar.ts`       | Helper messages, `CalendarEvent`, `joinLink()`, merge and free-time maths   |
 | Bridge    | The worker↔main channel Mac control uses   | `calendar:request`, `calendar:response`, `calendar:changed`                 |
 | Planner   | `apps/server/src/calendar/`                | Pure: events, chats, settings, clock → nudges, holds, prep jobs             |
+| Google    | `apps/server/src/calendar/google/`         | Pure Node: OAuth, the loopback, sync tokens, polling, the in-memory window  |
 | Prep      | `apps/server/src/companion/`               | Prep turns on the Spark assistant's session; the `calendar_prep` cache      |
 | Tools     | `apps/server/src/spark-mcp/tools/calendar` | `spark_calendar` (read), `spark_calendar_edit` (write)                      |
 | UI        | `apps/web/src/calendar/`, island, Home     | Today, Upcoming, the brief block, the connector card, Join and ⌘J           |
 
 ## Sources
 
-**macOS Calendar through EventKit is the only Phase 1 source**, and the card shows only it. It is local, reads every account in Internet Accounts at once, needs no Google verification, and runs on Intel and Apple silicon from macOS 12.
+Two sources, merged into one model, with the same switches per calendar:
 
-**Google Calendar API: Phase 2, only if accepting or declining invitations is needed.** EventKit creates, moves and deletes events and adds alarms, but "EventKit cannot add participants to an event nor change participant information" ([`EKParticipant`](https://developer.apple.com/documentation/eventkit/ekparticipant)). Google's terms (read 2026-10-15):
+- **macOS Calendar through EventKit.** Local, reads every account in Internet Accounts at once, needs no Google verification, and runs on Intel and Apple silicon from macOS 12.
+- **Google Calendar, straight from the Google Calendar API** ([below](#google-calendar-source)), because not everyone wants to go through Mac Calendar. Any number of Google accounts. It is pure Node in `apps/server`, with no Mac API, so it could later serve a Windows build; only the Mac app shows it today.
+
+EventKit creates, moves and deletes events and adds alarms, but "EventKit cannot add participants to an event nor change participant information" ([`EKParticipant`](https://developer.apple.com/documentation/eventkit/ekparticipant)); accepting or declining invitations, if it comes, goes through the Google source. Google's terms (read 2026-10-15):
 
 - **Not restricted:** Calendar is not on the [restricted list](https://support.google.com/cloud/answer/13464325), so no CASA assessment, which Google ties to [restricted scopes](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification).
 - **Sensitive:** Google's own [example](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification) is "reading events stored in Google Calendar"; review "typically takes 3-5 business days". The [scopes page](https://developers.google.com/workspace/calendar/api/auth) gives no tier per scope; check each in the Cloud Console ([help](https://support.google.com/cloud/answer/13463073)).
@@ -28,6 +32,38 @@
 - **Flow:** the [installed-app flow](https://developers.google.com/identity/protocols/oauth2/native-app) with PKCE; one keychain token per account.
 
 **Secret iCal address: not offered.** One calendar, read-only, and "Only you should know the Secret Address" ([help](https://support.google.com/calendar/answer/37648)).
+
+## Google Calendar source
+
+Decided with the owner, 2026-10-16. Code in `apps/server/src/calendar/google/`; contracts in `packages/contracts/src/calendar-google.ts`.
+
+**Sign-in: the installed-app flow.** **Add Google account** asks the server for a sign-in; the server opens a one-shot loopback listener on `127.0.0.1` at a random port (port 0, never the API port) and returns Google's authorize URL with `redirect_uri=http://127.0.0.1:<port>`, a PKCE S256 challenge, a 32-byte random `state`, `access_type=offline` and `prompt=consent` (so Google always returns a refresh token). The web app opens it with `window.open`, which both windows' `guardNavigation` sends to `shell.openExternal`: the default browser, never the Browser pane. The listener answers only `GET /` with a `code` or `error`, once, compares `state` in constant time, shows a fixed "You can close this tab" page that echoes nothing, and closes; it also closes after 10 minutes or on **Cancel**. One sign-in waits at a time. The code is exchanged at `oauth2.googleapis.com/token` with the verifier; neither the code nor a token is logged. **Sign in again** sends `login_hint` and refuses a different account.
+
+**Scopes.** Phase 1 reads with the narrowest scopes Google offers: `openid` and `email` (non-sensitive; the ID token's `sub` keys the account and `email` names it), `calendar.calendarlist.readonly` ("View the list of subscribed calendars") and `calendar.events.readonly` ("Read events on all calendars"). Google's granular consent lets the user untick a box; a grant without both calendar scopes is refused with a line saying so. **Phase 1b** (changing events) will add `calendar.events` by asking again, with `include_granted_scopes=true`, only when the user turns on **Agents can edit** on a Google calendar; it is not requested before 1b. RSVP needs `calendar.events` too.
+
+**Tokens.** One refresh token per Google account, keyed by `sub`, only in the keychain (`calendar:google:<sub>:refresh` under **Spark Outpost**); signing in again to the same account replaces it and revokes the old one. Access tokens live in memory for their hour. `calendar_google_accounts` holds only `id`, `sub`, email and a `needs_sign_in` flag. A refresh that Google answers `invalid_grant` (revoked, or the Testing 7-day expiry) marks the account **Sign in again**, drops its events and stops polling it; its calendar choices stay. A 401 from the API drops the access token and retries once with a fresh one.
+
+**The client ID.** A Google Cloud OAuth client of type **Desktop app**. Google calls Desktop apps "public clients" that "cannot keep secrets confidential", so its client secret is not treated as a secret, but it is still never committed:
+
+- **Dev** (`pnpm desktop:dev`, `pnpm desktop:dev-app`): the JSON file Google Cloud downloads for the client, saved as `.local/google-oauth-client.json` in the checkout the app runs from (`.local/` is git-ignored). The desktop main process reads `installed.client_id` and `installed.client_secret` and hands them to the API as `SPARK_GOOGLE_CLIENT_ID` and `SPARK_GOOGLE_CLIENT_SECRET`; `pnpm dev` takes the same two variables from its environment.
+- **Packaged builds:** `SPARK_GOOGLE_CLIENT_FILE=<that JSON file> pnpm desktop:package` bakes the two values into the app's `package.json` as `googleApp`, as the Slack client ID is; a file that is not a Desktop client fails the build. `SPARK_GOOGLE_APP_VERIFIED=1` marks the build's Google app verified.
+- With no client, the card shows no **Add Google account** (only supported connection methods).
+
+**Sync.** Per account, every 3 minutes while Spark runs, and at once after a sign-in or an **Include** change: `calendarList.list`, then `events.list` for each included calendar (an excluded calendar costs no request) with `singleEvents=true`, so recurring events arrive as instances sharing their `iCalUID`. The first request of a window sends `timeMin`/`timeMax` (today − 1 to + 8 days, as EventKit) and pages with `pageToken` (250 a page, at most 20 pages, then `truncated`); the last page's `nextSyncToken` drives the next poll, which sends only `syncToken`, since Google refuses it with `timeMin`, `timeMax`, `orderBy`, `q` and the rest. Changes and `cancelled` entries are applied to the stored window, and events outside it are filtered on read. A new local day starts a fresh windowed sync, and so does a **410 Gone**. **Push channels are out:** they need a public HTTPS URL, which Spark doesn't have.
+
+**Rate and backoff.** Calendar's default quota is per project and per user per minute; 100 users × 6 calendars × a poll every 3 minutes stays well inside a day's quota. 429, a 403 with `rateLimitExceeded`, `userRateLimitExceeded` or `quotaExceeded`, 5xx and network failures back off exponentially from 30 s to 30 min with ±20% jitter, never sooner than `Retry-After`; the account shows "Google asked Spark to slow down. Trying again soon." and keeps its last events. A 403 or 404 on one calendar skips that calendar.
+
+**Memory.** Events stay in memory in the API process, as EventKit's stay in the Mac app's main process; nothing from an event is written to the database. A restart syncs again. Notes and the Google Calendar link are read from memory for **Start a chat for this** and **Open in Google Calendar** (only an `https` link on `www.google.com` or `calendar.google.com`, opened in the default browser).
+
+**Mapping** (`google/map.ts`, pure): `iCalUID` → `uid`; `dateTime` → ISO; an all-day `date` → local midnight, the end date exclusive; `hangoutLink` or the conference `video` entry point → `url`, then `joinLink()`'s allowlist as for EventKit; `https` links in the HTML description → `noteLinks`; the `self` attendee's `responseStatus` → `myStatus` (`needsAction` → `pending`); rooms are not people; `transparent` → `free`; `recurringEventId` → `recurring`. Titles and links are clipped to the contract's limits. Calendars are `google:<account>:<calendarId>`, so two accounts that share a calendar don't collide; `owner`/`writer` are writable, the primary calendar and `owner` are `mine`, the rest `shared`; `freeBusyReader` calendars are skipped.
+
+**One model, de-duplicated.** Both sources feed `mergeEvents`, which keys copies by `uid` and start; a Google account that is also in Internet Accounts shows each event once, as the macOS copy (EventKit's calendars sort first) with "also on" the Google calendar. Whether EventKit's `calendarItemExternalIdentifier` for a Google CalDAV event equals the API's `iCalUID` is **to verify** in the real test. Today and nudges work from whichever sources are ready: a Google-only user, or one whose macOS access is denied or helper missing, still gets Today, Upcoming and nudges.
+
+**The card.** **Connections → Connectors → Calendar** lists sources: **macOS Calendar** (Connect, its accounts, **Disconnect macOS Calendar**) and **Google Calendar**, each account with its calendars and the same **Include**, **Use for nudges** and **Counts as busy** switches, **Sign in again** when needed, **Disconnect**, then **Add Google account**. While the build's Google app is unverified the card says "Google sign-in expires every 7 days until Spark's Google app is verified."
+
+**Disconnect** stops polling, posts the refresh token to `oauth2.googleapis.com/revoke`, deletes the keychain entry whatever Google answers, and deletes the account and its calendar choices; if Google didn't confirm, the card says to remove Spark at myaccount.google.com/permissions. **Settings → Reset** deletes every account's keychain entry, found by `sub` before the wipe.
+
+**Trust.** Google's answers are untrusted data: each is validated with zod, an invalid item is dropped, not the page, and titles and notes are shown as text. **Paired devices** get no route: every `/api/calendar/google/*` route is in `route-rules.ts`'s never list.
 
 ## Permissions
 
@@ -63,11 +99,11 @@ A signed Swift command-line helper, `spark-calendar`, spoken to as JSON lines, a
 
 ## Data model
 
-- **Events stay in memory**, today − 1 to + 7 days, refreshed on `changed`, wake, midnight and every 15 min; the server asks main over the bridge.
+- **Events stay in memory**, today − 1 to + 7 days, refreshed on `changed`, wake, midnight and every 15 min; the server asks main over the bridge. Google events stay in the API process's memory ([Google Calendar source](#google-calendar-source)).
 - **Calendars** are grouped by account, each with **Include**, **Use for nudges**, **Counts as busy**, **Prep meetings from this calendar** and **Agents can edit**, in the source's colour. A new calendar is included and busy, with nudges, prep and edit off.
-- **Duplicates:** copies with the same `uid` and start show once, as the first calendar's copy with "also on Family"; they nudge if any calendar does and are busy if any is. Whether one Google invitation seen through two accounts shares a `uid` is **to verify**.
+- **Duplicates:** copies with the same `uid` and start show once, across both sources, as the first calendar's copy with "also on Family"; they nudge if any calendar does and are busy if any is. Whether one Google invitation seen through two accounts shares a `uid` is **to verify**.
 - **Identity:** "a full sync with the calendar will lose" a `calendarIdentifier` ([Apple](https://developer.apple.com/documentation/eventkit/ekcalendar/calendaridentifier)), so a saved calendar keeps its source and title and is matched again by both, or reset with a note on the card.
-- **Tables:** `calendar_connection`, `calendar_calendars`, `calendar_marks` (`uid`, `occurrence_start`, `remind_5` or `hold`) and `calendar_prep`, the one table holding text drawn from events. Marks are purged an hour after the event. **Disconnect** deletes marks and briefs and stops the helper; calendar choices stay.
+- **Tables:** `calendar_connection`, `calendar_calendars` (a Google calendar carries its `google_account_id`; each source replaces only its own rows), `calendar_google_accounts`, `calendar_marks` (`uid`, `occurrence_start`, `remind_5` or `hold`) and `calendar_prep`, the one table holding text drawn from events. Marks are purged an hour after the event. **Disconnect** deletes marks and briefs and stops the helper; calendar choices stay.
 
 ## The view
 
@@ -166,6 +202,8 @@ A pure planner, `planNudges(events, chats, marks, settings, now)`, runs every mi
 | What                                                    | Where to                                    | When                                           |
 | ------------------------------------------------------- | ------------------------------------------- | ---------------------------------------------- |
 | Event details                                           | Nowhere                                     | By default                                     |
+| Calendar and event reads, with the account's token      | Google (`googleapis.com`)                   | Each Google account the user adds; every 3 min |
+| The refresh token, to revoke it                         | Google (`oauth2.googleapis.com/revoke`)     | **Disconnect**                                 |
 | Prep: title, times, notes without links, attendee names | The Spark assistant's provider              | Per calendar opt-in; audited                   |
 | `spark_calendar` results                                | The chat's or Ask Spark's provider          | **Let agents read my calendar**, then the mode |
 | A change to a synced calendar                           | That calendar's server, through macOS       | After the card or the mode allows              |
@@ -176,7 +214,7 @@ Titles, notes, attendees and locations are never logged.
 
 ## Testing
 
-**Automated:** the planner, merge, free time and `joinLink()` on fixed data (the failing hosts, SafeLinks, all-day, recurring, declined, midnight, time zones); the prep scrubber; Swift tests over a fake store; browser specs over `SPARK_FAKE_CALENDAR=1` for every view and state; the tools per mode, floor, refusal and card; a push payload that can't hold a title.
+**Automated:** the Google source over a fake Google OAuth and Calendar API (`apps/server/test/fake-google-calendar.ts`: sign-in, scopes, refresh, revoked tokens, 410, paging, all-day, recurring, backoff, de-duplication with EventKit, Disconnect) and `tests/browser/calendar-google.spec.ts` through the provider stub; the planner, merge, free time and `joinLink()` on fixed data (the failing hosts, SafeLinks, all-day, recurring, declined, midnight, time zones); the prep scrubber; Swift tests over a fake store; browser specs over `SPARK_FAKE_CALENDAR=1` for every view and state; the tools per mode, floor, refusal and card; a push payload that can't hold a title.
 
 ### Required real tests on this Mac
 
@@ -199,6 +237,12 @@ No Phase 1 PR is done until each check has run here and reports **pass** or **fa
 | Injection                     | The notes' instruction is quoted as data, by the chat and by prep, and not followed   |
 | Push                          | A paired phone shows exactly "Meeting in 10 min"                                      |
 | Cleanup                       | Both calendars gone; marks and briefs purged                                          |
+| Google sign-in                | **Add Google account** opens the default browser, not the pane; the card lists it     |
+| Google events                 | The owner's real events on Today and Upcoming; one shared with macOS shows once       |
+| Google Join                   | Join on a Meet link opens the default browser                                         |
+| Google Disconnect             | The token is revoked (a refresh then fails) and gone from the keychain                |
+
+The Google checks read only: they never create, edit or delete an event on the owner's calendar. They need the owner's Desktop OAuth client in `.local/google-oauth-client.json`.
 
 ## Phases
 
@@ -206,7 +250,7 @@ No Phase 1 PR is done until each check has run here and reports **pass** or **fa
    - **1a, see and join:** the helper and permission, the connector, first run and states, Today, Upcoming, the brief block, Join and ⌘J, nudges, holds and capture, the fast path, `spark_calendar`, the push line.
    - **1b, change:** `save`, `remove`, `alarm`, **Protect this free block**, **Agents can edit**, `spark_calendar_edit` and its floor.
    - **1c, prep:** prep turns, the cache, the opt-in, cost and audit.
-2. **Google Calendar API**, only if accepting or declining invitations is needed.
+2. **Accepting or declining invitations** through the Google source, if needed.
 
 ## Decided
 
@@ -217,7 +261,7 @@ The owner's defaults, 2026-10-16:
 3. **Focus blocks** are found by title.
 4. **Phone pushes** are held during focus, like chimes.
 5. **Outlook SafeLinks** are unwrapped only to an allowlisted Teams host, and the unwrapped host is shown.
-6. **The Google API** comes in Phase 2 only if accepting or declining invitations is needed.
+6. **Google Calendar** is a direct source from Phase 1a (owner, 2026-10-16), pure Node so it could run on Windows later; several accounts; the defaults are in [Google Calendar source](#google-calendar-source).
 7. **Let agents read my calendar** is off by default.
 8. **No phone calendar view** in Phase 1.
 9. **A new calendar** is included with nudges off.
@@ -225,4 +269,4 @@ The owner's defaults, 2026-10-16:
 
 ## Draft AGENTS.md paragraph
 
-- Calendar (designed, not built) is a Mac app connector (Connections → Connectors): a signed Swift helper reads and writes every calendar synced to the Mac through EventKit once the user connects it and grants Calendars; no Google OAuth or iCal addresses. Per calendar: include, nudges, busy, prep and agent editing; a new calendar is included and busy, with nudges, prep and editing off. Events stay in memory; only calendar choices, Spark's marks and prep briefs are stored, purged after the meeting. Today is a left-bar item, hidden on paired devices. Nudges are island lines that never start, stop or pause work, and focus blocks (found by title) hold the island's chimes and phone pushes while cards still appear. Join opens only `https` links on a fixed host allowlist (an Outlook SafeLinks wrapper only around a Teams link, showing the unwrapped host) in the default browser, never the Browser pane, from 5 minutes before and never on its own; ⌘J is in-app. Meeting prep is a Spark-written, read-only turn on the Spark assistant's session for meetings with two or more people on calendars the user opted in; it sends the title, times, attendee names and notes without links or passcodes to the assistant's provider, shows its cost, is audited, can't show a card and never acts. The morning brief's calendar block is drawn locally, never in its prompt. `spark_calendar` reads (with **Let agents read my calendar** on, off by default) and `spark_calendar_edit` writes (on calendars with **Agents can edit** on) follow the agent's mode as Spark actions do (at once in Auto, Bypass permissions, Approve for me and Full access, and in Accept edits when the user's message asked; otherwise a card with the change before and after), while a delete, a change to an event with other attendees and any write on a shared or unclassified calendar ask in every mode; inviting and RSVP are not offered. Calendar results are untrusted data, a read counts as a work-data read for the send flag, and a write to a synced calendar is a send. A paired device gets only a Web Push "Meeting in 10 min", behind the notify switch and **Meeting alerts on paired devices**, and no calendar route. Nudge, hold and prep settings are in Mac → Notifications. Read `docs/architecture/CALENDAR.md` before changing it.
+- Calendar (designed, not built) is a Mac app connector (Connections → Connectors): a signed Swift helper reads and writes every calendar synced to the Mac through EventKit once the user connects it and grants Calendars, and Google accounts are read through the Google Calendar API; no iCal addresses. Per calendar: include, nudges, busy, prep and agent editing; a new calendar is included and busy, with nudges, prep and editing off. Events stay in memory; only calendar choices, Spark's marks and prep briefs are stored, purged after the meeting. Today is a left-bar item, hidden on paired devices. Nudges are island lines that never start, stop or pause work, and focus blocks (found by title) hold the island's chimes and phone pushes while cards still appear. Join opens only `https` links on a fixed host allowlist (an Outlook SafeLinks wrapper only around a Teams link, showing the unwrapped host) in the default browser, never the Browser pane, from 5 minutes before and never on its own; ⌘J is in-app. Meeting prep is a Spark-written, read-only turn on the Spark assistant's session for meetings with two or more people on calendars the user opted in; it sends the title, times, attendee names and notes without links or passcodes to the assistant's provider, shows its cost, is audited, can't show a card and never acts. The morning brief's calendar block is drawn locally, never in its prompt. `spark_calendar` reads (with **Let agents read my calendar** on, off by default) and `spark_calendar_edit` writes (on calendars with **Agents can edit** on) follow the agent's mode as Spark actions do (at once in Auto, Bypass permissions, Approve for me and Full access, and in Accept edits when the user's message asked; otherwise a card with the change before and after), while a delete, a change to an event with other attendees and any write on a shared or unclassified calendar ask in every mode; inviting and RSVP are not offered. Calendar results are untrusted data, a read counts as a work-data read for the send flag, and a write to a synced calendar is a send. A paired device gets only a Web Push "Meeting in 10 min", behind the notify switch and **Meeting alerts on paired devices**, and no calendar route. Nudge, hold and prep settings are in Mac → Notifications. Read `docs/architecture/CALENDAR.md` before changing it.

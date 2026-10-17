@@ -6,6 +6,7 @@ import { jevAnswers, type StubRequest } from './jev-stub.ts';
 import { REJECTED_KEY_MARKER, STUB_PORT } from './stub-config.ts';
 import { SLACK_LEGACY_USER_SCOPES, fakeSlack } from '../../apps/server/test/fake-slack.ts';
 import { ticketFakes } from './ticket-stub.ts';
+import { handleGoogle, handlesGoogle } from './google-stub.ts';
 
 const anthropicModels = {
   data: [
@@ -119,6 +120,7 @@ const server = createServer((req, res) => {
   if (path?.startsWith('/github/')) {
     return void github.handle(req, res, (req.url ?? '').slice('/github'.length));
   }
+  if (path && handlesGoogle(path)) return void handleGoogle(req, res, path);
   if (path === '/slack-test/reset') {
     slack = fakeSlack();
     return send(res, 200, { ok: true });

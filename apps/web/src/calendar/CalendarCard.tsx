@@ -10,7 +10,8 @@ import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
 import { CalendarAccounts } from './CalendarAccounts.tsx';
-import { connectorLine, type TodayState } from './today-model.ts';
+import { GoogleAccounts } from './GoogleAccounts.tsx';
+import { connectorLine, macState } from './today-model.ts';
 import { useCalendarActions, useCalendarStatus, useOpenCalendarSettings } from './use-calendar.ts';
 
 export const AGENTS_READ_LABEL = 'Let agents read my calendar';
@@ -27,7 +28,7 @@ function ErrorLine({ error }: { error: Error | null }) {
 function ConnectBody() {
   const { connect } = useCalendarActions();
   return (
-    <div className="cx-body">
+    <>
       <div className="cal-connect">
         <b>Connect macOS Calendar</b>
         <ol>
@@ -47,14 +48,14 @@ function ConnectBody() {
           {connect.isPending ? 'Waiting for macOS…' : 'Connect'}
         </button>
       </div>
-    </div>
+    </>
   );
 }
 
 function DeniedBody() {
   const open = useOpenCalendarSettings();
   return (
-    <div className="cx-body">
+    <>
       <p>
         <b>Spark Outpost can’t read your calendars.</b> Turn on Spark Outpost in System Settings →
         Privacy &amp; Security → Calendars, then come back; this card checks again when the window
@@ -66,18 +67,16 @@ function DeniedBody() {
           Open Calendar settings
         </button>
       </div>
-    </div>
+    </>
   );
 }
 
 function HelperBody() {
   return (
-    <div className="cx-body">
-      <p>
-        <b>Spark Outpost can’t start its calendar helper.</b> From source, build it with{' '}
-        <code>pnpm desktop:calendar</code>. In a release, reinstall Spark Outpost.
-      </p>
-    </div>
+    <p>
+      <b>Spark Outpost can’t start its calendar helper.</b> From source, build it with{' '}
+      <code>pnpm desktop:calendar</code>. In a release, reinstall Spark Outpost.
+    </p>
   );
 }
 
@@ -118,8 +117,8 @@ function withOverrides(
   }));
 }
 
-function ConnectedBody({ status }: { status: CalendarStatus }) {
-  const { choose, disconnect } = useCalendarActions();
+function useChoiceOverrides() {
+  const { choose } = useCalendarActions();
   const [overrides, setOverrides] = useState<Overrides>({});
   const change = (key: string, patch: CalendarChoicePatch) => {
     setOverrides((current) => ({ ...current, [key]: { ...current[key], ...patch } }));
@@ -133,8 +132,19 @@ function ConnectedBody({ status }: { status: CalendarStatus }) {
       },
     );
   };
+  return { overrides, change, error: choose.error };
+}
+
+interface MacProps {
+  status: CalendarStatus;
+  accounts: readonly CalendarAccount[];
+  onChange: (key: string, patch: CalendarChoicePatch) => void;
+}
+
+function MacConnected({ status, accounts, onChange }: MacProps) {
+  const { disconnect } = useCalendarActions();
   return (
-    <div className="cx-body">
+    <>
       <p>
         Every account in System Settings → Internet Accounts, read on this Mac. Nudges come from
         calendars with Use for nudges on; Counts as busy shapes your free time.
@@ -144,9 +154,7 @@ function ConnectedBody({ status }: { status: CalendarStatus }) {
           {status.notice}
         </p>
       )}
-      <CalendarAccounts accounts={withOverrides(status.accounts, overrides)} onChange={change} />
-      <ErrorLine error={choose.error} />
-      <AgentsRead />
+      <CalendarAccounts accounts={accounts} onChange={onChange} />
       <ErrorLine error={disconnect.error} />
       <div className="cx-actions">
         <button
@@ -155,18 +163,38 @@ function ConnectedBody({ status }: { status: CalendarStatus }) {
           disabled={disconnect.isPending}
           onClick={() => disconnect.mutate()}
         >
-          Disconnect
+          Disconnect macOS Calendar
         </button>
       </div>
-    </div>
+    </>
   );
 }
 
-function bodyFor(state: TodayState, status: CalendarStatus): ReactNode {
-  if (state === 'helper') return <HelperBody />;
-  if (state === 'denied') return <DeniedBody />;
-  if (state === 'connect') return <ConnectBody />;
-  return <ConnectedBody status={status} />;
+function MacSection(props: MacProps) {
+  const state = macState(props.status);
+  return (
+    <section className="cal-source" aria-labelledby="cal-mac-h">
+      <h3 id="cal-mac-h">macOS Calendar</h3>
+      {state === 'helper' && <HelperBody />}
+      {state === 'denied' && <DeniedBody />}
+      {state === 'connect' && <ConnectBody />}
+      {state === 'ready' && <MacConnected {...props} />}
+    </section>
+  );
+}
+
+function CardBody({ status, connected }: { status: CalendarStatus; connected: boolean }) {
+  const { overrides, change, error } = useChoiceOverrides();
+  const accounts = withOverrides(status.accounts, overrides);
+  const mac = accounts.filter((account) => account.kind !== 'google');
+  return (
+    <div className="cx-body">
+      <MacSection status={status} accounts={mac} onChange={change} />
+      <GoogleAccounts status={status} accounts={accounts} onChange={change} />
+      <ErrorLine error={error} />
+      {connected && <AgentsRead />}
+    </div>
+  );
 }
 
 interface CalendarCardProps {
@@ -191,7 +219,7 @@ export function CalendarCard({ icon, open, onToggle }: CalendarCardProps) {
       open={open}
       onToggle={onToggle}
     >
-      {bodyFor(line.state, status)}
+      <CardBody status={status} connected={connected} />
     </ConnectorCard>
   );
 }

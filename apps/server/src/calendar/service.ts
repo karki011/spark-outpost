@@ -13,15 +13,19 @@ import {
   type CalendarDay,
   type CalendarEvent,
   type CalendarEventDetail,
+  type CalendarGoogleStatus,
   type CalendarHelperState,
   type CalendarNow,
   type CalendarStatus,
 } from '@spark-outpost/contracts';
 import { withTransaction, type Db } from '../persistence/db.ts';
 import type { CalendarHost } from './host-client.ts';
+import { googleSourceId } from './google/map.ts';
+import type { GoogleSource } from './google/source.ts';
 import { planNudges, type PlannerChat } from './planner.ts';
 import { lostNotice, rematchCalendars } from './rematch.ts';
 import {
+  EVENTKIT_OWNER,
   calendarConnection,
   calendarMarks,
   lockChoices,
@@ -34,8 +38,16 @@ export interface CalendarDeps {
   db: Db;
   workspaceId: string;
   host: CalendarHost | null;
+  google?: GoogleSource | null;
   now?: () => number;
 }
+
+const NO_GOOGLE: CalendarGoogleStatus = {
+  available: false,
+  testing: false,
+  accounts: [],
+  signIn: { status: 'idle', authorizeUrl: null, expiresAt: null, message: null },
+};
 
 interface Reading {
   connected: boolean;
@@ -45,6 +57,7 @@ interface Reading {
 
 export interface CalendarState {
   reading: Reading;
+  active: boolean;
   choices: CalendarChoice[];
   events: CalendarEvent[];
   truncated: boolean;
@@ -96,62 +109,106 @@ function readable(reading: Reading): boolean {
 }
 
 export async function syncCalendars(deps: CalendarDeps): Promise<CalendarChoice[]> {
-  if (!deps.host) return savedChoices(deps.db, deps.workspaceId);
+  if (!deps.host) return savedChoices(deps.db, deps.workspaceId, EVENTKIT_OWNER);
   const { calendars } = await deps.host.request({ op: 'calendars' });
   await withTransaction(deps.db, async (client) => {
-    await lockChoices(client, deps.workspaceId);
-    const match = rematchCalendars(await savedChoices(client, deps.workspaceId), calendars);
+    await lockChoices(client, deps.workspaceId, EVENTKIT_OWNER);
+    const saved = await savedChoices(client, deps.workspaceId, EVENTKIT_OWNER);
+    const match = rematchCalendars(saved, calendars);
     if (!match.changed) return;
-    await replaceChoices(client, deps.workspaceId, match.writes);
+    await replaceChoices(client, deps.workspaceId, match.writes, EVENTKIT_OWNER);
     const notice = lostNotice(match.lost);
     if (notice) await setNotice(client, deps.workspaceId, notice);
   });
-  return savedChoices(deps.db, deps.workspaceId);
+  return savedChoices(deps.db, deps.workspaceId, EVENTKIT_OWNER);
+}
+
+async function googleChoices(deps: CalendarDeps): Promise<CalendarChoice[]> {
+  if (!deps.google) return [];
+  const all = await savedChoices(deps.db, deps.workspaceId);
+  return all.filter((choice) => choice.sourceKind === 'google');
+}
+
+function googleStatus(deps: CalendarDeps): CalendarGoogleStatus {
+  return deps.google?.status() ?? NO_GOOGLE;
 }
 
 export async function calendarStatus(deps: CalendarDeps): Promise<CalendarStatus> {
+  await deps.google?.reconcile();
   const connection = await calendarConnection(deps.db, deps.workspaceId);
   const reading = await readHost(deps);
-  const choices = readable(reading)
+  const macChoices = readable(reading)
     ? await syncCalendars(deps)
-    : await savedChoices(deps.db, deps.workspaceId);
+    : await savedChoices(deps.db, deps.workspaceId, EVENTKIT_OWNER);
   const after = await calendarConnection(deps.db, deps.workspaceId);
+  const google = googleStatus(deps);
+  const googleAccounts = accountsOf(await googleChoices(deps));
+  const signedIn = google.accounts.map((account) => googleAccountOf(account, googleAccounts));
   return {
     supported: deps.host !== null,
     helper: reading.helper,
     authorization: reading.authorization,
     connected: connection.connected,
-    accounts: connection.connected ? accountsOf(choices) : [],
+    accounts: [...(connection.connected ? accountsOf(macChoices) : []), ...signedIn],
     notice: after.notice,
     settings: connection.settings,
+    google,
   };
 }
 
+function googleAccountOf(
+  account: CalendarGoogleStatus['accounts'][number],
+  withCalendars: readonly CalendarAccount[],
+): CalendarAccount {
+  const id = googleSourceId(account.id);
+  return (
+    withCalendars.find((candidate) => candidate.id === id) ?? {
+      id,
+      title: account.email,
+      kind: 'google',
+      calendars: [],
+    }
+  );
+}
+
+async function macEvents(deps: CalendarDeps, reading: Reading) {
+  if (!readable(reading) || !deps.host) return { choices: [], events: [], truncated: false };
+  const choices = await syncCalendars(deps);
+  const window = await deps.host.request({ op: 'window' });
+  return { choices, events: window.events, truncated: window.truncated };
+}
+
 export async function calendarState(deps: CalendarDeps): Promise<CalendarState> {
+  await deps.google?.reconcile();
   const now = deps.now?.() ?? Date.now();
   const connection = await calendarConnection(deps.db, deps.workspaceId);
   const reading = connection.connected
     ? await readHost(deps)
     : { connected: false, authorization: null, helper: null };
-  if (!readable(reading) || !deps.host) {
-    return {
-      reading,
-      choices: [],
-      events: [],
-      truncated: false,
-      settings: connection.connected ? connection.settings : CALENDAR_DEFAULT_SETTINGS,
-    };
+  const mac = await macEvents(deps, reading);
+  const google = deps.google?.window() ?? { events: [], truncated: false };
+  const googleReady = deps.google?.ready() ?? false;
+  const choices = [...mac.choices, ...(googleReady ? await googleChoices(deps) : [])];
+  const active = readable(reading) || googleReady;
+  const settings = active || connection.connected ? connection.settings : CALENDAR_DEFAULT_SETTINGS;
+  if (!active) {
+    return { reading, active, choices: [], events: [], truncated: false, settings };
   }
-  const choices = await syncCalendars(deps);
-  const window = await deps.host.request({ op: 'window' });
   const marks = await calendarMarks(deps.db, deps.workspaceId, new Date(now));
   const events = mergeEvents({
-    events: window.events,
+    events: [...mac.events, ...google.events],
     calendars: choices,
     focusNames: connection.settings.focusNames,
     marks,
   });
-  return { reading, choices, events, truncated: window.truncated, settings: connection.settings };
+  return {
+    reading,
+    active,
+    choices,
+    events,
+    truncated: mac.truncated || google.truncated,
+    settings,
+  };
 }
 
 const WEEK_DAYS = 7;
@@ -203,7 +260,7 @@ export function calendarNow(
   chats: readonly PlannerChat[],
   now: number,
 ): CalendarNow {
-  const active = readable(state.reading);
+  const active = state.active;
   const plan = planNudges(state.events, chats, state.settings, now);
   return {
     active,
@@ -217,5 +274,5 @@ export async function eventDetail(
   occurrence: { eventId: string; start: string },
 ): Promise<CalendarEventDetail> {
   const detail = await host.request({ op: 'event', ...occurrence });
-  return { title: detail.event.title, notes: detail.notes };
+  return { title: detail.event.title, notes: detail.notes, link: null };
 }

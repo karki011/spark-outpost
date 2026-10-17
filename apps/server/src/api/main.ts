@@ -47,6 +47,8 @@ import { pushKeys } from '../remote/push-keys.ts';
 import { startPushNotifier } from '../remote/push-notifier.ts';
 import { connectDesktopCalendar } from '../calendar/host-client.ts';
 import { startCalendarTicker, type CalendarTicker } from '../calendar/ticker.ts';
+import { googleClientConfig } from '../calendar/google/config.ts';
+import { createGoogleSource } from '../calendar/google/source.ts';
 import { generateVapidKeys, webPushSend } from '../remote/push-send.ts';
 import { slackSignInConfig } from '../slack/sign-in-config.ts';
 import { startSlackSocket } from '../slack/socket.ts';
@@ -101,6 +103,10 @@ const slackNotifier = startSlackNotifier(slackDeps, {
 });
 const remotePushKeys = pushKeys(secrets, generateVapidKeys);
 const desktopCalendar = connectDesktopCalendar(process.env, process);
+const googleCalendar = desktopCalendar
+  ? createGoogleSource({ db, workspaceId, secrets, fetch, client: googleClientConfig(config) })
+  : null;
+await googleCalendar?.start();
 let calendarTicker: CalendarTicker | null = null;
 const pushNotifier = startPushNotifier({
   db,
@@ -111,7 +117,13 @@ const pushNotifier = startPushNotifier({
   held: () => calendarTicker?.held() ?? false,
 });
 calendarTicker = desktopCalendar
-  ? startCalendarTicker({ db, workspaceId, host: desktopCalendar, push: pushNotifier })
+  ? startCalendarTicker({
+      db,
+      workspaceId,
+      host: desktopCalendar,
+      google: googleCalendar,
+      push: pushNotifier,
+    })
   : null;
 const slackSocket = startSlackSocket({
   ...slackDeps,
@@ -274,6 +286,7 @@ const { app, reconcileRemote } = createAppParts({
   slackSocket,
   pushKeys: remotePushKeys,
   calendarHost: desktopCalendar,
+  googleCalendar,
   ...(config.AGENT_RUNTIME === 'fake' && config.PAIRING_TEST_ATTEMPTS_PER_MINUTE
     ? { pairingAttemptsPerMinute: config.PAIRING_TEST_ATTEMPTS_PER_MINUTE }
     : {}),
@@ -334,6 +347,7 @@ const shutdown = async (keepTerminals = false) => {
   slackSocket.stop();
   await slackNotifier.stop();
   calendarTicker?.stop();
+  googleCalendar?.stop();
   await pushNotifier.stop();
   await outposts.close();
   server.close();

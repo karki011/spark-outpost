@@ -30,6 +30,7 @@ export const calendarSourceKindSchema = z.enum([
   'mobileme',
   'subscribed',
   'birthdays',
+  'google',
   'other',
 ]);
 export type CalendarSourceKind = z.infer<typeof calendarSourceKindSchema>;

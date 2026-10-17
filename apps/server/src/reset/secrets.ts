@@ -1,7 +1,13 @@
 import { connectableIdSchema, ticketSourceIdSchema } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import { signInRefs } from '../persistence/browser-sign-ins.ts';
-import { SLACK_SECRET_IDS, SLACK_SIGN_IN_SECRET, type SecretId } from '../setup/secrets.ts';
+import { googleSubjects } from '../calendar/google/store.ts';
+import {
+  SLACK_SECRET_IDS,
+  SLACK_SIGN_IN_SECRET,
+  googleCalendarSecret,
+  type SecretId,
+} from '../setup/secrets.ts';
 
 export async function storedSecretIds(db: Queryable, keepApiKeys: boolean): Promise<SecretId[]> {
   const { rows } = await db.query<{ id: string }>('SELECT id FROM mcp_servers ORDER BY id');
@@ -17,5 +23,6 @@ export async function storedSecretIds(db: Queryable, keepApiKeys: boolean): Prom
     SLACK_SIGN_IN_SECRET,
     ...rows.map((row) => `mcp:${row.id}` as const),
     ...signIns,
+    ...(await googleSubjects(db)).map(googleCalendarSecret),
   ];
 }

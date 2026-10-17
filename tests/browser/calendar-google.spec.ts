@@ -1,0 +1,171 @@
+import { rmSync, writeFileSync } from 'node:fs';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test, type Page } from '@playwright/test';
+import { GOOGLE_TESTING_LINE, calendarStatusSchema } from '../../packages/contracts/src/index.ts';
+import { resetTestDatabase } from './database.ts';
+import { readCalendarClock } from './fake-calendar-clock.ts';
+import { GOOGLE_STUB_EMAIL } from './google-stub.ts';
+import { FAKE_CALENDAR_STATE, STUB_PORT } from './stub-config.ts';
+
+test.skip(process.env.SPARK_FAKE_CALENDAR !== '1', 'needs SPARK_FAKE_CALENDAR=1');
+test.describe.configure({ mode: 'serial' });
+
+const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
+const MINUTE = 60_000;
+const fakeNow = () => Date.now() + readCalendarClock(FAKE_CALENDAR_STATE);
+let anchor = 0;
+
+const card = (page: Page) => page.locator('[data-connector="calendar"]');
+const today = (page: Page) => page.getByRole('main', { name: 'Today' });
+
+async function status(page: Page) {
+  const response = await page.request.get('/api/calendar/status');
+  return calendarStatusSchema.parse(await response.json());
+}
+
+async function forgetGoogle(page: Page) {
+  for (const account of (await status(page)).google.accounts) {
+    await page.request.delete(`/api/calendar/google/accounts/${account.id}`);
+  }
+}
+
+async function seedGoogle(events: object[]) {
+  await fetch(`${STUB_URL}/google-test/events`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(events),
+  });
+}
+
+const iso = (minutes: number) => new Date(anchor + minutes * MINUTE).toISOString();
+
+async function openCard(page: Page) {
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Today/ })
+    .click();
+  await today(page).getByRole('button', { name: 'Connect calendar' }).click();
+  await expect(card(page)).toBeVisible();
+}
+
+async function addGoogle(page: Page) {
+  const popup = page.waitForEvent('popup');
+  await card(page).getByRole('button', { name: 'Add Google account' }).click();
+  const signIn = await popup;
+  await expect(signIn.getByRole('heading', { name: 'You can close this tab' })).toBeVisible();
+  await signIn.close();
+  await expect(card(page).getByRole('region', { name: GOOGLE_STUB_EMAIL })).toBeVisible();
+}
+
+test.beforeEach(async ({ page }) => {
+  anchor = Math.floor(fakeNow() / MINUTE) * MINUTE;
+  writeFileSync(FAKE_CALENDAR_STATE, JSON.stringify({ authorization: 'notDetermined', anchor }));
+  await resetTestDatabase({ onboarded: true });
+  await forgetGoogle(page);
+  await fetch(`${STUB_URL}/google-test/reset`);
+  if (readCalendarClock(FAKE_CALENDAR_STATE) !== 0) {
+    await page.clock.install({ time: new Date(fakeNow()) });
+  }
+});
+
+test.afterEach(async ({ page }) => {
+  await forgetGoogle(page);
+});
+
+test.afterAll(() => {
+  rmSync(FAKE_CALENDAR_STATE, { force: true });
+});
+
+test('adds a Google account in the default browser and shows its events on Today', async ({
+  page,
+}) => {
+  await seedGoogle([
+    {
+      id: 'review',
+      iCalUID: 'review@google.com',
+      summary: 'Design review',
+      start: { dateTime: iso(30) },
+      end: { dateTime: iso(60) },
+      hangoutLink: 'https://meet.google.com/abc-defg-hij',
+      attendees: [{ self: true, responseStatus: 'accepted' }, { responseStatus: 'accepted' }],
+    },
+  ]);
+  await openCard(page);
+  await expect(card(page)).toContainText(GOOGLE_TESTING_LINE);
+  await addGoogle(page);
+  await expect(card(page)).toContainText('1 Google account · 1 of 1 calendar');
+  await expect(
+    card(page).getByRole('checkbox', { name: `Include ${GOOGLE_STUB_EMAIL}` }),
+  ).toBeChecked();
+  await expect(card(page).getByRole('button', { name: 'Connect', exact: true })).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(card(page)).toBeHidden();
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Today/ })
+    .click();
+  const review = today(page).getByRole('button', { name: /^Design review, / });
+  await expect(review).toBeVisible();
+  await review.click();
+  await expect(page.getByRole('button', { name: /Open in Google Calendar/ })).toBeVisible();
+});
+
+test('shows an event synced to macOS Calendar and Google once', async ({ page }) => {
+  await seedGoogle([
+    {
+      id: 'standup',
+      iCalUID: 'uid-standup',
+      summary: 'Standup',
+      start: { dateTime: iso(4) },
+      end: { dateTime: iso(19) },
+    },
+  ]);
+  await openCard(page);
+  await card(page).getByRole('button', { name: 'Connect', exact: true }).click();
+  await addGoogle(page);
+  const now = new Date(fakeNow());
+  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const day = await (await page.request.get(`/api/calendar/day?date=${date}`)).json();
+  const standups = (day.events as { title: string; also: string[] }[]).filter(
+    (event) => event.title === 'Standup',
+  );
+  expect(standups).toHaveLength(1);
+  expect(standups[0]!.also).toHaveLength(1);
+});
+
+test('asks to sign in again when Google ends the sign-in, and Disconnect revokes it', async ({
+  page,
+}) => {
+  await openCard(page);
+  await addGoogle(page);
+  await fetch(`${STUB_URL}/google-test/expire`);
+  const include = card(page).getByRole('checkbox', { name: `Include ${GOOGLE_STUB_EMAIL}` });
+  await include.uncheck();
+  await include.check();
+  await expect(
+    card(page).getByRole('button', { name: 'Sign in again', exact: true }),
+  ).toBeVisible();
+  await expect(card(page)).toContainText('Google sign-in ran out');
+
+  await card(page)
+    .getByRole('button', { name: `Disconnect ${GOOGLE_STUB_EMAIL}` })
+    .click();
+  await expect(card(page).getByRole('region', { name: GOOGLE_STUB_EMAIL })).toHaveCount(0);
+  const revoked = (await (await fetch(`${STUB_URL}/google-test/revoked`)).json()) as {
+    issued: number;
+    revoked: number;
+  };
+  expect(revoked.issued).toBe(revoked.revoked);
+  expect((await status(page)).google.accounts).toEqual([]);
+});
+
+test('has no serious accessibility problems in the Calendar card with Google', async ({ page }) => {
+  await openCard(page);
+  await addGoogle(page);
+  const results = await new AxeBuilder({ page }).include('[data-connector="calendar"]').analyze();
+  expect(
+    results.violations.filter((item) => ['serious', 'critical'].includes(item.impact ?? '')),
+  ).toEqual([]);
+});

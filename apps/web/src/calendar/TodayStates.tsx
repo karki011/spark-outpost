@@ -59,7 +59,7 @@ export function TodayStatePage({ state }: { state: Exclude<TodayState, 'ready'> 
   return (
     <StatePage title="See your day next to your chats">
       <ul className="td-benefits">
-        <li>Your meetings beside your chats, from every calendar on this Mac.</li>
+        <li>Your meetings beside your chats, from macOS Calendar and Google Calendar.</li>
         <li>A nudge before each one with what needs you, and Join in one click.</li>
         <li>Quiet focus time: Spark Island holds its chimes until you’re done.</li>
       </ul>

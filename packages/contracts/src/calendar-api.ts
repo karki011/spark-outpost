@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { calendarChoiceSchema, calendarEventSchema, dayShapeSchema } from './calendar.ts';
 import { calendarHelperStateSchema } from './calendar-bridge.ts';
 import { calendarAuthorizationSchema, calendarSourceKindSchema } from './calendar-helper.ts';
+import { calendarGoogleStatusSchema } from './calendar-google.ts';
 
 export const CALENDAR_BEFORE_MINUTES = [5, 10, 15] as const;
 export const CALENDAR_WRAP_UP_MINUTES = [0, 15, 30] as const;
@@ -59,6 +60,7 @@ export const calendarStatusSchema = z.object({
   accounts: z.array(calendarAccountSchema),
   notice: z.string().max(500).nullable(),
   settings: calendarSettingsSchema,
+  google: calendarGoogleStatusSchema,
 });
 export type CalendarStatus = z.infer<typeof calendarStatusSchema>;
 
@@ -160,5 +162,6 @@ export type CalendarOccurrence = z.infer<typeof calendarOccurrenceSchema>;
 export const calendarEventDetailSchema = z.object({
   title: z.string().max(1_000),
   notes: z.string().max(20_000),
+  link: z.url().nullable(),
 });
 export type CalendarEventDetail = z.infer<typeof calendarEventDetailSchema>;

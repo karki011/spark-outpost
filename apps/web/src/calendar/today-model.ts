@@ -26,12 +26,20 @@ export function includedCalendars(status: CalendarStatus): number {
   );
 }
 
-export function todayState(status: CalendarStatus): TodayState {
-  if (!status.supported) return 'web';
+export function macState(status: CalendarStatus): TodayState {
   if (status.helper === 'missing' || status.helper === 'failed') return 'helper';
   const access = status.authorization;
   if (access === 'denied' || access === 'restricted' || access === 'writeOnly') return 'denied';
   if (!status.connected) return 'connect';
+  return 'ready';
+}
+
+export function todayState(status: CalendarStatus): TodayState {
+  if (!status.supported) return 'web';
+  if (status.google.accounts.length === 0) {
+    const mac = macState(status);
+    if (mac !== 'ready') return mac;
+  }
   if (includedCalendars(status) === 0) return 'none';
   return 'ready';
 }
@@ -47,9 +55,15 @@ export function connectorLine(status: CalendarStatus): { state: TodayState; text
   const state = todayState(status);
   if (state !== 'ready' && state !== 'none') return { state, text: STATE_LINE[state] };
   const total = status.accounts.reduce((sum, account) => sum + account.calendars.length, 0);
-  const accounts = countLabel(status.accounts.length, 'account');
-  const text = `macOS Calendar · ${accounts} · ${includedCalendars(status)} of ${countLabel(total, 'calendar')}`;
-  return { state, text };
+  const macAccounts = status.accounts.filter((account) => account.kind !== 'google').length;
+  const google = status.google.accounts;
+  const parts = [
+    ...(status.connected ? [`macOS Calendar · ${countLabel(macAccounts, 'account')}`] : []),
+    ...(google.length > 0 ? [countLabel(google.length, 'Google account')] : []),
+    `${includedCalendars(status)} of ${countLabel(total, 'calendar')}`,
+    ...(google.some((account) => account.state === 'sign_in_again') ? ['Sign in again'] : []),
+  ];
+  return { state, text: parts.join(' · ') };
 }
 
 export function upcomingMeetings(events: readonly CalendarEvent[], now: number): CalendarEvent[] {

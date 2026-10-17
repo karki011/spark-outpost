@@ -78,6 +78,7 @@ const RESET_TABLES = [
   'outposts',
   'calendar_connection',
   'calendar_calendars',
+  'calendar_google_accounts',
   'calendar_marks',
 ];
 const LEFTOVER_RUN_WAIT_MS = 5000;
