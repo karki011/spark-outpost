@@ -14,7 +14,13 @@ import { getRun } from '../src/persistence/runs.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
 import { planUsage, recordPlanReport } from '../src/usage/plan-limits.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
-import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
+import {
+  createTestApp,
+  installedClis,
+  jsonResponse,
+  LOCAL_HEADERS,
+  ORIGIN,
+} from './app-support.ts';
 import { FAKE_ACP_LAUNCH as launch } from './fake-acp-support.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 import { connectCliProvider, createTestDb, eventually, type TestDb } from './support.ts';
@@ -144,6 +150,31 @@ describe('stored plan readings', { timeout: 30_000 }, () => {
     await connectCliProvider(t, 'claude');
     await recordAccount(t.db, t.workspaceId, 'claude', MAX);
     expect(await shown()).toEqual([]);
+    const { rows } = await t.db.query(
+      'SELECT 1 FROM provider_plan_limits UNION ALL SELECT 1 FROM provider_extra_usage',
+    );
+    expect(rows).toEqual([]);
+  });
+
+  it('forgets the readings when the provider is verified again, as another account may have signed in', async () => {
+    await recordPlanReport(t.db, t.workspaceId, 'claude', {
+      windows: [reading('seven_day', 0.6, new Date(Date.now() + 24 * HOUR))],
+      extraUsage: null,
+    });
+    const app = createTestApp(t, {
+      runCommand: installedClis,
+      fetch: async (input) => {
+        const url = (input as Request).url;
+        if (url.endsWith('/v1/messages')) return jsonResponse(200, { content: [] });
+        return jsonResponse(200, { data: [{ id: 'claude-sonnet-5', display_name: 'Sonnet 5' }] });
+      },
+    });
+    await request(app)
+      .post('/api/providers/claude/verify')
+      .set(LOCAL_HEADERS)
+      .set('Origin', ORIGIN)
+      .send({ method: 'api_key', apiKey: `sk-ant-api03-${'x'.repeat(24)}4f2a` })
+      .expect(200);
     const { rows } = await t.db.query(
       'SELECT 1 FROM provider_plan_limits UNION ALL SELECT 1 FROM provider_extra_usage',
     );
