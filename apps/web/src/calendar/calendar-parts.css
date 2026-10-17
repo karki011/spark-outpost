@@ -6,8 +6,19 @@
   background: var(--cal-color, var(--line-strong));
 }
 
+.cal-clip {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  vertical-align: bottom;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .cal-chip {
   flex: none;
+  max-width: 16rem;
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 999px;

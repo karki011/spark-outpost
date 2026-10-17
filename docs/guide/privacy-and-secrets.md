@@ -19,7 +19,7 @@ Your chats, settings and code stay on your computer; keys live in your keychain.
 | **Apple or Google push**              | Encrypted notifications; sender contact.                                             | **Notify this device**                                           |
 | **Slack**                             | Notifications, confirmed posts; never direct messages.                               | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
 | **Hugging Face**                      | The speech model, once.                                                              | [Voice](voice.md)                                                |
-| **Meeting services**                  | The meeting you **Join**.                                                            | [See your day](calendar.md)                                      |
+| **Meeting services, Google**          | The meeting you **Join**; calendar reads.                                            | [See your day](calendar.md)                                      |
 | **Spark Outpost team**                | Anonymous heartbeat.                                                                 | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
 
 ## Where your keys live
@@ -44,4 +44,4 @@ After private reads, Spark notes [sends elsewhere](approvals.md#sending-data-out
 
 ## When you reset
 
-**Settings → Reset** removes GitHub, ticket, Slack and MCP tokens and saved sign-ins. **Keep my API keys** keeps provider and Jev keys. See [Start over](trouble-setup-and-reset.md#start-over).
+**Settings → Reset** removes connector and MCP tokens and saved sign-ins. **Keep my API keys** keeps provider and Jev keys. See [Start over](trouble-setup-and-reset.md#start-over).

@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CALENDAR_SERVICE_NAMES,
+  isGoogleEventId,
   joinOpen,
   spanOf,
   type CalendarChoice,
@@ -10,6 +11,7 @@ import {
 } from '@spark-outpost/contracts';
 import { BellIcon, BellOffIcon, ChatPlusIcon, ExternalLinkIcon } from '../ui/icons.tsx';
 import { calendarApi, calendarKeys } from './calendar-api.ts';
+import { CalendarName } from './CalendarName.tsx';
 import { dateOf, span } from './calendar-format.ts';
 import { joinHint, openJoin } from './today-model.ts';
 
@@ -93,7 +95,16 @@ export function EventPanel({
 }: EventPanelProps) {
   const mark = useMark(event);
   const occurrence = { eventId: event.id, start: event.start };
-  const openInCalendar = useMutation({ mutationFn: () => calendarApi.open(occurrence) });
+  const google = isGoogleEventId(event.id);
+  const openInCalendar = useMutation({
+    mutationFn: async () => {
+      if (!google) return calendarApi.open(occurrence);
+      const { link } = await calendarApi.detail(occurrence);
+      if (!link) throw new Error('Google gave no link for this event.');
+      openJoin(link);
+      return { opened: true };
+    },
+  });
   const startChat = useMutation({
     mutationFn: () => calendarApi.detail(occurrence),
     onSuccess: (detail) => {
@@ -108,8 +119,7 @@ export function EventPanel({
   const ended = end <= now;
   const names = [event.calendarKey, ...event.also]
     .map((key) => calendars.get(key)?.title)
-    .filter(Boolean)
-    .join(' and ');
+    .filter((title): title is string => Boolean(title));
   const weekday = dateOf(date).toLocaleDateString(undefined, { weekday: 'long' });
   const people = event.attendeeCount > 1 ? ` · ${event.attendeeCount} people` : '';
   const error = mark.error ?? openInCalendar.error ?? startChat.error;
@@ -117,14 +127,20 @@ export function EventPanel({
     <section id={id} className="hpanel td-panel" aria-labelledby={`${id}-h`}>
       <h2 id={`${id}-h`}>{event.title}</h2>
       <p className="td-panel-meta">
-        {weekday} {span(start, end)} · {names}
+        {weekday} {span(start, end)} ·{' '}
+        {names.map((name, index) => (
+          <Fragment key={`${name}-${index}`}>
+            {index > 0 && ' and '}
+            <CalendarName name={name} className="td-panel-cal" />
+          </Fragment>
+        ))}
         {people}
       </p>
       <JoinRow event={event} isToday={isToday} now={now} />
       <Act
         icon={<ExternalLinkIcon />}
-        label="Open in Calendar"
-        note="Calendar.app"
+        label={google ? 'Open in Google Calendar' : 'Open in Calendar'}
+        note={google ? 'Your browser' : 'Calendar.app'}
         onClick={() => openInCalendar.mutate()}
       />
       <Act

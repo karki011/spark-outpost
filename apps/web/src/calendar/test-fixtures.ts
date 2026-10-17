@@ -82,6 +82,12 @@ export function status(overrides: Partial<CalendarStatus> = {}): CalendarStatus 
     ],
     notice: null,
     settings: CALENDAR_DEFAULT_SETTINGS,
+    google: {
+      available: true,
+      testing: true,
+      accounts: [],
+      signIn: { status: 'idle', authorizeUrl: null, expiresAt: null, message: null },
+    },
     ...overrides,
   };
 }

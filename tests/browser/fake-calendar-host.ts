@@ -20,6 +20,7 @@ interface FakeState {
   grant?: CalendarAuthorization;
   helper?: 'ready' | 'missing' | 'failed';
   anchor?: number;
+  familyTitle?: string;
 }
 
 const listeners = new Set<Listener>();
@@ -189,7 +190,16 @@ function answer(request: CalendarHostRequest): unknown {
     return { authorization: granted };
   }
   if (authorization() !== 'fullAccess') return failure('not_authorized', 'No calendar access.');
-  if (request.op === 'calendars') return { calendars: CALENDARS };
+  if (request.op === 'calendars') {
+    const familyTitle = state().familyTitle;
+    return {
+      calendars: CALENDARS.map((calendar) =>
+        familyTitle && calendar.id === 'fake-family'
+          ? { ...calendar, title: familyTitle }
+          : calendar,
+      ),
+    };
+  }
   if (request.op === 'window') return window();
   if (request.op === 'open') return { opened: true };
   const found = events().find((item) => item.id === request.eventId);

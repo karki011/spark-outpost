@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { seedModelStats } from '../src/model-cards/ingest.ts';
 import { getSetupState } from '../src/persistence/setup.ts';
 import { stopActiveWork } from '../src/reset/stop-work.ts';
-import { memorySecretStore, type SecretId } from '../src/setup/secrets.ts';
+import { saveGoogleAccount } from '../src/calendar/google/store.ts';
+import { googleCalendarSecret, memorySecretStore, type SecretId } from '../src/setup/secrets.ts';
 import { postReset, recordingStore, rowCounts, seedAppData, seedRun } from './reset-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
@@ -100,6 +101,17 @@ describe('POST /api/reset', () => {
       ].sort(),
     );
     for (const id of secrets.deleted) expect(await secrets.get(id)).toBeNull();
+  });
+
+  it('removes Google Calendar sign-ins, found through their accounts', async () => {
+    await saveGoogleAccount(t.db, t.workspaceId, { subject: '42', email: 'me@example.com' });
+    const secrets = recordingStore(memorySecretStore());
+    await secrets.set(googleCalendarSecret('42'), '1//refresh');
+
+    await postReset(t, secrets, { keepApiKeys: true });
+
+    expect(secrets.deleted).toEqual([googleCalendarSecret('42')]);
+    expect(await secrets.get(googleCalendarSecret('42'))).toBeNull();
   });
 
   it('keeps provider API keys when asked and still removes the other tokens', async () => {

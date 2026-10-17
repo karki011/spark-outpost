@@ -6,6 +6,28 @@
   line-height: 1.5;
 }
 
+.cal-source {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-source + .cal-source {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.cal-source h3 {
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.cal-google-acct {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .cal-notice {
   padding: 8px 10px;
   border-radius: var(--r-sm);
@@ -68,10 +90,13 @@
 }
 
 .cal-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-size: 13.5px;
+}
+
+.cal-acct-h b {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .cal-mini {

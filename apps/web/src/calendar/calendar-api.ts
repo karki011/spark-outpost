@@ -5,6 +5,7 @@ import {
   calendarNowSchema,
   calendarSettingsSchema,
   calendarStatusSchema,
+  googleSignInFlowSchema,
   type CalendarChoicePatch,
   type CalendarDay,
   type CalendarEventDetail,
@@ -14,6 +15,7 @@ import {
   type CalendarSettings,
   type CalendarSettingsPatch,
   type CalendarStatus,
+  type GoogleSignInFlow,
 } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
 
@@ -22,7 +24,10 @@ export const calendarKeys = {
   status: ['calendar', 'status'] as const,
   now: ['calendar', 'now'] as const,
   day: (date: string) => ['calendar', 'day', date] as const,
+  googleSignIn: ['calendar', 'google-sign-in'] as const,
 };
+
+const disconnected = z.object({ status: calendarStatusSchema, message: z.string().nullable() });
 
 const opened = z.object({ opened: z.boolean() });
 const ok = z.object({ ok: z.literal(true) });
@@ -55,4 +60,14 @@ export const calendarApi = {
     post(opened, '/calendar/open', occurrence),
   detail: (occurrence: CalendarOccurrence): Promise<CalendarEventDetail> =>
     post(calendarEventDetailSchema, '/calendar/event', occurrence),
+  googleSignIn: (): Promise<GoogleSignInFlow> =>
+    request(googleSignInFlowSchema, '/calendar/google/sign-in'),
+  startGoogleSignIn: (accountId: string | null): Promise<GoogleSignInFlow> =>
+    post(googleSignInFlowSchema, '/calendar/google/sign-in', accountId ? { accountId } : {}),
+  cancelGoogleSignIn: (): Promise<GoogleSignInFlow> =>
+    request(googleSignInFlowSchema, '/calendar/google/sign-in', { method: 'DELETE' }),
+  disconnectGoogle: (accountId: string): Promise<z.infer<typeof disconnected>> =>
+    request(disconnected, `/calendar/google/accounts/${encodeURIComponent(accountId)}`, {
+      method: 'DELETE',
+    }),
 };

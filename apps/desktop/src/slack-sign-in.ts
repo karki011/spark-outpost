@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { API_TOKEN_HEADER, parseSlackCallbackLink } from '@spark-outpost/contracts';
 import { gitHubAppEnv, readBakedGitHubApp } from './github-app.ts';
+import { googleClientEnv, readBakedGoogleClient, readDevGoogleClient } from './google-client.ts';
 
 export const SLACK_CLIENT_ID_ENV = 'SPARK_SLACK_CLIENT_ID';
 
@@ -23,11 +24,17 @@ export async function readBakedSlackClientId(appPath: string): Promise<string | 
   }
 }
 
-export async function bakedSignInEnv(appPath: string): Promise<Record<string, string>> {
+export async function bakedSignInEnv(
+  appPath: string,
+  devGoogleClientFile: string | null = null,
+): Promise<Record<string, string>> {
   const slack = await readBakedSlackClientId(appPath);
+  const google =
+    (await readBakedGoogleClient(appPath)) ?? (await readDevGoogleClient(devGoogleClientFile));
   return {
     ...gitHubAppEnv(await readBakedGitHubApp(appPath)),
     ...(slack ? { [SLACK_CLIENT_ID_ENV]: slack } : {}),
+    ...googleClientEnv(google),
   };
 }
 

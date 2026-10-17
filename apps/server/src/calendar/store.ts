@@ -140,10 +140,22 @@ function choiceOf(row: ChoiceRow): CalendarChoice {
   };
 }
 
-export async function savedChoices(db: Queryable, workspaceId: string): Promise<CalendarChoice[]> {
+export type ChoiceOwner = { googleAccountId: string | null };
+
+export const EVENTKIT_OWNER: ChoiceOwner = { googleAccountId: null };
+
+export async function savedChoices(
+  db: Queryable,
+  workspaceId: string,
+  owner?: ChoiceOwner,
+): Promise<CalendarChoice[]> {
+  const scoped = owner !== undefined;
   const { rows } = await db.query<ChoiceRow>(
-    'SELECT * FROM calendar_calendars WHERE workspace_id = $1 ORDER BY position, title, key',
-    [workspaceId],
+    `SELECT * FROM calendar_calendars
+     WHERE workspace_id = $1
+       AND (NOT $2 OR google_account_id IS NOT DISTINCT FROM $3)
+     ORDER BY google_account_id IS NOT NULL, google_account_id, position, title, key`,
+    [workspaceId, scoped, owner?.googleAccountId ?? null],
   );
   return rows.map(choiceOf);
 }
@@ -156,9 +168,13 @@ export interface ChoiceWrite {
   busy: boolean;
 }
 
-export async function lockChoices(client: Queryable, workspaceId: string): Promise<void> {
+export async function lockChoices(
+  client: Queryable,
+  workspaceId: string,
+  owner: ChoiceOwner,
+): Promise<void> {
   await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
-    `calendar_calendars:${workspaceId}`,
+    `calendar_calendars:${workspaceId}:${owner.googleAccountId ?? 'eventkit'}`,
   ]);
 }
 
@@ -166,15 +182,20 @@ export async function replaceChoices(
   client: Queryable,
   workspaceId: string,
   writes: readonly ChoiceWrite[],
+  owner: ChoiceOwner,
 ): Promise<void> {
-  await client.query('DELETE FROM calendar_calendars WHERE workspace_id = $1', [workspaceId]);
+  await client.query(
+    `DELETE FROM calendar_calendars
+     WHERE workspace_id = $1 AND google_account_id IS NOT DISTINCT FROM $2`,
+    [workspaceId, owner.googleAccountId],
+  );
   for (const [position, write] of writes.entries()) {
     const { calendar } = write;
     await client.query(
       `INSERT INTO calendar_calendars (key, workspace_id, calendar_id, title, source_id,
          source_title, source_kind, color, writable, subscribed, ownership, include, nudges,
-         busy, position)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+         busy, position, google_account_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
       [
         write.key ?? randomUUID(),
         workspaceId,
@@ -191,6 +212,7 @@ export async function replaceChoices(
         write.nudges,
         write.busy,
         position,
+        owner.googleAccountId,
       ],
     );
   }
@@ -272,6 +294,18 @@ export async function calendarMarks(
     (row.kind === 'hold' ? hold : remind).add(key);
   }
   return { remind, hold };
+}
+
+export async function forgetMarksOf(
+  db: Db,
+  workspaceId: string,
+  uids: readonly string[],
+): Promise<void> {
+  if (uids.length === 0) return;
+  await db.query('DELETE FROM calendar_marks WHERE workspace_id = $1 AND uid = ANY($2)', [
+    workspaceId,
+    uids,
+  ]);
 }
 
 export async function forgetMarks(db: Db, workspaceId: string): Promise<void> {

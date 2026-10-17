@@ -4,10 +4,13 @@ import {
   calendarMarkRequestSchema,
   calendarOccurrenceSchema,
   calendarSettingsPatchSchema,
+  isGoogleEventId,
   localDayStart,
 } from '@spark-outpost/contracts';
 import { BadRequestError, paramId, parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
+import { googleCalendarRoutes } from './google/routes.ts';
+import type { GoogleSource } from './google/source.ts';
 import { CalendarHostError, type CalendarHost } from './host-client.ts';
 import {
   calendarDay,
@@ -25,6 +28,7 @@ export interface CalendarRouteDeps {
   db: Db;
   workspaceId: string;
   calendarHost?: CalendarHost | null;
+  googleCalendar?: GoogleSource | null;
   now?: () => number;
 }
 
@@ -57,7 +61,9 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
   const router = Router();
   const host = deps.calendarHost ?? null;
   const now = () => deps.now?.() ?? Date.now();
-  const service = { db: deps.db, workspaceId: deps.workspaceId, host, now };
+  const google = deps.googleCalendar ?? null;
+  const service = { db: deps.db, workspaceId: deps.workspaceId, host, google, now };
+  google?.onChanged(() => void announceCalendar(deps.db).catch(() => undefined));
   const needHost = (): CalendarHost => {
     if (!host) throw new CalendarHostError('missing', 'Calendar is only in the Mac app.');
     return host;
@@ -96,6 +102,7 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
       const patch = parseBody(calendarChoicePatchSchema, req);
       const changed = await updateChoice(deps.db, deps.workspaceId, paramId(req, 'key'), patch);
       if (!changed) throw new BadRequestError('That calendar is not known.');
+      if (patch.include !== undefined) google?.refresh();
       await announceCalendar(deps.db);
       return calendarStatus(service);
     }),
@@ -134,14 +141,28 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
   });
 
   router.post('/calendar/open', (req, res) =>
-    guarded(res, () =>
-      needHost().request({ op: 'open', ...parseBody(calendarOccurrenceSchema, req) }),
-    ),
+    guarded(res, async () => {
+      const occurrence = parseBody(calendarOccurrenceSchema, req);
+      if (isGoogleEventId(occurrence.eventId)) return { opened: false };
+      return needHost().request({ op: 'open', ...occurrence });
+    }),
   );
 
   router.post('/calendar/event', (req, res) =>
-    guarded(res, () => eventDetail(needHost(), parseBody(calendarOccurrenceSchema, req))),
+    guarded(res, async () => {
+      const occurrence = parseBody(calendarOccurrenceSchema, req);
+      if (!isGoogleEventId(occurrence.eventId)) return eventDetail(needHost(), occurrence);
+      const detail = google?.detail(occurrence);
+      if (!detail) throw new CalendarHostError('not_found', 'That event is gone.');
+      return detail;
+    }),
   );
+
+  const macUids = async () => {
+    const mac = await calendarState({ ...service, google: null });
+    return mac.events.map((event) => event.uid ?? event.id);
+  };
+  router.use(googleCalendarRoutes({ google, status: () => calendarStatus(service), macUids }));
 
   return router;
 }

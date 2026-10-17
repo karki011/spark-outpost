@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   calendarDaySchema,
   calendarNowSchema,
@@ -113,13 +113,21 @@ let t: TestDb;
 let host: FakeHost;
 let client: ReturnType<typeof localClient>;
 
+function tenThisMorning(): Date {
+  const morning = new Date();
+  morning.setHours(10, 0, 0, 0);
+  return morning;
+}
+
 beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ['Date'], now: tenThisMorning() });
   t = await createTestDb();
   host = fakeHost();
   client = localClient(createApp({ ...testAppOptions(t), calendarHost: host }));
 });
 
 afterEach(async () => {
+  vi.useRealTimers();
   await t.cleanup();
 });
 

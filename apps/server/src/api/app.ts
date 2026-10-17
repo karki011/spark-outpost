@@ -39,6 +39,7 @@ import { queueRoutes } from './queue-routes.ts';
 import { sparkPauseRoutes } from './spark-pause-routes.ts';
 import { calendarRoutes } from '../calendar/routes.ts';
 import type { CalendarHost } from '../calendar/host-client.ts';
+import type { GoogleSource } from '../calendar/google/source.ts';
 import { teammateRoutes } from './teammate-routes.ts';
 import { slackRoutes, type SlackRouteDeps } from './slack-routes.ts';
 import { ticketRoutes, type TicketRouteDeps } from './ticket-routes.ts';
@@ -83,6 +84,7 @@ export interface AppOptions
   webRoot?: string;
   pushKeys?: PushKeys;
   calendarHost?: CalendarHost | null;
+  googleCalendar?: GoogleSource | null;
   pairingAttemptsPerMinute?: number;
   diagnostics?: DiagnosticsPlaces;
   activeWork?: ActiveWork;

@@ -92,6 +92,23 @@ const configSchema = z.object({
     .trim()
     .regex(/^(?:\d{1,20}\.\d{1,20})?$/)
     .default(''),
+  SPARK_GOOGLE_CLIENT_ID: z
+    .string()
+    .trim()
+    .regex(/^(?:\d{1,30}-[a-z0-9]{1,64}\.apps\.googleusercontent\.com)?$/)
+    .default(''),
+  SPARK_GOOGLE_CLIENT_SECRET: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9_-]{0,100}$/)
+    .default(''),
+  SPARK_GOOGLE_VERIFIED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  GOOGLE_ACCOUNTS_URL: providerUrl.optional(),
+  GOOGLE_OAUTH_URL: providerUrl.optional(),
+  GOOGLE_CALENDAR_API_URL: providerUrl.optional(),
   SPARK_LINK_SCHEME: z
     .string()
     .regex(/^[a-z][a-z0-9-]*$/)

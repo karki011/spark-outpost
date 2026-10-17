@@ -170,6 +170,10 @@ GET /api/calendar/now
 PUT /api/calendar/marks
 POST /api/calendar/open
 POST /api/calendar/event
+GET /api/calendar/google/sign-in
+POST /api/calendar/google/sign-in
+DELETE /api/calendar/google/sign-in
+DELETE /api/calendar/google/accounts/:id
 GET /api/remote/access
 PUT /api/remote/access
 PATCH /api/remote/switches

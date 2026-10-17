@@ -154,7 +154,7 @@ export const SPEC_GROUPS = {
     'terminal-record-setting',
     'zai',
   ],
-  home: ['calendar', 'companion', 'digest', 'home', 'live-updates', 'today'],
+  home: ['calendar', 'calendar-google', 'companion', 'digest', 'home', 'live-updates', 'today'],
   'analytics-audit': ['analytics', 'audit'],
   map: ['project-map', 'project-map-states', 'project-map-views'],
   outposts: [

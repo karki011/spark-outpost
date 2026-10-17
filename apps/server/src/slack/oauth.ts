@@ -1,6 +1,6 @@
-import { createHash, randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { SLACK_AUTHORIZE_URL } from '@spark-outpost/contracts';
+import type { Pkce } from '../setup/pkce.ts';
 import type { SlackSignInConfig } from './sign-in-config.ts';
 import { SLACK_API_URL, SlackApiError } from './web-api.ts';
 
@@ -19,24 +19,9 @@ export interface SlackUserTokens {
   refreshExpiresAt: string | null;
 }
 
-export interface SlackPkce {
-  state: string;
-  verifier: string;
-  challenge: string;
-}
-
-export function newSlackPkce(): SlackPkce {
-  const verifier = randomBytes(48).toString('base64url');
-  return {
-    state: randomBytes(32).toString('base64url'),
-    verifier,
-    challenge: createHash('sha256').update(verifier).digest('base64url'),
-  };
-}
-
 export function slackAuthorizeUrl(
   config: SlackSignInConfig,
-  pkce: SlackPkce,
+  pkce: Pkce,
   userScopes: readonly string[],
 ): string {
   const url = new URL(SLACK_AUTHORIZE_URL);

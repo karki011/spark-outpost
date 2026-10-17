@@ -6,6 +6,7 @@ import { duration, span } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
 import { DayShapeBar } from './DayShapeBar.tsx';
 import { localDate, useCalendarDay, useCalendarState } from './use-calendar.ts';
+import { CalendarName } from './CalendarName.tsx';
 
 export function CalendarBriefBlock({ now }: { now: number }) {
   const { remote } = useRemoteClient();
@@ -41,7 +42,7 @@ export function CalendarBriefBlock({ now }: { now: number }) {
                 {calendar && (
                   <span className="cal-chip">
                     <i className="cal-sw" style={swatch(calendar.color)} aria-hidden="true" />
-                    {calendar.title}
+                    <CalendarName name={calendar.title} />
                   </span>
                 )}
               </li>

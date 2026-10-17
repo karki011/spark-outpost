@@ -19,6 +19,7 @@ describe('appLayout', () => {
       calendarSeedBin: '/repo/.local/calendar/arm64/spark-calendar-seed',
       voiceBin: '/repo/.local/voice/arm64/spark-voice',
       voiceModels: '/repo/.local/voice/arm64/models',
+      googleClientFile: '/repo/.local/google-oauth-client.json',
     });
   });
 
@@ -39,6 +40,7 @@ describe('appLayout', () => {
       calendarSeedBin: null,
       voiceBin: '/Applications/Spark Outpost.app/Contents/Resources/voice/bin/spark-voice',
       voiceModels: '/Applications/Spark Outpost.app/Contents/Resources/voice/models',
+      googleClientFile: null,
     });
   });
 });
