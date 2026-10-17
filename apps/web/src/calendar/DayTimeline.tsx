@@ -2,6 +2,7 @@ import './timeline.css';
 import type { CSSProperties } from 'react';
 import {
   CALENDAR_SERVICE_NAMES,
+  clashText,
   spanOf,
   type CalendarChoice,
   type CalendarEvent,
@@ -12,6 +13,8 @@ import { block, HOUR_PX, hourMarks, offset, placeEvents } from './timeline-model
 import type { NoGap, TimelineSpan } from './today-model.ts';
 import { CalendarName } from './CalendarName.tsx';
 
+const NO_CLASHES: readonly string[] = [];
+
 interface DayTimelineProps {
   span: TimelineSpan;
   events: readonly CalendarEvent[];
@@ -19,17 +22,23 @@ interface DayTimelineProps {
   calendars: ReadonlyMap<string, CalendarChoice>;
   gaps: readonly NoGap[];
   overlaps: ReadonlySet<string>;
+  clashes: ReadonlyMap<string, readonly string[]>;
   now: number | null;
   selected: string | null;
   panelId: string;
   onSelect: (key: string) => void;
 }
 
-function tags(event: CalendarEvent, calendars: ReadonlyMap<string, CalendarChoice>): string[] {
+function tags(
+  event: CalendarEvent,
+  calendars: ReadonlyMap<string, CalendarChoice>,
+  clashes: readonly string[],
+): string[] {
   const also = event.also
     .map((key) => calendars.get(key)?.title)
     .filter((title): title is string => Boolean(title));
   return [
+    clashText(clashes),
     event.hold ? 'alerts held' : null,
     event.remind ? 'reminder' : null,
     also.length > 0 ? `also on ${also.join(', ')}` : null,
@@ -42,6 +51,7 @@ function EventBlock(props: {
   lanes: number;
   timeline: TimelineSpan;
   calendars: ReadonlyMap<string, CalendarChoice>;
+  clashes: readonly string[];
   selected: boolean;
   overlap: boolean;
   panelId: string;
@@ -60,7 +70,7 @@ function EventBlock(props: {
   } as CSSProperties;
   const kind = event.focus ? 'focus' : event.busy ? 'busy' : 'free';
   const service = event.link ? ` · ${CALENDAR_SERVICE_NAMES[event.link.service]}` : '';
-  const marks = tags(event, calendars);
+  const marks = tags(event, calendars, props.clashes);
   return (
     <button
       type="button"
@@ -77,7 +87,12 @@ function EventBlock(props: {
       {marks.length > 0 && (
         <span className="tl-tags" aria-hidden="true">
           {marks.map((mark) => (
-            <span key={mark} className="tl-tag" data-held={mark === 'alerts held' || undefined}>
+            <span
+              key={mark}
+              className="tl-tag"
+              data-held={mark === 'alerts held' || undefined}
+              data-clash={mark.startsWith('clashes with') || undefined}
+            >
               {mark}
             </span>
           ))}
@@ -161,6 +176,7 @@ function TimedEvents(props: DayTimelineProps) {
             lanes={lanes}
             timeline={span}
             calendars={props.calendars}
+            clashes={props.clashes.get(event.key) ?? NO_CLASHES}
             selected={props.selected === event.key}
             overlap={props.overlaps.has(event.key)}
             panelId={props.panelId}

@@ -112,6 +112,7 @@ export * from './spark-pause.ts';
 export * from './calendar-helper.ts';
 export * from './calendar-join.ts';
 export * from './calendar.ts';
+export * from './calendar-clash.ts';
 export * from './calendar-bridge.ts';
 export * from './calendar-api.ts';
 export * from './calendar-google.ts';

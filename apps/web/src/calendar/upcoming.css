@@ -124,3 +124,9 @@
     grid-column: 1 / -1;
   }
 }
+
+.upc-what .cal-clash {
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: 1px;
+}

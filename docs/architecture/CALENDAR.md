@@ -142,7 +142,7 @@ A signed Swift command-line helper, `spark-calendar`, spoken to as JSON lines, a
 
 An Outlook SafeLinks wrapper (`*.safelinks.protection.outlook.com`) is unwrapped only when its `url` parameter is itself a Teams link above, and the panel shows the unwrapped host ("teams.microsoft.com, unwrapped from Outlook SafeLinks"). Tests that must fail: `zoom.us.evil.com`, `evilzoom.us`, `https://user@zoom.us/j/1`, `http://zoom.us/j/1`, `https://zoom.us:8443/j/1`, and a SafeLinks wrapper around anything but Teams.
 
-**Join** is enabled from 10 min before the start until the end, on the event panel, in Upcoming, on the island's nudge line and in its Next meetings list, and never runs on its own; before that the button shows the start time and says when Join opens; **⌘J** (in-app) joins the earliest joinable meeting. It opens through `guardNavigation` → `shell.openExternal`, as both windows already do: the default browser, which hands off to the meeting app. Never the Browser pane.
+**Join** is enabled from 10 min before the start until the end, on the event panel, in Upcoming, on the island's nudge line and in its Next meetings list, and never runs on its own; before that the button shows the start time and says when Join opens; **⌘J** (in-app) joins the one joinable meeting, or opens **Choose** when two or more are ([Meetings at the same time](#meetings-at-the-same-time)). It opens through `guardNavigation` → `shell.openExternal`, as both windows already do: the default browser, which hands off to the meeting app. Never the Browser pane.
 
 ## Meeting prep
 
@@ -191,6 +191,15 @@ A pure planner, `planNudges(events, chats, marks, settings, now)`, runs every mi
 ### The nudge
 
 The first time a Before or Remind me line shows, the island's mascot hops (its `happy` mood, two hops) and a short meeting tune plays through the island's sound setting. A hold mutes the tune, never the line, and the line comes before a hold's own line. With reduced motion there is no hop, only the mood's glow. No new animation or sound system: the hop, glow and tune player are the island's own.
+
+### Meetings at the same time
+
+Two meetings **clash** when both are meetings (not focus, all-day or declined) and their times overlap strictly: one starts before the other ends, so back-to-back calls don't clash. `meetingsOverlap()` in `packages/contracts/src/calendar-clash.ts` is the one rule, used by the planner, the ticker and the web app, always on merged events, so one event on two calendars never clashes with itself.
+
+- **Group nudge.** The planner picks the lead as before (a due Remind me mark first, then the earliest meeting in its before window) and groups it with every other meeting that is due to nudge (in its before window or its Remind me window) and clashes with the lead. With two or more, the line is "Standup + 2 more at 10:00 · **Choose**", not Join. The nudge carries the group's events, up to 20.
+- **Once per group.** The hop and tune key is the lead's; when a group hops, every member's key is marked seen, so the lead handing over to another member, or a member joining later, hops nothing. The ticker claims every due meeting that clashes with the first one, so a group sends one "Meeting in N min" push.
+- **Choose.** On the island, **Choose** opens Home with **Choose a meeting** in place of Next meetings: each meeting as time · title · calendar, with **Join** while its Join window is open, or **Open**, which opens Today at that event. Focus moves to the first button, Tab moves through the rows, and Esc closes the island. In the main app, **⌘J** with two or more joinable meetings opens the same list in a dialog (focus trapped, Esc closes, focus returns), adding the nudge group's meetings without a link; with exactly one, it joins it. Nothing joins until the user clicks. At the hand-over between back-to-back calls both are briefly joinable, so ⌘J asks there too.
+- **Clash tags.** Every clashing meeting gets "clashes with Vendor sync", or "clashes with 2 meetings", in the island's Next meetings, Home Upcoming, the Today timeline (also in the event's accessible name) and the event panel. Upcoming and the island read `clashes` from `now`, computed over all of today's meetings; Today computes them from the day it shows.
 
 **Phone push** is exactly "Meeting in 10 min", a payload kind with no chat, behind **Notify when a chat needs you** and **Meeting alerts on paired devices** (off): no title, prep or Join.
 

@@ -103,6 +103,48 @@ describe('planNudges', () => {
     expect(plan.nudge).toMatchObject({ kind: 'remind', title: 'Design review', minutes: 4 });
   });
 
+  it('groups meetings due together that overlap the first one, once per nudge', () => {
+    const standup = event('Standup', 5, 21);
+    const design = event('Design sync', 6, 36);
+    const hours = event('Office hours', 9, 30);
+    const after = event('Retro', 21, 40);
+    const quiet = event('Pickup', 6, 20, { nudges: false });
+    const plan = planNudges([after, hours, design, quiet, standup], NO_CHATS, settings(), NOW);
+    expect(plan.nudge).toMatchObject({ kind: 'before', title: 'Standup' });
+    const group = plan.nudge?.kind === 'before' ? plan.nudge.group : [];
+    expect(group.map((item) => item.title)).toEqual(['Standup', 'Design sync', 'Office hours']);
+  });
+
+  it('keeps a back-to-back meeting out of the group and a lone meeting alone', () => {
+    const plan = planNudges([event('A', 2, 8), event('B', 8, 30)], NO_CHATS, settings(), NOW);
+    const group = plan.nudge?.kind === 'before' ? plan.nudge.group : [];
+    expect(group.map((item) => item.title)).toEqual(['A']);
+  });
+
+  it('groups a Remind me mark with the meetings due at the same time', () => {
+    const marked = event('Design review', 4, 30, { remind: true });
+    const standup = event('Standup', 3, 18);
+    const plan = planNudges([standup, marked], NO_CHATS, settings(), NOW);
+    expect(plan.nudge?.kind).toBe('remind');
+    const group = plan.nudge?.kind === 'remind' ? plan.nudge.group : [];
+    expect(group.map((item) => item.title)).toEqual(['Design review', 'Standup']);
+  });
+
+  it('names the meetings each upcoming meeting clashes with, among all of today', () => {
+    const events = [
+      event('Customer call', 30, 60),
+      event('Vendor sync', 45, 75),
+      event('Lunch', 75, 120),
+      event('Skipped', 50, 70, { myStatus: 'declined' }),
+      event('Holiday', 0, 24 * 60, { allDay: true }),
+    ];
+    const plan = planNudges(events, NO_CHATS, settings(), NOW);
+    expect(plan.clashes).toEqual([
+      { eventKey: events[0]!.key, titles: ['Vendor sync'] },
+      { eventKey: events[1]!.key, titles: ['Customer call'] },
+    ]);
+  });
+
   it('wraps up 15 min before when a chat is running, and stays quiet otherwise', () => {
     const meeting = event('Planning', 14, 60);
     expect(planNudges([meeting], NO_CHATS, settings(), NOW).nudge).toBeNull();
@@ -170,6 +212,14 @@ describe('holds', () => {
 });
 
 describe('meeting pushes', () => {
+  it('are in start order so a group is claimed from its first meeting', () => {
+    const events = [event('Later', 9, 20), event('Soon', 8, 20)];
+    expect(meetingPushDue(events, settings(), NOW).map((item) => item.title)).toEqual([
+      'Soon',
+      'Later',
+    ]);
+  });
+
   it('are due inside the before window only', () => {
     const events = [event('Soon', 8, 20), event('Later', 30, 40), event('Started', -1, 20)];
     expect(meetingPushDue(events, settings(), NOW).map((item) => item.title)).toEqual(['Soon']);

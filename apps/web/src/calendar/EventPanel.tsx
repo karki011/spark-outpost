@@ -12,6 +12,7 @@ import {
 import { BellIcon, BellOffIcon, ChatPlusIcon, ExternalLinkIcon } from '../ui/icons.tsx';
 import { calendarApi, calendarKeys } from './calendar-api.ts';
 import { CalendarName } from './CalendarName.tsx';
+import { ClashTag } from './ClashTag.tsx';
 import { dateOf, span } from './calendar-format.ts';
 import { JoinButton } from './JoinButton.tsx';
 import { joinHint, openJoin } from './today-model.ts';
@@ -21,6 +22,7 @@ interface EventPanelProps {
   event: CalendarEvent;
   date: string;
   calendars: ReadonlyMap<string, CalendarChoice>;
+  clashes?: readonly string[] | undefined;
   isToday: boolean;
   now: number;
   onStartChat: (text: string) => void;
@@ -87,6 +89,7 @@ export function EventPanel({
   event,
   date,
   calendars,
+  clashes,
   isToday,
   now,
   onStartChat,
@@ -134,6 +137,11 @@ export function EventPanel({
         ))}
         {people}
       </p>
+      {clashes && (
+        <p className="td-panel-clash">
+          <ClashTag titles={clashes} />
+        </p>
+      )}
       <JoinRow event={event} isToday={isToday} now={now} />
       <Act
         icon={<ExternalLinkIcon />}

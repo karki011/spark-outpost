@@ -7,21 +7,27 @@ export function meetingChimeRoute(held: boolean, soundOn: boolean): 'play' | 'sk
   return routeChime(held, soundOn) === 'play' ? 'play' : 'skip';
 }
 
-export function useMeetingHop(key: string | null, soundOn: boolean, held: boolean): boolean {
+const KEY_SEPARATOR = '\n';
+
+export function useMeetingHop(keys: readonly string[], soundOn: boolean, held: boolean): boolean {
   const [hopping, setHopping] = useState(false);
   const seen = useRef(new Set<string>());
   const facts = useRef({ soundOn, held });
   useEffect(() => {
     facts.current = { soundOn, held };
   }, [soundOn, held]);
+  const joined = keys.join(KEY_SEPARATOR);
   useEffect(() => {
-    if (!key || seen.current.has(key)) return;
-    seen.current.add(key);
+    const group = joined ? joined.split(KEY_SEPARATOR) : [];
+    const lead = group[0];
+    const fresh = lead !== undefined && !seen.current.has(lead);
+    group.forEach((key) => seen.current.add(key));
+    if (!fresh) return;
     setHopping(true);
     if (meetingChimeRoute(facts.current.held, facts.current.soundOn) === 'play') {
       playMeetingChime();
     }
-  }, [key]);
+  }, [joined]);
   useEffect(() => {
     if (!hopping) return;
     const timer = setTimeout(() => setHopping(false), HOP_MS);

@@ -5,6 +5,7 @@ import { HomeSection } from '../home/HomeCards.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { MAC } from '../ui/shortcuts.ts';
 import { span } from './calendar-format.ts';
+import { ClashTag } from './ClashTag.tsx';
 import { JoinButton } from './JoinButton.tsx';
 import { countdown, overlapChat } from './today-model.ts';
 import { useCalendarNow, useCalendarState } from './use-calendar.ts';
@@ -17,6 +18,7 @@ interface UpcomingCardProps {
 function UpcomingRow(props: {
   event: CalendarEvent;
   calendar: string;
+  clashes: readonly string[] | undefined;
   now: number;
   chats: readonly ConversationSummary[];
 }) {
@@ -31,6 +33,7 @@ function UpcomingRow(props: {
       <span className="upc-what">
         <b>{event.title}</b>
         <small>{where}</small>
+        <ClashTag titles={props.clashes} />
       </span>
       <JoinButton event={event} now={now} />
       {overlap && <span className="upc-ov">Overlaps “{overlap.title}”, still running</span>}
@@ -45,6 +48,10 @@ export function UpcomingCard({ chats, now }: UpcomingCardProps) {
   const query = useCalendarNow(ready);
   const calendars = useMemo(
     () => new Map((query.data?.calendars ?? []).map((choice) => [choice.key, choice.title])),
+    [query.data],
+  );
+  const clashes = useMemo(
+    () => new Map((query.data?.clashes ?? []).map((clash) => [clash.eventKey, clash.titles])),
     [query.data],
   );
   if (!ready || !query.data) return null;
@@ -64,6 +71,7 @@ export function UpcomingCard({ chats, now }: UpcomingCardProps) {
               key={event.key}
               event={event}
               calendar={calendars.get(event.calendarKey) ?? 'Calendar'}
+              clashes={clashes.get(event.key)}
               now={now}
               chats={chats}
             />

@@ -200,11 +200,16 @@ export function IslandApp() {
     setFollowUp(null);
   };
 
-  const calendar = useIslandCalendar(now, waiting, (text) => {
-    setFollowUp(null);
-    setDraft((current) => ({ ...current, text }));
-    openPanel('quick');
-  });
+  const calendar = useIslandCalendar(
+    now,
+    waiting,
+    (text) => {
+      setFollowUp(null);
+      setDraft((current) => ({ ...current, text }));
+      openPanel('quick');
+    },
+    { open: panel === 'home', show: () => openPanel('home') },
+  );
   const calendarLine = view.kind === 'peek' && !sparkFocused && !line ? calendar.line : null;
 
   const openChat = (id: string, runId?: string) => {
@@ -251,7 +256,7 @@ export function IslandApp() {
   };
 
   const sound = useIslandSound();
-  const hopping = useMeetingHop(calendar.hopKey, sound?.on ?? false, calendar.hold.held);
+  const hopping = useMeetingHop(calendar.hopKeys, sound?.on ?? false, calendar.hold.held);
   const mood =
     wave || hopping
       ? 'happy'

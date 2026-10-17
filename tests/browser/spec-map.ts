@@ -156,6 +156,7 @@ export const SPEC_GROUPS = {
   ],
   home: [
     'calendar',
+    'calendar-clash',
     'calendar-google',
     'calendar-nudges',
     'companion',

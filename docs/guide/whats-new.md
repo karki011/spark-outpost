@@ -12,7 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                 | What to do                                                |
 | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
-| Calendar: all calendars nudge; Scout hops; **Join** opens at 10 min.                                         | See [Use it](calendar.md#use-it).                         |
+| Calendar: all calendars nudge; Scout hops; **Join** opens at 10 min, **Choose** for clashes.                 | See [Use it](calendar.md#use-it).                         |
 | Claude plan ring.                                                                                            | See [Limits](statuses-and-limits.md#limits).              |
 | **Revert file** in the Changes drawer undoes one file.                                                       | See [Review changes](review-changes.md#keep-or-revert).   |
 | Compaction keeps exact PR numbers and commits.                                                               | See [Manage a long chat](compaction.md#read-the-summary). |

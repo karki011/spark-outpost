@@ -1,3 +1,4 @@
+import { meetingsOverlap } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { SentKeys } from '../remote/push-plan.ts';
 import type { GoogleSource } from './google/source.ts';
@@ -46,8 +47,11 @@ export function startCalendarTicker(deps: CalendarTickerDeps): CalendarTicker {
     const at = now();
     setHolding(activeHold(state.events, state.settings, at) !== null);
     if (!state.settings.phoneAlerts || holding) return;
-    for (const event of meetingPushDue(state.events, state.settings, at)) {
-      if (sent.claim(event.key)) deps.push.meeting(state.settings.beforeMinutes);
+    const due = meetingPushDue(state.events, state.settings, at);
+    for (const event of due) {
+      if (!sent.claim(event.key)) continue;
+      for (const other of due) if (meetingsOverlap(event, other)) sent.claim(other.key);
+      deps.push.meeting(state.settings.beforeMinutes);
     }
   };
 

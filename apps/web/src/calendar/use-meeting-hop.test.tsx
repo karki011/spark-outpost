@@ -29,7 +29,7 @@ class FakeAudioContext {
 }
 
 interface Props {
-  hopKey: string | null;
+  hopKey: string[];
   on: boolean;
   held: boolean;
 }
@@ -54,23 +54,35 @@ afterEach(() => {
 
 describe('useMeetingHop', () => {
   it('hops once with a short tune for a new nudge, then rests', () => {
-    const hook = hop({ hopKey: null, on: true, held: false });
+    const hook = hop({ hopKey: [], on: true, held: false });
     expect(hook.result.current).toBe(false);
-    hook.rerender({ hopKey: 'before:standup', on: true, held: false });
+    hook.rerender({ hopKey: ['before:standup'], on: true, held: false });
     expect(hook.result.current).toBe(true);
     expect(tones.length).toBeGreaterThan(0);
     act(() => vi.advanceTimersByTime(HOP_MS));
     expect(hook.result.current).toBe(false);
     const played = tones.length;
-    hook.rerender({ hopKey: 'before:standup', on: true, held: false });
+    hook.rerender({ hopKey: ['before:standup'], on: true, held: false });
     expect(hook.result.current).toBe(false);
     expect(tones.length).toBe(played);
   });
 
+  it('hops and plays once for a group, even when another member leads later', () => {
+    const hook = hop({ hopKey: ['before:a', 'before:b', 'before:c'], on: true, held: false });
+    expect(hook.result.current).toBe(true);
+    const played = tones.length;
+    act(() => vi.advanceTimersByTime(HOP_MS));
+    hook.rerender({ hopKey: ['before:b', 'before:c'], on: true, held: false });
+    expect(hook.result.current).toBe(false);
+    expect(tones.length).toBe(played);
+    hook.rerender({ hopKey: ['before:d'], on: true, held: false });
+    expect(hook.result.current).toBe(true);
+  });
+
   it('still hops but plays nothing when chimes are off or held', () => {
-    const off = hop({ hopKey: 'before:a', on: false, held: false });
+    const off = hop({ hopKey: ['before:a'], on: false, held: false });
     expect(off.result.current).toBe(true);
-    const held = hop({ hopKey: 'before:b', on: true, held: true });
+    const held = hop({ hopKey: ['before:b'], on: true, held: true });
     expect(held.result.current).toBe(true);
     expect(tones).toEqual([]);
   });

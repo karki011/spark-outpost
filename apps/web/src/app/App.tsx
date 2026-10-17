@@ -61,7 +61,7 @@ import { LivePausedHint } from './live/LivePausedHint.tsx';
 import { useAppEvents } from './live/use-app-events.ts';
 import { useFirstContent } from './first-content.ts';
 import { Analytics, OutpostView, Phone, preloadView, Tickets, Today } from './lazy-views.tsx';
-import { useCalendarShell } from '../calendar/use-calendar-shell.ts';
+import { JoinShortcut } from '../calendar/JoinShortcut.tsx';
 import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
@@ -201,7 +201,15 @@ function ChatShell({ entering }: { entering: boolean }) {
     [],
   );
   useChatRequests(openChat);
-  const startCalendarChat = useCalendarShell(remote, (text) => queueDraft(startDraft(), text));
+  const startCalendarChat = useStableCallback((text: string) => queueDraft(startDraft(), text));
+  const openTodayEvent = useCallback(
+    (eventKey: string) => {
+      setSettings(null);
+      setView('today');
+      requestTodayEvent(eventKey);
+    },
+    [setSettings, setView],
+  );
   useSlackPresence(remote);
   useNotificationChats(remote, openChat);
   useEffect(() => sparkDesktop()?.help?.onOpenFeedback(requestFeedback), []);
@@ -221,9 +229,7 @@ function ChatShell({ entering }: { entering: boolean }) {
           return;
         }
         if (target.startsWith('today:')) {
-          setSettings(null);
-          setView('today');
-          requestTodayEvent(target.slice('today:'.length));
+          openTodayEvent(target.slice('today:'.length));
           return;
         }
         if (target.startsWith('spark-edit:')) {
@@ -233,7 +239,7 @@ function ChatShell({ entering }: { entering: boolean }) {
         requestSettingFocus(SHOW_ISLAND_LABEL);
         setSettings('notifications');
       }),
-    [setSettings, setView],
+    [setSettings, openTodayEvent],
   );
 
   const openAtCard = (chat: ConversationSummary) => {
@@ -398,6 +404,7 @@ function ChatShell({ entering }: { entering: boolean }) {
           />
           <PasskeyOffer />
           <SessionPaletteHost onOpenChat={openChat} />
+          <JoinShortcut remote={remote} onOpenEvent={openTodayEvent} />
           <TeammateHost />
           <AnimatePresence>
             {settings && (

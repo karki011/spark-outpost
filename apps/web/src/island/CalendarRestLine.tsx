@@ -22,6 +22,16 @@ export function CalendarRestLine({ line, top, calendar }: CalendarRestLineProps)
       {line.join && (
         <JoinButton event={line.join} now={calendar.at} className="isl-calline-act primary" plain />
       )}
+      {line.choose && (
+        <button
+          type="button"
+          className="isl-calline-act primary"
+          aria-label={`Choose one of ${line.choose.length} meetings`}
+          onClick={() => calendar.onChoose(line)}
+        >
+          Choose
+        </button>
+      )}
       {line.capture && (
         <button
           type="button"
