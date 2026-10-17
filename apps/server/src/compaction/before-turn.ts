@@ -140,8 +140,12 @@ async function askFirst(
   );
 }
 
+function takesNote(input: RunInput): boolean {
+  return !input.prompt.trimStart().startsWith('/');
+}
+
 function withAgentNote(input: RunInput, identifiers: string): RunInput {
-  if (input.prompt.trimStart().startsWith('/')) return input;
+  if (!takesNote(input)) return input;
   const note = [AGENT_COMPACTED_NOTE, identifiers, input.followUp ?? input.prompt];
   return { ...input, followUp: note.filter(Boolean).join('\n\n') };
 }
@@ -170,7 +174,7 @@ async function compactWithAgent(
   );
   if (!compacted || !agentCompactWorked(candidate.reading, compacted.after)) return null;
   const { after } = compacted;
-  const identifiers = await chatIdentifiers(deps.db, input);
+  const identifiers = takesNote(input) ? await chatIdentifiers(deps.db, input) : '';
   await recordCompacted(deps.db, candidate.session.id, after);
   await insertCompaction(deps.db, {
     conversationId: input.identity.threadId,

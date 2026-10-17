@@ -132,6 +132,21 @@ describe('extractAnchors', () => {
     expect(anchors.file).toEqual([]);
   });
 
+  it('reads two million characters of mixed tool output quickly', () => {
+    const texts = Array.from(
+      { length: 600 },
+      (_, index) =>
+        [
+          'Edited apps/server/src/a.ts; TypeError: x is undefined. '.repeat(60),
+          'QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo'.repeat(100),
+          'function a(b){return b+1};var c=0x1f;'.repeat(90),
+        ][index % 3]!,
+    );
+    const start = performance.now();
+    extractAnchors(texts, { secretValues: ['a1b2c3d4e5f60718293a4b5c'] });
+    expect(performance.now() - start).toBeLessThan(1_500);
+  });
+
   it('strips backticks so code spans stay closed', () => {
     const anchors = extractAnchors(['TypeError: `x` is not a function']);
     expect(anchors.error).toEqual(['TypeError: x is not a function']);

@@ -4,6 +4,7 @@ import type { RunInput } from '../workflow/run-input.ts';
 import { extractAnchors, identifiersText } from './anchors.ts';
 
 const TEXT_ROWS = 3_000;
+const TEXT_CHARS = 2_000_000;
 
 async function chatTexts(db: Queryable, conversationId: string, runId: string): Promise<string[]> {
   const { rows } = await db.query<{ text: string }>(
@@ -15,6 +16,9 @@ async function chatTexts(db: Queryable, conversationId: string, runId: string): 
          WHERE pf.assistant_conversation_id = $1), '-infinity'::timestamptz) AS at
      )
      SELECT text FROM (
+     SELECT text, at, seq,
+       sum(length(text)) OVER (ORDER BY at DESC, seq DESC ROWS UNBOUNDED PRECEDING) AS read
+     FROM (
        SELECT m.content AS text, m.created_at AS at, 0 AS seq FROM messages m
        WHERE m.conversation_id = $1
          AND m.created_at < (SELECT message_at FROM current)
@@ -28,8 +32,10 @@ async function chatTexts(db: Queryable, conversationId: string, runId: string): 
          AND e.type IN ('TOOL_CALL_ARGS', 'TOOL_CALL_RESULT')
      ) texts
      WHERE text IS NOT NULL AND text <> ''
+     ) counted
+     WHERE read - length(text) < $4
      ORDER BY at DESC, seq DESC LIMIT $3`,
-    [conversationId, runId, TEXT_ROWS],
+    [conversationId, runId, TEXT_ROWS, TEXT_CHARS],
   );
   return rows.map((row) => row.text).reverse();
 }

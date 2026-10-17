@@ -17,14 +17,14 @@ When a chat's context is nearly full, Spark compacts it: the agent carries on fr
 
 ![The context ring open, warning that the chat is getting full](images/compaction-ring-light.png)
 
-Past the red point, Spark compacts before your next message, never mid-reply or during a card.
+Past the red point, Spark compacts before your next message, never mid-reply or while a card waits.
 
 ## Read the summary
 
 1. Find the **Compacted** divider.
-2. Select **View summary**, which the agent now carries.
+2. Select **View summary** to read what the agent now carries.
 
-It ends with **Exact identifiers**, without secrets: PR numbers, commits, branches, files, tickets, errors and links. After `/compact` they go with your message. Agents read earlier turns with `spark_chat_history`.
+It ends with **Exact identifiers**: PR numbers, commits, branches, files, tickets, errors and links, never secrets. Agents read earlier turns with `spark_chat_history`.
 
 ## Change when Spark compacts
 
@@ -34,7 +34,7 @@ It ends with **Exact identifiers**, without secrets: PR numbers, commits, branch
 
 ## Answer the card
 
-With auto-compaction off, this card asks first.
+With auto-compaction off, **This chat is almost full** asks first.
 
 ![The This chat is almost full card with its three choices](images/compaction-card-light.png)
 
