@@ -55,16 +55,30 @@ describe('hiding a file revert from the change list', () => {
     expect(undoesRevert(back, moved)).toBe(true);
   });
 
-  it('hides the run’s own reverted file only while its range is fixed', () => {
+  it('hides the run’s own change to a reverted file, but not an edit you made later', () => {
     const files = [
       listed({ path: 'a.ts', change: 'modified' }, 'start', 'agent'),
       listed({ path: 'b.ts', change: 'modified' }, 'start', 'agent'),
     ];
-    const own = [reverted('a.ts', 'agent', 'start')];
+    const own = revertsByPath([reverted('a.ts', 'agent', 'start')]);
     const earlier = revertsByPath([]);
-    const fixed = withoutReverted(files, { own, earlier, fixedRange: true });
-    const live = withoutReverted(files, { own, earlier, fixedRange: false });
-    expect(fixed.map((entry) => entry.file.path)).toEqual(['b.ts']);
-    expect(live.map((entry) => entry.file.path)).toEqual(['a.ts', 'b.ts']);
+    expect(withoutReverted(files, { own, earlier }).map((entry) => entry.file.path)).toEqual([
+      'b.ts',
+    ]);
+    const mine = [listed({ path: 'a.ts', change: 'modified' }, 'start', 'mine')];
+    expect(withoutReverted(mine, { own, earlier })).toHaveLength(1);
+  });
+
+  it('hides the run’s own rename once it was reverted', () => {
+    const own = revertsByPath([
+      reverted('old.ts', null, 'start'),
+      reverted('new.ts', 'agent', null),
+    ]);
+    const moved = listed(
+      { path: 'new.ts', change: 'modified', oldPath: 'old.ts' },
+      'start',
+      'agent',
+    );
+    expect(withoutReverted([moved], { own, earlier: revertsByPath([]) })).toEqual([]);
   });
 });

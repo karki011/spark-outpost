@@ -40,7 +40,12 @@ test('Revert file undoes one file of a run from the Changes drawer, by keyboard'
 
   await tree.getByRole('treeitem', { name: /notes\.txt/ }).click();
   const opener = drawer.getByRole('button', { name: 'Revert file' });
-  await opener.focus();
+  await tree.focus();
+  for (let press = 0; press < 8; press++) {
+    await page.keyboard.press('Tab');
+    if (await opener.evaluate((element) => element === document.activeElement)) break;
+  }
+  await expect(opener).toBeFocused();
   await page.keyboard.press('Enter');
   const confirm = drawer.getByRole('group', { name: 'Revert notes.txt' });
   await expect(confirm).toContainText('Restores it to how it was before this run.');

@@ -19,23 +19,24 @@ export function undoesRevert(listed: ListedFile, earlier: RevertsByPath): boolea
   return from.afterBlob === null && to.beforeBlob === null;
 }
 
-function touches(listed: ListedFile, paths: ReadonlySet<string>): boolean {
-  const { path, oldPath } = listed.file;
-  return paths.has(path) || (oldPath !== undefined && paths.has(oldPath));
+export function revertedByRun(listed: ListedFile, own: RevertsByPath): boolean {
+  const { blobs, file } = listed;
+  if (!blobs) return false;
+  const from = own.get(file.oldPath ?? file.path);
+  const to = own.get(file.path);
+  if (!from || !to) return false;
+  return from.afterBlob === blobs.before && to.beforeBlob === blobs.after;
 }
 
 export interface RevertView {
-  own: readonly FileRevert[];
+  own: RevertsByPath;
   earlier: RevertsByPath;
-  fixedRange: boolean;
 }
 
 export function withoutReverted(files: readonly ListedFile[], view: RevertView): ListedFile[] {
-  const own = new Set(view.own.map((revert) => revert.path));
-  return files.filter((listed) => {
-    if (view.fixedRange && touches(listed, own)) return false;
-    return !undoesRevert(listed, view.earlier);
-  });
+  return files.filter(
+    (listed) => !revertedByRun(listed, view.own) && !undoesRevert(listed, view.earlier),
+  );
 }
 
 export function revertedFiles(reverts: readonly FileRevert[]): RevertedFile[] {

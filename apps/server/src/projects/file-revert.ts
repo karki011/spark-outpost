@@ -1,4 +1,4 @@
-import { realpath } from 'node:fs/promises';
+import { access, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import type { FileRevertCheck, FileRevertResponse, RunChange } from '@spark-outpost/contracts';
 import { insertFinishedRunEntries } from '../persistence/audit-log.ts';
@@ -169,6 +169,12 @@ async function filesSource(
   return { source: { kind: 'files', backups }, reason: restored ? REASONS.already : null };
 }
 
+const folderExists = (target: string) =>
+  access(target).then(
+    () => true,
+    () => false,
+  );
+
 async function guardReason(
   db: Queryable,
   set: ChangeSet,
@@ -179,6 +185,7 @@ async function guardReason(
   if (set.runs.find((run) => run.runId === entry.runId)?.copy) return REASONS.copy;
   if (revertedAt) return REASONS.reverted;
   if (await chatHasWorkingRun(db, entry.runId)) return REASONS.working;
+  if (!(await folderExists(entry.root))) return REMOVED_FOLDER_REASON;
   for (const target of targets) {
     if (!(await staysInside(entry.root, target.path))) return REASONS.outside;
   }

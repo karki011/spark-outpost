@@ -197,6 +197,39 @@ describe('reverting one file of a kept run', { timeout: 60_000 }, () => {
     expect(gitIn(root, 'status', '--porcelain')).toBe(' M notes.txt\n');
   });
 
+  it('never rewrites pushed work: the commit and the remote branch stay', async () => {
+    const remote = await realpath(await mkdtemp(path.join(tmpdir(), 'spark-revert-remote-')));
+    try {
+      const { runId, taskId, root } = await firstTurn({
+        write: { 'notes.txt': 'agent notes\n', 'new.txt': 'new\n' },
+      });
+      gitIn(remote, 'init', '-q', '--bare');
+      gitIn(root, 'checkout', '-q', '-b', 'spark/pushed-work');
+      gitIn(root, '-c', 'user.email=t@t', '-c', 'user.name=t', 'add', '-A');
+      gitIn(root, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'agent work');
+      const branch = gitIn(root, 'branch', '--show-current').trim();
+      gitIn(root, 'remote', 'add', 'origin', remote);
+      gitIn(root, 'push', '-q', 'origin', `HEAD:refs/heads/${branch}`);
+      gitIn(root, 'fetch', '-q', 'origin');
+      const head = gitIn(root, 'rev-parse', 'HEAD');
+      const pushed = gitIn(root, 'rev-parse', `refs/remotes/origin/${branch}`);
+
+      expect(await check(t, taskId, runId, 'notes.txt')).toMatchObject({
+        revertible: true,
+        committed: true,
+        pushed: true,
+      });
+      await revert(t, taskId, runId, 'notes.txt');
+
+      expect(gitIn(root, 'rev-parse', 'HEAD')).toBe(head);
+      expect(gitIn(root, 'rev-parse', `refs/remotes/origin/${branch}`)).toBe(pushed);
+      expect(gitIn(remote, 'rev-parse', `refs/heads/${branch}`)).toBe(pushed);
+      expect(gitIn(root, 'status', '--porcelain')).toBe(' M notes.txt\n');
+    } finally {
+      await rm(remote, { recursive: true, force: true });
+    }
+  });
+
   it('waits while the chat is working', async () => {
     const { runId, taskId } = await firstTurn({ write: { 'notes.txt': 'agent notes\n' } });
     await t.db.query(`UPDATE runs SET status = 'running' WHERE id = $1`, [runId]);

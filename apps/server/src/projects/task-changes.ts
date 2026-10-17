@@ -123,16 +123,15 @@ async function gitListed(
   run: RunState,
   next: RunState | undefined,
   listings: RunListingCache | undefined,
-): Promise<{ files: ListedFile[]; fixedRange: boolean }> {
+): Promise<ListedFile[]> {
   const ref = run.snapshot.ref;
   const bounds = await gitRunBounds(db, run, next);
-  if (!ref || !bounds) return { files: [], fixedRange: false };
+  if (!ref || !bounds) return [];
   const { gitRoot, until } = bounds;
-  const fixedRange = until !== null;
   const range = { root: gitRoot, from: ref, until };
   const signature = listings ? await rangeSignature(range) : null;
   const known = signature === null ? undefined : listings?.get(signature);
-  if (known) return { files: known, fixedRange };
+  if (known) return known;
   const stacked = await branchesStackedOn(db, run.snapshot.root);
   const base = await runBaseUntil(gitRoot, ref, until, stacked);
   const files = await changesWhilePresent(gitRoot, async () =>
@@ -141,7 +140,7 @@ async function gitListed(
   if (files && signature !== null && (await rangeSignature(range)) === signature) {
     listings?.set(signature, files);
   }
-  return { files: files ?? [], fixedRange };
+  return files ?? [];
 }
 
 async function laterBackup(
@@ -249,7 +248,7 @@ async function runFiles(
       listings,
     );
     const earlier = revertsByPath(revertsOf(context.reverts, context.earlier.filter(sameRoot)));
-    files = withoutReverted(listed.files, { own, earlier, fixedRange: listed.fixedRange });
+    files = withoutReverted(listed, { own: revertsByPath(own), earlier });
   } else {
     files = await backupListed(db, run, later);
   }
