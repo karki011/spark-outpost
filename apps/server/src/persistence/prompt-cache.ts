@@ -21,6 +21,10 @@ export interface CacheRequest {
   ttlSeconds: CacheTtlSeconds | null;
 }
 
+const NEWER = (column: string) =>
+  `CASE WHEN EXCLUDED.last_at >= run_prompt_cache.last_at
+     THEN EXCLUDED.${column} ELSE run_prompt_cache.${column} END`;
+
 export async function recordCacheRequest(
   db: Queryable,
   runId: string,
@@ -33,10 +37,8 @@ export async function recordCacheRequest(
      ON CONFLICT (run_id) DO UPDATE SET
        first_write = CASE WHEN run_prompt_cache.first_key = EXCLUDED.first_key
          THEN EXCLUDED.first_write ELSE run_prompt_cache.first_write END,
-       last_key = CASE WHEN EXCLUDED.last_at >= run_prompt_cache.last_at
-         THEN EXCLUDED.last_key ELSE run_prompt_cache.last_key END,
-       last_context = CASE WHEN EXCLUDED.last_at >= run_prompt_cache.last_at
-         THEN EXCLUDED.last_context ELSE run_prompt_cache.last_context END,
+       last_key = ${NEWER('last_key')},
+       last_context = ${NEWER('last_context')},
        model = CASE WHEN EXCLUDED.last_at >= run_prompt_cache.last_at
          THEN COALESCE(EXCLUDED.model, run_prompt_cache.model) ELSE run_prompt_cache.model END,
        ttl_seconds = CASE WHEN EXCLUDED.last_at >= run_prompt_cache.last_at
@@ -69,6 +71,27 @@ export function recordRequestUsage(
     model: request.model,
     ttlSeconds: cacheTtlOf(request.buckets),
   });
+}
+
+export async function moveCacheRecord(
+  db: Queryable,
+  runId: string,
+  ownerRunId: string,
+): Promise<void> {
+  await db.query(
+    `INSERT INTO run_prompt_cache (run_id, first_key, first_write, last_key, last_context, last_at,
+       model, ttl_seconds)
+     SELECT $2, first_key, first_write, last_key, last_context, last_at, model, ttl_seconds
+     FROM run_prompt_cache WHERE run_id = $1
+     ON CONFLICT (run_id) DO UPDATE SET
+       last_key = ${NEWER('last_key')},
+       last_context = ${NEWER('last_context')},
+       model = ${NEWER('model')},
+       ttl_seconds = COALESCE(${NEWER('ttl_seconds')}, run_prompt_cache.ttl_seconds,
+         EXCLUDED.ttl_seconds),
+       last_at = GREATEST(EXCLUDED.last_at, run_prompt_cache.last_at)`,
+    [runId, ownerRunId],
+  );
 }
 
 export async function recordSessionCacheTtl(

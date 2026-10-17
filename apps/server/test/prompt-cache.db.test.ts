@@ -6,6 +6,7 @@ import type { ConversationDetail } from '@spark-outpost/contracts';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
+import { moveModUsage } from '../src/persistence/native-terminal-mod-usage.ts';
 import { promptCacheFor, recordRequestUsage } from '../src/persistence/prompt-cache.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import type { RequestUsage } from '../src/providers/provider.ts';
@@ -126,6 +127,20 @@ describe('a chat’s prompt cache', () => {
     const chat = await newChat();
     await turn(chat);
     expect((await detail(chat)).promptCache).toBeUndefined();
+  });
+
+  it('keeps a handback’s request when its run is folded into the owning turn', async () => {
+    const chat = await newChat();
+    const owner = await turn(chat);
+    await recordRequestUsage(t.db, owner, usage('a1', { cachedWrite: 50 }), AT);
+    const handback = await turn(chat);
+    await recordRequestUsage(t.db, handback, usage('h1', { cachedRead: 160_000 }), later(600));
+    await moveModUsage(t.db, handback, owner);
+    await t.db.query('DELETE FROM runs WHERE id = $1', [handback]);
+    const { rows } = await t.db.query(
+      'SELECT run_id, first_write, last_key, last_at FROM run_prompt_cache',
+    );
+    expect(rows).toEqual([{ run_id: owner, first_write: 50, last_key: 'h1', last_at: later(600) }]);
   });
 
   it('drops figures for a run that is gone', async () => {

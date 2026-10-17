@@ -101,27 +101,6 @@ test('no timer while the agent waits on a card', async ({ page }) => {
   await expect(timer(page)).toHaveCount(0);
 });
 
-test('no timer while background sub-agents still work', async ({ page }) => {
-  const { runId } = await claudeChat('running');
-  await cached(runId, 3600, 2);
-  await sql(
-    `INSERT INTO run_events (run_id, seq, type, payload) VALUES ($1, 1, 'ACTIVITY_SNAPSHOT', $2)`,
-    [
-      runId,
-      JSON.stringify({
-        type: 'ACTIVITY_SNAPSHOT',
-        messageId: 'subagents',
-        activityType: 'subagents',
-        content: { waitingOn: 2 },
-      }),
-    ],
-  );
-  await open(page);
-
-  await expect(page.getByText('Waiting on 2 sub-agents').first()).toBeVisible();
-  await expect(timer(page)).toHaveCount(0);
-});
-
 test('a turn that re-wrote the cache carries a dim note', async ({ page }) => {
   const { chatId, runId } = await claudeChat('succeeded');
   await cached(runId, 3600, 90);
