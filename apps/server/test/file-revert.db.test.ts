@@ -202,6 +202,7 @@ describe('reverting one file of a kept run', { timeout: 60_000 }, () => {
     try {
       const { runId, taskId, root } = await firstTurn({
         write: { 'notes.txt': 'agent notes\n', 'new.txt': 'new\n' },
+        remove: ['gone.txt'],
       });
       gitIn(remote, 'init', '-q', '--bare');
       gitIn(root, 'checkout', '-q', '-b', 'spark/pushed-work');
@@ -210,11 +211,14 @@ describe('reverting one file of a kept run', { timeout: 60_000 }, () => {
       const branch = gitIn(root, 'branch', '--show-current').trim();
       gitIn(root, 'remote', 'add', 'origin', remote);
       gitIn(root, 'push', '-q', 'origin', 'HEAD~1:refs/heads/older');
+      gitIn(root, 'push', '-q', 'origin', 'HEAD~2:refs/heads/ancient');
       gitIn(root, 'fetch', '-q', 'origin');
-      expect(await check(t, taskId, runId, 'notes.txt')).toMatchObject({
-        committed: true,
-        pushed: false,
-      });
+      for (const file of ['notes.txt', 'gone.txt']) {
+        expect(await check(t, taskId, runId, file)).toMatchObject({
+          committed: true,
+          pushed: false,
+        });
+      }
       gitIn(root, 'push', '-q', 'origin', `HEAD:refs/heads/${branch}`);
       gitIn(root, 'fetch', '-q', 'origin');
       const head = gitIn(root, 'rev-parse', 'HEAD');
@@ -231,6 +235,7 @@ describe('reverting one file of a kept run', { timeout: 60_000 }, () => {
       expect(gitIn(root, 'rev-parse', `refs/remotes/origin/${branch}`)).toBe(pushed);
       expect(gitIn(remote, 'rev-parse', `refs/heads/${branch}`)).toBe(pushed);
       expect(gitIn(root, 'status', '--porcelain')).toBe(' M notes.txt\n');
+      expect(await check(t, taskId, runId, 'gone.txt')).toMatchObject({ pushed: true });
     } finally {
       await rm(remote, { recursive: true, force: true });
     }

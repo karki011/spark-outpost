@@ -16,23 +16,44 @@ async function holdsAll(
   return true;
 }
 
-async function remoteRefs(root: string): Promise<string[]> {
+async function quietly(root: string, args: string[]): Promise<string> {
   try {
-    const output = await git(root, ['for-each-ref', '--format=%(refname)', 'refs/remotes']);
-    return output.split('\n').filter((ref) => ref !== '' && !ref.endsWith('/HEAD'));
+    return (await git(root, args)).trim();
   } catch {
-    return [];
+    return '';
   }
+}
+
+async function onRemote(root: string, start: string | null, paths: readonly string[]) {
+  const since = start ? [`^${start}`] : [];
+  const literal = paths.map((relative) => `:(literal)${relative}`);
+  const commit = await quietly(root, [
+    'log',
+    '-1',
+    '--format=%H',
+    'HEAD',
+    ...since,
+    '--',
+    ...literal,
+  ]);
+  if (!commit) return false;
+  const holders = await quietly(root, [
+    'branch',
+    '-r',
+    '--format=%(refname)',
+    '--contains',
+    commit,
+  ]);
+  return holders.split('\n').some((ref) => ref !== '' && !ref.endsWith('/HEAD'));
 }
 
 export async function publishedState(
   root: string,
+  snapshotRef: string,
   expected: ReadonlyMap<string, string | null>,
 ): Promise<PublishedState> {
   const committed = await holdsAll(root, 'HEAD', expected);
   if (!committed) return { committed, pushed: false };
-  for (const ref of await remoteRefs(root)) {
-    if (await holdsAll(root, ref, expected)) return { committed, pushed: true };
-  }
-  return { committed, pushed: false };
+  const start = (await quietly(root, ['rev-parse', '--verify', '-q', `${snapshotRef}^1`])) || null;
+  return { committed, pushed: await onRemote(root, start, [...expected.keys()]) };
 }

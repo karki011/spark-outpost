@@ -51,6 +51,7 @@ interface GitSource {
   base: string;
   current: ReadonlyMap<string, string | null>;
   original: ReadonlyMap<string, string | null>;
+  snapshotRef: string;
 }
 
 interface FilesSource {
@@ -140,7 +141,7 @@ async function gitSource(
   const ended = end ? await blobsAt(root, end, targets) : null;
   const current = new Map<string, string | null>();
   for (const target of targets) current.set(target.path, await worktreeBlob(root, target.path));
-  const source: GitSource = { kind: 'git', base, current, original };
+  const source: GitSource = { kind: 'git', base, current, original, snapshotRef };
   const restored = targets.every((t) => current.get(t.path) === original.get(t.path));
   if (restored) return { source, reason: REASONS.already };
   const moved = targets.some((target) => {
@@ -256,7 +257,7 @@ async function protectedKindOf(
 async function planFacts(plan: RevertPlan) {
   const published =
     plan.source?.kind === 'git'
-      ? await publishedState(plan.root, plan.source.current)
+      ? await publishedState(plan.root, plan.source.snapshotRef, plan.source.current)
       : { committed: false, pushed: false };
   return { protectedKind: await protectedKindOf(plan.root, plan.targets), ...published };
 }

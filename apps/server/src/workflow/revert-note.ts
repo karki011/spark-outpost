@@ -19,10 +19,18 @@ export function revertNote(reverts: readonly Pick<UnnotedRevert, 'runNumber' | '
   return `${lines.join('\n')}\nRe-read them before editing.`;
 }
 
-export async function noteRevertedFiles(db: Queryable, input: RunInput): Promise<RunInput> {
-  if (input.parentRunId !== null || startsWithCommand(input)) return input;
+export interface RevertNoted {
+  input: RunInput;
+  delivered(): Promise<void>;
+}
+
+export async function noteRevertedFiles(db: Queryable, input: RunInput): Promise<RevertNoted> {
+  const none = { input, delivered: () => Promise.resolve() };
+  if (input.parentRunId !== null || startsWithCommand(input)) return none;
   const reverts = await unnotedReverts(db, input.identity.threadId);
-  if (reverts.length === 0) return input;
-  await markRevertsNoted(db, reverts);
-  return withAgentNote(input, revertNote(reverts));
+  if (reverts.length === 0) return none;
+  return {
+    input: withAgentNote(input, revertNote(reverts)),
+    delivered: () => markRevertsNoted(db, reverts),
+  };
 }
