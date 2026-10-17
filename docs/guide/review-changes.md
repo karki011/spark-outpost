@@ -3,7 +3,7 @@ title: Review, keep or revert changes
 section: Chats
 type: how-to
 order: 222
-summary: Read the diff in the Changes drawer, undo a run, and bring kept changes into your own checkout.
+summary: Read the diff in the Changes drawer, undo a run or one file, and bring kept changes into your own checkout.
 ---
 
 You'll read what the agent changed and keep or undo it. About 2 minutes.
@@ -21,20 +21,21 @@ Big, generated and binary files stay folded until you select **Load full file** 
 
 ## Keep or revert
 
-Spark keeps changes by itself. The turn ends in a **Changes kept** record that needs no answer: files, lines, commit and pull request. Expand it for files and branch.
+Spark keeps changes by itself, in a **Changes kept** record: files, lines, commit and pull request.
 
 | To                                   | Select                                                      |
 | ------------------------------------ | ----------------------------------------------------------- |
 | Undo a run                           | **Revert to before this run**, on a turn that changed files |
+| Undo one file                        | **Revert file**, above its diff                             |
 | Copy kept changes into your checkout | **Bring changes into** _branch_, expanded                   |
 | Commit, push or open a pull request  | See [Ship a change](ship-and-pull-requests.md)              |
 
-No card asks whether to keep a change. To change it, say so in your next message.
+**Revert file** restores one file, or deletes one the run created. It refuses a file changed since. Commits and pushes stay. The agent is told next turn.
 
 Only the agent's own edits are counted and reverted, not changes it pulls in from the main branch. In a folder without git, only what its edit tools changed counts; a command's changes go unseen.
 
 ## Checks
 
-Spark runs no tests or lint itself. The agent runs your project's checks and says in its reply what it verified and what it skipped. Ask it to run a command if it didn't.
+Spark runs no tests itself; the agent runs your checks and says what it verified.
 
 **Next:** [Manage a long chat](compaction.md)

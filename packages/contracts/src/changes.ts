@@ -39,6 +39,12 @@ export const changeEntrySchema = changedFileSchema
   .extend({ runId: z.uuid() });
 export type ChangeEntry = z.infer<typeof changeEntrySchema>;
 
+export const revertedFileSchema = z.object({
+  path: z.string(),
+  revertedAt: z.string(),
+});
+export type RevertedFile = z.infer<typeof revertedFileSchema>;
+
 export const changeRunSummarySchema = z.object({
   runId: z.uuid(),
   revertedAt: z.string().nullable(),
@@ -47,6 +53,7 @@ export const changeRunSummarySchema = z.object({
   files: z.number().int().nonnegative(),
   added: z.number().int().nonnegative(),
   removed: z.number().int().nonnegative(),
+  reverted: z.array(revertedFileSchema).optional(),
 });
 export type ChangeRunSummary = z.infer<typeof changeRunSummarySchema>;
 
@@ -100,3 +107,28 @@ export const changeDiffSchema = changeEntrySchema.extend({
   limited: z.boolean(),
 });
 export type ChangeDiff = z.infer<typeof changeDiffSchema>;
+
+export const fileRevertQuerySchema = z.object({
+  runId: z.uuid(),
+  path: z.string().min(1).max(4096),
+  version: z.string().max(64).optional(),
+});
+export type FileRevertQuery = z.infer<typeof fileRevertQuerySchema>;
+
+export const fileRevertCheckSchema = z.object({
+  path: z.string(),
+  oldPath: z.string().optional(),
+  change: runChangeSchema.shape.change,
+  revertible: z.boolean(),
+  reason: z.string().nullable(),
+  protectedKind: z.enum(['secret', 'instructions']).nullable(),
+  committed: z.boolean(),
+  pushed: z.boolean(),
+});
+export type FileRevertCheck = z.infer<typeof fileRevertCheckSchema>;
+
+export const fileRevertResponseSchema = z.object({
+  restored: z.array(runChangeSchema),
+  revertedAt: z.string(),
+});
+export type FileRevertResponse = z.infer<typeof fileRevertResponseSchema>;

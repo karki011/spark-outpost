@@ -140,6 +140,16 @@ describe('labels', () => {
         }),
       ),
     ).toBe('tool_call · Read a.ts');
+    expect(
+      entrySummary(
+        entry({
+          direction: 'harness',
+          kind: 'revert',
+          method: 'spark/revert_file',
+          payload: { path: 'src/app.ts', change: 'modified' },
+        }),
+      ),
+    ).toBe('reverted file · src/app.ts');
     const spawned = entry({
       payload: {
         params: {

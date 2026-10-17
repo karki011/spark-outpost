@@ -19,6 +19,7 @@ import { planNote } from './plan-recorder.ts';
 import { noteProjectMove } from './project-move.ts';
 import { runAppender } from './run-appender.ts';
 import { runEvents } from './run-events.ts';
+import { noteRevertedFiles } from './revert-note.ts';
 import { loadRunInput, type RunInput } from './run-input.ts';
 
 type Start = Omit<ChatTurnContext, 'input'> & { hooks: ChatTurnHooks };
@@ -62,7 +63,8 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
     if (!placed) return;
     const prepared = await prepareTurn(deps, lease, placed.input, append, control);
     if (!prepared) return;
-    input = prepared;
+    const reverted = await noteRevertedFiles(deps.db, prepared);
+    input = reverted.input;
     if (isStoryWrapUp(input)) {
       const prompted = await withChatPrompt(deps, input);
       return await replyToWrapUp(prompted, lease, input, append, control);
@@ -74,6 +76,7 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
     input = ready;
     const prompted = await withChatPrompt(deps, input);
     const reply = await runAgentTurn(prompted, lease, input, append, control);
+    if (reply.outcome === 'succeeded') await reverted.delivered();
     const turn = { deps: prompted, lease, input, append, control };
     const result = await afterReply(turn, hooks, reply);
     await finishRun(append, input.identity, result, true);

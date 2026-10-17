@@ -146,9 +146,6 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
           >
             {checkpoint.agent ? `Keep it in ${checkpoint.agent}’s piece` : 'Keep it in the piece'}
           </Action>
-          <Action id={CHECKPOINT_OPTION.revertFile} approval={approval} decide={decide}>
-            Revert that file
-          </Action>
           <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
             Stop
           </Action>
