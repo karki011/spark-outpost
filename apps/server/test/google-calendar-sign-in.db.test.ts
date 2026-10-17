@@ -69,15 +69,18 @@ describe('Google sign-in', () => {
     expect((await today(h)).events.map((event) => event.title)).toEqual(['standup']);
   });
 
-  it('keeps one token per account: signing in again replaces and revokes the old one', async () => {
+  it('keeps one token per account: signing in again replaces it without revoking the grant', async () => {
     await signIn(h);
     const first = await h.secrets.get(googleCalendarSecret(SUBJECT));
     await signIn(h);
     const second = await h.secrets.get(googleCalendarSecret(SUBJECT));
     expect(second).not.toBe(first);
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(h.fake.revoked.has(first!)).toBe(true);
-    expect((await status(h)).google.accounts).toHaveLength(1);
+    expect(h.fake.revoked.size).toBe(0);
+    h.fake.failNext('/calendar/v3/users/me/calendarList', { status: 401 });
+    await h.google.syncNow();
+    expect((await status(h)).google.accounts).toEqual([
+      expect.objectContaining({ state: 'ready' }),
+    ]);
   });
 
   it('connects several accounts', async () => {
@@ -105,6 +108,16 @@ describe('Google sign-in', () => {
     h.fake.grantedScopes = ['openid', 'email'];
     expect((await signIn(h)).message).toBe(GOOGLE_SCOPES_MISSING);
     expect((await status(h)).google.accounts).toEqual([]);
+    const [partial] = h.fake.refreshTokensOf(SUBJECT);
+    expect(h.fake.revoked.has(partial!)).toBe(true);
+  });
+
+  it('keeps a connected account working when it signs in again with a partial grant', async () => {
+    await signIn(h);
+    h.fake.grantedScopes = ['openid', 'email'];
+    expect((await signIn(h)).message).toBe(GOOGLE_SCOPES_MISSING);
+    expect(h.fake.revoked.size).toBe(0);
+    expect((await status(h)).google.accounts[0]?.state).toBe('ready');
   });
 
   it('serves the loopback answer once and nothing else', async () => {
@@ -137,6 +150,23 @@ describe('Google tokens and disconnect', () => {
     expect((await status(h)).google.accounts[0]?.state).toBe('ready');
   });
 
+  it('does not revoke a mismatched sign-in whose account Spark already has', async () => {
+    h.fake.addUser('2', 'second@example.com');
+    h.fake.addCalendar('2', { id: 'second@example.com', accessRole: 'owner', primary: true });
+    await signIn(h);
+    h.fake.signInAs = '2';
+    await signIn(h);
+    const first = (await status(h)).google.accounts.find((item) => item.email === EMAIL)!;
+    expect((await signIn(h, first.id)).message).toBe(
+      `That was a different Google account. Sign in as ${EMAIL}.`,
+    );
+    expect(h.fake.revoked.size).toBe(0);
+    h.fake.failNext('/calendar/v3/users/me/calendarList', { status: 401 });
+    h.fake.failNext('/calendar/v3/users/me/calendarList', { status: 401 });
+    await h.google.syncNow();
+    expect((await status(h)).google.accounts.map((item) => item.state)).toEqual(['ready', 'ready']);
+  });
+
   it('refuses a different account when signing in again', async () => {
     await signIn(h);
     const [account] = (await status(h)).google.accounts;
@@ -146,6 +176,7 @@ describe('Google tokens and disconnect', () => {
       `That was a different Google account. Sign in as ${EMAIL}.`,
     );
     expect((await status(h)).google.accounts.map((item) => item.email)).toEqual([EMAIL]);
+    expect(h.fake.refreshTokensOf('other').every((token) => h.fake.revoked.has(token))).toBe(true);
   });
 
   it('renews an expired access token with the refresh token', async () => {
@@ -178,6 +209,28 @@ describe('Google tokens and disconnect', () => {
     const after = await status(h);
     expect(after.google.accounts).toEqual([]);
     expect(after.accounts).toEqual([]);
+  });
+
+  it('purges the Spark marks on its events when an account is disconnected', async () => {
+    h.fake.putEvent(SUBJECT, EMAIL, meeting('marked', 0));
+    await signIn(h);
+    const [event] = (await today(h)).events;
+    const marked = await h.client.send('put', '/api/calendar/marks', {
+      eventKey: event!.key,
+      end: event!.end,
+      kind: 'remind_5',
+      on: true,
+    });
+    expect(marked.status).toBe(200);
+    await t.db.query(
+      `INSERT INTO calendar_marks (workspace_id, uid, occurrence_start, kind, ends_at)
+       VALUES ($1, 'mac-only', now(), 'hold', now() + interval '1 hour')`,
+      [t.workspaceId],
+    );
+    const [account] = (await status(h)).google.accounts;
+    await h.client.send('delete', `/api/calendar/google/accounts/${account!.id}`);
+    const { rows } = await t.db.query<{ uid: string }>('SELECT uid FROM calendar_marks');
+    expect(rows.map((row) => row.uid)).toEqual(['mac-only']);
   });
 
   it('still deletes the token when Google cannot confirm the revoke', async () => {

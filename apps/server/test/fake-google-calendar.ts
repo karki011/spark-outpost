@@ -222,7 +222,10 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
     const value = body.get('token') ?? '';
     const access = accessTokens.get(value);
     if (!refreshTokens.has(value) && !access) return json(400, { error: 'invalid_token' });
-    fake.revoked.add(access?.refresh ?? value);
+    const subject = access?.subject ?? refreshTokens.get(value);
+    for (const [token, owner] of refreshTokens) {
+      if (owner === subject) fake.revoked.add(token);
+    }
     return json(200, {});
   }
 

@@ -296,6 +296,18 @@ export async function calendarMarks(
   return { remind, hold };
 }
 
+export async function forgetMarksOf(
+  db: Db,
+  workspaceId: string,
+  uids: readonly string[],
+): Promise<void> {
+  if (uids.length === 0) return;
+  await db.query('DELETE FROM calendar_marks WHERE workspace_id = $1 AND uid = ANY($2)', [
+    workspaceId,
+    uids,
+  ]);
+}
+
 export async function forgetMarks(db: Db, workspaceId: string): Promise<void> {
   await db.query('DELETE FROM calendar_marks WHERE workspace_id = $1', [workspaceId]);
 }

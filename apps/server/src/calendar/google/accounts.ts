@@ -144,7 +144,6 @@ function failureMessage(error: unknown): string {
 
 async function signInAgain(deps: AccountDeps, account: LiveAccount): Promise<PollOutcome> {
   account.accessToken = null;
-  account.calendars = new Map();
   account.synced = false;
   account.state = 'sign_in_again';
   account.message = SIGN_IN_AGAIN;

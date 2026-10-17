@@ -13,6 +13,15 @@ import { revokeGoogleToken, type GoogleGrant } from './oauth.ts';
 import { GoogleAccountMismatch, createGoogleSignIn, type GoogleSignIn } from './sign-in.ts';
 import { deleteGoogleAccount, googleAccounts, saveGoogleAccount } from './store.ts';
 import { eventsInWindow, googleWindow } from './sync.ts';
+import { forgetMarksOf } from '../store.ts';
+
+function accountUids(account: LiveAccount): string[] {
+  const uids = new Set<string>();
+  for (const sync of account.calendars.values()) {
+    for (const { event } of sync.events.values()) uids.add(event.uid ?? event.id);
+  }
+  return [...uids];
+}
 
 export interface GoogleSourceDeps {
   db: Db;
@@ -111,18 +120,21 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     return work;
   }
 
+  const knownSubject = (subject: string) =>
+    [...accounts.values()].some((account) => account.row.subject === subject);
+
+  async function discard(grant: GoogleGrant): Promise<void> {
+    if (knownSubject(grant.subject)) return;
+    await revokeGoogleToken({ fetch: deps.fetch, client: client! }, grant.refreshToken);
+  }
+
   async function connect(grant: GoogleGrant, accountId: string | null): Promise<void> {
     const wanted = accountId ? accounts.get(accountId) : undefined;
     if (wanted && wanted.row.subject !== grant.subject) {
-      await revokeGoogleToken({ fetch: deps.fetch, client: client! }, grant.refreshToken);
+      await discard(grant);
       throw new GoogleAccountMismatch(wanted.row.email);
     }
-    const secret = googleCalendarSecret(grant.subject);
-    const previous = await deps.secrets.get(secret).catch(() => null);
-    await deps.secrets.set(secret, grant.refreshToken);
-    if (previous && previous !== grant.refreshToken) {
-      void revokeGoogleToken({ fetch: deps.fetch, client: client! }, previous);
-    }
+    await deps.secrets.set(googleCalendarSecret(grant.subject), grant.refreshToken);
     const row = await saveGoogleAccount(deps.db, deps.workspaceId, {
       subject: grant.subject,
       email: grant.email,
@@ -155,7 +167,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
   }
 
   const signIn: GoogleSignIn | null = client
-    ? createGoogleSignIn({ fetch: deps.fetch, client, now, connect })
+    ? createGoogleSignIn({ fetch: deps.fetch, client, now, connect, discard })
     : null;
 
   return {
@@ -187,6 +199,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       const events: HelperEvent[] = [];
       let truncated = false;
       for (const account of accounts.values()) {
+        if (account.state === 'sign_in_again') continue;
         for (const sync of account.calendars.values()) {
           truncated ||= sync.truncated;
           events.push(...eventsInWindow(sync, window).map((entry) => entry.event));
@@ -225,6 +238,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       if (!row) return { found: false, revoked: false };
       schedule(accountId, null);
       accounts.delete(accountId);
+      await forgetMarksOf(deps.db, deps.workspaceId, account ? accountUids(account) : []);
       const secret = googleCalendarSecret(row.subject);
       const token = await deps.secrets.get(secret).catch(() => null);
       const revoked =

@@ -28,6 +28,7 @@ export class GoogleAccountMismatch extends Error {
 export interface GoogleSignInDeps extends GoogleOAuthDeps {
   now: () => number;
   connect(grant: GoogleGrant, accountId: string | null): Promise<void>;
+  discard(grant: GoogleGrant): Promise<void>;
 }
 
 export interface GoogleSignIn {
@@ -99,6 +100,7 @@ export function createGoogleSignIn(deps: GoogleSignInDeps): GoogleSignIn {
         deps.now(),
       );
       if (!hasCalendarScopes(grant.scopes)) {
+        await deps.discard(grant);
         flow = ended('failed', GOOGLE_SCOPES_MISSING);
         return;
       }
