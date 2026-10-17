@@ -8,11 +8,11 @@ summary: Watch the context ring, choose when Spark compacts a long chat, and rea
 
 You'll keep a long chat inside the model's context. About 2 minutes.
 
-When a chat's context is nearly full, Spark compacts it: the agent carries on from a summary. Your full transcript stays in the chat.
+When a chat's context is nearly full, Spark compacts it: the agent carries on from a summary; your transcript stays.
 
 ## Check how full the chat is
 
-1. Look at the context ring in the message box. It turns amber at 60% and red at 80% by default.
+1. Look at the message box's context ring. It turns amber at 60%, red at 80% by default.
 2. Select it for the numbers.
 
 ![The context ring open, warning that the chat is getting full](images/compaction-ring-light.png)
@@ -21,27 +21,27 @@ Past the red point, Spark compacts before your next message, never mid-reply or 
 
 ## Read the summary
 
-1. Find the **Compacted** divider above your message.
+1. Find the **Compacted** divider.
 2. Select **View summary** to read what the agent now carries.
 
-Agents can still look up earlier turns with `spark_chat_history`.
+It ends with **Exact identifiers**: PR numbers, commits, branches, files, tickets, errors and links, never secrets. Agents read earlier turns with `spark_chat_history`.
 
 ## Change when Spark compacts
 
 1. Open **Settings → Chats & autonomy** and find **Context compaction**.
 2. Set **Warn when context is** (30% to 90%). It only colours the ring.
-3. Set **Compact automatically at** (40% to 95%), or turn its switch off to be asked each time.
+3. Set **Compact automatically at** (40% to 95%), or switch it off to be asked.
 
 ## Answer the card
 
-With automatic compaction off, **This chat is almost full** asks before your message is sent.
+With auto-compaction off, **This chat is almost full** asks first.
 
 ![The This chat is almost full card with its three choices](images/compaction-card-light.png)
 
-| Choice                                | Result                                                                      |
-| ------------------------------------- | --------------------------------------------------------------------------- |
-| **Compact now**                       | The agent carries on in this chat from a summary.                           |
-| **Start a fresh chat with a summary** | A new chat, "… (continued)", gets your message. The two link to each other. |
-| **Keep going**                        | Sends as is. The card returns 10 points later, at most at 95%.              |
+| Choice                                | Result                                                    |
+| ------------------------------------- | --------------------------------------------------------- |
+| **Compact now**                       | Carries on in this chat from a summary.                   |
+| **Start a fresh chat with a summary** | A linked new chat, "… (continued)", gets your message.    |
+| **Keep going**                        | Sends as is; the card returns 10 points later, up to 95%. |
 
 **Next:** [Open a terminal](terminals.md)

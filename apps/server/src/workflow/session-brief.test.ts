@@ -22,6 +22,7 @@ describe('sessionHandoffPrompt', () => {
     changes: [{ path: 'src/export.ts', additions: 40, deletions: 2 }],
     openIssues: ['Failing checks:\npnpm test: 1 failed'],
     totals: '4 turns, 9 runs, 120000 tokens, $1.84 so far.',
+    identifiers: '## Exact identifiers\n- Pull requests and issues: `#41`',
   });
 
   it('carries the goal, plan, open subtasks, files, last check output and chat totals', () => {
@@ -34,6 +35,7 @@ describe('sessionHandoffPrompt', () => {
     expect(text).toContain('## Files changed\n- src/export.ts (+40 -2)');
     expect(text).toContain('## Last check output\nFailing checks:\npnpm test: 1 failed');
     expect(text).toContain('## Chat totals\n4 turns, 9 runs');
+    expect(text.endsWith('## Exact identifiers\n- Pull requests and issues: `#41`')).toBe(true);
   });
 
   it('keeps the last three exchanges verbatim and nothing older', () => {
@@ -52,6 +54,7 @@ describe('sessionHandoffPrompt', () => {
       changes: [],
       openIssues: [],
       totals: null,
+      identifiers: '',
     });
     expect(empty).toContain('No request recorded.');
     expect(empty).toContain('## Files changed\nNone.');
@@ -59,6 +62,7 @@ describe('sessionHandoffPrompt', () => {
     expect(empty).toContain('No earlier messages.');
     expect(empty).not.toContain('## Open subtasks');
     expect(empty).not.toContain('## Chat totals');
+    expect(empty).not.toContain('## Exact identifiers');
   });
 });
 
@@ -72,6 +76,7 @@ describe('the compacted chat summary', () => {
     changes: [{ path: 'src/parse.ts', additions: 12, deletions: 3 }],
     patch: '--- a/src/parse.ts\n+++ b/src/parse.ts\n+const cents = 1;',
     openIssues: ['Review findings still open:\n- [bug] rounding drops a cent'],
+    identifiers: '## Exact identifiers\n- Commits: `56cf70b5`',
   };
 
   it('keeps the first request, every request, the plan, recent turns, diff and open issues', () => {
@@ -90,6 +95,7 @@ describe('the compacted chat summary', () => {
     expect(text).toContain('[bug] rounding drops a cent');
     expect(text).not.toContain('## Acceptance');
     expect(text).not.toContain('## Rules');
+    expect(text.endsWith('## Exact identifiers\n- Commits: `56cf70b5`')).toBe(true);
   });
 
   it('lists only the latest requests of a very long chat and leaves out empty parts', () => {
@@ -103,11 +109,13 @@ describe('the compacted chat summary', () => {
       changes: [],
       patch: '',
       openIssues: [],
+      identifiers: '',
     });
     expect(text).toContain('(5 earlier requests not listed)');
     expect(text).toContain('6. ask 5');
     expect(text).not.toContain('1. ask 0');
     expect(text).not.toContain('## Current diff');
     expect(text).not.toContain('## Open issues');
+    expect(text).not.toContain('## Exact identifiers');
   });
 });
