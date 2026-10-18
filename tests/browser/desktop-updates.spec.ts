@@ -411,7 +411,7 @@ test.describe('update preview flow', () => {
     await expect(rail(page)).not.toContainText('0.1.0-beta.1');
     await expect(rail(page)).not.toContainText('dev');
     await expect(rail(page).getByRole('button', { name: /^App version/ })).toHaveCount(0);
-    await expect(rail(page).getByRole('button').last()).toHaveAccessibleName('Settings');
+    await expect(rail(page).locator('.rail-btn').last()).toHaveAccessibleName('Settings');
     await railShot(page, 'rail-no-version');
 
     await settings.click();

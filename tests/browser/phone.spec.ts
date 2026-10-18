@@ -96,7 +96,7 @@ test('sits above Settings in the left bar and asks to turn phone access on', asy
   const main = await openPhone(page);
   const labels = await page
     .getByRole('navigation', { name: 'Main' })
-    .getByRole('button')
+    .locator('.rail-btn')
     .allTextContents();
   expect(labels.slice(-2)).toEqual(['Remote', 'Settings']);
   await expect(main.getByRole('heading', { name: 'Remote control is off' })).toBeVisible();
