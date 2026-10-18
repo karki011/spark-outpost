@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 import { expandSection } from './provider-screen.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { animationsSettled } from './settle.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
@@ -328,6 +329,7 @@ test('a provider link opens its screen, Escape steps back to the tiles, then clo
   const codex = providers.getByRole('region', { name: 'Codex' });
   await expect(codex.getByRole('tab', { name: 'Local CLI' })).toBeVisible();
   await expect(codex.getByRole('button', { name: 'Back to AI providers' })).toBeFocused();
+  await animationsSettled(page);
   const screen = await new AxeBuilder({ page })
     .include('.pconf')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
@@ -341,6 +343,7 @@ test('a provider link opens its screen, Escape steps back to the tiles, then clo
   await expect(
     providers.getByRole('button', { name: 'Claude Connected · Local CLI', exact: true }),
   ).toBeVisible();
+  await animationsSettled(page);
   const tiles = await new AxeBuilder({ page })
     .include('.ptiles-view')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
@@ -356,6 +359,7 @@ test('a provider link opens its screen, Escape steps back to the tiles, then clo
   await expect(claude.getByRole('button', { name: /^Test/ })).toContainText('Not sent yet');
   await expandSection(claude, 'Danger zone');
   await expandSection(claude, 'Defaults for new chats');
+  await animationsSettled(page);
   const connected = await new AxeBuilder({ page })
     .include('.pconf')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])

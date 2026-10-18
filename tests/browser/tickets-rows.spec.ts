@@ -2,6 +2,7 @@ import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { seedFlowChats } from './ticket-flow-seed.ts';
+import { animationsSettled } from './settle.ts';
 import {
   connectTickets,
   openTickets,
@@ -97,6 +98,7 @@ test('hovering a row keeps every detail in place and reveals Start at the end', 
   const target = row(page, UP_NEXT);
   const start = target.getByRole('button', { name: `Start ${UP_NEXT}` });
   const slot = target.locator('.ir-acts');
+  await animationsSettled(page);
   const before = await placed(target, INFO_CELLS);
   const height = (await box(target)).height;
   await expect(slot).toHaveCSS('opacity', '0');
