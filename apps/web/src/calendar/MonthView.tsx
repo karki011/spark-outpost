@@ -1,8 +1,8 @@
 import './month.css';
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useId, useMemo, useState, type ReactNode } from 'react';
 import type { CalendarEvent } from '@spark-outpost/contracts';
-import { dayTitle } from './calendar-format.ts';
 import { EventPopover } from './EventPopover.tsx';
+import { MonthBar } from './MonthBar.tsx';
 import { MonthGrid } from './MonthGrid.tsx';
 import { eventsByDay, monthGrid, weekStartDay } from './month-model.ts';
 import { ScheduledRail } from './ScheduledRail.tsx';
@@ -30,6 +30,7 @@ const NO_EVENTS: readonly CalendarEvent[] = [];
 export function MonthView(props: MonthViewProps) {
   const { date, today, now, onDate } = props;
   const weekStart = useMemo(() => weekStartDay(), []);
+  const titleId = useId();
   const month = date.slice(0, 7);
   const grid = useMemo(() => monthGrid(`${month}-01`, today, weekStart), [month, today, weekStart]);
   const query = useCalendarRange(grid.from, grid.to);
@@ -56,14 +57,15 @@ export function MonthView(props: MonthViewProps) {
   const shown = open ? (events.find((event) => event.key === open.key) ?? null) : null;
 
   return (
-    <>
-      <header className="td-head">
-        <div>
-          <h1 id="today-h">Today</h1>
-          <p className="td-sub">{dayTitle(today)}</p>
-        </div>
-        {props.switcher}
-      </header>
+    <div className="mo-page">
+      <MonthBar
+        grid={grid}
+        date={date}
+        today={today}
+        titleId={titleId}
+        switcher={props.switcher}
+        onDate={pickDate}
+      />
       {query.isError && <p className="home-error">{query.error.message}</p>}
       {query.data?.truncated && (
         <p className="td-hint">Some events are not shown: this month has too many to read.</p>
@@ -72,6 +74,7 @@ export function MonthView(props: MonthViewProps) {
         <MonthGrid
           grid={grid}
           date={date}
+          titleId={titleId}
           byDay={byDay}
           calendars={calendars}
           loading={loading}
@@ -106,6 +109,6 @@ export function MonthView(props: MonthViewProps) {
           onClose={closePopover}
         />
       )}
-    </>
+    </div>
   );
 }

@@ -1,7 +1,6 @@
 import {
   memo,
   useEffect,
-  useId,
   useMemo,
   useRef,
   type CSSProperties,
@@ -9,26 +8,18 @@ import {
   type MouseEvent,
 } from 'react';
 import type { CalendarChoice, CalendarEvent } from '@spark-outpost/contracts';
-import { ChoicePicker, type PickerChoice } from '../ui/ChoicePicker.tsx';
 import { countLabel } from '../ui/count-label.ts';
 import { clock, dayTitle } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
-import { StepButtons } from './StepButtons.tsx';
-import {
-  keyMove,
-  preview,
-  setMonth,
-  shiftMonth,
-  type MonthCell,
-  type MonthGridModel,
-} from './month-model.ts';
-import { localDate } from './use-calendar.ts';
+import { keyMove, preview, type MonthCell, type MonthGridModel } from './month-model.ts';
+import { useTitlesThatFit } from './use-titles-fit.ts';
 
-const YEARS_AROUND = 5;
+const LABEL_TITLES = 3;
 
 interface MonthGridProps {
   grid: MonthGridModel;
   date: string;
+  titleId: string;
   byDay: ReadonlyMap<string, CalendarEvent[]>;
   calendars: ReadonlyMap<string, CalendarChoice>;
   loading: boolean;
@@ -38,75 +29,32 @@ interface MonthGridProps {
   onOpenEvent: (event: CalendarEvent, anchor: HTMLElement) => void;
 }
 
-function monthName(month: number): string {
-  return new Date(2000, month, 1).toLocaleDateString(undefined, { month: 'long' });
-}
-
-const MONTH_CHOICES: PickerChoice[] = Array.from({ length: 12 }, (_, month) => ({
-  id: String(month),
-  label: monthName(month),
-}));
-
-function yearsAround(year: number): number[] {
-  const current = new Date().getFullYear();
-  const first = Math.min(current - YEARS_AROUND, year);
-  const last = Math.max(current + YEARS_AROUND, year);
-  return Array.from({ length: last - first + 1 }, (_, index) => first + index);
-}
-
-function MonthBar(props: Pick<MonthGridProps, 'grid' | 'date' | 'onDate'> & { titleId: string }) {
-  const { grid, date, onDate } = props;
-  return (
-    <div className="mo-bar">
-      <h2 id={props.titleId} className="sr-only">
-        {monthName(grid.month)} {grid.year}
-      </h2>
-      <span className="mo-pick">
-        <ChoicePicker
-          label="Month"
-          choices={MONTH_CHOICES}
-          value={String(grid.month)}
-          onChange={(month) => onDate(setMonth(date, grid.year, Number(month)))}
-        />
-      </span>
-      <span className="mo-pick mo-year">
-        <ChoicePicker
-          label="Year"
-          choices={yearsAround(grid.year).map((year) => ({
-            id: String(year),
-            label: String(year),
-          }))}
-          value={String(grid.year)}
-          onChange={(year) => onDate(setMonth(date, Number(year), grid.month))}
-        />
-      </span>
-      <span className="mo-bar-end">
-        <button type="button" className="btn line sm" onClick={() => onDate(localDate(Date.now()))}>
-          Today
-        </button>
-        <StepButtons unit="month" onStep={(delta) => onDate(shiftMonth(date, delta))} />
-      </span>
-    </div>
-  );
-}
-
 function cellLabel(cell: MonthCell, events: readonly CalendarEvent[]): string {
-  const { shown, more } = preview(events);
   const count = events.length > 0 ? countLabel(events.length, 'event') : 'no events';
-  const titles = shown.map((event) => event.title).join(', ');
+  const titles = events
+    .slice(0, LABEL_TITLES)
+    .map((event) => event.title)
+    .join(', ');
+  const more = events.length - LABEL_TITLES;
   const rest = more > 0 ? ` and ${more} more` : '';
   const today = cell.today ? ', today' : '';
   return `${dayTitle(cell.date)}${today}, ${count}${titles ? `: ${titles}${rest}` : ''}`;
 }
 
+function startClock(event: CalendarEvent): string | null {
+  return event.allDay ? null : clock(Date.parse(event.start));
+}
+
 function eventLabel(event: CalendarEvent): string {
-  return event.allDay ? event.title : `${clock(Date.parse(event.start))} ${event.title}`;
+  const at = startClock(event);
+  return at ? `${at} ${event.title}` : event.title;
 }
 
 interface CellProps {
   cell: MonthCell;
   events: readonly CalendarEvent[];
   selected: boolean;
+  limit: number;
   calendars: ReadonlyMap<string, CalendarChoice>;
   onDate: (date: string) => void;
   onOpenDay: (date: string) => void;
@@ -117,10 +65,11 @@ const DayCell = memo(function DayCell({
   cell,
   events,
   selected,
+  limit,
   calendars,
   ...actions
 }: CellProps) {
-  const { shown, more } = preview(events);
+  const { shown, more } = preview(events, limit);
   const openEvent = (event: CalendarEvent) => (click: MouseEvent<HTMLButtonElement>) => {
     click.stopPropagation();
     actions.onDate(cell.date);
@@ -156,10 +105,11 @@ const DayCell = memo(function DayCell({
             title={eventLabel(event)}
             onClick={openEvent(event)}
           >
-            {event.title}
+            {!event.allDay && <span className="mo-at">{startClock(event)}</span>}
+            <span className="mo-ev-title">{event.title}</span>
           </button>
         ))}
-        {more > 0 && <span className="mo-more">+{more} more</span>}
+        {more > 0 && <span className="mo-more">{more} more</span>}
       </span>
     </div>
   );
@@ -179,10 +129,10 @@ function weekdayLabels(week: readonly MonthCell[]) {
 }
 
 export function MonthGrid(props: MonthGridProps) {
-  const { grid, date, weekStart, onDate, onOpenDay } = props;
+  const { grid, date, titleId, weekStart, onDate, onOpenDay } = props;
   const gridRef = useRef<HTMLDivElement>(null);
   const moved = useRef(false);
-  const titleId = useId();
+  const limit = useTitlesThatFit(gridRef);
   const weekdays = useMemo(() => weekdayLabels(grid.weeks[0]!), [grid]);
 
   useEffect(() => {
@@ -208,8 +158,7 @@ export function MonthGrid(props: MonthGridProps) {
   };
 
   return (
-    <section className="hpanel mo-panel" aria-labelledby={titleId} aria-busy={props.loading}>
-      <MonthBar grid={grid} date={date} onDate={onDate} titleId={titleId} />
+    <section className="mo-panel" aria-labelledby={titleId} aria-busy={props.loading}>
       <div
         ref={gridRef}
         role="grid"
@@ -233,6 +182,7 @@ export function MonthGrid(props: MonthGridProps) {
                 cell={cell}
                 events={props.byDay.get(cell.date) ?? NO_EVENTS}
                 selected={cell.date === date}
+                limit={limit}
                 calendars={props.calendars}
                 onDate={onDate}
                 onOpenDay={onOpenDay}

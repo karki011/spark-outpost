@@ -8,10 +8,10 @@ import {
   type CalendarSpan,
 } from '@spark-outpost/contracts';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
-import { dateOf, span } from './calendar-format.ts';
+import { dateOf, shortDay, span } from './calendar-format.ts';
 import { EventCard } from './EventCard.tsx';
 import { StepButtons } from './StepButtons.tsx';
-import { shiftDay, timeGroups, type TimeGroup } from './month-model.ts';
+import { shiftDay } from './month-model.ts';
 
 interface ScheduledRailProps {
   date: string;
@@ -27,17 +27,17 @@ interface ScheduledRailProps {
 }
 
 type RailItem =
-  | { kind: 'group'; at: number; group: TimeGroup }
+  | { kind: 'event'; at: number; event: CalendarEvent }
   | { kind: 'free'; at: number; free: CalendarSpan };
 
 const FREE_FIRST = 0.5;
 
-function railItems(groups: readonly TimeGroup[], free: readonly CalendarSpan[]): RailItem[] {
+function railItems(events: readonly CalendarEvent[], free: readonly CalendarSpan[]): RailItem[] {
   const items: RailItem[] = [
-    ...groups.map((group) => ({
-      kind: 'group' as const,
-      at: group.label === 'All day' ? -Infinity : Date.parse(group.events[0]!.start),
-      group,
+    ...events.map((event) => ({
+      kind: 'event' as const,
+      at: event.allDay ? -Infinity : Date.parse(event.start),
+      event,
     })),
     ...free.map((block) => ({ kind: 'free' as const, at: block.start - FREE_FIRST, free: block })),
   ];
@@ -51,15 +51,6 @@ function upcomingFree(blocks: readonly CalendarSpan[], now: number): CalendarSpa
   });
 }
 
-function railDate(date: string): string {
-  return dateOf(date).toLocaleDateString(undefined, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
-
 export function ScheduledRail(props: ScheduledRailProps) {
   const { date, today, now, events, calendars, clashes } = props;
   const headingId = useId();
@@ -67,52 +58,44 @@ export function ScheduledRail(props: ScheduledRailProps) {
   const items = useMemo(() => {
     const free =
       date >= today ? upcomingFree(freeBlocks([...events], dateOf(date).getTime()), now) : [];
-    return railItems(timeGroups(events, date), free);
+    return railItems(events, free);
   }, [events, date, today, now]);
   return (
-    <aside className="hpanel rl" aria-labelledby={headingId}>
+    <aside className="rl" aria-label="Scheduled">
       <header className="rl-head">
-        <div>
-          <h2 id={headingId}>Scheduled</h2>
-          <p className="td-sub" aria-live="polite">
-            {railDate(date)}
-          </p>
-        </div>
+        <h2 id={headingId} aria-live="polite">
+          {shortDay(date)}
+        </h2>
         <span className="rl-nav">
           <StepButtons unit="day" onStep={(delta) => props.onDate(shiftDay(date, delta))} />
         </span>
       </header>
-      <button type="button" className="btn line sm rl-day" onClick={() => props.onOpenDay(date)}>
-        Open in Day view
-      </button>
       {props.loading && <Skeleton label="Loading events" shape="cards" rows={2} />}
       {!props.loading && events.length === 0 && (
         <p className="hquiet rl-quiet">Nothing scheduled.</p>
       )}
-      {items.map((item) =>
-        item.kind === 'free' ? (
-          <p key={`free-${item.free.start}`} className="rl-free">
-            free {span(item.free.start, item.free.end)}
-          </p>
-        ) : (
-          <section key={item.group.label} className="rl-group" aria-label={item.group.label}>
-            <h3 className="rl-hour">{item.group.label}</h3>
-            <ul className="rl-cards">
-              {item.group.events.map((event) => (
-                <EventCard
-                  key={event.key}
-                  event={event}
-                  calendar={calendars.get(event.calendarKey)}
-                  clashes={clashes.get(event.key)}
-                  now={now}
-                  isToday={isToday}
-                  onOpen={props.onOpenEvent}
-                />
-              ))}
-            </ul>
-          </section>
-        ),
-      )}
+      <ul className="rl-cards" aria-labelledby={headingId}>
+        {items.map((item) =>
+          item.kind === 'free' ? (
+            <li key={`free-${item.free.start}`} className="rl-free">
+              free {span(item.free.start, item.free.end)}
+            </li>
+          ) : (
+            <EventCard
+              key={item.event.key}
+              event={item.event}
+              calendar={calendars.get(item.event.calendarKey)}
+              clashes={clashes.get(item.event.key)}
+              now={now}
+              isToday={isToday}
+              onOpen={props.onOpenEvent}
+            />
+          ),
+        )}
+      </ul>
+      <button type="button" className="rl-day" onClick={() => props.onOpenDay(date)}>
+        Open in Day view
+      </button>
     </aside>
   );
 }
