@@ -87,6 +87,7 @@ const SETTING_COLUMNS: Record<keyof CalendarSettingsPatch, string> = {
   focusNames: 'focus_names',
   phoneAlerts: 'phone_alerts',
   briefBlock: 'brief_block',
+  agentsRead: 'agents_read',
 };
 
 export async function updateSettings(
@@ -119,6 +120,7 @@ interface ChoiceRow {
   ownership: CalendarChoice['ownership'];
   include: boolean;
   nudges: boolean;
+  agents_edit: boolean;
 }
 
 function choiceOf(row: ChoiceRow): CalendarChoice {
@@ -135,6 +137,7 @@ function choiceOf(row: ChoiceRow): CalendarChoice {
     ownership: row.ownership,
     include: row.include,
     nudges: row.nudges,
+    agentsEdit: row.agents_edit,
   };
 }
 
@@ -163,6 +166,7 @@ export interface ChoiceWrite {
   calendar: HelperCalendar;
   include: boolean;
   nudges: boolean;
+  agentsEdit: boolean;
 }
 
 export async function lockChoices(
@@ -191,8 +195,8 @@ export async function replaceChoices(
     await client.query(
       `INSERT INTO calendar_calendars (key, workspace_id, calendar_id, title, source_id,
          source_title, source_kind, color, writable, subscribed, ownership, include, nudges,
-         position, google_account_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+         position, google_account_id, agents_edit)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
       [
         write.key ?? randomUUID(),
         workspaceId,
@@ -209,6 +213,7 @@ export async function replaceChoices(
         write.nudges,
         position,
         owner.googleAccountId,
+        write.agentsEdit && calendar.writable,
       ],
     );
   }
@@ -217,6 +222,7 @@ export async function replaceChoices(
 const CHOICE_COLUMNS: Record<keyof CalendarChoicePatch, string> = {
   include: 'include',
   nudges: 'nudges',
+  agentsEdit: 'agents_edit',
 };
 
 export async function updateChoice(
@@ -227,9 +233,14 @@ export async function updateChoice(
 ): Promise<boolean> {
   const entries = Object.entries(patch) as [keyof CalendarChoicePatch, boolean][];
   const sets = entries.map(([name], index) => `${CHOICE_COLUMNS[name]} = $${index + 3}`);
+  const googleMayEdit = patch.agentsEdit
+    ? `AND (google_account_id IS NULL OR EXISTS (
+         SELECT 1 FROM calendar_google_accounts account
+         WHERE account.id = calendar_calendars.google_account_id AND account.can_edit))`
+    : '';
   const { rowCount } = await db.query(
     `UPDATE calendar_calendars SET ${sets.length ? sets.join(', ') : 'include = include'}
-     WHERE workspace_id = $1 AND key = $2`,
+     WHERE workspace_id = $1 AND key = $2 ${googleMayEdit}`,
     [workspaceId, key, ...entries.map(([, value]) => value)],
   );
   return (rowCount ?? 0) > 0;

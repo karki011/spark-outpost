@@ -98,6 +98,7 @@ describe('with a Google account', () => {
             email: 'me@example.com',
             state,
             message: null,
+            canEdit: false,
           },
         ],
       },

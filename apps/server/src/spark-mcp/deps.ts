@@ -1,4 +1,5 @@
 import type { BrowserHost } from '../browser/host-client.ts';
+import type { AgentCalendarHosts } from '../calendar/agent/access.ts';
 import type { MacHost } from '../mac-control/host-client.ts';
 import type { CodeScanner } from '../codescan/scanner.ts';
 import type { Db } from '../persistence/db.ts';
@@ -39,6 +40,7 @@ export interface SparkToolDeps {
   now?: () => Date;
   browser?: BrowserHost | undefined;
   mac?: MacHost | undefined;
+  calendar?: AgentCalendarHosts | undefined;
   shotDir?: string;
   outposts?: OutpostToolDeps | undefined;
 }

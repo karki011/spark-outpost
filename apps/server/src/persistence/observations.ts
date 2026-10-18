@@ -2,7 +2,7 @@ import type { Queryable } from './db.ts';
 import { newId } from './ids.ts';
 
 export type ObservationSource =
-  'secret_file' | 'secret_output' | 'private_data' | 'web_page' | 'mac_app';
+  'secret_file' | 'secret_output' | 'private_data' | 'web_page' | 'mac_app' | 'calendar';
 
 export interface Observation {
   source: ObservationSource;

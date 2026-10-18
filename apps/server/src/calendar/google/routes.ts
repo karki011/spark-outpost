@@ -26,7 +26,12 @@ export function googleCalendarRoutes(deps: GoogleRouteDeps): Router {
 
   router.post('/calendar/google/sign-in', async (req, res) => {
     const request = parseBody(startGoogleSignInSchema, req);
-    res.json(await need().signIn({ accountId: request.accountId ?? null }));
+    res.json(
+      await need().signIn({
+        accountId: request.accountId ?? null,
+        editCalendar: request.editCalendar ?? null,
+      }),
+    );
   });
 
   router.delete('/calendar/google/sign-in', (_req, res) => {

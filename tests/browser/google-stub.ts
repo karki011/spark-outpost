@@ -55,6 +55,12 @@ export async function handleGoogle(req: IncomingMessage, res: ServerResponse, pa
     google.addCalendar(GOOGLE_STUB_SUBJECT, { ...entry, accessRole: 'reader' });
     return send(res, 200, { ok: true });
   }
+  if (path === '/google-test/read-only') {
+    google.grantedScopes = google.grantedScopes.filter(
+      (scope) => !scope.endsWith('/calendar.events'),
+    );
+    return send(res, 200, { ok: true });
+  }
   if (path === '/google-test/expire') {
     google.expireRefreshTokens();
     return send(res, 200, { ok: true });

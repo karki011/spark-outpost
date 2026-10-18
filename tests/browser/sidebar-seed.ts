@@ -11,6 +11,8 @@ export interface SeedApproval {
   diffs?: { path: string; oldText: string | null; newText: string }[];
   plan?: string;
   checkpoint?: Record<string, unknown>;
+  payload?: Record<string, unknown>;
+  options?: { optionId: string; name: string; kind: string }[];
 }
 
 export interface SeedChat {
@@ -46,7 +48,9 @@ async function insertApproval(
     truncated: false,
     ...(approval.plan ? { plan: approval.plan } : {}),
     ...(approval.checkpoint ? { checkpoint: approval.checkpoint } : {}),
+    ...approval.payload,
   };
+  const options = approval.options ?? APPROVAL_OPTIONS;
   const toolCallId = `seed:${id}`;
   const { rows } = await db.query<{ created_at: Date }>(
     `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash, options,
@@ -60,7 +64,7 @@ async function insertApproval(
       approval.kind,
       approval.title,
       JSON.stringify(payload),
-      JSON.stringify(APPROVAL_OPTIONS),
+      JSON.stringify(options),
     ],
   );
   const requested = {
@@ -74,7 +78,7 @@ async function insertApproval(
       title: approval.title,
       payload,
       payloadHash: 'sha256:seed',
-      options: APPROVAL_OPTIONS,
+      options,
       status: 'pending',
       reason: null,
       decisionOptionId: null,

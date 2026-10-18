@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import {
   SPARK_ACTION_KIND,
+  calendarAuditFacts,
+  isCalendarAction,
   SPARK_ACTION_OPTION,
   sparkActionLabels,
   sparkActionQuestion,
@@ -69,6 +71,10 @@ function cardTitle(action: SparkAction): string {
     action.action === 'mac_press'
   ) {
     return question;
+  }
+  if (action.action === 'calendar_read') return question;
+  if (action.action === 'calendar_edit') {
+    return `${question} ${action.after?.title ?? action.before?.title ?? ''}`.trim();
   }
   if (action.action === 'create_ticket') return `${question} ${action.title}`;
   if (action.action === 'open_pr') return `${question} ${action.title}`;
@@ -144,6 +150,13 @@ export async function postCard(
   return card;
 }
 
+export function auditedAction(action: SparkAction): unknown {
+  if (action.action === 'calendar_read' || action.action === 'calendar_edit') {
+    return calendarAuditFacts(action);
+  }
+  return action;
+}
+
 export function auditAction(
   run: ActionRun,
   action: SparkAction,
@@ -151,7 +164,7 @@ export function auditAction(
 ): void {
   run.hooks.audit?.message('harness', {
     method: `spark/${action.action}`,
-    params: redactValue({ action, ...outcome }),
+    params: redactValue({ action: auditedAction(action), ...outcome }),
   });
 }
 
@@ -181,10 +194,17 @@ function finished(approval: Approval) {
   return { outcome: 'done', message: result.message, url: result.url, ...result.output };
 }
 
+export interface ProposeOptions {
+  alwaysAsk?: boolean;
+  sendsTo?: string | null;
+  sendSubject?: string;
+  confirmName?: string;
+}
+
 export async function proposeAction(
   context: SparkToolContext,
   action: SparkAction,
-  options: { alwaysAsk?: boolean } = {},
+  options: ProposeOptions = {},
 ) {
   const run = actionRun(context.scope);
   const observed = (await run.scope.observations?.labels()) ?? [];
@@ -199,6 +219,7 @@ export async function proposeAction(
     path,
     requested: facts.requested,
     observed,
+    ...(options.confirmName ? { confirmName: options.confirmName } : {}),
   });
   if (path === 'confirm') {
     auditAction(run, action, { outcome: 'waiting_for_user', approvalId: card.id });
@@ -209,12 +230,16 @@ export async function proposeAction(
       ...(failedBefore ? { lastAttempt: `${LAST_ATTEMPT_FAILED} ${failedBefore}` } : {}),
     };
   }
-  auditAction(run, action, { outcome: 'performing', approvalId: card.id });
-  const target = SENDS_TO[action.action];
+  auditAction(run, action, {
+    outcome: 'performing',
+    approvalId: card.id,
+    ...(isCalendarAction(action.action) ? { ranWithoutReview: true } : {}),
+  });
+  const target = options.sendsTo === undefined ? SENDS_TO[action.action] : options.sendsTo;
   if (target && observed.length > 0) {
     run.scope.observations?.sentOut({
       toolCallId: null,
-      subject: card.title,
+      subject: options.sendSubject ?? card.title,
       target,
       observed,
       approvalId: card.id,

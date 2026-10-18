@@ -10,17 +10,17 @@ Your chats, settings and code stay on your computer; keys live in your keychain.
 
 ## What leaves your computer
 
-| Goes to                               | What                                                                                 | Stop it                                                          |
-| ------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
-| **Your AI provider**                  | Your messages, and files, command output and allowed Slack messages the agent reads. | [`.sparkignore`](sparkignore.md) for files                       |
-| **Jev**, if connected                 | Redacted PR comments, short turn facts, Map file contents.                           | See [what Jev reads](jev.md#what-jev-reads)                      |
-| **GitHub, Jira, Linear, MCP servers** | What you or an agent sends; a clone talks to its host.                               | Disconnect them                                                  |
-| **Sites agents open**                 | Addresses, typed text; never your sign-ins.                                          | [Agent mode](agent-mode.md)                                      |
-| **Apple or Google push**              | Encrypted notifications; sender contact.                                             | **Notify this device**                                           |
-| **Slack**                             | Notifications, confirmed posts; never direct messages.                               | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
-| **Hugging Face**                      | The speech model, once.                                                              | [Voice](voice.md)                                                |
-| **Meeting services, Google**          | The meeting you **Join**; calendar reads.                                            | [See your day](calendar.md)                                      |
-| **Spark Outpost team**                | Anonymous heartbeat.                                                                 | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
+| Goes to                               | What                                                                         | Stop it                                                          |
+| ------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **Your AI provider**                  | Your messages, and files, output, Slack messages and events the agent reads. | [`.sparkignore`](sparkignore.md) for files                       |
+| **Jev**, if connected                 | Redacted PR comments, short turn facts, Map file contents.                   | See [what Jev reads](jev.md#what-jev-reads)                      |
+| **GitHub, Jira, Linear, MCP servers** | What you or an agent sends; a clone talks to its host.                       | Disconnect them                                                  |
+| **Sites agents open**                 | Addresses, typed text; never your sign-ins.                                  | [Agent mode](agent-mode.md)                                      |
+| **Apple or Google push**              | Encrypted notifications; sender contact.                                     | **Notify this device**                                           |
+| **Slack**                             | Notifications, confirmed posts; never direct messages.                       | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
+| **Hugging Face**                      | The speech model, once.                                                      | [Voice](voice.md)                                                |
+| **Meeting services, Google**          | The meeting you **Join**; calendar reads and changes.                        | [See your day](calendar.md)                                      |
+| **Spark Outpost team**                | Anonymous heartbeat.                                                         | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
 
 ## Where your keys live
 

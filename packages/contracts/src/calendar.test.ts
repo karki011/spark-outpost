@@ -29,6 +29,7 @@ function calendar(key: string, overrides: Partial<CalendarChoice> = {}): Calenda
     ownership: 'mine',
     include: true,
     nudges: false,
+    agentsEdit: false,
     ...overrides,
   };
 }

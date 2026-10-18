@@ -30,6 +30,7 @@ function saved(key: string, calendar: HelperCalendar, flags: Partial<CalendarCho
     ownership: calendar.ownership,
     include: true,
     nudges: false,
+    agentsEdit: false,
     ...flags,
   } satisfies CalendarChoice;
 }
@@ -42,7 +43,9 @@ const K2 = '00000000-0000-4000-8000-000000000002';
 describe('rematchCalendars', () => {
   it('adds a new calendar included, with nudges on', () => {
     const match = rematchCalendars([], [WORK]);
-    expect(match.writes).toEqual([{ key: null, calendar: WORK, include: true, nudges: true }]);
+    expect(match.writes).toEqual([
+      { key: null, calendar: WORK, include: true, nudges: true, agentsEdit: false },
+    ]);
     expect(match.changed).toBe(true);
   });
 
@@ -61,7 +64,9 @@ describe('rematchCalendars', () => {
     const before = [saved(K1, WORK, { nudges: false })];
     const resynced = helperCalendar('work-2', 'Work');
     const match = rematchCalendars(before, [resynced]);
-    expect(match.writes).toEqual([{ key: K1, calendar: resynced, include: true, nudges: false }]);
+    expect(match.writes).toEqual([
+      { key: K1, calendar: resynced, include: true, nudges: false, agentsEdit: false },
+    ]);
     expect(match.lost).toEqual([]);
     expect(match.changed).toBe(true);
   });

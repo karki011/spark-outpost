@@ -117,3 +117,4 @@ export * from './calendar-clash.ts';
 export * from './calendar-bridge.ts';
 export * from './calendar-api.ts';
 export * from './calendar-google.ts';
+export * from './calendar-actions.ts';

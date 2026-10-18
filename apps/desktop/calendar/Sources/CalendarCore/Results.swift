@@ -67,6 +67,7 @@ public struct HelperEventDetail: Equatable, Encodable {
     public var notes: String
     public var attendees: [HelperAttendee]
     public var organizerIsMe: Bool
+    public var alarms: [Int]
 }
 
 public enum OpResult: Equatable, Encodable {
@@ -75,6 +76,8 @@ public enum OpResult: Equatable, Encodable {
     case events([HelperEvent], truncated: Bool)
     case event(HelperEventDetail)
     case opened(Bool)
+    case saved(before: HelperEventDetail?, after: HelperEventDetail)
+    case removed
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -90,10 +93,15 @@ public enum OpResult: Equatable, Encodable {
             try detail.encode(to: encoder)
         case .opened(let opened):
             try container.encode(opened, forKey: .opened)
+        case .saved(let before, let after):
+            try container.encodeNullable(before, forKey: .before)
+            try container.encode(after, forKey: .after)
+        case .removed:
+            try container.encode(true, forKey: .removed)
         }
     }
 
     private enum CodingKeys: String, CodingKey {
-        case authorization, calendars, events, truncated, opened
+        case authorization, calendars, events, truncated, opened, before, after, removed
     }
 }

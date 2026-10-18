@@ -41,19 +41,86 @@ final class EventKitStore: CalendarStore {
     }
 
     func occurrences(of eventId: String, around start: Date) -> [StoreEvent] {
+        ekOccurrences(of: eventId, around: start).map(storeEvent)
+    }
+
+    func create(in calendarId: String, change: EventChange) throws -> StoreEvent {
+        guard let calendar = store.calendar(withIdentifier: calendarId) else {
+            throw OpError(.notFound, "no calendar with that id")
+        }
+        let event = EKEvent(eventStore: store)
+        event.calendar = calendar
+        apply(change, to: event)
+        try commit { try store.save(event, span: .thisEvent, commit: true) }
+        return storeEvent(event)
+    }
+
+    func update(_ found: StoreEvent, change: EventChange, span: EditSpan) throws -> StoreEvent {
+        let event = try ekOccurrence(found)
+        apply(change, to: event)
+        try commit { try store.save(event, span: ekSpan(span), commit: true) }
+        return storeEvent(event)
+    }
+
+    func remove(_ found: StoreEvent, span: EditSpan) throws {
+        let event = try ekOccurrence(found)
+        try commit { try store.remove(event, span: ekSpan(span), commit: true) }
+    }
+
+    private func ekOccurrences(of eventId: String, around start: Date) -> [EKEvent] {
         guard let item = store.calendarItem(withIdentifier: eventId) as? EKEvent, let calendar = item.calendar else {
             return []
         }
         let predicate = store.predicateForEvents(withStart: start.addingTimeInterval(-1), end: start.addingTimeInterval(1), calendars: [calendar])
-        return store.events(matching: predicate)
-            .filter { $0.calendarItemIdentifier == eventId }
-            .map(storeEvent)
+        return store.events(matching: predicate).filter { $0.calendarItemIdentifier == eventId }
+    }
+
+    private func ekOccurrence(_ found: StoreEvent) throws -> EKEvent {
+        let match = ekOccurrences(of: found.id, around: found.start).first {
+            abs($0.startDate.timeIntervalSince(found.start)) < 1
+        }
+        guard let match else { throw OpError(.notFound, "no event with that id starts at that time") }
+        return match
     }
 
     func open(eventId: String) -> Bool {
         if let url = calendarEventURL(eventId), NSWorkspace.shared.open(url) { return true }
         guard let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal") else { return false }
         return NSWorkspace.shared.open(app)
+    }
+}
+
+private func commit(_ work: () throws -> Void) throws {
+    do {
+        try work()
+    } catch let error as OpError {
+        throw error
+    } catch {
+        throw OpError(.failed, "Calendar refused the change: \(error.localizedDescription)")
+    }
+}
+
+private func ekSpan(_ span: EditSpan) -> EKSpan {
+    span == .future ? .futureEvents : .thisEvent
+}
+
+private func apply(_ change: EventChange, to event: EKEvent) {
+    if let title = change.title { event.title = title }
+    if let allDay = change.allDay { event.isAllDay = allDay }
+    if let start = change.start { event.startDate = start }
+    if let end = change.end { event.endDate = end }
+    if let notes = change.notes { event.notes = notes.isEmpty ? nil : notes }
+    if let location = change.location { event.location = location.isEmpty ? nil : location }
+    switch change.alarm {
+    case .keep: break
+    case .none: event.alarms = nil
+    case .minutesBefore(let minutes): event.alarms = [EKAlarm(relativeOffset: -TimeInterval(minutes * 60))]
+    }
+}
+
+private func alarmMinutes(_ event: EKEvent) -> [Int] {
+    (event.alarms ?? []).compactMap { alarm in
+        alarm.absoluteDate == nil && alarm.relativeOffset <= 0 ? Int((-alarm.relativeOffset / 60).rounded()) : nil
     }
 }
 
@@ -135,7 +202,8 @@ private func storeEvent(_ event: EKEvent) -> StoreEvent {
         attendees: (event.attendees ?? []).map(participant),
         organizerIsCurrentUser: event.organizer?.isCurrentUser ?? false,
         availability: availability(event.availability),
-        recurring: event.hasRecurrenceRules
+        recurring: event.hasRecurrenceRules,
+        alarms: alarmMinutes(event)
     )
 }
 

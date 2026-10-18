@@ -273,6 +273,8 @@ describe('the Spark tools server', () => {
       'spark_attention',
       'spark_audit',
       'spark_brief',
+      'spark_calendar',
+      'spark_calendar_edit',
       'spark_chat',
       'spark_chat_history',
       'spark_chats',
@@ -321,6 +323,7 @@ describe('the Spark tools server', () => {
     expect(acting.map((tool) => tool.name).sort()).toEqual([
       'spark_add_mcp_server',
       'spark_assign_ticket',
+      'spark_calendar_edit',
       'spark_comment_ticket',
       'spark_create_spark',
       'spark_create_ticket',

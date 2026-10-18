@@ -39,6 +39,47 @@ final class FakeStore: CalendarStore {
         openedIds.append(eventId)
         return true
     }
+
+    var savedSpans: [EditSpan] = []
+    var removed: [(String, EditSpan)] = []
+    var refuse = false
+
+    func create(in calendarId: String, change: EventChange) throws -> StoreEvent {
+        if refuse { throw OpError(.failed, "Calendar refused the change") }
+        var created = StoreEvent(id: "new-\(storedEvents.count)", start: change.start!, end: change.end!, title: change.title!, calendarId: calendarId)
+        applyChange(change, to: &created)
+        storedEvents.append(created)
+        return created
+    }
+
+    func update(_ event: StoreEvent, change: EventChange, span: EditSpan) throws -> StoreEvent {
+        if refuse { throw OpError(.failed, "Calendar refused the change") }
+        savedSpans.append(span)
+        guard let index = storedEvents.firstIndex(where: { $0.id == event.id && $0.start == event.start }) else {
+            throw OpError(.notFound, "gone")
+        }
+        applyChange(change, to: &storedEvents[index])
+        return storedEvents[index]
+    }
+
+    func remove(_ event: StoreEvent, span: EditSpan) throws {
+        removed.append((event.id, span))
+        storedEvents.removeAll { $0.id == event.id && $0.start == event.start }
+    }
+}
+
+private func applyChange(_ change: EventChange, to event: inout StoreEvent) {
+    if let title = change.title { event.title = title }
+    if let start = change.start { event.start = start }
+    if let end = change.end { event.end = end }
+    if let allDay = change.allDay { event.allDay = allDay }
+    if let notes = change.notes { event.notes = notes }
+    if let location = change.location { event.location = location }
+    switch change.alarm {
+    case .keep: break
+    case .none: event.alarms = []
+    case .minutesBefore(let minutes): event.alarms = [minutes]
+    }
 }
 
 let base = Date(timeIntervalSince1970: 1_800_000_000)

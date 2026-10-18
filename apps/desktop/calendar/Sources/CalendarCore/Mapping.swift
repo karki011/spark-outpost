@@ -70,7 +70,8 @@ func helperDetail(_ event: StoreEvent) -> HelperEventDetail {
         attendees: event.attendees.prefix(Limits.attendees).map { attendee in
             HelperAttendee(name: clip(attendee.name, Limits.shortText), isMe: attendee.isCurrentUser, status: attendee.status)
         },
-        organizerIsMe: event.organizerIsCurrentUser
+        organizerIsMe: event.organizerIsCurrentUser,
+        alarms: Array(event.alarms.prefix(Limits.alarms))
     )
 }
 

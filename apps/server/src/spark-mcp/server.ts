@@ -15,6 +15,8 @@ import {
 import { browserTools } from './tools/browser/tools.ts';
 import { macActTool } from './tools/mac/act.ts';
 import { macAppsTool, macReadTool } from './tools/mac/read.ts';
+import { calendarEditTool } from './tools/calendar/edit-tool.ts';
+import { calendarReadTool } from './tools/calendar/read-tool.ts';
 import { prFollowUpRoundTool } from './actions/pr-follow-up-action.ts';
 import { ticketActionTools } from './actions/ticket-actions.ts';
 import { createTeammateTool, updateTeammateTool } from './actions/teammate-actions.ts';
@@ -84,6 +86,8 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   macAppsTool,
   macReadTool,
   macActTool,
+  calendarReadTool,
+  calendarEditTool,
 ];
 
 const INSTRUCTIONS =

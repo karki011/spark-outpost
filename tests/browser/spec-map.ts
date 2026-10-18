@@ -159,6 +159,7 @@ export const SPEC_GROUPS = {
   ],
   home: [
     'calendar',
+    'calendar-agents',
     'calendar-clash',
     'calendar-google',
     'calendar-month',

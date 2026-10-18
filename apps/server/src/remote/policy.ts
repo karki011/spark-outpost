@@ -1,6 +1,7 @@
 import {
   REMOTE_SWITCH_LABELS,
   approvalPayloadSchema,
+  isCalendarAction,
   isMacAction,
   isSecretFileName,
   type RemoteSwitch,
@@ -105,12 +106,12 @@ function baseName(path: string): string {
   return path.split('/').at(-1) ?? path;
 }
 
-export const MAC_CARD_REFUSAL = 'Mac control cards are answered on your Mac.';
+export const MAC_CARD_REFUSAL = 'Mac control and calendar cards are answered on your Mac.';
 
 export function macOnlyCard(payload: unknown): boolean {
   const parsed = approvalPayloadSchema.safeParse(payload);
   const action = parsed.success ? parsed.data.sparkAction?.action : undefined;
-  return action !== undefined && isMacAction(action);
+  return action !== undefined && (isMacAction(action) || isCalendarAction(action));
 }
 
 export function cardSwitch(payload: unknown): RemoteSwitch | null {

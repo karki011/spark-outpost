@@ -15,6 +15,8 @@ public enum Limits {
     public static let noteLinks = 20
     public static let attendees = 500
     public static let attendeeCount = 10_000
+    public static let alarms = 20
+    public static let alarmMinutes = 40_320
 }
 
 public enum Authorization: String, Encodable, Equatable {
@@ -90,8 +92,9 @@ public struct StoreEvent: Equatable {
     public var organizerIsCurrentUser: Bool
     public var availability: Availability
     public var recurring: Bool
+    public var alarms: [Int]
 
-    public init(id: String, uid: String? = nil, start: Date, end: Date, allDay: Bool = false, title: String, calendarId: String, url: String? = nil, location: String? = nil, notes: String? = nil, attendees: [StoreParticipant] = [], organizerIsCurrentUser: Bool = false, availability: Availability = .busy, recurring: Bool = false) {
+    public init(id: String, uid: String? = nil, start: Date, end: Date, allDay: Bool = false, title: String, calendarId: String, url: String? = nil, location: String? = nil, notes: String? = nil, attendees: [StoreParticipant] = [], organizerIsCurrentUser: Bool = false, availability: Availability = .busy, recurring: Bool = false, alarms: [Int] = []) {
         self.id = id
         self.uid = uid
         self.start = start
@@ -106,7 +109,47 @@ public struct StoreEvent: Equatable {
         self.organizerIsCurrentUser = organizerIsCurrentUser
         self.availability = availability
         self.recurring = recurring
+        self.alarms = alarms
     }
+}
+
+public enum EditSpan: String, Equatable {
+    case this
+    case future
+}
+
+public enum AlarmChange: Equatable {
+    case keep
+    case none
+    case minutesBefore(Int)
+}
+
+public struct EventChange: Equatable {
+    public var title: String?
+    public var start: Date?
+    public var end: Date?
+    public var allDay: Bool?
+    public var notes: String?
+    public var location: String?
+    public var alarm: AlarmChange
+
+    public init(title: String? = nil, start: Date? = nil, end: Date? = nil, allDay: Bool? = nil, notes: String? = nil, location: String? = nil, alarm: AlarmChange = .keep) {
+        self.title = title
+        self.start = start
+        self.end = end
+        self.allDay = allDay
+        self.notes = notes
+        self.location = location
+        self.alarm = alarm
+    }
+}
+
+public struct SaveRequest: Equatable {
+    public var calendarId: String
+    public var eventId: String?
+    public var occurrence: Date?
+    public var change: EventChange
+    public var span: EditSpan
 }
 
 public protocol CalendarStore: AnyObject {
@@ -116,6 +159,9 @@ public protocol CalendarStore: AnyObject {
     func events(from: Date, to: Date, calendarIds: [String]?) -> [StoreEvent]
     func occurrences(of eventId: String, around start: Date) -> [StoreEvent]
     func open(eventId: String) -> Bool
+    func create(in calendarId: String, change: EventChange) throws -> StoreEvent
+    func update(_ event: StoreEvent, change: EventChange, span: EditSpan) throws -> StoreEvent
+    func remove(_ event: StoreEvent, span: EditSpan) throws
 }
 
 extension KeyedEncodingContainer {

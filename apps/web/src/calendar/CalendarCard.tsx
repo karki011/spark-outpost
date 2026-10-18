@@ -1,5 +1,5 @@
 import './calendar-card.css';
-import { useId, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import type { CalendarAccount, CalendarStatus } from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
@@ -76,26 +76,32 @@ function HelperBody() {
   );
 }
 
-function AgentsRead() {
+export const AGENTS_READ_HINT =
+  'Agents in your chats can list events and free time. Each chat asks once unless its mode runs Spark actions at once. Agents change events only on calendars with Agents can edit on.';
+
+function AgentsRead({ on }: { on: boolean }) {
   const id = useId();
   const hintId = useId();
+  const { settings } = useCalendarActions();
+  const [shown, setShown] = useState<boolean | null>(null);
+  const checked = shown ?? on;
+  const change = (agentsRead: boolean) => {
+    setShown(agentsRead);
+    settings.mutate({ agentsRead }, { onSettled: () => setShown(null) });
+  };
   return (
-    <SettingRow
-      label={AGENTS_READ_LABEL}
-      controlId={id}
-      hint="Off. Agent tools for the calendar come in a later update."
-      hintId={hintId}
-      disabled
-    >
-      <BlobToggle
-        id={id}
-        label={AGENTS_READ_LABEL}
-        checked={false}
-        disabled
-        describedBy={hintId}
-        onChange={() => undefined}
-      />
-    </SettingRow>
+    <>
+      <SettingRow label={AGENTS_READ_LABEL} controlId={id} hint={AGENTS_READ_HINT} hintId={hintId}>
+        <BlobToggle
+          id={id}
+          label={AGENTS_READ_LABEL}
+          checked={checked}
+          describedBy={hintId}
+          onChange={change}
+        />
+      </SettingRow>
+      <ErrorLine error={settings.error} />
+    </>
   );
 }
 
@@ -114,7 +120,7 @@ function MacConnected({ status, accounts, onChange }: MacProps) {
           {status.notice}
         </p>
       )}
-      <CalendarAccounts accounts={accounts} onChange={onChange} />
+      <CalendarAccounts accounts={accounts} onChange={onChange} withEdit />
       <ErrorLine error={disconnect.error} />
       <div className="cal-foot">
         <button
@@ -153,7 +159,7 @@ function CardBody({ status, connected }: { status: CalendarStatus; connected: bo
       <MacSection status={status} accounts={mac} onChange={change} />
       <GoogleAccounts status={status} accounts={google} onChange={change} />
       <ErrorLine error={error} />
-      {connected && <AgentsRead />}
+      {connected && <AgentsRead on={status.settings.agentsRead} />}
     </div>
   );
 }
