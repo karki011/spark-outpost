@@ -12,7 +12,9 @@ import {
 import { BellIcon, BellOffIcon, ChatPlusIcon, ExternalLinkIcon } from '../ui/icons.tsx';
 import { calendarApi, calendarKeys } from './calendar-api.ts';
 import { CalendarName } from './CalendarName.tsx';
+import { ClashTag } from './ClashTag.tsx';
 import { dateOf, span } from './calendar-format.ts';
+import { JoinButton } from './JoinButton.tsx';
 import { joinHint, openJoin } from './today-model.ts';
 
 interface EventPanelProps {
@@ -20,6 +22,7 @@ interface EventPanelProps {
   event: CalendarEvent;
   date: string;
   calendars: ReadonlyMap<string, CalendarChoice>;
+  clashes?: readonly string[] | undefined;
   isToday: boolean;
   now: number;
   onStartChat: (text: string) => void;
@@ -59,14 +62,11 @@ function JoinRow({ event, isToday, now }: { event: CalendarEvent; isToday: boole
   const when = open ? ' · opens in your browser or app' : hint ? ` · ${hint}` : '';
   return (
     <div className="td-join">
-      <button
-        type="button"
-        className={open ? 'btn primary sm' : 'btn line sm'}
-        disabled={!open}
-        onClick={() => openJoin(link.url)}
-      >
-        Join {CALENDAR_SERVICE_NAMES[link.service]}
-      </button>
+      <JoinButton
+        event={event}
+        now={isToday ? now : 0}
+        label={`Join ${CALENDAR_SERVICE_NAMES[link.service]}`}
+      />
       <small>
         {host}
         {when}
@@ -84,17 +84,43 @@ function useMark(event: CalendarEvent) {
   });
 }
 
-export function EventPanel({
-  id,
-  event,
-  date,
-  calendars,
-  isToday,
-  now,
-  onStartChat,
-}: EventPanelProps) {
+interface EventMetaProps {
+  event: CalendarEvent;
+  date: string;
+  calendars: ReadonlyMap<string, CalendarChoice>;
+}
+
+export function EventMeta({ event, date, calendars }: EventMetaProps) {
+  const { start, end } = spanOf(event);
+  const names = [event.calendarKey, ...event.also]
+    .map((key) => calendars.get(key)?.title)
+    .filter((title): title is string => Boolean(title));
+  const weekday = dateOf(date).toLocaleDateString(undefined, { weekday: 'long' });
+  const people = event.attendeeCount > 1 ? ` · ${event.attendeeCount} people` : '';
+  return (
+    <p className="td-panel-meta">
+      {weekday} {event.allDay ? 'all day' : span(start, end)} ·{' '}
+      {names.map((name, index) => (
+        <Fragment key={`${name}-${index}`}>
+          {index > 0 && ' and '}
+          <CalendarName name={name} className="td-panel-cal" />
+        </Fragment>
+      ))}
+      {people}
+    </p>
+  );
+}
+
+interface EventActionsProps {
+  event: CalendarEvent;
+  isToday: boolean;
+  now: number;
+  onStartChat: (text: string) => void;
+}
+
+export function EventActions({ event, isToday, now, onStartChat }: EventActionsProps) {
   const mark = useMark(event);
-  const occurrence = { eventId: event.id, start: event.start };
+  const occurrence = { eventId: event.id, start: event.start, calendarKey: event.calendarKey };
   const google = isGoogleEventId(event.id);
   const openInCalendar = useMutation({
     mutationFn: async () => {
@@ -112,30 +138,13 @@ export function EventPanel({
       onStartChat(notes ? `${detail.title}\n\n${notes}` : detail.title);
     },
   });
-  const { start, end } = spanOf(event);
   const pending = mark.isPending ? mark.variables : null;
   const remind = pending?.kind === 'remind_5' ? pending.on : event.remind;
   const hold = pending?.kind === 'hold' ? pending.on : event.hold;
-  const ended = end <= now;
-  const names = [event.calendarKey, ...event.also]
-    .map((key) => calendars.get(key)?.title)
-    .filter((title): title is string => Boolean(title));
-  const weekday = dateOf(date).toLocaleDateString(undefined, { weekday: 'long' });
-  const people = event.attendeeCount > 1 ? ` · ${event.attendeeCount} people` : '';
+  const ended = spanOf(event).end <= now;
   const error = mark.error ?? openInCalendar.error ?? startChat.error;
   return (
-    <section id={id} className="hpanel td-panel" aria-labelledby={`${id}-h`}>
-      <h2 id={`${id}-h`}>{event.title}</h2>
-      <p className="td-panel-meta">
-        {weekday} {span(start, end)} ·{' '}
-        {names.map((name, index) => (
-          <Fragment key={`${name}-${index}`}>
-            {index > 0 && ' and '}
-            <CalendarName name={name} className="td-panel-cal" />
-          </Fragment>
-        ))}
-        {people}
-      </p>
+    <>
       <JoinRow event={event} isToday={isToday} now={now} />
       <Act
         icon={<ExternalLinkIcon />}
@@ -172,6 +181,30 @@ export function EventPanel({
         </p>
       )}
       <p className="td-hint">Reminders and holds live in Spark; they don’t change the event.</p>
+    </>
+  );
+}
+
+export function EventPanel({
+  id,
+  event,
+  date,
+  calendars,
+  clashes,
+  isToday,
+  now,
+  onStartChat,
+}: EventPanelProps) {
+  return (
+    <section id={id} className="hpanel td-panel" aria-labelledby={`${id}-h`}>
+      <h2 id={`${id}-h`}>{event.title}</h2>
+      <EventMeta event={event} date={date} calendars={calendars} />
+      {clashes && (
+        <p className="td-panel-clash">
+          <ClashTag titles={clashes} />
+        </p>
+      )}
+      <EventActions event={event} isToday={isToday} now={now} onStartChat={onStartChat} />
     </section>
   );
 }

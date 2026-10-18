@@ -7,16 +7,9 @@ import { TeammateFace } from '../teammates/TeammateFace.tsx';
 import { teammatesApi } from '../teammates/teammates-api.ts';
 import { useTeammates } from '../teammates/use-teammates.ts';
 import { PlusIcon } from '../ui/icons.tsx';
-import type { QuickStart } from './now-parts.tsx';
-import { QuickTiles } from './QuickTiles.tsx';
 
 interface SparkTilesProps {
-  waiting: number;
-  quickStart: QuickStart | null;
   onOpenHere: (id: string) => void;
-  onNewIn: (projectId: string | null) => void;
-  onAsk: () => void;
-  onChats: () => void;
   onMakeSpark: (() => void) | null;
   onEditSpark: ((id: string) => void) | null;
 }
@@ -124,37 +117,22 @@ export function SparkTiles(props: SparkTilesProps) {
     },
   });
   if (loading) return <TileSkeleton />;
-  const sparks = teammates.length > 0;
   const { onMakeSpark, onEditSpark } = props;
+  if (teammates.length === 0 && !onMakeSpark) return null;
   return (
-    <section
-      className="isl-hcard isl-tiles"
-      aria-label={sparks ? 'Your Sparks' : 'Quick start'}
-      style={tileStyle(1)}
-    >
-      <div className="isl-tilegrid" data-quick={sparks ? undefined : ''}>
-        {sparks ? (
-          teammates.map((teammate, index) => (
-            <SparkTile
-              key={teammate.id}
-              teammate={teammate}
-              index={index}
-              opening={open.isPending && open.variables === teammate.id}
-              onOpen={() => open.mutate(teammate.id)}
-              onEdit={onEditSpark && (() => onEditSpark(teammate.id))}
-            />
-          ))
-        ) : (
-          <QuickTiles
-            waiting={props.waiting}
-            project={props.quickStart?.name ?? null}
-            onNew={() => props.onNewIn(props.quickStart?.id ?? null)}
-            onAsk={props.onAsk}
-            onChats={props.onChats}
-            onMakeSpark={onMakeSpark}
+    <section className="isl-hcard isl-tiles" aria-label="Your Sparks" style={tileStyle(1)}>
+      <div className="isl-tilegrid">
+        {teammates.map((teammate, index) => (
+          <SparkTile
+            key={teammate.id}
+            teammate={teammate}
+            index={index}
+            opening={open.isPending && open.variables === teammate.id}
+            onOpen={() => open.mutate(teammate.id)}
+            onEdit={onEditSpark && (() => onEditSpark(teammate.id))}
           />
-        )}
-        {sparks && onMakeSpark && <NewSparkTile index={teammates.length} onMake={onMakeSpark} />}
+        ))}
+        {onMakeSpark && <NewSparkTile index={teammates.length} onMake={onMakeSpark} />}
       </div>
       {open.isError && (
         <p className="isl-err" role="alert">

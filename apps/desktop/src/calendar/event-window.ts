@@ -1,9 +1,16 @@
-import { addLocalDays, localDayStart, type HelperEvent } from '@spark-outpost/contracts';
+import {
+  addLocalDays,
+  eventsInSpan,
+  localDayStart,
+  type HelperEvent,
+} from '@spark-outpost/contracts';
 import type { CalendarHelper } from './helper-process.ts';
 
 export const WINDOW_REFRESH_MS = 15 * 60_000;
 export const WINDOW_DAYS_BEFORE = 1;
 export const WINDOW_DAYS_AFTER = 8;
+export const RANGE_KEEP_MS = 3 * 60_000;
+export const RANGE_CACHE_MAX = 6;
 
 export interface WindowSnapshot {
   events: HelperEvent[];
@@ -24,8 +31,14 @@ export interface EventWindowOptions {
   timers?: Timers;
 }
 
+export interface RangeEvents {
+  events: HelperEvent[];
+  truncated: boolean;
+}
+
 export interface EventWindow {
   read(): Promise<WindowSnapshot>;
+  range(from: string, to: string): Promise<RangeEvents>;
   invalidate(): void;
   stop(): void;
 }
@@ -53,6 +66,7 @@ export function createEventWindow(options: EventWindowOptions): EventWindow {
   let cached: Promise<WindowSnapshot> | null = null;
   let timer: unknown = null;
   let generation = 0;
+  const ranges = new Map<string, { at: number; loading: Promise<RangeEvents> }>();
 
   const schedule = () => {
     if (timer !== null) timers.clearTimeout(timer);
@@ -69,6 +83,7 @@ export function createEventWindow(options: EventWindowOptions): EventWindow {
   };
 
   function invalidate(): void {
+    ranges.clear();
     if (cached === null && timer === null) return;
     generation += 1;
     cached = null;
@@ -77,24 +92,52 @@ export function createEventWindow(options: EventWindowOptions): EventWindow {
     options.changed();
   }
 
+  function read(): Promise<WindowSnapshot> {
+    if (cached) return cached;
+    const mine = generation;
+    const loading = load();
+    cached = loading;
+    loading.then(
+      () => {
+        if (mine === generation) schedule();
+      },
+      () => {
+        if (cached === loading) cached = null;
+      },
+    );
+    return loading;
+  }
+
+  function readUncovered(from: string, to: string): Promise<RangeEvents> {
+    const key = `${from}|${to}`;
+    const known = ranges.get(key);
+    if (known && options.now() - known.at < RANGE_KEEP_MS) return known.loading;
+    const loading = options.helper
+      .call({ op: 'events', from, to })
+      .then((answer) => ({ events: answer.events, truncated: answer.truncated }));
+    loading.catch(() => {
+      if (ranges.get(key)?.loading === loading) ranges.delete(key);
+    });
+    ranges.delete(key);
+    ranges.set(key, { at: options.now(), loading });
+    while (ranges.size > RANGE_CACHE_MAX) ranges.delete(ranges.keys().next().value!);
+    return loading;
+  }
+
   return {
-    read() {
-      if (cached) return cached;
-      const mine = generation;
-      const loading = load();
-      cached = loading;
-      loading.then(
-        () => {
-          if (mine === generation) schedule();
-        },
-        () => {
-          if (cached === loading) cached = null;
-        },
-      );
-      return loading;
+    read,
+    async range(from, to) {
+      const start = Date.parse(from);
+      const end = Date.parse(to);
+      const stored = await read();
+      if (Date.parse(stored.from) <= start && end <= Date.parse(stored.to)) {
+        return { events: eventsInSpan(stored.events, start, end), truncated: stored.truncated };
+      }
+      return readUncovered(from, to);
     },
     invalidate,
     stop() {
+      ranges.clear();
       generation += 1;
       cached = null;
       if (timer !== null) timers.clearTimeout(timer);

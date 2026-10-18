@@ -252,14 +252,15 @@ describe('Join', () => {
     expect(joinTarget([review, standup], at(9, 46))?.title).toBe('Design review');
   });
 
-  it('finds nothing before five minutes ahead or after the end', () => {
-    expect(joinTarget([standup], at(9, 24))).toBeNull();
+  it('finds nothing before ten minutes ahead or after the end', () => {
+    expect(joinTarget([standup], at(9, 19))).toBeNull();
+    expect(joinTarget([standup], at(9, 20))?.title).toBe('Standup');
     expect(joinTarget([standup], at(9, 45))).toBeNull();
     expect(joinTarget([noLink], at(9, 30))).toBeNull();
   });
 
   it('says when Join opens', () => {
-    expect(joinHint(standup, at(9))).toBe('from 9:25');
-    expect(joinHint(standup, at(9, 26))).toBeNull();
+    expect(joinHint(standup, at(9))).toBe('from 9:20');
+    expect(joinHint(standup, at(9, 21))).toBeNull();
   });
 });

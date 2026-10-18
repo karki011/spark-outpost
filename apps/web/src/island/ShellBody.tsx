@@ -14,6 +14,7 @@ import { IslandHome, type HomeBundle } from './IslandHome.tsx';
 import { NowBar } from './NowBar.tsx';
 import { IslandBar, PANEL_ORDER, type BarActions } from './PanelTabs.tsx';
 import { QuickChat, type Compose, type QuickDraft } from './QuickChat.tsx';
+import { SparkTiles } from './SparkTiles.tsx';
 import { Sessions } from './Sessions.tsx';
 import type { Grab } from './use-island-drop.ts';
 import { chatAgent } from './use-island-data.ts';
@@ -85,7 +86,7 @@ function PanelPane({ panel, props }: { panel: Panel; props: IslandShellProps }) 
       return (
         <IslandHome
           home={props.home}
-          waiting={props.waiting}
+          calendar={props.calendar}
           sleepy={props.sleepy}
           reduced={props.reduced}
           onTab={props.onTab}
@@ -103,6 +104,13 @@ function PanelPane({ panel, props }: { panel: Panel; props: IslandShellProps }) 
           focusDelay={focusDelay}
           onDraft={props.onDraft}
           onSent={props.onSent}
+          footer={
+            <SparkTiles
+              onOpenHere={props.home.onOpenHere}
+              onMakeSpark={props.home.onMakeSpark}
+              onEditSpark={props.home.onEditSpark}
+            />
+          }
         />
       );
     case 'sessions':

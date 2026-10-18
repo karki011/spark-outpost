@@ -182,7 +182,7 @@ test('working keeps its steps, waiting says what it waits for, and two sessions 
   expect(await height()).toBe(working);
 });
 
-test('quick start separates what you can start from what needs you, at both panel widths', async ({
+test('Needs you lists what is waiting and opens it, after the Now card in focus order', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -192,34 +192,10 @@ test('quick start separates what you can start from what needs you, at both pane
   ]);
   await addReply(done!, 'README is tidy: headings fixed and the install steps reordered.');
   await open(page);
-  const quick = island(page).getByRole('region', { name: 'Quick start' });
-  await expect(quick.getByRole('button')).toHaveText([
-    'New chatfeature-web-apps',
-    'Ask Spark',
-    'New Spark',
-  ]);
-  const start = quick.getByRole('button', { name: 'New chat in feature-web-apps' });
-  await expect(start).toHaveAttribute('title', 'New chat in feature-web-apps');
-  expect(
-    await quick
-      .locator('.isl-tile-name, .isl-tile-role')
-      .evaluateAll((nodes) =>
-        nodes
-          .filter((node) => node.scrollWidth > node.clientWidth + 1)
-          .map((node) => node.textContent),
-      ),
-  ).toEqual([]);
-  await expect(quick.locator('.isl-tile-quiet')).toHaveText('Nothing needs you');
+  await expect(island(page).getByRole('region', { name: 'Quick start' })).toHaveCount(0);
+  const needs = island(page).getByRole('region', { name: 'Needs you' });
   await expect(nowCard(page).locator('.isl-now-said')).toContainText('README is tidy');
-  await snap(page, 'done-nothing-needs-you-small');
-
-  await nowCard(page)
-    .getByRole('button', { name: /^Reply/ })
-    .focus();
-  for (const name of ['New chat in feature-web-apps', 'Ask Spark', 'New Spark']) {
-    await page.keyboard.press('Tab');
-    await expect(quick.getByRole('button', { name })).toBeFocused();
-  }
+  await snap(page, 'done-needs-you-small');
 
   await seedChats([
     {
@@ -228,13 +204,20 @@ test('quick start separates what you can start from what needs you, at both pane
       approval: { kind: 'execute', title: 'pnpm deploy', command: 'pnpm deploy' },
     },
   ]);
-  const needs = quick.getByRole('button', {
-    name: 'Needs you: 1 chat is waiting. Opens the Chats tab',
-  });
-  await expect(needs).toHaveText('Needs youOpens Chats1');
-  await expect(island(page).locator('.isl-restline')).toHaveCount(0);
+  const waiting = needs.getByRole('button', { name: 'Approve: run pnpm deploy' });
+  await expect(waiting).toBeVisible();
+  await expect(needs.getByRole('button').first()).toHaveText('Approve: run pnpm deploy');
+  await nowCard(page)
+    .getByRole('button', { name: /^Reply|^Approve|^Open/ })
+    .last()
+    .focus();
+  for (let step = 0; step < 6; step += 1) {
+    if (await waiting.evaluate((node) => node === document.activeElement)) break;
+    await page.keyboard.press('Tab');
+  }
+  await expect(waiting).toBeFocused();
   await snap(page, 'needs-you-small');
-  await needs.click();
+  await page.keyboard.press('Enter');
   await expect(island(page).getByRole('tab', { name: /^Chats/ })).toHaveAttribute(
     'aria-selected',
     'true',

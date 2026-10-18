@@ -4,15 +4,33 @@ import type {
   GoogleSignInFlow,
   HelperEvent,
 } from '@spark-outpost/contracts';
+import { getGoogleEvent } from './api.ts';
 import type { Db } from '../../persistence/db.ts';
 import { googleCalendarSecret, type SecretStore } from '../../setup/secrets.ts';
-import { liveAccount, pollAccount, type AccountDeps, type LiveAccount } from './accounts.ts';
+import {
+  isSkippable,
+  liveAccount,
+  markSignInAgain,
+  needsSignInAgain,
+  pollAccount,
+  withFreshToken,
+  type AccountDeps,
+  type LiveAccount,
+} from './accounts.ts';
 import type { GoogleClientConfig } from './config.ts';
 import { splitGoogleEventId } from './map.ts';
 import { revokeGoogleToken, type GoogleGrant } from './oauth.ts';
 import { GoogleAccountMismatch, createGoogleSignIn, type GoogleSignIn } from './sign-in.ts';
 import { deleteGoogleAccount, googleAccounts, saveGoogleAccount } from './store.ts';
-import { eventsInWindow, googleWindow } from './sync.ts';
+import { createGoogleRangeCache } from './range.ts';
+import {
+  collectEvents,
+  covers,
+  findStored,
+  googleWindow,
+  storedEvent,
+  type StoredEvent,
+} from './sync.ts';
 import { forgetMarksOf } from '../store.ts';
 
 function accountUids(account: LiveAccount): string[] {
@@ -21,6 +39,18 @@ function accountUids(account: LiveAccount): string[] {
     for (const { event } of sync.events.values()) uids.add(event.uid ?? event.id);
   }
   return [...uids];
+}
+
+export interface GoogleOccurrence {
+  eventId: string;
+  start: string;
+  calendarId: string | null;
+}
+
+export class GoogleSignInNeeded extends Error {
+  constructor() {
+    super('Sign in to Google again to see this event.');
+  }
 }
 
 export interface GoogleSourceDeps {
@@ -45,7 +75,8 @@ export interface GoogleSource {
   status(): CalendarGoogleStatus;
   ready(): boolean;
   window(): GoogleWindowEvents;
-  detail(occurrence: { eventId: string; start: string }): CalendarEventDetail | null;
+  range(from: number, to: number): Promise<GoogleWindowEvents>;
+  detail(occurrence: GoogleOccurrence): Promise<CalendarEventDetail | null>;
   signIn(request: { accountId: string | null }): Promise<GoogleSignInFlow>;
   signInFlow(): GoogleSignInFlow;
   cancelSignIn(): GoogleSignInFlow;
@@ -91,8 +122,44 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       }
     : null;
 
+  const ranges = accountDeps ? createGoogleRangeCache(accountDeps) : null;
+  const usable = () =>
+    [...accounts.values()].filter((account) => account.state !== 'sign_in_again');
+
   const emit = () => {
     for (const listener of listeners) listener();
+  };
+
+  const windowEvents = (bounds: { from: number; to: number }): GoogleWindowEvents =>
+    collectEvents(
+      usable().flatMap((account) => [...account.calendars.values()]),
+      bounds,
+    );
+
+  const fetchEvent = async (
+    account: LiveAccount,
+    occurrence: GoogleOccurrence,
+  ): Promise<StoredEvent | null> => {
+    const googleId = splitGoogleEventId(occurrence.eventId)?.eventId;
+    const prefix = `google:${account.row.id}:`;
+    const calendarId = occurrence.calendarId?.startsWith(prefix)
+      ? occurrence.calendarId.slice(prefix.length)
+      : null;
+    if (!accountDeps || !googleId || !calendarId) return null;
+    try {
+      const raw = await withFreshToken(accountDeps, account, (api) =>
+        getGoogleEvent(api, calendarId, googleId),
+      );
+      const found = storedEvent({ accountId: account.row.id, calendarId }, raw);
+      return found && Date.parse(found.event.start) === Date.parse(occurrence.start) ? found : null;
+    } catch (error) {
+      if (isSkippable(error)) return null;
+      if (!needsSignInAgain(error)) throw error;
+      await markSignInAgain(accountDeps, account);
+      schedule(account.row.id, null);
+      emit();
+      throw new GoogleSignInNeeded();
+    }
   };
 
   const schedule = (accountId: string, delayMs: number | null) => {
@@ -113,7 +180,10 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       .then((outcome) => {
         if (accounts.get(accountId) !== account) return;
         schedule(accountId, outcome.nextInMs);
-        if (outcome.changed) emit();
+        if (outcome.changed) {
+          ranges?.dropAccount(accountId);
+          emit();
+        }
       })
       .catch((error: unknown) => {
         console.error('Google Calendar sync failed', (error as Error).message);
@@ -149,6 +219,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     account.state = 'syncing';
     account.message = null;
     accounts.set(row.id, account);
+    ranges?.clear();
     emit();
     void poll(row.id);
   }
@@ -197,31 +268,32 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     },
     ready: () =>
       [...accounts.values()].some((account) => account.synced && account.state !== 'sign_in_again'),
-    window() {
+    window: () => windowEvents(googleWindow(now())),
+    async range(from, to) {
       const window = googleWindow(now());
-      const events: HelperEvent[] = [];
-      let truncated = false;
-      for (const account of accounts.values()) {
-        if (account.state === 'sign_in_again') continue;
-        for (const sync of account.calendars.values()) {
-          truncated ||= sync.truncated;
-          events.push(...eventsInWindow(sync, window).map((entry) => entry.event));
-        }
-      }
-      return { events, truncated };
+      const storedCovers = usable().every((account) =>
+        [...account.calendars.values()].every((sync) => sync.windowKey === window.key),
+      );
+      if (storedCovers && covers(window, { from, to })) return windowEvents({ from, to });
+      if (!ranges) return { events: [], truncated: false };
+      return ranges.read({ key: `${from}|${to}`, from, to }, usable());
     },
-    detail(occurrence) {
+    async detail(occurrence) {
       const parts = splitGoogleEventId(occurrence.eventId);
       const account = parts ? accounts.get(parts.accountId) : undefined;
       if (!account) return null;
       const at = Date.parse(occurrence.start);
-      for (const sync of account.calendars.values()) {
-        const found = sync.events.get(occurrence.eventId);
-        if (found && Date.parse(found.event.start) === at) {
-          return { title: found.event.title, notes: found.notes, link: found.link };
-        }
-      }
-      return null;
+      const stored = findStored(account.calendars.values(), occurrence.eventId, at);
+      if (!stored && account.state === 'sign_in_again') throw new GoogleSignInNeeded();
+      const found = stored ?? (await fetchEvent(account, occurrence));
+      if (!found) return null;
+      return {
+        title: found.event.title,
+        notes: found.notes,
+        snippet: found.snippet,
+        link: found.link,
+        attendees: found.attendees,
+      };
     },
     async signIn(request) {
       if (!signIn) throw new GoogleUnavailable();
@@ -253,10 +325,12 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
         token && client ? await revokeGoogleToken({ fetch: deps.fetch, client }, token) : !token;
       await deps.secrets.delete(secret);
       await deleteGoogleAccount(deps.db, deps.workspaceId, accountId);
+      ranges?.clear();
       emit();
       return { found: true, revoked };
     },
     refresh() {
+      ranges?.clear();
       for (const accountId of accounts.keys()) schedule(accountId, 0);
     },
     async syncNow() {

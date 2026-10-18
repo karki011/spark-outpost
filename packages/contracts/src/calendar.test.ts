@@ -29,7 +29,6 @@ function calendar(key: string, overrides: Partial<CalendarChoice> = {}): Calenda
     ownership: 'mine',
     include: true,
     nudges: false,
-    busy: true,
     ...overrides,
   };
 }
@@ -88,17 +87,17 @@ describe('mergeEvents', () => {
     ]);
   });
 
-  it('busy if any copy is, nudges if any copy does', () => {
-    const quiet = calendar('00000000-0000-4000-8000-000000000004', { busy: false });
+  it('is busy on every included calendar, and nudges if any copy does', () => {
+    const quiet = calendar('00000000-0000-4000-8000-000000000004');
     const shared = { uid: 'u', start: at(11), end: at(12) };
     const merged = merge(
       [
         event({ ...shared, calendarId: quiet.calendarId }),
-        event({ ...shared, calendarId: FAMILY.calendarId }),
+        event({ ...shared, calendarId: WORK.calendarId }),
       ],
-      [quiet, FAMILY],
+      [quiet, WORK],
     );
-    expect(merged[0]).toMatchObject({ busy: true, nudges: false, calendarKey: quiet.key });
+    expect(merged[0]).toMatchObject({ busy: true, nudges: true, calendarKey: quiet.key });
   });
 
   it('leaves out calendars that are not included', () => {

@@ -192,6 +192,11 @@
   font-size: 12.5px;
 }
 
+.td-panel-clash {
+  display: flex;
+  margin: -4px 0 10px;
+}
+
 .td-join {
   display: flex;
   flex-wrap: wrap;

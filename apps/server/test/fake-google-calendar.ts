@@ -300,6 +300,12 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
     }
     const match = /^\/calendar\/v3\/calendars\/([^/]+)\/events$/.exec(url.pathname);
     if (match) return events(user, decodeURIComponent(match[1]!), query);
+    const single = /^\/calendar\/v3\/calendars\/([^/]+)\/events\/([^/]+)$/.exec(url.pathname);
+    if (single) {
+      const calendar = user.calendars.get(decodeURIComponent(single[1]!));
+      const found = calendar?.events.get(decodeURIComponent(single[2]!));
+      return found && found.event.status !== 'cancelled' ? json(200, found.event) : json(404, {});
+    }
     return json(404, {});
   }
 

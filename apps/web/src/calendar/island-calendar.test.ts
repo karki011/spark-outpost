@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { CalendarNow, CalendarNudge } from '@spark-outpost/contracts';
 import { at, event, link } from './test-fixtures.ts';
-import { calendarLine, catchUpText, NO_HELD, nudgeText, tallyHeld } from './island-calendar.ts';
+import {
+  calendarLine,
+  catchUpText,
+  hopKeys,
+  NO_HELD,
+  nudgeText,
+  tallyHeld,
+} from './island-calendar.ts';
 
 const iso = (time: number) => new Date(time).toISOString();
 const CHAT = '00000000-0000-4000-8000-000000000001';
@@ -9,7 +16,7 @@ const CHAT = '00000000-0000-4000-8000-000000000001';
 function nudge(kind: CalendarNudge['kind'], title: string, startsAt: number): CalendarNudge {
   const base = { eventKey: `${title}@x`, title, startsAt: iso(startsAt), minutes: 10 };
   if (kind === 'wrap_up') return { ...base, kind, chats: [] };
-  return { ...base, kind };
+  return { ...base, kind, group: [] };
 }
 
 function now(overrides: Partial<CalendarNow> = {}): CalendarNow {
@@ -19,6 +26,7 @@ function now(overrides: Partial<CalendarNow> = {}): CalendarNow {
     nudge: null,
     hold: null,
     capture: null,
+    clashes: [],
     calendars: [],
     ...overrides,
   };
@@ -100,16 +108,18 @@ describe('calendarLine', () => {
     expect(calendarLine(input(now()))).toBeNull();
   });
 
-  it('puts a hold first, then the catch-up, then capture, then the nudge', () => {
+  it('puts the meeting nudge first, even in a hold, then the hold, catch-up and capture', () => {
     const all = now({ hold, capture, nudge: nudge('before', 'Standup', at(10)) });
-    expect(calendarLine(input(all, { catchUp }))?.text).toBe('Focus · alerts held until 11:30');
-    expect(calendarLine(input({ ...all, hold: null }, { catchUp }))?.dismiss).toBe('catch_up');
-    expect(calendarLine(input({ ...all, hold: null }))?.text).toBe(
+    expect(calendarLine(input(all, { catchUp }))?.text).toBe('Standup in 10 min');
+    const quiet = { ...all, nudge: null };
+    expect(calendarLine(input(quiet, { catchUp }))?.text).toBe('Focus · alerts held until 11:30');
+    expect(calendarLine(input({ ...quiet, hold: null }, { catchUp }))?.dismiss).toBe('catch_up');
+    expect(calendarLine(input({ ...quiet, hold: null }))?.text).toBe(
       'Design review ended · anything to capture?',
     );
     expect(
-      calendarLine(input({ ...all, hold: null }, { dismissed: new Set(['review@x']) }))?.text,
-    ).toBe('Standup in 10 min');
+      calendarLine(input({ ...quiet, hold: null }, { dismissed: new Set(['review@x']) })),
+    ).toBeNull();
   });
 
   it('names a meeting hold by its title', () => {
@@ -124,13 +134,53 @@ describe('calendarLine', () => {
     );
   });
 
-  it('offers Join only while the next meeting is open to join', () => {
+  it('carries the nudged meeting for Join, and offers Join alone once it opens', () => {
     const standup = event('Standup', at(10), at(10, 15), { link: link('zoom') });
-    const calendar = now({ upcoming: [standup], nudge: nudge('before', 'Standup', at(10)) });
-    expect(calendarLine(input(calendar))?.join).toBeNull();
-    expect(calendarLine(input(calendar, { at: at(9, 56) }))?.join?.service).toBe('zoom');
+    const calendar = now({
+      upcoming: [standup],
+      nudge: { ...nudge('before', 'Standup', at(10)), eventKey: standup.key },
+    });
+    expect(calendarLine(input(calendar))?.join?.key).toBe(standup.key);
+    expect(calendarLine(input({ ...calendar, nudge: null }, { at: at(9, 45) }))).toBeNull();
     const late = calendarLine(input({ ...calendar, nudge: null }, { at: at(10, 2) }));
     expect(late?.text).toBe('Standup now');
-    expect(late?.join?.host).toBe('acme.zoom.us');
+    expect(late?.join?.link?.host).toBe('acme.zoom.us');
+  });
+
+  it('hops once per meeting nudge, not for a wrap-up', () => {
+    expect(hopKeys(now({ nudge: nudge('before', 'Standup', at(10)) }))).toEqual([
+      'before:Standup@x',
+    ]);
+    expect(hopKeys(now({ nudge: nudge('remind', 'Standup', at(10)) }))).toEqual([
+      'remind:Standup@x',
+    ]);
+    expect(hopKeys(now({ nudge: nudge('wrap_up', 'Standup', at(10)) }))).toEqual([]);
+    expect(hopKeys(now({ active: false, nudge: nudge('before', 'Standup', at(10)) }))).toEqual([]);
+  });
+
+  it('turns meetings that start together into one Choose line and one hop', () => {
+    const standup = event('Standup', at(10), at(10, 15), { link: link('zoom') });
+    const design = event('Design sync', at(10), at(10, 30), { link: link('meet') });
+    const room = event('Room booking', at(10), at(10, 30));
+    const grouped = {
+      ...nudge('before', 'Standup', at(10)),
+      eventKey: standup.key,
+      group: [standup, design, room],
+    };
+    const calendar = now({ upcoming: [standup, design, room], nudge: grouped });
+    const line = calendarLine(input(calendar));
+    expect(line?.text).toBe('Standup + 2 more at 10:00');
+    expect(line?.join).toBeNull();
+    expect(line?.choose?.map((item) => item.title)).toEqual([
+      'Standup',
+      'Design sync',
+      'Room booking',
+    ]);
+    expect(line?.key).toBe(`before:${standup.key}:3`);
+    expect(hopKeys(calendar)).toEqual([
+      `before:${standup.key}`,
+      `before:${design.key}`,
+      `before:${room.key}`,
+    ]);
   });
 });

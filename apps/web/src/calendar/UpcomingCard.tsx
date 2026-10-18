@@ -1,17 +1,13 @@
 import './upcoming.css';
 import { useMemo } from 'react';
-import {
-  joinOpen,
-  JOIN_LEAD_MS,
-  spanOf,
-  type CalendarEvent,
-  type ConversationSummary,
-} from '@spark-outpost/contracts';
+import { spanOf, type CalendarEvent, type ConversationSummary } from '@spark-outpost/contracts';
 import { HomeSection } from '../home/HomeCards.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { MAC } from '../ui/shortcuts.ts';
-import { clock, span } from './calendar-format.ts';
-import { countdown, openJoin, overlapChat } from './today-model.ts';
+import { span } from './calendar-format.ts';
+import { ClashTag } from './ClashTag.tsx';
+import { JoinButton } from './JoinButton.tsx';
+import { countdown, overlapChat } from './today-model.ts';
 import { useCalendarNow, useCalendarState } from './use-calendar.ts';
 
 interface UpcomingCardProps {
@@ -22,13 +18,13 @@ interface UpcomingCardProps {
 function UpcomingRow(props: {
   event: CalendarEvent;
   calendar: string;
+  clashes: readonly string[] | undefined;
   now: number;
   chats: readonly ConversationSummary[];
 }) {
   const { event, now } = props;
   const { start, end } = spanOf(event);
   const link = event.link;
-  const open = link !== null && joinOpen({ start, end }, now);
   const overlap = overlapChat(event, now, props.chats);
   const where = [span(start, end), props.calendar, link?.host].filter(Boolean).join(' · ');
   return (
@@ -37,19 +33,9 @@ function UpcomingRow(props: {
       <span className="upc-what">
         <b>{event.title}</b>
         <small>{where}</small>
+        <ClashTag titles={props.clashes} />
       </span>
-      {link && (
-        <button
-          type="button"
-          className={open ? 'btn primary sm' : 'btn line sm'}
-          disabled={!open}
-          title={open ? undefined : `From ${clock(start - JOIN_LEAD_MS)}`}
-          aria-label={`Join ${event.title}`}
-          onClick={() => openJoin(link.url)}
-        >
-          Join
-        </button>
-      )}
+      <JoinButton event={event} now={now} />
       {overlap && <span className="upc-ov">Overlaps “{overlap.title}”, still running</span>}
     </li>
   );
@@ -62,6 +48,10 @@ export function UpcomingCard({ chats, now }: UpcomingCardProps) {
   const query = useCalendarNow(ready);
   const calendars = useMemo(
     () => new Map((query.data?.calendars ?? []).map((choice) => [choice.key, choice.title])),
+    [query.data],
+  );
+  const clashes = useMemo(
+    () => new Map((query.data?.clashes ?? []).map((clash) => [clash.eventKey, clash.titles])),
     [query.data],
   );
   if (!ready || !query.data) return null;
@@ -81,6 +71,7 @@ export function UpcomingCard({ chats, now }: UpcomingCardProps) {
               key={event.key}
               event={event}
               calendar={calendars.get(event.calendarKey) ?? 'Calendar'}
+              clashes={clashes.get(event.key)}
               now={now}
               chats={chats}
             />

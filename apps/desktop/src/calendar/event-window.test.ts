@@ -3,6 +3,7 @@ import { connectCalendarBridge } from './bridge.ts';
 import {
   createEventWindow,
   nextRefreshMs,
+  RANGE_KEEP_MS,
   windowRange,
   WINDOW_REFRESH_MS,
   type Timers,
@@ -67,6 +68,47 @@ describe('the event window', () => {
     expect(changed).toHaveBeenCalledTimes(2);
     await window.read();
     expect(call).toHaveBeenCalledTimes(3);
+  });
+
+  it('answers a range inside the window from it, and asks the helper for one outside', async () => {
+    const event = (id: string, day: number) => ({
+      id,
+      start: new Date(2026, 9, day, 10).toISOString(),
+      end: new Date(2026, 9, day, 11).toISOString(),
+    });
+    const call = vi.fn(async (request: { from: string }) => ({
+      events: request.from === windowRange(NOW).from ? [event('today', 16), event('next', 20)] : [],
+      truncated: false,
+    }));
+    const { timers } = manualTimers();
+    let clock = NOW;
+    const window = createEventWindow({
+      helper: { call } as never,
+      now: () => clock,
+      changed: vi.fn(),
+      timers,
+    });
+    const inside = await window.range(
+      new Date(2026, 9, 16).toISOString(),
+      new Date(2026, 9, 17).toISOString(),
+    );
+    expect(inside.events.map((item) => item.id)).toEqual(['today']);
+    expect(call).toHaveBeenCalledTimes(1);
+    const far = {
+      from: new Date(2026, 10, 1).toISOString(),
+      to: new Date(2026, 11, 1).toISOString(),
+    };
+    await window.range(far.from, far.to);
+    expect(call).toHaveBeenLastCalledWith({ op: 'events', ...far });
+    expect(call).toHaveBeenCalledTimes(2);
+    await window.range(far.from, far.to);
+    expect(call).toHaveBeenCalledTimes(2);
+    clock += RANGE_KEEP_MS;
+    await window.range(far.from, far.to);
+    expect(call).toHaveBeenCalledTimes(3);
+    window.invalidate();
+    await window.range(far.from, far.to);
+    expect(call).toHaveBeenCalledTimes(5);
   });
 
   it('says nothing before the first read and stops refreshing when stopped', async () => {
@@ -146,7 +188,20 @@ describe('the test seed', () => {
       mode: 'seed',
       binary: '/seed',
       state: '/tmp/state.json',
+      one: null,
     });
+    expect(
+      seedPlan(
+        { seedPath: '/seed', env: { ...env, SPARK_CALENDAR_SEED_ONE: '12' }, log: () => undefined },
+        exists,
+      )?.one,
+    ).toBe('12');
+    expect(
+      seedPlan(
+        { seedPath: '/seed', env: { ...env, SPARK_CALENDAR_SEED_ONE: '-1' }, log: () => undefined },
+        exists,
+      )?.one,
+    ).toBeNull();
     expect(seedPlan({ seedPath: null, env, log: () => undefined }, exists)).toBeNull();
     expect(
       seedPlan(
