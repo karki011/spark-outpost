@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { clockLabel, clockParts, clockTitle, type ClockPart } from './rail-clock-format.ts';
@@ -26,18 +26,30 @@ function FlipDigits({ text }: { text: string }) {
 const FULL_SIZE_PX = 12;
 const SMALLEST_SIZE_PX = 8;
 
+function shrinkToFit(element: HTMLElement) {
+  if (element.clientWidth === 0) return;
+  let size = FULL_SIZE_PX;
+  element.style.fontSize = '';
+  while (element.scrollWidth > element.clientWidth && size > SMALLEST_SIZE_PX) {
+    size -= 0.5;
+    element.style.fontSize = `${size}px`;
+  }
+}
+
 function useShrinkToFit(text: string) {
   const ref = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
     const element = ref.current;
-    if (!element) return;
-    let size = FULL_SIZE_PX;
-    element.style.fontSize = '';
-    while (element.scrollWidth > element.clientWidth && size > SMALLEST_SIZE_PX) {
-      size -= 0.5;
-      element.style.fontSize = `${size}px`;
-    }
+    if (element) shrinkToFit(element);
   }, [text]);
+  useEffect(() => {
+    const element = ref.current;
+    const rail = element?.closest('nav') ?? element?.parentElement;
+    if (!element || !rail || typeof ResizeObserver !== 'function') return;
+    const observer = new ResizeObserver(() => shrinkToFit(element));
+    observer.observe(rail);
+    return () => observer.disconnect();
+  }, []);
   return ref;
 }
 

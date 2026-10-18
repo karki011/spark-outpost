@@ -187,6 +187,58 @@ test.describe('in a 24-hour locale', () => {
   });
 });
 
+test.describe('in the am-ET locale, whose day period needs a smaller size', () => {
+  test.use({ locale: 'am-ET' });
+
+  test('fits the clock as soon as a phone-width window grows', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.install({ time: new Date('2026-10-17T16:30:05-04:00') });
+    await page.goto('/');
+    await expect(rail(page).locator('.rail-btn').first()).toBeVisible();
+    await expect(clock(page)).toBeHidden();
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const face = clock(page).locator('.rail-clock-face');
+    await expect(face).toBeVisible();
+    await expect
+      .poll(() => face.evaluate((element) => element.scrollWidth <= element.clientWidth), {
+        timeout: 2000,
+      })
+      .toBe(true);
+    const size = await face.evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
+    expect(size).toBeLessThan(12);
+    const bar = await rail(page).boundingBox();
+    const box = await face.boundingBox();
+    expect(box!.x + box!.width).toBeLessThanOrEqual(bar!.x + bar!.width);
+  });
+
+  test('fits the clock once a rail that mounted hidden is shown', async ({ page }) => {
+    await page.addInitScript(() => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.id = 'hide-rail';
+        style.textContent = 'nav.rail { display: none !important; }';
+        document.head.append(style);
+      });
+    });
+    await page.clock.install({ time: new Date('2026-10-17T16:30:05-04:00') });
+    await page.goto('/');
+    await expect(page.locator('.rail-clock')).toBeAttached();
+    await expect(page.locator('.rail-clock')).toBeHidden();
+
+    await page.evaluate(() => document.getElementById('hide-rail')?.remove());
+    const face = clock(page).locator('.rail-clock-face');
+    await expect(face).toBeVisible();
+    await expect
+      .poll(() => face.evaluate((element) => element.scrollWidth <= element.clientWidth), {
+        timeout: 2000,
+      })
+      .toBe(true);
+    const size = await face.evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
+    expect(size).toBeLessThan(12);
+  });
+});
+
 for (const locale of ['as-IN', 'el-GR', 'am-ET']) {
   test.describe(`in the ${locale} locale`, () => {
     test.use({ locale });

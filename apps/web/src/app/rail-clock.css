@@ -28,7 +28,6 @@ button.rail-clock:hover {
 .rail-clock-face {
   display: block;
   max-width: 60px;
-  overflow-x: clip;
 }
 
 .rail-clock-period {
