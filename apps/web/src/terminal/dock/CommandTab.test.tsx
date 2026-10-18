@@ -29,7 +29,12 @@ vi.mock('../../chat/use-stop.ts', () => ({
 }));
 
 vi.mock('../../chat/commands/command-api.ts', () => ({
-  commandOutputKey: (runId: string, id: string) => ['command-output', runId, id],
+  commandOutputKey: (runId: string, id: string, running: boolean) => [
+    'command-output',
+    runId,
+    id,
+    running,
+  ],
   fetchCommandOutput: (runId: string, id: string) => fetchOutput(runId, id),
 }));
 
