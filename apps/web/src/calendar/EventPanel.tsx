@@ -12,7 +12,9 @@ import {
 import { BellIcon, BellOffIcon, ChatPlusIcon, ExternalLinkIcon } from '../ui/icons.tsx';
 import { calendarApi, calendarKeys } from './calendar-api.ts';
 import { CalendarName } from './CalendarName.tsx';
+import { ClashTag } from './ClashTag.tsx';
 import { dateOf, span } from './calendar-format.ts';
+import { JoinButton } from './JoinButton.tsx';
 import { joinHint, openJoin } from './today-model.ts';
 
 interface EventPanelProps {
@@ -20,6 +22,7 @@ interface EventPanelProps {
   event: CalendarEvent;
   date: string;
   calendars: ReadonlyMap<string, CalendarChoice>;
+  clashes?: readonly string[] | undefined;
   isToday: boolean;
   now: number;
   onStartChat: (text: string) => void;
@@ -59,14 +62,11 @@ function JoinRow({ event, isToday, now }: { event: CalendarEvent; isToday: boole
   const when = open ? ' · opens in your browser or app' : hint ? ` · ${hint}` : '';
   return (
     <div className="td-join">
-      <button
-        type="button"
-        className={open ? 'btn primary sm' : 'btn line sm'}
-        disabled={!open}
-        onClick={() => openJoin(link.url)}
-      >
-        Join {CALENDAR_SERVICE_NAMES[link.service]}
-      </button>
+      <JoinButton
+        event={event}
+        now={isToday ? now : 0}
+        label={`Join ${CALENDAR_SERVICE_NAMES[link.service]}`}
+      />
       <small>
         {host}
         {when}
@@ -89,6 +89,7 @@ export function EventPanel({
   event,
   date,
   calendars,
+  clashes,
   isToday,
   now,
   onStartChat,
@@ -136,6 +137,11 @@ export function EventPanel({
         ))}
         {people}
       </p>
+      {clashes && (
+        <p className="td-panel-clash">
+          <ClashTag titles={clashes} />
+        </p>
+      )}
       <JoinRow event={event} isToday={isToday} now={now} />
       <Act
         icon={<ExternalLinkIcon />}

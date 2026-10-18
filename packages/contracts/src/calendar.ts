@@ -26,7 +26,6 @@ export const calendarChoiceSchema = z.object({
   ownership: calendarOwnershipSchema,
   include: z.boolean(),
   nudges: z.boolean(),
-  busy: z.boolean(),
 });
 export type CalendarChoice = z.infer<typeof calendarChoiceSchema>;
 
@@ -133,7 +132,7 @@ export function mergeEvents(input: MergeInput): CalendarEvent[] {
       availability: event.availability,
       recurring: event.recurring,
       hasNotes: event.hasNotes,
-      busy: countsAsBusy(event) && copies.some((calendar) => calendar.busy),
+      busy: countsAsBusy(event),
       nudges: copies.some((calendar) => calendar.nudges),
       focus: isFocusTitle(event.title, input.focusNames),
       remind: input.marks.remind.has(key),

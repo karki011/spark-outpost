@@ -158,13 +158,13 @@ describe('calendar status and connect', () => {
     expect(host.calls).not.toContain('window');
   });
 
-  it('connects after full access, with new calendars included and busy, nudges off', async () => {
+  it('connects after full access, with new calendars included and nudging', async () => {
     const after = await connect();
     expect(after.connected).toBe(true);
     expect(after.accounts.map((account) => account.title)).toEqual(['On My Mac', 'iCloud']);
     expect(after.accounts.flatMap((account) => account.calendars)).toEqual([
-      expect.objectContaining({ title: 'Work', include: true, busy: true, nudges: false }),
-      expect.objectContaining({ title: 'Family', include: true, busy: true, nudges: false }),
+      expect.objectContaining({ title: 'Work', include: true, nudges: true }),
+      expect.objectContaining({ title: 'Family', include: true, nudges: true }),
     ]);
   });
 

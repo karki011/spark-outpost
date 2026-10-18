@@ -350,6 +350,10 @@ export function BellOffIcon() {
   return <StrokeIcon path="M6 16v-5a6 6 0 0 1 9-5.2M18 11v5l2 2H4M10 21h4M3 3l18 18" />;
 }
 
+export function VideoIcon() {
+  return <StrokeIcon path="M3 7h12v10H3zM15 10.5l6-3.5v10l-6-3.5" />;
+}
+
 export function ChatPlusIcon() {
   return <StrokeIcon path="M4 5h16v11H8l-4 4zM12 8v5M9.5 10.5h5" />;
 }

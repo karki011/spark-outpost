@@ -1,17 +1,13 @@
 import './calendar-card.css';
-import { useId, useState, type ReactNode } from 'react';
-import type {
-  CalendarAccount,
-  CalendarChoice,
-  CalendarChoicePatch,
-  CalendarStatus,
-} from '@spark-outpost/contracts';
+import { useId, type ReactNode } from 'react';
+import type { CalendarAccount, CalendarStatus } from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
-import { CalendarAccounts } from './CalendarAccounts.tsx';
+import { CalendarAccounts, type ChangeChoice } from './CalendarAccounts.tsx';
 import { GoogleAccounts } from './GoogleAccounts.tsx';
 import { connectorLine, macState } from './today-model.ts';
+import { useCalendarChoices } from './use-calendar-choices.ts';
 import { useCalendarActions, useCalendarStatus, useOpenCalendarSettings } from './use-calendar.ts';
 
 export const AGENTS_READ_LABEL = 'Let agents read my calendar';
@@ -103,52 +99,16 @@ function AgentsRead() {
   );
 }
 
-type Overrides = Readonly<Record<string, CalendarChoicePatch>>;
-
-function withOverrides(
-  accounts: readonly CalendarAccount[],
-  overrides: Overrides,
-): CalendarAccount[] {
-  return accounts.map((account) => ({
-    ...account,
-    calendars: account.calendars.map(
-      (calendar) => ({ ...calendar, ...overrides[calendar.key] }) as CalendarChoice,
-    ),
-  }));
-}
-
-function useChoiceOverrides() {
-  const { choose } = useCalendarActions();
-  const [overrides, setOverrides] = useState<Overrides>({});
-  const change = (key: string, patch: CalendarChoicePatch) => {
-    setOverrides((current) => ({ ...current, [key]: { ...current[key], ...patch } }));
-    choose.mutate(
-      { key, patch },
-      {
-        onSettled: () =>
-          setOverrides((current) =>
-            Object.fromEntries(Object.entries(current).filter(([saved]) => saved !== key)),
-          ),
-      },
-    );
-  };
-  return { overrides, change, error: choose.error };
-}
-
 interface MacProps {
   status: CalendarStatus;
   accounts: readonly CalendarAccount[];
-  onChange: (key: string, patch: CalendarChoicePatch) => void;
+  onChange: ChangeChoice;
 }
 
 function MacConnected({ status, accounts, onChange }: MacProps) {
   const { disconnect } = useCalendarActions();
   return (
     <>
-      <p>
-        Every account in System Settings → Internet Accounts, read on this Mac. Nudges come from
-        calendars with Use for nudges on; Counts as busy shapes your free time.
-      </p>
       {status.notice && (
         <p className="cal-notice" role="status">
           {status.notice}
@@ -156,7 +116,7 @@ function MacConnected({ status, accounts, onChange }: MacProps) {
       )}
       <CalendarAccounts accounts={accounts} onChange={onChange} />
       <ErrorLine error={disconnect.error} />
-      <div className="cx-actions">
+      <div className="cal-foot">
         <button
           type="button"
           className="btn ghost sm danger"
@@ -174,7 +134,10 @@ function MacSection(props: MacProps) {
   const state = macState(props.status);
   return (
     <section className="cal-source" aria-labelledby="cal-mac-h">
-      <h3 id="cal-mac-h">macOS Calendar</h3>
+      <div className="cal-src-h">
+        <h3 id="cal-mac-h">macOS Calendar</h3>
+        <small>Internet Accounts on this Mac</small>
+      </div>
       {state === 'helper' && <HelperBody />}
       {state === 'denied' && <DeniedBody />}
       {state === 'connect' && <ConnectBody />}
@@ -184,13 +147,11 @@ function MacSection(props: MacProps) {
 }
 
 function CardBody({ status, connected }: { status: CalendarStatus; connected: boolean }) {
-  const { overrides, change, error } = useChoiceOverrides();
-  const accounts = withOverrides(status.accounts, overrides);
-  const mac = accounts.filter((account) => account.kind !== 'google');
+  const { mac, google, change, error } = useCalendarChoices(status.accounts);
   return (
-    <div className="cx-body">
+    <div className="cx-body cal-body">
       <MacSection status={status} accounts={mac} onChange={change} />
-      <GoogleAccounts status={status} accounts={accounts} onChange={change} />
+      <GoogleAccounts status={status} accounts={google} onChange={change} />
       <ErrorLine error={error} />
       {connected && <AgentsRead />}
     </div>

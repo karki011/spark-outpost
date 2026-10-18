@@ -19,7 +19,7 @@ import type {
 export type IslandAction = 'quick' | 'sessions';
 
 export type IslandSettingsTarget =
-  'island' | 'sparks' | 'spark-new' | 'connectors' | `spark-edit:${string}`;
+  'island' | 'sparks' | 'spark-new' | 'connectors' | `spark-edit:${string}` | `today:${string}`;
 
 export type { IslandSize };
 

@@ -30,7 +30,6 @@ function saved(key: string, calendar: HelperCalendar, flags: Partial<CalendarCho
     ownership: calendar.ownership,
     include: true,
     nudges: false,
-    busy: true,
     ...flags,
   } satisfies CalendarChoice;
 }
@@ -41,11 +40,9 @@ const K1 = '00000000-0000-4000-8000-000000000001';
 const K2 = '00000000-0000-4000-8000-000000000002';
 
 describe('rematchCalendars', () => {
-  it('adds a new calendar included and busy, with nudges off', () => {
+  it('adds a new calendar included, with nudges on', () => {
     const match = rematchCalendars([], [WORK]);
-    expect(match.writes).toEqual([
-      { key: null, calendar: WORK, include: true, nudges: false, busy: true },
-    ]);
+    expect(match.writes).toEqual([{ key: null, calendar: WORK, include: true, nudges: true }]);
     expect(match.changed).toBe(true);
   });
 
@@ -61,21 +58,19 @@ describe('rematchCalendars', () => {
   });
 
   it('matches again by source and title after a full sync changes the identifier', () => {
-    const before = [saved(K1, WORK, { nudges: true, busy: false })];
+    const before = [saved(K1, WORK, { nudges: false })];
     const resynced = helperCalendar('work-2', 'Work');
     const match = rematchCalendars(before, [resynced]);
-    expect(match.writes).toEqual([
-      { key: K1, calendar: resynced, include: true, nudges: true, busy: false },
-    ]);
+    expect(match.writes).toEqual([{ key: K1, calendar: resynced, include: true, nudges: false }]);
     expect(match.lost).toEqual([]);
     expect(match.changed).toBe(true);
   });
 
   it('resets with a note when the match is ambiguous or gone', () => {
-    const before = [saved(K1, WORK, { nudges: true })];
+    const before = [saved(K1, WORK, { nudges: false })];
     const twins = [helperCalendar('work-2', 'Work'), helperCalendar('work-3', 'Work')];
     const match = rematchCalendars(before, twins);
-    expect(match.writes.every((write) => write.key === null && !write.nudges)).toBe(true);
+    expect(match.writes.every((write) => write.key === null && write.nudges)).toBe(true);
     expect(match.lost.map((choice) => choice.key)).toEqual([K1]);
     expect(lostNotice(match.lost)).toBe(
       'Work (Google) was not found after a calendar sync, so its choices were reset.',

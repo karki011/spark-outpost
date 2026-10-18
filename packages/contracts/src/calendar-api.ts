@@ -9,6 +9,7 @@ export const CALENDAR_WRAP_UP_MINUTES = [0, 15, 30] as const;
 export const CALENDAR_REMIND_MINUTES = 5;
 export const CALENDAR_CAPTURE_WINDOW_MS = 15 * 60_000;
 export const CALENDAR_UPCOMING_COUNT = 3;
+export const CALENDAR_GROUP_MAX = 20;
 
 export const calendarHoldRuleSchema = z.enum(['never', 'focus', 'meetings']);
 export type CalendarHoldRule = z.infer<typeof calendarHoldRuleSchema>;
@@ -65,7 +66,7 @@ export const calendarStatusSchema = z.object({
 export type CalendarStatus = z.infer<typeof calendarStatusSchema>;
 
 export const calendarChoicePatchSchema = z
-  .object({ include: z.boolean(), nudges: z.boolean(), busy: z.boolean() })
+  .object({ include: z.boolean(), nudges: z.boolean() })
   .partial()
   .strict();
 export type CalendarChoicePatch = z.infer<typeof calendarChoicePatchSchema>;
@@ -98,8 +99,18 @@ const nudgeBase = {
 };
 
 export const calendarNudgeSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('before'), ...nudgeBase, minutes: z.number().int() }),
-  z.object({ kind: z.literal('remind'), ...nudgeBase, minutes: z.number().int() }),
+  z.object({
+    kind: z.literal('before'),
+    ...nudgeBase,
+    minutes: z.number().int(),
+    group: z.array(calendarEventSchema).max(CALENDAR_GROUP_MAX),
+  }),
+  z.object({
+    kind: z.literal('remind'),
+    ...nudgeBase,
+    minutes: z.number().int(),
+    group: z.array(calendarEventSchema).max(CALENDAR_GROUP_MAX),
+  }),
   z.object({
     kind: z.literal('wrap_up'),
     ...nudgeBase,
@@ -137,6 +148,9 @@ export const calendarNowSchema = z.object({
   nudge: calendarNudgeSchema.nullable(),
   hold: calendarHoldSchema.nullable(),
   capture: calendarCaptureSchema.nullable(),
+  clashes: z.array(
+    z.object({ eventKey: z.string().max(600), titles: z.array(z.string().max(1_000)).max(50) }),
+  ),
   calendars: z.array(calendarChoiceSchema),
 });
 export type CalendarNow = z.infer<typeof calendarNowSchema>;

@@ -163,7 +163,8 @@ test('asks to sign in again when Google ends the sign-in, and Disconnect revokes
 
 const LONG_GOOGLE =
   'Find out more about this very long subscribed calendar https://docs.google.com/drawings/d/1I-ChMlOhrqGjMPll4cO70WbRn2wjyZ9kTVBM30EX9nM/preview';
-const LONG_MAC = 'Family and friends shared calendar with a name far too long to fit on one line';
+const LONG_MAC =
+  'Family and friends shared calendar with a name far too long to fit on one line, holding every school run, birthday and weekend plan';
 
 async function expectClipped(name: string, where: Locator) {
   const label = where.locator(`[title="${name}"]`).first();
@@ -214,4 +215,43 @@ test('has no serious accessibility problems in the Calendar card with Google', a
   expect(
     results.violations.filter((item) => ['serious', 'critical'].includes(item.impact ?? '')),
   ).toEqual([]);
+});
+
+test('groups a Google account with one Nudge switch per row and folds a long list', async ({
+  page,
+}) => {
+  for (const n of [1, 2, 3, 4, 5]) {
+    await fetch(`${STUB_URL}/google-test/calendar`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: `team${n}@group.calendar.google.com`, summary: `Team ${n}` }),
+    });
+  }
+  await openCard(page);
+  await addGoogle(page);
+  const account = card(page).getByRole('region', { name: GOOGLE_STUB_EMAIL });
+  await expect(account.getByRole('listitem')).toHaveCount(5);
+  await expect(
+    card(page)
+      .getByRole('region', { name: 'Google Calendar' })
+      .getByRole('button', { name: 'Add Google account' }),
+  ).toBeVisible();
+  await expect(account.getByRole('switch', { name: 'Nudge, Team 1' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(account).not.toContainText('Counts as busy');
+  const more = account.getByRole('button', { name: 'Show 1 more' });
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await more.click();
+  await expect(account.getByRole('listitem')).toHaveCount(6);
+  await account.getByRole('button', { name: 'Show fewer' }).click();
+  await expect(account.getByRole('listitem')).toHaveCount(5);
+  await account.getByRole('switch', { name: 'Nudge, Team 1' }).click();
+  await expect
+    .poll(async () => {
+      const calendars = (await status(page)).accounts.flatMap((item) => item.calendars);
+      return calendars.find((calendar) => calendar.title === 'Team 1')?.nudges;
+    })
+    .toBe(false);
 });

@@ -21,6 +21,7 @@ interface FakeState {
   helper?: 'ready' | 'missing' | 'failed';
   anchor?: number;
   familyTitle?: string;
+  clash?: boolean;
 }
 
 const listeners = new Set<Listener>();
@@ -122,9 +123,26 @@ function tomorrowAt(hours: number): number {
   return day.getTime();
 }
 
+function clashEvents(at: (minutes: number) => number): HelperEvent[] {
+  return [
+    event('clash-standup', 'Standup', 'fake-work', at(6), 15, {
+      noteLinks: ['https://acme.zoom.us/j/123456789'],
+    }),
+    event('clash-design', 'Design sync', 'fake-work', at(6), 30, {
+      url: 'https://meet.google.com/abc-defg-hij',
+    }),
+    event('clash-room', 'Room booking', 'fake-family', at(6), 30),
+    event('clash-customer', 'Customer call', 'fake-work', at(60), 30),
+    event('clash-vendor', 'Vendor sync', 'fake-work', at(75), 30, {
+      url: 'https://meet.google.com/xyz-abcd-efg',
+    }),
+  ];
+}
+
 function events(): HelperEvent[] {
   const start = anchor();
   const at = (minutes: number) => start + minutes * MINUTE;
+  if (state().clash) return clashEvents(at);
   const safeLinks = `https://nam12.safelinks.protection.outlook.com/?url=${encodeURIComponent(
     'https://teams.microsoft.com/l/meetup-join/19%3ameeting_fake/0',
   )}`;

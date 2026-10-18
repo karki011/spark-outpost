@@ -129,6 +129,13 @@
   color: var(--accent-ink);
 }
 
+.isl-calline-act.primary:disabled {
+  border-color: var(--island-line);
+  background: transparent;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .isl-calline-act:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

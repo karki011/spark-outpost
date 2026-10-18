@@ -5,6 +5,7 @@ import './today.css';
 import { useCallback, useId, useMemo, useState } from 'react';
 import {
   addLocalDays,
+  clashList,
   localDayStart,
   type CalendarChoice,
   type CalendarDay,
@@ -22,6 +23,7 @@ import { TodayStatePage } from './TodayStates.tsx';
 import { noGaps, overlapChat, timelineSpan, todayState, visibleEvents } from './today-model.ts';
 import { localDate, useCalendarDay, useCalendarStatus } from './use-calendar.ts';
 import { CalendarFilters, WeekStrip } from './WeekStrip.tsx';
+import { useTodayEventRequests } from './today-request.ts';
 
 interface TodayProps {
   chats: readonly ConversationSummary[];
@@ -61,6 +63,16 @@ function TodayDay({ chats, onStartChat, onOpenChat }: TodayProps) {
       new Map<string, CalendarChoice>((day?.calendars ?? []).map((choice) => [choice.key, choice])),
     [day],
   );
+  const clashes = useMemo(
+    () =>
+      new Map(
+        clashList(day?.events ?? [], day?.events ?? []).map((clash) => [
+          clash.eventKey,
+          clash.titles,
+        ]),
+      ),
+    [day],
+  );
   const pick = useCallback(
     (next: string) => {
       setPicked(next === today ? null : next);
@@ -68,6 +80,11 @@ function TodayDay({ chats, onStartChat, onOpenChat }: TodayProps) {
     },
     [today],
   );
+  const showEvent = useCallback((eventKey: string) => {
+    setPicked(null);
+    setSelected(eventKey);
+  }, []);
+  useTodayEventRequests(showEvent);
   const toggleCalendar = (key: string) =>
     setHidden((current) => {
       const next = new Set(current);
@@ -122,6 +139,7 @@ function TodayDay({ chats, onStartChat, onOpenChat }: TodayProps) {
             calendars={calendars}
             gaps={noGaps(shown)}
             overlaps={new Set(overlaps.map((overlap) => overlap.event.key))}
+            clashes={clashes}
             now={isToday ? now : null}
             selected={selected}
             panelId={panelId}
@@ -136,6 +154,7 @@ function TodayDay({ chats, onStartChat, onOpenChat }: TodayProps) {
               event={shownEvent}
               date={day.date}
               calendars={calendars}
+              clashes={clashes.get(shownEvent.key)}
               isToday={isToday}
               now={now}
               onStartChat={onStartChat}

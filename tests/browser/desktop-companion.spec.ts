@@ -179,7 +179,7 @@ test('searching an island row while the island is off focuses Show Spark Island'
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   const search = page.getByRole('combobox', { name: 'Search settings' });
-  await search.fill('chimes');
+  await search.fill('island chimes');
   await expect(page.getByRole('option')).toHaveText([/^Island chimes/]);
   await search.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Notifications' });

@@ -16,11 +16,21 @@ func hasFullAccess() -> Bool {
     return status == .authorized
 }
 
+let usage = "usage: spark-calendar-seed seed|remove --state <file> [--one <minutes>]"
+
 func statePath(_ arguments: [String]) throws -> String {
-    guard arguments.count == 4, arguments[2] == "--state", !arguments[3].isEmpty else {
-        throw SeedFailure(message: "usage: spark-calendar-seed seed|remove --state <file>")
+    guard arguments.count == 4 || arguments.count == 6, arguments[2] == "--state", !arguments[3].isEmpty else {
+        throw SeedFailure(message: usage)
     }
     return arguments[3]
+}
+
+func oneMeeting(_ arguments: [String]) throws -> Int? {
+    guard arguments.count == 6 else { return nil }
+    guard arguments[4] == "--one", let minutes = Int(arguments[5]), (0...999).contains(minutes) else {
+        throw SeedFailure(message: usage)
+    }
+    return minutes
 }
 
 func run(_ arguments: [String]) throws -> [String: Any] {
@@ -30,9 +40,9 @@ func run(_ arguments: [String]) throws -> [String: Any] {
     }
     let store = EKEventStore()
     switch arguments[1] {
-    case "seed": return try seed(store: store, statePath: path)
+    case "seed": return try seed(store: store, statePath: path, oneIn: try oneMeeting(arguments))
     case "remove": return try remove(store: store, statePath: path)
-    default: throw SeedFailure(message: "usage: spark-calendar-seed seed|remove --state <file>")
+    default: throw SeedFailure(message: usage)
     }
 }
 

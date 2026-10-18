@@ -1,16 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CalendarEvent } from '@spark-outpost/contracts';
+import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import type { Chime, ChimeHold } from '../island/island-sound.ts';
 import { calendarApi } from './calendar-api.ts';
 import {
   calendarLine,
+  hopKeys,
   NO_HELD,
   tallyHeld,
   type CalendarLine,
   type CatchUp,
   type HeldTally,
 } from './island-calendar.ts';
-import { openJoin, todayState } from './today-model.ts';
+import { todayState } from './today-model.ts';
 import { useCalendarNow, useCalendarStatus } from './use-calendar.ts';
+
+const NO_MEETINGS: readonly CalendarEvent[] = [];
+const NO_CLASHES: ReadonlyMap<string, readonly string[]> = new Map();
+
+function openToday(eventKey: string): void {
+  const desktop = sparkDesktop();
+  if (desktop?.island.openSettings) desktop.island.openSettings(`today:${eventKey}`);
+  else window.open('/', '_blank', 'noopener');
+}
 
 const DISMISSED_KEY = 'spark-outpost.calendar-capture-dismissed';
 const DISMISSED_MAX = 50;
@@ -33,9 +45,17 @@ function saveDismissed(keys: ReadonlySet<string>): void {
 }
 
 export interface IslandCalendar {
+  connected: boolean;
   line: CalendarLine | null;
   hold: ChimeHold;
-  onJoin: (line: CalendarLine) => void;
+  at: number;
+  upcoming: readonly CalendarEvent[];
+  clashes: ReadonlyMap<string, readonly string[]>;
+  choosing: readonly CalendarEvent[] | null;
+  calendarName: (event: CalendarEvent) => string;
+  hopKeys: string[];
+  onOpenEvent: (eventKey: string) => void;
+  onChoose: (line: CalendarLine) => void;
   onCapture: (line: CalendarLine) => void;
   onDismiss: (line: CalendarLine) => void;
 }
@@ -67,10 +87,31 @@ function useHeldChimes(holdLabel: string | null) {
   return { hold, catchUp, clearCatchUp: () => setCatchUp(null) };
 }
 
+export interface IslandHomePanel {
+  open: boolean;
+  show: () => void;
+}
+
+function useChoosing(home: IslandHomePanel) {
+  const [choosing, setChoosing] = useState<readonly CalendarEvent[] | null>(null);
+  const [wasOpen, setWasOpen] = useState(home.open);
+  if (wasOpen !== home.open) {
+    setWasOpen(home.open);
+    if (!home.open) setChoosing(null);
+  }
+  const choose = (line: CalendarLine) => {
+    if (!line.choose) return;
+    setChoosing(line.choose);
+    home.show();
+  };
+  return { choosing: home.open ? choosing : null, choose };
+}
+
 export function useIslandCalendar(
   at: number,
   waiting: number,
   onQuickChat: (text: string) => void,
+  home: IslandHomePanel,
 ): IslandCalendar {
   const status = useCalendarStatus();
   const ready = status.data !== undefined && todayState(status.data) === 'ready';
@@ -86,12 +127,28 @@ export function useIslandCalendar(
       return next;
     });
   const line = calendarLine({ now: live, at, waiting, catchUp: held.catchUp, dismissed });
+  const { choosing, choose } = useChoosing(home);
+  const clashes = useMemo(
+    () =>
+      live ? new Map(live.clashes.map((clash) => [clash.eventKey, clash.titles])) : NO_CLASHES,
+    [live],
+  );
+  const names = useMemo(
+    () => new Map((live?.calendars ?? []).map((choice) => [choice.key, choice.title])),
+    [live],
+  );
   return {
+    connected: ready,
     line,
     hold: held.hold,
-    onJoin: (shown) => {
-      if (shown.join) openJoin(shown.join.url);
-    },
+    at,
+    upcoming: live?.upcoming ?? NO_MEETINGS,
+    clashes,
+    choosing,
+    calendarName: (event) => names.get(event.calendarKey) ?? 'Calendar',
+    hopKeys: hopKeys(live),
+    onOpenEvent: (eventKey) => openToday(eventKey),
+    onChoose: choose,
     onDismiss: (shown) => {
       if (shown.dismiss === 'catch_up') held.clearCatchUp();
       if (shown.capture) dismiss(shown.capture.eventKey);

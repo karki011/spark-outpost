@@ -146,7 +146,20 @@ describe('the test seed', () => {
       mode: 'seed',
       binary: '/seed',
       state: '/tmp/state.json',
+      one: null,
     });
+    expect(
+      seedPlan(
+        { seedPath: '/seed', env: { ...env, SPARK_CALENDAR_SEED_ONE: '12' }, log: () => undefined },
+        exists,
+      )?.one,
+    ).toBe('12');
+    expect(
+      seedPlan(
+        { seedPath: '/seed', env: { ...env, SPARK_CALENDAR_SEED_ONE: '-1' }, log: () => undefined },
+        exists,
+      )?.one,
+    ).toBeNull();
     expect(seedPlan({ seedPath: null, env, log: () => undefined }, exists)).toBeNull();
     expect(
       seedPlan(

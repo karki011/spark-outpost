@@ -24,9 +24,9 @@ Drag Scout to place it. At top centre it docks, half hidden while nothing happen
 1. Point at Scout: **Home** opens until the pointer leaves.
 2. Click inside to keep it open. **Esc** closes it.
 
-![Spark Island Home with the Now card showing a chat's latest steps and the Sparks tiles](images/companion-island-home-light.png)
+![Spark Island Home with the Now card and Needs you listing a waiting approval and a finished chat](images/companion-island-home-light.png)
 
-Select a Spark to chat, right-click to edit, or select **New Spark**. Without Sparks, tiles start a chat and **Needs you** opens waiting chats.
+**Next meetings** opens a meeting in **Today**; **Needs you** opens what waits for you. In the **+** tab, select a Spark to chat, right-click to edit, or select **New Spark**.
 
 Steps show verbs and file names, never secrets. See [Spark Island states](statuses-and-limits.md#spark-island-states).
 
