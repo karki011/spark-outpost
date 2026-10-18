@@ -16,7 +16,7 @@ const PS_LINE = /^(\d+)\s+(\d+)\s+(-?\d+)\s+(.*)$/;
 const INTERPRETERS = /^(node|bun|deno|python[\d.]*|ruby|perl)$/;
 const SCRIPT_EXTENSION = /\.(c?js|mjs|py|rb)$/;
 const COMMAND_MAX_LENGTH = 60;
-const NOT_A_COMMAND = /^(\(.*\)|<defunct>)$/;
+const NOT_A_COMMAND = /^\(.*\)$|<defunct>$/;
 
 export function isAlive(pid: number): boolean {
   try {

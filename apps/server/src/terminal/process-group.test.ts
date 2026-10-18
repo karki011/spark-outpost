@@ -29,7 +29,12 @@ describe('runningCommand', () => {
   });
 
   it('is null while the shell only has a process mid-exec or a finished child', () => {
-    const table = [row(10, 1, '-bash', 50), row(50, 10, '(bash)'), row(51, 10, '<defunct>')];
+    const table = [
+      row(10, 1, '-bash', 50),
+      row(50, 10, '(bash)'),
+      row(51, 10, '<defunct>'),
+      row(52, 10, '[python3] <defunct>'),
+    ];
     expect(runningCommand(10, table)).toBeNull();
   });
 
