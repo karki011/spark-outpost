@@ -1,61 +1,49 @@
-.rl-nav {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-}
-
 .rl {
-  position: sticky;
-  top: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
+  padding-left: 16px;
+  overflow-y: auto;
+  border-left: 1px solid var(--line);
+  contain: size;
 }
 
 .rl-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
+  min-height: 28px;
 }
 
 .rl-head h2 {
+  flex: 1;
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
 }
 
-.rl-day {
-  align-self: flex-start;
+.rl-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .rl-quiet {
   margin: 4px 0;
 }
 
-.rl-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.rl-hour {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 12px;
+.rl-day {
+  align-self: flex-start;
+  margin-top: auto;
+  padding: 4px 2px;
+  color: var(--accent-text);
+  font-size: 13px;
   font-weight: 500;
 }
 
-.rl-hour::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--line);
+.rl-day:hover {
+  text-decoration: underline;
 }
 
 .rl-cards {
@@ -71,8 +59,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 14px 12px 12px;
+  gap: 5px;
+  padding: 9px 10px 10px 14px;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
@@ -107,16 +95,15 @@
 
 .rl-strip {
   position: absolute;
-  top: 6px;
-  right: 12px;
-  left: 12px;
-  height: 4px;
-  border-radius: 2px;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
   background: var(--cal-color, var(--line-strong));
 }
 
 .rl-open {
-  font-size: 14.5px;
+  font-size: 13.5px;
   font-weight: 600;
   text-align: left;
 }
@@ -225,10 +212,22 @@
 
 .rl-free {
   margin: 0;
+  list-style: none;
   padding: 6px 10px;
   border: 1px dashed var(--line);
   border-radius: var(--r-sm);
   color: var(--faint);
   font-family: var(--font-mono);
   font-size: 11.5px;
+}
+
+@container (max-width: 760px) {
+  .rl {
+    margin-top: 16px;
+    padding: 16px 0 0;
+    overflow: visible;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+    contain: none;
+  }
 }

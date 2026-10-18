@@ -1,7 +1,7 @@
 import { ChevronIcon } from '../ui/icons.tsx';
 
 interface StepButtonsProps {
-  unit: 'day' | 'month';
+  unit: 'day' | 'month' | 'year';
   onStep: (delta: -1 | 1) => void;
 }
 

@@ -47,6 +47,7 @@ test.afterAll(() => {
 test('opens on the month with today selected and its events in the Scheduled rail', async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
   await openToday(page);
   await expect(today(page).getByRole('radio', { name: 'Month' })).toHaveAttribute(
     'aria-checked',
@@ -57,7 +58,7 @@ test('opens on the month with today selected and its events in the Scheduled rai
   await expect(cell(page, now)).toHaveAttribute('aria-selected', 'true');
   await expect(cell(page, now)).toHaveAttribute('tabindex', '0');
   await expect(cell(page, now)).toHaveAccessibleName(/today, \d+ events: Company holiday/);
-  await expect(cell(page, now).locator('.mo-more')).toHaveText(/^\+\d+ more$/);
+  await expect(cell(page, now).locator('.mo-more')).toHaveText(/^\d+ more$/);
   await expect(cell(page, now - 6 * DAY)).toHaveAttribute('data-past');
 
   const standup = scheduled(page).locator('.rl-card', { hasText: 'Standup' });
@@ -87,7 +88,7 @@ test('moves across days with the arrows, crosses months and opens a day with Ent
   await page.keyboard.press('PageDown');
   const next = new Date(now);
   next.setMonth(next.getMonth() + 1);
-  await expect(today(page).getByRole('button', { name: 'Month', exact: true })).toContainText(
+  await expect(today(page).getByRole('heading', { level: 1 })).toContainText(
     next.toLocaleDateString(undefined, { month: 'long' }),
   );
   await expect(grid(page).locator('[aria-selected="true"]')).toBeFocused();
@@ -166,6 +167,63 @@ test('keeps Day across a reload in the same session', async ({ page }) => {
     'aria-checked',
     'true',
   );
+});
+
+test('fills the window and shows more titles per day when the window is taller', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1400, height: 720 });
+  await openToday(page);
+  const now = apiNow();
+  await expect(cell(page, now).locator('.mo-ev').first()).toBeVisible();
+  const short = await cell(page, now).locator('.mo-ev').count();
+  const page720 = await today(page).boundingBox();
+  const layout = await today(page).locator('.mo-layout').boundingBox();
+  expect(layout!.width).toBeGreaterThan(page720!.width - 80);
+
+  await page.setViewportSize({ width: 1400, height: 1300 });
+  await expect.poll(() => cell(page, now).locator('.mo-ev').count()).toBeGreaterThan(short);
+  const rail = await scheduled(page).boundingBox();
+  expect(rail!.width).toBeLessThanOrEqual(262);
+});
+
+test('picks a month and year from the title with the keyboard', async ({ page }) => {
+  await openToday(page);
+  const now = new Date(apiNow());
+  const title = today(page).getByRole('heading', { level: 1 }).getByRole('button');
+  await title.focus();
+  await page.keyboard.press('Enter');
+  const picker = page.getByRole('dialog', { name: 'Choose month' });
+  const current = now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  await expect(picker.getByRole('button', { name: current })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(picker).toBeHidden();
+  await expect(title).toBeFocused();
+
+  await page.keyboard.press('Enter');
+  await picker.getByRole('button', { name: 'Next year' }).click();
+  const target = new Date(now.getFullYear() + 1, 0, 1);
+  await picker.getByRole('button', { name: `January ${now.getFullYear() + 1}` }).focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await expect(picker).toBeHidden();
+  await expect(title).toBeFocused();
+  target.setMonth(1);
+  await expect(title).toHaveText(
+    target.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+  );
+});
+
+test('keeps the month inside a phone-width window', async ({ page }) => {
+  await openToday(page);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(grid(page)).toBeVisible();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(overflow).toBe(false);
+  const gridBox = await grid(page).boundingBox();
+  expect(gridBox!.x + gridBox!.width).toBeLessThanOrEqual(375);
 });
 
 test('stacks the rail under the grid at a narrow width', async ({ page }) => {

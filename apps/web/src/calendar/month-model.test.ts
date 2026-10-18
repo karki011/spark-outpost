@@ -7,7 +7,7 @@ import {
   preview,
   setMonth,
   shiftMonth,
-  timeGroups,
+  titlesThatFit,
 } from './month-model.ts';
 import { at, event } from './test-fixtures.ts';
 
@@ -60,7 +60,7 @@ describe('moving between days and months', () => {
 });
 
 describe('what a day shows', () => {
-  it('puts all-day events first, then by start, and keeps three with a count of the rest', () => {
+  it('puts all-day events first, then by start', () => {
     const late = event('Late', at(16), at(17));
     const early = event('Early', at(9), at(10));
     const holiday = event('Holiday', at(0), at(24), { allDay: true });
@@ -71,25 +71,21 @@ describe('what a day shows', () => {
     const day = byDay.get('2026-10-16')!;
     expect(byDay.get('2026-10-17')!.map((item) => item.title)).toEqual(['Tomorrow']);
     expect(day.map((item) => item.title)).toEqual(['Holiday', 'Early', 'Lunch', 'Late']);
-    expect(preview(day)).toMatchObject({ more: 1 });
-    expect(preview(day).shown.map((item) => item.title)).toEqual(['Holiday', 'Early', 'Lunch']);
   });
 
-  it('groups the rail by the hour each event starts', () => {
-    const groups = timeGroups(
-      [
-        event('Half past', at(9, 30), at(10)),
-        event('Nine', at(9), at(9, 15)),
-        event('Ten', at(10), at(11)),
-        event('Holiday', at(0), at(24), { allDay: true }),
-      ],
-      '2026-10-16',
-    );
-    expect(groups.map((group) => [group.label, group.events.map((item) => item.title)])).toEqual([
-      ['All day', ['Holiday']],
-      ['9:00', ['Nine', 'Half past']],
-      ['10:00', ['Ten']],
-    ]);
+  it('shows every title that fits, or one line fewer and a count of the rest', () => {
+    const day = [9, 10, 11, 12].map((hour) => event(`At ${hour}`, at(hour), at(hour + 1)));
+    expect(preview(day, 4)).toEqual({ shown: day, more: 0 });
+    expect(preview(day, 3)).toEqual({ shown: day.slice(0, 2), more: 2 });
+    expect(preview(day, 1)).toEqual({ shown: day.slice(0, 1), more: 3 });
+    expect(preview([], 3)).toEqual({ shown: [], more: 0 });
+  });
+
+  it('fits as many title lines as the cell height holds, at least one', () => {
+    expect(titlesThatFit(120, 19)).toBe(6);
+    expect(titlesThatFit(37, 19)).toBe(1);
+    expect(titlesThatFit(0, 19)).toBe(1);
+    expect(titlesThatFit(120, 0)).toBe(1);
   });
 
   it('puts an event that spans days in every day it covers', () => {
@@ -102,15 +98,12 @@ describe('what a day shows', () => {
     expect(byDay.get('2026-10-19')).toEqual([]);
   });
 
-  it('keeps a zero-length event at local midnight on its day, in the cell and the rail', () => {
+  it('keeps a zero-length event at local midnight on its day, in its cell', () => {
     const cells = monthGrid('2026-10-16', '2026-10-16', SUNDAY).weeks.flat();
     const marker = event('Release day', at(0), at(0), { allDay: true });
     const byDay = eventsByDay([marker], cells);
     expect(byDay.get('2026-10-16')!.map((item) => item.title)).toEqual(['Release day']);
     expect(byDay.get('2026-10-15')).toEqual([]);
-    expect(timeGroups(byDay.get('2026-10-16')!, '2026-10-16')).toEqual([
-      { label: 'All day', events: [marker] },
-    ]);
   });
 
   it('shows initials for names and email addresses', () => {

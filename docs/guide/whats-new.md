@@ -14,7 +14,7 @@ What changed recently in Spark, newest first.
 | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | Agents can read and change your calendar.                                                                       | See [Let agents use it](calendar.md#let-agents-use-it).   |
 | Fixed: Terminal, tab close, Ask Spark and outpost glitches.                                                     | None.                                                     |
-| Calendar: **Today** from macOS or Google, **Month**, nudges, **Join** at 10 min, **Choose** for clashes.        | See [Use it](calendar.md#use-it).                         |
+| **Today** from macOS or Google, full-window **Month**, nudges, **Join** at 10 min, **Choose** for clashes.      | See [Use it](calendar.md#use-it).                         |
 | Prompt cache countdown and **Cache hit**.                                                                       | See [Prompt cache](statuses-and-limits.md#prompt-cache).  |
 | Claude plan ring.                                                                                               | See [Limits](statuses-and-limits.md#limits).              |
 | **Revert file** undoes one file.                                                                                | See [Review changes](review-changes.md#keep-or-revert).   |

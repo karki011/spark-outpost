@@ -48,3 +48,11 @@ export function weekdayShort(iso: string): string {
   const date = dateOf(iso);
   return `${date.toLocaleDateString(undefined, { weekday: 'short' })} ${date.getDate()}`;
 }
+
+export function shortDay(iso: string): string {
+  return dateOf(iso).toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}

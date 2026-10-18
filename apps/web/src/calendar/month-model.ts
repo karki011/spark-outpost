@@ -1,10 +1,9 @@
 import { addLocalDays, localDayStart, spanOf, type CalendarEvent } from '@spark-outpost/contracts';
-import { clock, dateOf } from './calendar-format.ts';
+import { dateOf } from './calendar-format.ts';
 import { localDate } from './use-calendar.ts';
 
 export const GRID_WEEKS = 6;
 export const WEEK_DAYS = 7;
-export const CELL_TITLES = 3;
 
 export interface MonthCell {
   date: string;
@@ -97,11 +96,18 @@ export function eventsByDay(
   );
 }
 
-export function preview(events: readonly CalendarEvent[]): {
-  shown: CalendarEvent[];
-  more: number;
-} {
-  return { shown: events.slice(0, CELL_TITLES), more: Math.max(0, events.length - CELL_TITLES) };
+export function titlesThatFit(space: number, row: number): number {
+  if (!(row > 0)) return 1;
+  return Math.max(1, Math.floor(space / row));
+}
+
+export function preview(
+  events: readonly CalendarEvent[],
+  limit: number,
+): { shown: CalendarEvent[]; more: number } {
+  if (events.length <= limit) return { shown: [...events], more: 0 };
+  const shown = Math.max(1, limit - 1);
+  return { shown: events.slice(0, shown), more: events.length - shown };
 }
 
 export function shiftMonth(date: string, months: number): string {
@@ -144,30 +150,6 @@ export function keyMove(key: string, date: string, weekStart: number): string | 
     default:
       return null;
   }
-}
-
-export interface TimeGroup {
-  label: string;
-  events: CalendarEvent[];
-}
-
-function hourOf(at: number): number {
-  const hour = new Date(at);
-  hour.setMinutes(0, 0, 0);
-  return hour.getTime();
-}
-
-export function timeGroups(events: readonly CalendarEvent[], date: string): TimeGroup[] {
-  const dayStart = dateOf(date).getTime();
-  const placed = events.map((event) => ({ event, start: spanOf(event).start }));
-  const groups: TimeGroup[] = [];
-  for (const { event, start } of placed.toSorted(byStart)) {
-    const label = event.allDay ? 'All day' : clock(hourOf(Math.max(start, dayStart)));
-    const last = groups.at(-1);
-    if (last?.label === label) last.events.push(event);
-    else groups.push({ label, events: [event] });
-  }
-  return groups;
 }
 
 export function durationMinutes(event: CalendarEvent): number {
