@@ -1,7 +1,11 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { GOOGLE_TESTING_LINE, calendarStatusSchema } from '../../packages/contracts/src/index.ts';
+import {
+  GOOGLE_EDIT_SIGN_IN_LINE,
+  GOOGLE_TESTING_LINE,
+  calendarStatusSchema,
+} from '../../packages/contracts/src/index.ts';
 import { resetTestDatabase } from './database.ts';
 import { readCalendarClock } from './fake-calendar-clock.ts';
 import { GOOGLE_STUB_EMAIL } from './google-stub.ts';
@@ -255,4 +259,21 @@ test('groups a Google account with one Nudge switch per row and folds a long lis
       return calendars.find((calendar) => calendar.title === 'Team 1')?.nudges;
     })
     .toBe(false);
+});
+
+test('asks to sign in again before agents can edit a Google calendar without the grant', async ({
+  page,
+}) => {
+  await fetch(`${STUB_URL}/google-test/read-only`);
+  await openCard(page);
+  await addGoogle(page);
+  const account = card(page).getByRole('region', { name: GOOGLE_STUB_EMAIL });
+  await expect(account.getByRole('button', { name: 'Sign in again' })).toHaveCount(0);
+  const edit = account.getByRole('switch', { name: `Agents can edit, ${GOOGLE_STUB_EMAIL}` });
+  await expect(edit).toHaveAttribute('aria-checked', 'false');
+  await edit.click();
+  await expect(edit).toHaveAttribute('aria-checked', 'true');
+  await expect(account).toContainText(GOOGLE_EDIT_SIGN_IN_LINE);
+  await expect(account.getByRole('button', { name: 'Sign in again' })).toBeVisible();
+  expect((await status(page)).google.accounts[0]).toMatchObject({ canEdit: false });
 });

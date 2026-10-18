@@ -124,7 +124,7 @@ test('connects from Today through the Calendar connector card', async ({ page })
   await expect(card.getByRole('checkbox', { name: 'Include Spark Work' })).toBeChecked();
   await expect(card.getByText('shared')).toBeVisible();
   const agents = card.getByRole('switch', { name: 'Let agents read my calendar' });
-  await expect(agents).toBeDisabled();
+  await expect(agents).toBeEnabled();
   await expect(agents).toHaveAttribute('aria-checked', 'false');
   await expect(card.getByRole('switch', { name: 'Nudge, Spark Work' })).toHaveAttribute(
     'aria-checked',
@@ -347,6 +347,7 @@ test('lists the calendar rows in Notifications and in Settings search', async ({
   const nudges = dialog.getByRole('group', { name: 'Calendars that nudge' });
   await expect(nudges.getByRole('switch', { name: 'Nudge, Spark Work' })).toBeVisible();
   await expect(nudges.getByRole('checkbox', { name: 'Include Spark Family' })).toBeVisible();
+  await expect(nudges.getByRole('switch', { name: /Agents can edit/ })).toHaveCount(0);
   await expect(dialog).not.toContainText('Counts as busy');
   await expect(dialog).not.toContainText('Prepare meetings');
 });
