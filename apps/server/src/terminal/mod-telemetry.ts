@@ -9,12 +9,19 @@ import {
   type ModModelTotals,
 } from '../persistence/native-terminal-mod-usage.ts';
 import { recordNativeStep } from '../persistence/native-terminal-steps.ts';
+import {
+  longWritesByModel,
+  recordCacheRequest,
+  recordCacheResume,
+} from '../persistence/prompt-cache.ts';
 import { cardPriceFor, type ModelPrice } from '../usage/prices.ts';
+import { contextOf } from '../usage/prompt-cache.ts';
 import type { ChatRecord } from './chat-record.ts';
 import {
   MOD_INPUT_CHARS,
   MOD_OUTPUT_CHARS,
   MOD_REPLY_CHARS,
+  MOD_SIDE_INDEX,
 } from './native-mod-telemetry-script.ts';
 import { estimatedCost } from './turn-usage.ts';
 
@@ -56,6 +63,15 @@ const itemSchema = z.discriminatedUnion('kind', [
     cacheRead: count,
     cacheWrite: count,
     costUsd: z.number().nonnegative().max(1_000_000).nullable(),
+    at: at.optional(),
+  }),
+  z.strictObject({
+    kind: z.literal('cache_resume'),
+    at,
+    secondsSince: count.nullable(),
+    contextTokens: count,
+    likelyExpired: z.boolean().nullable(),
+    estimatedWriteUsd: z.number().nonnegative().max(1_000_000).nullable(),
   }),
   z.strictObject({
     kind: z.literal('tool'),
@@ -94,12 +110,17 @@ export function readModTelemetry(body: unknown): ModItem[] | null {
 
 type PriceFor = (provider: string, model: string | null) => ModelPrice | null;
 
-function totalCost(models: ModModelTotals[], priceFor: PriceFor) {
+function totalCost(
+  models: ModModelTotals[],
+  longWrites: ReadonlyMap<string, number>,
+  priceFor: PriceFor,
+) {
   if (models.every((entry) => entry.costUsd !== null))
     return { costUsd: sum(models.map((entry) => entry.costUsd!)), reported: true };
   const estimates = models.map((entry) => {
     const price = priceFor('claude', entry.model);
-    return price ? estimatedCost(price, { ...entry, cachedWriteLong: 0, thought: 0 }) : null;
+    const cachedWriteLong = longWrites.get(entry.model) ?? 0;
+    return price ? estimatedCost(price, { ...entry, cachedWriteLong, thought: 0 }) : null;
   });
   if (estimates.some((cost) => cost === null)) return { costUsd: null, reported: false };
   return { costUsd: sum(estimates as number[]), reported: false };
@@ -130,7 +151,7 @@ export async function saveModUsage(
     cachedRead: countOf(models, 'cachedRead'),
     cachedWrite: countOf(models, 'cachedWrite'),
   };
-  const { costUsd, reported } = totalCost(models, priceFor);
+  const { costUsd, reported } = totalCost(models, await longWritesByModel(db, runId), priceFor);
   await recordModUsage(
     db,
     runId,
@@ -169,8 +190,35 @@ function detailed(item: ModItem): boolean {
   return item.kind === 'reply' || (item.kind === 'tool' && ('input' in item || 'output' in item));
 }
 
+function mainRequest(item: Extract<ModItem, { kind: 'request' }>): boolean {
+  return item.agent === null && item.index < MOD_SIDE_INDEX;
+}
+
+async function recordRequest(db: Db, runId: string, item: Extract<ModItem, { kind: 'request' }>) {
+  await recordModRequest(db, runId, {
+    turnId: item.turn,
+    index: item.index,
+    agentId: item.agent,
+    model: item.model,
+    input: item.input,
+    output: item.output,
+    cachedRead: item.cacheRead,
+    cachedWrite: item.cacheWrite,
+    costUsd: item.costUsd,
+  });
+  if (!mainRequest(item)) return;
+  await recordCacheRequest(db, runId, {
+    key: `${item.turn}:${item.index}`,
+    write: item.cacheWrite,
+    context: contextOf({ ...item, cachedRead: item.cacheRead, cachedWrite: item.cacheWrite }),
+    at: item.at === undefined ? new Date() : new Date(item.at),
+    model: item.model,
+    ttlSeconds: null,
+  });
+}
+
 async function recordItem(db: Db, runId: string, item: ModItem): Promise<void> {
-  if (item.kind === 'reply') return;
+  if (item.kind === 'reply' || item.kind === 'cache_resume') return;
   const agentId = item.agent;
   if (item.kind === 'turn_start' || item.kind === 'turn_end') {
     await recordModTurn(db, runId, {
@@ -182,20 +230,7 @@ async function recordItem(db: Db, runId: string, item: ModItem): Promise<void> {
     });
     return;
   }
-  if (item.kind === 'request') {
-    await recordModRequest(db, runId, {
-      turnId: item.turn,
-      index: item.index,
-      agentId,
-      model: item.model,
-      input: item.input,
-      output: item.output,
-      cachedRead: item.cacheRead,
-      cachedWrite: item.cacheWrite,
-      costUsd: item.costUsd,
-    });
-    return;
-  }
+  if (item.kind === 'request') return recordRequest(db, runId, item);
   await recordNativeStep(db, runId, {
     id: item.id,
     name: item.name,
@@ -211,10 +246,22 @@ export async function recordModTelemetry(
   runOf: (promptId: string) => string | null,
   items: readonly ModItem[],
   chatRecordFor: ChatRecordFor = async () => null,
+  sessionId: string | null = null,
 ): Promise<string[]> {
   const touched = new Set<string>();
   const aborted: string[] = [];
   for (const item of items) {
+    if (item.kind === 'cache_resume') {
+      if (sessionId)
+        await recordCacheResume(db, sessionId, {
+          at: item.at,
+          secondsSince: item.secondsSince,
+          contextTokens: item.contextTokens,
+          likelyExpired: item.likelyExpired,
+          estimatedWriteUsd: item.estimatedWriteUsd,
+        });
+      continue;
+    }
     const runId = runOf(item.prompt);
     if (!runId) continue;
     await recordItem(db, runId, item);

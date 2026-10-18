@@ -19,9 +19,9 @@ Open an AI terminal. About 1 minute.
 
 A line shows while dependencies copy. Pull requests aren't automatic.
 
-**Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events. Esc before Claude replies stays **Running** until you send. **Open**: no tracking. Dropped files insert paths.
+**Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events; idle Claude shows its [cache](statuses-and-limits.md#prompt-cache). Esc before a reply stays **Running** until you send. **Open**: no tracking. Drops insert paths.
 
-Selection copies, with **Add to terminal**, **Ask about this**, **Comment** and **New chat with this**. You press Enter. Hold Option to select when the agent uses the mouse. [Browser pane](use-the-browser.md#point-at-something) picks land there too.
+Selection copies, with **Add to terminal**, **Ask about this**, **Comment** and **New chat with this**. You press Enter. Hold Option to select when the agent uses the mouse. [Browser pane](use-the-browser.md#point-at-something) picks land there.
 
 **Focus terminal** (**⌘⇧F**) hides the chat list and Work panel. **⋯** has **Copy folder path**, **Reconnect** and **Stop session** (hold). [Paired devices](use-your-phone.md) can follow.
 

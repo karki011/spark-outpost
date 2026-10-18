@@ -6,7 +6,7 @@ order: 312
 summary: List files in .sparkignore so agents can't read or change them, and keep API keys out of chat messages.
 ---
 
-You'll protect files that Spark doesn't already treat as secret, and keep keys out of chats. About 2 minutes.
+You'll protect files that Spark doesn't treat as secret, and keep keys out of chats. About 2 minutes.
 
 ## Hide files with .sparkignore
 
@@ -45,7 +45,7 @@ Chat text is sent to the agent's provider and saved with the chat. Paste keys on
 
 When a message looks like it has a secret in it, Spark holds it and shows "Paste API keys in Settings → AI providers instead."
 
-1. Press **Enter** to pick **Remove it**. Each secret becomes `[removed]` so you can review and send.
+1. Press **Enter** to pick **Remove it**. Each secret becomes `[removed]` to review and send.
 2. Or select **Send anyway**, or press **Esc** to edit the message yourself.
 
 Spark checks for API keys and tokens (`sk-…`, `ghp_…`, `AKIA…`, JWTs), private key blocks, and `KEY=value` lines with a long random value.

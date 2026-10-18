@@ -16,7 +16,7 @@ A sub-task that starts after another in the same project branches from that chat
 | **Starts after** `@api`, same project        | `@api`'s branch    | `@api`'s branch      |
 | **Starts after** `@api`, a different project | The default branch | The default branch   |
 
-The proposing chat picks parallel or stacked; you can change it before you [start the story](outpost-stories.md). A different branch you choose for the chat, or **Edit my files**, wins over the stack.
+The proposing chat picks parallel or stacked; change it before you [start the story](outpost-stories.md). A different branch you choose for the chat, or **Edit my files**, wins over the stack.
 
 ## What you see
 

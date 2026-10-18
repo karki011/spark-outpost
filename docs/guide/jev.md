@@ -10,11 +10,11 @@ Jev is an optional advisor from TypeSafe. It answers short questions outside you
 
 ## What Jev decides
 
-| Job              | With Jev                                     | Without Jev              |
-| ---------------- | -------------------------------------------- | ------------------------ |
-| **The Map**      | Labels each area.                            | Rules label the areas.   |
-| **PR feedback**  | Sorts pull request comments.                 | Keyword rules sort them. |
-| **Spark Island** | Picks what a chat's short update should say. | Rules write the update.  |
+| Job              | With Jev                               | Without Jev              |
+| ---------------- | -------------------------------------- | ------------------------ |
+| **The Map**      | Labels each area.                      | Rules label the areas.   |
+| **PR feedback**  | Sorts pull request comments.           | Keyword rules sort them. |
+| **Spark Island** | Picks what a chat's short update says. | Rules write the update.  |
 
 Jev never answers a chat, edits files, runs code, answers an approval card, loosens a mode, picks a model or checks a change. To add it, see [Connect Jev](providers-and-models.md#connect-jev).
 

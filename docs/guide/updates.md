@@ -17,7 +17,7 @@ The Mac app checks for updates when it starts and every 4 hours. It never instal
 
 ![The Update blob above Settings in the rail](images/updates-rail-blob-light.png)
 
-A ready update also installs when you next quit. While a chat is running or waiting, the blob says **Waiting**. If the restart doesn't start, the blob returns to **Restart** and says why.
+A ready update installs when you next quit. While a chat is running or waiting, the blob says **Waiting**. If the restart doesn't start, the blob returns to **Restart** and says why.
 
 ## Stable or Beta
 

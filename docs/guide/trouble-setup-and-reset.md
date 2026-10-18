@@ -27,7 +27,7 @@ Setup has no replay button. It comes back when you disconnect every provider or 
 ## Send diagnostics with a bug report
 
 1. Open **Settings → Help** and select **Export diagnostics**.
-2. Open the zip to check it, then attach it to your report.
+2. Open and check the zip, then attach it to your report.
 3. Or select **Send feedback**, turn on **Include diagnostics**, and select **Open email draft** or **Open GitHub issue draft**.
 
 Nothing is sent until you send it.
@@ -39,7 +39,7 @@ Nothing is sent until you send it.
 | Your settings, with your name left out               | Keys or tokens                                            |
 | Which database updates have run, and recent app logs | Anything that looks like a key: it becomes `[redacted:…]` |
 
-The draft lists Docs searches that found nothing; you can delete that line.
+The draft lists Docs searches that found nothing; you can delete it.
 
 ## Start over
 
@@ -47,4 +47,4 @@ A reset deletes your chats, projects and settings. Your repositories and pushed 
 
 1. Open **Settings → Reset** and read **What Spark removes** and **What stays**.
 2. Turn on **Keep my API keys** to keep provider and Jev keys. GitHub, ticket and MCP tokens are always removed.
-3. Press and hold **Hold to reset** for 1.5 seconds. You have 10 seconds to select **Undo**.
+3. Hold **Hold to reset** for 1.5 seconds. You have 10 seconds to select **Undo**.

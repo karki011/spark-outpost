@@ -1,3 +1,4 @@
+import { promptCacheFor } from './prompt-cache.ts';
 import {
   PERMISSION_DO,
   UNTITLED_CONVERSATION,
@@ -162,6 +163,7 @@ export async function getConversationDetail(
     interruption,
     subagents,
     nativeActivity,
+    promptCache,
   ] = await Promise.all([
     db.query<MessageRow>(
       `SELECT ${MESSAGE_COLUMNS} FROM messages WHERE conversation_id = $1 ORDER BY created_at, id`,
@@ -200,6 +202,7 @@ export async function getConversationDetail(
     findInterruption(db, id),
     conversationSubagents(db, id),
     nativeStepActivity(db, id),
+    promptCacheFor(db, id),
   ]);
   const attachments = await attachmentsForMessages(
     db,
@@ -228,6 +231,7 @@ export async function getConversationDetail(
     ...(commands.length > 0 ? { commands } : {}),
     ...(interruption ? { interruption } : {}),
     ...(Object.keys(subagents).length > 0 ? { subagents } : {}),
+    ...(promptCache.last ? { promptCache } : {}),
   };
 }
 

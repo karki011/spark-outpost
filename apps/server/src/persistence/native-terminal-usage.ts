@@ -9,6 +9,7 @@ import type {
 } from '@spark-outpost/contracts';
 import type { Db, Queryable } from './db.ts';
 import { nativeStepsByRun, storedLabel } from './native-terminal-steps.ts';
+import { promptCacheFor } from './prompt-cache.ts';
 
 export const STOPPED_BY_USER = 'Stopped by the user.';
 
@@ -60,7 +61,7 @@ export async function nativeTerminalUsage(
   db: Queryable,
   conversationId: string,
 ): Promise<NativeTerminalUsage> {
-  const [session, runs, steps, reported] = await Promise.all([
+  const [session, runs, steps, reported, promptCache] = await Promise.all([
     db.query<{ provider: NativeTerminalProvider; stopped: boolean }>(
       `SELECT provider, state = 'exited' AND reason = $2 AS stopped
        FROM native_terminal_sessions WHERE conversation_id = $1`,
@@ -85,6 +86,7 @@ export async function nativeTerminalUsage(
        WHERE s.conversation_id = $1 ORDER BY u.created_at, u.native_session_id`,
       [conversationId],
     ),
+    promptCacheFor(db, conversationId),
   ]);
   return {
     provider: session.rows[0]?.provider ?? null,
@@ -101,6 +103,7 @@ export async function nativeTerminalUsage(
     })),
     reported: reportedTotals(reported.rows),
     stopped: session.rows[0]?.stopped ?? false,
+    promptCache,
   };
 }
 

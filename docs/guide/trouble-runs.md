@@ -9,14 +9,14 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 ## A run seems stuck
 
 - **You see:** a chat that doesn't move.
-- **Why:** it's usually waiting for you, or a long command is running.
-- **Fix:** read the line above the message box. **Waiting for you** jumps to the card. Anything else, such as **Running · pnpm test**, is still working.
+- **Why:** it's usually waiting for you or running a long command.
+- **Fix:** read the line above the message box. **Waiting for you** jumps to the card. Anything else, like **Running · pnpm test**, is working.
 - **Still stuck:** select **Stop**, then send a new message.
 
 ## A run stopped with the app
 
 - **You see:** the **This turn was interrupted** card.
-- **Why:** Spark Outpost stopped while the run was working.
+- **Why:** Spark Outpost stopped mid-run.
 - **Fix:** select **Continue from here** to resume the session, or **Start fresh**. Nothing retries by itself.
 
 ## A card expired

@@ -1,6 +1,10 @@
-import { EventType, type RunEvent, type TokenUsage } from '@spark-outpost/contracts';
+import {
+  countsCacheOutsideInput,
+  EventType,
+  type RunEvent,
+  type TokenUsage,
+} from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
-import { countsCacheOutsideInput } from '../usage/prices.ts';
 
 type RunFinished = Extract<RunEvent, { type: typeof EventType.RUN_FINISHED }>;
 type StandardUsage = NonNullable<RunFinished['usage']>[number];

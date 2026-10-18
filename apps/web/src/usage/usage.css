@@ -233,3 +233,29 @@
   background: transparent;
   color: var(--faint);
 }
+
+.cache-timer {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.cache-timer:hover,
+.cache-timer:focus-visible {
+  color: var(--muted);
+  background: var(--raise);
+}
+
+.cache-rebuild {
+  font-size: 12px;
+  color: var(--faint);
+  cursor: default;
+}

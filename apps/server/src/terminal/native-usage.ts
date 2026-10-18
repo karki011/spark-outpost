@@ -7,7 +7,9 @@ import {
   recordNativeTurnUsage,
   recordNativeUsageOffset,
 } from '../persistence/native-terminal-usage.ts';
+import { recordLongWrites, recordSessionCacheTtl } from '../persistence/prompt-cache.ts';
 import { claudeTranscriptParser } from './claude-transcript.ts';
+import { saveModUsage } from './mod-telemetry.ts';
 import { codexRolloutParser } from './codex-rollout.ts';
 import type { LiveSession } from './native-runtime-types.ts';
 import type { WatchTranscript } from './native-tail.ts';
@@ -18,6 +20,7 @@ import {
   firstPosition,
   moveToOwner,
   note,
+  noteCacheTtl,
   openTurn,
   stepRun,
   type SessionTranscript,
@@ -33,15 +36,27 @@ function reportedHere(path: string, usage: ReportedUsage): boolean {
   return basename(path) === `${usage.nativeSessionId}.jsonl`;
 }
 
+async function saveCacheTtl(db: Db, session: LiveSession): Promise<void> {
+  const transcript = session.transcript;
+  const ttl = transcript?.cacheTtl ?? null;
+  if (!transcript || ttl === null || ttl === transcript.savedTtl) return;
+  await recordSessionCacheTtl(db, session.row.id, ttl);
+  transcript.savedTtl = ttl;
+}
+
 export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
   const caughtUp = new Set<string>();
   let notTyped: OnNotTyped = async () => undefined;
   const save = async (session: LiveSession) => {
+    await saveCacheTtl(db, session);
     for (const transcript of chain(session.transcript)) {
       for (const turn of transcript.turns.values()) {
-        const totals = turn.changed ? turn.usage.totals() : null;
+        if (!turn.changed) continue;
         turn.changed = false;
+        const totals = turn.usage.totals();
         if (totals) await recordNativeTurnUsage(db, turn.runId, totals);
+        if (await recordLongWrites(db, turn.runId, turn.usage.longWrites()))
+          await saveModUsage(db, turn.runId);
       }
       const reported = transcript.reported;
       transcript.reported = null;
@@ -80,6 +95,7 @@ export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
           changed = true;
         }
         if (count(session, transcript, record)) changed = true;
+        if (noteCacheTtl(transcript, record)) changed = true;
       }
       return Promise.all([
         missed.reduce((before, record) => before.then(record), Promise.resolve()),
@@ -136,6 +152,8 @@ export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
       agents: new Map(),
       reported: null,
       model,
+      cacheTtl: null,
+      savedTtl: null,
       previous,
     };
   };

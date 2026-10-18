@@ -103,6 +103,7 @@ describe('Claude usage records', () => {
       cachedWriteLong: 20,
       thought: 7,
     };
+    const buckets = { short: 10, long: 20 };
     expect(
       parse(
         assistant('before-any-prompt', usage),
@@ -122,13 +123,22 @@ describe('Claude usage records', () => {
         responseId: 'before-any-prompt',
         model: 'claude-opus-5-5',
         tokens,
+        buckets,
       },
-      { kind: 'response', turnId: 'p1', responseId: 'msg_1', model: 'claude-opus-5-5', tokens },
+      {
+        kind: 'response',
+        turnId: 'p1',
+        responseId: 'msg_1',
+        model: 'claude-opus-5-5',
+        tokens,
+        buckets,
+      },
       {
         kind: 'response',
         turnId: 'p1',
         responseId: 'msg_2',
         model: 'claude-opus-5-5',
+        buckets: null,
         tokens: {
           input: 0,
           output: 0,

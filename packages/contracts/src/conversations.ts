@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { promptCacheSchema } from './prompt-cache.ts';
 import { browserShotSchema } from './browser.ts';
 import { commandRunSchema } from './command-runs.ts';
 import { adviceSummarySchema } from './advice.ts';
@@ -171,6 +172,7 @@ export const conversationDetailSchema = z.object({
   commands: z.array(commandRunSchema).optional(),
   interruption: interruptionSchema.nullable().optional(),
   subagents: z.record(z.string(), z.array(subagentRowSchema)).optional(),
+  promptCache: promptCacheSchema.optional(),
 });
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
 
