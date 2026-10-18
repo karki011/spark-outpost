@@ -233,9 +233,14 @@ export async function updateChoice(
 ): Promise<boolean> {
   const entries = Object.entries(patch) as [keyof CalendarChoicePatch, boolean][];
   const sets = entries.map(([name], index) => `${CHOICE_COLUMNS[name]} = $${index + 3}`);
+  const googleMayEdit = patch.agentsEdit
+    ? `AND (google_account_id IS NULL OR EXISTS (
+         SELECT 1 FROM calendar_google_accounts account
+         WHERE account.id = calendar_calendars.google_account_id AND account.can_edit))`
+    : '';
   const { rowCount } = await db.query(
     `UPDATE calendar_calendars SET ${sets.length ? sets.join(', ') : 'include = include'}
-     WHERE workspace_id = $1 AND key = $2`,
+     WHERE workspace_id = $1 AND key = $2 ${googleMayEdit}`,
     [workspaceId, key, ...entries.map(([, value]) => value)],
   );
   return (rowCount ?? 0) > 0;

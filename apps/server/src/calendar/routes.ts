@@ -133,10 +133,14 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
     guarded(res, async () => {
       const patch = parseBody(calendarChoicePatchSchema, req);
       const key = paramId(req, 'key');
-      if (patch.agentsEdit && (await googleEditBlocked(deps.db, deps.workspaceId, key))) {
+      const changed = await updateChoice(deps.db, deps.workspaceId, key, patch);
+      if (
+        !changed &&
+        patch.agentsEdit &&
+        (await googleEditBlocked(deps.db, deps.workspaceId, key))
+      ) {
         throw new BadRequestError(GOOGLE_EDIT_NEEDS_GRANT);
       }
-      const changed = await updateChoice(deps.db, deps.workspaceId, key, patch);
       if (!changed) throw new BadRequestError('That calendar is not known.');
       if (patch.include !== undefined) google?.refresh();
       await announceCalendar(deps.db);
