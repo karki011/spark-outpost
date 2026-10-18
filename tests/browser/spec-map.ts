@@ -111,6 +111,7 @@ export const SPEC_GROUPS = {
     'project-work-place',
     'projects',
     'plan-ring',
+    'rail-clock',
     'rail-badges-live',
     'search-jump',
     'session-palette',

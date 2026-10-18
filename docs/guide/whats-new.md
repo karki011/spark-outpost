@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                 | What to do                                                |
 | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| Clock below **Settings** opens **Today**.                                                                    | None.                                                     |
 | Calendar: **Add Google account**.                                                                            | See [Google sign-in](calendar.md#google-sign-in).         |
 | Claude plan ring.                                                                                            | See [Limits](statuses-and-limits.md#limits).              |
 | **Revert file** in the Changes drawer undoes one file.                                                       | See [Review changes](review-changes.md#keep-or-revert).   |

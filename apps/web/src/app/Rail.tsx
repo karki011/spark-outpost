@@ -8,6 +8,7 @@ import { SIDEBAR_HINT, useSidebarLayout } from '../conversations/sidebar-layout.
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { CALENDAR_PATH } from '../ui/icons.tsx';
 import { useSparkPause } from './pause/use-spark-pause.ts';
+import { RailClock } from './RailClock.tsx';
 import { RailMore } from './RailMore.tsx';
 import { UpdateBlob } from './UpdateBlob.tsx';
 import { PlanRing } from './PlanRing.tsx';
@@ -310,6 +311,10 @@ export function Rail({
             {SETTINGS_ICON}
             Settings
           </button>
+          <RailClock
+            onOpen={remote ? undefined : () => onView('today')}
+            onIntent={() => onIntent('today')}
+          />
         </>
       )}
     </nav>

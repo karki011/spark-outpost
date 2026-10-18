@@ -20,7 +20,7 @@ Events in both show once. Spark never changes events; no AI provider sees them.
 
 ## Use it
 
-- **Today** (left bar) shows your day, week and free blocks; **Home** shows **Upcoming**.
+- **Today** (left bar, or the clock below **Settings**) shows your day, week and free blocks; **Home** shows **Upcoming**.
 - Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before** or **Hold alerts during this**.
 
 **Join** appears 5 minutes before a Zoom, Meet, Teams or Webex call; **⌘J** joins the next. Spark Island nudges before meetings and holds chimes during focus blocks (**Settings → Notifications**).
