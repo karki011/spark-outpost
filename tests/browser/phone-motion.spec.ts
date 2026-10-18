@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { apiNow } from './api-clock.ts';
 import {
   denyWaitingPhones,
   NARROW,
@@ -199,9 +200,9 @@ test('waiting motion follows the countdown and leaves the QR still, wide and at 
   const main = await openPhone(page);
   const scene = main.locator('.ph-scene');
   await turnOn(page);
-  await page.clock.install();
+  await page.clock.install({ time: apiNow() });
   await startPairing(page);
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await page.clock.pauseAt(new Date(apiNow() + 1000));
 
   await expect(scene).toHaveAttribute('data-blob', 'idle');
   await expect.poll(() => loops(scene)).toEqual(expect.arrayContaining(['ph-bob', 'ph-glance']));

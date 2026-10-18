@@ -14,6 +14,7 @@ import {
   type Page,
 } from '@playwright/test';
 import { FAKE_TAILSCALE_HOST } from '../../apps/server/test/fake-tailscale.ts';
+import { matchApiClock } from './api-clock.ts';
 import { PHONE_ADDRESS, startPairing } from './phone-support.ts';
 import { API_PORT } from './stub-config.ts';
 
@@ -127,6 +128,7 @@ export async function signedInAs(page: Page): Promise<string | null> {
 }
 
 export async function openPhonePage(page: Page): Promise<Locator> {
+  await matchApiClock(page);
   await page.goto('/');
   await page
     .getByRole('navigation', { name: 'Main' })

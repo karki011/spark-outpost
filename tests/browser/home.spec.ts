@@ -436,9 +436,12 @@ test('a tooltip near the right edge stays inside the viewport', async ({ page })
 test('Home fits a phone screen without sideways scrolling', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   const title = 'A very long chat title that keeps going well past the edge of a phone screen';
+  const noon = new Date();
+  noon.setHours(12, 0, 0, 0);
+  await page.clock.install({ time: noon });
   await seedChats([
     { title: 'Stopped', run: { status: 'failed', error: 'Rate limit reached.' } },
-    { title, minutesAgo: 30 },
+    { title, minutesAgo: (Date.now() - noon.getTime()) / 60_000 + 30 },
   ]);
   await page.setViewportSize({ width: 360, height: 780 });
   await openHome(page);

@@ -17,6 +17,7 @@ import {
   toggleHeaderPane,
 } from './header-menu.ts';
 import { turnDone } from './project-chat-kit.ts';
+import { animationsSettled } from './settle.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
 const SKINS = [
@@ -256,6 +257,7 @@ test('the terminal panel has no serious contrast or ARIA issues in any theme', a
       if (next) document.documentElement.dataset.skin = next;
       else delete document.documentElement.dataset.skin;
     }, skin);
+    await animationsSettled(page);
     const results = await new AxeBuilder({ page })
       .include('#terminal-dock')
       .include('.head-r')

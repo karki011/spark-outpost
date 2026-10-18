@@ -52,6 +52,7 @@ export function remoteAccessParts(deps: RemoteAccessDeps): RemoteAccessParts {
       streams,
       tailscale,
       pushKeys: deps.pushKeys ?? pushKeys(deps.secrets, generateVapidKeys),
+      attemptsPerMinute: deps.pairingAttemptsPerMinute,
     }),
     reconcile: tailscale.reconcile,
   };

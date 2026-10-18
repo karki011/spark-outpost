@@ -3,7 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { GOOGLE_TESTING_LINE, calendarStatusSchema } from '../../packages/contracts/src/index.ts';
 import { resetTestDatabase } from './database.ts';
-import { readCalendarClock } from './fake-calendar-clock.ts';
+import { apiNow, matchApiClock } from './api-clock.ts';
 import { GOOGLE_STUB_EMAIL } from './google-stub.ts';
 import { FAKE_CALENDAR_STATE, STUB_PORT } from './stub-config.ts';
 
@@ -12,7 +12,6 @@ test.describe.configure({ mode: 'serial' });
 
 const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
 const MINUTE = 60_000;
-const fakeNow = () => Date.now() + readCalendarClock(FAKE_CALENDAR_STATE);
 let anchor = 0;
 
 const card = (page: Page) => page.locator('[data-connector="calendar"]');
@@ -59,14 +58,12 @@ async function addGoogle(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
-  anchor = Math.floor(fakeNow() / MINUTE) * MINUTE;
+  anchor = Math.floor(apiNow() / MINUTE) * MINUTE;
   writeFileSync(FAKE_CALENDAR_STATE, JSON.stringify({ authorization: 'notDetermined', anchor }));
   await resetTestDatabase({ onboarded: true });
   await forgetGoogle(page);
   await fetch(`${STUB_URL}/google-test/reset`);
-  if (readCalendarClock(FAKE_CALENDAR_STATE) !== 0) {
-    await page.clock.install({ time: new Date(fakeNow()) });
-  }
+  await matchApiClock(page);
 });
 
 test.afterEach(async ({ page }) => {
@@ -125,7 +122,7 @@ test('shows an event synced to macOS Calendar and Google once', async ({ page })
   await openCard(page);
   await card(page).getByRole('button', { name: 'Connect', exact: true }).click();
   await addGoogle(page);
-  const now = new Date(fakeNow());
+  const now = new Date(apiNow());
   const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const day = await (await page.request.get(`/api/calendar/day?date=${date}`)).json();
   const standups = (day.events as { title: string; also: string[] }[]).filter(

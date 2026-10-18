@@ -6,6 +6,7 @@ import {
   FAKE_TAILSCALE_HOST,
   type FakeTailscaleState,
 } from '../../apps/server/test/fake-tailscale.ts';
+import { matchApiClock } from './api-clock.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { API_PORT, FAKE_TAILSCALE_STATE } from './stub-config.ts';
 
@@ -106,6 +107,7 @@ export async function denyWaitingPhones(page: Page): Promise<void> {
 }
 
 export async function openPhone(page: Page) {
+  await matchApiClock(page);
   await page.goto('/');
   await page
     .getByRole('navigation', { name: 'Main' })
