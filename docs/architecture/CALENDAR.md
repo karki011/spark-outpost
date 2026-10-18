@@ -269,6 +269,19 @@ No Phase 1 PR is done until each check has run here and reports **pass** or **fa
 | Google Join                   | Join on a Meet link opens the default browser                                         |
 | Google Disconnect             | The token is revoked (a refresh then fails) and gone from the keychain                |
 
+**1b real test, 2026-10-18** (Apple silicon, the signed **Spark Outpost Dev** shell from this worktree with its freshly built helper, a throwaway data folder, Claude Code 2.1.301, Opus 5.5): **Spark Test** and **Spark Test Family** were seeded on On My Mac and every other calendar was unchecked before **Let agents read my calendar** went on; **Agents can edit** was on for Spark Test only.
+
+| Check                                                             | Result                                                                                                                                    |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Chat, Manual: "what's on my calendar tomorrow"                    | **pass**: the **Let the agent read your calendar?** card, then the two Spark Test events, the agent saying the read was allowed on a card |
+| Chat, Manual: create "Spark 1b test" tomorrow 15:00 on Spark Test | **pass**: **Add this event?** with the calendar, title and time; after **Add event** the event was in the calendar                        |
+| Chat, Bypass permissions: move it to 17:00                        | **pass**: moved at once, "Done without a card: the agent's mode allows it"                                                                |
+| Chat, Bypass permissions: delete it                               | **pass**: **Delete this event?** with "Spark asks before every delete, in every mode"; deleted after **Delete event**                     |
+| Terminal session, Manual: the same read, create and delete        | **pass**: Claude's own tool prompt, then Spark's card for each; created, then deleted                                                     |
+| Cleanup                                                           | **pass**: the seed tool removed both calendars by identifier                                                                              |
+
+Not tested for real: a Google write (only the fake Google API; the owner's Google and iCloud calendars were never written), an event with attendees and a shared calendar in the real app (DB tests only), **This and future** on a real recurring event, and the island's card view for a calendar card (the island showed a waiting badge).
+
 The Google checks read only: they never create, edit or delete an event on the owner's calendar. They need the owner's Desktop OAuth client in `.local/google-oauth-client.json`.
 
 ## Phases
