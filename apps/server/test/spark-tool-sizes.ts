@@ -15,6 +15,8 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   mac: false,
   outpost: false,
   outpost_draft: false,
+  calendar_read: false,
+  calendar_edit: false,
 };
 
 export const SESSION_CASES = {
@@ -30,6 +32,11 @@ export const SESSION_CASES = {
     ...NOTHING_AVAILABLE,
     outpost: true,
     outpost_draft: true,
+  },
+  'plain chat, calendar read and edit on': {
+    ...NOTHING_AVAILABLE,
+    calendar_read: true,
+    calendar_edit: true,
   },
   'everything connected, Browser pane': EVERYTHING_AVAILABLE,
 } satisfies Record<string, SparkAvailability>;

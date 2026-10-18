@@ -1,4 +1,4 @@
-import { GOOGLE_CALENDAR_SCOPES, type GoogleSignInFlow } from '@spark-outpost/contracts';
+import { googleScopesRead, type GoogleSignInFlow } from '@spark-outpost/contracts';
 import { newPkce, sameText } from '../../setup/pkce.ts';
 import { startLoopback, type Loopback, type LoopbackCallback } from './loopback.ts';
 import {
@@ -60,13 +60,6 @@ const ended = (status: GoogleSignInFlow['status'], message: string | null): Goog
   message,
 });
 
-function hasCalendarScopes(scopes: readonly string[]): boolean {
-  const granted = new Set(scopes);
-  return GOOGLE_CALENDAR_SCOPES.filter((scope) => scope.startsWith('https://')).every((scope) =>
-    granted.has(scope),
-  );
-}
-
 function deniedMessage(error: string): string {
   if (error === 'access_denied') return GOOGLE_SIGN_IN_DENIED;
   return `Google ended the sign-in (${error.slice(0, 60)}).`;
@@ -99,7 +92,7 @@ export function createGoogleSignIn(deps: GoogleSignInDeps): GoogleSignIn {
         { code: callback.code, verifier: waiting.verifier, redirectUri: waiting.redirectUri },
         deps.now(),
       );
-      if (!hasCalendarScopes(grant.scopes)) {
+      if (!googleScopesRead(grant.scopes)) {
         await deps.discard(grant);
         flow = ended('failed', GOOGLE_SCOPES_MISSING);
         return;

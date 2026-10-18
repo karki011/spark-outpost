@@ -16,7 +16,7 @@ async function switchedOn(db: Queryable, conversationId: string): Promise<boolea
   return rows[0]?.on === true;
 }
 
-async function childRun(db: Queryable, runId: string): Promise<boolean> {
+export async function childRun(db: Queryable, runId: string): Promise<boolean> {
   const { rows } = await db.query<{ child: boolean }>(
     'SELECT parent_run_id IS NOT NULL AS child FROM runs WHERE id = $1',
     [runId],

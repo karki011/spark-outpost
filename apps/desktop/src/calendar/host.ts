@@ -72,6 +72,13 @@ export function startCalendarHost(options: CalendarHostOptions): CalendarHost {
         window.invalidate();
         return answer;
       }
+      case 'save':
+      case 'remove': {
+        ready();
+        const answer = await helper.call(request);
+        window.invalidate();
+        return answer;
+      }
       default:
         ready();
         return helper.call(request);

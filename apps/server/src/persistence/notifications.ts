@@ -12,7 +12,7 @@ export interface ListenOptions {
 
 export async function listen(
   connectionString: string,
-  channel: 'run_events' | 'jobs' | 'approvals' | 'changes' | 'pr_poll',
+  channel: 'run_events' | 'jobs' | 'approvals' | 'changes' | 'pr_poll' | 'calendar_written',
   onPayload: (payload: string) => void,
   { searchPath, onError }: ListenOptions = {},
 ): Promise<NotificationListener> {

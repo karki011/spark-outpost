@@ -26,6 +26,7 @@ export const calendarChoiceSchema = z.object({
   ownership: calendarOwnershipSchema,
   include: z.boolean(),
   nudges: z.boolean(),
+  agentsEdit: z.boolean(),
 });
 export type CalendarChoice = z.infer<typeof calendarChoiceSchema>;
 

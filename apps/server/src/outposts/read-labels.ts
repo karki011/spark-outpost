@@ -15,6 +15,7 @@ const SOURCES: ReadonlySet<string> = new Set<ObservationSource>([
   'private_data',
   'web_page',
   'mac_app',
+  'calendar',
 ]);
 
 export type OutpostRead = 'answer' | 'notes';

@@ -6,6 +6,7 @@ export interface GoogleAccountRow {
   subject: string;
   email: string;
   needsSignIn: boolean;
+  canEdit: boolean;
 }
 
 interface Row {
@@ -13,6 +14,7 @@ interface Row {
   subject: string;
   email: string;
   needs_sign_in: boolean;
+  can_edit: boolean;
 }
 
 const rowOf = (row: Row): GoogleAccountRow => ({
@@ -20,11 +22,12 @@ const rowOf = (row: Row): GoogleAccountRow => ({
   subject: row.subject,
   email: row.email,
   needsSignIn: row.needs_sign_in,
+  canEdit: row.can_edit,
 });
 
 export async function googleAccounts(db: Queryable, workspaceId: string) {
   const { rows } = await db.query<Row>(
-    `SELECT id, subject, email, needs_sign_in FROM calendar_google_accounts
+    `SELECT id, subject, email, needs_sign_in, can_edit FROM calendar_google_accounts
      WHERE workspace_id = $1 ORDER BY created_at, email`,
     [workspaceId],
   );
@@ -34,15 +37,15 @@ export async function googleAccounts(db: Queryable, workspaceId: string) {
 export async function saveGoogleAccount(
   db: Queryable,
   workspaceId: string,
-  account: { subject: string; email: string },
+  account: { subject: string; email: string; canEdit: boolean },
 ): Promise<GoogleAccountRow> {
   const { rows } = await db.query<Row>(
-    `INSERT INTO calendar_google_accounts (id, workspace_id, subject, email)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO calendar_google_accounts (id, workspace_id, subject, email, can_edit)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (workspace_id, subject)
-       DO UPDATE SET email = EXCLUDED.email, needs_sign_in = false
-     RETURNING id, subject, email, needs_sign_in`,
-    [randomUUID(), workspaceId, account.subject, account.email],
+       DO UPDATE SET email = EXCLUDED.email, needs_sign_in = false, can_edit = EXCLUDED.can_edit
+     RETURNING id, subject, email, needs_sign_in, can_edit`,
+    [randomUUID(), workspaceId, account.subject, account.email, account.canEdit],
   );
   return rowOf(rows[0]!);
 }

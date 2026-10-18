@@ -104,7 +104,11 @@ describe('POST /api/reset', () => {
   });
 
   it('removes Google Calendar sign-ins, found through their accounts', async () => {
-    await saveGoogleAccount(t.db, t.workspaceId, { subject: '42', email: 'me@example.com' });
+    await saveGoogleAccount(t.db, t.workspaceId, {
+      subject: '42',
+      email: 'me@example.com',
+      canEdit: false,
+    });
     const secrets = recordingStore(memorySecretStore());
     await secrets.set(googleCalendarSecret('42'), '1//refresh');
 

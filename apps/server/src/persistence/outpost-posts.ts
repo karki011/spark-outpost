@@ -64,7 +64,14 @@ interface FactsRow extends PostRow {
 
 const observedSchema = z.array(
   z.object({
-    source: z.enum(['secret_file', 'secret_output', 'private_data', 'web_page', 'mac_app']),
+    source: z.enum([
+      'secret_file',
+      'secret_output',
+      'private_data',
+      'web_page',
+      'mac_app',
+      'calendar',
+    ]),
     label: z.string(),
   }),
 );

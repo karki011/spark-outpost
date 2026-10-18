@@ -29,7 +29,9 @@ export type SparkToolNeed =
   | 'browser'
   | 'mac'
   | 'outpost'
-  | 'outpost_draft';
+  | 'outpost_draft'
+  | 'calendar_read'
+  | 'calendar_edit';
 
 export interface SparkTool {
   name: string;

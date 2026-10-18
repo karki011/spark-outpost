@@ -1,8 +1,9 @@
-import type {
-  CalendarEventDetail,
-  CalendarGoogleStatus,
-  GoogleSignInFlow,
-  HelperEvent,
+import {
+  googleScopesEdit,
+  type CalendarEventDetail,
+  type CalendarGoogleStatus,
+  type GoogleSignInFlow,
+  type HelperEvent,
 } from '@spark-outpost/contracts';
 import { getGoogleEvent } from './api.ts';
 import type { Db } from '../../persistence/db.ts';
@@ -211,6 +212,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     const row = await saveGoogleAccount(deps.db, deps.workspaceId, {
       subject: grant.subject,
       email: grant.email,
+      canEdit: googleScopesEdit(grant.scopes),
     });
     const account = accounts.get(row.id) ?? liveAccount(row);
     account.row = row;
@@ -262,6 +264,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
           email: account.row.email,
           state: account.state,
           message: account.message,
+          canEdit: account.row.canEdit,
         })),
         signIn: signIn?.flow() ?? IDLE_FLOW,
       };

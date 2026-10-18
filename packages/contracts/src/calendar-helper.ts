@@ -97,10 +97,45 @@ export const helperEventDetailSchema = z.object({
   notes: text(20_000),
   attendees: z.array(helperAttendeeSchema).max(500),
   organizerIsMe: z.boolean(),
+  alarms: z.array(z.number().int().min(0)).max(20).optional(),
 });
 export type HelperEventDetail = z.infer<typeof helperEventDetailSchema>;
 
 const occurrence = { eventId: text(500).min(1), start: instant };
+
+export const CALENDAR_ALARM_MAX_MINUTES = 40_320;
+
+export const calendarEditSpanSchema = z.enum(['this', 'future']);
+export type CalendarEditSpan = z.infer<typeof calendarEditSpanSchema>;
+
+export const calendarEventFieldsSchema = z
+  .object({
+    title: text(1_000).optional(),
+    start: instant.optional(),
+    end: instant.optional(),
+    allDay: z.boolean().optional(),
+    notes: text(20_000).optional(),
+    location: text(2_000).optional(),
+    alarmMinutes: z.number().int().min(0).max(CALENDAR_ALARM_MAX_MINUTES).nullable().optional(),
+  })
+  .strict();
+export type CalendarEventFields = z.infer<typeof calendarEventFieldsSchema>;
+
+export const calendarSaveFields = {
+  calendarId: text(300).min(1),
+  eventId: text(500).min(1).optional(),
+  occurrence: instant.optional(),
+  fields: calendarEventFieldsSchema,
+  span: calendarEditSpanSchema.optional(),
+};
+
+export const calendarRemoveFields = { ...occurrence, span: calendarEditSpanSchema.optional() };
+
+export const calendarSavedSchema = z.object({
+  before: helperEventDetailSchema.nullable(),
+  after: helperEventDetailSchema,
+});
+export type CalendarSaved = z.infer<typeof calendarSavedSchema>;
 
 export const calendarHelperRequestSchema = z.discriminatedUnion('op', [
   z.object({ id, op: z.literal('status') }),
@@ -115,6 +150,8 @@ export const calendarHelperRequestSchema = z.discriminatedUnion('op', [
   }),
   z.object({ id, op: z.literal('event'), ...occurrence }),
   z.object({ id, op: z.literal('open'), ...occurrence }),
+  z.object({ id, op: z.literal('save'), ...calendarSaveFields }),
+  z.object({ id, op: z.literal('remove'), ...calendarRemoveFields }),
 ]);
 export type CalendarHelperRequest = z.infer<typeof calendarHelperRequestSchema>;
 export type CalendarHelperOp = CalendarHelperRequest['op'];
@@ -131,6 +168,8 @@ export const calendarHelperResultSchemas = {
   }),
   event: helperEventDetailSchema,
   open: z.object({ opened: z.boolean() }),
+  save: calendarSavedSchema,
+  remove: z.object({ removed: z.literal(true) }),
 } satisfies Record<CalendarHelperOp, z.ZodType>;
 
 export const calendarHelperErrorCodeSchema = z.enum([

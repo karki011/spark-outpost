@@ -70,6 +70,15 @@ export const googleEventSchema = z.object({
   recurrence: z.array(z.string()).optional(),
   attendees: z.array(attendee).optional(),
   conferenceData: z.object({ entryPoints: z.array(entryPoint).optional() }).optional(),
+  reminders: z
+    .object({
+      useDefault: z.boolean().optional(),
+      overrides: z
+        .array(z.object({ method: z.string().optional(), minutes: z.number().int().optional() }))
+        .max(20)
+        .optional(),
+    })
+    .optional(),
 });
 export type GoogleEvent = z.infer<typeof googleEventSchema>;
 
@@ -121,17 +130,43 @@ async function failureOf(response: Response): Promise<GoogleApiError> {
   return new GoogleApiError('bad_response', `Google answered ${response.status}.`);
 }
 
-async function getJson(deps: GoogleApiDeps, path: string, query: URLSearchParams) {
+interface Send {
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  body?: unknown;
+}
+
+async function call(
+  deps: GoogleApiDeps,
+  path: string,
+  query: URLSearchParams,
+  send: Send,
+): Promise<Response> {
   let response: Response;
   try {
     response = await deps.fetch(`${deps.apiUrl}${path}?${query.toString()}`, {
-      headers: { authorization: `Bearer ${deps.accessToken}`, accept: 'application/json' },
+      method: send.method,
+      headers: {
+        authorization: `Bearer ${deps.accessToken}`,
+        accept: 'application/json',
+        ...(send.body === undefined ? {} : { 'content-type': 'application/json' }),
+      },
+      ...(send.body === undefined ? {} : { body: JSON.stringify(send.body) }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch {
     throw new GoogleApiError('unreachable', 'Couldn’t reach Google.');
   }
   if (!response.ok) throw await failureOf(response);
+  return response;
+}
+
+async function getJson(
+  deps: GoogleApiDeps,
+  path: string,
+  query: URLSearchParams,
+  send: Send = { method: 'GET' },
+) {
+  const response = await call(deps, path, query, send);
   const data = (await response.json().catch(() => null)) as unknown;
   if (data === null) throw new GoogleApiError('bad_response', 'Google sent an unreadable answer.');
   return data;
@@ -217,4 +252,55 @@ export async function listGoogleEvents(
     if (!pageToken) return { events, syncToken: null, truncated: false };
   }
   return { events, syncToken: null, truncated: true };
+}
+
+export interface GoogleEventWrite {
+  summary?: string;
+  description?: string;
+  location?: string;
+  start?: { dateTime: string } | { date: string };
+  end?: { dateTime: string } | { date: string };
+  reminders?: { useDefault: boolean; overrides: { method: 'popup'; minutes: number }[] };
+}
+
+const NO_UPDATES = () => new URLSearchParams({ sendUpdates: 'none' });
+
+function eventPath(calendarId: string, eventId?: string): string {
+  const base = `/calendars/${encodeURIComponent(calendarId)}/events`;
+  return eventId === undefined ? base : `${base}/${encodeURIComponent(eventId)}`;
+}
+
+function parsedEvent(data: unknown): GoogleEvent {
+  const parsed = googleEventSchema.safeParse(data);
+  if (!parsed.success) throw new GoogleApiError('bad_response', 'Google sent an odd event.');
+  return parsed.data;
+}
+
+export async function insertGoogleEvent(
+  deps: GoogleApiDeps,
+  calendarId: string,
+  body: GoogleEventWrite,
+): Promise<GoogleEvent> {
+  return parsedEvent(
+    await getJson(deps, eventPath(calendarId), NO_UPDATES(), { method: 'POST', body }),
+  );
+}
+
+export async function patchGoogleEvent(
+  deps: GoogleApiDeps,
+  calendarId: string,
+  eventId: string,
+  body: GoogleEventWrite,
+): Promise<GoogleEvent> {
+  return parsedEvent(
+    await getJson(deps, eventPath(calendarId, eventId), NO_UPDATES(), { method: 'PATCH', body }),
+  );
+}
+
+export async function deleteGoogleEvent(
+  deps: GoogleApiDeps,
+  calendarId: string,
+  eventId: string,
+): Promise<void> {
+  await call(deps, eventPath(calendarId, eventId), NO_UPDATES(), { method: 'DELETE' });
 }

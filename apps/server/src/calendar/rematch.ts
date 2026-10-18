@@ -23,11 +23,12 @@ function kept(saved: CalendarChoice, calendar: HelperCalendar): ChoiceWrite {
     calendar,
     include: saved.include,
     nudges: saved.nudges,
+    agentsEdit: saved.agentsEdit,
   };
 }
 
 function fresh(calendar: HelperCalendar): ChoiceWrite {
-  return { key: null, calendar, include: true, nudges: true };
+  return { key: null, calendar, include: true, nudges: true, agentsEdit: false };
 }
 
 function sameFacts(saved: CalendarChoice, calendar: HelperCalendar): boolean {

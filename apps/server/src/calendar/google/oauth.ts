@@ -38,6 +38,7 @@ export function googleAuthorizeUrl(
   url.searchParams.set('code_challenge_method', 'S256');
   url.searchParams.set('access_type', 'offline');
   url.searchParams.set('prompt', 'consent');
+  url.searchParams.set('include_granted_scopes', 'true');
   if (loginHint) url.searchParams.set('login_hint', loginHint);
   return url.toString();
 }

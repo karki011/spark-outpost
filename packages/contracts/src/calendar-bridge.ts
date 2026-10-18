@@ -4,6 +4,9 @@ import {
   calendarAuthorizationSchema,
   helperCalendarSchema,
   helperEventDetailSchema,
+  calendarRemoveFields,
+  calendarSaveFields,
+  calendarSavedSchema,
   helperEventSchema,
 } from './calendar-helper.ts';
 
@@ -26,6 +29,8 @@ export const calendarHostRequestSchema = z.discriminatedUnion('op', [
   }),
   z.object({ op: z.literal('event'), ...occurrence }),
   z.object({ op: z.literal('open'), ...occurrence }),
+  z.object({ op: z.literal('save'), ...calendarSaveFields }),
+  z.object({ op: z.literal('remove'), ...calendarRemoveFields }),
   z.object({ op: z.literal('open_settings') }),
   z.object({ op: z.literal('stop') }),
 ]);
@@ -54,6 +59,8 @@ export const calendarHostResultSchemas = {
   }),
   event: helperEventDetailSchema,
   open: z.object({ opened: z.boolean() }),
+  save: calendarSavedSchema,
+  remove: z.object({ removed: z.literal(true) }),
   open_settings: z.object({ opened: z.boolean() }),
   stop: z.object({ stopped: z.boolean() }),
 } satisfies Record<CalendarHostOp, z.ZodType>;

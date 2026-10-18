@@ -1,4 +1,5 @@
 import { conversationProjectIds } from '../agent-config/store.ts';
+import { calendarOffer } from './tools/calendar/offered.ts';
 import { macRunRefusal } from '../mac-control/offered.ts';
 import { outpostNeeds } from '../outposts/outpost-availability.ts';
 import { gitHubStatus } from '../ship/github/access.ts';
@@ -26,6 +27,8 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   mac: true,
   outpost: true,
   outpost_draft: true,
+  calendar_read: true,
+  calendar_edit: true,
 };
 
 async function chatHasProject(deps: SparkToolDeps, scope: SparkScope): Promise<boolean> {
@@ -44,12 +47,13 @@ export async function sparkAvailability(
   deps: SparkToolDeps,
   scope: SparkScope,
 ): Promise<SparkAvailability> {
-  const [sources, slack, project, outposts, macRefused] = await Promise.all([
+  const [sources, slack, project, outposts, macRefused, calendar] = await Promise.all([
     connectedSources(ticketDepsFor(deps, scope)),
     openSlack(slackDepsFor(deps, scope)),
     chatHasProject(deps, scope),
     outpostNeeds(deps.db, scope),
     deps.mac ? macRunRefusal(deps.db, scope) : Promise.resolve('off' as const),
+    calendarOffer(deps, scope),
   ]);
   const gitHub = project ? await gitHubReach(deps, scope) : { connected: false, ownLogin: false };
   return {
@@ -61,6 +65,8 @@ export async function sparkAvailability(
     pull_request_create: gitHub.ownLogin,
     browser: deps.browser !== undefined,
     mac: macRefused === null,
+    calendar_read: calendar.read,
+    calendar_edit: calendar.edit,
     ...outposts,
   };
 }
@@ -68,7 +74,14 @@ export async function sparkAvailability(
 const HOW_TO_GET: Record<
   Exclude<
     SparkToolNeed,
-    'browser' | 'mac' | 'publish' | 'pull_request_create' | 'outpost' | 'outpost_draft'
+    | 'browser'
+    | 'mac'
+    | 'publish'
+    | 'pull_request_create'
+    | 'outpost'
+    | 'outpost_draft'
+    | 'calendar_read'
+    | 'calendar_edit'
   >,
   string
 > = {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  GOOGLE_EDIT_SIGN_IN_LINE,
   GOOGLE_TESTING_LINE,
   type CalendarAccount,
   type CalendarChoicePatch,
@@ -100,6 +101,8 @@ function GoogleAccount({
   onDisconnect,
 }: AccountProps) {
   const rows = calendars?.calendars ?? [];
+  const needsEditGrant =
+    account.state !== 'sign_in_again' && !account.canEdit && rows.some((row) => row.agentsEdit);
   return (
     <section className="cal-source" aria-label={account.email}>
       <div className="cal-src-h">
@@ -110,8 +113,8 @@ function GoogleAccount({
       </div>
       {rows.length > 0 && (
         <>
-          <RowsHeader />
-          <CalendarRows calendars={rows} onChange={onChange} />
+          <RowsHeader withEdit />
+          <CalendarRows calendars={rows} onChange={onChange} withEdit />
         </>
       )}
       {account.message && (
@@ -119,8 +122,13 @@ function GoogleAccount({
           {account.message}
         </p>
       )}
+      {needsEditGrant && (
+        <p className="gh-state warn" role="status">
+          {GOOGLE_EDIT_SIGN_IN_LINE}
+        </p>
+      )}
       <div className="cal-foot">
-        {account.state === 'sign_in_again' && (
+        {(account.state === 'sign_in_again' || needsEditGrant) && (
           <button type="button" className="btn primary sm" disabled={busy} onClick={onSignIn}>
             Sign in again
           </button>
