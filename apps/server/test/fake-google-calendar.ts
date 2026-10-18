@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { GOOGLE_CALENDAR_SCOPES } from '@spark-outpost/contracts';
+import { GOOGLE_CALENDAR_SCOPES, GOOGLE_EVENTS_EDIT_SCOPE } from '@spark-outpost/contracts';
 import type { GoogleCalendarEntry, GoogleEvent } from '../src/calendar/google/api.ts';
 
 export const FAKE_GOOGLE_CLIENT_ID = '1234567890-fakeclient.apps.googleusercontent.com';
@@ -36,9 +36,18 @@ export interface FakeGoogleRequest {
   query: Record<string, string>;
 }
 
+export interface FakeGoogleWrite {
+  method: 'POST' | 'PATCH' | 'DELETE';
+  calendarId: string;
+  eventId: string;
+  body: Record<string, unknown> | null;
+  sendUpdates: string | null;
+}
+
 export interface FakeGoogle {
   baseUrl: string;
   requests: FakeGoogleRequest[];
+  writes: FakeGoogleWrite[];
   revoked: Set<string>;
   pageSize: number;
   grantedScopes: string[];
@@ -47,6 +56,7 @@ export interface FakeGoogle {
   addUser(subject: string, email: string): void;
   addCalendar(subject: string, entry: GoogleCalendarEntry): void;
   putEvent(subject: string, calendarId: string, event: GoogleEvent): void;
+  eventOf(subject: string, calendarId: string, eventId: string): GoogleEvent | null;
   cancelEvent(subject: string, calendarId: string, eventId: string): void;
   expireSyncTokens(): void;
   expireRefreshTokens(): void;
@@ -81,6 +91,8 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
   const codes = new Map<string, IssuedCode>();
   const refreshTokens = new Map<string, string>();
   const accessTokens = new Map<string, { subject: string; refresh: string }>();
+  const scopesOf = new Map<string, string[]>();
+  let created = 0;
   const failures = new Map<string, Failure[]>();
   let version = 1;
   let syncEpoch = 1;
@@ -88,6 +100,7 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
   const fake: FakeGoogle = {
     baseUrl,
     requests: [],
+    writes: [],
     revoked: new Set(),
     pageSize: 2,
     grantedScopes: [...GOOGLE_CALENDAR_SCOPES],
@@ -104,6 +117,10 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
       version += 1;
       const calendar = users.get(subject)!.calendars.get(calendarId)!;
       calendar.events.set(event.id, { event, version });
+    },
+    eventOf(subject, calendarId, eventId) {
+      const found = users.get(subject)?.calendars.get(calendarId)?.events.get(eventId);
+      return found && found.event.status !== 'cancelled' ? found.event : null;
     },
     cancelEvent(subject, calendarId, eventId) {
       version += 1;
@@ -144,9 +161,9 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
     },
     fetch: async (input, init) => {
       const url = new URL(typeof input === 'string' ? input : input.toString());
-      const body = init?.body ? new URLSearchParams(String(init.body)) : new URLSearchParams();
+      const raw = init?.body ? String(init.body) : '';
       const headers = new Headers(init?.headers);
-      return handle(init?.method ?? 'GET', url, body, headers.get('authorization'));
+      return handle(init?.method ?? 'GET', url, raw, headers.get('authorization'));
     },
     async listen() {
       const server: Server = createServer(async (request, response) => {
@@ -160,7 +177,7 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
         const answer = await handle(
           request.method ?? 'GET',
           url,
-          new URLSearchParams(Buffer.concat(chunks).toString('utf8')),
+          Buffer.concat(chunks).toString('utf8'),
           request.headers.authorization ?? null,
         );
         response.writeHead(answer.status, Object.fromEntries(answer.headers));
@@ -204,6 +221,7 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
     const user = users.get(code.subject)!;
     const refresh = `1//fake-refresh-${randomBytes(6).toString('hex')}`;
     refreshTokens.set(refresh, user.subject);
+    scopesOf.set(refresh, [...fake.grantedScopes]);
     return json(200, {
       access_token: issueAccess(user.subject, refresh),
       expires_in: 3599,
@@ -233,6 +251,44 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
     const access = accessTokens.get(authorization?.replace(/^Bearer /, '') ?? '');
     if (!access || fake.revoked.has(access.refresh)) return null;
     return users.get(access.subject) ?? null;
+  }
+
+  function mayWrite(authorization: string | null): boolean {
+    const access = accessTokens.get(authorization?.replace(/^Bearer /, '') ?? '');
+    return access ? (scopesOf.get(access.refresh) ?? []).includes(GOOGLE_EVENTS_EDIT_SCOPE) : false;
+  }
+
+  function write(
+    user: FakeUser,
+    method: FakeGoogleWrite['method'],
+    target: { calendarId: string; eventId: string | null },
+    raw: string,
+    query: URLSearchParams,
+  ): Response {
+    const calendar = user.calendars.get(target.calendarId);
+    if (!calendar) return json(404, { error: { errors: [{ reason: 'notFound' }] } });
+    const body = raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+    const eventId = target.eventId ?? `created-${(created += 1)}`;
+    fake.writes.push({
+      method,
+      calendarId: target.calendarId,
+      eventId,
+      body,
+      sendUpdates: query.get('sendUpdates'),
+    });
+    const current = calendar.events.get(eventId)?.event;
+    if (method !== 'POST' && (!current || current.status === 'cancelled')) return json(404, {});
+    version += 1;
+    if (method === 'DELETE') {
+      calendar.events.set(eventId, { event: { id: eventId, status: 'cancelled' }, version });
+      return new Response(null, { status: 204 });
+    }
+    const next = {
+      ...(current ?? { id: eventId, iCalUID: `${eventId}@google.com` }),
+      ...body,
+    } as GoogleEvent;
+    calendar.events.set(eventId, { event: next, version });
+    return json(200, next);
   }
 
   function page<T>(items: T[], query: URLSearchParams) {
@@ -271,13 +327,9 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
     });
   }
 
-  function handle(
-    method: string,
-    url: URL,
-    body: URLSearchParams,
-    authorization: string | null,
-  ): Response {
+  function handle(method: string, url: URL, raw: string, authorization: string | null): Response {
     const query = url.searchParams;
+    const body = new URLSearchParams(raw);
     fake.requests.push({ method, path: url.pathname, query: Object.fromEntries(query) });
     const queued = failures.get(url.pathname)?.shift();
     if (queued) {
@@ -299,8 +351,16 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
       return json(200, { items: slice, ...(next ? { nextPageToken: next } : {}) });
     }
     const match = /^\/calendar\/v3\/calendars\/([^/]+)\/events$/.exec(url.pathname);
-    if (match) return events(user, decodeURIComponent(match[1]!), query);
     const single = /^\/calendar\/v3\/calendars\/([^/]+)\/events\/([^/]+)$/.exec(url.pathname);
+    if (method !== 'GET' && (match || single)) {
+      if (!mayWrite(authorization)) {
+        return json(403, { error: { errors: [{ reason: 'insufficientPermissions' }] } });
+      }
+      const calendarId = decodeURIComponent((match ?? single)![1]!);
+      const eventId = single ? decodeURIComponent(single[2]!) : null;
+      return write(user, method as FakeGoogleWrite['method'], { calendarId, eventId }, raw, query);
+    }
+    if (match) return events(user, decodeURIComponent(match[1]!), query);
     if (single) {
       const calendar = user.calendars.get(decodeURIComponent(single[1]!));
       const found = calendar?.events.get(decodeURIComponent(single[2]!));

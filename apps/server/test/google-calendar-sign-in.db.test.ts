@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { GOOGLE_CALENDAR_SCOPES } from '@spark-outpost/contracts';
+import { GOOGLE_CALENDAR_SCOPES, GOOGLE_EVENTS_EDIT_SCOPE } from '@spark-outpost/contracts';
 import { googleCalendarSecret } from '../src/setup/secrets.ts';
 import {
   GOOGLE_SCOPES_MISSING,
@@ -39,12 +39,14 @@ afterEach(async () => {
 });
 
 describe('Google sign-in', () => {
-  it('asks only for the reading scopes, with PKCE, state and a loopback redirect', async () => {
+  it('asks for the calendar scopes with events editing, with PKCE, state and a loopback redirect', async () => {
     const flow = await startSignIn(h);
     expect(flow.status).toBe('waiting');
     const url = new URL(flow.authorizeUrl!);
     expect(url.searchParams.get('scope')).toBe(GOOGLE_CALENDAR_SCOPES.join(' '));
-    expect(url.searchParams.get('scope')).not.toMatch(/calendar\.events( |$)|auth\/calendar( |$)/);
+    expect(url.searchParams.get('scope')).toContain(GOOGLE_EVENTS_EDIT_SCOPE);
+    expect(url.searchParams.get('scope')).not.toMatch(/auth\/calendar( |$)/);
+    expect(url.searchParams.get('include_granted_scopes')).toBe('true');
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
     expect(url.searchParams.get('state')).toMatch(/^[\w-]{40,}$/);
     expect(url.searchParams.get('access_type')).toBe('offline');

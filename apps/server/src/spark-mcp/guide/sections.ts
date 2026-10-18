@@ -184,7 +184,7 @@ Hooks and a repo's permissions.allow rules are off until you trust the folder (o
 
 Read tools need no card; section spark-tools maps questions.
 
-Action tools: ticket create, comment, move, assign; spark_pr_follow_up_round, spark_create_spark, spark_update_spark, spark_*_mcp_server. In Auto, Bypass or Full auto → PR Spark does them at once; otherwise you confirm on a card. Audited. Agents open PRs themselves.`,
+Action tools: ticket create, comment, move, assign; spark_pr_follow_up_round, spark_create_spark, spark_update_spark, spark_*_mcp_server, spark_calendar_edit. In Auto, Bypass or Full auto → PR Spark does them at once; otherwise you confirm on a card. Audited. Agents open PRs themselves.`,
   },
   {
     id: 'spark-tools',
@@ -192,7 +192,7 @@ Action tools: ticket create, comment, move, assign; spark_pr_follow_up_round, sp
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
     text: `Needs me? spark_attention. Run, model, cost: spark_run. Plan, files changed: spark_task. Chats, queue: spark_chats, spark_chat. Old turns: spark_chat_history. Agent steps: spark_audit. Recent: spark_activity, spark_brief.
 Spend: spark_spend. Trends: spark_analytics. Models: spark_models.
-Agents: spark_providers. Connectors: spark_connectors. Slack: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Code: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr, spark_pr_follow_up. Sparks, @Spark jobs, replies: spark_sparks. How Spark works: spark_guide. How-tos: spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview, spark_browser_signins. Mac apps: spark_mac_apps, spark_mac_read. Outposts: spark_outpost, spark_outpost_note, spark_outpost_draft.`,
+Agents: spark_providers. Connectors: spark_connectors. Slack: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Code: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr, spark_pr_follow_up. Sparks, @Spark jobs, replies: spark_sparks. How Spark works: spark_guide. How-tos: spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview, spark_browser_signins. Mac apps: spark_mac_apps, spark_mac_read. Calendar: spark_calendar. Outposts: spark_outpost, spark_outpost_note, spark_outpost_draft.`,
   },
   {
     id: 'compaction',
