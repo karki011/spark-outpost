@@ -1,9 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import {
-  GOOGLE_CALENDAR_LIST_SCOPE,
-  GOOGLE_EVENTS_EDIT_SCOPE,
-  GOOGLE_EVENTS_READ_SCOPE,
-} from '@spark-outpost/contracts';
 import { createGoogleAgentClient } from '../src/calendar/agent/google-client.ts';
 import { FAKE_GOOGLE_CLIENT_ID, FAKE_GOOGLE_CLIENT_SECRET } from './fake-google-calendar.ts';
 import {
@@ -29,8 +24,11 @@ afterEach(async () => {
   await h.close();
 });
 
-async function connectGoogle(mode = 'auto') {
+async function connectGoogle(mode = 'auto', allowEdit = true) {
   await signIn(g);
+  const connected = await status(g);
+  const calendarKey = connected.accounts[0]!.calendars[0]!.key;
+  if (allowEdit) await signIn(g, connected.google.accounts[0]!.id, calendarKey);
   const [account] = (await status(g)).google.accounts;
   const calendarId = `google:${account!.id}:${EMAIL}`;
   await h.start({
@@ -195,14 +193,8 @@ describe('Google calendars through the agent tools', () => {
     expect(refused.text).toContain('one occurrence at a time');
   });
 
-  it('asks the user to sign in again when the grant has no write scope', async () => {
-    g.fake.grantedScopes = [
-      'openid',
-      'email',
-      GOOGLE_CALENDAR_LIST_SCOPE,
-      GOOGLE_EVENTS_READ_SCOPE,
-    ];
-    const { account, key } = await connectGoogle();
+  it('refuses writes on an account that has not allowed editing', async () => {
+    const { account, key } = await connectGoogle('auto', false);
     expect(account.canEdit).toBe(false);
     const refused = await h.edit({
       action: 'create',
@@ -212,22 +204,8 @@ describe('Google calendars through the agent tools', () => {
       end: tomorrowAt(16),
     });
     expect(refused.result.isError).toBe(true);
-    expect(refused.text).toContain('Sign in again');
+    expect(refused.text).toContain('Agents can edit');
     expect(g.fake.writes).toEqual([]);
     expect((await h.read()).result.isError).toBeFalsy();
-  });
-
-  it('counts the editing scope as reading when the read box was left unticked', async () => {
-    putReview();
-    g.fake.grantedScopes = [
-      'openid',
-      'email',
-      GOOGLE_CALENDAR_LIST_SCOPE,
-      GOOGLE_EVENTS_EDIT_SCOPE,
-    ];
-    const { account } = await connectGoogle();
-    expect(account).toMatchObject({ state: 'ready', canEdit: true });
-    const titles = ((await h.read()).facts.events as { title: string }[]).map((e) => e.title);
-    expect(titles).toContain('Design review');
   });
 });

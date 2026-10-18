@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  GOOGLE_EDIT_SIGN_IN_LINE,
   GOOGLE_TESTING_LINE,
   type CalendarAccount,
   type CalendarChoicePatch,
@@ -11,7 +10,7 @@ import {
 } from '@spark-outpost/contracts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
 import { CalendarRows, RowsHeader } from './CalendarAccounts.tsx';
-import { calendarApi, calendarKeys } from './calendar-api.ts';
+import { calendarApi, calendarKeys, type GoogleSignInStart } from './calendar-api.ts';
 import { CalendarName } from './CalendarName.tsx';
 
 const POLL_MS = 1500;
@@ -34,7 +33,7 @@ function useGoogleSignIn(initial: GoogleSignInFlow, enabled: boolean) {
   const setFlow = (next: GoogleSignInFlow) =>
     queryClient.setQueryData(calendarKeys.googleSignIn, next);
   const start = useMutation({
-    mutationFn: (accountId: string | null) => calendarApi.startGoogleSignIn(accountId),
+    mutationFn: (request: GoogleSignInStart) => calendarApi.startGoogleSignIn(request),
     onSuccess: (next) => {
       setFlow(next);
       if (next.authorizeUrl) window.open(next.authorizeUrl, '_blank', 'noopener,noreferrer');
@@ -58,12 +57,19 @@ function useDisconnectGoogle() {
   });
 }
 
-function Waiting({ flow, onCancel }: { flow: GoogleSignInFlow; onCancel: () => void }) {
+interface WaitingProps {
+  flow: GoogleSignInFlow;
+  editing: boolean;
+  onCancel: () => void;
+}
+
+function Waiting({ flow, editing, onCancel }: WaitingProps) {
+  const asks = editing ? 'change events in your calendars' : 'see your calendars';
   return (
     <div className="cal-google-wait" role="group" aria-label="Google sign-in">
       <p className="gh-note">
-        Finish in your browser: Google asks you to allow Spark Outpost to see your calendars, then
-        sends you back here.
+        Finish in your browser: Google asks you to allow Spark Outpost to {asks}, then sends you
+        back here.
       </p>
       <div className="cx-actions">
         {flow.authorizeUrl && (
@@ -87,8 +93,9 @@ interface AccountProps {
   account: GoogleAccountStatus;
   calendars: CalendarAccount | undefined;
   busy: boolean;
+  note: string | null;
   onChange: (key: string, patch: CalendarChoicePatch) => void;
-  onSignIn: () => void;
+  onSignIn: (editCalendar: string | null) => void;
   onDisconnect: () => void;
 }
 
@@ -96,13 +103,16 @@ function GoogleAccount({
   account,
   calendars,
   busy,
+  note,
   onChange,
   onSignIn,
   onDisconnect,
 }: AccountProps) {
   const rows = calendars?.calendars ?? [];
-  const needsEditGrant =
-    account.state !== 'sign_in_again' && !account.canEdit && rows.some((row) => row.agentsEdit);
+  const change = (key: string, patch: CalendarChoicePatch) => {
+    if (patch.agentsEdit && !account.canEdit) onSignIn(key);
+    else onChange(key, patch);
+  };
   return (
     <section className="cal-source" aria-label={account.email}>
       <div className="cal-src-h">
@@ -114,7 +124,7 @@ function GoogleAccount({
       {rows.length > 0 && (
         <>
           <RowsHeader withEdit />
-          <CalendarRows calendars={rows} onChange={onChange} withEdit />
+          <CalendarRows calendars={rows} onChange={change} withEdit />
         </>
       )}
       {account.message && (
@@ -122,14 +132,19 @@ function GoogleAccount({
           {account.message}
         </p>
       )}
-      {needsEditGrant && (
-        <p className="gh-state warn" role="status">
-          {GOOGLE_EDIT_SIGN_IN_LINE}
+      {note && (
+        <p className="gh-err" role="alert">
+          {note}
         </p>
       )}
       <div className="cal-foot">
-        {(account.state === 'sign_in_again' || needsEditGrant) && (
-          <button type="button" className="btn primary sm" disabled={busy} onClick={onSignIn}>
+        {account.state === 'sign_in_again' && (
+          <button
+            type="button"
+            className="btn primary sm"
+            disabled={busy}
+            onClick={() => onSignIn(null)}
+          >
             Sign in again
           </button>
         )}
@@ -158,8 +173,15 @@ export function GoogleAccounts({ status, accounts, onChange }: GoogleAccountsPro
   const { flow, start, cancel } = useGoogleSignIn(google.signIn, google.available);
   const disconnect = useDisconnectGoogle();
   const [note, setNote] = useState<string | null>(null);
+  const [started, setStarted] = useState<GoogleSignInStart | null>(null);
   if (!google.available && google.accounts.length === 0) return null;
   const waiting = flow.status === 'waiting';
+  const begin = (request: GoogleSignInStart) => {
+    setStarted(request);
+    start.mutate(request);
+  };
+  const failure = flow.status === 'failed' ? flow.message : null;
+  const failedFor = started?.accountId ?? null;
   const remove = (accountId: string) => {
     setNote(null);
     disconnect.mutate(accountId, { onSuccess: (result) => setNote(result.message) });
@@ -173,8 +195,9 @@ export function GoogleAccounts({ status, accounts, onChange }: GoogleAccountsPro
           account={account}
           calendars={accounts.find((item) => item.id === `google:${account.id}`)}
           busy={disconnect.isPending || waiting}
+          note={failedFor === account.id ? failure : null}
           onChange={onChange}
-          onSignIn={() => start.mutate(account.id)}
+          onSignIn={(editCalendar) => begin({ accountId: account.id, editCalendar })}
           onDisconnect={() => remove(account.id)}
         />
       ))}
@@ -185,10 +208,16 @@ export function GoogleAccounts({ status, accounts, onChange }: GoogleAccountsPro
             <small>Read straight from Google</small>
           </div>
         )}
-        {waiting && <Waiting flow={flow} onCancel={() => cancel.mutate()} />}
-        {flow.status === 'failed' && flow.message && (
+        {waiting && (
+          <Waiting
+            flow={flow}
+            editing={Boolean(started?.editCalendar)}
+            onCancel={() => cancel.mutate()}
+          />
+        )}
+        {failure && failedFor === null && (
           <p className="gh-err" role="alert">
-            {flow.message}
+            {failure}
           </p>
         )}
         {note && (
@@ -208,7 +237,7 @@ export function GoogleAccounts({ status, accounts, onChange }: GoogleAccountsPro
               type="button"
               className="btn line sm"
               disabled={start.isPending}
-              onClick={() => start.mutate(null)}
+              onClick={() => begin({ accountId: null, editCalendar: null })}
             >
               {ADD_GOOGLE_LABEL}
             </button>

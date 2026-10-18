@@ -1,4 +1,11 @@
-import { googleScopesRead, type GoogleSignInFlow } from '@spark-outpost/contracts';
+import {
+  GOOGLE_CALENDAR_SCOPES,
+  GOOGLE_EDIT_DECLINED,
+  GOOGLE_EDIT_SCOPES,
+  googleScopesEdit,
+  googleScopesRead,
+  type GoogleSignInFlow,
+} from '@spark-outpost/contracts';
 import { newPkce, sameText } from '../../setup/pkce.ts';
 import { startLoopback, type Loopback, type LoopbackCallback } from './loopback.ts';
 import {
@@ -27,13 +34,18 @@ export class GoogleAccountMismatch extends Error {
 
 export interface GoogleSignInDeps extends GoogleOAuthDeps {
   now: () => number;
-  connect(grant: GoogleGrant, accountId: string | null): Promise<void>;
+  connect(grant: GoogleGrant, request: GoogleSignInRequest): Promise<void>;
   discard(grant: GoogleGrant): Promise<void>;
+}
+
+export interface GoogleSignInRequest {
+  accountId: string | null;
+  editCalendar: string | null;
 }
 
 export interface GoogleSignIn {
   flow(): GoogleSignInFlow;
-  start(request: { accountId: string | null; loginHint: string | null }): Promise<GoogleSignInFlow>;
+  start(request: GoogleSignInRequest & { loginHint: string | null }): Promise<GoogleSignInFlow>;
   cancel(): GoogleSignInFlow;
   settled(): Promise<void>;
 }
@@ -42,7 +54,7 @@ interface Pending {
   state: string;
   verifier: string;
   redirectUri: string;
-  accountId: string | null;
+  request: GoogleSignInRequest;
   loopback: Loopback;
   timer: NodeJS.Timeout;
 }
@@ -82,8 +94,13 @@ export function createGoogleSignIn(deps: GoogleSignInDeps): GoogleSignIn {
       flow = ended('failed', GOOGLE_SIGN_IN_WRONG_STATE);
       return;
     }
+    const editing = waiting.request.editCalendar !== null;
     if (callback.error || !callback.code) {
-      flow = ended('failed', deniedMessage(callback.error ?? 'no_code'));
+      const denied = editing && callback.error === 'access_denied';
+      flow = ended(
+        'failed',
+        denied ? GOOGLE_EDIT_DECLINED : deniedMessage(callback.error ?? 'no_code'),
+      );
       return;
     }
     try {
@@ -97,8 +114,9 @@ export function createGoogleSignIn(deps: GoogleSignInDeps): GoogleSignIn {
         flow = ended('failed', GOOGLE_SCOPES_MISSING);
         return;
       }
-      await deps.connect(grant, waiting.accountId);
-      flow = ended('connected', null);
+      await deps.connect(grant, waiting.request);
+      const declined = editing && !googleScopesEdit(grant.scopes);
+      flow = declined ? ended('failed', GOOGLE_EDIT_DECLINED) : ended('connected', null);
     } catch (error) {
       const message =
         error instanceof GoogleAuthError || error instanceof GoogleAccountMismatch
@@ -132,19 +150,17 @@ export function createGoogleSignIn(deps: GoogleSignInDeps): GoogleSignIn {
         state: pkce.state,
         verifier: pkce.verifier,
         redirectUri: loopback.redirectUri,
-        accountId: request.accountId,
+        request: { accountId: request.accountId, editCalendar: request.editCalendar },
         loopback,
         timer,
       };
       pending = waiting;
       flow = {
         status: 'waiting',
-        authorizeUrl: googleAuthorizeUrl(
-          deps.client,
-          pkce,
-          loopback.redirectUri,
-          request.loginHint,
-        ),
+        authorizeUrl: googleAuthorizeUrl(deps.client, pkce, loopback.redirectUri, {
+          scopes: request.editCalendar ? GOOGLE_EDIT_SCOPES : GOOGLE_CALENDAR_SCOPES,
+          loginHint: request.loginHint,
+        }),
         expiresAt: new Date(expiresAt).toISOString(),
         message: null,
       };

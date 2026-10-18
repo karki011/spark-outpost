@@ -56,7 +56,7 @@ describe('who may change a calendar', () => {
   it('needs the Google editing grant and changes one Google occurrence at a time', () => {
     const google = choice({ sourceKind: 'google', calendarId: 'google:a:me@example.com' });
     expect(editRefusal({ choice: google, googleCanEdit: false, span: 'this' })).toContain(
-      'Sign in again',
+      'allow it in Google',
     );
     expect(editRefusal({ choice: google, googleCanEdit: true, span: 'future' })).toContain(
       'one occurrence',

@@ -26,7 +26,7 @@ export function editRefusal({ choice, googleCanEdit, span }: EditRefusalFacts): 
   if (!choice.writable) return `${choice.title} is read-only, so nothing can change it.`;
   if (choice.sourceKind !== 'google') return null;
   if (!googleCanEdit) {
-    return 'Spark can’t change events on this Google account yet. Ask the user to select Sign in again on the Calendar card and allow Spark to edit events.';
+    return 'Spark can’t change events on this Google account yet. Ask the user to turn on Agents can edit for this calendar on the Calendar card and allow it in Google.';
   }
   if (span === 'future') {
     return 'On a Google calendar Spark changes one occurrence at a time. Change this occurrence only, or ask the user to change the series in Google Calendar.';

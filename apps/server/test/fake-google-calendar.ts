@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { GOOGLE_CALENDAR_SCOPES, GOOGLE_EVENTS_EDIT_SCOPE } from '@spark-outpost/contracts';
+import { GOOGLE_EDIT_SCOPES, GOOGLE_EVENTS_EDIT_SCOPE } from '@spark-outpost/contracts';
 import type { GoogleCalendarEntry, GoogleEvent } from '../src/calendar/google/api.ts';
 
 export const FAKE_GOOGLE_CLIENT_ID = '1234567890-fakeclient.apps.googleusercontent.com';
@@ -22,6 +22,7 @@ interface IssuedCode {
   subject: string;
   challenge: string;
   redirectUri: string;
+  scopes: string[];
 }
 
 interface Failure {
@@ -62,6 +63,7 @@ export interface FakeGoogle {
   expireRefreshTokens(): void;
   failNext(path: string, failure: Failure): void;
   refreshTokensOf(subject: string): string[];
+  forgetGrants(subject: string): void;
   authorize(authorizeUrl: string): string;
   fetch: typeof fetch;
   listen(): Promise<{ baseUrl: string; close(): Promise<void> }>;
@@ -92,6 +94,7 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
   const refreshTokens = new Map<string, string>();
   const accessTokens = new Map<string, { subject: string; refresh: string }>();
   const scopesOf = new Map<string, string[]>();
+  const grantsOf = new Map<string, Set<string>>();
   let created = 0;
   const failures = new Map<string, Failure[]>();
   let version = 1;
@@ -103,7 +106,7 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
     writes: [],
     revoked: new Set(),
     pageSize: 2,
-    grantedScopes: [...GOOGLE_CALENDAR_SCOPES],
+    grantedScopes: [...GOOGLE_EDIT_SCOPES],
     deny: null,
     signInAs: '',
     addUser(subject, email) {
@@ -139,6 +142,9 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
     refreshTokensOf(subject) {
       return [...refreshTokens].filter(([, owner]) => owner === subject).map(([token]) => token);
     },
+    forgetGrants(subject) {
+      grantsOf.delete(subject);
+    },
     authorize(authorizeUrl) {
       const url = new URL(authorizeUrl);
       const query = url.searchParams;
@@ -151,10 +157,15 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
       if (query.get('client_id') !== FAKE_GOOGLE_CLIENT_ID) throw new Error('wrong client');
       if (query.get('code_challenge_method') !== 'S256') throw new Error('no PKCE');
       const code = `code-${randomBytes(6).toString('hex')}`;
+      const requested = (query.get('scope') ?? '').split(' ');
+      const earlier =
+        query.get('include_granted_scopes') === 'true' ? (grantsOf.get(fake.signInAs) ?? []) : [];
+      const allowed = requested.filter((scope) => fake.grantedScopes.includes(scope));
       codes.set(code, {
         subject: fake.signInAs,
         challenge: query.get('code_challenge') ?? '',
         redirectUri: query.get('redirect_uri') ?? '',
+        scopes: [...new Set([...earlier, ...allowed])],
       });
       redirect.searchParams.set('code', code);
       return redirect.toString();
@@ -221,12 +232,13 @@ export function fakeGoogleCalendar(baseUrl = 'http://127.0.0.1:9'): FakeGoogle {
     const user = users.get(code.subject)!;
     const refresh = `1//fake-refresh-${randomBytes(6).toString('hex')}`;
     refreshTokens.set(refresh, user.subject);
-    scopesOf.set(refresh, [...fake.grantedScopes]);
+    scopesOf.set(refresh, code.scopes);
+    grantsOf.set(user.subject, new Set(code.scopes));
     return json(200, {
       access_token: issueAccess(user.subject, refresh),
       expires_in: 3599,
       refresh_token: refresh,
-      scope: fake.grantedScopes.join(' '),
+      scope: code.scopes.join(' '),
       id_token: unsignedJwt({
         iss: 'https://accounts.google.com',
         aud: FAKE_GOOGLE_CLIENT_ID,

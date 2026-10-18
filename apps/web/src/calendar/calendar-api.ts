@@ -41,6 +41,11 @@ function post<T>(schema: z.ZodType<T>, path: string, body: unknown = {}): Promis
   return request(schema, path, { method: 'POST', body: JSON.stringify(body) });
 }
 
+export interface GoogleSignInStart {
+  accountId: string | null;
+  editCalendar: string | null;
+}
+
 export const calendarApi = {
   status: (): Promise<CalendarStatus> => request(calendarStatusSchema, '/calendar/status'),
   connect: (): Promise<CalendarStatus> => post(calendarStatusSchema, '/calendar/connect'),
@@ -69,8 +74,11 @@ export const calendarApi = {
     post(calendarEventDetailSchema, '/calendar/event', occurrence),
   googleSignIn: (): Promise<GoogleSignInFlow> =>
     request(googleSignInFlowSchema, '/calendar/google/sign-in'),
-  startGoogleSignIn: (accountId: string | null): Promise<GoogleSignInFlow> =>
-    post(googleSignInFlowSchema, '/calendar/google/sign-in', accountId ? { accountId } : {}),
+  startGoogleSignIn: (request: GoogleSignInStart): Promise<GoogleSignInFlow> =>
+    post(googleSignInFlowSchema, '/calendar/google/sign-in', {
+      ...(request.accountId ? { accountId: request.accountId } : {}),
+      ...(request.editCalendar ? { editCalendar: request.editCalendar } : {}),
+    }),
   cancelGoogleSignIn: (): Promise<GoogleSignInFlow> =>
     request(googleSignInFlowSchema, '/calendar/google/sign-in', { method: 'DELETE' }),
   disconnectGoogle: (accountId: string): Promise<z.infer<typeof disconnected>> =>

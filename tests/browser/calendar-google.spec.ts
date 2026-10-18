@@ -2,7 +2,7 @@ import { rmSync, writeFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
-  GOOGLE_EDIT_SIGN_IN_LINE,
+  GOOGLE_EDIT_DECLINED,
   GOOGLE_TESTING_LINE,
   calendarStatusSchema,
 } from '../../packages/contracts/src/index.ts';
@@ -15,6 +15,7 @@ test.skip(process.env.SPARK_FAKE_CALENDAR !== '1', 'needs SPARK_FAKE_CALENDAR=1'
 test.describe.configure({ mode: 'serial' });
 
 const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
+const SHOTS = process.env.CALENDAR_SHOTS ?? '';
 const MINUTE = 60_000;
 let anchor = 0;
 
@@ -258,19 +259,43 @@ test('groups a Google account with one Nudge switch per row and folds a long lis
     .toBe(false);
 });
 
-test('asks to sign in again before agents can edit a Google calendar without the grant', async ({
+async function allowEdit(page: Page, account: Locator) {
+  const popup = page.waitForEvent('popup');
+  await account.getByRole('switch', { name: `Agents can edit, ${GOOGLE_STUB_EMAIL}` }).click();
+  const consent = await popup;
+  await expect(consent.getByRole('heading', { name: 'You can close this tab' })).toBeVisible();
+  await consent.close();
+}
+
+test('asks Google to allow editing only when Agents can edit is turned on', async ({ page }) => {
+  await openCard(page);
+  await addGoogle(page);
+  expect((await status(page)).google.accounts[0]).toMatchObject({ canEdit: false });
+  const account = card(page).getByRole('region', { name: GOOGLE_STUB_EMAIL });
+  const edit = account.getByRole('switch', { name: `Agents can edit, ${GOOGLE_STUB_EMAIL}` });
+  await expect(edit).toHaveAttribute('aria-checked', 'false');
+  await allowEdit(page, account);
+  await expect(edit).toHaveAttribute('aria-checked', 'true');
+  expect((await status(page)).google.accounts[0]).toMatchObject({ canEdit: true });
+  if (SHOTS) await account.screenshot({ path: `${SHOTS}/google-edit-allowed.png` });
+  await edit.click();
+  await expect(edit).toHaveAttribute('aria-checked', 'false');
+  await edit.click();
+  await expect(edit).toHaveAttribute('aria-checked', 'true');
+});
+
+test('keeps Agents can edit off with a note when Google doesn’t allow editing', async ({
   page,
 }) => {
   await fetch(`${STUB_URL}/google-test/read-only`);
   await openCard(page);
   await addGoogle(page);
   const account = card(page).getByRole('region', { name: GOOGLE_STUB_EMAIL });
-  await expect(account.getByRole('button', { name: 'Sign in again' })).toHaveCount(0);
+  await allowEdit(page, account);
+  await expect(account.getByRole('alert')).toHaveText(GOOGLE_EDIT_DECLINED);
   const edit = account.getByRole('switch', { name: `Agents can edit, ${GOOGLE_STUB_EMAIL}` });
   await expect(edit).toHaveAttribute('aria-checked', 'false');
-  await edit.click();
-  await expect(edit).toHaveAttribute('aria-checked', 'true');
-  await expect(account).toContainText(GOOGLE_EDIT_SIGN_IN_LINE);
-  await expect(account.getByRole('button', { name: 'Sign in again' })).toBeVisible();
+  await expect(account.getByRole('button', { name: 'Sign in again' })).toHaveCount(0);
   expect((await status(page)).google.accounts[0]).toMatchObject({ canEdit: false });
+  if (SHOTS) await account.screenshot({ path: `${SHOTS}/google-edit-declined.png` });
 });

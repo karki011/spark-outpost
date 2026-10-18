@@ -26,8 +26,8 @@ You'll connect your calendars. About 2 minutes.
 ## Let agents use it
 
 1. On the Calendar card, turn on **Let agents read my calendar**.
-2. Turn on **Agents can edit** per calendar. For Google, select **Sign in again** if asked.
+2. Turn on **Agents can edit** per calendar. For Google, allow editing in Google.
 
-Agents follow their [mode](spark-tools.md#when-actions-ask-first); cards show each change. Deletes, events with guests and shared calendars always ask. No invitations.
+Agents follow their [mode](spark-tools.md#when-actions-ask-first); cards show each change. In **Accept edits**, a vague request still shows a card. Deletes, events with guests and shared calendars always ask. No invitations.
 
 **Next:** [Talk to Spark](voice.md)

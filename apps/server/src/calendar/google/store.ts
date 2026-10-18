@@ -50,6 +50,42 @@ export async function saveGoogleAccount(
   return rowOf(rows[0]!);
 }
 
+export async function setGoogleAgentsEdit(
+  db: Queryable,
+  workspaceId: string,
+  account: GoogleAccountRow,
+  editCalendar: string | null,
+): Promise<void> {
+  if (!account.canEdit) {
+    await db.query(
+      `UPDATE calendar_calendars SET agents_edit = false
+       WHERE workspace_id = $1 AND google_account_id = $2 AND agents_edit`,
+      [workspaceId, account.id],
+    );
+    return;
+  }
+  if (!editCalendar) return;
+  await db.query(
+    `UPDATE calendar_calendars SET agents_edit = true
+     WHERE workspace_id = $1 AND google_account_id = $2 AND key = $3 AND writable`,
+    [workspaceId, account.id, editCalendar],
+  );
+}
+
+export async function googleEditBlocked(
+  db: Queryable,
+  workspaceId: string,
+  calendarKey: string,
+): Promise<boolean> {
+  const { rows } = await db.query<{ can_edit: boolean }>(
+    `SELECT account.can_edit FROM calendar_calendars calendar
+     JOIN calendar_google_accounts account ON account.id = calendar.google_account_id
+     WHERE calendar.workspace_id = $1 AND calendar.key = $2`,
+    [workspaceId, calendarKey],
+  );
+  return rows.length > 0 && !rows[0]!.can_edit;
+}
+
 export async function markGoogleSignIn(
   db: Queryable,
   workspaceId: string,
