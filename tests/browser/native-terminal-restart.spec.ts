@@ -9,6 +9,7 @@ import { setTerminalState } from './terminal-seed.ts';
 import { API_PORT, API_RESTART_FLAG, PACKAGED } from './stub-config.ts';
 
 const built = path.resolve('.local/tmux', process.arch, 'bin/tmux');
+const EVENTS_RECONNECT_MS = 20_000;
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
@@ -120,9 +121,10 @@ test('the sidebar, the palette, the island and the companion follow a re-adopted
   const notice = workspace.locator('.native-restart');
   await expect(notice).toContainText('This session kept running.', { timeout: 30_000 });
   await expect(bar).toHaveText('Open');
-  await expect(row).toHaveAttribute('title', /Terminal session · Open · /);
-  await expect(islandNote).toHaveText('Terminal sessionOpen');
-  await expect(running).toHaveCount(0);
+  const reconnected = { timeout: EVENTS_RECONNECT_MS };
+  await expect(row).toHaveAttribute('title', /Terminal session · Open · /, reconnected);
+  await expect(islandNote).toHaveText('Terminal sessionOpen', reconnected);
+  await expect(running).toHaveCount(0, reconnected);
   const dismiss = notice.getByRole('button', { name: 'Dismiss' });
   const colours = await dismiss.evaluate((button) => {
     const probe = document.createElement('span');

@@ -2,7 +2,12 @@ import { existsSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
-import { FIXTURE_READY, startFixtureTerminal, typeLine } from './native-terminal-fixture.ts';
+import {
+  FIXTURE_READY,
+  SESSION_START_MS,
+  startFixtureTerminal,
+  typeLine,
+} from './native-terminal-fixture.ts';
 import { pickTerminalAgent } from './native-terminal-support.ts';
 import { chatRepo } from './project-chat-kit.ts';
 import { openChats } from './navigation.ts';
@@ -217,7 +222,9 @@ test('a terminal opens in its worktree and is usable while dependencies are stil
       .fill('Inspect the fixture.');
     await page.getByRole('button', { name: 'Start terminal', exact: true }).click();
     const workspace = page.getByRole('region', { name: 'Terminal session', exact: true });
-    await expect(workspace.locator('.xterm-accessibility')).toContainText(FIXTURE_READY);
+    await expect(workspace.locator('.xterm-accessibility')).toContainText(FIXTURE_READY, {
+      timeout: SESSION_START_MS,
+    });
     const notice = workspace.getByText(
       'Dependencies are still installing. Commands that need them may fail until this finishes.',
     );

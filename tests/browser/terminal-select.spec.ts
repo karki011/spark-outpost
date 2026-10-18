@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
-import { typeLine } from './native-terminal-fixture.ts';
+import { SESSION_START_MS, typeLine } from './native-terminal-fixture.ts';
 import { openChats } from './navigation.ts';
 
 const READY = 'Ready for terminal input. No provider request is made.';
@@ -34,7 +34,9 @@ async function startTerminal(page: Page): Promise<{ conversationId: string; work
   await page.getByRole('button', { name: 'Start terminal', exact: true }).click();
   const { session } = (await (await launched).json()) as { session: { conversationId: string } };
   const workspace = page.getByRole('region', { name: 'Terminal session', exact: true });
-  await expect(workspace.locator('.xterm-accessibility')).toContainText(READY);
+  await expect(workspace.locator('.xterm-accessibility')).toContainText(READY, {
+    timeout: SESSION_START_MS,
+  });
   await page.evaluate(() => navigator.clipboard.writeText('before'));
   return { conversationId: session.conversationId, workspace };
 }
@@ -286,6 +288,8 @@ test('a toolbar survives the pointer crossing an agent that tracks every mouse m
     const area = (await workspace.locator('.xterm-screen').boundingBox())!;
     await page.mouse.move(area.x + 40, area.y + area.height - 40);
     await page.mouse.move(area.x + 400, area.y + area.height - 120, { steps: 30 });
+    await page.keyboard.type('z');
+    await expect(rows.filter({ hasText: /^z$/ })).toHaveCount(1);
     await page.keyboard.down('Alt');
     await selectLine(page, workspace, READY);
     await page.keyboard.up('Alt');

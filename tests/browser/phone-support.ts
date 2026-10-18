@@ -14,6 +14,7 @@ export const PHONE_ADDRESS = `https://${FAKE_TAILSCALE_HOST}`;
 export const PHONE_PAGE = 'http://phone.test';
 export const WIDE = { width: 1280, height: 900 };
 export const NARROW = { width: 390, height: 844 };
+export const REMOTE_TURN_MS = 20_000;
 const THEME = path.resolve(import.meta.dirname, '../../apps/web/public/theme.css');
 
 export function setFakeTailscale(change: Partial<FakeTailscaleState> | null): void {
@@ -120,7 +121,7 @@ export async function openPhone(page: Page) {
 export async function turnOn(page: Page) {
   await page.getByRole('switch', { name: 'Remote control' }).click();
   await expect(page.getByRole('heading', { name: 'Remote control is on' })).toBeVisible({
-    timeout: 20_000,
+    timeout: REMOTE_TURN_MS,
   });
 }
 
