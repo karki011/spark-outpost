@@ -1,28 +1,42 @@
 import { Router, type Response } from 'express';
 import {
+  CALENDAR_RANGE_MAX_DAYS,
+  addLocalDays,
   calendarChoicePatchSchema,
   calendarMarkRequestSchema,
   calendarOccurrenceSchema,
   calendarSettingsPatchSchema,
+  type CalendarOccurrence,
   isGoogleEventId,
   localDayStart,
 } from '@spark-outpost/contracts';
 import { BadRequestError, paramId, parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import { googleCalendarRoutes } from './google/routes.ts';
-import type { GoogleSource } from './google/source.ts';
+import { GoogleApiError } from './google/api.ts';
+import { GoogleAuthError } from './google/oauth.ts';
+import { GoogleSignInNeeded, type GoogleSource } from './google/source.ts';
 import { CalendarHostError, type CalendarHost } from './host-client.ts';
 import {
   calendarDay,
   calendarNow,
+  calendarRange,
   calendarState,
   calendarStatus,
+  dayAndWeek,
   dayFromKey,
   eventDetail,
   plannerChats,
   syncCalendars,
 } from './service.ts';
-import { forgetMarks, setConnected, setMark, updateChoice, updateSettings } from './store.ts';
+import {
+  forgetMarks,
+  savedChoices,
+  setConnected,
+  setMark,
+  updateChoice,
+  updateSettings,
+} from './store.ts';
 
 export interface CalendarRouteDeps {
   db: Db;
@@ -41,6 +55,22 @@ const HOST_STATUS: Record<CalendarHostError['code'], number> = {
   failed: 502,
   timeout: 504,
 };
+
+function dateParam(raw: unknown): number {
+  const day = typeof raw === 'string' ? dayFromKey(raw) : null;
+  if (day === null) throw new BadRequestError('Dates must be YYYY-MM-DD.');
+  return day;
+}
+
+function rangeParams(query: Record<string, unknown>): { start: number; end: number } {
+  const start = dateParam(query.from);
+  const end = dateParam(query.to);
+  if (end <= start) throw new BadRequestError('to must be after from.');
+  if (end > addLocalDays(start, CALENDAR_RANGE_MAX_DAYS)) {
+    throw new BadRequestError(`A range is at most ${CALENDAR_RANGE_MAX_DAYS} days.`);
+  }
+  return { start, end };
+}
 
 async function guarded(res: Response, work: () => Promise<unknown>): Promise<void> {
   try {
@@ -117,10 +147,16 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
 
   router.get('/calendar/day', (req, res) =>
     guarded(res, async () => {
-      const raw = typeof req.query.date === 'string' ? req.query.date : null;
-      const day = raw === null ? localDayStart(now()) : dayFromKey(raw);
-      if (day === null) throw new BadRequestError('The date must be YYYY-MM-DD.');
-      return calendarDay(await calendarState(service), day, now());
+      const day = req.query.date === undefined ? localDayStart(now()) : dateParam(req.query.date);
+      const state = await calendarState(service, dayAndWeek(day, now()));
+      return calendarDay(state, day, now());
+    }),
+  );
+
+  router.get('/calendar/range', (req, res) =>
+    guarded(res, async () => {
+      const range = rangeParams(req.query);
+      return calendarRange(await calendarState(service, [range]), range, now());
     }),
   );
 
@@ -144,7 +180,11 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
     guarded(res, async () => {
       const occurrence = parseBody(calendarOccurrenceSchema, req);
       if (isGoogleEventId(occurrence.eventId)) return { opened: false };
-      return needHost().request({ op: 'open', ...occurrence });
+      return needHost().request({
+        op: 'open',
+        eventId: occurrence.eventId,
+        start: occurrence.start,
+      });
     }),
   );
 
@@ -152,11 +192,33 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
     guarded(res, async () => {
       const occurrence = parseBody(calendarOccurrenceSchema, req);
       if (!isGoogleEventId(occurrence.eventId)) return eventDetail(needHost(), occurrence);
-      const detail = google?.detail(occurrence);
+      const detail = await googleDetail(occurrence);
       if (!detail) throw new CalendarHostError('not_found', 'That event is gone.');
       return detail;
     }),
   );
+
+  const googleDetail = async (occurrence: CalendarOccurrence) => {
+    if (!google) return null;
+    const choices = occurrence.calendarKey ? await savedChoices(deps.db, deps.workspaceId) : [];
+    const calendarId =
+      choices.find((choice) => choice.key === occurrence.calendarKey)?.calendarId ?? null;
+    try {
+      return await google.detail({
+        eventId: occurrence.eventId,
+        start: occurrence.start,
+        calendarId,
+      });
+    } catch (error) {
+      if (error instanceof GoogleSignInNeeded) {
+        throw new CalendarHostError('not_authorized', error.message);
+      }
+      if (error instanceof GoogleApiError || error instanceof GoogleAuthError) {
+        throw new CalendarHostError('failed', error.message);
+      }
+      throw error;
+    }
+  };
 
   const macUids = async () => {
     const mac = await calendarState({ ...service, google: null });

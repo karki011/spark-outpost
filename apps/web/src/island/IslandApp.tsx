@@ -29,6 +29,7 @@ import {
 } from '../desktop/desktop-bridge.ts';
 import { useChatListAttentionReport } from '../desktop/use-attention-report.ts';
 import { useIslandCalendar } from '../calendar/use-island-calendar.ts';
+import { useMeetingHop } from '../calendar/use-meeting-hop.ts';
 import { useVoice } from '../spark/use-voice.ts';
 import { useReducedMotion } from '../ui/motion.ts';
 import type { Decided } from './CardView.tsx';
@@ -199,11 +200,16 @@ export function IslandApp() {
     setFollowUp(null);
   };
 
-  const calendar = useIslandCalendar(now, waiting, (text) => {
-    setFollowUp(null);
-    setDraft((current) => ({ ...current, text }));
-    openPanel('quick');
-  });
+  const calendar = useIslandCalendar(
+    now,
+    waiting,
+    (text) => {
+      setFollowUp(null);
+      setDraft((current) => ({ ...current, text }));
+      openPanel('quick');
+    },
+    { open: panel === 'home', show: () => openPanel('home') },
+  );
   const calendarLine = view.kind === 'peek' && !sparkFocused && !line ? calendar.line : null;
 
   const openChat = (id: string, runId?: string) => {
@@ -249,16 +255,19 @@ export function IslandApp() {
     else openPanel('quick');
   };
 
-  const mood = wave
-    ? 'happy'
-    : scoutMoodFor(view, {
-        waiting: cards.length,
-        hour: new Date(now).getHours(),
-        idleMinutes: 0,
-        running: running.length,
-        moment,
-        failed: row.sessions.some((chat) => sessionState(chat) === 'failed'),
-      });
+  const sound = useIslandSound();
+  const hopping = useMeetingHop(calendar.hopKeys, sound?.on ?? false, calendar.hold.held);
+  const mood =
+    wave || hopping
+      ? 'happy'
+      : scoutMoodFor(view, {
+          waiting: cards.length,
+          hour: new Date(now).getHours(),
+          idleMinutes: 0,
+          running: running.length,
+          moment,
+          failed: row.sessions.some((chat) => sessionState(chat) === 'failed'),
+        });
 
   const geometry = useIslandBridge({
     islandRef,
@@ -316,7 +325,6 @@ export function IslandApp() {
   };
 
   const sessions = useMemo(() => rankedSessions(data.chats, NO_HIDDEN), [data.chats]);
-  const sound = useIslandSound();
   useChimes(
     sound?.on ?? false,
     data.loaded ? data.chats : null,
@@ -337,6 +345,8 @@ export function IslandApp() {
   const homeChats = useMemo(() => homeSessions(data.chats), [data.chats]);
   const home = {
     sessions: homeChats,
+    chats: data.chats,
+    cards: allCards,
     quickStart: quickStart ? { id: quickStart.id, name: quickStart.name } : null,
     onOpenHere: (id: string) => {
       setSelected(id);

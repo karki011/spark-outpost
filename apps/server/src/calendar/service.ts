@@ -1,4 +1,5 @@
 import {
+  CALENDAR_ATTENDEES_MAX,
   CALENDAR_DEFAULT_SETTINGS,
   addLocalDays,
   dayShape,
@@ -7,6 +8,8 @@ import {
   isMeeting,
   localDayStart,
   mergeEvents,
+  overlaps,
+  spanOf,
   type CalendarAccount,
   type CalendarAuthorization,
   type CalendarChoice,
@@ -16,13 +19,17 @@ import {
   type CalendarGoogleStatus,
   type CalendarHelperState,
   type CalendarNow,
+  type CalendarRange,
+  type CalendarSpan,
   type CalendarStatus,
+  type HelperEvent,
 } from '@spark-outpost/contracts';
 import { withTransaction, type Db } from '../persistence/db.ts';
 import type { CalendarHost } from './host-client.ts';
 import { googleSourceId } from './google/map.ts';
 import type { GoogleSource } from './google/source.ts';
 import { planNudges, type PlannerChat } from './planner.ts';
+import { linkFreeSnippet } from './snippet.ts';
 import { lostNotice, rematchCalendars } from './rematch.ts';
 import {
   EVENTKIT_OWNER,
@@ -74,8 +81,10 @@ export function dateKey(at: number): string {
 export function dayFromKey(key: string): number | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
   if (!match) return null;
-  const day = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  return Number.isNaN(day.getTime()) ? null : day.getTime();
+  const [year, month, date] = [Number(match[1]), Number(match[2]) - 1, Number(match[3])];
+  const day = new Date(year, month, date);
+  const exact = day.getFullYear() === year && day.getMonth() === month && day.getDate() === date;
+  return exact ? day.getTime() : null;
 }
 
 function accountsOf(choices: readonly CalendarChoice[]): CalendarAccount[] {
@@ -171,22 +180,67 @@ function googleAccountOf(
   );
 }
 
-async function macEvents(deps: CalendarDeps, reading: Reading) {
-  if (!readable(reading) || !deps.host) return { choices: [], events: [], truncated: false };
-  const choices = await syncCalendars(deps);
-  const window = await deps.host.request({ op: 'window' });
-  return { choices, events: window.events, truncated: window.truncated };
+interface SourceEvents {
+  events: HelperEvent[];
+  truncated: boolean;
 }
 
-export async function calendarState(deps: CalendarDeps): Promise<CalendarState> {
+async function eachSpan(
+  spans: readonly CalendarSpan[],
+  read: (span: CalendarSpan) => Promise<SourceEvents>,
+): Promise<SourceEvents> {
+  const answers = await Promise.all(spans.map(read));
+  const seen = new Map<string, HelperEvent>();
+  for (const answer of answers) {
+    for (const event of answer.events) seen.set(`${event.id}|${event.start}`, event);
+  }
+  return { events: [...seen.values()], truncated: answers.some((answer) => answer.truncated) };
+}
+
+async function macEvents(
+  deps: CalendarDeps,
+  reading: Reading,
+  spans: readonly CalendarSpan[] | null,
+) {
+  const host = deps.host;
+  if (!readable(reading) || !host) return { choices: [], events: [], truncated: false };
+  const choices = await syncCalendars(deps);
+  const read = spans
+    ? await eachSpan(spans, (span) =>
+        host.request({
+          op: 'range',
+          from: new Date(span.start).toISOString(),
+          to: new Date(span.end).toISOString(),
+        }),
+      )
+    : await host.request({ op: 'window' });
+  return { choices, events: read.events, truncated: read.truncated };
+}
+
+async function googleEvents(
+  deps: CalendarDeps,
+  spans: readonly CalendarSpan[] | null,
+): Promise<SourceEvents> {
+  const google = deps.google;
+  if (!google) return { events: [], truncated: false };
+  if (!spans) return google.window();
+  return eachSpan(spans, (span) => google.range(span.start, span.end));
+}
+
+export async function calendarState(
+  deps: CalendarDeps,
+  spans: readonly CalendarSpan[] | null = null,
+): Promise<CalendarState> {
   await deps.google?.reconcile();
   const now = deps.now?.() ?? Date.now();
   const connection = await calendarConnection(deps.db, deps.workspaceId);
   const reading = connection.connected
     ? await readHost(deps)
     : { connected: false, authorization: null, helper: null };
-  const mac = await macEvents(deps, reading);
-  const google = deps.google?.window() ?? { events: [], truncated: false };
+  const [mac, google] = await Promise.all([
+    macEvents(deps, reading, spans),
+    googleEvents(deps, spans),
+  ]);
   const googleReady = deps.google?.ready() ?? false;
   const choices = [...mac.choices, ...(googleReady ? await googleChoices(deps) : [])];
   const active = readable(reading) || googleReady;
@@ -212,6 +266,15 @@ export async function calendarState(deps: CalendarDeps): Promise<CalendarState> 
 }
 
 const WEEK_DAYS = 7;
+const ATTENDEE_NAME_MAX = 300;
+
+export function dayAndWeek(dayStart: number, now: number): CalendarSpan[] {
+  const today = localDayStart(now);
+  const week = { start: today, end: addLocalDays(today, WEEK_DAYS) };
+  const day = { start: dayStart, end: addLocalDays(dayStart, 1) };
+  const inWeek = day.start >= week.start && day.end <= week.end;
+  return inWeek ? [week] : [day, week];
+}
 
 export function calendarDay(state: CalendarState, dayStart: number, now: number): CalendarDay {
   const events = eventsOnDay(state.events, dayStart);
@@ -232,6 +295,26 @@ export function calendarDay(state: CalendarState, dayStart: number, now: number)
     free: freeBlocks(events, dayStart),
     shape: dayShape(events, dayStart),
     week,
+    calendars: state.choices.filter((choice) => choice.include),
+    truncated: state.truncated,
+  };
+}
+
+export function calendarRange(
+  state: CalendarState,
+  range: CalendarSpan,
+  now: number,
+): CalendarRange {
+  const events = state.events
+    .map((event) => ({ event, span: spanOf(event) }))
+    .filter(({ span }) => overlaps(span, range.start, range.end))
+    .toSorted((a, b) => a.span.start - b.span.start)
+    .map(({ event }) => event);
+  return {
+    from: dateKey(range.start),
+    to: dateKey(range.end),
+    today: dateKey(localDayStart(now)),
+    events,
     calendars: state.choices.filter((choice) => choice.include),
     truncated: state.truncated,
   };
@@ -273,6 +356,20 @@ export async function eventDetail(
   host: CalendarHost,
   occurrence: { eventId: string; start: string },
 ): Promise<CalendarEventDetail> {
-  const detail = await host.request({ op: 'event', ...occurrence });
-  return { title: detail.event.title, notes: detail.notes, link: null };
+  const detail = await host.request({
+    op: 'event',
+    eventId: occurrence.eventId,
+    start: occurrence.start,
+  });
+  const attendees = detail.attendees
+    .filter((attendee) => !attendee.isMe && attendee.name.trim())
+    .map((attendee) => attendee.name.trim().slice(0, ATTENDEE_NAME_MAX))
+    .slice(0, CALENDAR_ATTENDEES_MAX);
+  return {
+    title: detail.event.title,
+    notes: detail.notes,
+    snippet: linkFreeSnippet(detail.notes),
+    link: null,
+    attendees,
+  };
 }

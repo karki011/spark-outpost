@@ -54,9 +54,12 @@ const SETTINGS_TARGETS: readonly string[] = ['island', 'sparks', 'spark-new', 'c
 const SPARK_EDIT_TARGET =
   /^spark-edit:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const TODAY_TARGET = /^today:\P{Cc}{1,600}$/u;
+
 function isSettingsTarget(value: unknown): value is string {
   return (
-    typeof value === 'string' && (SETTINGS_TARGETS.includes(value) || SPARK_EDIT_TARGET.test(value))
+    typeof value === 'string' &&
+    (SETTINGS_TARGETS.includes(value) || SPARK_EDIT_TARGET.test(value) || TODAY_TARGET.test(value))
   );
 }
 

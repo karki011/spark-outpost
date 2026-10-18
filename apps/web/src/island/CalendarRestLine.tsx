@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { CalendarLine } from '../calendar/island-calendar.ts';
 import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
+import { JoinButton } from '../calendar/JoinButton.tsx';
 
 interface CalendarRestLineProps {
   line: CalendarLine;
@@ -19,12 +20,16 @@ export function CalendarRestLine({ line, top, calendar }: CalendarRestLineProps)
       <span className="isl-restline-dot" aria-hidden="true" />
       <span className="isl-restline-text">{line.text}</span>
       {line.join && (
+        <JoinButton event={line.join} now={calendar.at} className="isl-calline-act primary" plain />
+      )}
+      {line.choose && (
         <button
           type="button"
           className="isl-calline-act primary"
-          onClick={() => calendar.onJoin(line)}
+          aria-label={`Choose one of ${line.choose.length} meetings`}
+          onClick={() => calendar.onChoose(line)}
         >
-          Join
+          Choose
         </button>
       )}
       {line.capture && (

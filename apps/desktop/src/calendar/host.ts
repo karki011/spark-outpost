@@ -63,6 +63,9 @@ export function startCalendarHost(options: CalendarHostOptions): CalendarHost {
       case 'window':
         ready();
         return window.read();
+      case 'range':
+        ready();
+        return window.range(request.from, request.to);
       case 'request': {
         ready();
         const answer = await helper.call({ op: 'request' });

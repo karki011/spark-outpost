@@ -64,7 +64,7 @@ describe('Google sign-in', () => {
       expect.objectContaining({
         title: EMAIL,
         kind: 'google',
-        calendars: [expect.objectContaining({ include: true, busy: true, nudges: false })],
+        calendars: [expect.objectContaining({ include: true, nudges: true })],
       }),
     ]);
     expect(await h.secrets.get(googleCalendarSecret(SUBJECT))).toMatch(/^1\/\/fake-refresh/);

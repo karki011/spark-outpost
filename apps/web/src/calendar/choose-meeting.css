@@ -1,0 +1,57 @@
+.cal-choose-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.cal-choose {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  max-height: min(560px, 100%);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--r) + 6px);
+  background: var(--panel);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+.cal-choose-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 18px 14px 6px 22px;
+}
+
+.cal-choose-head > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.cal-choose-head h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.cal-choose-head small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.cal-choose-body {
+  padding: 6px 22px 18px;
+  overflow-y: auto;
+}
+
+.cal-choose-body .cal-choice + .cal-choice {
+  border-top: 1px solid var(--line);
+}

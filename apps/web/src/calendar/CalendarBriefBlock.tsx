@@ -7,6 +7,7 @@ import { swatch } from './CalendarAccounts.tsx';
 import { DayShapeBar } from './DayShapeBar.tsx';
 import { localDate, useCalendarDay, useCalendarState } from './use-calendar.ts';
 import { CalendarName } from './CalendarName.tsx';
+import { calendarMap } from './today-model.ts';
 
 export function CalendarBriefBlock({ now }: { now: number }) {
   const { remote } = useRemoteClient();
@@ -15,10 +16,7 @@ export function CalendarBriefBlock({ now }: { now: number }) {
   const date = localDate(now);
   const query = useCalendarDay(date, on);
   const day = query.data?.date === date ? query.data : null;
-  const calendars = useMemo(
-    () => new Map((day?.calendars ?? []).map((choice) => [choice.key, choice])),
-    [day],
-  );
+  const calendars = useMemo(() => calendarMap(day?.calendars), [day]);
   if (!on || !day) return null;
   const meetings = day.events.filter(isMeeting);
   const longest = longestFree(day.free);

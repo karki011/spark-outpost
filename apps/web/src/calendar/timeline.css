@@ -119,6 +119,14 @@
   color: var(--accent-text);
 }
 
+.tl-tag[data-clash] {
+  color: var(--warn);
+}
+
+.tl-ev[data-narrow] .tl-tags {
+  display: none;
+}
+
 .tl-gap {
   position: absolute;
   right: 10px;
@@ -188,4 +196,8 @@
 
 .tl-allday-ev[aria-expanded='true'] {
   box-shadow: 0 0 0 2px var(--accent);
+}
+
+.td-main[aria-busy='true'] .tl {
+  opacity: 0.4;
 }

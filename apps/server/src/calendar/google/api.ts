@@ -45,6 +45,8 @@ const when = z.object({
 });
 
 const attendee = z.object({
+  displayName: z.string().max(1000).optional(),
+  email: z.string().max(1000).optional(),
   self: z.boolean().optional(),
   resource: z.boolean().optional(),
   responseStatus: z.string().optional(),
@@ -157,6 +159,17 @@ export async function listGoogleCalendars(deps: GoogleApiDeps): Promise<GoogleCa
     if (!pageToken) break;
   }
   return found.filter((entry) => !entry.deleted && entry.accessRole !== 'freeBusyReader');
+}
+
+export async function getGoogleEvent(
+  deps: GoogleApiDeps,
+  calendarId: string,
+  eventId: string,
+): Promise<GoogleEvent> {
+  const path = `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`;
+  const parsed = googleEventSchema.safeParse(await getJson(deps, path, new URLSearchParams()));
+  if (!parsed.success) throw new GoogleApiError('bad_response', 'Google sent an odd event.');
+  return parsed.data;
 }
 
 export type GoogleEventsRequest =
