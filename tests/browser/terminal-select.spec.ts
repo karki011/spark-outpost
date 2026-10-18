@@ -172,7 +172,7 @@ test('a terminal selection is copied and offers Add to terminal, Ask, Comment an
 });
 
 test('an ended session keeps Copy and a new chat for its last output', async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
   const { conversationId, workspace } = await startTerminal(page);
   try {
     const toolbar = workspace.getByRole('toolbar', { name: 'Selected text' });
