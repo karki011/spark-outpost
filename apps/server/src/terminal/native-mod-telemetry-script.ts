@@ -134,7 +134,7 @@ export function telemetry() {
       const fact = { kind: 'turn_start', prompt: owner, agent, turn, at };
       push(recording && !agent ? { ...fact, record: true } : fact);
     },
-    stepped(e, usage, costUsd) {
+    stepped(e, usage, costUsd, at) {
       const turn = label(e.turnId);
       const owner = turn ? turns.get(turn) : null;
       const model = label(usage && usage.model);
@@ -152,6 +152,22 @@ export function telemetry() {
         cacheRead: count(usage.cache_read_input_tokens),
         cacheWrite: count(usage.cache_creation_input_tokens),
         costUsd,
+        at,
+      });
+    },
+    resumed(e, at) {
+      if ((e.source !== 'resume' && e.source !== 'fork') || !Number.isSafeInteger(e.context_tokens))
+        return;
+      const since = e.seconds_since_last_response;
+      const usd = e.estimated_cache_write_usd;
+      push({
+        kind: 'cache_resume',
+        at,
+        secondsSince: Number.isFinite(since) && since >= 0 ? Math.round(since) : null,
+        contextTokens: count(e.context_tokens),
+        likelyExpired:
+          typeof e.prompt_cache_likely_expired === 'boolean' ? e.prompt_cache_likely_expired : null,
+        estimatedWriteUsd: Number.isFinite(usd) && usd >= 0 && usd <= 1e6 ? usd : null,
       });
     },
     answered(e, text) {

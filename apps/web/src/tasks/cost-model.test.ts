@@ -136,7 +136,7 @@ describe('costSummary', () => {
         thought: null,
       },
     };
-    const runs = [{ id: ids[0]!, usage } as unknown as Run];
+    const runs = [{ id: ids[0]!, provider: 'codex', usage } as unknown as Run];
     const summary = costSummary({ task: detail, runs, identities: new Map(), modelName: namer });
     expect(summary.split).toEqual({
       input: 800,
@@ -144,6 +144,7 @@ describe('costSummary', () => {
       cached: 600,
       cacheWrites: 0,
       subagents: 0,
+      cacheHit: 0.75,
     });
   });
 
@@ -159,16 +160,18 @@ describe('costSummary', () => {
       subagents: 46_894,
     };
     const usage = { contextUsed: null, contextSize: null, costUsd: 0.5, tokens };
-    const runs = [{ id: ids[0]!, usage } as unknown as Run];
+    const runs = [{ id: ids[0]!, provider: 'claude', usage } as unknown as Run];
     const { split } = costSummary({ task: detail, runs, identities: new Map(), modelName: namer });
-    expect(split).toEqual({
+    const { cacheHit, ...parts } = split!;
+    expect(parts).toEqual({
       input: 1_554,
       output: 916,
       cached: 27_418,
       cacheWrites: 26_462,
       subagents: 46_894,
     });
-    expect(Object.values(split!).reduce((sum, part) => sum + part, 0)).toBe(tokens.total);
+    expect(Object.values(parts).reduce((sum, part) => sum + part, 0)).toBe(tokens.total);
+    expect(cacheHit).toBeCloseTo(27_418 / (1_554 + 27_418 + 26_462));
   });
 });
 

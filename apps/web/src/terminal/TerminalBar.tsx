@@ -15,6 +15,7 @@ import { TERMINAL_FOCUS_KEYS } from '../ui/Keys.tsx';
 import { MAC } from '../ui/shortcuts.ts';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { terminalLabel } from './native-state.ts';
+import { TerminalCache } from './TerminalCache.tsx';
 import { TerminalCompanion } from './TerminalCompanion.tsx';
 import { terminalAgentName } from './terminal-agents.ts';
 
@@ -79,6 +80,7 @@ export function TerminalBar({
           ? ` · ${link === 'connecting' ? 'Connecting' : 'Disconnected'}`
           : ''}
       </p>
+      <TerminalCache chat={chat} native={native} />
       {permission && (
         <span
           className={`pchip risk-${permission.risk} tbar-mode`}

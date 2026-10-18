@@ -45,6 +45,12 @@ function response(record: Record<string, unknown>, turnId: string | null): Trans
         cachedWriteLong: tokenCount(written.ephemeral_1h_input_tokens),
         thought: tokenCount(details.thinking_tokens),
       },
+      buckets: isRecord(usage.cache_creation)
+        ? {
+            short: tokenCount(written.ephemeral_5m_input_tokens),
+            long: tokenCount(written.ephemeral_1h_input_tokens),
+          }
+        : null,
     },
   ];
 }

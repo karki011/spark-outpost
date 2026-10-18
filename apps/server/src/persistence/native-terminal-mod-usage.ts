@@ -1,6 +1,7 @@
 import type { Db, Queryable } from './db.ts';
 import type { NativeTurnTotals } from './native-terminal-usage.ts';
 import { storedLabel } from './native-terminal-steps.ts';
+import { moveCacheRecord } from './prompt-cache.ts';
 
 export interface ModTurnEvent {
   turnId: string;
@@ -137,6 +138,7 @@ export async function recordModUsage(
 }
 
 export async function moveModUsage(db: Queryable, runId: string, ownerRunId: string) {
+  await moveCacheRecord(db, runId, ownerRunId);
   await db.query(
     `UPDATE native_terminal_mod_turns t SET run_id = $2 WHERE t.run_id = $1 AND NOT EXISTS (
        SELECT 1 FROM native_terminal_mod_turns o WHERE o.run_id = $2 AND o.turn_id = t.turn_id)`,

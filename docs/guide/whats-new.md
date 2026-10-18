@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                       | What to do                                                |
 | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| Prompt cache countdown, re-write notes and **Cache hit**.                                                          | See [Prompt cache](statuses-and-limits.md#prompt-cache).  |
 | **Today** opens on **Month**.                                                                                      | See [Use it](calendar.md#use-it).                         |
 | Calendar: all calendars nudge; Scout hops; **Join** opens at 10 min, **Choose** for clashes; island **Needs you**. | See [Use it](calendar.md#use-it).                         |
 | Claude plan ring.                                                                                                  | See [Limits](statuses-and-limits.md#limits).              |

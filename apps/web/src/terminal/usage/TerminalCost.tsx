@@ -7,10 +7,12 @@ import {
   type NativeTerminalUsage,
 } from '@spark-outpost/contracts';
 import { formatTokens } from '../../chat/composer/model-options.ts';
+import { CacheRebuildNote } from '../../usage/CacheRebuildNote.tsx';
+import { cacheHitText } from '../../usage/cache-view.ts';
 import { formatCost } from '../../usage/format.ts';
 import { terminalUsageQuery } from './terminal-usage-api.ts';
 import { durationText } from './step-rows.ts';
-import { estimateTotal, turnUsageText } from './turn-usage-text.ts';
+import { estimateTotal, turnsCacheHit, turnUsageText } from './turn-usage-text.ts';
 
 function ReportedTotal({ usage }: { usage: NativeTerminalUsage }) {
   const several = usage.reported.length > 1;
@@ -57,6 +59,7 @@ export function TerminalCost({ conversationId }: { conversationId: string }) {
   if (!usage.data) return null;
   const { turns, provider } = usage.data;
   const estimate = estimateTotal(turns);
+  const hit = turnsCacheHit(turns, provider);
   const allReported = turns.every(
     (turn) => turn.costUsd === null || turn.costSource === 'reported',
   );
@@ -72,6 +75,11 @@ export function TerminalCost({ conversationId }: { conversationId: string }) {
               : `${formatCost(estimate, 'estimated')} estimated from tokens`}
         </span>
       </div>
+      {hit !== null && (
+        <p className="tu-hit">
+          Cache hit <b>{cacheHitText(hit)}</b>
+        </p>
+      )}
       {turns.length === 0 ? (
         <p className="wnote first">No turns yet.</p>
       ) : (
@@ -93,6 +101,10 @@ export function TerminalCost({ conversationId }: { conversationId: string }) {
                   {text.tokens}
                   {text.detail && <small> · {text.detail}</small>}
                 </span>
+                <CacheRebuildNote
+                  rebuild={usage.data.promptCache?.rebuilds[turn.runId]}
+                  className="tu-rebuild"
+                />
               </li>
             );
           })}

@@ -34,6 +34,7 @@ import {
   promptText,
 } from './conversation-prompt.ts';
 import { AUTH_STATUS_METHOD, parseAuthStatus } from './auth-status.ts';
+import { parseRequestUsage, SDK_MESSAGE_METHOD } from './request-usage.ts';
 import { exitCause, type SignInCheck } from './exit-cause.ts';
 import { assertProtocolVersion, failureError, namesCause } from './errors.ts';
 import { declineInConversation, nativePlan } from './permissions.ts';
@@ -339,6 +340,9 @@ async function converse(
     )
     .onNotification(AUTH_STATUS_METHOD, parseAuthStatus, ({ params }) => {
       if (params && definition.reportsModelAccess) push([{ kind: 'account', account: params }]);
+    })
+    .onNotification(SDK_MESSAGE_METHOD, parseRequestUsage, ({ params }) => {
+      if (params) push([{ kind: 'request_usage', request: params }]);
     });
   if (policy) {
     client.onRequest(acp.methods.client.fs.readTextFile, (ctx) =>

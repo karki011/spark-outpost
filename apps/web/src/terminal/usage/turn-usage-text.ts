@@ -1,4 +1,6 @@
 import {
+  cacheHitCounts,
+  cacheHitRate,
   turnCostOrigin,
   usageOriginLabel,
   type NativeTerminalProvider,
@@ -43,4 +45,14 @@ export function estimateTotal(turns: readonly NativeTerminalTurn[]): number | nu
   const priced = turns.flatMap((turn) => (turn.costUsd === null ? [] : [turn.costUsd]));
   if (priced.length === 0) return null;
   return Math.round(priced.reduce((sum, cost) => sum + cost, 0) * 1_000_000) / 1_000_000;
+}
+
+export function turnsCacheHit(
+  turns: readonly NativeTerminalTurn[],
+  provider: NativeTerminalProvider | null,
+): number | null {
+  if (!provider) return null;
+  return cacheHitRate(
+    turns.flatMap((turn) => (turn.tokens ? [cacheHitCounts(provider, turn.tokens)] : [])),
+  );
 }

@@ -1,5 +1,5 @@
-import type { TokenUsage } from '@spark-outpost/contracts';
-import { cardPriceFor, costAt, countsCacheOutsideInput, type ModelPrice } from '../usage/prices.ts';
+import { countsCacheOutsideInput, type TokenUsage } from '@spark-outpost/contracts';
+import { cardPriceFor, costAt, type ModelPrice } from '../usage/prices.ts';
 import type { TokenCounts, TranscriptRecord } from './native-transcript.ts';
 
 const LONG_CACHE_WRITE_FACTOR = 2;
@@ -63,6 +63,11 @@ export function createTurnUsage(provider: string, priceFor: PriceFor = cardPrice
       responses.set(response.responseId, response);
       latest = response.model ?? latest;
       return true;
+    },
+    longWrites(): { model: string; tokens: number }[] {
+      return byModel().flatMap(({ model, tokens }) =>
+        model && tokens.cachedWriteLong > 0 ? [{ model, tokens: tokens.cachedWriteLong }] : [],
+      );
     },
     take(): Response[] {
       const taken = [...responses.values()];

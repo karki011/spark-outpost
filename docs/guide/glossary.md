@@ -22,7 +22,7 @@ summary: One-line definitions of the words you see in Spark Outpost - agent, mod
 | **Stacked**               | A sub-task whose branch and pull request [build on another's](stacked-pull-requests.md).      |
 | **Publish step**          | Spark's one request to the agent to [push and open the PR](ship-and-pull-requests.md).        |
 | **Protected path**        | [Something](protected-paths.md) that always asks or is refused.                               |
-| **Ran without review**    | An action taken in a mode that never asks, recorded in the audit.                             |
+| **Ran without review**    | An action in a mode that never asks, recorded in the audit.                                   |
 | **Scout**                 | Spark's blob on Spark Island and in the app's corner.                                         |
 | **Ship**                  | [Commit, push or open a pull request](ship-and-pull-requests.md).                             |
 | **Spark**                 | The assistant layer around the agents. Also a [named teammate](sparks.md) you make.           |

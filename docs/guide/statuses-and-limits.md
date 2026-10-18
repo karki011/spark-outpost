@@ -41,7 +41,7 @@ A dot shows what happened since you last opened the chat, on paired devices too.
 | Status        | Means                                                                                       |
 | ------------- | ------------------------------------------------------------------------------------------- |
 | **Sent**      | The chat is busy, failed or stopped, something is paused, or it reads **Waiting for @api**. |
-| **Working**   | Its turn is running; the line under it says what the chat is doing.                         |
+| **Working**   | Its turn is running; the line under it says what it's doing.                                |
 | **Needs you** | An approval card waits, or the reply ends **Needs you: …**.                                 |
 | **Answered**  | The answer is under the request.                                                            |
 | **Failed**    | The turn failed and the line says why, or **Not delivered: …**.                             |
@@ -80,6 +80,18 @@ A dot shows what happened since you last opened the chat, on paired devices too.
 | **Terminal session** on the card                  | Answer in **Open terminal**. The card never shows commands. |
 
 With **Reduce motion** on, only faces change.
+
+## Prompt cache
+
+Idle Claude chats and Terminal sessions show it, never during a turn, sub-agent or card.
+
+| Shows                                                         | Means                                          |
+| ------------------------------------------------------------- | ---------------------------------------------- |
+| **Cache warm · 42 min left**                                  | Time left in the lifetime the last write used. |
+| **Cache cold · next message re-writes ~182K tokens (~$3.64)** | About tokens × the cache-write price.          |
+| **Cache last used 12 min ago**                                | Lifetime unknown.                              |
+| **This turn re-wrote …**                                      | Half the last context or more, re-written.     |
+| **Cache hit** in **Cost**                                     | Cache reads ÷ all input tokens.                |
 
 ## Limits
 

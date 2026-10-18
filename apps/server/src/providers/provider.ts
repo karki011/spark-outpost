@@ -197,6 +197,16 @@ export interface SubagentReported {
   summary?: string;
 }
 
+export interface RequestUsage {
+  key: string;
+  model: string;
+  input: number;
+  output: number;
+  cachedRead: number;
+  cachedWrite: number;
+  buckets: { short: number; long: number } | null;
+}
+
 export type ProviderOutput =
   | {
       kind: 'step_started';
@@ -234,6 +244,7 @@ export type ProviderOutput =
       readings?: UsageReadings;
     }
   | { kind: 'tokens'; tokens: TokenUsage }
+  | { kind: 'request_usage'; request: RequestUsage }
   | ({ kind: 'plan_limits' } & PlanReport)
   | {
       kind: 'session_settings';

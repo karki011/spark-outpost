@@ -15,6 +15,7 @@ import {
   SECRET_GLOBS,
 } from './codex-permissions.ts';
 import { codexUnlistedModels } from './codex-models.ts';
+import { RAW_REQUEST_MESSAGES } from './request-usage.ts';
 import type { ClaudeRepoOptions, CodexRepoOptions, RepoStyle } from './repo-session.ts';
 import { ZAI_EFFORTS, ZAI_MODELS, zaiLaunchEnvironment, zaiModelId } from './zai.ts';
 
@@ -166,6 +167,7 @@ export function claudeSessionMeta(
   return {
     ...(repo?.appendPrompt ? { systemPrompt: { append: repo.appendPrompt } } : {}),
     claudeCode: {
+      emitRawSDKMessages: RAW_REQUEST_MESSAGES,
       options: {
         tools: [...tools, ...repoTools(repo)],
         disallowedTools: deny,
