@@ -6,6 +6,7 @@ import {
   FAKE_TAILSCALE_HOST,
   type FakeTailscaleState,
 } from '../../apps/server/test/fake-tailscale.ts';
+import { matchApiClock } from './api-clock.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { API_PORT, FAKE_TAILSCALE_STATE } from './stub-config.ts';
 
@@ -13,6 +14,7 @@ export const PHONE_ADDRESS = `https://${FAKE_TAILSCALE_HOST}`;
 export const PHONE_PAGE = 'http://phone.test';
 export const WIDE = { width: 1280, height: 900 };
 export const NARROW = { width: 390, height: 844 };
+export const REMOTE_TURN_MS = 20_000;
 const THEME = path.resolve(import.meta.dirname, '../../apps/web/public/theme.css');
 
 export function setFakeTailscale(change: Partial<FakeTailscaleState> | null): void {
@@ -106,6 +108,7 @@ export async function denyWaitingPhones(page: Page): Promise<void> {
 }
 
 export async function openPhone(page: Page) {
+  await matchApiClock(page);
   await page.goto('/');
   await page
     .getByRole('navigation', { name: 'Main' })
@@ -117,7 +120,9 @@ export async function openPhone(page: Page) {
 
 export async function turnOn(page: Page) {
   await page.getByRole('switch', { name: 'Remote control' }).click();
-  await expect(page.getByRole('heading', { name: 'Remote control is on' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Remote control is on' })).toBeVisible({
+    timeout: REMOTE_TURN_MS,
+  });
 }
 
 export async function startPairing(

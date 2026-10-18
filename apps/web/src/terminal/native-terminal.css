@@ -75,7 +75,7 @@
   min-height: 0;
   background: var(--code);
 }
-.native-screen {
+.native-stage > .native-screen {
   flex: 1;
   min-width: 0;
   height: auto;

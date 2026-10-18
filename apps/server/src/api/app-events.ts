@@ -1,11 +1,10 @@
 import type { Request, Response } from 'express';
 import { parseAppEvent, type AppEvent } from '@spark-outpost/contracts';
-import { listen, type NotificationListener } from '../persistence/notifications.ts';
+import { keepListening, type NotificationListener } from '../persistence/notifications.ts';
 
 const APP_EVENT_CLIENT_LIMIT = 32;
 const HEARTBEAT_MS = 15_000;
 const CLIENT_RETRY_MS = 2_000;
-const RELISTEN_MS = 2_000;
 
 export class AppEventFeed {
   private readonly clients = new Set<Response>();
@@ -84,50 +83,20 @@ export async function listenForAppEvents(
   feed: AppEventFeed,
   searchPath?: string,
 ): Promise<NotificationListener> {
-  let current: NotificationListener | null = null;
-  let retry: ReturnType<typeof setTimeout> | null = null;
-  let closed = false;
-
-  const connect = () =>
-    listen(connectionString, 'changes', (payload) => feed.publish(payload), {
+  const listener = await keepListening(
+    connectionString,
+    'changes',
+    (payload) => feed.publish(payload),
+    {
       ...(searchPath ? { searchPath } : {}),
-      onError: lost,
-    });
-
-  function lost() {
-    if (closed || retry) return;
-    feed.setAvailable(false);
-    void current?.close();
-    current = null;
-    scheduleReconnect();
-  }
-
-  function scheduleReconnect() {
-    retry = setTimeout(async () => {
-      if (closed) return;
-      try {
-        const next = await connect();
-        retry = null;
-        if (closed) {
-          await next.close();
-          return;
-        }
-        current = next;
-        feed.setAvailable(true);
-      } catch {
-        retry = null;
-        scheduleReconnect();
-      }
-    }, RELISTEN_MS);
-  }
-
-  current = await connect();
+      onLost: () => feed.setAvailable(false),
+      onBack: () => feed.setAvailable(true),
+    },
+  );
   return {
     async close() {
-      closed = true;
-      if (retry) clearTimeout(retry);
       feed.disconnectAll();
-      await current?.close();
+      await listener.close();
     },
   };
 }

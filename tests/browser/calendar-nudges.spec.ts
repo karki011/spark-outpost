@@ -1,7 +1,7 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { calendarNowSchema, calendarStatusSchema } from '../../packages/contracts/src/index.ts';
-import { readCalendarClock } from './fake-calendar-clock.ts';
+import { apiNow, matchApiClock } from './api-clock.ts';
 import { resetTestDatabase } from './database.ts';
 import { fakeHomeDesktop, fakeState, island, openHome, openIsland } from './island-home-desktop.ts';
 import { openNotchIsland, settled } from './island-notch-desktop.ts';
@@ -11,10 +11,9 @@ test.skip(process.env.SPARK_FAKE_CALENDAR !== '1', 'needs SPARK_FAKE_CALENDAR=1'
 test.describe.configure({ mode: 'serial' });
 
 const MINUTE = 60_000;
-const fakeNow = () => Date.now() + readCalendarClock(FAKE_CALENDAR_STATE);
 
 function startEventsIn(minutes: number) {
-  const anchor = Math.floor(fakeNow() / MINUTE) * MINUTE + (minutes - 4) * MINUTE;
+  const anchor = Math.floor(apiNow() / MINUTE) * MINUTE + (minutes - 4) * MINUTE;
   writeFileSync(FAKE_CALENDAR_STATE, JSON.stringify({ anchor }));
 }
 
@@ -42,9 +41,7 @@ async function soundOn(page: Page) {
 test.beforeEach(async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   startEventsIn(4);
-  if (readCalendarClock(FAKE_CALENDAR_STATE) !== 0) {
-    await page.clock.install({ time: new Date(fakeNow()) });
-  }
+  await matchApiClock(page);
 });
 
 test.afterAll(() => {

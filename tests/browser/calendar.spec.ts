@@ -13,7 +13,7 @@ import { resetTestDatabase } from './database.ts';
 import { island, openNotchIsland } from './island-notch-desktop.ts';
 import { decorateLatestRun } from './home-seed.ts';
 import { seedChats } from './sidebar-seed.ts';
-import { readCalendarClock } from './fake-calendar-clock.ts';
+import { apiNow, matchApiClock } from './api-clock.ts';
 import { FAKE_CALENDAR_STATE } from './stub-config.ts';
 
 test.skip(process.env.SPARK_FAKE_CALENDAR !== '1', 'needs SPARK_FAKE_CALENDAR=1');
@@ -27,8 +27,6 @@ interface FakeCalendarState {
 
 const MINUTE = 60_000;
 let anchor = 0;
-const clockOffset = () => readCalendarClock(FAKE_CALENDAR_STATE);
-const fakeNow = () => Date.now() + clockOffset();
 
 export function writeFakeCalendar(state: FakeCalendarState | null): void {
   if (state === null && anchor === 0) rmSync(FAKE_CALENDAR_STATE, { force: true });
@@ -57,7 +55,7 @@ async function connect(page: Page, nudgeWork = true) {
 }
 
 async function todayEvents(page: Page): Promise<CalendarEvent[]> {
-  const now = new Date(fakeNow());
+  const now = new Date(apiNow());
   const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const response = await page.request.get(`/api/calendar/day?date=${date}`);
   return calendarDaySchema.parse(await response.json()).events;
@@ -98,9 +96,9 @@ const opened = (page: Page) =>
 
 test.beforeEach(async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
-  anchor = Math.floor(fakeNow() / MINUTE) * MINUTE;
+  anchor = Math.floor(apiNow() / MINUTE) * MINUTE;
   writeFakeCalendar(null);
-  if (clockOffset() !== 0) await page.clock.install({ time: new Date(fakeNow()) });
+  await matchApiClock(page);
   await page.request.post('/api/calendar/connect', { data: {} });
   await page.request.post('/api/calendar/disconnect', { data: {} });
 });
@@ -222,8 +220,8 @@ test('joins only an open meeting, from the panel and with ⌘J', async ({ page }
   const events = await todayEvents(page);
   const standup = events.find((item) => item.title === 'Standup')!;
   const customer = events.find((item) => item.title === 'Customer call')!;
-  expect(joinOpen(spanOf(standup), fakeNow())).toBe(true);
-  expect(joinOpen(spanOf(customer), fakeNow())).toBe(false);
+  expect(joinOpen(spanOf(standup), apiNow())).toBe(true);
+  expect(joinOpen(spanOf(customer), apiNow())).toBe(false);
   await openTodayDay(page);
 
   await event(page, 'Customer call').focus();

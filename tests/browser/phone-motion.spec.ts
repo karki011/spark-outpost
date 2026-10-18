@@ -1,11 +1,13 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { apiNow } from './api-clock.ts';
 import {
   denyWaitingPhones,
   NARROW,
   openPairingPage,
   openPhone,
+  REMOTE_TURN_MS,
   pairFromPhone,
   resetPhone,
   setFakeTailscale,
@@ -144,7 +146,7 @@ test('the blob works while phone access turns on or off, and is unsure when it f
   await page.waitForTimeout(1200);
   await expect(scene).toHaveAttribute('data-blob', 'working');
   await on.release();
-  await expect(scene).toHaveAttribute('data-blob', 'ready');
+  await expect(scene).toHaveAttribute('data-blob', 'ready', { timeout: REMOTE_TURN_MS });
   await expect(scene.locator('.scout')).not.toHaveClass(/working/);
   await expect(main.getByRole('button', { name: 'Pair a device' })).toBeEnabled();
 
@@ -158,7 +160,7 @@ test('the blob works while phone access turns on or off, and is unsure when it f
   expect(await loops(scene.locator('.ph-scene-stage'))).toEqual([]);
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await off.release();
-  await expect(scene).toHaveAttribute('data-blob', 'asleep');
+  await expect(scene).toHaveAttribute('data-blob', 'asleep', { timeout: REMOTE_TURN_MS });
   await expect(scene.locator('.scout')).toHaveClass(/sleep/);
 
   setFakeTailscale({ failServe: true });
@@ -180,7 +182,7 @@ test('the blob works while phone access turns on or off, and is unsure when it f
 
   setFakeTailscale(null);
   await main.getByRole('switch', { name: 'Remote control' }).click();
-  await expect(scene).toHaveAttribute('data-blob', 'ready');
+  await expect(scene).toHaveAttribute('data-blob', 'ready', { timeout: REMOTE_TURN_MS });
   await expect(main.getByRole('alert')).toHaveCount(0);
 });
 
@@ -199,9 +201,9 @@ test('waiting motion follows the countdown and leaves the QR still, wide and at 
   const main = await openPhone(page);
   const scene = main.locator('.ph-scene');
   await turnOn(page);
-  await page.clock.install();
+  await page.clock.install({ time: apiNow() });
   await startPairing(page);
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await page.clock.pauseAt(new Date(apiNow() + 1000));
 
   await expect(scene).toHaveAttribute('data-blob', 'idle');
   await expect.poll(() => loops(scene)).toEqual(expect.arrayContaining(['ph-bob', 'ph-glance']));

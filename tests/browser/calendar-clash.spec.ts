@@ -1,7 +1,7 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { readCalendarClock } from './fake-calendar-clock.ts';
+import { apiNow, matchApiClock } from './api-clock.ts';
 import { resetTestDatabase } from './database.ts';
 import { fakeHomeDesktop, fakeState, island, openHome, openIsland } from './island-home-desktop.ts';
 import { FAKE_CALENDAR_STATE } from './stub-config.ts';
@@ -11,7 +11,6 @@ test.describe.configure({ mode: 'serial' });
 
 const MINUTE = 60_000;
 const MEETING_TUNE_NOTES = 4;
-const fakeNow = () => Date.now() + readCalendarClock(FAKE_CALENDAR_STATE);
 
 async function connect(page: Page) {
   const response = await page.request.post('/api/calendar/connect', { data: {} });
@@ -36,11 +35,9 @@ const rail = (page: Page) => page.getByRole('navigation', { name: 'Main' });
 
 test.beforeEach(async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
-  const anchor = Math.floor(fakeNow() / MINUTE) * MINUTE;
+  const anchor = Math.floor(apiNow() / MINUTE) * MINUTE;
   writeFileSync(FAKE_CALENDAR_STATE, JSON.stringify({ anchor, clash: true }));
-  if (readCalendarClock(FAKE_CALENDAR_STATE) !== 0) {
-    await page.clock.install({ time: new Date(fakeNow()) });
-  }
+  await matchApiClock(page);
   await connect(page);
 });
 

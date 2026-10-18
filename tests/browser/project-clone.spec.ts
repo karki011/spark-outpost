@@ -6,6 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 import type { CloneJob } from '../../packages/contracts/src/project-clone.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { animationsSettled } from './settle.ts';
 import { CLONE_TEST_ROOT, STUB_PORT } from './stub-config.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
@@ -78,6 +79,7 @@ async function openClone(page: Page) {
 }
 
 async function axeClean(page: Page) {
+  await animationsSettled(page);
   const results = await new AxeBuilder({ page }).include('.fdlg').analyze();
   expect(
     results.violations.map((violation) => ({

@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { PHONE_ADDRESS, denyWaitingPhones, resetPhone, setFakeTailscale } from './phone-support.ts';
 import {
   arriveFromElsewhere,
@@ -68,9 +68,17 @@ test('a paired phone that arrives from another site or reopens the QR link lands
   await stranger.close();
 });
 
+async function expectActivityLine(main: Locator, text: string) {
+  const activity = main.getByRole('region', { name: 'Recent remote activity' });
+  const line = activity.getByText(text);
+  const more = activity.getByRole('button', { name: 'Show more' });
+  while (!(await line.isVisible()) && (await more.isVisible())) await more.click();
+  await expect(line).toBeVisible();
+}
+
 test('pairing a phone again does not pile up devices', async ({ page }) => {
   const main = await openPhonePage(page);
-  const devices = main.getByRole('region', { name: 'Devices' });
+  const devices = main.getByRole('region', { name: 'Devices', exact: true });
   const rows = devices.locator('.ph-devices').first().getByRole('listitem');
   const phone = await newPhone(network);
   await pairPhone(main, phone, 'Kitchen phone');
@@ -111,8 +119,6 @@ test('pairing a phone again does not pile up devices', async ({ page }) => {
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText('kitchen phone');
   await expect(devices.getByRole('button', { name: '2 removed' })).toBeVisible();
-  await expect(
-    main.getByRole('region', { name: 'Recent remote activity' }).getByText(/asked to pair again/),
-  ).toBeVisible({ timeout: 15_000 });
+  await expectActivityLine(main, 'Kitchen phone asked to pair again (it was removed on this Mac)');
   await second.close();
 });

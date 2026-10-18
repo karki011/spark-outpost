@@ -224,6 +224,9 @@ test('shows the ghost row inside an empty project and inside a folded project', 
   await page.reload();
   const empty = block(page, docs.name);
   await expect(empty.locator('.pempty')).toBeVisible();
+  const folded = block(page, web.name);
+  await folded.locator('.proj-head').click();
+  await expect(folded).not.toHaveClass(/open/);
 
   await pickUp(page, row(page, 'Loose idea'));
   await hoverOver(page, empty.locator('.proj-head'), 'bottom');
@@ -233,10 +236,8 @@ test('shows the ghost row inside an empty project and inside a folded project', 
   await page.keyboard.press('Escape');
   await page.mouse.up();
   await expect(slot(empty)).toHaveCount(0);
-
-  const folded = block(page, web.name);
-  await folded.locator('.proj-head').click();
   await expect(folded).not.toHaveClass(/open/);
+
   await pickUp(page, row(page, 'Loose idea'));
   await hoverOver(page, folded.locator('.proj-head'), 'bottom');
   await expect(folded).toHaveClass(/open/);

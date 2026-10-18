@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { apiNow } from './api-clock.ts';
 import {
   denyWaitingPhones,
   NARROW,
@@ -159,8 +160,8 @@ test('turns on, pairs a phone through its pairing page, renames and revokes it',
   await expectAccessible(page);
   await shoot(page, 'phone-3-found');
 
-  await page.clock.install();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await page.clock.install({ time: apiNow() });
+  await page.clock.pauseAt(new Date(apiNow() + 1000));
   await main.getByRole('button', { name: 'Confirm' }).click();
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'paired');
   await expect(main.locator('.ph-scene .scout')).toHaveClass(/happy/);
@@ -176,7 +177,7 @@ test('turns on, pairs a phone through its pairing page, renames and revokes it',
   await phoneContext.close();
 
   await page.clock.resume();
-  const devices = main.getByRole('region', { name: 'Devices' });
+  const devices = main.getByRole('region', { name: 'Devices', exact: true });
   const row = devices.getByRole('listitem').filter({ hasText: 'Kitchen phone' });
   await expect(row).toBeVisible({ timeout: 15_000 });
   await expect(row).toHaveClass(/fresh/);
@@ -220,7 +221,7 @@ test('denies a phone, then lets a code run out', async ({ page, browser }) => {
   await phoneContext.close();
 
   await startPairing(page, 'Try again');
-  await page.clock.install();
+  await page.clock.install({ time: apiNow() });
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'code');
   await page.clock.fastForward(103_000);
   await expect(main.locator('.ph-scene')).toHaveClass(/expiring/);
@@ -311,7 +312,7 @@ test('every theme passes colour and ARIA checks on the Phone page and the pairin
   );
 
   await main.getByRole('button', { name: 'Confirm' }).click();
-  const devices = main.getByRole('region', { name: 'Devices' });
+  const devices = main.getByRole('region', { name: 'Devices', exact: true });
   await expect(devices.getByRole('listitem').filter({ hasText: 'Theme phone' })).toBeVisible();
   await context.close();
   await expectEveryTheme([[page, '.ph']], 'devices');
@@ -360,7 +361,7 @@ test('disconnects every device after a hold', async ({ page, browser }) => {
   await phone.getByLabel('Device name').fill('Hold phone');
   await phone.getByRole('button', { name: 'Pair' }).click();
   await main.getByRole('button', { name: 'Confirm' }).click();
-  const devices = main.getByRole('region', { name: 'Devices' });
+  const devices = main.getByRole('region', { name: 'Devices', exact: true });
   await expect(devices.getByText('Hold phone')).toBeVisible({ timeout: 15_000 });
   await context.close();
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'ready');

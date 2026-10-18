@@ -84,7 +84,7 @@ export const CommandTerminal = memo(function CommandTerminal({
   const queryClient = useQueryClient();
   const running = command.status === 'running';
   const saved = {
-    queryKey: commandOutputKey(command.runId, command.id),
+    queryKey: commandOutputKey(command.runId, command.id, running),
     queryFn: () => fetchCommandOutput(command.runId, command.id),
     staleTime: running ? 0 : Infinity,
   };

@@ -28,6 +28,16 @@ describe('runningCommand', () => {
     expect(runningCommand(10, table)).toBe('pnpm dev');
   });
 
+  it('is null while the shell only has a process mid-exec or a finished child', () => {
+    const table = [
+      row(10, 1, '-bash', 50),
+      row(50, 10, '(bash)'),
+      row(51, 10, '<defunct>'),
+      row(52, 10, '[python3] <defunct>'),
+    ];
+    expect(runningCommand(10, table)).toBeNull();
+  });
+
   it('falls back to a direct child when nothing is in the foreground', () => {
     const table = [row(10, 1, '-zsh', 10), row(40, 10, '/bin/sleep 100'), row(41, 40, 'x')];
     expect(runningCommand(10, table)).toBe('sleep 100');

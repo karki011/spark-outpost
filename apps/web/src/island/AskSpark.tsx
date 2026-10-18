@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { Markdown } from '../chat/markdown/Markdown.tsx';
@@ -45,12 +45,14 @@ interface AskSparkProps {
 const HISTORY = 3;
 const CHEER_MS = 1_400;
 
+const assistantQuery = queryOptions({
+  queryKey: islandKeys.assistant,
+  queryFn: islandApi.assistant,
+  staleTime: Infinity,
+});
+
 function useAssistant() {
-  const id = useQuery({
-    queryKey: islandKeys.assistant,
-    queryFn: islandApi.assistant,
-    staleTime: Infinity,
-  });
+  const id = useQuery(assistantQuery);
   const detail = useQuery({
     queryKey: queryKeys.conversation(id.data ?? 'none'),
     queryFn: () => api.getConversation(id.data!),
@@ -119,14 +121,14 @@ export function AskSpark({ fast, voice, focusDelay, onOpenChat }: AskSparkProps)
 
   const ask = useMutation({
     mutationFn: async ({ id, question }: Waiting) => {
-      if (!assistant.id) throw new Error('Spark isn’t ready to answer yet.');
       setWaiting((list) => [...list, { id, question }]);
-      await queueApi.add(assistant.id, id, question);
+      const assistantId = await queryClient.ensureQueryData(assistantQuery);
+      await queueApi.add(assistantId, id, question);
+      return assistantId;
     },
     onError: (_error, { id }) => setWaiting((list) => list.filter((entry) => entry.id !== id)),
-    onSuccess: () => {
-      if (assistant.id)
-        void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(assistant.id) });
+    onSuccess: (assistantId) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(assistantId) });
     },
   });
 

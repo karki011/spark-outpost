@@ -144,6 +144,25 @@ test('keeps focus inside, closes on Escape and returns focus to the button', asy
   await expect(setupButton(page)).toBeFocused();
 });
 
+test('moves focus into Agent setup once a slow setup loads', async ({ page }) => {
+  let release = () => undefined as void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/api/projects/*/agent-config', async (route) => {
+    if (route.request().method() === 'GET') await held;
+    await route.continue();
+  });
+  await chatWithRepo(page);
+  await setupButton(page).click();
+  await expect(setup(page)).toBeFocused();
+  release();
+  await expect(card(page, 'Instructions')).toBeVisible();
+  await expect(setup(page).locator(':focus')).toHaveCount(1);
+  await page.keyboard.press('Shift+Tab');
+  await expect(setup(page).locator(':focus')).toHaveCount(1);
+});
+
 test('opens repo files in a preview from the empty chat and from Agent setup', async ({ page }) => {
   await chatWithRepo(page);
   const kit = page.getByRole('region', { name: 'What app gives the agents' });

@@ -14,16 +14,25 @@ import { LoadingBlob } from '../../ui/loading/LoadingBlob.tsx';
 const FOCUSABLE =
   'button:not([disabled]), input:not([disabled]), summary, [href], [tabindex]:not([tabindex="-1"])';
 
-function useFocusTrap(panelRef: RefObject<HTMLElement | null>, open: boolean) {
+function focusablesIn(panel: HTMLElement): HTMLElement[] {
+  return [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)];
+}
+
+function useFocusTrap(panelRef: RefObject<HTMLElement | null>, open: boolean, loaded: boolean) {
   useEffect(() => {
     const panel = panelRef.current;
     if (!open || !panel) return;
-    const focusables = () => [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)];
-    (focusables()[0] ?? panel).focus();
-    const onKeyDown = (event: KeyboardEvent) => wrapTabFocus(event, focusables);
+    (focusablesIn(panel)[0] ?? panel).focus();
+    const onKeyDown = (event: KeyboardEvent) => wrapTabFocus(event, () => focusablesIn(panel));
     panel.addEventListener('keydown', onKeyDown);
     return () => panel.removeEventListener('keydown', onKeyDown);
   }, [panelRef, open]);
+
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!open || !loaded || !panel || document.activeElement !== panel) return;
+    focusablesIn(panel)[0]?.focus();
+  }, [panelRef, open, loaded]);
 }
 
 function RepoSetup({ project, onOpen }: { project: Project; onOpen: (path: string) => void }) {
@@ -78,8 +87,9 @@ export function AgentSetup({ repos }: { repos: Project[] }) {
   const config = useAgentConfig(primary.id);
   const attention = config.data ? needsAttention(config.data) : false;
   const prompt = config.data ? trustPrompt(config.data) : null;
+  const shownConfig = useAgentConfig(shown.id);
   const openFile = useOpenFile();
-  useFocusTrap(panelRef, open);
+  useFocusTrap(panelRef, open, shownConfig.data !== undefined);
   const openForPrimary = () => {
     setChosenId(primary.id);
     setOpen(true);

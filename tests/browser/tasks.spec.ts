@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { animationsSettled } from './settle.ts';
 
 const PR_TITLE = 'spark-outpost/demo#42';
 
@@ -114,8 +115,10 @@ test('hovering the task card, work rows and sidebar rows does not move anything'
       );
   const steady = async (selector: string) => {
     await page.mouse.move(1, 1);
+    await animationsSettled(page);
     const before = await boxes(selector);
     await page.locator(selector).first().hover();
+    await animationsSettled(page);
     expect(await boxes(selector)).toEqual(before);
   };
 
