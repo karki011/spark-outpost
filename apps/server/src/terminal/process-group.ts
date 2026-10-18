@@ -16,6 +16,7 @@ const PS_LINE = /^(\d+)\s+(\d+)\s+(-?\d+)\s+(.*)$/;
 const INTERPRETERS = /^(node|bun|deno|python[\d.]*|ruby|perl)$/;
 const SCRIPT_EXTENSION = /\.(c?js|mjs|py|rb)$/;
 const COMMAND_MAX_LENGTH = 60;
+const NOT_A_COMMAND = /^(\(.*\)|<defunct>)$/;
 
 export function isAlive(pid: number): boolean {
   try {
@@ -57,7 +58,7 @@ export function commandLabel(args: string): string {
 
 export function runningCommand(root: number, table: readonly ProcessRow[]): string | null {
   const descendants = new Set(descendantsOf(root, table));
-  const running = table.filter((row) => descendants.has(row.pid));
+  const running = table.filter((row) => descendants.has(row.pid) && !NOT_A_COMMAND.test(row.args));
   const foreground = table.find((row) => row.pid === root)?.foregroundGroup;
   const main =
     running.find((row) => row.pid === foreground) ??
