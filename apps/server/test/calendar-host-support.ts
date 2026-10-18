@@ -133,13 +133,13 @@ export function fakeHost(): FakeHost {
   return host as unknown as FakeHost;
 }
 
-function occurrenceOf(host: FakeHost, eventId: string, start: string): HelperEvent | undefined {
+function occurrenceOf(host: HostState, eventId: string, start: string): HelperEvent | undefined {
   return host.events.find(
     (event) => event.id === eventId && Date.parse(event.start) === Date.parse(start),
   );
 }
 
-function detailOf(host: FakeHost, event: HelperEvent): HelperEventDetail {
+function detailOf(host: HostState, event: HelperEvent): HelperEventDetail {
   const extra = host.details.get(event.id) ?? {
     notes: '',
     attendees: [],
@@ -149,7 +149,7 @@ function detailOf(host: FakeHost, event: HelperEvent): HelperEventDetail {
   return { event, ...extra };
 }
 
-function saved(host: FakeHost, request: Extract<CalendarHostRequest, { op: 'save' }>) {
+function saved(host: HostState, request: Extract<CalendarHostRequest, { op: 'save' }>) {
   const { fields } = request;
   const before = request.eventId
     ? occurrenceOf(host, request.eventId, request.occurrence ?? '')
@@ -182,9 +182,11 @@ function saved(host: FakeHost, request: Extract<CalendarHostRequest, { op: 'save
   return { before: beforeDetail, after: detailOf(host, after) };
 }
 
-function removed(host: FakeHost, request: Extract<CalendarHostRequest, { op: 'remove' }>) {
+function removed(host: HostState, request: Extract<CalendarHostRequest, { op: 'remove' }>) {
   const found = occurrenceOf(host, request.eventId, request.start);
   if (!found) throw new CalendarHostError('not_found', 'That event is gone.');
   host.events = host.events.filter((event) => event !== found);
   return { removed: true };
 }
+
+type HostState = Pick<FakeHost, 'events' | 'details' | 'writes'>;
