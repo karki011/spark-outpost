@@ -186,3 +186,22 @@ test.describe('in a 24-hour locale', () => {
     await expect(clock(page).locator('.rail-clock-period')).toHaveCount(0);
   });
 });
+
+for (const locale of ['as-IN', 'el-GR', 'am-ET']) {
+  test.describe(`in the ${locale} locale`, () => {
+    test.use({ locale });
+
+    test('shrinks a long day period to fit inside the rail', async ({ page }) => {
+      await openAt(page);
+      await expect(clock(page).locator('.rail-clock-period')).toHaveCount(1);
+      const bar = await rail(page).boundingBox();
+      const face = clock(page).locator('.rail-clock-face');
+      const box = await face.boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(bar!.x);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(bar!.x + bar!.width);
+      const fits = await face.evaluate((element) => element.scrollWidth <= element.clientWidth);
+      expect(fits).toBe(true);
+      expect(await width(page, '.rail')).toBe(70);
+    });
+  });
+}

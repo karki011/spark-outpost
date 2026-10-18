@@ -3,7 +3,7 @@
   bottom: 0;
   z-index: 2;
   flex-shrink: 0;
-  max-width: 64px;
+  max-width: 68px;
   min-height: 24px;
   margin-top: 2px;
   padding: 3px 4px;
@@ -23,6 +23,12 @@
 
 button.rail-clock:hover {
   background: var(--raise);
+}
+
+.rail-clock-face {
+  display: block;
+  max-width: 60px;
+  overflow-x: clip;
 }
 
 .rail-clock-period {

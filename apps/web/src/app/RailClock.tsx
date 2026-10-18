@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { clockLabel, clockParts, clockTitle, type ClockPart } from './rail-clock-format.ts';
@@ -23,30 +23,49 @@ function FlipDigits({ text }: { text: string }) {
   );
 }
 
-function ClockFace({ parts }: { parts: ClockPart[] }) {
-  return parts.map((part, index) => {
-    if (part.kind === 'hour' || part.kind === 'minute') {
-      return <FlipDigits key={part.kind} text={part.text} />;
+const FULL_SIZE_PX = 12;
+const SMALLEST_SIZE_PX = 8;
+
+function useShrinkToFit(text: string) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    let size = FULL_SIZE_PX;
+    element.style.fontSize = '';
+    while (element.scrollWidth > element.clientWidth && size > SMALLEST_SIZE_PX) {
+      size -= 0.5;
+      element.style.fontSize = `${size}px`;
     }
-    if (part.kind === 'period') {
-      return (
-        <span key={index} className="rail-clock-period">
-          {part.text}
-        </span>
-      );
-    }
-    return <span key={index}>{part.text}</span>;
-  });
+  }, [text]);
+  return ref;
+}
+
+function ClockPartView({ part }: { part: ClockPart }) {
+  if (part.kind === 'hour' || part.kind === 'minute') return <FlipDigits text={part.text} />;
+  if (part.kind === 'period') return <span className="rail-clock-period">{part.text}</span>;
+  return <span>{part.text}</span>;
+}
+
+function ClockFace({ parts, decorative }: { parts: ClockPart[]; decorative: boolean }) {
+  const ref = useShrinkToFit(parts.map((part) => part.text).join(''));
+  return (
+    <span ref={ref} className="rail-clock-face" aria-hidden={decorative || undefined}>
+      {parts.map((part, index) => (
+        <ClockPartView key={part.kind === 'literal' ? index : part.kind} part={part} />
+      ))}
+    </span>
+  );
 }
 
 export function RailClock({ onOpen, onIntent }: RailClockProps) {
   const now = new Date(useMinuteClock());
   const { triggerProps, tooltip } = useTooltip(clockTitle(now), { side: 'top' });
-  const face = <ClockFace parts={clockParts(now)} />;
+  const parts = clockParts(now);
   if (!onOpen) {
     return (
       <time className="rail-clock" dateTime={now.toISOString()}>
-        {face}
+        <ClockFace parts={parts} decorative={false} />
       </time>
     );
   }
@@ -67,7 +86,7 @@ export function RailClock({ onOpen, onIntent }: RailClockProps) {
         }}
         onClick={onOpen}
       >
-        <span aria-hidden="true">{face}</span>
+        <ClockFace parts={parts} decorative />
       </button>
       {tooltip}
     </>
