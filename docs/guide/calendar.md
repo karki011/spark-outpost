@@ -12,8 +12,6 @@ You'll connect your calendars. About 2 minutes.
 2. Select **Connect** for macOS Calendar, or **Add Google account** per Google account.
 3. Per calendar, set **Include** and **Nudge**.
 
-Spark never changes events; no AI provider sees them.
-
 ## Google sign-in
 
 **Disconnect** revokes a sign-in. Until Spark's Google app is verified, sign-ins expire every 7 days: select **Sign in again**.
@@ -23,6 +21,13 @@ Spark never changes events; no AI provider sees them.
 - **Today**, or the clock below **Settings**, opens on **Month** and **Scheduled**; Enter opens **Day**. **Home** shows **Upcoming**.
 - Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before** or **Hold alerts during this**.
 
-**Join** opens 10 minutes before a video call. Before a meeting, Scout hops and offers **Join**, or **Choose** when meetings overlap; **⌘J** does the same. Focus blocks hold chimes.
+**Join** opens 10 minutes before a call. Before a meeting, Scout hops and offers **Join**, or **Choose** for overlaps; **⌘J** too. Focus blocks hold chimes.
+
+## Let agents use it
+
+1. On the Calendar card, turn on **Let agents read my calendar**.
+2. Turn on **Agents can edit** per calendar. For Google, select **Sign in again** if asked.
+
+Agents follow their [mode](spark-tools.md#when-actions-ask-first); cards show each change. Deletes, events with guests and shared calendars always ask. No invitations.
 
 **Next:** [Talk to Spark](voice.md)

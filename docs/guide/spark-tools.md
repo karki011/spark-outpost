@@ -31,10 +31,9 @@ Ticket, Slack and pull request tools need their connector; pull request and map 
 | Your Sparks, and the jobs and replies from an `@` mention  | `spark_sparks`, `spark_chat`                                                                                          |
 | The audit log, including actions that ran without review   | `spark_audit`                                                                                                         |
 | How Spark works, and this guide                            | `spark_guide`, `spark_docs`                                                                                           |
+| Your [calendar](calendar.md#let-agents-use-it)             | `spark_calendar`                                                                                                      |
 
 ## Tools that act
-
-Spark does what the agent proposes.
 
 | Action                                      | Tool                                                                                                    |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -48,6 +47,7 @@ Spark does what the agent proposes.
 | Use a saved sign-in (always asks)           | `spark_browser_sign_in`                                                                                 |
 | Use a [Mac app](mac-control.md)             | `spark_mac_apps`, `spark_mac_read`, `spark_mac_act`                                                     |
 | Keep one command running after the turn     | `spark_terminal_run`                                                                                    |
+| Change a calendar event                     | `spark_calendar_edit`                                                                                   |
 
 An MCP server card shows the exact command. Agents pass only variable and header names; you fill values in **Settings → MCP servers**.
 
@@ -74,15 +74,15 @@ Project chats get `spark_outpost_draft`; a Spark's job gets none. What another c
 
 ![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
 
-Edit any field, then confirm or select **Don't**. Browser and Mac tools report cards you allowed. The card shows the result, or why it failed with **Try again**. Every action is audited.
+Edit, then confirm or select **Don't**. The card shows the result, or why it failed with **Try again**. Every action is audited.
 
 ## Commands after the turn
 
-`spark_terminal_run` runs a command such as a dev server outside the agent's sandbox. Modes that don't ask start it, marked ran without review; others show **Allow once** or **Reject**.
+`spark_terminal_run` runs a command, such as a dev server, outside the sandbox. Modes that don't ask start it, marked ran without review; others show **Allow once** or **Reject**.
 
 [Protected paths](protected-paths.md) and push rules hold in every mode. Read-only turns and turns with no project are refused.
 
-The agent can read its output and stop it. Stopping the turn or quitting Spark stops it.
+The agent can read and stop it; so do stopping the turn and quitting Spark.
 
 ## What the tools never return
 
@@ -94,4 +94,4 @@ The agent can read its output and stop it. Stopping the turn or quitting Spark s
 | Secrets, API keys and tokens | Redacted before the agent sees them.                  |
 | Feedback comments            | Analytics give counts only.                           |
 
-After a tool reads tickets, Slack, other chats or spend, Spark notes [sends elsewhere](approvals.md#sending-data-out-after-reading-secrets).
+After private reads, Spark notes [sends elsewhere](approvals.md#sending-data-out-after-reading-secrets).
