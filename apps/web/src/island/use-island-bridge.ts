@@ -6,6 +6,7 @@ import {
   type IslandGeometry,
 } from '../desktop/desktop-bridge.ts';
 import { matchesShortcut } from '../desktop/shortcut-keys.ts';
+import { onScout, scoutRects } from './island-hover.ts';
 
 export const HIT_MARGIN = 14;
 const DRAG_START = 6;
@@ -44,13 +45,10 @@ function padded(rect: DOMRect): DOMRect {
   );
 }
 
-function restSize(
-  rects: readonly DOMRect[],
-  zone: readonly DOMRect[],
-): { width: number; height: number } | null {
+function restSize(rects: readonly DOMRect[]): { width: number; height: number } | null {
   const shown = rects.filter((rect) => rect.width > 0);
   if (shown.length === 0) return null;
-  const taken = [...shown.map(padded), ...zone];
+  const taken = shown.map(padded);
   const middle = window.innerWidth / 2;
   const reach = Math.max(...taken.map((rect) => Math.max(middle - rect.left, rect.right - middle)));
   return { width: 2 * reach, height: Math.max(...taken.map((rect) => rect.bottom)) };
@@ -59,7 +57,6 @@ function restSize(
 interface BridgeOptions {
   coreRects: () => DOMRect[];
   blobRects: () => DOMRect[];
-  zoneRects: (docked: boolean) => DOMRect[];
   peek: boolean;
   hovered: boolean;
   restKey: string;
@@ -89,10 +86,8 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
   const engage = useRef<() => void>(() => undefined);
   const resting = options.peek && geometry.docked && !geometry.notch;
   const latest = useRef(options);
-  const docked = useRef(geometry.docked);
   useEffect(() => {
     latest.current = options;
-    docked.current = geometry.docked;
   });
 
   useEffect(() => {
@@ -153,22 +148,16 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
     let lastProbe = -Infinity;
     let probeFrame = 0;
     let trailing: { x: number; y: number } | null = null;
-    let zone: DOMRect[] = [];
     engage.current = () => setInteractive(true);
     const probe = (x: number, y: number) => {
       lastProbe = performance.now();
       trailing = null;
-      const core = latest.current.coreRects();
-      const blobs = latest.current.blobRects();
-      const resting = latest.current.zoneRects(docked.current);
-      if (resting.length > 0) zone = resting;
-      else if (!hovering.current) zone = [];
-      const near = inside([...core, ...blobs], x, y);
-      const hit = near || inside(zone, x, y, 0);
-      setInteractive(near || (hit && latest.current.hovered));
-      const onCore = inside(core, x, y, 0);
-      const onBlob = inside(blobs, x, y, 0);
-      setHover(hit && (onCore || !onBlob));
+      const { coreRects, blobRects, islandRef, peek } = latest.current;
+      const core = coreRects();
+      const onBlob = onScout(islandRef.current, x, y);
+      const near = inside([...core, ...blobRects()], x, y, peek ? 0 : HIT_MARGIN);
+      setInteractive(onBlob || near);
+      setHover(onBlob || (!peek && inside(core, x, y)));
     };
     const onMove = (event: MouseEvent) => {
       if (dragging) {
@@ -232,6 +221,7 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
     const onDragOut = (event: DragEvent) => {
       if (event.type === 'drop' || !event.relatedTarget) setInteractive(false);
     };
+    const offPointer = desktop?.island.onPointer?.((point) => probe(point.x, point.y));
     document.addEventListener('mousemove', onMove);
     document.documentElement.addEventListener('mouseleave', onLeave);
     window.addEventListener('pointerdown', onDown);
@@ -243,6 +233,7 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
     document.documentElement.addEventListener('dragleave', onDragOut);
     return () => {
       cancelAnimationFrame(probeFrame);
+      offPointer?.();
       window.removeEventListener('dragenter', onDragIn);
       window.removeEventListener('drop', onDragOut);
       document.documentElement.removeEventListener('dragleave', onDragOut);
@@ -265,10 +256,9 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
     desktop.island.setRestSize(null);
     if (!resting || pointerIn) return;
     const timer = setTimeout(() => {
-      const { coreRects, blobRects, zoneRects } = latest.current;
-      desktop.island.setRestSize(
-        restSize([...coreRects(), ...blobRects()], zoneRects(docked.current)),
-      );
+      const { coreRects, blobRects, islandRef } = latest.current;
+      const rects = [...coreRects(), ...blobRects(), ...scoutRects(islandRef.current)];
+      desktop.island.setRestSize(restSize(rects));
     }, REST_DELAY_MS);
     return () => clearTimeout(timer);
   }, [desktop, resting, pointerIn, options.restKey]);

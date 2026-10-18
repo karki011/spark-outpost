@@ -18,6 +18,7 @@ export interface CompanionSettings {
   islandSize: IslandSize;
   islandSizePicked: boolean;
   autoExpand: boolean;
+  hideInShare: boolean;
   notify: boolean;
 }
 
@@ -34,6 +35,7 @@ export const DEFAULT_SETTINGS: CompanionSettings = {
   islandSize: 'full',
   islandSizePicked: false,
   autoExpand: true,
+  hideInShare: true,
   notify: true,
 };
 
@@ -144,6 +146,7 @@ export function parseSettings(raw: string | null): CompanionSettings {
     islandSize: size ?? DEFAULT_SETTINGS.islandSize,
     islandSizePicked: size !== null,
     autoExpand: savedFlag(record.autoExpand, DEFAULT_SETTINGS.autoExpand),
+    hideInShare: savedFlag(record.hideInShare, DEFAULT_SETTINGS.hideInShare),
     notify: savedFlag(record.notify, DEFAULT_SETTINGS.notify),
   };
 }

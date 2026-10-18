@@ -19,6 +19,7 @@ const native = vi.hoisted(() => {
     setAlwaysOnTop = vi.fn();
     setVisibleOnAllWorkspaces = vi.fn();
     setIgnoreMouseEvents = vi.fn();
+    setContentProtection = vi.fn();
     setFocusable = vi.fn();
     focus = vi.fn();
     blur = vi.fn();
@@ -40,6 +41,7 @@ const native = vi.hoisted(() => {
   return {
     window,
     displays: [] as DisplayInfo[],
+    cursor: { x: 0, y: 0 },
     events: new Map<string, () => void>(),
     BrowserWindow: vi.fn(function (options: { x: number; y: number }) {
       window.bounds = { ...window.bounds, x: options.x, y: options.y };
@@ -55,6 +57,7 @@ vi.mock('electron', () => ({
   screen: {
     getAllDisplays: () => native.displays,
     getPrimaryDisplay: () => native.displays[0],
+    getCursorScreenPoint: () => native.cursor,
     getDisplayNearestPoint: ({ x }: { x: number }) =>
       native.displays.find(
         (display) => x >= display.bounds.x && x < display.bounds.x + display.bounds.width,
@@ -71,6 +74,7 @@ vi.mock('./notch-probe.ts', () => ({
 
 const FLOATING_BLOB = floatingBlob(58);
 let size: IslandSize = 'full';
+let hideInShare = true;
 
 const internal: DisplayInfo = {
   id: 1,
@@ -94,6 +98,7 @@ function open(saved: IslandPosition = { docked: true }) {
     preload: '/app/preload.cjs',
     position: () => saved,
     size: () => size,
+    hideInShare: () => hideInShare,
     savePosition,
     onGone: vi.fn(),
     log,
@@ -109,11 +114,13 @@ const sentGeometry = () =>
 
 beforeEach(() => {
   size = 'full';
+  hideInShare = true;
   vi.useFakeTimers();
   vi.clearAllMocks();
   native.events.clear();
   native.window.events.clear();
   native.window.lowered = 0;
+  native.cursor = { x: 0, y: 0 };
   native.displays = [internal, external];
 });
 afterEach(() => vi.useRealTimers());
@@ -154,6 +161,69 @@ describe('native island window', () => {
     expect(native.window.bounds.x).toBe(origin.x + (ISLAND_WIDTH - 100) / 2);
     expect(savePosition).toHaveBeenCalledTimes(1);
     handle.destroy();
+  });
+
+  it('keeps itself out of screen sharing as the setting says, and follows a change at once', () => {
+    const { handle } = open();
+    expect(native.window.setContentProtection).toHaveBeenLastCalledWith(true);
+    handle.setHideInShare(false);
+    expect(native.window.setContentProtection).toHaveBeenLastCalledWith(false);
+    handle.setHideInShare(true);
+    expect(native.window.setContentProtection).toHaveBeenLastCalledWith(true);
+    handle.destroy();
+
+    hideInShare = false;
+    open().handle.destroy();
+    expect(native.window.setContentProtection).toHaveBeenLastCalledWith(false);
+  });
+
+  it('lets the pointer through a resting window on a flat display until the page asks for it', async () => {
+    native.displays = [external];
+    const { handle } = open();
+    await Promise.resolve();
+    handle.setRestSize({ width: 100, height: 40 });
+    expect(native.window.setIgnoreMouseEvents).toHaveBeenLastCalledWith(true, { forward: true });
+    handle.setInteractive(true);
+    expect(native.window.setIgnoreMouseEvents).toHaveBeenLastCalledWith(false, { forward: true });
+    handle.setInteractive(false);
+    expect(native.window.setIgnoreMouseEvents).toHaveBeenLastCalledWith(true, { forward: true });
+    handle.destroy();
+  });
+
+  it('passes the pointer over a resting window to the page while it lets the pointer through', async () => {
+    native.displays = [external];
+    const { handle } = open();
+    await Promise.resolve();
+    handle.setRestSize({ width: 100, height: 40 });
+    const pointers = () =>
+      native.window.webContents.send.mock.calls
+        .filter(([channel]) => channel === IPC.islandPointer)
+        .map(([, point]) => point);
+    const { x, y } = native.window.bounds;
+    native.cursor = { x: x + 50, y: y + 12 };
+    vi.advanceTimersByTime(120);
+    expect(pointers()).toEqual([{ x: 50, y: 12 }]);
+    native.cursor = { x: x - 5, y: y + 12 };
+    vi.advanceTimersByTime(120);
+    native.cursor = { x: x + 51, y: y + 13 };
+    vi.advanceTimersByTime(40);
+    expect(pointers()).toEqual([
+      { x: 50, y: 12 },
+      { x: 51, y: 13 },
+    ]);
+    handle.setInteractive(true);
+    native.cursor = { x: x + 20, y: y + 5 };
+    vi.advanceTimersByTime(200);
+    expect(pointers()).toHaveLength(2);
+    handle.setInteractive(false);
+    vi.advanceTimersByTime(40);
+    expect(pointers()).toHaveLength(3);
+    handle.setRestSize(null);
+    native.cursor = { x: x + 21, y: y + 6 };
+    vi.advanceTimersByTime(200);
+    expect(pointers()).toHaveLength(3);
+    handle.destroy();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('tells the page where the window really is when macOS puts it lower than asked', () => {

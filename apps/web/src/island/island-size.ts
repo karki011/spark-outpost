@@ -1,4 +1,4 @@
-import { ISLAND_BLOB, islandHoverReach, islandTuck } from '@spark-outpost/contracts';
+import { ISLAND_BLOB, islandTuck } from '@spark-outpost/contracts';
 import type { IslandSize } from '../desktop/desktop-bridge.ts';
 import { useCompanionStatus } from '../desktop/use-companion-status.ts';
 
@@ -18,11 +18,10 @@ const SMALL_BLOB = 38;
 export interface RestMetrics {
   blob: number;
   tuck: number;
-  reach: number;
 }
 
 function measure(blob: number): RestMetrics {
-  return { blob, tuck: islandTuck(blob), reach: islandHoverReach(blob) };
+  return { blob, tuck: islandTuck(blob) };
 }
 
 const METRICS = new Map(ISLAND_SIZES.map((option) => [option.id, measure(ISLAND_BLOB[option.id])]));

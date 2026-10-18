@@ -49,7 +49,7 @@ import {
 import { isSleepyTime, scoutMoodFor } from './island-mood.ts';
 import { homeSessions, quickStartProject } from './home-model.ts';
 import { useChimes, useIslandSound } from './island-sound.ts';
-import { restMetrics, useAutoExpandSetting, useIslandSize } from './island-size.ts';
+import { useAutoExpandSetting, useIslandSize } from './island-size.ts';
 import { opensByItself, useAutoExpand } from './auto-expand.ts';
 import { restsQuietly } from './island-fit.ts';
 import { IslandShell } from './IslandShell.tsx';
@@ -58,14 +58,7 @@ import { useAttachments } from '../chat/attachments/use-attachments.ts';
 import { useAddProject } from './use-add-project.ts';
 import { useIslandBridge, useSparkFocus } from './use-island-bridge.ts';
 import { useIslandDrop } from './use-island-drop.ts';
-import {
-  coreRects,
-  flatRowRects,
-  lineRects,
-  minuteOf,
-  useHoverIntent,
-  zoneRects,
-} from './island-hover.ts';
+import { coreRects, flatRowRects, lineRects, minuteOf, useHoverIntent } from './island-hover.ts';
 import { restLine, type RestLine } from './island-rest-line.ts';
 import { useSetAside } from './set-aside.ts';
 import { useFastState } from './use-fast-state.ts';
@@ -274,7 +267,6 @@ export function IslandApp() {
     focusable: (panel !== null && opener === 'user') || (focusSignal > 0 && view.kind === 'card'),
     coreRects: () => coreRects(islandRef.current),
     blobRects: () => [...flatRowRects(rowRef.current), ...lineRects(islandRef.current)],
-    zoneRects: (docked) => zoneRects(islandRef.current, restMetrics(size).reach, docked),
     peek: resting,
     hovered: hover,
     restKey: `${row.sessions.length}:${row.more}:${size}:${waiting}:${restsQuietly(mood)}:${line?.key}:${line?.more}:${calendarLine?.key}`,

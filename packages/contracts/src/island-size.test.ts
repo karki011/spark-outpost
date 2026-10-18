@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ISLAND_BLOB, ISLAND_SIZES, islandHoverReach, islandTuck } from './island-size.ts';
+import { ISLAND_BLOB, ISLAND_SIZES, islandTuck } from './island-size.ts';
 
 describe('island sizes', () => {
   it('ends with a size exactly twice the previous largest', () => {
@@ -16,13 +16,5 @@ describe('island sizes', () => {
       expect(shown).toBeGreaterThan(0.46);
       expect(shown).toBeLessThan(0.49);
     }
-  });
-
-  it('reaches about a third of the blob past it for hover, never under 14 or over 32', () => {
-    expect(ISLAND_SIZES.map((size) => islandHoverReach(ISLAND_BLOB[size]))).toEqual([
-      19, 14, 16, 19, 32,
-    ]);
-    expect(islandHoverReach(1)).toBe(14);
-    expect(islandHoverReach(400)).toBe(32);
   });
 });

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { pointAtScout, scoutBody } from './island-pointer.ts';
 
 const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
 
@@ -10,8 +11,7 @@ async function openIsland(page: Page) {
 }
 
 async function hoverIsland(page: Page) {
-  await page.mouse.move(640, 300);
-  await page.mouse.move(640, 8, { steps: 4 });
+  await pointAtScout(page);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
 }
 
@@ -23,9 +23,10 @@ async function leaveIsland(page: Page) {
 test('hovering waits a moment before opening and a moment before closing', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await openIsland(page);
-  await page.mouse.move(640, 300);
-  await page.mouse.move(640, 8);
-  await page.mouse.move(640, 300);
+  const body = await scoutBody(page);
+  await page.mouse.move(body.x, 300);
+  await page.mouse.move(body.x, body.y);
+  await page.mouse.move(body.x, 300);
   await page.waitForTimeout(400);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
 

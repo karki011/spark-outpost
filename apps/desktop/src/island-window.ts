@@ -29,6 +29,7 @@ import { revealGate } from './reveal-gate.ts';
 import { guardNavigation } from './window.ts';
 
 const READY_FALLBACK_MS = 8_000;
+const POINTER_POLL_MS = 40;
 
 export interface IslandWindow extends IslandHandle {
   owns(webContentsId: number): boolean;
@@ -37,6 +38,7 @@ export interface IslandWindow extends IslandHandle {
   setFocusable(on: boolean): void;
   drag(phase: DragPhase, pointer: Point): void;
   setRestSize(size: Size | null): void;
+  setHideInShare(on: boolean): void;
   sizeChanged(): void;
   sparkFocus(focused: boolean): void;
   geometry(): IslandGeometry;
@@ -47,6 +49,7 @@ interface IslandWindowOptions {
   preload: string;
   position: () => IslandPosition;
   size: () => IslandSize;
+  hideInShare: () => boolean;
   savePosition: (position: IslandPosition) => void;
   onGone: () => void;
   log: (line: string) => void;
@@ -74,6 +77,8 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   let requested: Rect | null = null;
   let logged = '';
   let sentTop = 0;
+  let pointerPoll: ReturnType<typeof setInterval> | null = null;
+  let lastPointer = '';
 
   window.setAlwaysOnTop(true, ISLAND_LEVEL);
   window.setVisibleOnAllWorkspaces(true, {
@@ -81,6 +86,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     skipTransformProcessType: true,
   });
   window.setIgnoreMouseEvents(true, { forward: true });
+  window.setContentProtection(options.hideInShare());
   guardNavigation(window, options.origin);
 
   const geometry = (): IslandGeometry =>
@@ -103,9 +109,36 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const resting = (): Size | null =>
     placed?.docked && !geometry().notch && !dragging ? rest : null;
 
+  const watchesPointer = () =>
+    !window.isDestroyed() && !interactive && resting() !== null && window.isVisible();
+
+  const stopPointerPoll = () => {
+    if (pointerPoll !== null) clearInterval(pointerPoll);
+    pointerPoll = null;
+    lastPointer = '';
+  };
+
+  const pollPointer = () => {
+    if (!watchesPointer()) {
+      stopPointerPoll();
+      return;
+    }
+    const cursor = screen.getCursorScreenPoint();
+    const bounds = window.getBounds();
+    const point = { x: cursor.x - bounds.x, y: cursor.y - bounds.y };
+    const inside =
+      point.x >= 0 && point.y >= 0 && point.x < bounds.width && point.y < bounds.height;
+    const key = inside ? `${point.x},${point.y}` : '';
+    if (key === lastPointer) return;
+    lastPointer = key;
+    if (inside) send(IPC.islandPointer, point);
+  };
+
   const applyMouse = () => {
     if (window.isDestroyed()) return;
-    window.setIgnoreMouseEvents(!(interactive || resting() !== null), { forward: true });
+    window.setIgnoreMouseEvents(!interactive, { forward: true });
+    if (!watchesPointer()) stopPointerPoll();
+    else pointerPoll ??= setInterval(pollPointer, POINTER_POLL_MS);
   };
 
   const report = (reason: string) => {
@@ -166,6 +199,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     window.showInactive();
     report(reason);
     settle();
+    applyMouse();
   };
   const reveal = revealGate(() => {
     if (!visibility.hidden()) showNow('shown');
@@ -187,6 +221,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     settle();
   });
   window.on('closed', () => {
+    stopPointerPoll();
     reveal.cancel();
     visibility.cancel();
     escape.arm(false);
@@ -235,6 +270,9 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     sparkFocus: (focused) => {
       visibility.sparkFocus(focused);
       send(IPC.islandSparkFocus, focused);
+    },
+    setHideInShare: (on) => {
+      if (!window.isDestroyed()) window.setContentProtection(on);
     },
     setRestSize: (size) => {
       const changed = JSON.stringify(size) !== JSON.stringify(rest);
