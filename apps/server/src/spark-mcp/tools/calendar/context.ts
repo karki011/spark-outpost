@@ -12,6 +12,7 @@ export const CALENDAR_UNTRUSTED_NOTE =
 const RUN_REFUSALS: Record<CalendarRefusedRun, string> = {
   no_shell: 'Calendar is only available in the Spark Outpost Mac app.',
   no_chat: 'Calendar tools belong to a chat, and this session has none.',
+  assistant: 'Ask Spark does not read the calendar through tools yet.',
   remote: 'Calendar tools are not available in a turn started from a paired device.',
   child: 'Calendar tools belong to the chat’s own turn; a child run gets none.',
 };

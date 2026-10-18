@@ -5,7 +5,15 @@ import { googleAccounts } from '../../../calendar/google/store.ts';
 import { calendarConnection, savedChoices } from '../../../calendar/store.ts';
 import type { SparkScope, SparkToolDeps } from '../../deps.ts';
 
-export type CalendarRefusedRun = 'no_shell' | 'no_chat' | 'remote' | 'child';
+export type CalendarRefusedRun = 'no_shell' | 'no_chat' | 'assistant' | 'remote' | 'child';
+
+async function assistantChat(db: Db, conversationId: string): Promise<boolean> {
+  const { rows } = await db.query(
+    'SELECT 1 FROM profiles WHERE assistant_conversation_id = $1 LIMIT 1',
+    [conversationId],
+  );
+  return rows.length > 0;
+}
 
 export async function calendarRunRefusal(
   deps: Pick<SparkToolDeps, 'db' | 'calendar'>,
@@ -13,6 +21,7 @@ export async function calendarRunRefusal(
 ): Promise<CalendarRefusedRun | null> {
   if (!deps.calendar) return 'no_shell';
   if (!scope.conversationId) return 'no_chat';
+  if (await assistantChat(deps.db, scope.conversationId)) return 'assistant';
   if (!scope.runId) return null;
   if (await runFromDevice(deps.db, scope.runId)) return 'remote';
   if (await childRun(deps.db, scope.runId)) return 'child';

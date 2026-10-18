@@ -178,12 +178,14 @@ Results are untrusted `calendar_evidence`; lists carry no notes or names. A read
 
 **Built in 1b (2026-10-18).**
 
-- **Offered** (`spark-mcp/tools/calendar/offered.ts`): both need the calendar connected (EventKit with the Mac host, or a Google account) and a run that is not from a paired device and not a child run, checked at grant and at every call. The reader needs **Let agents read my calendar**; the editor needs some writable calendar with **Agents can edit** and a turn that may act. Ask turns get the reader only.
+- **Offered** (`spark-mcp/tools/calendar/offered.ts`): both need the calendar connected (EventKit with the Mac host, or a Google account) and a run that is not from a paired device and not a child run, checked at grant and at every call. The reader needs **Let agents read my calendar**; the editor needs some writable calendar with **Agents can edit** and a turn that may act. Ask turns get the reader only. The Spark assistant's session (Ask Spark) gets neither until its island card is built. `calendars` lists only included calendars and those with **Agents can edit**.
 - **The read card** is `calendar_read`, **Allow for this chat**, remembered for the chat like `read_page`; the mode can skip it as for any Spark action.
 - **The edit card** is `calendar_edit`, a `proposeAction` card with the change before and after, the calendar, "This occurrence only" or "This and future", and the floor reasons (`delete`, `others`, `shared`); a floor reason sets `alwaysAsk`. The follow-through re-reads the event before writing and changes nothing if its title, times or people changed since the card ("The event changed after the card was shown"), or if a floor reason appears that the card did not show. The card stores the change it shows (titles, times, a notes excerpt) in the approval, as other cards do; the audit holds only ids, the calendar key and the names of the fields changed.
 - **Both processes reach the calendar**: the chat worker and the API (Terminal sessions) each connect the EventKit bridge and a non-polling Google client (`calendar/agent/google-client.ts`) built from the keychain token, `oauth.ts` refresh and `api.ts`; it never marks an account **Sign in again** itself. A Google write notifies `calendar_written`, and the API's Google source then polls at once.
 - **Google writes** send `sendUpdates=none`; **This and future** is refused on Google, since a series split is not one call. Inviting, adding attendees and RSVP are not offered.
-- **Paired devices** can't answer a calendar card (`macOnlyCard`).
+- **Paired devices** can't answer a calendar card (`macOnlyCard`); a device following the chat sees the card's text, as it sees the chat.
+- **Sends**: a write to a synced calendar after a read is noted as `spark/egress` with the subject "a change on <calendar>", never the event's title.
+- **Accept edits** counts the message as asking for `calendar_edit` when an edit verb comes near a calendar noun, today, tomorrow or a time ("create Spark 1b test tomorrow at 15:00"); "move it" alone still shows a card.
 - **Not built**: `calendars` filtering by search beyond titles, `alert` and `focus` as separate actions (an alarm is a field of `create` and `update`), Ask Spark's island card for the reader.
 
 ## Nudges and focus

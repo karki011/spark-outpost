@@ -93,7 +93,9 @@ async function oneEvent(calendar: AgentCalendar, args: ReadArgs) {
 
 async function answer(calendar: AgentCalendar, args: ReadArgs) {
   if (args.action === 'calendars') {
-    return { calendars: (await savedChoices(calendar.db, calendar.workspaceId)).map(calendarRow) };
+    const choices = await savedChoices(calendar.db, calendar.workspaceId);
+    const shown = choices.filter((choice) => choice.include || choice.agentsEdit);
+    return { calendars: shown.map(calendarRow) };
   }
   if (args.action === 'event') return oneEvent(calendar, args);
   return events(calendar, args);

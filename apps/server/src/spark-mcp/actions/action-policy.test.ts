@@ -53,6 +53,8 @@ describe('explicitlyAsked', () => {
     ['calendar_read', 'am I free at 3?', true],
     ['calendar_read', 'fix the calendar view bug', false],
     ['calendar_edit', 'add an event called Spark 1b test tomorrow at 15:00', true],
+    ['calendar_edit', 'create "Spark 1b test" tomorrow at 15:00 on Spark Test', true],
+    ['calendar_edit', 'move the header 10px to the left', false],
     ['calendar_edit', 'move the standup to 11', false],
     ['calendar_edit', 'move that event to 17:00', true],
     ['calendar_edit', 'delete the meeting', true],

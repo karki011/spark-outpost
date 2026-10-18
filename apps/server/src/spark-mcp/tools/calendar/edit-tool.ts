@@ -157,6 +157,7 @@ async function edit(args: EditArgs, context: SparkToolContext) {
   const result = await proposeAction(context, action, {
     alwaysAsk: action.floor.length > 0,
     sendsTo: action.calendar.synced ? `to the calendar ${action.calendar.title}` : null,
+    sendSubject: `a change on ${action.calendar.title}`,
     confirmName: calendarEditConfirm(action),
   });
   auditCalendar(context, {

@@ -197,6 +197,7 @@ function finished(approval: Approval) {
 export interface ProposeOptions {
   alwaysAsk?: boolean;
   sendsTo?: string | null;
+  sendSubject?: string;
   confirmName?: string;
 }
 
@@ -238,7 +239,7 @@ export async function proposeAction(
   if (target && observed.length > 0) {
     run.scope.observations?.sentOut({
       toolCallId: null,
-      subject: card.title,
+      subject: options.sendSubject ?? card.title,
       target,
       observed,
       approvalId: card.id,

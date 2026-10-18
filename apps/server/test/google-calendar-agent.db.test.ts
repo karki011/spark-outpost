@@ -113,6 +113,27 @@ describe('Google calendars through the agent tools', () => {
     });
   });
 
+  it('flags a write to Google after a read as a send, without the title', async () => {
+    const { key } = await connectGoogle();
+    await h.read();
+    const created = await h.edit({
+      action: 'create',
+      calendar: key,
+      title: 'Secret offsite',
+      start: tomorrowAt(15),
+      end: tomorrowAt(16),
+    });
+    expect(created.facts.outcome).toBe('done');
+    expect(h.audited('spark/egress')).toEqual([
+      expect.objectContaining({
+        outcome: 'ran',
+        subject: `a change on ${EMAIL}`,
+        observed: ['calendar events'],
+      }),
+    ]);
+    expect(JSON.stringify(h.recorded.audited)).not.toContain('Secret offsite');
+  });
+
   it('asks before a delete even in Auto, then deletes', async () => {
     putReview();
     const { account, key } = await connectGoogle();

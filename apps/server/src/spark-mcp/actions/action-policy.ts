@@ -68,7 +68,7 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   ),
   calendar_edit: asked(
     'add|create|schedule|book|put|move|reschedule|shift|change|update|rename|edit|delete|remove|cancel|set',
-    'calendar|events?|meetings?|appointments?|blocks?|reminders?|alarms?|alerts?',
+    'calendar|events?|meetings?|appointments?|blocks?|reminders?|alarms?|alerts?|today|tomorrow|tonight|\\d{1,2}:\\d{2}|\\d{1,2} ?(?:am|pm)',
   ),
 };
 

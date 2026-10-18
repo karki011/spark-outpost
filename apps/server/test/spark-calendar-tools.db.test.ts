@@ -74,6 +74,17 @@ describe('which sessions get the calendar tools', () => {
     expect(await h.toolNames()).toEqual([]);
   });
 
+  it('gives the Ask Spark session no calendar tools', async () => {
+    await h.newChat('auto');
+    await h.t.db.query(
+      `INSERT INTO profiles (workspace_id, assistant_conversation_id) VALUES ($1, $2)
+       ON CONFLICT (workspace_id) DO UPDATE SET assistant_conversation_id = $2`,
+      [h.t.workspaceId, h.chat.conversationId],
+    );
+    await h.start({ mode: 'auto', scope: { readOnly: true } });
+    expect(await h.toolNames()).toEqual([]);
+  });
+
   it('never lets a paired device answer a calendar card', async () => {
     await h.start({ mode: 'default' });
     const reading = h.read();
@@ -133,6 +144,13 @@ describe('what a read returns', () => {
     const tooLong = await h.read({ action: 'events', from: '2026-01-01', to: '2026-04-01' });
     expect(tooLong.result.isError).toBe(true);
     expect(tooLong.text).toContain('62 days');
+  });
+
+  it('lists only calendars that are included or editable', async () => {
+    await h.start({ mode: 'auto', edit: [] });
+    await h.t.db.query(`UPDATE calendar_calendars SET include = false WHERE calendar_id = 'fam-1'`);
+    const read = await h.read({ action: 'calendars' });
+    expect((read.facts.calendars as { title: string }[]).map((row) => row.title)).toEqual(['Work']);
   });
 
   it('keeps titles and notes out of the audit', async () => {
