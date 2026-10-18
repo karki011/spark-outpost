@@ -117,7 +117,7 @@ describe('calendar cards', () => {
 describe('Google scopes', () => {
   it('reads with either events scope and edits only with calendar.events', () => {
     expect(googleScopesRead([GOOGLE_CALENDAR_LIST_SCOPE, GOOGLE_EVENTS_READ_SCOPE])).toBe(true);
-    expect(googleScopesRead([GOOGLE_CALENDAR_LIST_SCOPE, GOOGLE_EVENTS_EDIT_SCOPE])).toBe(false);
+    expect(googleScopesRead([GOOGLE_CALENDAR_LIST_SCOPE, GOOGLE_EVENTS_EDIT_SCOPE])).toBe(true);
     expect(googleScopesRead([GOOGLE_EVENTS_EDIT_SCOPE])).toBe(false);
     expect(googleScopesEdit([GOOGLE_EVENTS_READ_SCOPE])).toBe(false);
     expect(googleScopesEdit([GOOGLE_EVENTS_EDIT_SCOPE])).toBe(true);

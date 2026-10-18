@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import type { Queryable } from '../../persistence/db.ts';
+import { withTransaction, type Db, type Queryable } from '../../persistence/db.ts';
+import { lockChoices } from '../store.ts';
 
 export interface GoogleAccountRow {
   id: string;
@@ -51,25 +52,30 @@ export async function saveGoogleAccount(
 }
 
 export async function setGoogleAgentsEdit(
-  db: Queryable,
+  db: Db,
   workspaceId: string,
   account: GoogleAccountRow,
   editCalendar: string | null,
-): Promise<void> {
-  if (!account.canEdit) {
-    await db.query(
-      `UPDATE calendar_calendars SET agents_edit = false
-       WHERE workspace_id = $1 AND google_account_id = $2 AND agents_edit`,
-      [workspaceId, account.id],
-    );
-    return;
-  }
-  if (!editCalendar) return;
-  await db.query(
-    `UPDATE calendar_calendars SET agents_edit = true
-     WHERE workspace_id = $1 AND google_account_id = $2 AND key = $3 AND writable`,
-    [workspaceId, account.id, editCalendar],
-  );
+): Promise<{ turnedOff: boolean }> {
+  return withTransaction(db, async (client) => {
+    await lockChoices(client, workspaceId, { googleAccountId: account.id });
+    if (!account.canEdit) {
+      const { rowCount } = await client.query(
+        `UPDATE calendar_calendars SET agents_edit = false
+         WHERE workspace_id = $1 AND google_account_id = $2 AND agents_edit`,
+        [workspaceId, account.id],
+      );
+      return { turnedOff: (rowCount ?? 0) > 0 };
+    }
+    if (editCalendar) {
+      await client.query(
+        `UPDATE calendar_calendars SET agents_edit = true
+         WHERE workspace_id = $1 AND google_account_id = $2 AND key = $3 AND writable`,
+        [workspaceId, account.id, editCalendar],
+      );
+    }
+    return { turnedOff: false };
+  });
 }
 
 export async function googleEditBlocked(

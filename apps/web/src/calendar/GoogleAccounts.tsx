@@ -180,8 +180,8 @@ export function GoogleAccounts({ status, accounts, onChange }: GoogleAccountsPro
     setStarted(request);
     start.mutate(request);
   };
-  const failure = flow.status === 'failed' ? flow.message : null;
-  const failedFor = started?.accountId ?? null;
+  const flowNote = waiting ? null : flow.message;
+  const noteFor = started?.accountId ?? null;
   const remove = (accountId: string) => {
     setNote(null);
     disconnect.mutate(accountId, { onSuccess: (result) => setNote(result.message) });
@@ -195,7 +195,7 @@ export function GoogleAccounts({ status, accounts, onChange }: GoogleAccountsPro
           account={account}
           calendars={accounts.find((item) => item.id === `google:${account.id}`)}
           busy={disconnect.isPending || waiting}
-          note={failedFor === account.id ? failure : null}
+          note={noteFor === account.id ? flowNote : null}
           onChange={onChange}
           onSignIn={(editCalendar) => begin({ accountId: account.id, editCalendar })}
           onDisconnect={() => remove(account.id)}
@@ -215,9 +215,9 @@ export function GoogleAccounts({ status, accounts, onChange }: GoogleAccountsPro
             onCancel={() => cancel.mutate()}
           />
         )}
-        {failure && failedFor === null && (
+        {flowNote && noteFor === null && (
           <p className="gh-err" role="alert">
-            {failure}
+            {flowNote}
           </p>
         )}
         {note && (

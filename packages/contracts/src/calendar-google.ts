@@ -15,7 +15,9 @@ export const GOOGLE_CALENDAR_SCOPES = [
 export const GOOGLE_EDIT_SCOPES = [...GOOGLE_CALENDAR_SCOPES, GOOGLE_EVENTS_EDIT_SCOPE] as const;
 
 export function googleScopesRead(scopes: readonly string[]): boolean {
-  return scopes.includes(GOOGLE_CALENDAR_LIST_SCOPE) && scopes.includes(GOOGLE_EVENTS_READ_SCOPE);
+  const granted = new Set(scopes);
+  const events = granted.has(GOOGLE_EVENTS_READ_SCOPE) || granted.has(GOOGLE_EVENTS_EDIT_SCOPE);
+  return granted.has(GOOGLE_CALENDAR_LIST_SCOPE) && events;
 }
 
 export function googleScopesEdit(scopes: readonly string[]): boolean {
@@ -24,6 +26,9 @@ export function googleScopesEdit(scopes: readonly string[]): boolean {
 
 export const GOOGLE_EDIT_DECLINED =
   'Google didn’t allow Spark to change events, so Agents can edit stays off.';
+
+export const GOOGLE_EDIT_LOST =
+  'Google no longer lets Spark change events on this account, so Agents can edit is off.';
 
 export const GOOGLE_EDIT_NEEDS_GRANT =
   'Allow Spark to change events on this Google account first: turn on Agents can edit and finish in Google.';

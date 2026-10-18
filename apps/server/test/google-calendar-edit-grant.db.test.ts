@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   GOOGLE_CALENDAR_LIST_SCOPE,
   GOOGLE_EDIT_DECLINED,
+  GOOGLE_EDIT_LOST,
   GOOGLE_EDIT_NEEDS_GRANT,
   GOOGLE_EVENTS_EDIT_SCOPE,
   GOOGLE_EVENTS_READ_SCOPE,
@@ -86,7 +87,10 @@ describe('Allowing agents to edit a Google calendar', () => {
     expect((await google()).calendar.agentsEdit).toBe(true);
     h.fake.forgetGrants(SUBJECT);
     h.fake.grantedScopes = READ_ONLY;
-    expect((await signIn(h, accountId)).status).toBe('connected');
+    expect(await signIn(h, accountId)).toMatchObject({
+      status: 'connected',
+      message: GOOGLE_EDIT_LOST,
+    });
     const after = await google();
     expect(after.account.canEdit).toBe(false);
     expect(after.calendar.agentsEdit).toBe(false);
@@ -95,7 +99,7 @@ describe('Allowing agents to edit a Google calendar', () => {
   it('keeps editing allowed when the user signs in again later', async () => {
     const { accountId, key } = await connected();
     await signIn(h, accountId, key);
-    expect((await signIn(h, accountId)).status).toBe('connected');
+    expect(await signIn(h, accountId)).toMatchObject({ status: 'connected', message: null });
     const after = await google();
     expect(after.account.canEdit).toBe(true);
     expect(after.calendar.agentsEdit).toBe(true);

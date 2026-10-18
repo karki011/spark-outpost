@@ -1,6 +1,7 @@
 import {
   GOOGLE_CALENDAR_SCOPES,
   GOOGLE_EDIT_DECLINED,
+  GOOGLE_EDIT_LOST,
   GOOGLE_EDIT_SCOPES,
   googleScopesEdit,
   googleScopesRead,
@@ -34,8 +35,12 @@ export class GoogleAccountMismatch extends Error {
 
 export interface GoogleSignInDeps extends GoogleOAuthDeps {
   now: () => number;
-  connect(grant: GoogleGrant, request: GoogleSignInRequest): Promise<void>;
+  connect(grant: GoogleGrant, request: GoogleSignInRequest): Promise<Connected>;
   discard(grant: GoogleGrant): Promise<void>;
+}
+
+export interface Connected {
+  editTurnedOff: boolean;
 }
 
 export interface GoogleSignInRequest {
@@ -114,9 +119,9 @@ export function createGoogleSignIn(deps: GoogleSignInDeps): GoogleSignIn {
         flow = ended('failed', GOOGLE_SCOPES_MISSING);
         return;
       }
-      await deps.connect(grant, waiting.request);
-      const declined = editing && !googleScopesEdit(grant.scopes);
-      flow = declined ? ended('failed', GOOGLE_EDIT_DECLINED) : ended('connected', null);
+      const connected = await deps.connect(grant, waiting.request);
+      if (editing && !googleScopesEdit(grant.scopes)) flow = ended('failed', GOOGLE_EDIT_DECLINED);
+      else flow = ended('connected', connected.editTurnedOff ? GOOGLE_EDIT_LOST : null);
     } catch (error) {
       const message =
         error instanceof GoogleAuthError || error instanceof GoogleAccountMismatch

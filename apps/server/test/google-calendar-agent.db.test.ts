@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { GOOGLE_CALENDAR_LIST_SCOPE, GOOGLE_EVENTS_EDIT_SCOPE } from '@spark-outpost/contracts';
 import { createGoogleAgentClient } from '../src/calendar/agent/google-client.ts';
 import { FAKE_GOOGLE_CLIENT_ID, FAKE_GOOGLE_CLIENT_SECRET } from './fake-google-calendar.ts';
 import {
@@ -207,5 +208,21 @@ describe('Google calendars through the agent tools', () => {
     expect(refused.text).toContain('Agents can edit');
     expect(g.fake.writes).toEqual([]);
     expect((await h.read()).result.isError).toBeFalsy();
+  });
+
+  it('counts the editing scope as reading when the read box was left unticked', async () => {
+    putReview();
+    await signIn(g);
+    g.fake.forgetGrants(SUBJECT);
+    g.fake.grantedScopes = [
+      'openid',
+      'email',
+      GOOGLE_CALENDAR_LIST_SCOPE,
+      GOOGLE_EVENTS_EDIT_SCOPE,
+    ];
+    const { account } = await connectGoogle();
+    expect(account).toMatchObject({ state: 'ready', canEdit: true });
+    const titles = ((await h.read()).facts.events as { title: string }[]).map((e) => e.title);
+    expect(titles).toContain('Design review');
   });
 });

@@ -25,6 +25,7 @@ import {
   GoogleAccountMismatch,
   createGoogleSignIn,
   type GoogleSignIn,
+  type Connected,
   type GoogleSignInRequest,
 } from './sign-in.ts';
 import {
@@ -212,7 +213,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     await revokeGoogleToken({ fetch: deps.fetch, client: client! }, grant.refreshToken);
   }
 
-  async function connect(grant: GoogleGrant, request: GoogleSignInRequest): Promise<void> {
+  async function connect(grant: GoogleGrant, request: GoogleSignInRequest): Promise<Connected> {
     const wanted = request.accountId ? accounts.get(request.accountId) : undefined;
     if (wanted && wanted.row.subject !== grant.subject) {
       await discard(grant);
@@ -224,7 +225,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       email: grant.email,
       canEdit: googleScopesEdit(grant.scopes),
     });
-    await setGoogleAgentsEdit(deps.db, deps.workspaceId, row, request.editCalendar);
+    const edit = await setGoogleAgentsEdit(deps.db, deps.workspaceId, row, request.editCalendar);
     const account = accounts.get(row.id) ?? liveAccount(row);
     account.row = row;
     account.accessToken = grant.accessToken;
@@ -235,6 +236,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     ranges?.clear();
     emit();
     void poll(row.id);
+    return { editTurnedOff: edit.turnedOff };
   }
 
   async function reconcile(): Promise<void> {
