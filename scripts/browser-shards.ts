@@ -140,7 +140,16 @@ async function tidyAfterRun(plans: ShardPlan[]): Promise<void> {
   for (const plan of plans) {
     const decision = inspectSlot(plan, ROOT);
     await stopLeftovers(plan, { stop: decision.stop, blocked: [] });
-    rmSync(slotTmpdir(plan.slot), { recursive: true, force: true });
+    removeSlotTmpdir(plan.slot);
+  }
+}
+
+function removeSlotTmpdir(slot: number): void {
+  const folder = slotTmpdir(slot);
+  try {
+    rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  } catch (error) {
+    console.warn(`[slot ${slot}] Could not remove ${folder}: ${(error as Error).message}`);
   }
 }
 

@@ -1,7 +1,7 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { readCalendarClock } from './fake-calendar-clock.ts';
+import { apiNow, matchApiClock } from './api-clock.ts';
 import { resetTestDatabase } from './database.ts';
 import { FAKE_CALENDAR_FAR_DAYS, FAKE_CALENDAR_STATE } from './stub-config.ts';
 
@@ -10,7 +10,6 @@ test.describe.configure({ mode: 'serial' });
 
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
-const fakeNow = () => Date.now() + readCalendarClock(FAKE_CALENDAR_STATE);
 
 function dayKey(at: number): string {
   const day = new Date(at);
@@ -34,11 +33,9 @@ async function openToday(page: Page) {
 
 test.beforeEach(async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
-  const anchor = Math.floor(fakeNow() / MINUTE) * MINUTE;
+  const anchor = Math.floor(apiNow() / MINUTE) * MINUTE;
   writeFileSync(FAKE_CALENDAR_STATE, JSON.stringify({ anchor }));
-  if (readCalendarClock(FAKE_CALENDAR_STATE) !== 0) {
-    await page.clock.install({ time: new Date(fakeNow()) });
-  }
+  await matchApiClock(page);
   const response = await page.request.post('/api/calendar/connect', { data: {} });
   expect(response.ok()).toBe(true);
 });
@@ -55,7 +52,7 @@ test('opens on the month with today selected and its events in the Scheduled rai
     'aria-checked',
     'true',
   );
-  const now = fakeNow();
+  const now = apiNow();
   await expect(cell(page, now)).toHaveAttribute('aria-current', 'date');
   await expect(cell(page, now)).toHaveAttribute('aria-selected', 'true');
   await expect(cell(page, now)).toHaveAttribute('tabindex', '0');
@@ -78,7 +75,7 @@ test('moves across days with the arrows, crosses months and opens a day with Ent
   page,
 }) => {
   await openToday(page);
-  const now = fakeNow();
+  const now = apiNow();
   await cell(page, now).focus();
   await page.keyboard.press('ArrowRight');
   await expect(cell(page, now + DAY)).toBeFocused();
@@ -107,7 +104,7 @@ test('moves across days with the arrows, crosses months and opens a day with Ent
 
 test('steps the rail by day and opens the event popover, which Esc closes', async ({ page }) => {
   await openToday(page);
-  const now = fakeNow();
+  const now = apiNow();
   await scheduled(page).getByRole('button', { name: 'Next day' }).click();
   await expect(cell(page, now + DAY)).toHaveAttribute('aria-selected', 'true');
   await scheduled(page).getByRole('button', { name: 'Previous day' }).click();
@@ -143,7 +140,7 @@ test('steps the rail by day and opens the event popover, which Esc closes', asyn
 
 test('reads past months through the range and mutes past days', async ({ page }) => {
   await openToday(page);
-  const now = fakeNow();
+  const now = apiNow();
   const past = now - FAKE_CALENDAR_FAR_DAYS * DAY;
   if (new Date(past).getMonth() !== new Date(now).getMonth()) {
     const range = page.waitForResponse((response) =>
@@ -158,7 +155,7 @@ test('reads past months through the range and mutes past days', async ({ page })
   const review = scheduled(page).locator('.rl-card', { hasText: 'Quarterly review' });
   await expect(review).toHaveAttribute('data-past');
   await today(page).getByRole('button', { name: 'Today', exact: true }).click();
-  await expect(cell(page, fakeNow())).toHaveAttribute('aria-selected', 'true');
+  await expect(cell(page, apiNow())).toHaveAttribute('aria-selected', 'true');
 });
 
 test('keeps Day across a reload in the same session', async ({ page }) => {

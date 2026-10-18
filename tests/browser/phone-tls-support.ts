@@ -14,7 +14,8 @@ import {
   type Page,
 } from '@playwright/test';
 import { FAKE_TAILSCALE_HOST } from '../../apps/server/test/fake-tailscale.ts';
-import { PHONE_ADDRESS, startPairing } from './phone-support.ts';
+import { matchApiClock } from './api-clock.ts';
+import { PHONE_ADDRESS, startPairing, turnOn } from './phone-support.ts';
 import { API_PORT } from './stub-config.ts';
 
 export const ELSEWHERE = 'https://elsewhere.example';
@@ -127,15 +128,13 @@ export async function signedInAs(page: Page): Promise<string | null> {
 }
 
 export async function openPhonePage(page: Page): Promise<Locator> {
+  await matchApiClock(page);
   await page.goto('/');
   await page
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button', { name: 'Remote control' })
     .click();
-  await page.getByRole('switch', { name: 'Remote control' }).click();
-  await expect(page.getByRole('heading', { name: 'Remote control is on' })).toBeVisible({
-    timeout: 20_000,
-  });
+  await turnOn(page);
   return page.getByRole('main');
 }
 

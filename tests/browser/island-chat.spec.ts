@@ -115,9 +115,8 @@ test('Sessions lists every active chat and opens one inline to read, approve and
   const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
   await expect(waiting).toContainText('npm test');
   await shot(page, 'inline');
-  const frame = (await island(page).boundingBox())!;
-  expect(frame.y).toBe(0);
-  expect(frame.width).toBeGreaterThan(640);
+  await expect.poll(async () => (await island(page).boundingBox())!.width).toBeGreaterThan(640);
+  expect((await island(page).boundingBox())!.y).toBe(0);
 
   await waiting.getByRole('button', { name: 'Allow', exact: true }).click();
   await expect

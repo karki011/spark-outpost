@@ -115,13 +115,11 @@ test('adds quotes and a comment from a reply, then sends them as quotes', async 
     .getByText(/^Deploy plan/)
     .click();
   await expect.poll(() => highlightCount(page, 'spark-annotation')).toBe(1);
-  const mark = await page.evaluate(() => {
+  await page.evaluate(() => {
     const [range] = Array.from(CSS.highlights.get('spark-annotation')!) as Range[];
     range!.startContainer.parentElement!.scrollIntoView({ block: 'center' });
-    const rect = range!.getBoundingClientRect();
-    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
   });
-  await page.evaluate(() => new Promise(requestAnimationFrame));
+  const mark = await restingMark(page);
   await page.mouse.move(mark.x, mark.y);
   await expect(page.getByRole('tooltip')).toContainText('Why before the rollout?');
   await page.mouse.click(mark.x, mark.y);
@@ -207,3 +205,24 @@ test('the shortcut adds a selection and a selection across messages stays in one
   );
   await expect(sent.locator('.msg-quote-text')).toHaveText('What changes if we skip it?');
 });
+
+function markCentre(page: Page) {
+  return page.evaluate(() => {
+    const [range] = Array.from(CSS.highlights.get('spark-annotation')!) as Range[];
+    const rect = range!.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  });
+}
+
+async function restingMark(page: Page) {
+  let last = '';
+  await expect
+    .poll(async () => {
+      const now = JSON.stringify(await markCentre(page));
+      const same = now === last;
+      last = now;
+      return same;
+    })
+    .toBe(true);
+  return markCentre(page);
+}

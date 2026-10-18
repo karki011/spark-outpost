@@ -71,7 +71,7 @@ function Mirror({
   const searching = !detail.isSuccess || (!settled && catchingUp);
   const running = command?.status === 'running';
   const loaded = useQuery({
-    queryKey: commandOutputKey(mirror.runId, mirror.commandId),
+    queryKey: commandOutputKey(mirror.runId, mirror.commandId, running),
     queryFn: () => fetchCommandOutput(mirror.runId, mirror.commandId),
     staleTime: running ? 0 : Infinity,
     enabled: needsSavedOutput(command),

@@ -392,6 +392,9 @@ test('the Map has no serious colour-contrast or ARIA issues in any theme', async
     .getByRole('option', { name: /client\.ts/ })
     .first()
     .click();
+  await expect(page.locator('.map-stage [aria-live="polite"]').first()).toContainText(
+    /Found \S*client\.ts/,
+  );
   const { x, y, width, height } = (await page.locator('.map-stage').boundingBox())!;
   await page.mouse.click(x + width / 2, y + height / 2);
   await expect(page.getByRole('dialog', { name: 'client.ts' })).toBeVisible();

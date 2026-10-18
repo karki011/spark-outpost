@@ -5,6 +5,7 @@ import type { RemoteSession, RemoteSwitches } from '../../packages/contracts/src
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import { openTestDb } from './database.ts';
 import { openPhone, resetPhone, turnOn, WIDE } from './phone-support.ts';
+import { animationsSettled } from './settle.ts';
 
 const PHONE = { width: 390, height: 844 };
 const KEY =
@@ -119,6 +120,7 @@ test('a paired phone turns its notifications on and off', async ({ page }) => {
   const toggle = card(page).getByRole('switch', { name: TOGGLE });
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
   await expect(toggle).toBeEnabled();
+  await animationsSettled(page);
   const axe = await new AxeBuilder({ page })
     .include('section[aria-labelledby="ph-notify-title"]')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
@@ -221,6 +223,7 @@ test('the Mac sets the sender contact and shows why Apple refused a notification
   await expect(switches.getByText(/did not accept the sender contact/)).toBeVisible({
     timeout: 10_000,
   });
+  await animationsSettled(page);
   const axe = await new AxeBuilder({ page })
     .include('section[aria-labelledby="ph-switches-title"]')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])

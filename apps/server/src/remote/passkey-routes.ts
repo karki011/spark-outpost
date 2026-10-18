@@ -41,6 +41,7 @@ export interface PasskeyRouteDeps {
   db: Db;
   workspaceId: string;
   challenges: PasskeyChallenges;
+  attemptsPerMinute?: number | undefined;
 }
 
 const SIGN_IN_LIMIT = 5;
@@ -63,8 +64,9 @@ export function toPasskey(row: PasskeyRow): RemotePasskey {
 export function passkeyRoutes(deps: PasskeyRouteDeps): Router {
   const { db, workspaceId, challenges } = deps;
   const refusal = () => new RateLimitError(TOO_MANY);
-  const optionCalls = new AttemptWindow(SIGN_IN_LIMIT, Date.now, refusal);
-  const attempts = new AttemptWindow(SIGN_IN_LIMIT, Date.now, refusal);
+  const limit = deps.attemptsPerMinute ?? SIGN_IN_LIMIT;
+  const optionCalls = new AttemptWindow(limit, Date.now, refusal);
+  const attempts = new AttemptWindow(limit, Date.now, refusal);
   const router = Router();
   const audit = (entry: AuditInput) => recordRemoteAudit(db, workspaceId, entry);
 

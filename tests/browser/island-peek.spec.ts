@@ -50,6 +50,11 @@ async function shot(page: Page, name: string) {
   });
 }
 
+async function scoutCentre(page: Page): Promise<number> {
+  const box = (await island(page).locator('.isl-scout-wrap').boundingBox())!;
+  return box.x + box.width / 2;
+}
+
 async function tuckedUnder(page: Page, size: (typeof SIZES)[number], edge: number) {
   const blob = ISLAND_BLOB[size];
   const tuck = islandTuck(blob);
@@ -80,8 +85,7 @@ for (const notch of [true, false]) {
       await open(page, { size, notch });
       await expect(island(page)).toHaveAttribute('data-view', 'peek');
       await tuckedUnder(page, size, edge);
-      const centre = (await island(page).locator('.isl-scout-wrap').boundingBox())!;
-      expect(centre.x + centre.width / 2).toBe(VIEWPORT.width / 2);
+      await expect.poll(() => scoutCentre(page)).toBe(VIEWPORT.width / 2);
       await shot(page, `${notch ? 'notch' : 'flat'}-${size}-rest`);
 
       const [chat] = await seedChats([deploy]);

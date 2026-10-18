@@ -50,7 +50,7 @@ test('a paired phone signs in with its passkey in a browser that has no cookie',
   page,
 }) => {
   const main = await openPhonePage(page);
-  const devices = main.getByRole('region', { name: 'Devices' });
+  const devices = main.getByRole('region', { name: 'Devices', exact: true });
   const rows = devices.locator('.ph-devices').first().getByRole('listitem');
   const firstBrowser = await newPhone(network);
   const first = await pairPhone(main, firstBrowser, 'Kitchen phone');
@@ -147,7 +147,7 @@ test('the phone app offers a passkey once and the Mac can remove it @packaged', 
 }) => {
   test.skip(!PACKAGED, 'The phone only gets the web app from a packaged server.');
   const main = await openPhonePage(page);
-  const devices = main.getByRole('region', { name: 'Devices' });
+  const devices = main.getByRole('region', { name: 'Devices', exact: true });
   const browser = await newPhone(network);
   const phone = await pairPhone(main, browser, 'Kitchen phone');
   await addAuthenticator(browser, phone);

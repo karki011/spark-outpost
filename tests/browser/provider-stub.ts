@@ -7,6 +7,7 @@ import { REJECTED_KEY_MARKER, STUB_PORT } from './stub-config.ts';
 import { SLACK_LEGACY_USER_SCOPES, fakeSlack } from '../../apps/server/test/fake-slack.ts';
 import { ticketFakes } from './ticket-stub.ts';
 import { handleGoogle, handlesGoogle } from './google-stub.ts';
+import { removeTestTmpdirWhenStopped } from './test-tmpdir.ts';
 
 const anthropicModels = {
   data: [
@@ -190,3 +191,4 @@ const server = createServer((req, res) => {
 });
 
 server.listen(STUB_PORT, '127.0.0.1');
+removeTestTmpdirWhenStopped();

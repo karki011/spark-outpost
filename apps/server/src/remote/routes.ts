@@ -57,6 +57,7 @@ export interface RemoteRouteDeps {
   streams: DeviceStreams;
   tailscale: TailscaleServe;
   pushKeys: PushKeys;
+  attemptsPerMinute?: number | undefined;
 }
 
 const BAD_CODE = 'That code is not valid. Start pairing again on your Mac.';
@@ -196,7 +197,9 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
       .json({ status: 'paired' } satisfies PairingClaimResponse);
   });
 
-  router.use(passkeyRoutes({ db, workspaceId, challenges }));
+  router.use(
+    passkeyRoutes({ db, workspaceId, challenges, attemptsPerMinute: deps.attemptsPerMinute }),
+  );
   router.use(pushRoutes({ db, workspaceId, keys: deps.pushKeys }));
 
   router.get('/remote/switches', async (_req, res) => {

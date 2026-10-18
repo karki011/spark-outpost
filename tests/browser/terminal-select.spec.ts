@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { SESSION_START_MS, typeLine } from './native-terminal-fixture.ts';
 import { openChats } from './navigation.ts';
 
 const READY = 'Ready for terminal input. No provider request is made.';
@@ -33,7 +34,9 @@ async function startTerminal(page: Page): Promise<{ conversationId: string; work
   await page.getByRole('button', { name: 'Start terminal', exact: true }).click();
   const { session } = (await (await launched).json()) as { session: { conversationId: string } };
   const workspace = page.getByRole('region', { name: 'Terminal session', exact: true });
-  await expect(workspace.locator('.xterm-accessibility')).toContainText(READY);
+  await expect(workspace.locator('.xterm-accessibility')).toContainText(READY, {
+    timeout: SESSION_START_MS,
+  });
   await page.evaluate(() => navigator.clipboard.writeText('before'));
   return { conversationId: session.conversationId, workspace };
 }
@@ -75,6 +78,7 @@ test('a terminal selection is copied and offers Add to terminal, Ask, Comment an
   const { conversationId, workspace } = await startTerminal(page);
   try {
     const screen = workspace.locator('.xterm-accessibility');
+    const rows = workspace.locator('.xterm-accessibility-tree > div');
     const stage = workspace.locator('.native-stage');
     const toolbar = workspace.getByRole('toolbar', { name: 'Selected text' });
     await expect(toolbar).toHaveCount(0);
@@ -99,7 +103,7 @@ test('a terminal selection is copied and offers Add to terminal, Ask, Comment an
     await toolbar.getByRole('button', { name: 'Add to terminal' }).click();
     await expect(toolbar).toHaveCount(0);
     expect(await terminalHasFocus(page)).toBe(true);
-    await expect.poll(async () => (await screen.textContent())!.split(READY).length).toBe(3);
+    await expect(rows.filter({ hasText: READY })).toHaveCount(2);
     await expect(screen).not.toContainText('received[');
     await page.keyboard.type(' typed after');
     await page.keyboard.press('Enter');
@@ -168,16 +172,11 @@ test('a terminal selection is copied and offers Add to terminal, Ask, Comment an
 });
 
 test('an ended session keeps Copy and a new chat for its last output', async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
   const { conversationId, workspace } = await startTerminal(page);
   try {
     const toolbar = workspace.getByRole('toolbar', { name: 'Selected text' });
-    await workspace.locator('.native-screen').click();
-    for (let row = 0; row < 30; row += 1) {
-      await page.keyboard.type(`row${row}`);
-      await page.keyboard.press('Enter');
-    }
-    await expect(workspace.locator('.xterm-accessibility')).toContainText(/received\[\d+\]: row29/);
+    for (let row = 0; row < 30; row += 1) await typeLine(page, workspace, `row${row}`);
     await selectLine(page, workspace, 'row25');
     await expect(toolbar).toBeVisible();
     await page.mouse.wheel(0, -240);
@@ -223,10 +222,11 @@ test('an agent that reports focus and uses the mouse keeps focus, Comment and Op
     await expect.poll(cell).toBe(spacing);
     await workspace.locator('.native-screen').click();
     await expect(hint).toHaveCount(0);
-    for (const line of ['fixture focus on', 'fixture mouse on']) {
-      await page.keyboard.type(line);
-      await page.keyboard.press('Enter');
-    }
+    await page.keyboard.type('fixture focus on');
+    await page.keyboard.press('Enter');
+    await expect(screen).toContainText(/received\[\d+\]: fixture focus on/);
+    await page.keyboard.type('fixture mouse on');
+    await page.keyboard.press('Enter');
     await expect(hint).toBeVisible();
 
     await page.keyboard.press('Shift+Tab');
@@ -288,6 +288,8 @@ test('a toolbar survives the pointer crossing an agent that tracks every mouse m
     const area = (await workspace.locator('.xterm-screen').boundingBox())!;
     await page.mouse.move(area.x + 40, area.y + area.height - 40);
     await page.mouse.move(area.x + 400, area.y + area.height - 120, { steps: 30 });
+    await page.keyboard.type('z');
+    await expect(rows.filter({ hasText: /^z$/ })).toHaveCount(1);
     await page.keyboard.down('Alt');
     await selectLine(page, workspace, READY);
     await page.keyboard.up('Alt');

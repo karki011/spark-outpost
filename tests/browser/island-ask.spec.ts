@@ -30,6 +30,7 @@ async function askLongQuestion(page: Page) {
   const ask = island(page).getByRole('textbox', { name: 'Ask Spark' });
   await expect(ask).toBeFocused();
   await ask.fill(QUESTION);
+  await page.clock.pauseAt(Date.now() + 1_000);
   await page.keyboard.press('Enter');
   return island(page).locator('.isl-thinking');
 }
@@ -48,6 +49,7 @@ test('Ask shows a playful looking scene, cycles its lines, then renders the answ
   await shot(page, 'looking-next');
   await page.clock.runFor(2_500);
   await expect(thinking).toContainText('Almost there');
+  await page.clock.resume();
 
   const answer = island(page).locator('.isl-ask-a').last();
   await expect(answer.locator('li')).toHaveCount(2, { timeout: 20_000 });

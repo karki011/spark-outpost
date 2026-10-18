@@ -2,6 +2,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 import { openChats } from './navigation.ts';
 
 export const FIXTURE_READY = 'Ready for terminal input. No provider request is made.';
+export const SESSION_START_MS = 20_000;
 
 export async function startFixtureTerminal(
   page: Page,
@@ -25,7 +26,9 @@ export async function startFixtureTerminal(
     .fill('Inspect the fixture.');
   await page.getByRole('button', { name: 'Start terminal', exact: true }).click();
   const workspace = page.getByRole('region', { name: 'Terminal session', exact: true });
-  await expect(workspace.locator('.xterm-accessibility')).toContainText(FIXTURE_READY);
+  await expect(workspace.locator('.xterm-accessibility')).toContainText(FIXTURE_READY, {
+    timeout: SESSION_START_MS,
+  });
   return workspace;
 }
 

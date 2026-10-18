@@ -9,12 +9,14 @@ import {
   continueFromTools,
   dialog,
   enterName,
+  fakeFullDiskAccess,
   nameField,
   openApiKeyTab,
   tile,
 } from './onboarding-flow.ts';
 
 const SHOTS = path.resolve('test-results/auto-mode-prompts');
+const CALENDAR_HOST = process.env.SPARK_FAKE_CALENDAR === '1';
 
 async function shot(page: Page, name: string, colorScheme: 'light' | 'dark') {
   await page.emulateMedia({ colorScheme });
@@ -22,8 +24,9 @@ async function shot(page: Page, name: string, colorScheme: 'light' | 'dark') {
   await page.screenshot({ path: path.join(SHOTS, `${name}-${colorScheme}.png`) });
 }
 
-test.beforeEach(async () => {
+test.beforeEach(async ({ page }) => {
   await resetTestDatabase({ onboarded: false });
+  await fakeFullDiskAccess(page, 'not_granted');
 });
 
 async function columnCount(page: Page) {
@@ -91,11 +94,10 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await expect(git).toContainText(/Git \d+\.\d+/);
   await expect(git).toContainText('Found');
   const tools = dialog(page).locator('.cx-card');
-  await expect(tools).toHaveCount(4);
-  await expect(tools.first()).toContainText('GitHub');
-  await expect(tools.nth(1)).toContainText('Jira');
-  await expect(tools.nth(3)).toContainText('Slack');
-  await expect(dialog(page).locator('.cx-card button.pc-head')).toHaveCount(4);
+  const names = ['GitHub', 'Jira', 'Linear', 'Slack', ...(CALENDAR_HOST ? ['Calendar'] : [])];
+  await expect(tools).toHaveCount(names.length);
+  for (const [index, name] of names.entries()) await expect(tools.nth(index)).toContainText(name);
+  await expect(dialog(page).locator('.cx-card button.pc-head')).toHaveCount(names.length);
 
   await continueFromTools(page, "You're all set, Hazel");
   await expect(dialog(page).getByRole('heading', { name: "You're all set, Hazel" })).toBeVisible();
@@ -246,10 +248,7 @@ test('the Mac access step explains Full Disk Access and can be skipped', async (
   await expect(dialog(page).getByRole('heading', { name: 'Bring in your tools' })).toBeVisible();
 
   await continueButton(page).click();
-  const macAccess = dialog(page).getByRole('heading', { name: 'Mac access' });
-  const allSet = dialog(page).getByRole('heading', { name: "You're all set, Hazel" });
-  await expect(macAccess.or(allSet)).toBeVisible();
-  test.skip(!(await macAccess.isVisible()), 'Full Disk Access is reported unsupported here.');
+  await expect(dialog(page).getByRole('heading', { name: 'Mac access' })).toBeVisible();
 
   const card = dialog(page).getByRole('region', { name: 'Full Disk Access' });
   await expect(card).toContainText(
