@@ -1,6 +1,7 @@
 import { Router, type Response } from 'express';
 import {
   CALENDAR_RANGE_MAX_DAYS,
+  GOOGLE_EDIT_NEEDS_GRANT,
   addLocalDays,
   calendarChoicePatchSchema,
   calendarMarkRequestSchema,
@@ -15,6 +16,7 @@ import type { Db } from '../persistence/db.ts';
 import { googleCalendarRoutes } from './google/routes.ts';
 import { GoogleApiError } from './google/api.ts';
 import { GoogleAuthError } from './google/oauth.ts';
+import { googleEditBlocked } from './google/store.ts';
 import { GoogleSignInNeeded, type GoogleSource } from './google/source.ts';
 import { CalendarHostError, type CalendarHost } from './host-client.ts';
 import {
@@ -130,7 +132,15 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
   router.patch('/calendar/calendars/:key', (req, res) =>
     guarded(res, async () => {
       const patch = parseBody(calendarChoicePatchSchema, req);
-      const changed = await updateChoice(deps.db, deps.workspaceId, paramId(req, 'key'), patch);
+      const key = paramId(req, 'key');
+      const changed = await updateChoice(deps.db, deps.workspaceId, key, patch);
+      if (
+        !changed &&
+        patch.agentsEdit &&
+        (await googleEditBlocked(deps.db, deps.workspaceId, key))
+      ) {
+        throw new BadRequestError(GOOGLE_EDIT_NEEDS_GRANT);
+      }
       if (!changed) throw new BadRequestError('That calendar is not known.');
       if (patch.include !== undefined) google?.refresh();
       await announceCalendar(deps.db);

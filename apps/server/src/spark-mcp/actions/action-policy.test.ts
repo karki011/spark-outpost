@@ -49,6 +49,16 @@ describe('explicitlyAsked', () => {
     ['switch_mcp_server', 'turn off the files mcp for this chat', true],
     ['remove_mcp_server', 'remove the old MCP server', true],
     ['remove_mcp_server', 'add an MCP server', false],
+    ['calendar_read', "what's on my calendar tomorrow", true],
+    ['calendar_read', 'am I free at 3?', true],
+    ['calendar_read', 'fix the calendar view bug', false],
+    ['calendar_edit', 'add an event called Spark 1b test tomorrow at 15:00', true],
+    ['calendar_edit', 'create "Spark 1b test" tomorrow at 15:00 on Spark Test', true],
+    ['calendar_edit', 'move the header 10px to the left', false],
+    ['calendar_edit', 'move the standup to 11', false],
+    ['calendar_edit', 'move that event to 17:00', true],
+    ['calendar_edit', 'delete the meeting', true],
+    ['calendar_edit', "what's on my calendar tomorrow", false],
   ] as const)('%s for "%s" is %s', (action, request, expected) => {
     expect(explicitlyAsked(action, request)).toBe(expected);
   });

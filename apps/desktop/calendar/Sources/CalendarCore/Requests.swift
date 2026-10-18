@@ -7,6 +7,8 @@ public enum Request: Equatable {
     case events(from: Date, to: Date, calendarIds: [String]?)
     case event(eventId: String, start: Date)
     case open(eventId: String, start: Date)
+    case save(SaveRequest)
+    case remove(eventId: String, start: Date, span: EditSpan)
 }
 
 public enum ParsedLine: Equatable {
@@ -48,6 +50,8 @@ private func request(from object: [String: Any]) throws -> Request {
     case "events": return try eventsRequest(object)
     case "event": return .event(eventId: try eventId(object), start: try instant(object, "start"))
     case "open": return .open(eventId: try eventId(object), start: try instant(object, "start"))
+    case "save": return .save(try saveRequest(object))
+    case "remove": return .remove(eventId: try eventId(object), start: try instant(object, "start"), span: try span(object))
     default: throw InvalidRequest(message: "unknown op")
     }
 }
@@ -78,4 +82,58 @@ private func calendarIds(_ value: Any?) throws -> [String]? {
         throw InvalidRequest(message: "invalid calendarIds")
     }
     return ids
+}
+
+private func saveRequest(_ object: [String: Any]) throws -> SaveRequest {
+    guard let calendarId = object["calendarId"] as? String, !calendarId.isEmpty, calendarId.utf16.count <= Limits.calendarId else {
+        throw InvalidRequest(message: "invalid calendarId")
+    }
+    guard let fields = object["fields"] as? [String: Any] else { throw InvalidRequest(message: "missing fields") }
+    let existing = object["eventId"] != nil
+    return SaveRequest(
+        calendarId: calendarId,
+        eventId: existing ? try eventId(object) : nil,
+        occurrence: existing ? try instant(object, "occurrence") : nil,
+        change: try eventChange(fields),
+        span: try span(object)
+    )
+}
+
+private func span(_ object: [String: Any]) throws -> EditSpan {
+    guard let value = object["span"] else { return .this }
+    guard let text = value as? String, let span = EditSpan(rawValue: text) else { throw InvalidRequest(message: "invalid span") }
+    return span
+}
+
+private func eventChange(_ fields: [String: Any]) throws -> EventChange {
+    EventChange(
+        title: try optionalText(fields, "title", Limits.title),
+        start: try fields["start"] == nil ? nil : instant(fields, "start"),
+        end: try fields["end"] == nil ? nil : instant(fields, "end"),
+        allDay: try optionalBool(fields, "allDay"),
+        notes: try optionalText(fields, "notes", Limits.notes),
+        location: try optionalText(fields, "location", Limits.longText),
+        alarm: try alarm(fields)
+    )
+}
+
+private func optionalText(_ object: [String: Any], _ name: String, _ limit: Int) throws -> String? {
+    guard let value = object[name] else { return nil }
+    guard let text = value as? String, text.utf16.count <= limit else { throw InvalidRequest(message: "invalid \(name)") }
+    return text
+}
+
+private func optionalBool(_ object: [String: Any], _ name: String) throws -> Bool? {
+    guard let value = object[name] else { return nil }
+    guard let flag = value as? Bool else { throw InvalidRequest(message: "invalid \(name)") }
+    return flag
+}
+
+private func alarm(_ fields: [String: Any]) throws -> AlarmChange {
+    guard let value = fields["alarmMinutes"] else { return .keep }
+    if value is NSNull { return .none }
+    guard let minutes = value as? Int, minutes >= 0, minutes <= Limits.alarmMinutes else {
+        throw InvalidRequest(message: "invalid alarmMinutes")
+    }
+    return .minutesBefore(minutes)
 }

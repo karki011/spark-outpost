@@ -31,10 +31,7 @@ export const calendarSettingsSchema = z.object({
 });
 export type CalendarSettings = z.infer<typeof calendarSettingsSchema>;
 
-export const calendarSettingsPatchSchema = calendarSettingsSchema
-  .omit({ agentsRead: true })
-  .partial()
-  .strict();
+export const calendarSettingsPatchSchema = calendarSettingsSchema.partial().strict();
 export type CalendarSettingsPatch = z.infer<typeof calendarSettingsPatchSchema>;
 
 export const CALENDAR_DEFAULT_SETTINGS: CalendarSettings = {
@@ -69,7 +66,7 @@ export const calendarStatusSchema = z.object({
 export type CalendarStatus = z.infer<typeof calendarStatusSchema>;
 
 export const calendarChoicePatchSchema = z
-  .object({ include: z.boolean(), nudges: z.boolean() })
+  .object({ include: z.boolean(), nudges: z.boolean(), agentsEdit: z.boolean() })
   .partial()
   .strict();
 export type CalendarChoicePatch = z.infer<typeof calendarChoicePatchSchema>;

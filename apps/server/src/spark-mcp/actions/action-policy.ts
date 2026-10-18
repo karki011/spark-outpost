@@ -62,6 +62,14 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     'post|send|share|reply|tell|message|notify|announce|update',
     'slack|channel|thread',
   ),
+  calendar_read: asked(
+    "what|what's|whats|when|show|list|check|read|look|see|find|am i|do i|tell me",
+    'calendar|schedule|agenda|events?|meetings?|free|busy|appointments?',
+  ),
+  calendar_edit: asked(
+    'add|create|schedule|book|put|move|reschedule|shift|change|update|rename|edit|delete|remove|cancel|set',
+    'calendar|events?|meetings?|appointments?|blocks?|reminders?|alarms?|alerts?|today|tomorrow|tonight|\\d{1,2}:\\d{2}|\\d{1,2} ?(?:am|pm)',
+  ),
 };
 
 export function explicitlyAsked(action: SparkActionName, request: string): boolean {

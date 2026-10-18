@@ -46,6 +46,8 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_mac_apps: 'Listing Mac apps',
   spark_mac_read: 'Reading a Mac app',
   spark_mac_act: 'Acting in a Mac app',
+  spark_calendar: 'Reading your calendar',
+  spark_calendar_edit: 'Changing your calendar',
   spark_browser_tabs: 'Looking at browser tabs',
   spark_browser_read: 'Reading a page',
   spark_browser_screenshot: 'Taking a screenshot of a page',

@@ -130,9 +130,18 @@
 }
 
 .cal-nudge {
+  margin-left: auto;
+}
+
+.cal-col {
   display: flex;
   flex: none;
-  margin-left: auto;
+  justify-content: center;
+  width: 92px;
+}
+
+.cal-cols {
+  display: flex;
 }
 
 .cal-more {

@@ -41,12 +41,18 @@ import {
   setNotice,
 } from './store.ts';
 
-export interface CalendarDeps {
+export type GoogleEventReads = Pick<GoogleSource, 'reconcile' | 'ready' | 'window' | 'range'>;
+
+export interface CalendarReadDeps {
   db: Db;
   workspaceId: string;
   host: CalendarHost | null;
-  google?: GoogleSource | null;
+  google?: GoogleEventReads | null;
   now?: () => number;
+}
+
+export interface CalendarDeps extends CalendarReadDeps {
+  google?: GoogleSource | null;
 }
 
 const NO_GOOGLE: CalendarGoogleStatus = {
@@ -102,7 +108,7 @@ function accountsOf(choices: readonly CalendarChoice[]): CalendarAccount[] {
   return [...accounts.values()];
 }
 
-export async function readHost(deps: CalendarDeps): Promise<Reading> {
+export async function readHost(deps: CalendarReadDeps): Promise<Reading> {
   const connection = await calendarConnection(deps.db, deps.workspaceId);
   if (!deps.host) return { connected: connection.connected, authorization: null, helper: null };
   const status = await deps.host.request({ op: 'status' });
@@ -117,7 +123,7 @@ function readable(reading: Reading): boolean {
   return reading.connected && reading.helper === 'ready' && reading.authorization === 'fullAccess';
 }
 
-export async function syncCalendars(deps: CalendarDeps): Promise<CalendarChoice[]> {
+export async function syncCalendars(deps: CalendarReadDeps): Promise<CalendarChoice[]> {
   if (!deps.host) return savedChoices(deps.db, deps.workspaceId, EVENTKIT_OWNER);
   const { calendars } = await deps.host.request({ op: 'calendars' });
   await withTransaction(deps.db, async (client) => {
@@ -132,7 +138,7 @@ export async function syncCalendars(deps: CalendarDeps): Promise<CalendarChoice[
   return savedChoices(deps.db, deps.workspaceId, EVENTKIT_OWNER);
 }
 
-async function googleChoices(deps: CalendarDeps): Promise<CalendarChoice[]> {
+async function googleChoices(deps: CalendarReadDeps): Promise<CalendarChoice[]> {
   if (!deps.google) return [];
   const all = await savedChoices(deps.db, deps.workspaceId);
   return all.filter((choice) => choice.sourceKind === 'google');
@@ -198,7 +204,7 @@ async function eachSpan(
 }
 
 async function macEvents(
-  deps: CalendarDeps,
+  deps: CalendarReadDeps,
   reading: Reading,
   spans: readonly CalendarSpan[] | null,
 ) {
@@ -218,7 +224,7 @@ async function macEvents(
 }
 
 async function googleEvents(
-  deps: CalendarDeps,
+  deps: CalendarReadDeps,
   spans: readonly CalendarSpan[] | null,
 ): Promise<SourceEvents> {
   const google = deps.google;
@@ -228,7 +234,7 @@ async function googleEvents(
 }
 
 export async function calendarState(
-  deps: CalendarDeps,
+  deps: CalendarReadDeps,
   spans: readonly CalendarSpan[] | null = null,
 ): Promise<CalendarState> {
   await deps.google?.reconcile();

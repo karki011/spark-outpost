@@ -1,8 +1,9 @@
-import type {
-  CalendarEventDetail,
-  CalendarGoogleStatus,
-  GoogleSignInFlow,
-  HelperEvent,
+import {
+  googleScopesEdit,
+  type CalendarEventDetail,
+  type CalendarGoogleStatus,
+  type GoogleSignInFlow,
+  type HelperEvent,
 } from '@spark-outpost/contracts';
 import { getGoogleEvent } from './api.ts';
 import type { Db } from '../../persistence/db.ts';
@@ -20,8 +21,19 @@ import {
 import type { GoogleClientConfig } from './config.ts';
 import { splitGoogleEventId } from './map.ts';
 import { revokeGoogleToken, type GoogleGrant } from './oauth.ts';
-import { GoogleAccountMismatch, createGoogleSignIn, type GoogleSignIn } from './sign-in.ts';
-import { deleteGoogleAccount, googleAccounts, saveGoogleAccount } from './store.ts';
+import {
+  GoogleAccountMismatch,
+  createGoogleSignIn,
+  type GoogleSignIn,
+  type Connected,
+  type GoogleSignInRequest,
+} from './sign-in.ts';
+import {
+  deleteGoogleAccount,
+  googleAccounts,
+  saveGoogleAccount,
+  setGoogleAgentsEdit,
+} from './store.ts';
 import { createGoogleRangeCache } from './range.ts';
 import {
   collectEvents,
@@ -77,7 +89,7 @@ export interface GoogleSource {
   window(): GoogleWindowEvents;
   range(from: number, to: number): Promise<GoogleWindowEvents>;
   detail(occurrence: GoogleOccurrence): Promise<CalendarEventDetail | null>;
-  signIn(request: { accountId: string | null }): Promise<GoogleSignInFlow>;
+  signIn(request: GoogleSignInRequest): Promise<GoogleSignInFlow>;
   signInFlow(): GoogleSignInFlow;
   cancelSignIn(): GoogleSignInFlow;
   signInSettled(): Promise<void>;
@@ -201,8 +213,8 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     await revokeGoogleToken({ fetch: deps.fetch, client: client! }, grant.refreshToken);
   }
 
-  async function connect(grant: GoogleGrant, accountId: string | null): Promise<void> {
-    const wanted = accountId ? accounts.get(accountId) : undefined;
+  async function connect(grant: GoogleGrant, request: GoogleSignInRequest): Promise<Connected> {
+    const wanted = request.accountId ? accounts.get(request.accountId) : undefined;
     if (wanted && wanted.row.subject !== grant.subject) {
       await discard(grant);
       throw new GoogleAccountMismatch(wanted.row.email);
@@ -211,7 +223,9 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     const row = await saveGoogleAccount(deps.db, deps.workspaceId, {
       subject: grant.subject,
       email: grant.email,
+      canEdit: googleScopesEdit(grant.scopes),
     });
+    const edit = await setGoogleAgentsEdit(deps.db, deps.workspaceId, row, request.editCalendar);
     const account = accounts.get(row.id) ?? liveAccount(row);
     account.row = row;
     account.accessToken = grant.accessToken;
@@ -222,6 +236,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     ranges?.clear();
     emit();
     void poll(row.id);
+    return { editTurnedOff: edit.turnedOff };
   }
 
   async function reconcile(): Promise<void> {
@@ -262,6 +277,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
           email: account.row.email,
           state: account.state,
           message: account.message,
+          canEdit: account.row.canEdit,
         })),
         signIn: signIn?.flow() ?? IDLE_FLOW,
       };
@@ -300,6 +316,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       const account = request.accountId ? accounts.get(request.accountId) : undefined;
       return signIn.start({
         accountId: account?.row.id ?? null,
+        editCalendar: account ? request.editCalendar : null,
         loginHint: account?.row.email ?? null,
       });
     },

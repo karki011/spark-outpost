@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { GOOGLE_CALENDAR_SCOPES } from '@spark-outpost/contracts';
+
 import type { Pkce } from '../../setup/pkce.ts';
 import type { GoogleClientConfig } from './config.ts';
 
@@ -26,19 +26,20 @@ export function googleAuthorizeUrl(
   client: GoogleClientConfig,
   pkce: Pkce,
   redirectUri: string,
-  loginHint: string | null,
+  request: { scopes: readonly string[]; loginHint: string | null },
 ): string {
   const url = new URL(`${client.accountsUrl}/o/oauth2/v2/auth`);
   url.searchParams.set('client_id', client.clientId);
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', GOOGLE_CALENDAR_SCOPES.join(' '));
+  url.searchParams.set('scope', request.scopes.join(' '));
   url.searchParams.set('state', pkce.state);
   url.searchParams.set('code_challenge', pkce.challenge);
   url.searchParams.set('code_challenge_method', 'S256');
   url.searchParams.set('access_type', 'offline');
   url.searchParams.set('prompt', 'consent');
-  if (loginHint) url.searchParams.set('login_hint', loginHint);
+  url.searchParams.set('include_granted_scopes', 'true');
+  if (request.loginHint) url.searchParams.set('login_hint', request.loginHint);
   return url.toString();
 }
 

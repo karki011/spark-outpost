@@ -27,6 +27,9 @@ import { startPrFollowUp } from '../pr-follow-up/poller.ts';
 import { pollNowForApproval } from '../persistence/pr-watches.ts';
 import { POLL_CHANNEL } from '../pr-tracking/refresh.ts';
 import { connectDesktopBrowser } from '../browser/host-client.ts';
+import { agentCalendarHosts } from '../calendar/agent/access.ts';
+import { googleClientConfig } from '../calendar/google/config.ts';
+import { connectDesktopCalendar } from '../calendar/host-client.ts';
 import { parseAppEvent } from '@spark-outpost/contracts';
 import { TaskWakes } from '../a2a/task-wakes.ts';
 import { stackGit } from '../outposts/stack-git.ts';
@@ -66,6 +69,12 @@ const sparkDeps: SparkToolDeps = {
   codeScan,
   browser: desktopBrowser?.host,
   mac: desktopBrowser?.mac,
+  calendar: agentCalendarHosts(connectDesktopCalendar(process.env, process), {
+    db,
+    secrets,
+    fetch,
+    client: googleClientConfig(config),
+  }),
   outposts: { wakes: outpostWakes, parked: parkedTurns, stackGit },
 };
 const sparkTools = await startSparkMcpHost(sparkDeps);

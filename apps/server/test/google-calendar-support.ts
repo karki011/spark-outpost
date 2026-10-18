@@ -112,18 +112,17 @@ export async function status(harness: Harness) {
   return calendarStatusSchema.parse(response.body);
 }
 
-export async function startSignIn(harness: Harness, accountId?: string) {
-  const response = await harness.client.send(
-    'post',
-    '/api/calendar/google/sign-in',
-    accountId ? { accountId } : {},
-  );
+export async function startSignIn(harness: Harness, accountId?: string, editCalendar?: string) {
+  const response = await harness.client.send('post', '/api/calendar/google/sign-in', {
+    ...(accountId ? { accountId } : {}),
+    ...(editCalendar ? { editCalendar } : {}),
+  });
   expect(response.status).toBe(200);
   return googleSignInFlowSchema.parse(response.body);
 }
 
-export async function signIn(harness: Harness, accountId?: string) {
-  const flow = await startSignIn(harness, accountId);
+export async function signIn(harness: Harness, accountId?: string, editCalendar?: string) {
+  const flow = await startSignIn(harness, accountId, editCalendar);
   const back = await fetch(harness.fake.authorize(flow.authorizeUrl!));
   expect(back.status).toBe(200);
   await harness.google.signInSettled();

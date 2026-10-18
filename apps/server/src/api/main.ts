@@ -49,6 +49,7 @@ import { connectDesktopCalendar } from '../calendar/host-client.ts';
 import { startCalendarTicker, type CalendarTicker } from '../calendar/ticker.ts';
 import { googleClientConfig } from '../calendar/google/config.ts';
 import { createGoogleSource } from '../calendar/google/source.ts';
+import { CALENDAR_WRITTEN_CHANNEL, agentCalendarHosts } from '../calendar/agent/access.ts';
 import { generateVapidKeys, webPushSend } from '../remote/push-send.ts';
 import { slackSignInConfig } from '../slack/sign-in-config.ts';
 import { startSlackSocket } from '../slack/socket.ts';
@@ -216,12 +217,21 @@ const nativeMcp = await startSparkMcpHost(
     codeScan: createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) }),
     browser: desktopBrowser?.host,
     mac: desktopBrowser?.mac,
+    calendar: agentCalendarHosts(desktopCalendar, {
+      db,
+      secrets,
+      fetch,
+      client: googleClientConfig(config),
+    }),
   },
   undefined,
   savedPort(nativeMcpPortFile),
 );
 savePort(nativeMcpPortFile, nativeMcp.port);
 const nativeApprovalWaiters = new ApprovalWaiters();
+const calendarWrittenListener = await listen(config.DATABASE_URL, CALENDAR_WRITTEN_CHANNEL, () =>
+  googleCalendar?.refresh(),
+);
 const nativeApprovalListener = await listen(config.DATABASE_URL, 'approvals', (id) =>
   nativeApprovalWaiters.notify(id),
 );
@@ -339,6 +349,7 @@ const shutdown = async (keepTerminals = false) => {
   if (terminalTmux.host && !keepTerminals) killTmuxServer(terminalTmux.host);
   await nativeMcp.close();
   await nativeApprovalListener.close();
+  await calendarWrittenListener.close();
   await previews.stopAll('shutdown').catch(() => undefined);
   await agentTerminals.stopAll().catch(() => undefined);
   stopLagMonitor();

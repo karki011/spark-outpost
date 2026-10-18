@@ -119,8 +119,26 @@ describe('calendar status and connect', () => {
     await connect();
     const unknown = await client.send('patch', '/api/calendar/calendars/nope', { include: false });
     expect(unknown.status).toBe(400);
-    const status400 = await client.send('patch', '/api/calendar/settings', { agentsRead: true });
+    const status400 = await client.send('patch', '/api/calendar/settings', { busy: true });
     expect(status400.status).toBe(400);
+  });
+
+  it('saves Let agents read my calendar, off by default, and Agents can edit per calendar', async () => {
+    const connected = await connect();
+    expect(connected.settings.agentsRead).toBe(false);
+    const saved = await client.send('patch', '/api/calendar/settings', { agentsRead: true });
+    expect(saved.body).toMatchObject({ agentsRead: true });
+    const work = connected.accounts[0]!.calendars[0]!;
+    expect(work.agentsEdit).toBe(false);
+    await client.send('patch', `/api/calendar/calendars/${work.key}`, { agentsEdit: true });
+    host.calendars = [helperCalendar('work-2', 'Work', 'On My Mac'), host.calendars[1]!];
+    const resynced = await status();
+    expect(resynced.accounts[0]!.calendars[0]).toMatchObject({
+      key: work.key,
+      calendarId: 'work-2',
+      agentsEdit: true,
+    });
+    expect(resynced.settings.agentsRead).toBe(true);
   });
 });
 

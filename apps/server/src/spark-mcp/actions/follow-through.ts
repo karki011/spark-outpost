@@ -1,4 +1,9 @@
-import { applySparkEdits, type SparkAction, type SparkResult } from '@spark-outpost/contracts';
+import {
+  applySparkEdits,
+  isCalendarAction,
+  type SparkAction,
+  type SparkResult,
+} from '@spark-outpost/contracts';
 import { redactValue } from '../../audit/redact.ts';
 import { insertFinishedRunEntries } from '../../persistence/audit-log.ts';
 import {
@@ -9,6 +14,7 @@ import {
 } from '../../persistence/spark-results.ts';
 import { shipFailureMessage } from '../../ship/failure-hint.ts';
 import type { SparkToolDeps } from '../deps.ts';
+import { auditedAction } from './confirm.ts';
 import { performSparkAction } from './perform.ts';
 
 export interface SparkActionFollowThrough {
@@ -26,7 +32,9 @@ async function audit(
   action: SparkAction,
   result: SparkResult,
 ): Promise<void> {
-  const payload = redactValue({ action, outcome: result.state, result });
+  const payload = isCalendarAction(action.action)
+    ? redactValue({ action: auditedAction(action), outcome: result.state })
+    : redactValue({ action, outcome: result.state, result });
   await insertFinishedRunEntries(deps.db, runId, [
     {
       at: new Date(),

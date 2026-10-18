@@ -15,6 +15,7 @@ import {
   performTransitionTicket,
 } from './ticket-actions.ts';
 import { performPostSlack } from './slack-actions.ts';
+import { performCalendarEdit } from './calendar-actions.ts';
 import type { Performed } from './performed.ts';
 
 export const OPEN_PR_RETIRED =
@@ -83,6 +84,13 @@ export function performSparkAction(
       return Promise.resolve({ message: `Allowed once in ${action.app}.`, url: null });
     case 'post_slack':
       return performPostSlack(context, action);
+    case 'calendar_read':
+      return Promise.resolve({
+        message: 'The agent can read your calendar in this chat.',
+        url: null,
+      });
+    case 'calendar_edit':
+      return performCalendarEdit(context, action);
     case 'pr_follow_up':
       return Promise.reject(new Error('PR feedback is pushed by the follow-up round.'));
   }

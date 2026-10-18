@@ -14,6 +14,11 @@ import {
   updateMcpServerActionSchema,
 } from './spark-mcp-actions.ts';
 import { SLACK_POST_TEXT_MAX, slackChannelIdSchema } from './slack.ts';
+import {
+  calendarEditActionSchema,
+  calendarEditQuestion,
+  calendarReadActionSchema,
+} from './calendar-actions.ts';
 import { ticketSourceIdSchema, ticketStatusSchema } from './tickets.ts';
 
 export const SPARK_ACTION_KIND = 'spark_action' as const;
@@ -241,6 +246,8 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   macActActionSchema,
   macPressActionSchema,
   postSlackActionSchema,
+  calendarReadActionSchema,
+  calendarEditActionSchema,
 ]);
 export type SparkAction = z.infer<typeof sparkActionSchema>;
 export type SparkActionName = SparkAction['action'];
@@ -283,6 +290,8 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   mac_act: [],
   mac_press: [],
   post_slack: ['body'],
+  calendar_read: [],
+  calendar_edit: [],
 };
 
 export function editableFields(action: SparkActionName): readonly (keyof SparkActionEdits)[] {
@@ -410,6 +419,16 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
     confirm: 'Post to Slack',
     doing: 'Posting to Slack…',
   },
+  calendar_read: {
+    question: 'Let the agent read your calendar?',
+    confirm: 'Allow for this chat',
+    doing: 'Allowing the calendar…',
+  },
+  calendar_edit: {
+    question: 'Change this event?',
+    confirm: 'Save change',
+    doing: 'Changing the event…',
+  },
 };
 
 const SLACK_POST_AS_YOU_QUESTION = 'Post this to Slack as you?';
@@ -422,6 +441,7 @@ export function sparkActionQuestion(action: SparkAction): string {
   if (action.action === 'mac_use_app') return `Let the agent use ${action.app} in this chat?`;
   if (action.action === 'mac_act') return `Let the agent press buttons and menus in ${action.app}?`;
   if (action.action === 'mac_press') return `Press ${action.what} in ${action.app}?`;
+  if (action.action === 'calendar_edit') return calendarEditQuestion(action);
   return sparkActionLabels[action.action].question;
 }
 
@@ -455,6 +475,7 @@ const REPEATABLE: ReadonlySet<SparkActionName> = new Set([
   'mac_use_app',
   'mac_act',
   'mac_press',
+  'calendar_read',
 ]);
 
 export function sparkRetryAllowed(action: SparkAction, result: SparkResult | undefined): boolean {

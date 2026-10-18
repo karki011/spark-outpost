@@ -13,6 +13,8 @@ const NOTHING: SparkAvailability = {
   mac: false,
   outpost: false,
   outpost_draft: false,
+  calendar_read: false,
+  calendar_edit: false,
 };
 
 const GROUPS: [keyof SparkAvailability, string[]][] = [
