@@ -20,7 +20,7 @@ Spark never changes events; no AI provider sees them.
 
 ## Use it
 
-- **Today** opens on **Month** and **Scheduled**; Enter opens **Day**. **Home** shows **Upcoming**.
+- **Today**, or the clock below **Settings**, opens on **Month** and **Scheduled**; Enter opens **Day**. **Home** shows **Upcoming**.
 - Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before** or **Hold alerts during this**.
 
 **Join** opens 10 minutes before a video call. Before a meeting, Scout hops and offers **Join**, or **Choose** when meetings overlap; **⌘J** does the same. Focus blocks hold chimes.

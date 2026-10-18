@@ -17,6 +17,7 @@ import { ISLAND_PAIRS } from './island-pairs.ts';
 import { MAP } from './map-pairs.ts';
 import { PHONE } from './phone-pairs.ts';
 import { PULL_REQUESTS } from './pull-request-pairs.ts';
+import { RAIL_CLOCK } from './rail-clock-pairs.ts';
 import { TICKETS } from './ticket-pairs.ts';
 import { surfaceText, type HuePair, type Pair, type PairKind } from './pair-types.ts';
 
@@ -64,6 +65,7 @@ export const PAIRS: Pair[] = [
   ...PHONE,
   ...PULL_REQUESTS,
   ...COMMANDS,
+  ...RAIL_CLOCK,
 ];
 
 export const HUE_PAIRS: HuePair[] = [
