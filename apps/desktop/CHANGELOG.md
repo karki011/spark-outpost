@@ -2,6 +2,19 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.20
+
+- Calendar: connect Google Calendar directly with Add Google account, alongside macOS Calendar, and add more than one account. An event on both shows once. Spark only reads your calendars, and Google sign-in expires every 7 days until Spark's Google app is verified.
+- Calendar: Today opens on a Month view with a Scheduled list for the picked day; click an event for Join, Open in Calendar, Start a chat for this, Remind me and Hold alerts. Day view is one click away.
+- Calendar: every calendar nudges by default. Before a meeting Scout hops and plays a short tune, and Join works from 10 minutes before until it ends. Meetings at the same time show one nudge with Choose, ⌘J asks which one, and clashes are tagged.
+- Spark Island: Home shows your next meetings and a Needs you list in place of the quick actions; New Spark moved to the + tab.
+- Left bar: a clock below Settings shows the time and opens Today.
+- Prompt cache: an idle chat or Terminal session shows how long Claude's cache stays warm, then what the next message will re-write. Turns that rebuilt the cache say so, and Work panel → Cost shows the cache hit rate.
+- Claude plan: a ring above Pause shows your 5-hour and weekly use and when they reset, once a window reaches 70%. A limit message names the reset time.
+- Changes: Revert file undoes one file of a run and never overwrites a later edit. The agent is told which files to re-read.
+- Compaction: summaries keep exact PR numbers, commits, branches, paths and errors.
+- Security: the app now sets a strict Content Security Policy, also for paired devices.
+
 ## 0.1.0-beta.19
 
 - Calendar: Today, in the left bar, shows your day from macOS Calendar next to your chats, with free blocks and a countdown to the next meeting. Home lists Upcoming meetings, and Join opens a Zoom, Google Meet, Microsoft Teams or Webex link in your browser; ⌘J joins the next one. Connect it under Settings → Connections → Connectors, then allow Spark Outpost under Privacy & Security → Calendars. Your calendar stays on this Mac.
