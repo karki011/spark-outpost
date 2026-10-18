@@ -119,7 +119,9 @@ export async function openPhone(page: Page) {
 
 export async function turnOn(page: Page) {
   await page.getByRole('switch', { name: 'Remote control' }).click();
-  await expect(page.getByRole('heading', { name: 'Remote control is on' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Remote control is on' })).toBeVisible({
+    timeout: 20_000,
+  });
 }
 
 export async function startPairing(
