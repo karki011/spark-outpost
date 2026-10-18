@@ -99,6 +99,8 @@ describe('what a Spark tools session can use', () => {
       mac: false,
       outpost: false,
       outpost_draft: false,
+      calendar_read: false,
+      calendar_edit: false,
     });
   });
 
