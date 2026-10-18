@@ -112,7 +112,7 @@ test('the sidebar, the palette, the island and the companion follow a re-adopted
 
   await setTerminalState(await terminalChatId(), 'working');
   await expect(bar).toHaveText('Running');
-  await expect(row).toContainText('Terminal session · Running');
+  await expect(row).toHaveAttribute('title', /Terminal session · Running · /);
   await expect(islandNote).toContainText('Running');
   await expect(running).toBeVisible();
 
@@ -120,7 +120,7 @@ test('the sidebar, the palette, the island and the companion follow a re-adopted
   const notice = workspace.locator('.native-restart');
   await expect(notice).toContainText('This session kept running.', { timeout: 30_000 });
   await expect(bar).toHaveText('Open');
-  await expect(row).toContainText('Terminal session · Open');
+  await expect(row).toHaveAttribute('title', /Terminal session · Open · /);
   await expect(islandNote).toHaveText('Terminal sessionOpen');
   await expect(running).toHaveCount(0);
   const dismiss = notice.getByRole('button', { name: 'Dismiss' });
@@ -146,6 +146,6 @@ test('the sidebar, the palette, the island and the companion follow a re-adopted
 
   await page.keyboard.press('Control+D');
   await expect(bar).toHaveText('Exited');
-  await expect(row).toContainText('Terminal session · Exited');
+  await expect(row).toHaveAttribute('title', /Terminal session · Exited · /);
   await expect(islandNote).toHaveText('Terminal sessionExited');
 });

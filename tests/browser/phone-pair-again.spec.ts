@@ -1,6 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
-import type { RemoteAuditList } from '../../packages/contracts/src/index.ts';
+import { expect, test, type Locator } from '@playwright/test';
 import { PHONE_ADDRESS, denyWaitingPhones, resetPhone, setFakeTailscale } from './phone-support.ts';
 import {
   arriveFromElsewhere,
@@ -69,15 +68,12 @@ test('a paired phone that arrives from another site or reopens the QR link lands
   await stranger.close();
 });
 
-async function askedToPairAgain(page: Page, deviceName: string): Promise<boolean> {
-  const response = await page.request.get('/api/remote/audit');
-  const { entries } = (await response.json()) as RemoteAuditList;
-  return entries.some(
-    (entry) =>
-      entry.action === 'pairing_page_shown' &&
-      entry.detail.reason === 'revoked' &&
-      entry.deviceName === deviceName,
-  );
+async function expectActivityLine(main: Locator, text: string) {
+  const activity = main.getByRole('region', { name: 'Recent remote activity' });
+  const line = activity.getByText(text);
+  const more = activity.getByRole('button', { name: 'Show more' });
+  while (!(await line.isVisible()) && (await more.isVisible())) await more.click();
+  await expect(line).toBeVisible();
 }
 
 test('pairing a phone again does not pile up devices', async ({ page }) => {
@@ -123,6 +119,6 @@ test('pairing a phone again does not pile up devices', async ({ page }) => {
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText('kitchen phone');
   await expect(devices.getByRole('button', { name: '2 removed' })).toBeVisible();
-  await expect.poll(() => askedToPairAgain(page, 'Kitchen phone')).toBe(true);
+  await expectActivityLine(main, 'Kitchen phone asked to pair again (it was removed on this Mac)');
   await second.close();
 });

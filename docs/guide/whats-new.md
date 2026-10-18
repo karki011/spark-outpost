@@ -12,6 +12,9 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                       | What to do                                                |
 | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| Terminal sessions fill the window in the desktop app again.                                                        | None.                                                     |
+| A question sent to Ask Spark before it was ready is no longer lost.                                                | None.                                                     |
+| **Agent setup** moves focus into its cards once they load.                                                         | None.                                                     |
 | Clock below **Settings** opens **Today**.                                                                          | None.                                                     |
 | Prompt cache countdown, re-write notes and **Cache hit**.                                                          | See [Prompt cache](statuses-and-limits.md#prompt-cache).  |
 | **Today** opens on **Month**.                                                                                      | See [Use it](calendar.md#use-it).                         |

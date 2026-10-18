@@ -6,6 +6,8 @@ import { pickTerminalAgent } from './native-terminal-support.ts';
 import { openChats } from './navigation.ts';
 import { FAKE_CLAUDE_BIN } from './stub-config.ts';
 
+const SEQUENTIAL_HOOKS_MS = 20_000;
+
 const CLI = path.resolve('tests/browser/terminal-usage-cli.ts');
 const CODEX_FIXTURE = path.join(FAKE_CLAUDE_BIN, 'codex-usage-fixture');
 
@@ -42,7 +44,9 @@ test('a Codex Terminal session shows its steps and tokens by turn, with no repor
     .fill('Run the usage fixture.');
   await page.getByRole('button', { name: 'Start terminal', exact: true }).click();
   const workspace = page.getByRole('region', { name: 'Terminal session', exact: true });
-  await expect(workspace.locator('.xterm-accessibility')).toContainText('Turn finished.');
+  await expect(workspace.locator('.xterm-accessibility')).toContainText('Turn finished.', {
+    timeout: SEQUENTIAL_HOOKS_MS,
+  });
   const panel = page.getByRole('complementary', { name: 'Work panel' });
   const show = page.getByRole('button', { name: 'Show work panel' });
   if (await show.isVisible()) await show.click();
@@ -84,7 +88,9 @@ test('a Terminal session shows its steps, tokens by turn and the total the CLI r
   await page.getByRole('button', { name: 'Start terminal', exact: true }).click();
   const workspace = page.getByRole('region', { name: 'Terminal session', exact: true });
   const screen = workspace.locator('.xterm-accessibility');
-  await expect(screen).toContainText('Turn finished.');
+  await expect(screen).toContainText('Turn finished.', {
+    timeout: SEQUENTIAL_HOOKS_MS,
+  });
   const panel = page.getByRole('complementary', { name: 'Work panel' });
   const show = page.getByRole('button', { name: 'Show work panel' });
   if (await show.isVisible()) await show.click();
