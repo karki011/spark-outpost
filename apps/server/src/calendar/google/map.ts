@@ -1,10 +1,12 @@
 import {
+  CALENDAR_ATTENDEES_MAX,
   CALENDAR_NOTE_LINKS_MAX,
   GOOGLE_EVENT_ID_PREFIX,
   type CalendarMyStatus,
   type HelperCalendar,
   type HelperEvent,
 } from '@spark-outpost/contracts';
+import { linkFreeSnippet } from '../snippet.ts';
 import type { GoogleCalendarEntry, GoogleEvent } from './api.ts';
 
 const DEFAULT_COLOR = '#4285f4';
@@ -85,19 +87,30 @@ function decodeEntities(value: string): string {
     .replace(/&amp;/g, '&');
 }
 
-export function notesText(description: string | undefined): string {
-  if (!description) return '';
+const ANCHOR = /<a\s[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi;
+
+function htmlText(description: string, anchor: (href: string, label: string) => string): string {
   const text = description
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(p|div|li)>/gi, '\n')
-    .replace(/<a\s[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, (_, href: string, label: string) =>
-      label.trim() && label.trim() !== href ? `${label} (${href})` : href,
-    )
+    .replace(ANCHOR, (_, href: string, label: string) => anchor(href, label))
     .replace(/<[^>]*>/g, '');
-  return decodeEntities(text)
+  return decodeEntities(text);
+}
+
+export function notesText(description: string | undefined): string {
+  if (!description) return '';
+  return htmlText(description, (href, label) =>
+    label.trim() && label.trim() !== href ? `${label} (${href})` : href,
+  )
     .replace(/\n{3,}/g, '\n\n')
     .trim()
     .slice(0, NOTES_MAX);
+}
+
+export function notesSnippet(description: string | undefined): string {
+  if (!description) return '';
+  return linkFreeSnippet(htmlText(description, () => ''));
 }
 
 export function noteLinks(description: string | undefined): string[] {
@@ -154,6 +167,16 @@ export function mapGoogleEvent(
     availability: event.transparency === 'transparent' ? 'free' : 'busy',
     recurring: Boolean(event.recurringEventId || event.recurrence?.length),
   };
+}
+
+export function attendeeNames(attendees: GoogleEvent['attendees']): string[] {
+  return (attendees ?? [])
+    .filter((attendee) => !attendee.resource && !attendee.self)
+    .flatMap((attendee) => {
+      const name = (attendee.displayName ?? attendee.email ?? '').trim();
+      return name ? [name.slice(0, 300)] : [];
+    })
+    .slice(0, CALENDAR_ATTENDEES_MAX);
 }
 
 export function googleHtmlLink(raw: string | undefined): string | null {

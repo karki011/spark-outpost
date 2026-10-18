@@ -127,6 +127,7 @@ test('Today tags clashing meetings on the timeline and in the event panel', asyn
     .getByRole('button', { name: /^Today/ })
     .click();
   const today = page.getByRole('main', { name: 'Today' });
+  await today.getByRole('radio', { name: 'Day' }).click();
   const customer = today.getByRole('button', { name: /^Customer call, / });
   await expect(customer).toHaveAccessibleName(/clashes with Vendor sync/);
   await expect(customer.locator('.tl-tags')).toBeVisible();

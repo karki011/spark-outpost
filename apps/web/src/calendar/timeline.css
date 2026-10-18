@@ -197,3 +197,7 @@
 .tl-allday-ev[aria-expanded='true'] {
   box-shadow: 0 0 0 2px var(--accent);
 }
+
+.td-main[aria-busy='true'] .tl {
+  opacity: 0.4;
+}

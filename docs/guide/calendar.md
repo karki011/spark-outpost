@@ -12,7 +12,7 @@ You'll connect your calendars. About 2 minutes.
 2. Select **Connect** for macOS Calendar, or **Add Google account** per Google account.
 3. Per calendar, set **Include** and **Nudge**.
 
-Events in both show once. Spark never changes events; no AI provider sees them.
+Spark never changes events; no AI provider sees them.
 
 ## Google sign-in
 
@@ -20,7 +20,7 @@ Events in both show once. Spark never changes events; no AI provider sees them.
 
 ## Use it
 
-- **Today** (left bar) shows your day, week, free blocks and clashes; **Home** shows **Upcoming**.
+- **Today** opens on **Month** and **Scheduled**; Enter opens **Day**. **Home** shows **Upcoming**.
 - Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before** or **Hold alerts during this**.
 
 **Join** opens 10 minutes before a video call. Before a meeting, Scout hops and offers **Join**, or **Choose** when meetings overlap; **⌘J** does the same. Focus blocks hold chimes.

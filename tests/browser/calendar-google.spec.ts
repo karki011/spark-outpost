@@ -202,6 +202,7 @@ test('cuts long macOS and Google calendar names to one line, with the full name 
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button', { name: /^Today/ })
     .click();
+  await today(page).getByRole('radio', { name: 'Day' }).click();
   const filters = today(page).getByRole('group', { name: 'Show calendars' });
   await expectClipped(LONG_MAC, filters);
   await expectClipped(LONG_GOOGLE, filters);

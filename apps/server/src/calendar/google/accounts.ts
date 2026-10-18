@@ -3,12 +3,18 @@ import { withTransaction, type Db } from '../../persistence/db.ts';
 import { googleCalendarSecret, type SecretStore } from '../../setup/secrets.ts';
 import { rematchCalendars } from '../rematch.ts';
 import { lockChoices, replaceChoices, savedChoices } from '../store.ts';
-import { GoogleApiError, listGoogleCalendars } from './api.ts';
+import { GoogleApiError, listGoogleCalendars, type GoogleApiDeps } from './api.ts';
 import type { GoogleClientConfig } from './config.ts';
 import { mapGoogleCalendar } from './map.ts';
 import { GoogleAuthError, refreshGoogleAccess } from './oauth.ts';
 import { markGoogleSignIn, type GoogleAccountRow } from './store.ts';
-import { googleWindow, syncCalendar, type CalendarSync } from './sync.ts';
+import {
+  fullSync,
+  googleWindow,
+  syncCalendar,
+  type CalendarSync,
+  type GoogleWindow,
+} from './sync.ts';
 
 export const GOOGLE_POLL_MS = 3 * 60_000;
 export const GOOGLE_BACKOFF_START_MS = 30_000;
@@ -83,8 +89,44 @@ function prefixOf(accountId: string) {
   return `google:${accountId}:`;
 }
 
-async function pollWith(deps: AccountDeps, account: LiveAccount, token: string) {
-  const api = { fetch: deps.fetch, apiUrl: deps.client.apiUrl, accessToken: token };
+export function isSkippable(error: unknown): boolean {
+  return error instanceof GoogleApiError && ['forbidden', 'not_found'].includes(error.kind);
+}
+
+export async function withFreshToken<T>(
+  deps: AccountDeps,
+  account: LiveAccount,
+  work: (api: GoogleApiDeps) => Promise<T>,
+): Promise<T> {
+  const api = async (): Promise<GoogleApiDeps> => ({
+    fetch: deps.fetch,
+    apiUrl: deps.client.apiUrl,
+    accessToken: await accessToken(deps, account),
+  });
+  try {
+    return await work(await api());
+  } catch (error) {
+    if (!(error instanceof GoogleApiError) || error.kind !== 'unauthorized') throw error;
+    account.accessToken = null;
+    return work(await api());
+  }
+}
+
+const RANGE_CONCURRENCY = 4;
+
+async function settleAll<T, R>(
+  items: readonly T[],
+  limit: number,
+  work: (item: T) => Promise<R>,
+): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = [];
+  for (let index = 0; index < items.length; index += limit) {
+    results.push(...(await Promise.allSettled(items.slice(index, index + limit).map(work))));
+  }
+  return results;
+}
+
+async function pollWith(deps: AccountDeps, account: LiveAccount, api: GoogleApiDeps) {
   const entries = await listGoogleCalendars(api);
   const mapped = entries.flatMap((entry) => {
     const calendar = mapGoogleCalendar(account.row.id, account.row.email, entry);
@@ -110,15 +152,32 @@ async function pollWith(deps: AccountDeps, account: LiveAccount, token: string) 
       next.set(calendarId, result.sync);
       changed ||= result.changed;
     } catch (error) {
-      const skip =
-        error instanceof GoogleApiError && ['forbidden', 'not_found'].includes(error.kind);
-      if (!skip) throw error;
+      if (!isSkippable(error)) throw error;
       changed ||= previous !== null;
     }
   }
   changed ||= [...account.calendars.keys()].some((calendarId) => !next.has(calendarId));
   account.calendars = next;
   return changed;
+}
+
+export async function accountRange(
+  deps: AccountDeps,
+  account: LiveAccount,
+  range: GoogleWindow,
+): Promise<Map<string, CalendarSync>> {
+  return withFreshToken(deps, account, async (api) => {
+    const calendarIds = [...account.calendars.keys()];
+    const results = await settleAll(calendarIds, RANGE_CONCURRENCY, (calendarId) =>
+      fullSync(api, { accountId: account.row.id, calendarId }, range),
+    );
+    const found = new Map<string, CalendarSync>();
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') found.set(calendarIds[index]!, result.value);
+      else if (!isSkippable(result.reason)) throw result.reason;
+    });
+    return found;
+  });
 }
 
 export function backoffMs(failures: number, retryAfterMs: number | null, random: number): number {
@@ -142,13 +201,24 @@ function failureMessage(error: unknown): string {
   return 'Couldn’t read this Google account. Trying again soon.';
 }
 
-async function signInAgain(deps: AccountDeps, account: LiveAccount): Promise<PollOutcome> {
+export function needsSignInAgain(error: unknown): boolean {
+  return (
+    error instanceof SignInAgain ||
+    (error instanceof GoogleApiError && error.kind === 'unauthorized')
+  );
+}
+
+export async function markSignInAgain(deps: AccountDeps, account: LiveAccount): Promise<void> {
   account.accessToken = null;
   account.synced = false;
   account.state = 'sign_in_again';
   account.message = SIGN_IN_AGAIN;
   await markGoogleSignIn(deps.db, deps.workspaceId, account.row.id, true);
   account.row = { ...account.row, needsSignIn: true };
+}
+
+async function signInAgain(deps: AccountDeps, account: LiveAccount): Promise<PollOutcome> {
+  await markSignInAgain(deps, account);
   return { changed: true, nextInMs: null };
 }
 
@@ -159,14 +229,7 @@ export async function pollAccount(
 ): Promise<PollOutcome> {
   if (account.row.needsSignIn) return { changed: false, nextInMs: null };
   try {
-    let changed: boolean;
-    try {
-      changed = await pollWith(deps, account, await accessToken(deps, account));
-    } catch (error) {
-      if (!(error instanceof GoogleApiError) || error.kind !== 'unauthorized') throw error;
-      account.accessToken = null;
-      changed = await pollWith(deps, account, await accessToken(deps, account));
-    }
+    const changed = await withFreshToken(deps, account, (api) => pollWith(deps, account, api));
     const recovered = account.state !== 'ready';
     account.state = 'ready';
     account.message = null;
@@ -174,10 +237,7 @@ export async function pollAccount(
     account.synced = true;
     return { changed: changed || recovered, nextInMs: GOOGLE_POLL_MS };
   } catch (error) {
-    if (error instanceof SignInAgain) return signInAgain(deps, account);
-    if (error instanceof GoogleApiError && error.kind === 'unauthorized') {
-      return signInAgain(deps, account);
-    }
+    if (needsSignInAgain(error)) return signInAgain(deps, account);
     account.failures += 1;
     const wasError = account.state === 'error';
     account.state = 'error';

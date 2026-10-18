@@ -167,15 +167,23 @@ export function workWindow(dayStart: number): CalendarSpan {
   return { start: start.getTime(), end: end.getTime() };
 }
 
+export function overlaps(span: CalendarSpan, start: number, end: number): boolean {
+  return span.start < end && Math.max(span.end, span.start + 1) > start;
+}
+
+export function eventsInSpan<T extends { start: string; end: string }>(
+  events: readonly T[],
+  start: number,
+  end: number,
+): T[] {
+  return events.filter((event) => overlaps(spanOf(event), start, end));
+}
+
 export function eventsOnDay<T extends { start: string; end: string }>(
   events: readonly T[],
   dayStart: number,
 ): T[] {
-  const dayEnd = addLocalDays(dayStart, 1);
-  return events.filter((event) => {
-    const span = spanOf(event);
-    return span.start < dayEnd && span.end > dayStart;
-  });
+  return eventsInSpan(events, dayStart, addLocalDays(dayStart, 1));
 }
 
 function busySpans(events: readonly CalendarEvent[], window: CalendarSpan): CalendarSpan[] {

@@ -10,6 +10,9 @@ export const CALENDAR_REMIND_MINUTES = 5;
 export const CALENDAR_CAPTURE_WINDOW_MS = 15 * 60_000;
 export const CALENDAR_UPCOMING_COUNT = 3;
 export const CALENDAR_GROUP_MAX = 20;
+export const CALENDAR_RANGE_MAX_DAYS = 62;
+export const CALENDAR_ATTENDEES_MAX = 100;
+export const CALENDAR_SNIPPET_MAX = 160;
 
 export const calendarHoldRuleSchema = z.enum(['never', 'focus', 'meetings']);
 export type CalendarHoldRule = z.infer<typeof calendarHoldRuleSchema>;
@@ -92,6 +95,16 @@ export const calendarDaySchema = z.object({
 });
 export type CalendarDay = z.infer<typeof calendarDaySchema>;
 
+export const calendarRangeSchema = z.object({
+  from: z.iso.date(),
+  to: z.iso.date(),
+  today: z.iso.date(),
+  events: z.array(calendarEventSchema),
+  calendars: z.array(calendarChoiceSchema),
+  truncated: z.boolean(),
+});
+export type CalendarRange = z.infer<typeof calendarRangeSchema>;
+
 const nudgeBase = {
   eventKey: z.string().max(600),
   title: z.string().max(1_000),
@@ -169,13 +182,19 @@ export const calendarMarkRequestSchema = z
 export type CalendarMarkRequest = z.infer<typeof calendarMarkRequestSchema>;
 
 export const calendarOccurrenceSchema = z
-  .object({ eventId: z.string().min(1).max(500), start: z.iso.datetime({ offset: true }) })
+  .object({
+    eventId: z.string().min(1).max(500),
+    start: z.iso.datetime({ offset: true }),
+    calendarKey: z.uuid().optional(),
+  })
   .strict();
 export type CalendarOccurrence = z.infer<typeof calendarOccurrenceSchema>;
 
 export const calendarEventDetailSchema = z.object({
   title: z.string().max(1_000),
   notes: z.string().max(20_000),
+  snippet: z.string().max(CALENDAR_SNIPPET_MAX),
   link: z.url().nullable(),
+  attendees: z.array(z.string().max(300)).max(CALENDAR_ATTENDEES_MAX),
 });
 export type CalendarEventDetail = z.infer<typeof calendarEventDetailSchema>;
