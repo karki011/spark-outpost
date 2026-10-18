@@ -1,6 +1,7 @@
 import type {
   CalendarChoice,
   CalendarEditSpan,
+  CalendarEventFacts,
   CalendarEventFields,
 } from '@spark-outpost/contracts';
 import type { Db } from '../../persistence/db.ts';
@@ -108,7 +109,7 @@ export interface AgentSave {
   target: EventTarget | null;
   fields: CalendarEventFields;
   span: CalendarEditSpan;
-  allDay: boolean;
+  after: CalendarEventFacts;
 }
 
 async function announceWrite(db: Db): Promise<void> {
@@ -128,7 +129,7 @@ export async function agentSave(
         calendar.workspaceId,
         choice.calendarId,
         target?.eventId ?? null,
-        googleWriteBody(fields, save.allDay),
+        googleWriteBody(fields, save.after),
       )
     : helperAgentDetail(
         (

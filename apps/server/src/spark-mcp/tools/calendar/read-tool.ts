@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { agentDetail, agentReadDeps, type AgentCalendar } from '../../../calendar/agent/access.ts';
 import { calendarRange, calendarState, dateKey } from '../../../calendar/service.ts';
-import { savedChoices } from '../../../calendar/store.ts';
+import { calendarConnection, savedChoices } from '../../../calendar/store.ts';
 import { SparkBlocks, sparkTool, type SparkToolContext } from '../../tool.ts';
 import { allowedNote } from '../allowed-note.ts';
 import {
@@ -101,8 +101,19 @@ async function answer(calendar: AgentCalendar, args: ReadArgs) {
   return events(calendar, args);
 }
 
+async function readingAllowed(calendar: AgentCalendar): Promise<void> {
+  const { settings } = await calendarConnection(calendar.db, calendar.workspaceId);
+  if (!settings.agentsRead) {
+    throw new CalendarToolError(
+      'off',
+      'Let agents read my calendar is off. The user can turn it on on the Calendar card.',
+    );
+  }
+}
+
 async function read(args: ReadArgs, context: SparkToolContext) {
   const calendar = await calendarSession(context);
+  await readingAllowed(calendar);
   const what = described(args, calendar.now());
   const cleared = await clearCalendarRead(context, what);
   if (!cleared.cleared) {

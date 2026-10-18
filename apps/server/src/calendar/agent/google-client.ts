@@ -1,4 +1,9 @@
-import type { CalendarEventFields } from '@spark-outpost/contracts';
+import {
+  addLocalDays,
+  localDayStart,
+  type CalendarEventFacts,
+  type CalendarEventFields,
+} from '@spark-outpost/contracts';
 import type { Db } from '../../persistence/db.ts';
 import type { SecretStore } from '../../setup/secrets.ts';
 import {
@@ -95,13 +100,24 @@ function when(at: string, allDay: boolean): { dateTime: string } | { date: strin
   return allDay ? { date: dateKey(Date.parse(at)) } : { dateTime: new Date(at).toISOString() };
 }
 
-export function googleWriteBody(fields: CalendarEventFields, allDay: boolean): GoogleEventWrite {
+function allDayEnd(after: CalendarEventFacts): string {
+  const nextDay = addLocalDays(localDayStart(Date.parse(after.start)), 1);
+  return new Date(Math.max(Date.parse(after.end), nextDay)).toISOString();
+}
+
+export function googleWriteBody(
+  fields: CalendarEventFields,
+  after: CalendarEventFacts,
+): GoogleEventWrite {
   const body: GoogleEventWrite = {};
   if (fields.title !== undefined) body.summary = fields.title;
   if (fields.notes !== undefined) body.description = fields.notes;
   if (fields.location !== undefined) body.location = fields.location;
-  if (fields.start !== undefined) body.start = when(fields.start, allDay);
-  if (fields.end !== undefined) body.end = when(fields.end, allDay);
+  const timed = fields.start !== undefined || fields.end !== undefined;
+  if (timed || fields.allDay !== undefined) {
+    body.start = when(after.start, after.allDay);
+    body.end = when(after.allDay ? allDayEnd(after) : after.end, after.allDay);
+  }
   if (fields.alarmMinutes !== undefined) {
     body.reminders = {
       useDefault: false,

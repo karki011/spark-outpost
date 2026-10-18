@@ -36,6 +36,15 @@ describe('which sessions get the calendar tools', () => {
     expect(await h.toolNames()).toEqual(['spark_calendar']);
   });
 
+  it('refuses a read once Let agents read my calendar is turned off mid-session', async () => {
+    await h.start({ mode: 'auto' });
+    await h.t.db.query('UPDATE calendar_connection SET agents_read = false');
+    const refused = await h.read();
+    expect(refused.result.isError).toBe(true);
+    expect(refused.text).toContain('Let agents read my calendar is off');
+    expect(h.fake.calls).not.toContain('range');
+  });
+
   it('offers nothing while the calendar is not connected', async () => {
     await h.start({ mode: 'auto', connected: false });
     expect(await h.toolNames()).toEqual([]);

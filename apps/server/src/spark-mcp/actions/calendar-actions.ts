@@ -79,12 +79,13 @@ export async function performCalendarEdit(
     await agentRemove(calendar, choice, target!, action.span);
     return { message: `${DONE.delete} ${choice.title}.`, url: null };
   }
+  if (!action.after) throw new CalendarAgentError('The card has no event to save.');
   const after = await agentSave(calendar, {
     choice,
     target,
     fields: action.fields,
     span: action.span,
-    allDay: action.after?.allDay ?? false,
+    after: action.after,
   });
   return {
     message: `${DONE[action.op]} ${choice.title}.`,

@@ -111,14 +111,27 @@ describe('the change a card shows', () => {
   });
 
   it('writes Google fields, all-day dates and reminders', () => {
-    expect(googleWriteBody({ title: 'x', alarmMinutes: null }, false)).toEqual({
+    expect(googleWriteBody({ title: 'x', alarmMinutes: null }, MEETING)).toEqual({
       summary: 'x',
       reminders: { useDefault: false, overrides: [] },
     });
+    const day = { ...MEETING, start: new Date(2026, 9, 19).toISOString() };
     const allDay = googleWriteBody(
-      { start: new Date(2026, 9, 19).toISOString(), end: new Date(2026, 9, 20).toISOString() },
-      true,
+      { start: day.start, end: new Date(2026, 9, 20).toISOString() },
+      { ...day, end: new Date(2026, 9, 20).toISOString(), allDay: true },
     );
     expect(allDay).toEqual({ start: { date: '2026-10-19' }, end: { date: '2026-10-20' } });
+  });
+
+  it('sends both dates when only all-day changes, ending on the next day', () => {
+    const start = new Date(2026, 9, 19, 10).toISOString();
+    const end = new Date(2026, 9, 19, 10, 30).toISOString();
+    const toAllDay = googleWriteBody({ allDay: true }, { ...MEETING, start, end, allDay: true });
+    expect(toAllDay).toEqual({ start: { date: '2026-10-19' }, end: { date: '2026-10-20' } });
+    const toTimed = googleWriteBody({ allDay: false }, { ...MEETING, start, end });
+    expect(toTimed).toEqual({
+      start: { dateTime: new Date(start).toISOString() },
+      end: { dateTime: new Date(end).toISOString() },
+    });
   });
 });

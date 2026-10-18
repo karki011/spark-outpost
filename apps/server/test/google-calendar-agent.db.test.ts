@@ -164,6 +164,22 @@ describe('Google calendars through the agent tools', () => {
     expect((await h.pending()).payload.sparkAction).toMatchObject({ floor: ['others'] });
   });
 
+  it('turns a timed Google event into an all-day one with both dates', async () => {
+    putReview();
+    const { account, key } = await connectGoogle();
+    const changed = await h.edit({
+      action: 'update',
+      calendar: key,
+      eventId: `google:${account.id}:review`,
+      occurrence: tomorrowAt(14),
+      allDay: true,
+    });
+    expect(changed.facts.outcome).toBe('done');
+    const body = g.fake.writes[0]!.body as { start: { date: string }; end: { date: string } };
+    expect(body.start.date).toBeDefined();
+    expect(body.end.date > body.start.date).toBe(true);
+  });
+
   it('refuses This and future on Google', async () => {
     putReview({ recurringEventId: 'series' });
     const { account, key } = await connectGoogle();
