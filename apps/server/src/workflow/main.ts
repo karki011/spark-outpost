@@ -6,7 +6,7 @@ import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { configuredBackup } from '../persistence/startup-backup.ts';
 import { migrateOrExit } from '../persistence/migrate-startup.ts';
-import { listen } from '../persistence/notifications.ts';
+import { keepListening, listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
 import { configuredSecretStore } from '../setup/secrets.ts';
 import { gitHubAppConfig } from '../ship/github/app-config.ts';
@@ -137,10 +137,15 @@ const approvalListener = await listen(config.DATABASE_URL, 'approvals', (id) => 
     .catch(() => undefined);
 });
 const prPollListener = await listen(config.DATABASE_URL, POLL_CHANNEL, () => prFollowUp.wake());
-const outpostListener = await listen(config.DATABASE_URL, 'changes', (payload) => {
-  const event = parseAppEvent(payload);
-  if (event) outpostWakes.changed(event);
-});
+const outpostListener = await keepListening(
+  config.DATABASE_URL,
+  'changes',
+  (payload) => {
+    const event = parseAppEvent(payload);
+    if (event) outpostWakes.changed(event);
+  },
+  { onBack: () => outpostWakes.wakeAll() },
+);
 console.log(
   `Worker running with concurrency ${config.WORKER_CONCURRENCY} and ${config.AGENT_RUNTIME} agents.`,
 );

@@ -29,6 +29,14 @@ describe('task wake-ups', () => {
     expect(wakes.waiters).toBe(0);
   });
 
+  it('wakes every waiter when told changes may have been missed', async () => {
+    const wakes = new TaskWakes();
+    const waiting = wakes.next(new AbortController().signal);
+    wakes.wakeAll();
+    expect(await settled(waiting)).toBe(true);
+    expect(wakes.waiters).toBe(0);
+  });
+
   it('ignores changes that cannot move a request', async () => {
     const wakes = new TaskWakes();
     const waiting = wakes.next(new AbortController().signal);

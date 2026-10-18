@@ -19,7 +19,10 @@ export class TaskWakes {
   }
 
   changed(event: AppEvent): void {
-    if (!movesTasks(event)) return;
+    if (movesTasks(event)) this.wakeAll();
+  }
+
+  wakeAll(): void {
     const woken = [...this.waiting];
     this.waiting.clear();
     woken.forEach((wake) => wake());
