@@ -14,7 +14,7 @@ Open pages beside a chat for you and the agent. About 2 minutes. Mac app only.
 2. Type an address, like `localhost:5173`; press **Enter**.
 3. **+** adds a tab.
 
-Chat and Terminal links open here; **⌘**-click opens yours.
+Chat links open here; **⌘**-click opens yours.
 
 ## Let the agent look and browse
 
@@ -23,11 +23,11 @@ Chat and Terminal links open here; **⌘**-click opens yours.
 | Open any web address or project file     | Reach Spark's ports               |
 | Read a page, its logs, a screenshot      | See or fill password, card fields |
 | Click, type, press keys, scroll, go back | Navigate a tab you opened         |
-|                                          | Click a covered element           |
+| Run scripts, inspect, check speed        | Click a covered element           |
 
-**Agent** tabs close with the turn unless pinned or you used them. Its network log shows addresses and timings, secrets hidden.
+**Agent** tabs close with the turn unless pinned or you used them. Logs show errors, stacks and timed requests. **Open developer tools** (**⌥⌘I**) is yours.
 
-Websites follow the [agent mode](agent-mode.md); acting on your tab always asks. Page text is untrusted.
+Websites follow the [agent mode](agent-mode.md); your own tab always asks. Page text is untrusted.
 
 ## Let Spark run your dev server
 
@@ -48,6 +48,6 @@ Right-click highlighted text: **Add to chat** or **Ask about this** (**⌘⇧A**
 1. In **Settings** → **Projects**, select **Add** beside **Saved sign-ins**: label, site, **Other sign-in sites**, test account.
 2. Ask the agent to sign in; allow the card once per chat.
 
-Spark types only on those sites; the agent never sees them. Refused? **Add this site**. For SSO, the agent hands you its tab: sign in, then **Done**.
+Spark types only there; the agent never sees them. Refused? **Add this site**. For SSO, the agent hands you its tab; sign in, then **Done**.
 
 **Next:** [Make a Spark](sparks.md)

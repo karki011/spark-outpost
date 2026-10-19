@@ -296,7 +296,7 @@ const browserSignInTool = sparkTool({
   acts: true,
   title: 'Sign in with a saved sign-in',
   description:
-    "Spark types a saved username and password into the tab's sign-in form (one page, or username then password) and submits it, only on the sign-in's own sites (https or a local host), never in a frame. First use in a chat asks on a card, in every mode. handOver: the user signs in themselves in your tab (SSO, MFA, passkey) and the call waits until they are done. Never returns the values.",
+    "Spark types a saved sign-in into the tab's form (one page, or username then password) and submits it, only on that sign-in's sites. First use in a chat asks, in every mode. handOver: the user signs in themselves in your tab (SSO, MFA, passkey); the call waits for them. Never returns the values.",
   input: {
     signIn: z
       .string()

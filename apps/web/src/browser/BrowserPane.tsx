@@ -1,10 +1,18 @@
 import './browser-pane.css';
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 import { addressToUrl, type BrowserPaneTab } from '@spark-outpost/contracts';
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import {
+  DevtoolsIcon,
   NavBackIcon,
   NavForwardIcon,
   PickElementIcon,
@@ -146,6 +154,12 @@ function StartPage({ chatId, tab }: { chatId: string; tab: BrowserPaneTab | null
   );
 }
 
+function isDevtoolsKey(event: KeyboardEvent<HTMLElement>): boolean {
+  return (
+    event.altKey && (event.metaKey || event.ctrlKey) && !event.shiftKey && event.code === 'KeyI'
+  );
+}
+
 function AgentTabNote({ chatId, tab }: { chatId: string; tab: BrowserPaneTab }) {
   if (tab.pinned) return null;
   if (tab.kept) {
@@ -201,7 +215,15 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
   const destination = home.sendsTo === 'terminal' ? 'the terminal' : 'the chat';
 
   return (
-    <section className="bp" aria-label="Browser">
+    <section
+      className="bp"
+      aria-label="Browser"
+      onKeyDown={(event) => {
+        if (!tab || blank || !isDevtoolsKey(event)) return;
+        event.preventDefault();
+        sendBrowserCommand(chatId, { command: 'devtools', tabId: tab.id });
+      }}
+    >
       <div className="bp-head">
         {lead}
         <BrowserTabs chatId={chatId} tabs={browser.tabs} />
@@ -247,6 +269,13 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
           onClick={() => pick('region')}
         >
           <PickRegionIcon />
+        </ToolButton>
+        <ToolButton
+          label="Open developer tools (⌥⌘I)"
+          disabled={blank}
+          onClick={() => tab && sendBrowserCommand(chatId, { command: 'devtools', tabId: tab.id })}
+        >
+          <DevtoolsIcon />
         </ToolButton>
         <ToolButton
           label="Open in default browser"

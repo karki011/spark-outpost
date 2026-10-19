@@ -12,7 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                 | What to do                                                        |
 | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| Browser: network log with timings, sign-ins on several sites, SSO handed to you.                             | See [Use the browser](use-the-browser.md).                        |
+| Browser: developer tools, network log, multi-site sign-ins, SSO handoff.                                     | See [Use the browser](use-the-browser.md).                        |
 | **Atlassian** replaces Jira. Agent deletes in Jira, Confluence and Calendar follow your mode.                | See [Connect](tickets-and-github.md#connect-atlassian-or-linear). |
 | Calendar: meeting bubble, **N more**, links.                                                                 | See [Use it](calendar.md#use-it).                                 |
 | Spark Island opens only from Scout. **Hide in screen sharing**.                                              | See [Spark Island](desktop-companion.md).                         |

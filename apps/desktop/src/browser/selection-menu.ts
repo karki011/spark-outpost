@@ -64,6 +64,11 @@ export function isAddShortcut(input: ShortcutInput, platform: NodeJS.Platform): 
   return platform === 'darwin' ? input.meta && !input.control : input.control && !input.meta;
 }
 
+export function isDevtoolsShortcut(input: ShortcutInput, platform: NodeJS.Platform): boolean {
+  if (input.type !== 'keyDown' || input.code !== 'KeyI' || !input.alt || input.shift) return false;
+  return platform === 'darwin' ? input.meta && !input.control : input.control && !input.meta;
+}
+
 export async function readPageSelection(cdp: Cdp): Promise<string> {
   const { frameTree } = await cdp.send<{ frameTree: { frame: { id: string } } }>(
     'Page.getFrameTree',

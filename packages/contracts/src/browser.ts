@@ -159,6 +159,7 @@ export const browserCommandSchema = z.discriminatedUnion('command', [
   z.object({ command: z.literal('forward'), tabId: z.string() }),
   z.object({ command: z.literal('reload'), tabId: z.string() }),
   z.object({ command: z.literal('stop'), tabId: z.string() }),
+  z.object({ command: z.literal('devtools'), tabId: z.string() }),
   z.object({ command: z.literal('select'), tabId: z.string() }),
   z.object({ command: z.literal('close'), tabId: z.string() }),
   z.object({ command: z.literal('pin'), tabId: z.string(), pinned: z.boolean() }),

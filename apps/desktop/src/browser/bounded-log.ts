@@ -1,4 +1,8 @@
-import { BROWSER_LOG_TEXT_MAX, type BrowserLogEntry } from '@spark-outpost/contracts';
+import {
+  BROWSER_LOG_STACK_MAX,
+  BROWSER_LOG_TEXT_MAX,
+  type BrowserLogEntry,
+} from '@spark-outpost/contracts';
 
 export const LOG_CAPACITY = 300;
 
@@ -20,12 +24,17 @@ export class BoundedLog {
     this.capacity = capacity;
   }
 
-  push(entry: Omit<BrowserLogEntry, 'at'> & { at?: string }): void {
+  push(
+    entry: Omit<BrowserLogEntry, 'at' | 'ms' | 'stack'> &
+      Partial<Pick<BrowserLogEntry, 'at' | 'ms' | 'stack'>>,
+  ): void {
     this.entries.push({
       ...entry,
       at: entry.at ?? new Date().toISOString(),
       text: clip(entry.text, BROWSER_LOG_TEXT_MAX),
       source: entry.source === null ? null : clip(entry.source, 300),
+      ms: entry.ms ?? null,
+      stack: entry.stack ? clip(entry.stack, BROWSER_LOG_STACK_MAX) : null,
     });
     const extra = this.entries.length - this.capacity;
     if (extra <= 0) return;

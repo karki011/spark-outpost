@@ -57,3 +57,22 @@ test('an agent tab says when it closes, and pinning it keeps it', async ({ page 
   await push(page, chatId, { ...agentTab, owner: 'user' });
   await expect(life).toBeHidden();
 });
+
+test('the toolbar and Alt+Cmd+I open developer tools for the shown tab', async ({ page }) => {
+  await withDesktopBrowser(page);
+  const { pane, chatId } = await openPane(page);
+  await push(page, chatId, { ...agentTab, owner: 'user' });
+  const open = pane.getByRole('button', { name: 'Open developer tools (⌥⌘I)' });
+  await open.click();
+  expect((await calls(page, 'command')).at(-1)).toEqual({
+    chatId,
+    command: { command: 'devtools', tabId: 't1' },
+  });
+
+  const before = (await calls(page, 'command')).length;
+  await open.focus();
+  await page.keyboard.press('Alt+Meta+KeyI');
+  const sent = await calls(page, 'command');
+  expect(sent).toHaveLength(before + 1);
+  expect(sent.at(-1)).toEqual({ chatId, command: { command: 'devtools', tabId: 't1' } });
+});

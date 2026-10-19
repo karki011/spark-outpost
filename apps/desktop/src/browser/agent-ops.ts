@@ -1,8 +1,6 @@
 import {
   browserActLine,
   browserOrigin,
-  browserPlaceOf,
-  type BrowserHostErrorCode,
   type BrowserHostRequest,
   type BrowserTab,
 } from '@spark-outpost/contracts';
@@ -17,56 +15,13 @@ import { agentOpenProblem } from './request-guard.ts';
 import { SIGN_IN_TIMING, SignInError, signInOnPage } from './sign-in.ts';
 import { textFieldNodes, type DomNode } from './sensitive-nodes.ts';
 import type { PaneTab } from './tab.ts';
+import { BrowserOpError, refuseHeld, tabFacts, targetTab } from './op-tab.ts';
 import { chooseOpenTab } from './tab-rules.ts';
-
-export class BrowserOpError extends Error {
-  readonly code: BrowserHostErrorCode;
-
-  constructor(code: BrowserHostErrorCode, message: string) {
-    super(message);
-    this.code = code;
-  }
-}
+import { isDevtoolsOp, runDevtoolsOp } from './devtools-ops.ts';
 
 type Request<Op extends BrowserHostRequest['op']> = Extract<BrowserHostRequest, { op: Op }>;
 
-function tabFacts(tab: PaneTab) {
-  const url = tab.currentUrl();
-  return {
-    tabId: tab.id,
-    url: url.slice(0, 4096),
-    title: tab.currentTitle().slice(0, 300),
-    place: browserPlaceOf(url),
-    owner: tab.owner,
-  };
-}
-
-function targetTab(panes: BrowserPanes, chatId: string, wanted: string | undefined): PaneTab {
-  const tabs = panes.tabsOf(chatId);
-  const tab = wanted
-    ? tabs.find((candidate) => candidate.id === wanted)
-    : (tabs
-        .filter((candidate) => candidate.owner === 'agent')
-        .sort((a, b) => b.lastUsed - a.lastUsed)[0] ?? tabs.find((candidate) => candidate.active));
-  if (!tab) {
-    throw new BrowserOpError(
-      'no_tab',
-      wanted ? `There is no tab ${wanted} in this chat.` : 'No tab is open in this chat yet.',
-    );
-  }
-  refuseHeld(tab);
-  return tab;
-}
-
-const SIGNING_IN =
-  'The user is signing in on this tab. Wait for spark_browser_sign_in to return, then go on.';
-
-function refuseHeld(tab: PaneTab): void {
-  if (tab.picking) {
-    throw new BrowserOpError('user_picking', 'The user is selecting on this tab. Try again soon.');
-  }
-  if (tab.handoff) throw new BrowserOpError('user_signing_in', SIGNING_IN);
-}
+export { BrowserOpError };
 
 async function open(panes: BrowserPanes, request: Request<'open'>, signal: AbortSignal) {
   const home = {
@@ -310,6 +265,7 @@ export async function runBrowserOp(
     if (request.op === 'page') return await page(panes, request, signal);
     if (request.op === 'keep') return keep(panes, request);
     if (request.op === 'hand_over') return await handOver(panes, request);
+    if (isDevtoolsOp(request)) return await runDevtoolsOp(panes, request);
     if (request.op === 'act') return await act(panes, request, signal);
     if (request.op === 'sign_in') return await signIn(panes, request, signal);
     return await endRun(panes, request);
