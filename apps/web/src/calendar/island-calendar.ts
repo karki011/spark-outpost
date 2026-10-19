@@ -3,6 +3,7 @@ import type {
   CalendarEvent,
   CalendarNow,
   CalendarNudge,
+  ConversationSummary,
 } from '@spark-outpost/contracts';
 import type { Chime } from '../island/island-sound.ts';
 import { countLabel } from '../ui/count-label.ts';
@@ -45,6 +46,30 @@ export interface CalendarLineInput {
   catchUp: CatchUp | null;
   dismissed: ReadonlySet<string>;
   marks: NudgeMarks;
+  chats: ChatStates;
+}
+
+export type ChatStates = ReadonlyMap<string, 'running' | 'needs_you'>;
+
+export function chatStates(chats: readonly ConversationSummary[]): ChatStates {
+  const states = new Map<string, 'running' | 'needs_you'>();
+  for (const chat of chats) {
+    if (chat.archivedAt) continue;
+    if (chat.needsInput) states.set(chat.id, 'needs_you');
+    else if (chat.latestRun?.status === 'running' || chat.latestRun?.status === 'queued') {
+      states.set(chat.id, 'running');
+    }
+  }
+  return states;
+}
+
+export function liveWrapUp(nudge: CalendarNudge, states: ChatStates): CalendarNudge | null {
+  if (nudge.kind !== 'wrap_up') return nudge;
+  const chats = nudge.chats.flatMap((chat) => {
+    const reason = states.get(chat.id);
+    return reason ? [{ ...chat, reason }] : [];
+  });
+  return chats.length > 0 ? { ...nudge, chats } : null;
 }
 
 export function tallyHeld(tally: HeldTally, chime: Chime): HeldTally {
@@ -182,7 +207,8 @@ function liveNudge(now: CalendarNow, nudge: CalendarNudge, at: number): Calendar
 }
 
 function nudgeLine(now: CalendarNow, shown: CalendarNudge, input: CalendarLineInput) {
-  const nudge = liveNudge(now, shown, input.at);
+  const current = liveWrapUp(shown, input.chats);
+  const nudge = current ? liveNudge(now, current, input.at) : null;
   if (!nudge) return null;
   const group = nudgeGroupOf(nudge);
   const text = nudgeText(nudge, input.at, input.waiting);

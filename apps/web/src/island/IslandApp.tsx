@@ -206,6 +206,7 @@ export function IslandApp() {
   const calendar = useIslandCalendar(
     now,
     waiting,
+    data.chats,
     (text) => {
       setFollowUp(null);
       setDraft((current) => ({ ...current, text }));

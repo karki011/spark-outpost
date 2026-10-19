@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CalendarEvent } from '@spark-outpost/contracts';
+import type { CalendarEvent, ConversationSummary } from '@spark-outpost/contracts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import type { Chime, ChimeHold } from '../island/island-sound.ts';
 import { calendarApi } from './calendar-api.ts';
 import {
   calendarLine,
+  chatStates,
   hopKeys,
   NO_HELD,
   tallyHeld,
@@ -134,6 +135,7 @@ function useNudgeClock(live: ReturnType<typeof useCalendarNow>['data'] | null, u
 export function useIslandCalendar(
   minute: number,
   waiting: number,
+  chats: readonly ConversationSummary[],
   onQuickChat: (text: string) => void,
   home: IslandHomePanel,
 ): IslandCalendar {
@@ -152,6 +154,7 @@ export function useIslandCalendar(
       saveDismissed(next);
       return next;
     });
+  const liveChats = useMemo(() => chatStates(chats), [chats]);
   const line = calendarLine({
     now: live,
     at,
@@ -159,6 +162,7 @@ export function useIslandCalendar(
     catchUp: held.catchUp,
     dismissed,
     marks: nudges.marks,
+    chats: liveChats,
   });
   const { choosing, choose } = useChoosing(home);
   const clashes = useMemo(
