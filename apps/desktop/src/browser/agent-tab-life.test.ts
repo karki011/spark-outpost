@@ -170,3 +170,56 @@ describe('a tab handed to the user to sign in', () => {
     expect(panes.tab(CHAT, tabId)!.paneTab()).toMatchObject({ handoff: null, kept: true });
   });
 });
+
+describe('storage in developer tools', () => {
+  const storage = (tab: string) =>
+    runBrowserOp(
+      panes,
+      { op: 'storage', chatId: CHAT, runId: RUN, tab, values: true },
+      signal,
+    ) as Promise<{
+      partition: string;
+      valuesShown: boolean;
+      local: { key: string; value?: string }[];
+      cookies: { name: string; value?: string }[];
+    }>;
+
+  beforeEach(() => {
+    net.answer = (method) => {
+      if (method === 'DOMStorage.getDOMStorageItems') return { entries: [['theme', 'dark']] };
+      if (method === 'Network.getCookies') {
+        return {
+          cookies: [
+            {
+              name: 'sid',
+              value: 'abc',
+              domain: 'docs.example.com',
+              path: '/',
+              secure: true,
+              httpOnly: true,
+              session: true,
+              expires: -1,
+            },
+          ],
+        };
+      }
+      return {};
+    };
+  });
+
+  it('shows values only in the agent’s own storage on a website', async () => {
+    const agentTab = await agentOpens('https://docs.example.com/');
+    expect(await storage(agentTab)).toMatchObject({
+      partition: 'agent',
+      valuesShown: true,
+      local: [{ key: 'theme', value: 'dark' }],
+      cookies: [{ name: 'sid', value: 'abc' }],
+    });
+
+    const local = await agentOpens('http://localhost:5173/');
+    const shared = await storage(local);
+    expect(shared).toMatchObject({ partition: 'user', valuesShown: false });
+    expect(shared.local[0]).not.toHaveProperty('value');
+    expect(shared.cookies[0]).not.toHaveProperty('value');
+  });
+});

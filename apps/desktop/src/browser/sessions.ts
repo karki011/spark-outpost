@@ -48,6 +48,44 @@ export function browserSession(partition: string, guards: SessionGuards): Sessio
   return target;
 }
 
+export const DEVTOOLS_PARTITION = 'spark-browser-devtools';
+const NETWORK_SCHEMES = new Set(['http:', 'https:', 'ws:', 'wss:']);
+
+export function devtoolsRequestAllowed(value: string, blockedPorts: ReadonlySet<number>): boolean {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  if (!NETWORK_SCHEMES.has(url.protocol)) return true;
+  const port = Number(
+    url.port || (url.protocol === 'https:' || url.protocol === 'wss:' ? 443 : 80),
+  );
+  return !blockedPorts.has(port);
+}
+
+export function devtoolsSession(guards: Pick<SessionGuards, 'blockedPorts' | 'log'>): Session {
+  const target = session.fromPartition(DEVTOOLS_PARTITION);
+  if (target === session.defaultSession) {
+    throw new Error('Developer tools never use the app session.');
+  }
+  if (configured.has(target)) return target;
+  configured.add(target);
+  target.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+  target.setPermissionCheckHandler(() => false);
+  target.webRequest.onBeforeRequest((details, callback) => {
+    const allowed = devtoolsRequestAllowed(details.url, guards.blockedPorts());
+    if (!allowed) guards.log('Blocked a developer tools request to a Spark port.');
+    callback({ cancel: !allowed });
+  });
+  target.webRequest.onBeforeSendHeaders((details, callback) => {
+    callback({ requestHeaders: withoutSparkToken(details.requestHeaders) });
+  });
+  target.on('will-download', (event) => event.preventDefault());
+  return target;
+}
+
 function cookieOrigin(domain: string, secure: boolean): string {
   const host = domain.replace(/^\./, '');
   return `${secure ? 'https' : 'http'}://${host}`;

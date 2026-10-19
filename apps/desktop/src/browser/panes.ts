@@ -17,7 +17,7 @@ import {
   type PartitionChoice,
 } from './request-guard.ts';
 import type { SendsTo } from './selection-menu.ts';
-import { browserSession } from './sessions.ts';
+import { browserSession, devtoolsSession } from './sessions.ts';
 import { PaneTab } from './tab.ts';
 
 export interface PanesOptions {
@@ -183,6 +183,8 @@ export class BrowserPanes {
         visited: (url) => this.visited(pane, projectId, url),
         contextMenu: (owner, params) => this.options.contextMenu(owner, params),
         addShortcut: (owner) => this.options.addShortcut(owner),
+        devtoolsSession: () =>
+          devtoolsSession({ blockedPorts: this.options.blockedPorts, log: this.options.log }),
       },
     );
     pane.tabs.push(tab);

@@ -5,6 +5,7 @@ import {
   redactQuery,
   type BrowserNetworkEntry,
 } from '@spark-outpost/contracts';
+import { PageClock } from './page-clock.ts';
 
 type Params = Record<string, unknown>;
 
@@ -77,19 +78,17 @@ function fromCache(response: ResponseFacts): boolean {
 export class NetworkLog {
   private entries: BrowserNetworkEntry[] = [];
   private readonly open = new Map<string, BrowserNetworkEntry>();
-  private zero: number | null = null;
   private lost = 0;
   private readonly capacity: number;
+  private readonly clock: PageClock;
 
-  constructor(capacity = BROWSER_NETWORK_CAPACITY) {
+  constructor(capacity = BROWSER_NETWORK_CAPACITY, clock = new PageClock()) {
     this.capacity = capacity;
+    this.clock = clock;
   }
 
   private ms(timestamp: unknown): number {
-    const seconds = typeof timestamp === 'number' ? timestamp : null;
-    if (seconds === null) return 0;
-    this.zero ??= seconds;
-    return Math.max(0, Math.round((seconds - this.zero) * 1000 * 10) / 10);
+    return typeof timestamp === 'number' ? this.clock.fromMonotonic(timestamp) : 0;
   }
 
   private add(entry: BrowserNetworkEntry): void {
@@ -122,6 +121,7 @@ export class NetworkLog {
     }
     const request = (params.request ?? {}) as { url?: string; method?: string };
     const wall = typeof params.wallTime === 'number' ? params.wallTime * 1000 : Date.now();
+    if (typeof params.timestamp === 'number') this.clock.calibrate(params.timestamp, wall / 1000);
     const entry: BrowserNetworkEntry = {
       at: new Date(wall).toISOString(),
       method: clip(request.method ?? 'GET', 12),
@@ -190,7 +190,7 @@ export class NetworkLog {
   clear(): void {
     this.entries = [];
     this.open.clear();
-    this.zero = null;
+    this.clock.reset();
     this.lost = 0;
   }
 }

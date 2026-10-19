@@ -1,4 +1,4 @@
-import { WebContentsView, type ContextMenuParams, type Session } from 'electron';
+import { BrowserWindow, WebContentsView, type ContextMenuParams, type Session } from 'electron';
 import {
   browserPlaceOf,
   classifyBrowserUrl,
@@ -9,8 +9,8 @@ import {
 import { attachCdp, type Cdp } from './cdp.ts';
 import { capturePageLogs, type PageLogs } from './page-capture.ts';
 import { RefMap, tabRefNumbers } from './ref-map.ts';
-import { navigationAllowed } from './request-guard.ts';
-import { isAddShortcut } from './selection-menu.ts';
+import { agentPartition, navigationAllowed } from './request-guard.ts';
+import { isAddShortcut, isDevtoolsShortcut } from './selection-menu.ts';
 import type { TabFacts } from './tab-rules.ts';
 
 export interface TabHooks {
@@ -24,6 +24,7 @@ export interface TabHooks {
   visited(url: string): void;
   contextMenu(tab: PaneTab, params: ContextMenuParams): void;
   addShortcut(tab: PaneTab): void;
+  devtoolsSession(): Session;
 }
 
 export interface TabInit {
@@ -70,6 +71,7 @@ export class PaneTab {
   private opening: Promise<LiveTab> | null = null;
   private waking: Promise<LiveTab> | null = null;
   private readonly hooks: TabHooks;
+  private devtools: BrowserWindow | null = null;
 
   constructor(init: TabInit, hooks: TabHooks) {
     this.id = init.id;
@@ -87,6 +89,45 @@ export class PaneTab {
 
   currentTitle(): string {
     return this.title;
+  }
+
+  openDevtools(): void {
+    const contents = this.live?.view.webContents;
+    if (!contents || contents.isDestroyed()) return;
+    if (this.devtools && !this.devtools.isDestroyed()) {
+      this.devtools.focus();
+      return;
+    }
+    const window = new BrowserWindow({
+      width: 1000,
+      height: 700,
+      title: `Developer tools: ${this.title || 'Browser pane'}`,
+      webPreferences: {
+        session: this.hooks.devtoolsSession(),
+        sandbox: true,
+        contextIsolation: true,
+      },
+    });
+    this.devtools = window;
+    contents.setDevToolsWebContents(window.webContents);
+    contents.openDevTools({ mode: 'detach' });
+    contents.once('devtools-closed', () => {
+      if (!window.isDestroyed()) window.close();
+    });
+    window.on('closed', () => {
+      if (this.devtools === window) this.devtools = null;
+      if (!contents.isDestroyed()) contents.closeDevTools();
+    });
+  }
+
+  private closeDevtools(): void {
+    const window = this.devtools;
+    this.devtools = null;
+    if (window && !window.isDestroyed()) window.close();
+  }
+
+  inAgentStorage(): boolean {
+    return this.partition !== null && this.partition === agentPartition(this.chatId);
   }
 
   view(): WebContentsView | null {
@@ -220,6 +261,11 @@ export class PaneTab {
     });
     contents.on('before-input-event', (event, input) => {
       if (input.type === 'keyDown') this.userUsed();
+      if (isDevtoolsShortcut(input, process.platform)) {
+        event.preventDefault();
+        this.openDevtools();
+        return;
+      }
       if (!isAddShortcut(input, process.platform)) return;
       event.preventDefault();
       this.hooks.addShortcut(this);
@@ -313,6 +359,7 @@ export class PaneTab {
     const live = this.live;
     if (!live) return;
     this.url = this.currentUrl();
+    this.closeDevtools();
     this.live = null;
     this.partition = null;
     this.loading = false;

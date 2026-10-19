@@ -16,6 +16,14 @@ import {
 } from './browser-act.ts';
 import { BROWSER_NETWORK_CAPACITY, browserNetworkEntrySchema } from './browser-network.ts';
 import {
+  BROWSER_EVAL_EXPRESSION_MAX,
+  BROWSER_SELECTOR_MAX,
+  browserEvaluateShape,
+  browserInspectShape,
+  browserPerformanceShape,
+  browserStorageShape,
+} from './browser-devtools.ts';
+import {
   SIGN_IN_ORIGIN_MAX,
   SIGN_IN_SITES_MAX,
   SIGN_IN_PASSWORD_MAX,
@@ -28,6 +36,7 @@ export const BROWSER_READ_MAX_CHARS = 12_000;
 export const BROWSER_READ_MIN_CHARS = 500;
 export const BROWSER_LOG_ENTRIES_MAX = 200;
 export const BROWSER_LOG_TEXT_MAX = 500;
+export const BROWSER_LOG_STACK_MAX = 1500;
 
 const chat = { chatId: z.uuid(), runId: z.uuid().nullable() };
 const tab = z.string().min(1).max(40).optional();
@@ -91,6 +100,22 @@ export const browserHostRequestSchema = z.discriminatedUnion('op', [
     settle: z.boolean().optional(),
   }),
   z.object({ op: z.literal('keep'), ...chat, tab: z.string().min(1).max(40) }),
+  z.object({
+    op: z.literal('evaluate'),
+    ...chat,
+    tab: z.string().min(1).max(40),
+    expression: z.string().min(1).max(BROWSER_EVAL_EXPRESSION_MAX),
+    origin: z.string().min(1).max(300),
+  }),
+  z.object({
+    op: z.literal('inspect'),
+    ...chat,
+    tab,
+    ref: z.string().max(20).optional(),
+    selector: z.string().min(1).max(BROWSER_SELECTOR_MAX).optional(),
+  }),
+  z.object({ op: z.literal('performance'), ...chat, tab }),
+  z.object({ op: z.literal('storage'), ...chat, tab, values: z.boolean() }),
   z.object({
     op: z.literal('hand_over'),
     ...chat,
@@ -176,6 +201,8 @@ export const browserLogEntrySchema = z.object({
   source: z.string().max(300).nullable(),
   status: z.number().int().nullable(),
   method: z.string().max(12).nullable(),
+  ms: z.number().nonnegative().nullable().default(null),
+  stack: z.string().max(BROWSER_LOG_STACK_MAX).nullable().default(null),
 });
 export type BrowserLogEntry = z.infer<typeof browserLogEntrySchema>;
 
@@ -191,6 +218,15 @@ export type BrowserLogsResult = z.infer<typeof browserLogsResultSchema>;
 export const browserEndRunResultSchema = z.object({ closed: z.number().int().nonnegative() });
 
 export const browserKeepResultSchema = z.object({ kept: z.boolean() });
+
+export const browserEvaluateResultSchema = z.object({ ...tabFacts, ...browserEvaluateShape });
+export type BrowserEvaluateResult = z.infer<typeof browserEvaluateResultSchema>;
+export const browserInspectResultSchema = z.object({ ...tabFacts, ...browserInspectShape });
+export type BrowserInspectResult = z.infer<typeof browserInspectResultSchema>;
+export const browserPerformanceResultSchema = z.object({ ...tabFacts, ...browserPerformanceShape });
+export type BrowserPerformanceResult = z.infer<typeof browserPerformanceResultSchema>;
+export const browserStorageResultSchema = z.object({ ...tabFacts, ...browserStorageShape });
+export type BrowserStorageResult = z.infer<typeof browserStorageResultSchema>;
 
 export const browserHandOverResultSchema = z.object({
   ...tabFacts,
@@ -228,6 +264,10 @@ export const browserHostResultSchemas = {
   logs: browserLogsResultSchema,
   end_run: browserEndRunResultSchema,
   keep: browserKeepResultSchema,
+  evaluate: browserEvaluateResultSchema,
+  inspect: browserInspectResultSchema,
+  performance: browserPerformanceResultSchema,
+  storage: browserStorageResultSchema,
   hand_over: browserHandOverResultSchema,
   page: browserPageResultSchema,
   act: browserActResultSchema,

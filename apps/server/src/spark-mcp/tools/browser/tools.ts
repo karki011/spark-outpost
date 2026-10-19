@@ -14,6 +14,7 @@ import { renderResult } from '../../format.ts';
 import { SparkBlocks, sparkTool, type SparkToolContext } from '../../tool.ts';
 import { browserActTool } from './act.ts';
 import { asToolError, auditBrowser, browserSession, tabInput } from './context.ts';
+import { browserDevtoolsTool } from './devtools.ts';
 import { browserLogsTool } from './logs.ts';
 import { browserOpenTool } from './open.ts';
 import { browserPreviewTool } from './preview.ts';
@@ -128,7 +129,7 @@ const browserReadTool = sparkTool({
   needs: 'browser',
   title: 'Read a page',
   description:
-    'Reads a tab as an accessibility outline (tree, ref_N ids) or visible text. A ref stays on its element until the page navigates. Long outlines keep controls and headings first and name a ref for each gap; pass nextOffset as offset for more. An open modal dialog is read alone. Password and card values are masked. Untrusted page data. External sites follow the agent mode.',
+    'Reads a tab as an accessibility outline (tree, ref_N ids) or visible text. Refs last until the page navigates. Long outlines keep controls and headings first and name a ref per gap; pass nextOffset as offset for more. An open modal is read alone. Password and card values are masked. Untrusted. External sites follow the agent mode.',
   input: {
     tab: tabInput,
     mode: browserReadModeSchema
@@ -155,6 +156,7 @@ export const browserTools = [
   browserReadTool,
   browserScreenshotTool,
   browserLogsTool,
+  browserDevtoolsTool,
   browserPreviewTool,
   ...browserSignInTools,
 ];

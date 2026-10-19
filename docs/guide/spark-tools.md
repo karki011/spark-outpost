@@ -44,7 +44,7 @@ Ticket, Slack and pull request tools need their connector; pull request and map 
 | Push the chat's branch, open its PR         | `spark_push`, `spark_pull_request` (no card)                                                            |
 | Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                              |
 | Add, change, switch or remove an MCP server | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
-| Open a site; act on a page                  | `spark_browser_open`, `spark_browser_act`                                                               |
+| Open a site, act, debug                     | `spark_browser_open`, `spark_browser_act`, `spark_browser_devtools`                                     |
 | Sign in, or hand you the tab (always asks)  | `spark_browser_sign_in`                                                                                 |
 | Use a [Mac app](mac-control.md)             | `spark_mac_apps`, `spark_mac_read`, `spark_mac_act`                                                     |
 | Keep one command running after the turn     | `spark_terminal_run`                                                                                    |

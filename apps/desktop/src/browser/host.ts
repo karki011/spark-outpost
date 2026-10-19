@@ -193,6 +193,8 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     } else if (action.command === 'pin') {
       tab.pinned = action.pinned;
       panes.noteChange(chatId);
+    } else if (action.command === 'devtools') {
+      tab.openDevtools();
     } else if (action.command === 'pick') {
       tab.keep();
       await pick(tab, action.mode);

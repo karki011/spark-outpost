@@ -224,6 +224,7 @@ describe('browser tools need the Mac app', () => {
       'spark_browser_read',
       'spark_browser_screenshot',
       'spark_browser_logs',
+      'spark_browser_devtools',
       'spark_browser_preview',
       'spark_browser_signins',
       'spark_browser_sign_in',
@@ -306,8 +307,11 @@ describe('reading a local page', () => {
       '+4ms → +9ms (5ms) · GET · 404 · Fetch · http://localhost:47611/missing.json?v=',
     );
     expect(logs.texts[1]).not.toContain('abcdefghijklmnopqrstuvwxyz0123456789');
-    const errors = await call('spark_browser_logs');
+    const errors = await call('spark_browser_logs', { type: 'error' });
+    expect(errors.facts).toMatchObject({ entries: 1, errors: 1 });
     expect(errors.texts[1]).toContain('[error] Failed to load key');
+    const warnings = await call('spark_browser_logs', { type: 'warn,info' });
+    expect(warnings.facts).toMatchObject({ entries: 0 });
     expect(errors.texts[1]).not.toContain('abcdefghijklmnopqrstuvwxyz0123456789');
   });
 

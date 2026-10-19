@@ -56,6 +56,7 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_browser_read: 'Reading a page',
   spark_browser_screenshot: 'Taking a screenshot of a page',
   spark_browser_logs: 'Reading page logs',
+  spark_browser_devtools: 'Using developer tools on a page',
   spark_browser_preview: 'Checking the preview server',
   spark_browser_signins: 'Listing saved sign-ins',
   spark_browser_sign_in: 'Signing in with a saved sign-in',

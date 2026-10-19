@@ -27,6 +27,14 @@ export function GlobeIcon() {
   );
 }
 
+export function DevtoolsIcon() {
+  return (
+    <Icon>
+      <path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14" />
+    </Icon>
+  );
+}
+
 export function NavBackIcon() {
   return (
     <Icon>
