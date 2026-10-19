@@ -75,10 +75,19 @@ interface MenuShellProps {
   page: string;
   onClose: () => void;
   onKey?: (event: KeyboardEvent<HTMLDivElement>) => boolean;
+  className?: string;
   children: ReactNode;
 }
 
-export function MenuShell({ anchor, label, page, onClose, onKey, children }: MenuShellProps) {
+export function MenuShell({
+  anchor,
+  label,
+  page,
+  onClose,
+  onKey,
+  className,
+  children,
+}: MenuShellProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: anchor.x, top: anchor.y, origin: 'top left' });
 
@@ -133,7 +142,7 @@ export function MenuShell({ anchor, label, page, onClose, onKey, children }: Men
   return createPortal(
     <div
       ref={menuRef}
-      className="ctx"
+      className={className ? `ctx ${className}` : 'ctx'}
       role="menu"
       aria-label={label}
       style={{ left: position.left, top: position.top, transformOrigin: position.origin }}

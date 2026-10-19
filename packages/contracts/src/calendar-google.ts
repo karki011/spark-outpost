@@ -51,6 +51,7 @@ export const googleAccountStatusSchema = z.object({
   state: googleAccountStateSchema,
   message: z.string().max(500).nullable(),
   canEdit: z.boolean(),
+  syncedAt: z.iso.datetime({ offset: true }).nullable(),
 });
 export type GoogleAccountStatus = z.infer<typeof googleAccountStatusSchema>;
 

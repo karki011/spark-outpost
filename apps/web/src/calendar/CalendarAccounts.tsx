@@ -30,15 +30,20 @@ export function swatch(color: string): CSSProperties {
 
 export type ChangeChoice = (key: string, patch: CalendarChoicePatch) => void;
 
+export type RowsView = 'notify' | 'card' | 'choose' | 'edit';
+
+const SHOWS_INCLUDE: ReadonlySet<RowsView> = new Set(['notify', 'choose']);
+const SHOWS_NUDGE: ReadonlySet<RowsView> = new Set(['notify', 'card']);
+
 interface RowProps {
   calendar: CalendarChoice;
   onChange: ChangeChoice;
-  withEdit: boolean;
+  view: RowsView;
 }
 
-function EditSwitch({ calendar, onChange }: Omit<RowProps, 'withEdit'>) {
+function EditSwitch({ calendar, onChange }: Omit<RowProps, 'view'>) {
   return (
-    <span className="cal-col">
+    <span className="cal-col cal-end">
       <BlobToggle
         size="sm"
         kind="plain"
@@ -51,42 +56,57 @@ function EditSwitch({ calendar, onChange }: Omit<RowProps, 'withEdit'>) {
   );
 }
 
-function CalendarRow({ calendar, onChange, withEdit }: RowProps) {
+function NudgeSwitch({ calendar, onChange }: Omit<RowProps, 'view'>) {
   return (
-    <li className="cal-row" data-off={!calendar.include || undefined}>
-      <input
-        type="checkbox"
-        className="cal-include"
-        checked={calendar.include}
-        aria-label={`Include ${calendar.title}`}
-        onChange={(event) => onChange(calendar.key, { include: event.target.checked })}
+    <span className="cal-col cal-end">
+      <BlobToggle
+        size="sm"
+        kind="plain"
+        label={`${NUDGE_LABEL}, ${calendar.title}`}
+        checked={calendar.include && calendar.nudges}
+        disabled={!calendar.include}
+        onChange={(checked) => onChange(calendar.key, { nudges: checked })}
       />
+    </span>
+  );
+}
+
+function CalendarRow({ calendar, onChange, view }: RowProps) {
+  const off = !calendar.include && view !== 'edit';
+  return (
+    <li className="cal-row" data-off={off || undefined}>
+      {SHOWS_INCLUDE.has(view) && (
+        <input
+          type="checkbox"
+          className="cal-include"
+          checked={calendar.include}
+          aria-label={`Include ${calendar.title}`}
+          onChange={(event) => onChange(calendar.key, { include: event.target.checked })}
+        />
+      )}
       <i className="cal-sw" style={swatch(calendar.color)} aria-hidden="true" />
       <CalendarName name={calendar.title} className="cal-title" />
       {calendar.ownership !== 'mine' && <span className="cal-chip">shared</span>}
-      <span className="cal-nudge cal-col">
-        <BlobToggle
-          size="sm"
-          kind="plain"
-          label={`${NUDGE_LABEL}, ${calendar.title}`}
-          checked={calendar.include && calendar.nudges}
-          disabled={!calendar.include}
-          onChange={(checked) => onChange(calendar.key, { nudges: checked })}
-        />
-      </span>
-      {withEdit && <EditSwitch calendar={calendar} onChange={onChange} />}
+      {view === 'card' && !calendar.include && <span className="cal-chip">hidden</span>}
+      {SHOWS_NUDGE.has(view) && <NudgeSwitch calendar={calendar} onChange={onChange} />}
+      {view === 'edit' && <EditSwitch calendar={calendar} onChange={onChange} />}
     </li>
   );
 }
 
-export function RowsHeader({ withEdit = false }: { withEdit?: boolean }) {
+const HEADER: Record<RowsView, { start: string | null; end: string | null }> = {
+  notify: { start: 'Include', end: NUDGE_LABEL },
+  card: { start: null, end: NUDGE_LABEL },
+  choose: { start: 'Include', end: null },
+  edit: { start: null, end: AGENTS_EDIT_LABEL },
+};
+
+export function RowsHeader({ view = 'notify' }: { view?: RowsView }) {
+  const { start, end } = HEADER[view];
   return (
     <p className="cal-rows-h" aria-hidden="true">
-      <span>Include</span>
-      <span className="cal-cols">
-        <span className="cal-col">{NUDGE_LABEL}</span>
-        {withEdit && <span className="cal-col">{AGENTS_EDIT_LABEL}</span>}
-      </span>
+      <span>{start}</span>
+      {end && <span className="cal-col">{end}</span>}
     </p>
   );
 }
@@ -94,10 +114,10 @@ export function RowsHeader({ withEdit = false }: { withEdit?: boolean }) {
 interface RowsProps {
   calendars: readonly CalendarChoice[];
   onChange: ChangeChoice;
-  withEdit?: boolean;
+  view?: RowsView;
 }
 
-export function CalendarRows({ calendars, onChange, withEdit = false }: RowsProps) {
+export function CalendarRows({ calendars, onChange, view = 'notify' }: RowsProps) {
   const [all, setAll] = useState(false);
   const listId = useId();
   const hidden = calendars.length - ROWS_SHOWN;
@@ -106,12 +126,7 @@ export function CalendarRows({ calendars, onChange, withEdit = false }: RowsProp
     <>
       <ul className="cal-rows" id={listId}>
         {shown.map((calendar) => (
-          <CalendarRow
-            key={calendar.key}
-            calendar={calendar}
-            onChange={onChange}
-            withEdit={withEdit}
-          />
+          <CalendarRow key={calendar.key} calendar={calendar} onChange={onChange} view={view} />
         ))}
       </ul>
       {hidden > 0 && (
@@ -129,25 +144,23 @@ export function CalendarRows({ calendars, onChange, withEdit = false }: RowsProp
   );
 }
 
-export function CalendarAccounts({
-  accounts,
-  onChange,
-  withEdit = false,
-}: {
+interface AccountsProps {
   accounts: readonly CalendarAccount[];
   onChange: ChangeChoice;
-  withEdit?: boolean;
-}) {
+  view?: RowsView;
+}
+
+export function CalendarAccounts({ accounts, onChange, view = 'notify' }: AccountsProps) {
   return (
     <div className="cal-accounts">
-      <RowsHeader withEdit={withEdit} />
+      <RowsHeader view={view} />
       {accounts.map((account) => (
         <section key={account.id} className="cal-acct" aria-label={account.title}>
           <p className="cal-acct-h">
             <CalendarName name={account.title} />
             <small>{SOURCE_LABEL[account.kind]}</small>
           </p>
-          <CalendarRows calendars={account.calendars} onChange={onChange} withEdit={withEdit} />
+          <CalendarRows calendars={account.calendars} onChange={onChange} view={view} />
         </section>
       ))}
     </div>

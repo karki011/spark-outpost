@@ -1,11 +1,3 @@
-.cal-connect ol {
-  margin: 6px 0 0;
-  padding-left: 20px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
 .cal-source {
   display: flex;
   flex-direction: column;
@@ -20,12 +12,6 @@
 .cal-source h3 {
   margin: 0;
   font-size: 13.5px;
-}
-
-.cal-google-acct {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
 
 .cal-notice {
@@ -111,7 +97,10 @@
   border-top: 1px solid var(--line);
 }
 
-.cal-row[data-off] .cal-title,
+.cal-row[data-off] .cal-title {
+  color: var(--muted);
+}
+
 .cal-row[data-off] .cal-sw {
   opacity: 0.55;
 }
@@ -129,7 +118,7 @@
   font-size: 13.5px;
 }
 
-.cal-nudge {
+.cal-end {
   margin-left: auto;
 }
 
@@ -138,10 +127,6 @@
   flex: none;
   justify-content: center;
   width: 92px;
-}
-
-.cal-cols {
-  display: flex;
 }
 
 .cal-more {

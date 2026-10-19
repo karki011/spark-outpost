@@ -3,7 +3,9 @@ import type { ConversationSummary } from '@spark-outpost/contracts';
 import { duration, shapeWords } from './calendar-format.ts';
 import { at, choice, event, FAMILY, link, status, WORK } from './test-fixtures.ts';
 import {
+  CALENDAR_TAGLINE,
   connectorLine,
+  nextMeeting,
   countdown,
   joinHint,
   joinTarget,
@@ -99,6 +101,7 @@ describe('with a Google account', () => {
             state,
             message: null,
             canEdit: false,
+            syncedAt: null,
           },
         ],
       },
@@ -106,28 +109,39 @@ describe('with a Google account', () => {
 
   it('is ready without macOS Calendar, whatever its helper says', () => {
     expect(todayState(google('ready'))).toBe('ready');
-    expect(connectorLine(google('ready')).text).toBe('1 Google account · 1 of 1 calendar');
+    expect(connectorLine(google('ready')).text).toBe('1 calendar');
   });
 
   it('says to sign in again when Google refused the sign-in', () => {
-    expect(connectorLine(google('sign_in_again')).text).toBe(
-      '1 Google account · 1 of 1 calendar · Sign in again',
-    );
+    expect(connectorLine(google('sign_in_again')).text).toBe('1 calendar · Sign in again');
   });
 });
 
 describe('connectorLine', () => {
-  it('counts accounts and included calendars once connected', () => {
+  it('counts included calendars once connected', () => {
     const two = status();
     two.accounts[0]!.calendars[1]!.include = false;
-    expect(connectorLine(two)).toEqual({
-      state: 'ready',
-      text: 'macOS Calendar · 1 account · 1 of 2 calendars',
-    });
+    expect(connectorLine(two)).toEqual({ state: 'ready', text: '1 calendar' });
   });
 
-  it('names the state before connecting', () => {
-    expect(connectorLine(status({ connected: false })).text).toBe('Not connected');
+  it('names the next meeting that has not started', () => {
+    const now = at(9);
+    const started = event('Planning', at(8, 30), at(9, 30));
+    const standup = event('Standup', at(9, 25), at(9, 40));
+    const next = nextMeeting([started, standup], now);
+    expect(next?.title).toBe('Standup');
+    expect(connectorLine(status(), next, now).text).toBe('2 calendars · next: Standup in 25 min');
+    expect(nextMeeting([started], now)).toBeNull();
+  });
+
+  it('says so when no calendar is included', () => {
+    const none = status();
+    for (const calendar of none.accounts[0]!.calendars) calendar.include = false;
+    expect(connectorLine(none).text).toBe('No calendars included');
+  });
+
+  it('describes Calendar before anything is connected and names a denial after', () => {
+    expect(connectorLine(status({ connected: false })).text).toBe(CALENDAR_TAGLINE);
     expect(connectorLine(status({ authorization: 'denied' })).text).toBe(
       'Calendars access is off for Spark Outpost',
     );

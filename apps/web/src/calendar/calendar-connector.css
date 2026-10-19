@@ -1,0 +1,242 @@
+.cal-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.cal-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+}
+
+.cal-tile h3 {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+
+.cal-tile .cx-actions {
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.cal-source-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  color: var(--muted);
+}
+
+.cal-source-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+}
+
+.cal-source-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cal-source-name {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.cal-source-name small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.cal-source-more {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+}
+
+.cal-source-more:hover,
+.cal-source-more[aria-expanded='true'] {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.cal-source-more:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.cal-source-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-pill {
+  flex: none;
+  padding: 2px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.cal-pill.warn {
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+  color: var(--warn);
+}
+
+.cal-pill.danger {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.cal-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+}
+
+.cal-panel .cal-rows {
+  background: var(--panel);
+}
+
+.cal-panel-h {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.cal-panel-h p {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.cal-panel-h small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cal-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cal-add-row .cal-muted {
+  margin-right: auto;
+}
+
+.cal-privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.cal-privacy svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.cal-confirm-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--text) 28%, transparent);
+}
+
+.cal-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+  padding: 20px 22px 16px;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--r) + 4px);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.cal-confirm h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+}
+
+.cal-confirm p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.cal-confirm-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn.cal-danger {
+  background: var(--danger);
+  color: var(--panel);
+}
+
+.btn.cal-danger:hover:not(:disabled) {
+  box-shadow: 0 0 0 4px var(--danger-soft);
+}
+
+.btn.cal-danger:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+
+.ctx.cal-menu {
+  z-index: 110;
+}

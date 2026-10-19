@@ -11,6 +11,7 @@ import { readCalendarClock } from './fake-calendar-clock.ts';
 import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { FAKE_CALENDAR_STATE } from './stub-config.ts';
+import { calendarCard, editCalendars } from './calendar-card.ts';
 
 test.skip(process.env.SPARK_FAKE_CALENDAR !== '1', 'needs SPARK_FAKE_CALENDAR=1');
 test.describe.configure({ mode: 'serial' });
@@ -18,7 +19,7 @@ test.describe.configure({ mode: 'serial' });
 const SHOTS = process.env.CALENDAR_SHOTS ?? '';
 const MINUTE = 60_000;
 const fakeNow = () => Date.now() + readCalendarClock(FAKE_CALENDAR_STATE);
-const card = (page: Page) => page.locator('[data-connector="calendar"]');
+const card = calendarCard;
 
 async function status(page: Page) {
   const response = await page.request.get('/api/calendar/status');
@@ -53,6 +54,7 @@ test('turns on agent reading and editing per calendar, off by default, and keeps
   const read = card(page).getByRole('switch', { name: 'Let agents read my calendar' });
   await expect(read).toBeEnabled();
   await expect(read).toHaveAttribute('aria-checked', 'false');
+  await editCalendars(page, 'Mac Calendar');
   const work = card(page).getByRole('switch', { name: 'Agents can edit, Spark Work' });
   const family = card(page).getByRole('switch', { name: 'Agents can edit, Spark Family' });
   await expect(work).toHaveAttribute('aria-checked', 'false');
@@ -66,6 +68,7 @@ test('turns on agent reading and editing per calendar, off by default, and keeps
   if (SHOTS) await card(page).screenshot({ path: `${SHOTS}/calendar-card-agents.png` });
   await page.reload();
   await openCard(page);
+  await editCalendars(page, 'Mac Calendar');
   await expect(read).toHaveAttribute('aria-checked', 'true');
   await expect(work).toHaveAttribute('aria-checked', 'true');
   await expect(family).toHaveAttribute('aria-checked', 'false');

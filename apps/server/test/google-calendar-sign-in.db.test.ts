@@ -62,6 +62,8 @@ describe('Google sign-in', () => {
       testing: true,
       accounts: [{ email: EMAIL, state: 'ready', message: null }],
     });
+    const syncedAt = Date.parse(after.google.accounts[0]!.syncedAt ?? '');
+    expect(Math.abs(Date.now() - syncedAt)).toBeLessThan(60_000);
     expect(after.accounts).toEqual([
       expect.objectContaining({
         title: EMAIL,

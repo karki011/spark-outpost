@@ -361,3 +361,15 @@ export function ChatPlusIcon() {
 export function WarnIcon() {
   return <StrokeIcon path="M12 3l9 16H3zM12 10v4M12 17h.01" />;
 }
+
+export function LockIcon() {
+  return <StrokeIcon path="M6 11h12v9H6zM8.5 11V7.5a3.5 3.5 0 0 1 7 0V11" />;
+}
+
+export function LaptopIcon() {
+  return <StrokeIcon path="M5 6h14v10H5zM3 19h18" />;
+}
+
+export function CloudIcon() {
+  return <StrokeIcon path="M7 18a4 4 0 0 1-.6-8 5.5 5.5 0 0 1 10.6-1.5A4.5 4.5 0 0 1 17 18z" />;
+}

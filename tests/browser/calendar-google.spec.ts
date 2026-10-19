@@ -10,6 +10,7 @@ import { resetTestDatabase } from './database.ts';
 import { apiNow, matchApiClock } from './api-clock.ts';
 import { GOOGLE_STUB_EMAIL } from './google-stub.ts';
 import { FAKE_CALENDAR_STATE, STUB_PORT } from './stub-config.ts';
+import { calendarCard, chooseCalendars, disconnectSource, editCalendars } from './calendar-card.ts';
 
 test.skip(process.env.SPARK_FAKE_CALENDAR !== '1', 'needs SPARK_FAKE_CALENDAR=1');
 test.describe.configure({ mode: 'serial' });
@@ -19,7 +20,7 @@ const SHOTS = process.env.CALENDAR_SHOTS ?? '';
 const MINUTE = 60_000;
 let anchor = 0;
 
-const card = (page: Page) => page.locator('[data-connector="calendar"]');
+const card = calendarCard;
 const today = (page: Page) => page.getByRole('main', { name: 'Today' });
 
 async function status(page: Page) {
@@ -55,7 +56,13 @@ async function openCard(page: Page) {
 
 async function addGoogle(page: Page) {
   const popup = page.waitForEvent('popup');
-  await card(page).getByRole('button', { name: 'Add Google account' }).click();
+  const empty = card(page).getByRole('button', { name: 'Sign in with Google' });
+  if (await empty.isVisible()) {
+    await empty.click();
+  } else {
+    await card(page).getByRole('button', { name: 'Add calendar' }).click();
+    await page.getByRole('menuitem', { name: 'Google Calendar' }).click();
+  }
   const signIn = await popup;
   await expect(signIn.getByRole('heading', { name: 'You can close this tab' })).toBeVisible();
   await signIn.close();
@@ -96,11 +103,22 @@ test('adds a Google account in the default browser and shows its events on Today
   await openCard(page);
   await expect(card(page)).toContainText(GOOGLE_TESTING_LINE);
   await addGoogle(page);
-  await expect(card(page)).toContainText('1 Google account · 1 of 1 calendar');
+  await expect(card(page)).toContainText(/1 calendar · next: Design review in \d+ min/);
+  const account = card(page).getByRole('region', { name: GOOGLE_STUB_EMAIL });
+  await expect(account).toContainText(/Synced (just now|\d+ min ago)/);
+  await expect(account).toContainText('Connected');
+  await chooseCalendars(page, GOOGLE_STUB_EMAIL);
   await expect(
     card(page).getByRole('checkbox', { name: `Include ${GOOGLE_STUB_EMAIL}` }),
   ).toBeChecked();
-  await expect(card(page).getByRole('button', { name: 'Connect', exact: true })).toBeVisible();
+  await expect(card(page)).toContainText(GOOGLE_TESTING_LINE);
+  const add = card(page).getByRole('button', { name: 'Add calendar' });
+  await add.click();
+  const choices = page.getByRole('menu', { name: 'Add calendar' });
+  await expect(choices.getByRole('menuitem')).toHaveText(['Mac Calendar', 'Google Calendar']);
+  await page.keyboard.press('Escape');
+  await expect(choices).toBeHidden();
+  await expect(add).toBeFocused();
 
   await page.keyboard.press('Escape');
   await expect(card(page)).toBeHidden();
@@ -126,6 +144,7 @@ test('shows an event synced to macOS Calendar and Google once', async ({ page })
   ]);
   await openCard(page);
   await card(page).getByRole('button', { name: 'Connect', exact: true }).click();
+  await expect(card(page).getByRole('button', { name: 'Options for Mac Calendar' })).toBeVisible();
   await addGoogle(page);
   const now = new Date(apiNow());
   const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -143,6 +162,7 @@ test('asks to sign in again when Google ends the sign-in, and Disconnect revokes
   await openCard(page);
   await addGoogle(page);
   await fetch(`${STUB_URL}/google-test/expire`);
+  await chooseCalendars(page, GOOGLE_STUB_EMAIL);
   const include = card(page).getByRole('checkbox', { name: `Include ${GOOGLE_STUB_EMAIL}` });
   await include.uncheck();
   await include.check();
@@ -151,9 +171,10 @@ test('asks to sign in again when Google ends the sign-in, and Disconnect revokes
   ).toBeVisible();
   await expect(card(page)).toContainText('Google sign-in ran out');
 
-  await card(page)
-    .getByRole('button', { name: `Disconnect ${GOOGLE_STUB_EMAIL}` })
-    .click();
+  await expect(card(page).getByRole('region', { name: GOOGLE_STUB_EMAIL })).toContainText(
+    'Signed out',
+  );
+  await disconnectSource(page, GOOGLE_STUB_EMAIL);
   await expect(card(page).getByRole('region', { name: GOOGLE_STUB_EMAIL })).toHaveCount(0);
   const revoked = (await (await fetch(`${STUB_URL}/google-test/revoked`)).json()) as {
     issued: number;
@@ -194,9 +215,11 @@ test('cuts long macOS and Google calendar names to one line, with the full name 
   });
   await openCard(page);
   await card(page).getByRole('button', { name: 'Connect', exact: true }).click();
+  await expect(card(page).getByRole('button', { name: 'Options for Mac Calendar' })).toBeVisible();
   await addGoogle(page);
   await expectClipped(LONG_MAC, card(page));
   await expectClipped(LONG_GOOGLE, card(page));
+  await chooseCalendars(page, GOOGLE_STUB_EMAIL);
   await expect(card(page).getByRole('checkbox', { name: `Include ${LONG_GOOGLE}` })).toBeChecked();
 
   await page.keyboard.press('Escape');
@@ -234,11 +257,7 @@ test('groups a Google account with one Nudge switch per row and folds a long lis
   await addGoogle(page);
   const account = card(page).getByRole('region', { name: GOOGLE_STUB_EMAIL });
   await expect(account.getByRole('listitem')).toHaveCount(5);
-  await expect(
-    card(page)
-      .getByRole('region', { name: 'Google Calendar' })
-      .getByRole('button', { name: 'Add Google account' }),
-  ).toBeVisible();
+  await expect(card(page).getByRole('button', { name: 'Add calendar' })).toBeVisible();
   await expect(account.getByRole('switch', { name: 'Nudge, Team 1' })).toHaveAttribute(
     'aria-checked',
     'true',
@@ -260,8 +279,12 @@ test('groups a Google account with one Nudge switch per row and folds a long lis
 });
 
 async function allowEdit(page: Page, account: Locator) {
+  await editCalendars(page, GOOGLE_STUB_EMAIL);
+  const edit = account.getByRole('switch', { name: `Agents can edit, ${GOOGLE_STUB_EMAIL}` });
+  await expect(edit).toBeFocused();
+  await expect(edit).toHaveAttribute('aria-checked', 'false');
   const popup = page.waitForEvent('popup');
-  await account.getByRole('switch', { name: `Agents can edit, ${GOOGLE_STUB_EMAIL}` }).click();
+  await edit.click();
   const consent = await popup;
   await expect(consent.getByRole('heading', { name: 'You can close this tab' })).toBeVisible();
   await consent.close();
@@ -272,9 +295,8 @@ test('asks Google to allow editing only when Agents can edit is turned on', asyn
   await addGoogle(page);
   expect((await status(page)).google.accounts[0]).toMatchObject({ canEdit: false });
   const account = card(page).getByRole('region', { name: GOOGLE_STUB_EMAIL });
-  const edit = account.getByRole('switch', { name: `Agents can edit, ${GOOGLE_STUB_EMAIL}` });
-  await expect(edit).toHaveAttribute('aria-checked', 'false');
   await allowEdit(page, account);
+  const edit = account.getByRole('switch', { name: `Agents can edit, ${GOOGLE_STUB_EMAIL}` });
   await expect(edit).toHaveAttribute('aria-checked', 'true');
   expect((await status(page)).google.accounts[0]).toMatchObject({ canEdit: true });
   if (SHOTS) await account.screenshot({ path: `${SHOTS}/google-edit-allowed.png` });

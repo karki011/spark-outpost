@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                    | What to do                                                |
 | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Simpler Calendar card.                                                                                          | None.                                                     |
 | Agents can read and change your calendar.                                                                       | See [Let agents use it](calendar.md#let-agents-use-it).   |
 | Fixed: Terminal, tab close, Ask Spark and outpost glitches.                                                     | None.                                                     |
 | **Today** from macOS or Google, full-window **Month**, nudges, **Join** at 10 min, **Choose** for clashes.      | See [Use it](calendar.md#use-it).                         |
