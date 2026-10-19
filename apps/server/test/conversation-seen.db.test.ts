@@ -34,7 +34,7 @@ async function seenAtColumn(id: string): Promise<Date | null> {
   return rows[0]?.seen_at ?? null;
 }
 
-async function raiseCard(runId: string): Promise<void> {
+async function raiseCard(runId: string, call = 'seen:call'): Promise<void> {
   await t.db.query(
     `UPDATE runs SET status = 'awaiting_approval', started_at = now() WHERE id = $1`,
     [runId],
@@ -42,9 +42,9 @@ async function raiseCard(runId: string): Promise<void> {
   await t.db.query(
     `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash, options,
        status)
-     VALUES ($1, $2, 'seen:call', 'execute', 'Run tests', '{"command":"pnpm test"}',
+     VALUES ($1, $2, $3, 'execute', 'Run tests', '{"command":"pnpm test"}',
        'sha256:seen', '[]', 'pending')`,
-    [randomUUID(), runId],
+    [randomUUID(), runId, call],
   );
 }
 
@@ -91,6 +91,18 @@ describe('seen_at', () => {
     expect(Date.parse(waiting.waitingSince!)).toBeGreaterThan(
       Date.parse(waiting.seenAt ?? '1970-01-01T00:00:00Z'),
     );
+  });
+
+  it('waits since the newest card, so a second card after a look counts as unseen', async () => {
+    const asking = await startChat(t, 'Ask twice');
+    await raiseCard(asking.runId);
+    await localClient(app).send('post', `/api/conversations/${asking.conversationId}/seen`, {});
+    const looked = await summary(asking.conversationId);
+    expect(Date.parse(looked.waitingSince!)).toBeLessThanOrEqual(Date.parse(looked.seenAt!));
+
+    await raiseCard(asking.runId, 'seen:second');
+    const again = await summary(asking.conversationId);
+    expect(Date.parse(again.waitingSince!)).toBeGreaterThan(Date.parse(again.seenAt!));
   });
 
   it('tells every open app that the chat was seen, without moving it in the list', async () => {

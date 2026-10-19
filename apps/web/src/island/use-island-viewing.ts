@@ -28,6 +28,20 @@ export function unacknowledged(
   return cards.filter((card) => !seen.has(cardKey(card)) && !viewed.has(card.chat.id));
 }
 
+interface IslandChatState {
+  review: string | null;
+  selfOpened: string | null;
+  focusSignal: number;
+  panel: string | null;
+  selected: string | null;
+}
+
+export function islandViewedChat(state: IslandChatState): string | null {
+  const openedByUser = state.review !== state.selfOpened || state.focusSignal > 0;
+  if (state.review && openedByUser) return state.review;
+  return state.panel === 'sessions' ? state.selected : null;
+}
+
 interface IslandViewingOptions {
   openChatId: string | null;
   chats: readonly ConversationSummary[];

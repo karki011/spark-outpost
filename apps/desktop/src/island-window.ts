@@ -151,7 +151,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     applyMouse();
     pointerPoll = setTimeout(
       pollPointer,
-      pollDelay(screen.getCursorScreenPoint(), window.getBounds()),
+      pollDelay(screen.getCursorScreenPoint(), window.getBounds(), regions),
     );
   };
 

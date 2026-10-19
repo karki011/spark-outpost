@@ -62,7 +62,7 @@ import { restLine, type RestLine } from './island-rest-line.ts';
 import { useSetAside } from './set-aside.ts';
 import { useFastState } from './use-fast-state.ts';
 import { useIslandData } from './use-island-data.ts';
-import { useIslandViewing } from './use-island-viewing.ts';
+import { islandViewedChat, useIslandViewing } from './use-island-viewing.ts';
 import { useGreeting, useMoments } from './use-island-moments.ts';
 import { useThemeSync } from './use-theme-sync.ts';
 import { SpeechSeedContext } from '../voice/speech-seed.tsx';
@@ -105,6 +105,7 @@ export function IslandApp() {
   const [selected, setSelected] = useState<string | null>(null);
   const [note, setNote] = useState<Decided | null>(null);
   const [review, setReview] = useState<string | null>(null);
+  const [selfOpened, setSelfOpened] = useState<string | null>(null);
   const [wave, setWave] = useState(false);
   const [focusSignal, setFocusSignal] = useState(0);
   const [draftId, setDraftId] = useState(newDraftId);
@@ -147,7 +148,7 @@ export function IslandApp() {
     () => pendingCards(data.chats, data.approvalsByChat, aside.keys),
     [data.chats, data.approvalsByChat, aside.keys],
   );
-  const islandChatId = review ?? (panel === 'sessions' ? selected : null);
+  const islandChatId = islandViewedChat({ review, selfOpened, focusSignal, panel, selected });
   const { viewed, fresh, unviewed } = useIslandViewing({
     openChatId: islandChatId,
     chats: data.chats,
@@ -313,6 +314,7 @@ export function IslandApp() {
   }, []);
 
   const pin = (event: SyntheticEvent) => {
+    setSelfOpened(null);
     if (panel && opener === 'hover' && event.target !== event.currentTarget) setOpener('user');
   };
 
@@ -401,6 +403,7 @@ export function IslandApp() {
     cards: fresh,
     pending: allCards,
     onExpand: (card) => {
+      setSelfOpened(card.chat.id);
       setFocusSignal(0);
       setReview(card.chat.id);
     },

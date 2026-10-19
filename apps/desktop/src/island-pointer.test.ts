@@ -27,10 +27,15 @@ describe('pointerOnIsland', () => {
 });
 
 describe('pollDelay', () => {
-  it('polls often near the island and rarely far from it', () => {
-    expect(pollDelay({ x: 1200, y: 100 }, strip)).toBe(NEAR_POLL_MS);
-    expect(pollDelay({ x: 1200, y: 200 }, strip)).toBe(NEAR_POLL_MS);
-    expect(pollDelay({ x: 1200, y: 900 }, strip)).toBe(FAR_POLL_MS);
-    expect(pollDelay({ x: 100, y: 10 }, strip)).toBe(FAR_POLL_MS);
+  it('polls often near what the island shows and rarely anywhere else', () => {
+    expect(pollDelay({ x: 1560, y: 100 }, full, regions)).toBe(NEAR_POLL_MS);
+    expect(pollDelay({ x: 1560, y: 900 }, full, regions)).toBe(FAR_POLL_MS);
+    expect(pollDelay({ x: 900, y: 40 }, full, regions)).toBe(FAR_POLL_MS);
+    expect(pollDelay({ x: 1560, y: 40 }, strip, regions)).toBe(NEAR_POLL_MS);
+  });
+
+  it('polls rarely when the island shows nothing to point at', () => {
+    const empty = { width: 1040, boxes: [], scout: null };
+    expect(pollDelay({ x: 1560, y: 40 }, full, empty)).toBe(FAR_POLL_MS);
   });
 });

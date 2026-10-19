@@ -243,7 +243,8 @@ describe('native island window', () => {
       native.window.webContents.send.mock.calls
         .filter(([channel]) => channel === IPC.islandPointer)
         .map(([, point]) => point);
-    const { x, y } = native.window.bounds;
+    const { x, y, width } = native.window.bounds;
+    handle.setRegions({ width, boxes: [{ x: 90, y: 0, width: 8, height: 8 }], scout: null });
     native.cursor = { x: x + 50, y: y + 12 };
     vi.advanceTimersByTime(120);
     expect(pointers()).toEqual([{ x: 50, y: 12 }]);

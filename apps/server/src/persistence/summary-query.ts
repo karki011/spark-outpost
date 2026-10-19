@@ -50,7 +50,7 @@ export const summaryQuery = `
     EXISTS (
       SELECT 1 FROM profiles apf WHERE apf.assistant_conversation_id = c.id
     ) AS assistant,
-    COALESCE(p.pending_created_at, fl.flag_created_at) AS waiting_since,
+    COALESCE(pl.latest_pending_at, fl.flag_created_at) AS waiting_since,
     COALESCE(
       r.status = 'awaiting_approval' OR p.pending_id IS NOT NULL OR fl.flag_id IS NOT NULL, false
     ) AS needs_input,
@@ -100,6 +100,11 @@ export const summaryQuery = `
     WHERE a.status = 'pending' AND (ar.id = r.id OR ar.parent_run_id = r.id)
     ORDER BY a.created_at, a.id LIMIT 1
   ) p ON true
+  LEFT JOIN LATERAL (
+    SELECT max(la.created_at) AS latest_pending_at
+    FROM approvals la JOIN runs lr ON lr.id = la.run_id
+    WHERE la.status = 'pending' AND (lr.id = r.id OR lr.parent_run_id = r.id)
+  ) pl ON true
   LEFT JOIN LATERAL (
     SELECT f.id AS flag_id, f.title AS flag_title, f.created_at AS flag_created_at
     FROM rail_flags f

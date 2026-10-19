@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { API_CHAT, FE_CHAT, chat } from '../outposts/test-fixtures.ts';
 import type { Card } from './island-model.ts';
-import { acknowledged, unacknowledged } from './use-island-viewing.ts';
+import { acknowledged, islandViewedChat, unacknowledged } from './use-island-viewing.ts';
 
 const NONE: ReadonlySet<string> = new Set();
 
@@ -38,5 +38,25 @@ describe('acknowledged', () => {
 describe('unacknowledged', () => {
   it('hides the requests of a chat being viewed right now', () => {
     expect(unacknowledged([fe, api], NONE, new Set([API_CHAT]))).toEqual([fe]);
+  });
+});
+
+describe('islandViewedChat', () => {
+  const quiet = { review: null, selfOpened: null, focusSignal: 0, panel: null, selected: null };
+
+  it('counts a card the user opened and a chat open in the island', () => {
+    expect(islandViewedChat({ ...quiet, review: FE_CHAT })).toBe(FE_CHAT);
+    expect(islandViewedChat({ ...quiet, panel: 'sessions', selected: API_CHAT })).toBe(API_CHAT);
+  });
+
+  it('does not count a card the island opened by itself until the user takes it', () => {
+    const selfOpened = { ...quiet, review: FE_CHAT, selfOpened: FE_CHAT };
+    expect(islandViewedChat(selfOpened)).toBeNull();
+    expect(islandViewedChat({ ...selfOpened, focusSignal: 1 })).toBe(FE_CHAT);
+    expect(islandViewedChat({ ...selfOpened, selfOpened: null })).toBe(FE_CHAT);
+  });
+
+  it('ignores a selection when the chats panel is closed', () => {
+    expect(islandViewedChat({ ...quiet, panel: 'home', selected: API_CHAT })).toBeNull();
   });
 });
