@@ -6,9 +6,10 @@ import {
   type IslandGeometry,
 } from '../desktop/desktop-bridge.ts';
 import { matchesShortcut } from '../desktop/shortcut-keys.ts';
-import { onScout, scoutRects } from './island-hover.ts';
+import { onScout, scoutHit, scoutRects } from './island-hover.ts';
+import { HIT_MARGIN, islandRegions, restGrows, restSize, type RestSize } from './island-regions.ts';
+import { useIslandLayout } from './use-island-layout.ts';
 
-export const HIT_MARGIN = 14;
 const DRAG_START = 6;
 const PROBE_GAP_MS = 16;
 const REST_DELAY_MS = 700;
@@ -36,30 +37,11 @@ function inside(rects: readonly DOMRect[], x: number, y: number, margin = HIT_MA
   );
 }
 
-function padded(rect: DOMRect): DOMRect {
-  return new DOMRect(
-    rect.x - HIT_MARGIN,
-    rect.y - HIT_MARGIN,
-    rect.width + 2 * HIT_MARGIN,
-    rect.height + 2 * HIT_MARGIN,
-  );
-}
-
-function restSize(rects: readonly DOMRect[]): { width: number; height: number } | null {
-  const shown = rects.filter((rect) => rect.width > 0);
-  if (shown.length === 0) return null;
-  const taken = shown.map(padded);
-  const middle = window.innerWidth / 2;
-  const reach = Math.max(...taken.map((rect) => Math.max(middle - rect.left, rect.right - middle)));
-  return { width: 2 * reach, height: Math.max(...taken.map((rect) => rect.bottom)) };
-}
-
 interface BridgeOptions {
   coreRects: () => DOMRect[];
   blobRects: () => DOMRect[];
   peek: boolean;
   hovered: boolean;
-  restKey: string;
   islandRef: RefObject<HTMLElement | null>;
   focusable: boolean;
   onHover: (inside: boolean) => void;
@@ -81,9 +63,11 @@ export function useSparkFocus(): boolean {
 export function useIslandBridge(options: BridgeOptions): IslandGeometry {
   const desktop = sparkDesktop();
   const [geometry, setGeometry] = useState<IslandGeometry>(BROWSER_GEOMETRY);
-  const [pointerIn, setPointerIn] = useState(false);
   const hovering = useRef(false);
-  const engage = useRef<() => void>(() => undefined);
+  const sentRegions = useRef('');
+  const remeasureRef = useRef<() => void>(() => undefined);
+  const sentRest = useRef<RestSize | null | undefined>(undefined);
+  const shrinkTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const resting = options.peek && geometry.docked && !geometry.notch;
   const latest = useRef(options);
   useEffect(() => {
@@ -131,14 +115,13 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
   }, [desktop]);
 
   useEffect(() => {
-    let interactive = false;
+    let held = false;
     let dragging: { x: number; y: number; started: boolean; blob: boolean } | null = null;
     let dropped = false;
-    const setInteractive = (on: boolean) => {
-      if (on === interactive) return;
-      interactive = on;
+    const hold = (on: boolean) => {
+      if (on === held) return;
+      held = on;
       desktop?.island.setInteractive(on);
-      setPointerIn(on);
     };
     const setHover = (on: boolean) => {
       if (on === hovering.current) return;
@@ -148,16 +131,13 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
     let lastProbe = -Infinity;
     let probeFrame = 0;
     let trailing: { x: number; y: number } | null = null;
-    engage.current = () => setInteractive(true);
     const probe = (x: number, y: number) => {
       lastProbe = performance.now();
       trailing = null;
-      const { coreRects, blobRects, islandRef, peek } = latest.current;
-      const core = coreRects();
+      remeasureRef.current();
+      const { coreRects, islandRef, peek } = latest.current;
       const onBlob = onScout(islandRef.current, x, y);
-      const near = inside([...core, ...blobRects()], x, y, peek ? 0 : HIT_MARGIN);
-      setInteractive(onBlob || near);
-      setHover(onBlob || (!peek && inside(core, x, y)));
+      setHover(onBlob || (!peek && inside(coreRects(), x, y)));
     };
     const onMove = (event: MouseEvent) => {
       if (dragging) {
@@ -166,12 +146,14 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
           Math.hypot(event.screenX - dragging.x, event.screenY - dragging.y) >= DRAG_START
         ) {
           dragging.started = true;
+          hold(true);
           if (dragging.blob) setHover(false);
           desktop?.island.drag(dragging.blob ? 'lift' : 'start', dragging.x, dragging.y);
         }
         if (dragging.started) desktop?.island.drag('move', event.screenX, event.screenY);
         return;
       }
+      desktop?.island.pointerMoved?.();
       const now = performance.now();
       if (now - lastProbe >= PROBE_GAP_MS) {
         probe(event.clientX, event.clientY);
@@ -188,7 +170,6 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
     const onLeave = () => {
       trailing = null;
       if (dragging) return;
-      setInteractive(false);
       setHover(false);
     };
     const onDown = (event: PointerEvent) => {
@@ -207,6 +188,7 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       if (dragging?.started) {
         desktop?.island.drag('end', event.screenX, event.screenY);
         dropped = dragging.blob;
+        hold(false);
       }
       dragging = null;
     };
@@ -217,9 +199,9 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       event.preventDefault();
     };
     const onBlur = () => latest.current.onBlur();
-    const onDragIn = () => setInteractive(true);
+    const onDragIn = () => hold(true);
     const onDragOut = (event: DragEvent) => {
-      if (event.type === 'drop' || !event.relatedTarget) setInteractive(false);
+      if (event.type === 'drop' || !event.relatedTarget) hold(false);
     };
     const offPointer = desktop?.island.onPointer?.((point) => probe(point.x, point.y));
     document.addEventListener('mousemove', onMove);
@@ -248,20 +230,59 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
 
   useEffect(() => {
     if (!options.hovered) hovering.current = false;
-    else if (hovering.current) engage.current();
   }, [options.hovered]);
 
+  const sendRest = (size: RestSize | null) => {
+    clearTimeout(shrinkTimer.current);
+    if (
+      sentRest.current !== undefined &&
+      JSON.stringify(size) === JSON.stringify(sentRest.current)
+    ) {
+      return;
+    }
+    sentRest.current = size;
+    desktop?.island.setRestSize(size);
+  };
+  const shrinkLater = (size: RestSize | null) => {
+    clearTimeout(shrinkTimer.current);
+    shrinkTimer.current = setTimeout(() => sendRest(size), REST_DELAY_MS);
+  };
+  useEffect(() => () => clearTimeout(shrinkTimer.current), []);
+
+  const remeasure = useIslandLayout(
+    () => {
+      if (!desktop) return;
+      const { coreRects, blobRects, islandRef, peek } = latest.current;
+      const core = coreRects();
+      const blobs = blobRects();
+      const regions = islandRegions({
+        width: window.innerWidth,
+        core,
+        blobs,
+        scout: scoutHit(islandRef.current),
+        peek,
+      });
+      const key = JSON.stringify(regions);
+      if (key !== sentRegions.current) {
+        sentRegions.current = key;
+        desktop.island.setRegions?.(regions);
+      }
+      if (!resting) {
+        sendRest(null);
+        return;
+      }
+      const next = restSize(
+        [...core, ...blobs, ...scoutRects(islandRef.current)],
+        window.innerWidth,
+      );
+      if (restGrows(next, sentRest.current)) sendRest(next);
+      else if (JSON.stringify(next) !== JSON.stringify(sentRest.current)) shrinkLater(next);
+    },
+    `${resting}:${geometry.windowTop ?? 0}`,
+  );
   useEffect(() => {
-    if (!desktop) return;
-    desktop.island.setRestSize(null);
-    if (!resting || pointerIn) return;
-    const timer = setTimeout(() => {
-      const { coreRects, blobRects, islandRef } = latest.current;
-      const rects = [...coreRects(), ...blobRects(), ...scoutRects(islandRef.current)];
-      desktop.island.setRestSize(restSize(rects));
-    }, REST_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [desktop, resting, pointerIn, options.restKey]);
+    remeasureRef.current = remeasure;
+  });
 
   useEffect(() => {
     desktop?.island.setFocusable(options.focusable);

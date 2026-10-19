@@ -45,6 +45,11 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
   attention: {
     report: (report: unknown) => ipcRenderer.send(IPC.attentionReport, report),
   },
+  viewing: {
+    report: (chatId: string | null) => ipcRenderer.send(IPC.viewingReport, chatId),
+    get: () => ipcRenderer.invoke(IPC.viewedGet),
+    onChange: (callback: (viewed: unknown) => void) => listen(IPC.viewedChanged, callback),
+  },
   island: {
     geometry: () => ipcRenderer.invoke(IPC.islandGeometry),
     onGeometry: (callback: (geometry: unknown) => void) =>
@@ -57,6 +62,8 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     pathForFile: (file: File) => webUtils.getPathForFile(file) || null,
     onSparkFocus: (callback: (focused: unknown) => void) => listen(IPC.islandSparkFocus, callback),
     setInteractive: (on: boolean) => ipcRenderer.send(IPC.islandInteractive, on),
+    setRegions: (regions: unknown) => ipcRenderer.send(IPC.islandRegions, regions),
+    pointerMoved: () => ipcRenderer.send(IPC.islandPointerMoved),
     setFocusable: (on: boolean) => ipcRenderer.send(IPC.islandFocusable, on),
     drag: (phase: DragPhase, x: number, y: number) => ipcRenderer.send(IPC.islandDrag, phase, x, y),
     openChat: (id: string | null, runId?: string) =>

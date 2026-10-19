@@ -24,6 +24,7 @@ import { turnAnchor } from '../chat/outline/outline-model.ts';
 import { ConversationList } from '../conversations/ConversationList.tsx';
 import { attention, isRunning, rowState } from '../conversations/row-state.ts';
 import { SidebarLayoutProvider, useSidebarLayoutState } from '../conversations/sidebar-layout.tsx';
+import { useChatViewed } from '../conversations/use-chat-viewed.ts';
 import { useMarkSeen } from '../conversations/use-mark-seen.ts';
 import { OnScreenChat, onScreenChatId } from '../conversations/on-screen.ts';
 import { isDocLinkOpen, leaveDocs, useDocLinks } from '../docs/doc-route.ts';
@@ -72,9 +73,9 @@ import { useAttentionTitle } from './use-attention-title.ts';
 import { useAttentionReport } from '../desktop/use-attention-report.ts';
 import { useChatRequests } from './chat-request.ts';
 import { useSlackPresence } from '../slack/use-slack-presence.ts';
+import { useCloseSeenNotifications } from '../phone/close-seen-notifications.ts';
 import { useNotificationChats } from '../phone/use-notification-chats.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
-import { useShareOnScreenChat } from '../island/on-screen-chat.ts';
 import { startIdleMotion } from './idle-motion.ts';
 import '../ui/controls.css';
 import { openTodayEvent, useTodayOpener } from '../calendar/today-request.ts';
@@ -254,8 +255,9 @@ function ChatShell({ entering }: { entering: boolean }) {
     settingsOpen: settings !== null,
     activeId,
   });
-  useShareOnScreenChat(onScreenId);
-  useMarkSeen(onScreenId, chats);
+  const viewedHere = useChatViewed(onScreenId);
+  useMarkSeen(viewedHere ? onScreenId : null, chats);
+  useCloseSeenNotifications(remote, chats, viewedHere ? onScreenId : null);
 
   const classes = [
     'app',

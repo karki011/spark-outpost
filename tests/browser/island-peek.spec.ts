@@ -1,10 +1,12 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
+import { hitsIsland } from '../../packages/contracts/src/island-hit.ts';
 import { ISLAND_BLOB, islandTuck } from '../../packages/contracts/src/island-size.ts';
 import {
   dragPhases,
   island,
+  latestRegions,
   openNotchIsland,
   scoutLook,
   settled,
@@ -140,11 +142,17 @@ const OFF = 3;
 const STAYS_SHUT_MS = 500;
 const BODY_HALF_WIDTH = 22 / 64;
 
+async function takesPointerAt(page: Page, x: number, y: number): Promise<boolean> {
+  const regions = await latestRegions(page);
+  return regions !== null && hitsIsland(regions, x, y);
+}
+
 async function staysShut(page: Page, spots: readonly { x: number; y: number }[]) {
   for (const spot of spots) {
     await approach(page, spot.x, spot.y);
     await page.waitForTimeout(STAYS_SHUT_MS);
     await expect(island(page)).toHaveAttribute('data-view', 'peek');
+    expect(await takesPointerAt(page, spot.x, spot.y)).toBe(false);
   }
   expect(await takesClicks(page)).toEqual([]);
 }
@@ -162,9 +170,10 @@ for (const notch of [true, false]) {
       await resetTestDatabase({ onboarded: true });
       await open(page, { size, notch });
       await tuckedUnder(page, size, edge);
+      const body = await stillScout(page);
+      expect(await takesPointerAt(page, body.x, body.y)).toBe(true);
       await pointAtScout(page);
       await expect(island(page)).toHaveAttribute('data-view', 'panel');
-      expect((await takesClicks(page))[0]).toBe('on at peek');
       await page.mouse.move(5, 600);
       await expect(island(page)).toHaveAttribute('data-view', 'peek');
       await tuckedUnder(page, size, edge);
@@ -208,9 +217,9 @@ test('a floating blob opens from its body, not the space round it', async ({ pag
     { x: CENTRE, y: body.top - OFF },
     { x: CENTRE, y: body.bottom + OFF },
   ]);
+  expect(await takesPointerAt(page, body.x, body.y)).toBe(true);
   await pointAtScout(page);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
-  expect((await takesClicks(page))[0]).toBe('on at peek');
 });
 
 test('a working chat keeps the blob out and a floating island is never tucked', async ({

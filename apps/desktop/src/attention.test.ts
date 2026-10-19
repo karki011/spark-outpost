@@ -6,6 +6,7 @@ import {
   NO_ATTENTION,
   noticesFor,
   parseAttentionReport,
+  seenInSpark,
   withdrawn,
   type AttentionContext,
 } from './attention.ts';
@@ -30,6 +31,7 @@ function context(overrides: Partial<AttentionContext>): AttentionContext {
     enabled: true,
     islandShowing: false,
     sparkFocused: false,
+    viewed: new Set(),
     ...overrides,
   };
 }
@@ -94,6 +96,7 @@ describe('noticesFor', () => {
         title: 'Spark needs you: Fix login',
         body: 'Claude wants to run a command',
         requests: ['a'],
+        chats: [CHAT],
       },
     ]);
   });
@@ -111,6 +114,7 @@ describe('noticesFor', () => {
         title: '3 chats need you',
         body: 'Fix login, Add tests and 1 more',
         requests: ['a', 'b', 'c'],
+        chats: [CHAT, OTHER],
       },
     ]);
   });
@@ -133,6 +137,30 @@ describe('noticesFor', () => {
     const next = { count: 3, requests: [...report.requests, request('c', OTHER)] };
     const later = decideAttention(context({ report: next, seen: launch.seen }));
     expect(later.notify.map((notice) => notice.key)).toEqual(['c']);
+  });
+});
+
+describe('a chat the user is viewing', () => {
+  it('is never notified, then or later', () => {
+    const viewed = new Set([CHAT]);
+    const looking = decideAttention(context({ viewed }));
+    expect(looking.notify).toEqual([]);
+    expect(decideAttention(context({ seen: looking.seen })).notify).toEqual([]);
+  });
+
+  it('still lets a different chat notify', () => {
+    const report = { count: 2, requests: [request('a'), request('b', OTHER)] };
+    const decision = decideAttention(context({ report, viewed: new Set([CHAT]) }));
+    expect(decision.notify.map((notice) => notice.key)).toEqual(['b']);
+  });
+
+  it('clears a shown notice once its chat is opened, and a summary once all its chats are', () => {
+    const [single] = noticesFor([request('a')]);
+    expect(seenInSpark(single!, new Set([OTHER]))).toBe(false);
+    expect(seenInSpark(single!, new Set([CHAT]))).toBe(true);
+    const [summary] = noticesFor([request('a'), request('b', OTHER)]);
+    expect(seenInSpark(summary!, new Set([CHAT]))).toBe(false);
+    expect(seenInSpark(summary!, new Set([CHAT, OTHER]))).toBe(true);
   });
 });
 

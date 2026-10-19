@@ -65,17 +65,6 @@ export function shownBox(box: Box, edge: number | null): Box {
   return { x: box.x, y: top, width: box.width, height: Math.max(0, box.y + box.height - top) };
 }
 
-const BODY = { box: 64, cx: 32, cy: 39, rx: 22, up: 22, down: 19 } as const;
-
-export function onScoutBody(box: Box, edge: number | null, x: number, y: number): boolean {
-  if (box.width <= 0 || (edge !== null && y < edge)) return false;
-  const scale = box.width / BODY.box;
-  const dx = (x - box.x) / scale - BODY.cx;
-  const dy = (y - box.y) / scale - BODY.cy;
-  const ry = dy < 0 ? BODY.up : BODY.down;
-  return (dx / BODY.rx) ** 2 + (dy / ry) ** 2 <= 1;
-}
-
 export function restLineTop(flat: boolean, rowTop: number): number {
   const rowBottom = flat ? FLAT_ROW_BOTTOM : rowTop + ROW_BLOB_DROP;
   return rowBottom + ROW_BADGE + LINE_GAP;

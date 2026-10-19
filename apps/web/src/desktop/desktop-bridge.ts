@@ -8,6 +8,7 @@ import type {
   DesktopHelpInfo,
   DiagnosticsExport,
   InstallResult,
+  IslandRegions,
   IslandSize,
   MacControlStatus,
   MacIndicator,
@@ -99,6 +100,11 @@ export interface SparkDesktop {
   attention?: {
     report(report: AttentionReport): void;
   };
+  viewing?: {
+    report(chatId: string | null): void;
+    get(): Promise<unknown>;
+    onChange(callback: (viewed: unknown) => void): Unsubscribe;
+  };
   island: {
     geometry(): Promise<IslandGeometry | null>;
     onGeometry(callback: (geometry: IslandGeometry) => void): Unsubscribe;
@@ -110,6 +116,8 @@ export interface SparkDesktop {
     pathForFile(file: File): string | null;
     onSparkFocus(callback: (focused: boolean) => void): Unsubscribe;
     setInteractive(on: boolean): void;
+    setRegions?(regions: IslandRegions): void;
+    pointerMoved?(): void;
     setFocusable(on: boolean): void;
     drag(phase: 'start' | 'lift' | 'move' | 'end', x: number, y: number): void;
     openChat(id: string | null, runId?: string): void;

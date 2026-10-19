@@ -11,6 +11,7 @@ import {
   type IpcMainEvent,
   type IpcMainInvokeEvent,
 } from 'electron';
+import { parseIslandRegions } from '@spark-outpost/contracts';
 import { createCompanion, type Companion, type CompanionStatus } from './companion.ts';
 import {
   isIslandSize,
@@ -27,6 +28,7 @@ import { isSize } from './island-geometry.ts';
 import { trayTemplate } from './island-options.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
 import { appLayout } from './layout.ts';
+import { startViewingHost } from './viewing-host.ts';
 import { startVoiceHost, type VoiceHost } from './voice/host.ts';
 
 interface CompanionHostOptions {
@@ -230,6 +232,14 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   ipcMain.on(IPC.islandInteractive, (event, on: unknown) => {
     if (fromIsland(event) && typeof on === 'boolean') island!.setInteractive(on);
   });
+  ipcMain.on(IPC.islandRegions, (event, value: unknown) => {
+    if (!fromIsland(event)) return;
+    const regions = parseIslandRegions(value);
+    if (regions) island!.setRegions(regions);
+  });
+  ipcMain.on(IPC.islandPointerMoved, (event) => {
+    if (fromIsland(event)) island!.pointerMoved();
+  });
   ipcMain.on(IPC.islandFocusable, (event, on: unknown) => {
     if (fromIsland(event) && typeof on === 'boolean') island!.setFocusable(on);
   });
@@ -270,6 +280,12 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     log: options.log,
   });
 
+  const viewing = startViewingHost({
+    trusted: fromSpark,
+    fromIsland,
+    onChange: (viewed) => attention?.viewing(viewed),
+  });
+
   const layout = appLayout({
     isPackaged: app.isPackaged,
     appPath: app.getAppPath(),
@@ -306,6 +322,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     openChat,
     dispose: () => {
       attention?.dispose();
+      viewing.dispose();
       voice?.dispose();
       companion.shutdown();
       globalShortcut.unregisterAll();
@@ -328,6 +345,8 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       }
       for (const channel of [
         IPC.islandInteractive,
+        IPC.islandRegions,
+        IPC.islandPointerMoved,
         IPC.islandFocusable,
         IPC.islandDrag,
         IPC.islandRestSize,

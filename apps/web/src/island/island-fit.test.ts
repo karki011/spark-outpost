@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { onScoutBody } from '@spark-outpost/contracts';
 import type { IslandGeometry, IslandSize } from '../desktop/desktop-bridge.ts';
 import {
   notchFit,
-  onScoutBody,
   restLineTop,
   restPose,
   restsQuietly,

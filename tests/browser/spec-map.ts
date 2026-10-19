@@ -195,6 +195,7 @@ export const SPEC_GROUPS = {
     'island',
     'island-ask',
     'island-chat',
+    'island-click-regions',
     'island-code',
     'island-drop',
     'island-home',

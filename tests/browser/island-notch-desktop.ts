@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import type { IslandRegions } from '../../packages/contracts/src/island-hit.ts';
 import type { IslandSize } from '../../packages/contracts/src/island-size.ts';
 
 export const NOTCH = { width: 186, height: 32, menuBar: 38 };
@@ -28,6 +29,7 @@ export interface NotchWindow {
   islandRest: (RestSize | null)[];
   islandDrags: string[];
   islandTakesClicks: string[];
+  islandRegions: IslandRegions[];
   sparkFocus(focused: boolean): void;
   islandCommand(action: string): void;
 }
@@ -63,7 +65,9 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
       const rest: ({ width: number; height: number } | null)[] = [];
       const drags: string[] = [];
       const takesClicks: string[] = [];
+      const regions: unknown[] = [];
       Object.assign(window, {
+        islandRegions: regions,
         islandFocus: focus,
         islandRest: rest,
         islandDrags: drags,
@@ -108,6 +112,7 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
               const view = document.querySelector<HTMLElement>('.isl')?.dataset.view;
               takesClicks.push(`${on ? 'on' : 'off'} at ${view}`);
             },
+            setRegions: (next: unknown) => regions.push(next),
             setFocusable: (on: boolean) => focus.push(on),
             drag: (phase: string) => drags.push(phase),
             openChat: () => undefined,
@@ -213,6 +218,9 @@ export const command = (page: Page, action: 'quick' | 'sessions') =>
 
 export const takesClicks = (page: Page) =>
   page.evaluate(() => (window as unknown as NotchWindow).islandTakesClicks);
+
+export const latestRegions = (page: Page) =>
+  page.evaluate(() => (window as unknown as NotchWindow).islandRegions.at(-1) ?? null);
 
 export const dragPhases = (page: Page) =>
   page.evaluate(() => (window as unknown as NotchWindow).islandDrags);

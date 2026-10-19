@@ -1,4 +1,5 @@
 import { app, BrowserWindow, globalShortcut, screen, type Display } from 'electron';
+import { NO_ISLAND_REGIONS, type IslandRegions } from '@spark-outpost/contracts';
 import type { IslandPosition, IslandSize, ShortcutAction } from './companion-settings.ts';
 import type { IslandHandle } from './companion.ts';
 import {
@@ -22,6 +23,7 @@ import {
 import { emulatedNotch, readNotches, type Notches } from './notch-probe.ts';
 import { escapeGuard } from './island-escape.ts';
 import { setIslandFocus } from './island-focus.ts';
+import { pointerOnIsland, pollDelay, windowPoint } from './island-pointer.ts';
 import { ISLAND_LEVEL, ISLAND_PATH, islandWindowOptions } from './island-options.ts';
 import { islandVisibility } from './island-visibility.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
@@ -29,12 +31,13 @@ import { revealGate } from './reveal-gate.ts';
 import { guardNavigation } from './window.ts';
 
 const READY_FALLBACK_MS = 8_000;
-const POINTER_POLL_MS = 40;
 
 export interface IslandWindow extends IslandHandle {
   owns(webContentsId: number): boolean;
   ready(): void;
   setInteractive(on: boolean): void;
+  setRegions(regions: IslandRegions): void;
+  pointerMoved(): void;
   setFocusable(on: boolean): void;
   drag(phase: DragPhase, pointer: Point): void;
   setRestSize(size: Size | null): void;
@@ -74,10 +77,12 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   let dragging: { origin: Point; pointer: Point } | null = null;
   let rest: Size | null = null;
   let interactive = false;
+  let held = false;
+  let regions: IslandRegions = NO_ISLAND_REGIONS;
   let requested: Rect | null = null;
   let logged = '';
   let sentTop = 0;
-  let pointerPoll: ReturnType<typeof setInterval> | null = null;
+  let pointerPoll: ReturnType<typeof setTimeout> | null = null;
   let lastPointer = '';
 
   window.setAlwaysOnTop(true, ISLAND_LEVEL);
@@ -109,36 +114,49 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const resting = (): Size | null =>
     placed?.docked && !geometry().notch && !dragging ? rest : null;
 
-  const watchesPointer = () =>
-    !window.isDestroyed() && !interactive && resting() !== null && window.isVisible();
+  const watchesPointer = () => !interactive && resting() !== null;
+
+  const forwardPointer = (cursor: Point, bounds: Rect) => {
+    const point = watchesPointer() ? windowPoint(cursor, bounds) : null;
+    const key = point ? `${point.x},${point.y}` : '';
+    if (key === lastPointer) return;
+    lastPointer = key;
+    if (point) send(IPC.islandPointer, point);
+  };
+
+  const applyMouse = () => {
+    if (window.isDestroyed()) return;
+    const cursor = screen.getCursorScreenPoint();
+    const bounds = window.getBounds();
+    const next = held || (window.isVisible() && pointerOnIsland(cursor, bounds, regions));
+    if (next !== interactive) {
+      interactive = next;
+      window.setIgnoreMouseEvents(!interactive, { forward: true });
+    }
+    forwardPointer(cursor, bounds);
+  };
 
   const stopPointerPoll = () => {
-    if (pointerPoll !== null) clearInterval(pointerPoll);
+    if (pointerPoll !== null) clearTimeout(pointerPoll);
     pointerPoll = null;
     lastPointer = '';
   };
 
   const pollPointer = () => {
-    if (!watchesPointer()) {
+    pointerPoll = null;
+    if (window.isDestroyed() || !window.isVisible()) {
       stopPointerPoll();
       return;
     }
-    const cursor = screen.getCursorScreenPoint();
-    const bounds = window.getBounds();
-    const point = { x: cursor.x - bounds.x, y: cursor.y - bounds.y };
-    const inside =
-      point.x >= 0 && point.y >= 0 && point.x < bounds.width && point.y < bounds.height;
-    const key = inside ? `${point.x},${point.y}` : '';
-    if (key === lastPointer) return;
-    lastPointer = key;
-    if (inside) send(IPC.islandPointer, point);
+    applyMouse();
+    pointerPoll = setTimeout(
+      pollPointer,
+      pollDelay(screen.getCursorScreenPoint(), window.getBounds()),
+    );
   };
 
-  const applyMouse = () => {
-    if (window.isDestroyed()) return;
-    window.setIgnoreMouseEvents(!interactive, { forward: true });
-    if (!watchesPointer()) stopPointerPoll();
-    else pointerPoll ??= setInterval(pollPointer, POINTER_POLL_MS);
+  const startPointerPoll = () => {
+    if (pointerPoll === null) pollPointer();
   };
 
   const report = (reason: string) => {
@@ -151,6 +169,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const moveTo = (position: Point, animate = false) => {
     requested = islandBounds(position, resting());
     window.setBounds(requested, animate);
+    applyMouse();
   };
 
   const settle = () => {
@@ -199,7 +218,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     window.showInactive();
     report(reason);
     settle();
-    applyMouse();
+    startPointerPoll();
   };
   const reveal = revealGate(() => {
     if (!visibility.hidden()) showNow('shown');
@@ -213,6 +232,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       setIslandFocus(window, false);
       escape.arm(false);
       window.hide();
+      stopPointerPoll();
       report('hidden');
     },
   });
@@ -257,12 +277,20 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       visibility.summon();
       reveal.ready();
       if (!window.isVisible()) window.showInactive();
+      startPointerPoll();
       send(IPC.islandCommand, action);
     },
     setInteractive: (on) => {
-      interactive = on;
+      held = on;
       applyMouse();
+      startPointerPoll();
     },
+    setRegions: (next) => {
+      regions = next;
+      applyMouse();
+      startPointerPoll();
+    },
+    pointerMoved: applyMouse,
     setFocusable: (on) => {
       setIslandFocus(window, on);
       escape.arm(on && !window.isDestroyed());
@@ -279,7 +307,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       rest = size;
       if (!changed || window.isDestroyed() || dragging || !placed) return;
       moveTo(placed.position);
-      applyMouse();
+      startPointerPoll();
       report(size ? 'resting' : 'expanded');
     },
     drag: (phase, pointer) => {

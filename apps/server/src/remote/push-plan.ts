@@ -9,6 +9,15 @@ export interface PushCandidate {
   detail: string | null;
 }
 
+export interface QueuedPush extends PushCandidate {
+  at: number;
+}
+
+export function unseenPushes(items: readonly QueuedPush[], seenAt: Date | null): QueuedPush[] {
+  if (!seenAt) return [...items];
+  return items.filter((item) => item.at > seenAt.getTime());
+}
+
 export interface PushMessage {
   title: string;
   body: string;
