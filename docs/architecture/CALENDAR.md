@@ -168,12 +168,12 @@ Before a meeting, the **Spark assistant** (the hidden, persistent Ask Spark sess
 | `spark_calendar`      | `calendars`, `events` (range, search), `event`, `free` | no     | **Let agents read my calendar** on (off by default) |
 | `spark_calendar_edit` | `create`, `update`, `delete`, `alert`, `focus`         | yes    | Some calendar has **Agents can edit** on            |
 
-| Call                                                                                               | Decision                              |
-| -------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| A read; `create`, `update`, `alert`, `focus` on the user's own event                               | The agent's mode through `actionPath` |
-| `delete`; a change to an event with `othersInvited`; any write on a `shared` or `unknown` calendar | A card in every mode (`alwaysAsk`)    |
-| A write to a calendar without **Agents can edit**, or not `writable`                               | Refused, with the reason              |
-| Inviting, RSVP, adding attendees                                                                   | Not offered; the Google API, if added |
+| Call                                                                                     | Decision                              |
+| ---------------------------------------------------------------------------------------- | ------------------------------------- |
+| A read; `create`, `update`, `delete`, `alert`, `focus` on the user's own event           | The agent's mode through `actionPath` |
+| A change to an event with `othersInvited`; any write on a `shared` or `unknown` calendar | A card in every mode (`alwaysAsk`)    |
+| A write to a calendar without **Agents can edit**, or not `writable`                     | Refused, with the reason              |
+| Inviting, RSVP, adding attendees                                                         | Not offered; the Google API, if added |
 
 The mode works as for every Spark action: at once in Auto, Bypass permissions, Approve for me and Full access, and in Accept edits when the user's message asked; otherwise a card showing the change before and after ("When 11:00–12:30 → 17:00–18:00, this occurrence only"). A Terminal session with no turn to show a card on refuses such a call, as in [Mac control](MAC_CONTROL.md#built-in-phase-1). Ask Spark gets the reader only, its card in the island's Ask view, remembered for the session; prep turns, child runs and runs from a paired device get neither.
 
@@ -183,7 +183,7 @@ Results are untrusted `calendar_evidence`; lists carry no notes or names. A read
 
 - **Offered** (`spark-mcp/tools/calendar/offered.ts`): both need the calendar connected (EventKit with the Mac host, or a Google account) and a run that is not from a paired device and not a child run, checked at grant and at every call. The reader needs **Let agents read my calendar**; the editor needs some writable calendar with **Agents can edit** and a turn that may act. Ask turns get the reader only. The Spark assistant's session (Ask Spark) gets neither until its island card is built. `calendars` lists only included calendars and those with **Agents can edit**.
 - **The read card** is `calendar_read`, **Allow for this chat**, remembered for the chat like `read_page`; the mode can skip it as for any Spark action.
-- **The edit card** is `calendar_edit`, a `proposeAction` card with the change before and after, the calendar, "This occurrence only" or "This and future", and the floor reasons (`delete`, `others`, `shared`); a floor reason sets `alwaysAsk`. The follow-through re-reads the event before writing and changes nothing if its title, times or people changed since the card ("The event changed after the card was shown"), or if a floor reason appears that the card did not show. The card stores the change it shows (titles, times, a notes excerpt) in the approval, as other cards do; the audit holds only ids, the calendar key and the names of the fields changed.
+- **The edit card** is `calendar_edit`, a `proposeAction` card with the change before and after, the calendar, "This occurrence only" or "This and future", and the floor reasons (`others`, `shared`); a floor reason sets `alwaysAsk`. A delete follows the mode since 2026-10-19 (owner decision); its result line names the event, and for Google says Google keeps deleted events in its trash. Older cards may still carry the `delete` reason. The follow-through re-reads the event before writing and changes nothing if its title, times or people changed since the card ("The event changed after the card was shown"), or if a floor reason appears that the card did not show. The card stores the change it shows (titles, times, a notes excerpt) in the approval, as other cards do; the audit holds only ids, the calendar key and the names of the fields changed.
 - **Both processes reach the calendar**: the chat worker and the API (Terminal sessions) each connect the EventKit bridge and a non-polling Google client (`calendar/agent/google-client.ts`) built from the keychain token, `oauth.ts` refresh and `api.ts`; it never marks an account **Sign in again** itself. A Google write notifies `calendar_written`, and the API's Google source then polls at once.
 - **Google writes** send `sendUpdates=none`; **This and future** is refused on Google, since a series split is not one call. Inviting, adding attendees and RSVP are not offered.
 - **Paired devices** can't answer a calendar card (`macOnlyCard`); a device following the chat sees the card's text, as it sees the chat.
@@ -265,7 +265,7 @@ No Phase 1 PR is done until each check has run here and reports **pass** or **fa
 | Nudge, hold, capture          | The 10-min line; none for Spark Test Family; no chime or push in focus; capture line  |
 | Join and ⌘J                   | Join opens at 10 min; the Meet link opens in the default browser, not the pane        |
 | Protect a free block          | The focus event appears in Calendar.app                                               |
-| Real Claude, chat             | Reads in Manual (card) and Auto; a create at once in Auto; a delete asks in Auto      |
+| Real Claude, chat             | Reads in Manual (card) and Auto; a create and a delete at once in Auto                |
 | Real Claude, Terminal session | A read; a delete refused when no card can show                                        |
 | Prep                          | A brief with cost; the audit lists the fields sent; no link or passcode in the prompt |
 | Injection                     | The notes' instruction is quoted as data, by the chat and by prep, and not followed   |

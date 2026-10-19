@@ -1,7 +1,7 @@
 import {
   REMOTE_SWITCH_LABELS,
   approvalPayloadSchema,
-  atlassianAlwaysAsks,
+  atlassianDeletes,
   isCalendarAction,
   isMacAction,
   isSecretFileName,
@@ -122,7 +122,7 @@ export function cardSwitch(payload: unknown): RemoteSwitch | null {
   const action = card.sparkAction;
   if (action?.action === 'browser_sign_in') return 'signIns';
   const editsAtlassian = action?.action === 'jira_edit' || action?.action === 'confluence_edit';
-  if (editsAtlassian && atlassianAlwaysAsks(action)) {
+  if (editsAtlassian && atlassianDeletes(action)) {
     return 'highRiskCards';
   }
   const paths = [...card.paths, ...(card.fullPaths ?? [])];

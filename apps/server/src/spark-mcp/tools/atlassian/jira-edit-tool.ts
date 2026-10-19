@@ -2,7 +2,6 @@ import { z } from 'zod';
 import {
   ATLASSIAN_BODY_MAX,
   ATLASSIAN_CARD_TEXT_MAX,
-  atlassianAlwaysAsks,
   atlassianConfirm,
   jiraEditOpSchema,
   ticketKeySchema,
@@ -125,10 +124,7 @@ async function plan(session: AtlassianSession, args: EditArgs): Promise<JiraEdit
 async function edit(context: SparkToolContext, args: EditArgs) {
   const session = await openAtlassian(ticketDepsFor(context.deps, context.scope), 'jira');
   const action = await plan(session, args);
-  return proposeAction(context, action, {
-    alwaysAsk: atlassianAlwaysAsks(action),
-    confirmName: atlassianConfirm(action),
-  });
+  return proposeAction(context, action, { confirmName: atlassianConfirm(action) });
 }
 
 export const jiraEditTool = sparkTool({
@@ -136,7 +132,7 @@ export const jiraEditTool = sparkTool({
   needs: 'jira',
   acts: true,
   title: 'Change Jira',
-  description: `Changes a Jira issue: update sets summary, description (plain text or Markdown), labels (replaces them) or priority by name; edit_comment and delete_comment change one of the user's own comments (commentId from spark_jira read); delete removes the issue (withSubtasks to remove its subtasks too). Create, comment, move and assign with the ticket tools. The card shows before and after; a delete always asks. ${ACTION_NOTE}`,
+  description: `Changes a Jira issue: update sets summary, description (plain text or Markdown), labels (replaces them) or priority by name; edit_comment and delete_comment change one of the user's own comments (commentId from spark_jira read); delete removes the issue (withSubtasks to remove its subtasks too). Create, comment, move and assign with the ticket tools. The card shows before and after. ${ACTION_NOTE}`,
   input: {
     action: jiraEditOpSchema,
     key: ticketKeySchema,

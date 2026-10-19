@@ -3,7 +3,6 @@ import {
   ATLASSIAN_BODY_MAX,
   ATLASSIAN_CARD_TEXT_MAX,
   CONFLUENCE_TITLE_MAX,
-  atlassianAlwaysAsks,
   atlassianConfirm,
   confluenceEditOpSchema,
   confluencePageIdSchema,
@@ -112,10 +111,7 @@ async function edit(context: SparkToolContext, args: EditArgs) {
   const session = await openAtlassian(ticketDepsFor(context.deps, context.scope), 'confluence');
   const action =
     args.action === 'create' ? await create(session, args) : await onPage(session, args);
-  return proposeAction(context, action, {
-    alwaysAsk: atlassianAlwaysAsks(action),
-    confirmName: atlassianConfirm(action),
-  });
+  return proposeAction(context, action, { confirmName: atlassianConfirm(action) });
 }
 
 export const confluenceEditTool = sparkTool({
@@ -123,7 +119,7 @@ export const confluenceEditTool = sparkTool({
   needs: 'confluence',
   acts: true,
   title: 'Change Confluence',
-  description: `Changes Confluence. create adds a page (space key, title, body, optional parentId); update replaces a page's title or body and needs the version you read: if the page moved on since, nothing is saved and you read it again; comment adds a footer comment; delete moves the page to the trash. body is Markdown. The card shows before and after; a delete always asks. ${ACTION_NOTE}`,
+  description: `Changes Confluence. create adds a page (space key, title, body, optional parentId); update replaces a page's title or body and needs the version you read: if the page moved on since, nothing is saved and you read it again; comment adds a footer comment; delete moves the page to the trash. body is Markdown. The card shows before and after. ${ACTION_NOTE}`,
   input: {
     action: confluenceEditOpSchema,
     pageId: confluencePageIdSchema.optional(),

@@ -156,8 +156,21 @@ describe('spark_confluence_edit', () => {
     ]);
   });
 
-  it('asks before moving a page to the trash even in Bypass permissions', async () => {
+  it('moves a page to the trash at once in Bypass permissions and says so', async () => {
     h = await startAtlassian('Delete the rollback page', 'bypassPermissions');
+    const trashed = await h.tools.call('spark_confluence_edit', {
+      action: 'delete',
+      pageId: '9002',
+    });
+    expect(trashed.json()).toMatchObject({
+      outcome: 'done',
+      message: 'Moved to trash: Rollback plan.',
+    });
+    expect(page('9002').status).toBe('trashed');
+  });
+
+  it('shows a card before moving a page to the trash in Manual', async () => {
+    h = await startAtlassian('Delete the rollback page', 'default');
     const waiting = await h.tools.call('spark_confluence_edit', {
       action: 'delete',
       pageId: '9002',

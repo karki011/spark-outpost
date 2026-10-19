@@ -136,7 +136,7 @@ export function atlassianCardSubject(action: AtlassianAction): string {
   return action.page.title;
 }
 
-export function atlassianAlwaysAsks(action: AtlassianAction): boolean {
+export function atlassianDeletes(action: AtlassianAction): boolean {
   if (action.action === 'jira_edit')
     return action.op === 'delete' || action.op === 'delete_comment';
   return action.action === 'confluence_edit' && action.op === 'delete';

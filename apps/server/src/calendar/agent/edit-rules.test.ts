@@ -66,14 +66,13 @@ describe('who may change a calendar', () => {
 });
 
 describe('the floor', () => {
-  it('asks for a delete, other people and any calendar that is not plainly mine', () => {
+  it('asks for other people and any calendar that is not plainly mine, not for a delete', () => {
     expect(floorReasons('update', choice(), 0)).toEqual([]);
-    expect(floorReasons('delete', choice(), 0)).toEqual(['delete']);
+    expect(floorReasons('delete', choice(), 0)).toEqual([]);
     expect(floorReasons('update', choice(), 2)).toEqual(['others']);
     expect(floorReasons('create', choice({ ownership: 'shared' }), 0)).toEqual(['shared']);
     expect(floorReasons('create', choice({ ownership: 'unknown' }), 0)).toEqual(['shared']);
     expect(floorReasons('delete', choice({ ownership: 'unknown' }), 3)).toEqual([
-      'delete',
       'others',
       'shared',
     ]);

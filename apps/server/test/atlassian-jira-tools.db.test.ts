@@ -94,14 +94,25 @@ describe('spark_jira_edit', () => {
     expect(JSON.stringify(h.recorded.audited)).not.toContain(JIRA_TOKEN);
   });
 
-  it('asks before deleting an issue even in Bypass permissions', async () => {
+  it('deletes an issue at once in Bypass permissions and names it', async () => {
     h = await startAtlassian('Delete API-95', 'bypassPermissions');
+    const deleted = await h.tools.call('spark_jira_edit', { action: 'delete', key: 'API-95' });
+    expect(deleted.json()).toMatchObject({
+      outcome: 'done',
+      message: 'Deleted API-95 Resumable uploads.',
+    });
+    expect(issue('API-95')).toBeUndefined();
+    expect(await sparkCards(h.t)).toEqual(['allowed']);
+    expect(JSON.stringify(h.recorded.audited)).toContain('spark/jira_edit');
+  });
+
+  it('shows a card before deleting an issue in Manual', async () => {
+    h = await startAtlassian('Delete API-95', 'default');
     const waiting = await h.tools.call('spark_jira_edit', { action: 'delete', key: 'API-95' });
     expect(waiting.json()).toMatchObject({ outcome: 'waiting_for_user' });
     expect(issue('API-95')).toBeDefined();
     const card = await confirmCard(h.t);
     expect(card.options[0]!.name).toBe('Delete ticket');
-    expect(card.payload.sparkResult).toMatchObject({ state: 'done', message: 'Deleted API-95.' });
     expect(issue('API-95')).toBeUndefined();
   });
 
@@ -113,7 +124,7 @@ describe('spark_jira_edit', () => {
     expect(await sparkCards(h.t)).toEqual([]);
   });
 
-  it('edits only the user’s own comments and always asks to delete one', async () => {
+  it('edits and deletes only the user’s own comments', async () => {
     h = await startAtlassian('Fix my comment on WEB-418', 'auto');
     const theirs = seedComment('WEB-418', 'acc-2', 'Their note');
     const mine = seedComment('WEB-418', JIRA_ME, 'Typo here');
@@ -136,8 +147,7 @@ describe('spark_jira_edit', () => {
       key: 'WEB-418',
       commentId: mine,
     });
-    expect(waiting.json()).toMatchObject({ outcome: 'waiting_for_user' });
-    await confirmCard(h.t);
+    expect(waiting.json()).toMatchObject({ outcome: 'done' });
     expect(issue('WEB-418')!.comments.filter((entry) => entry.created !== 'deleted')).toHaveLength(
       2,
     );

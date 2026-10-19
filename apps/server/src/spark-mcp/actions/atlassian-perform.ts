@@ -34,7 +34,7 @@ async function jiraComment(context: SparkToolContext, action: JiraEditAction) {
   if (current.updatedAt !== comment!.updatedAt) throw new AtlassianChangedError(JIRA_CHANGED);
   if (action.op === 'delete_comment') {
     await jira.deleteComment(ticket.key, comment!.id);
-    return { message: `Deleted your comment on ${ticket.key}.`, url: ticket.url };
+    return { message: `Deleted your comment ${comment!.id} on ${ticket.key}.`, url: ticket.url };
   }
   await jira.editComment(ticket.key, comment!.id, comment!.after ?? '');
   return { message: `Edited your comment on ${ticket.key}.`, url: ticket.url };
@@ -56,7 +56,11 @@ export async function performJiraEdit(
       throw new AtlassianChangedError(JIRA_CHANGED);
     }
     await jira.deleteIssue(ticket.key, action.subtasks.length > 0);
-    return { message: `Deleted ${ticket.key}.`, url: null, output: { key: ticket.key } };
+    return {
+      message: `Deleted ${ticket.key} ${ticket.title}.`,
+      url: null,
+      output: { key: ticket.key },
+    };
   }
   await jira.update(ticket.key, action.changes);
   return {
@@ -99,7 +103,7 @@ export async function performConfluenceEdit(
   }
   if (action.op === 'delete') {
     await confluence.remove(current.id);
-    return { message: `Moved ${current.title} to the Confluence trash.`, url: null };
+    return { message: `Moved to trash: ${current.title}.`, url: null };
   }
   try {
     const saved = await confluence.update({

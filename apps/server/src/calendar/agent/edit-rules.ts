@@ -40,7 +40,6 @@ export function floorReasons(
   others: number,
 ): CalendarFloorReason[] {
   const reasons: CalendarFloorReason[] = [];
-  if (op === 'delete') reasons.push('delete');
   if (others > 0) reasons.push('others');
   if (choice.ownership !== 'mine') reasons.push('shared');
   return reasons;

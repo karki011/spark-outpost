@@ -181,7 +181,7 @@ export const calendarEditTool = sparkTool({
   acts: true,
   title: 'Change the calendar',
   description:
-    'Creates, changes (title, start, end, allDay, notes, location, alarmMinutes; null removes the alarm) or deletes an event on a calendar where the user turned on Agents can edit. calendar is the calendar key; update and delete take eventId and occurrence from the event’s ref. span future changes a recurring macOS event from this occurrence on. Follows the agent mode with a card showing the change before and after; a delete, an event with other people, and a shared calendar always ask. Never invites anyone or answers invitations.',
+    'Creates, changes (title, start, end, allDay, notes, location, alarmMinutes; null removes the alarm) or deletes an event on a calendar where the user turned on Agents can edit. calendar is the calendar key; update and delete take eventId and occurrence from the event’s ref. span future changes a recurring macOS event from this occurrence on. Follows the agent mode with a card showing the change before and after; an event with other people and a shared calendar always ask. Never invites anyone or answers invitations.',
   input: {
     action: editOpSchema,
     calendar: z.uuid(),

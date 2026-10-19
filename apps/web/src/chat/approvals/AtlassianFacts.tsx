@@ -132,11 +132,9 @@ export function atlassianNote(action: SparkAction): string | null {
   if (atlassian.action === 'atlassian_read') {
     return 'What the agent reads goes to its model provider, and Spark treats it as untrusted. Allowing covers reading it for the rest of this chat.';
   }
-  const deleting =
-    atlassian.op === 'delete' ||
-    (atlassian.action === 'jira_edit' && atlassian.op === 'delete_comment');
-  const check = ' If it changed in the meantime, Spark changes nothing.';
-  return deleting
-    ? `Nothing changes until you confirm. Spark asks before every delete, in every mode.${check}`
-    : `Nothing changes until you confirm.${check}`;
+  const trash =
+    atlassian.action === 'confluence_edit' && atlassian.op === 'delete'
+      ? ' The page goes to the Confluence trash.'
+      : '';
+  return `Nothing changes until you confirm.${trash} If it changed in the meantime, Spark changes nothing.`;
 }

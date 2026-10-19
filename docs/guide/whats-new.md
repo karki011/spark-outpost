@@ -12,7 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                 | What to do                                                        |
 | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| **Atlassian** replaces Jira; agents use Jira and Confluence.                                                 | See [Connect](tickets-and-github.md#connect-atlassian-or-linear). |
+| **Atlassian** replaces Jira. Agent deletes in Jira, Confluence and Calendar follow your mode.                | See [Connect](tickets-and-github.md#connect-atlassian-or-linear). |
 | Calendar: meeting bubble, **N more**, links.                                                                 | See [Use it](calendar.md#use-it).                                 |
 | Spark Island opens only from Scout. **Hide in screen sharing**.                                              | See [Spark Island](desktop-companion.md).                         |
 | **Today** from macOS or Google: **Month**, nudges, **Join** at 10 min, **Choose** for clashes, agent access. | See [Use it](calendar.md#use-it).                                 |
@@ -24,4 +24,4 @@ What changed recently in Spark, newest first.
 | Push to talk: dictate, start chats or ask who needs you. Speech stays local.                                 | See [Talk to Spark](voice.md).                                    |
 | Ask Spark is faster and remembers key facts.                                                                 | See [Settings](settings.md#spark-assistant).                      |
 | Without a project, Spark actions follow your mode.                                                           | See [Spark tools](spark-tools.md#when-actions-ask-first).         |
-| Agents can read and press in other Mac apps; sends and deletes always ask.                                   | See [Mac control](mac-control.md).                                |
+| Agents can read and press in other Mac apps.                                                                 | See [Mac control](mac-control.md).                                |
