@@ -160,6 +160,7 @@ export const SPEC_GROUPS = {
   home: [
     'calendar',
     'calendar-agents',
+    'calendar-bubble',
     'calendar-busy',
     'calendar-clash',
     'calendar-connector',

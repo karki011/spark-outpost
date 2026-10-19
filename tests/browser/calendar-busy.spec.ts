@@ -209,6 +209,27 @@ test('Day fills the window and keeps titles readable beside a long block', async
   ).toEqual([]);
 });
 
+test('ended meetings are dimmed everywhere and ongoing ones stay full strength', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1400 });
+  await openToday(page);
+  const chip = (title: string) => cell(page).locator('.mo-ev', { hasText: title });
+  await expect(chip('Earlier sync')).toHaveAttribute('data-ended', 'true');
+  await expect(chip('Ongoing review')).not.toHaveAttribute('data-ended');
+  const card = (title: string) => scheduled(page).locator('.rl-card', { hasText: title });
+  await expect(card('Earlier sync')).toHaveAttribute('data-past', 'true');
+  await expect(card('Ongoing review')).not.toHaveAttribute('data-past');
+  await today(page).getByRole('radio', { name: 'Day' }).click();
+  await expect(today(page).getByRole('button', { name: /^Earlier sync, / })).toHaveAttribute(
+    'data-ended',
+    'true',
+  );
+  await expect(today(page).getByRole('button', { name: /^Ongoing review, / })).not.toHaveAttribute(
+    'data-ended',
+  );
+});
+
 const THEMES = [
   'dark',
   'light',

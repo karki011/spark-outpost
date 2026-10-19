@@ -108,5 +108,7 @@ export function busyEvents(event: MakeEvent, anchor: number, dayStart: number): 
     event('busy-support', 'Support rotation', 'fake-work', at(14, 30), 60),
     event('busy-roadmap', 'Roadmap', 'fake-work', at(15, 30), 60),
     event('busy-wrap', 'Week wrap-up', 'fake-work', at(17), 30),
+    event('busy-earlier', 'Earlier sync', 'fake-work', anchor - 90 * MINUTE, 60),
+    event('busy-ongoing', 'Ongoing review', 'fake-work', anchor - 10 * MINUTE, 30),
   ];
 }
