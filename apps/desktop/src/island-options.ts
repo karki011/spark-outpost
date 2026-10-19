@@ -4,7 +4,11 @@ import { ISLAND_HEIGHT, ISLAND_WIDTH, type Point } from './island-geometry.ts';
 export const ISLAND_LEVEL = 'status';
 export const ISLAND_PATH = '/island';
 
-export function islandWindowOptions(preload: string, at: Point): BrowserWindowConstructorOptions {
+export function islandWindowOptions(
+  preload: string,
+  at: Point,
+  args: string[],
+): BrowserWindowConstructorOptions {
   return {
     x: at.x,
     y: at.y,
@@ -35,6 +39,7 @@ export function islandWindowOptions(preload: string, at: Point): BrowserWindowCo
       nodeIntegration: false,
       sandbox: true,
       backgroundThrottling: true,
+      additionalArguments: args,
     },
   };
 }

@@ -22,6 +22,8 @@ import {
 } from './island-geometry.ts';
 import { emulatedNotch, readNotches, type Notches } from './notch-probe.ts';
 import { escapeGuard } from './island-escape.ts';
+import { hourCycleArgs } from './hour-cycle-arg.ts';
+import { systemHourCycle } from './hour-cycle.ts';
 import { setIslandFocus } from './island-focus.ts';
 import { windowPoint } from './island-pointer.ts';
 import { regionPointer } from './region-pointer.ts';
@@ -76,7 +78,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     placement(saved, screen.getAllDisplays().map(info), screen.getPrimaryDisplay().id, blob().size);
   let placed = currentPlacement(options.position());
   const start = placed?.position ?? { x: 0, y: 0 };
-  const window = new BrowserWindow(islandWindowOptions(options.preload, start));
+  const window = new BrowserWindow(islandWindowOptions(options.preload, start, hourCycleArgs(systemHourCycle())));
   let dragging: { origin: Point; pointer: Point } | null = null;
   let rest: Size | null = null;
   let requested: Rect | null = null;

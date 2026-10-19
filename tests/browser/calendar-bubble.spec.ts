@@ -91,7 +91,7 @@ test('the meeting card hangs from Scout with its details, opens Today and snooze
   await recordDesktop(page);
   await page.reload();
   await expect(bubble(page)).toContainText(/^In [1-5] min\s*Standup/);
-  await expect(bubble(page)).toContainText(/\d+:\d{2} – \d+:\d{2} · 15 min/);
+  await expect(bubble(page)).toContainText(/\d+:\d{2}( [AP]M)?–\d+:\d{2} [AP]M · 15 min/);
   await expect(bubble(page)).toContainText('Zoom · Spark Work');
   await expect(bubble(page)).toContainText('Alex Wong, Ivan Marsh');
   await expect(bubble(page)).toContainText('Daily sync: what changed since yesterday.');

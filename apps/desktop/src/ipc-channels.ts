@@ -48,6 +48,7 @@ export const IPC = {
   viewingReport: 'spark:viewing',
   viewedGet: 'spark:viewed',
   viewedChanged: 'spark:viewed-changed',
+  hourCycleChanged: 'spark:hour-cycle-changed',
   themeSave: 'spark:theme',
   storageSeed: 'spark:storage-seed',
   bootStatus: 'boot:status',

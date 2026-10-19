@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 import { applySeed } from './storage-seed.ts';
+import { hourCycleFromArgs } from './hour-cycle-arg.ts';
 import { themeFromArgs } from './theme-arg.ts';
 
 function listen<T>(channel: string, callback: (payload: T) => void): () => void {
@@ -60,6 +61,10 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     focus: () => ipcRenderer.send(IPC.meetingAlertFocus),
     setRegions: (regions: unknown) => ipcRenderer.send(IPC.meetingAlertRegions, regions),
     pointerMoved: () => ipcRenderer.send(IPC.meetingAlertPointerMoved),
+  },
+  clock: {
+    hourCycle: hourCycleFromArgs(process.argv),
+    onHourCycle: (callback: (cycle: unknown) => void) => listen(IPC.hourCycleChanged, callback),
   },
   viewing: {
     report: (chatId: string | null) => ipcRenderer.send(IPC.viewingReport, chatId),

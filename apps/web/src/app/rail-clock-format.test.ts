@@ -45,6 +45,7 @@ describe('rail clock in a 24-hour locale', () => {
   it('names the 24-hour time', () => {
     expect(clockLabel(AFTERNOON, 'en-GB')).toBe('16:30');
     expect(clockLabel(MORNING, 'en-GB')).toBe('9:05');
+    expect(clockLabel(AFTERNOON, 'en-US', 'h23')).toBe('16:30');
   });
 
   it('honours a locale that asks for a 24-hour cycle', () => {

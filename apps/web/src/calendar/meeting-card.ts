@@ -4,7 +4,7 @@ import {
   type CalendarEvent,
   type CalendarPerson,
 } from '@spark-outpost/contracts';
-import { clock, duration } from './calendar-format.ts';
+import { duration, span } from './calendar-format.ts';
 
 const MINUTE_MS = 60_000;
 const PEOPLE_SHOWN = 3;
@@ -37,7 +37,7 @@ export function startsLabel(event: CalendarEvent, at: number): string {
 export function timeRow(event: CalendarEvent): string {
   const { start, end } = spanOf(event);
   const minutes = Math.round((end - start) / MINUTE_MS);
-  return `${clock(start)} – ${clock(end)} · ${duration(minutes)}`;
+  return `${span(start, end)} · ${duration(minutes)}`;
 }
 
 export function placeRow(

@@ -12,6 +12,8 @@ import {
   parseIslandRegions,
   type MeetingAlertPayload,
 } from '@spark-outpost/contracts';
+import { hourCycleArgs } from './hour-cycle-arg.ts';
+import { systemHourCycle } from './hour-cycle.ts';
 import type { Point } from './island-geometry.ts';
 import { ISLAND_LEVEL } from './island-options.ts';
 import { IPC } from './ipc-channels.ts';
@@ -59,7 +61,13 @@ function overlayWindow(preload: string): BrowserWindow {
     roundedCorners: false,
     type: 'panel',
     title: 'Spark meeting alert',
-    webPreferences: { preload, contextIsolation: true, nodeIntegration: false, sandbox: true },
+    webPreferences: {
+      preload,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      additionalArguments: hourCycleArgs(systemHourCycle()),
+    },
   });
   window.setAlwaysOnTop(true, ISLAND_LEVEL);
   window.setVisibleOnAllWorkspaces(true, {

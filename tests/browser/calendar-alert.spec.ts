@@ -160,7 +160,7 @@ test('the hanging card offers Join, Snooze and Dismiss, and Esc dismisses once c
   await openOverlay(page, payload);
   const card = page.getByRole('alertdialog', { name: /^Standup starts in \d min$/ });
   await expect(card).toBeVisible();
-  await expect(card).toContainText(/\d+:\d{2}–\d+:\d{2} · Zoom · 3 people/);
+  await expect(card).toContainText(/\d+:\d{2}( [AP]M)?–\d+:\d{2} [AP]M · Zoom · 3 people/);
   await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeVisible();
   await expect(card).toHaveAccessibleDescription('Esc dismisses · ⌘J joins');
   await expect

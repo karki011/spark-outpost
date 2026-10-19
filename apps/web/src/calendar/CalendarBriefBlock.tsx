@@ -1,6 +1,12 @@
 import './upcoming.css';
 import { useMemo } from 'react';
-import { isMeeting, localDayStart, longestFree, spanOf } from '@spark-outpost/contracts';
+import {
+  isMeeting,
+  localDayStart,
+  longestFree,
+  spanOf,
+  workWindow,
+} from '@spark-outpost/contracts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { duration, span } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
@@ -22,6 +28,8 @@ export function CalendarBriefBlock({ now }: { now: number }) {
   const longest = longestFree(day.free);
   const focus = day.events.find((event) => event.focus && !event.allDay);
   const holds = status?.settings.holdRule !== 'never';
+  const work = workWindow(localDayStart(now));
+  const hours = span(work.start, work.end);
   return (
     <section className="cal-brief" aria-labelledby="cal-brief-h">
       <p className="cal-brief-note">From your calendar · on this Mac, not sent to a model</p>
@@ -52,16 +60,16 @@ export function CalendarBriefBlock({ now }: { now: number }) {
       <DayShapeBar
         shape={day.shape}
         dayStart={localDayStart(now)}
-        label="Busy and focus time, 9:00 to 18:00"
+        label={`Busy and focus time, ${hours}`}
       />
       <p className="cal-brief-line">
         {longest ? (
           <>
-            Longest free block, 9:00–18:00: <b>{span(longest.start, longest.end)}</b> (
+            Longest free block, {hours}: <b>{span(longest.start, longest.end)}</b> (
             {duration(Math.round((longest.end - longest.start) / 60_000))}).
           </>
         ) : (
-          'No free block of 30 min or more, 9:00–18:00.'
+          `No free block of 30 min or more, ${hours}.`
         )}
         {focus && holds && (
           <>

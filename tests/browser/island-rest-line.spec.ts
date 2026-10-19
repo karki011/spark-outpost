@@ -66,7 +66,7 @@ async function overlaps(first: Locator, second: Locator): Promise<boolean> {
 
 for (const [place, setup] of Object.entries(PLACES)) {
   for (const size of ['small', 'large', 'xlarge'] as const) {
-    test(`${place}, ${size}: the resting island names the request beside Scout and a click opens it`, async ({
+    test(`${place}, ${size}: the resting island hangs the request under Scout and a click opens it`, async ({
       page,
     }) => {
       await resetTestDatabase({ onboarded: true });
@@ -80,7 +80,9 @@ for (const [place, setup] of Object.entries(PLACES)) {
       await settled(page);
       const box = (await line(page).boundingBox())!;
       const scout = (await island(page).locator('.isl-scout-wrap').boundingBox())!;
-      expect(box.x).toBeGreaterThanOrEqual(scout.x + scout.width);
+      expect(box.y).toBeGreaterThan(scout.y);
+      expect(await overlaps(line(page), island(page).locator('.isl-scout-wrap'))).toBe(false);
+      expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(VIEWPORT.width);
       expect(box.y).toBeGreaterThanOrEqual(0);
       for (const blob of await page.locator('.isl-peekblob, .isl-pb').all()) {

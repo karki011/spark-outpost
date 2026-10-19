@@ -214,7 +214,7 @@ test('merges both calendars, filters one out and shows another day', async ({ pa
   await expect(today(page).getByText('Join and the now line appear on the day')).toBeVisible();
   await event(page, 'Demo day').click();
   await expect(
-    today(page).getByRole('button', { name: /^Demo day at \d+:\d+, Join opens at / }),
+    today(page).getByRole('button', { name: /^Demo day at \d+:\d+ [AP]M, Join opens at / }),
   ).toBeDisabled();
 });
 
@@ -232,7 +232,7 @@ test('joins only an open meeting, from the panel and with ⌘J', async ({ page }
   await page.keyboard.press('Enter');
   await expect(event(page, 'Customer call')).toHaveAttribute('aria-expanded', 'true');
   const panel = today(page).getByRole('region', { name: 'Customer call' });
-  const teams = panel.getByRole('button', { name: /^Customer call at \d+:\d+, Join opens at / });
+  const teams = panel.getByRole('button', { name: /^Customer call at \d+:\d+ [AP]M, Join opens at / });
   await expect(teams).toBeDisabled();
   await expect(panel).toContainText('teams.microsoft.com, unwrapped from Outlook SafeLinks');
 
@@ -251,8 +251,8 @@ test('the resting island names the next meeting and joins it', async ({ page }) 
   await connect(page);
   await openNotchIsland(page, { size: 'large', autoExpand: false });
   const bubble = island(page).getByRole('group', { name: 'Meeting Standup' });
-  await expect(bubble).toContainText(/^In [1-5] min\s*· Standup/);
-  await bubble.getByRole('button', { name: 'Join Standup' }).click();
+  await expect(bubble).toContainText(/^In [1-5] min\s*Standup/);
+  await bubble.getByRole('button', { name: 'Join Zoom: Standup' }).click();
   await expect.poll(() => opened(page)).toEqual(['https://acme.zoom.us/j/123456789']);
 });
 
@@ -308,7 +308,7 @@ test('shows Upcoming and the calendar block beside the brief on Home', async ({ 
   await expect(card).toContainText('Standup');
   await expect(card.getByRole('button', { name: 'Join Standup' })).toBeEnabled();
   await expect(
-    card.getByRole('button', { name: /^Customer call at \d+:\d+, Join opens at / }),
+    card.getByRole('button', { name: /^Customer call at \d+:\d+ [AP]M, Join opens at / }),
   ).toBeDisabled();
 });
 

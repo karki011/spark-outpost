@@ -118,6 +118,10 @@ export interface SparkDesktop {
     setRegions(regions: IslandRegions): void;
     pointerMoved(): void;
   };
+  clock?: {
+    hourCycle: unknown;
+    onHourCycle(callback: (cycle: unknown) => void): Unsubscribe;
+  };
   viewing?: {
     report(chatId: string | null): void;
     get(): Promise<unknown>;

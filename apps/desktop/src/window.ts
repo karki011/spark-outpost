@@ -4,6 +4,8 @@ import { targetsApi, withApiToken } from './api-token.ts';
 import type { ChannelConfig } from './channel.ts';
 import { linkTarget } from './link-target.ts';
 import { guardSessionMedia } from './media-guard.ts';
+import { hourCycleArgs } from './hour-cycle-arg.ts';
+import { systemHourCycle } from './hour-cycle.ts';
 import { themeArgs } from './theme-arg.ts';
 
 export interface WindowOptions {
@@ -69,7 +71,7 @@ export function openWindow({ config, preload, theme }: WindowOptions): BrowserWi
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      additionalArguments: themeArgs(theme),
+      additionalArguments: [...themeArgs(theme), ...hourCycleArgs(systemHourCycle())],
     },
   });
   window.on('page-title-updated', (event) => {

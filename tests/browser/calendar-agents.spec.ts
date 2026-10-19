@@ -154,7 +154,7 @@ test('shows a calendar change before and after on its card', async ({ page }) =>
   await expect(event).toBeVisible();
   await expect(event).toContainText('wants to change an event.');
   await expect(event).toContainText('Spark Family (iCloud)');
-  await expect(event).toContainText(/When.*11:00–12:00.*→.*17:00–18:00/);
+  await expect(event).toContainText(/When.*11:00 AM–12:00 PM.*→.*5:00–6:00 PM/);
   await expect(event).toContainText('This occurrence only');
   await expect(event).toContainText('2 other people, not told by Spark');
   await expect(event).toContainText('This event has other people, so Spark asks in every mode.');

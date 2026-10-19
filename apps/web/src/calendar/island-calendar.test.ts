@@ -155,7 +155,7 @@ describe('calendarLine', () => {
     const all = now({ hold, capture, nudge: nudge('before', 'Standup', at(10)) });
     expect(calendarLine(input(all, { catchUp }))?.text).toBe('Standup in 10 min');
     const quiet = { ...all, nudge: null };
-    expect(calendarLine(input(quiet, { catchUp }))?.text).toBe('Focus · alerts held until 11:30');
+    expect(calendarLine(input(quiet, { catchUp }))?.text).toBe('Focus · alerts held until 11:30 AM');
     expect(calendarLine(input({ ...quiet, hold: null }, { catchUp }))?.dismiss).toBe('catch_up');
     expect(calendarLine(input({ ...quiet, hold: null }))?.text).toBe(
       'Design review ended · anything to capture?',
@@ -168,7 +168,7 @@ describe('calendarLine', () => {
   it('names a meeting hold by its title', () => {
     expect(
       calendarLine(input(now({ hold: { ...hold, focus: false, title: 'Standup' } })))?.text,
-    ).toBe('Standup · alerts held until 11:30');
+    ).toBe('Standup · alerts held until 11:30 AM');
   });
 
   it('keeps the catch-up line after the calendar is disconnected', () => {
@@ -212,7 +212,7 @@ describe('calendarLine', () => {
     };
     const calendar = now({ upcoming: [standup, design, room], nudge: grouped });
     const line = calendarLine(input(calendar));
-    expect(line?.text).toBe('Standup + 2 more at 10:00');
+    expect(line?.text).toBe('Standup + 2 more at 10:00 AM');
     expect(line?.join).toBeNull();
     expect(line?.choose?.map((item) => item.title)).toEqual([
       'Standup',

@@ -30,6 +30,7 @@ import { openIslandWindow, type IslandWindow } from './island-window.ts';
 import { appLayout } from './layout.ts';
 import { startMeetingAlertHost } from './meeting-alert-host.ts';
 import { startViewingHost } from './viewing-host.ts';
+import { watchHourCycle } from './hour-cycle.ts';
 import { startVoiceHost, type VoiceHost } from './voice/host.ts';
 
 interface CompanionHostOptions {
@@ -283,6 +284,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     log: options.log,
   });
 
+  const stopHourCycle = watchHourCycle();
   const viewing = startViewingHost({
     trusted: fromSpark,
     fromIsland,
@@ -337,6 +339,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     dispose: () => {
       attention?.dispose();
       viewing.dispose();
+      stopHourCycle();
       meetingAlert.dispose();
       voice?.dispose();
       companion.shutdown();

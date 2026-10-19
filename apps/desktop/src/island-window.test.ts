@@ -54,6 +54,7 @@ vi.mock('electron', () => ({
   app: { isPackaged: true },
   BrowserWindow: native.BrowserWindow,
   globalShortcut: { register: vi.fn(), unregister: vi.fn() },
+  systemPreferences: { getUserDefault: () => false },
   screen: {
     getAllDisplays: () => native.displays,
     getPrimaryDisplay: () => native.displays[0],
