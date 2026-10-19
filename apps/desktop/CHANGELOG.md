@@ -2,6 +2,15 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.22
+
+- Atlassian: one connection for Jira and Confluence replaces the Jira card, with a switch for each; your Jira connection carries over. Agents can search, read, create, update, comment on and delete Jira issues and Confluence pages, following the chat's mode. A Confluence update is refused when someone changed the page first, and deleted pages go to the trash.
+- Calendar: deletes follow the chat's mode like other Spark actions; events with guests and shared calendars still ask.
+- Calendar: the day panel is wider and resizable, shows two or three people then +N more, and lists rooms as the location. Hover N more to see the hidden events. Links, addresses and emails in an event are clickable, and Zoom and Meet boilerplate is folded away.
+- Calendar: Day view fills the window and keeps titles readable when meetings overlap. Past events are dimmed.
+- Calendar: Scout speaks a meeting nudge as a bubble with Join, Snooze 2 min, Open and dismiss. Open, the island's meetings, Home's Upcoming and ⌘J show the meeting selected in Day view. Nudges and meeting rows clear themselves when the meeting ends.
+- Fixes: the Don't button on action cards is readable in every theme.
+
 ## 0.1.0-beta.21
 
 - Calendar: agents can read your calendar when you turn on Let agents read my calendar, and create, move or delete events on calendars where you turn on Agents can edit. Each change shows a card unless the chat's mode runs Spark actions at once; deleting always asks. For a Google calendar, Google asks for edit permission only when you turn on Agents can edit.
