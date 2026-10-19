@@ -321,3 +321,19 @@ test('keeps Agents can edit off with a note when Google doesn’t allow editing'
   expect((await status(page)).google.accounts[0]).toMatchObject({ canEdit: false });
   if (SHOTS) await account.screenshot({ path: `${SHOTS}/google-edit-declined.png` });
 });
+
+test('shows the Calendars access note, not a Mac account, when macOS refuses Add calendar', async ({
+  page,
+}) => {
+  writeFileSync(
+    FAKE_CALENDAR_STATE,
+    JSON.stringify({ authorization: 'notDetermined', grant: 'denied', anchor }),
+  );
+  await openCard(page);
+  await addGoogle(page);
+  await card(page).getByRole('button', { name: 'Add calendar' }).click();
+  await page.getByRole('menuitem', { name: 'Mac Calendar' }).click();
+  await expect(card(page).getByRole('button', { name: 'Open Calendar settings' })).toBeVisible();
+  await expect(card(page).getByRole('button', { name: 'Options for Mac Calendar' })).toHaveCount(0);
+  expect((await status(page)).connected).toBe(false);
+});

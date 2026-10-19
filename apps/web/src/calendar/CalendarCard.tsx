@@ -165,11 +165,12 @@ function ConnectedBody({ status, google }: { status: CalendarStatus; google: Goo
   const { mac, google: googleAccounts, change, error } = useCalendarChoices(status.accounts);
   const { connect } = useCalendarActions();
   const state = macState(status);
-  const macShown = status.connected || (connect.isSuccess && state !== 'connect');
+  const macRefused = !status.connected && connect.isSuccess && state === 'denied';
   const canAddMac = !status.connected && state !== 'helper';
   return (
     <>
-      {macShown && <MacSource status={status} accounts={mac} onChange={change} />}
+      {status.connected && <MacSource status={status} accounts={mac} onChange={change} />}
+      {macRefused && <DeniedBody />}
       {status.google.accounts.map((account) => (
         <GoogleSource
           key={account.id}
