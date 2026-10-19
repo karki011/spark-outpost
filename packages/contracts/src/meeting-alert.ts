@@ -18,7 +18,13 @@ export const meetingAlertPayloadSchema = z.object({
 });
 export type MeetingAlertPayload = z.infer<typeof meetingAlertPayloadSchema>;
 
-export const MEETING_ALERT_ACTIONS = ['joined', 'snooze', 'dismiss', 'cancel-join', 'join-now'] as const;
+export const MEETING_ALERT_ACTIONS = [
+  'joined',
+  'snooze',
+  'dismiss',
+  'cancel-join',
+  'join-now',
+] as const;
 export const meetingAlertActionSchema = z.object({
   kind: z.enum(MEETING_ALERT_ACTIONS),
   key: z.string().max(KEY_MAX * CALENDAR_GROUP_MAX),

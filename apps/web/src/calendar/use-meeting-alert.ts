@@ -63,9 +63,10 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
   });
 
   const canShow = sparkDesktop()?.meetingAlert !== undefined;
-  const alert = settings && canShow
-    ? meetingAlert({ now: live, settings, at, held, marks: marksWithout(marks, joined) })
-    : null;
+  const alert =
+    settings && canShow
+      ? meetingAlert({ now: live, settings, at, held, marks: marksWithout(marks, joined) })
+      : null;
 
   const join = (event: CalendarEvent, automatic: boolean) => {
     if (!event.link) return;

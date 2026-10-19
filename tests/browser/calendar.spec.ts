@@ -232,7 +232,9 @@ test('joins only an open meeting, from the panel and with ⌘J', async ({ page }
   await page.keyboard.press('Enter');
   await expect(event(page, 'Customer call')).toHaveAttribute('aria-expanded', 'true');
   const panel = today(page).getByRole('region', { name: 'Customer call' });
-  const teams = panel.getByRole('button', { name: /^Customer call at \d+:\d+ [AP]M, Join opens at / });
+  const teams = panel.getByRole('button', {
+    name: /^Customer call at \d+:\d+ [AP]M, Join opens at /,
+  });
   await expect(teams).toBeDisabled();
   await expect(panel).toContainText('teams.microsoft.com, unwrapped from Outlook SafeLinks');
 

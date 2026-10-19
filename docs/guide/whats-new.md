@@ -15,6 +15,6 @@ What changed recently in Spark, newest first.
 | No line, chime or notification for a chat you're viewing. Spark Island takes the first click.                | See [Spark Island](desktop-companion.md#answer-a-card).           |
 | Browser: developer tools, network log, multi-site sign-ins, SSO handoff.                                     | See [Use the browser](use-the-browser.md).                        |
 | **Atlassian** replaces Jira. Agent deletes in Jira, Confluence and Calendar follow your mode.                | See [Connect](tickets-and-github.md#connect-atlassian-or-linear). |
-| Meetings: Scout lowers a card mid-screen; optional **Join meetings automatically**; 12-hour times.         | See [Use it](calendar.md#use-it).                                 |
+| Meetings: Scout lowers a card mid-screen; optional **Join meetings automatically**; 12-hour times.           | See [Use it](calendar.md#use-it).                                 |
 | Spark Island opens only from Scout. **Hide in screen sharing**.                                              | See [Spark Island](desktop-companion.md).                         |
 | **Today** from macOS or Google: **Month**, nudges, **Join** at 10 min, **Choose** for clashes, agent access. | See [Use it](calendar.md#use-it).                                 |

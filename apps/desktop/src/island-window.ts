@@ -78,7 +78,9 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     placement(saved, screen.getAllDisplays().map(info), screen.getPrimaryDisplay().id, blob().size);
   let placed = currentPlacement(options.position());
   const start = placed?.position ?? { x: 0, y: 0 };
-  const window = new BrowserWindow(islandWindowOptions(options.preload, start, hourCycleArgs(systemHourCycle())));
+  const window = new BrowserWindow(
+    islandWindowOptions(options.preload, start, hourCycleArgs(systemHourCycle())),
+  );
   let dragging: { origin: Point; pointer: Point } | null = null;
   let rest: Size | null = null;
   let requested: Rect | null = null;

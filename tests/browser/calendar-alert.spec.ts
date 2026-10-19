@@ -1,9 +1,6 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import {
-  calendarNowSchema,
-  type MeetingAlertPayload,
-} from '../../packages/contracts/src/index.ts';
+import { calendarNowSchema, type MeetingAlertPayload } from '../../packages/contracts/src/index.ts';
 import { apiNow, matchApiClock } from './api-clock.ts';
 import { resetTestDatabase } from './database.ts';
 import { island, openNotchIsland } from './island-notch-desktop.ts';
@@ -32,7 +29,8 @@ async function recordIslandAlerts(page: Page) {
     const desktop = (window as unknown as { sparkDesktop: Record<string, unknown> }).sparkDesktop;
     desktop.meetingAlert = {
       show: (payload: unknown) => shows.push(payload),
-      hide: () => Object.assign(window, { alertHides: (window as never as AlertWindow).alertHides + 1 }),
+      hide: () =>
+        Object.assign(window, { alertHides: (window as never as AlertWindow).alertHides + 1 }),
       onAction: (callback: (action: unknown) => void) => {
         Object.assign(window, { alertAction: callback });
         return () => undefined;
@@ -86,7 +84,7 @@ async function openOverlay(page: Page, payload: MeetingAlertPayload) {
   await page.goto('/meeting-alert');
 }
 
-const alertWindow = <T,>(page: Page, read: (window: AlertWindow) => T): Promise<T> =>
+const alertWindow = <T>(page: Page, read: (window: AlertWindow) => T): Promise<T> =>
   page.evaluate(`(${read.toString()})(window)`);
 
 async function standupPayload(page: Page): Promise<MeetingAlertPayload> {
@@ -133,7 +131,8 @@ test('the centre alert takes over from the island bubble and Dismiss sends it ba
   await expect(island(page).getByRole('group', { name: 'Meeting Standup' })).toHaveCount(0);
 
   await page.evaluate(
-    (key) => (window as unknown as AlertWindow).alertAction({ kind: 'dismiss', key, eventKey: null }),
+    (key) =>
+      (window as unknown as AlertWindow).alertAction({ kind: 'dismiss', key, eventKey: null }),
     shown.key,
   );
   await expect
@@ -191,7 +190,11 @@ test('meetings that start together share one card with a Join for each', async (
     title: 'Design sync',
     link: { ...standup!.link!, service: 'meet' as const, url: 'https://meet.google.com/abc' },
   };
-  await openOverlay(page, { ...single, key: `${design.key}|${standup!.key}`, events: [design, standup!] });
+  await openOverlay(page, {
+    ...single,
+    key: `${design.key}|${standup!.key}`,
+    events: [design, standup!],
+  });
   const card = page.getByRole('alertdialog', { name: /^2 meetings start in \d min$/ });
   await expect(card.getByRole('listitem')).toHaveCount(2);
   await expect(card.getByRole('button', { name: 'Join Google Meet' })).toBeVisible();

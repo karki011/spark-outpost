@@ -93,7 +93,9 @@ describe('JoinButton', () => {
 
   it('shows the start time before Join opens, ten minutes ahead', () => {
     render(<JoinButton event={standup} now={at(9, 49)} />);
-    const button = screen.getByRole('button', { name: /Standup at 10:00 AM, Join opens at 9:50 AM/ });
+    const button = screen.getByRole('button', {
+      name: /Standup at 10:00 AM, Join opens at 9:50 AM/,
+    });
     expect((button as HTMLButtonElement).disabled).toBe(true);
     expect(button.textContent).toBe('10:00 AM');
   });

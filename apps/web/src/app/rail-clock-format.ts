@@ -29,6 +29,10 @@ export function clockLabel(date: Date, locale?: string, hourCycle?: HourCycle): 
 }
 
 export function clockTitle(date: Date, locale?: string, hourCycle?: HourCycle): string {
-  const format = new Intl.DateTimeFormat(locale, { dateStyle: 'full', timeStyle: 'short', hourCycle });
+  const format = new Intl.DateTimeFormat(locale, {
+    dateStyle: 'full',
+    timeStyle: 'short',
+    hourCycle,
+  });
   return format.format(date).replace(WIDE_SPACES, ' ');
 }

@@ -155,7 +155,9 @@ describe('calendarLine', () => {
     const all = now({ hold, capture, nudge: nudge('before', 'Standup', at(10)) });
     expect(calendarLine(input(all, { catchUp }))?.text).toBe('Standup in 10 min');
     const quiet = { ...all, nudge: null };
-    expect(calendarLine(input(quiet, { catchUp }))?.text).toBe('Focus · alerts held until 11:30 AM');
+    expect(calendarLine(input(quiet, { catchUp }))?.text).toBe(
+      'Focus · alerts held until 11:30 AM',
+    );
     expect(calendarLine(input({ ...quiet, hold: null }, { catchUp }))?.dismiss).toBe('catch_up');
     expect(calendarLine(input({ ...quiet, hold: null }))?.text).toBe(
       'Design review ended · anything to capture?',

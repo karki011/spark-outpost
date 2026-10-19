@@ -4,7 +4,10 @@ import { at, event, link } from './test-fixtures.ts';
 import {
   autoJoinPlan,
   lineUnderAlert,
-  meetingAlert, type AutoJoinInput, type Presence } from './meeting-alert.ts';
+  meetingAlert,
+  type AutoJoinInput,
+  type Presence,
+} from './meeting-alert.ts';
 import { dismissNudge, NO_NUDGE_MARKS, snoozeNudge } from './nudge-marks.ts';
 
 const standup = event('Standup', at(10), at(10, 15), { link: link('zoom') });

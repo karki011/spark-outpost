@@ -46,10 +46,7 @@ export function regionPointer(
     timer = null;
     if (window.isDestroyed() || !window.isVisible()) return;
     apply();
-    timer = setTimeout(
-      tick,
-      pollDelay(screen.getCursorScreenPoint(), window.getBounds(), regions),
-    );
+    timer = setTimeout(tick, pollDelay(screen.getCursorScreenPoint(), window.getBounds(), regions));
   };
 
   return {
