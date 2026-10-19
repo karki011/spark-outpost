@@ -187,6 +187,43 @@ describe('remote policy', () => {
     expect(cardSwitch({ unexpected: true })).toBe('highRiskCards');
   });
 
+  it('keeps Jira and Confluence deletes behind the high-risk switch and other changes ordinary', () => {
+    const base = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
+    const ticket = { key: 'WEB-1', title: 'A', url: 'https://acme.atlassian.net/browse/WEB-1' };
+    const jira = (op: string) => ({
+      ...base,
+      sparkAction: {
+        action: 'jira_edit',
+        op,
+        ticket,
+        updated: null,
+        changes: {},
+        before: null,
+        after: null,
+        comment: null,
+        subtasks: [],
+      },
+    });
+    const page = {
+      id: '9001',
+      title: 'Page',
+      url: null,
+      version: 1,
+      spaceId: '1',
+      space: null,
+      parentId: null,
+    };
+    const confluence = (op: string) => ({
+      ...base,
+      sparkAction: { action: 'confluence_edit', op, page, body: null, before: null, after: null },
+    });
+    expect(cardSwitch(jira('update'))).toBeNull();
+    expect(cardSwitch(jira('delete'))).toBe('highRiskCards');
+    expect(cardSwitch(jira('delete_comment'))).toBe('highRiskCards');
+    expect(cardSwitch(confluence('comment'))).toBeNull();
+    expect(cardSwitch(confluence('delete'))).toBe('highRiskCards');
+  });
+
   it('lets a paired device answer the browser’s site cards, and keeps saved sign-ins behind their switch', () => {
     const base = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
     const site = { origin: 'https://docs.example.com', path: '/guide' };

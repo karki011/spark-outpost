@@ -52,6 +52,9 @@ export async function performJiraEdit(
   const now = await jira.facts(ticket.key);
   if (now.updated !== action.updated) throw new AtlassianChangedError(JIRA_CHANGED);
   if (action.op === 'delete') {
+    if (now.subtasks.toSorted().join(',') !== action.subtasks.toSorted().join(',')) {
+      throw new AtlassianChangedError(JIRA_CHANGED);
+    }
     await jira.deleteIssue(ticket.key, action.subtasks.length > 0);
     return { message: `Deleted ${ticket.key}.`, url: null, output: { key: ticket.key } };
   }

@@ -162,7 +162,13 @@ export function auditedAction(action: SparkAction): unknown {
   if (action.action === 'calendar_read' || action.action === 'calendar_edit') {
     return calendarAuditFacts(action);
   }
-  if (isAtlassianAction(action.action)) return atlassianAuditFacts(action as never);
+  if (
+    action.action === 'atlassian_read' ||
+    action.action === 'jira_edit' ||
+    action.action === 'confluence_edit'
+  ) {
+    return atlassianAuditFacts(action);
+  }
   return action;
 }
 

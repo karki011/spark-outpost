@@ -153,6 +153,16 @@ describe('spark_jira_edit', () => {
     expect(issue('WEB-418')!.summary).toBe('Someone else');
   });
 
+  it('deletes no subtask the card did not list', async () => {
+    h = await startAtlassian('Delete WEB-418 and its subtasks', 'default');
+    await h.tools.call('spark_jira_edit', { action: 'delete', key: 'WEB-418', withSubtasks: true });
+    issue('WEB-418')!.subtasks.push('API-77');
+    const card = await confirmCard(h.t);
+    expect(card.payload.sparkResult).toMatchObject({ state: 'failed', message: JIRA_CHANGED });
+    expect(issue('WEB-418')).toBeDefined();
+    expect(issue('API-77')).toBeDefined();
+  });
+
   it('shows labels on the card exactly as Jira will get them', async () => {
     h = await startAtlassian('Label WEB-418', 'auto');
     await h.tools.call('spark_jira_edit', {

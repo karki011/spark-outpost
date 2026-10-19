@@ -235,8 +235,7 @@ test('a Jira change card shows the issue before and after with a link to it', as
   await expect(change).not.toContainText('Description now');
   await expect(change.getByRole('button', { name: 'Save change' })).toBeVisible();
   await shoot(page, 'jira-update-card', change);
-  await axeInEveryTheme(page, '.sac .sac-facts');
-  await axeInEveryTheme(page, '.sac .appr-h');
+  await axeInEveryTheme(page, '.sac');
 });
 
 test('a Confluence delete card says it always asks and moves the page to the trash', async ({
@@ -261,6 +260,5 @@ test('a Confluence delete card says it always asks and moves the page to the tra
   await expect(remove).toContainText('Spark asks before every delete, in every mode.');
   await expect(remove.getByRole('button', { name: 'Move to trash' })).toBeVisible();
   await shoot(page, 'confluence-delete-card', remove);
-  await axeInEveryTheme(page, '.sac .sac-facts');
-  await axeInEveryTheme(page, '.sac .appr-h');
+  await axeInEveryTheme(page, '.sac');
 });
