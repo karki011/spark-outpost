@@ -287,6 +287,8 @@ No Phase 1 PR is done until each check has run here and reports **pass** or **fa
 | Terminal session, Manual: the same read, create and delete        | **pass**: Claude's own tool prompt, then Spark's card for each; created, then deleted                                                     |
 | Cleanup                                                           | **pass**: the seed tool removed both calendars by identifier                                                                              |
 
+The Bypass permissions delete row above was recorded before 2026-10-19, when a delete still asked in every mode. Since then a delete follows the mode, so in Bypass permissions it runs at once and its result line names the event.
+
 Incremental consent, 2026-10-18, the same shell with the real Desktop OAuth client: **Add Google account** sent `accounts.google.com` only `openid email calendar.calendarlist.readonly calendar.events.readonly` with `include_granted_scopes=true`; an edit sign-in for an unknown account fell back to those four, one without an account was refused (400), and the sign-in was cancelled without signing in. The edit consent itself needs a connected Google account and was not run against Google.
 
 Not tested for real: Google's consent screen for `calendar.events` and the switch turning on after it, a Google write (only the fake Google API; the owner's Google and iCloud calendars were never written), an event with attendees and a shared calendar in the real app (DB tests only), **This and future** on a real recurring event, and the island's card view for a calendar card (the island showed a waiting badge).
