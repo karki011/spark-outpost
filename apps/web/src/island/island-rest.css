@@ -1,9 +1,11 @@
 .isl-restline {
   position: absolute;
-  left: calc(100% + 8px);
-  top: max(calc(50% - 13px), var(--line-top, 0px));
+  left: 50%;
+  top: var(--line-top, 0px);
+  translate: -50% 0;
   height: 26px;
-  max-width: calc(352px - 50%);
+  max-width: 360px;
+  transform-origin: 50% 0;
   padding: 0 10px 0 8px;
   border: 1px solid var(--island-line);
   border-radius: 13px;
@@ -18,7 +20,7 @@
   cursor: pointer;
   pointer-events: auto;
   box-shadow: var(--island-shadow);
-  animation: isl-restline-in 0.28s var(--out) both;
+  animation: isl-hang-in 0.6s var(--out) both;
   transition:
     opacity 0.15s,
     border-color 0.15s;
@@ -93,13 +95,6 @@
   text-align: center;
   z-index: 2;
   animation: isl-pop 0.5s var(--spring);
-}
-
-@keyframes isl-restline-in {
-  from {
-    opacity: 0;
-    transform: translateX(-6px);
-  }
 }
 
 .isl-calline {

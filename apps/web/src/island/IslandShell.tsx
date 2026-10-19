@@ -6,6 +6,7 @@ import {
   type CSSProperties,
   type RefObject,
 } from 'react';
+import './island-bubble.css';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { setMotionMode } from '../app/idle-motion.ts';
 import { leaveAsGhost } from './home-motion.ts';
@@ -35,6 +36,8 @@ const FLAT_ROW_BLOB = 28;
 const NOTCH_MARGIN = 8;
 const ISLAND_BORDER = 1;
 const PEEK_ROW_RISE = 7;
+const THREAD = 30;
+const SCOUT_FEET = 58 / 64;
 
 function hasCard(view: IslandView): boolean {
   return view.kind === 'card' || view.kind === 'note';
@@ -104,7 +107,9 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
     props.reduced,
   );
   const rowTop = Math.max(top, notchHeight + PEEK_ROW_RISE);
-  const lineTop = restLineTop(flat, rowTop) - (pose?.y ?? 0);
+  const threadTop = rest.blob * SCOUT_FEET;
+  const lineTop = Math.max(restLineTop(flat, rowTop) - (pose?.y ?? 0), threadTop + THREAD);
+  const hanging = peeking && (props.line !== null || props.calendarLine !== null);
   const wings = wingsFor({ ...props, hugsNotch });
   const resting = (quiet || view.kind === 'now') && !props.hover;
   useEffect(() => setMotionMode(resting ? 'paused' : 'live'), [resting]);
@@ -218,6 +223,18 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
             aria-label={scoutLabel(props.asking, props.setAside)}
             onClick={props.onScout}
           />
+          {hanging && (
+            <span
+              className="isl-thread"
+              aria-hidden="true"
+              style={
+                {
+                  '--thread-top': `${threadTop}px`,
+                  '--thread-len': `${lineTop - threadTop}px`,
+                } as CSSProperties
+              }
+            />
+          )}
           {peeking && props.line && (
             <RestLine key={props.line.key} line={props.line} top={lineTop} onOpen={props.onLine} />
           )}
