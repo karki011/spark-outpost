@@ -6,7 +6,7 @@ order: 421
 summary: Connect Mac Calendar or Google Calendar to see Today beside your chats, join meetings in one click and keep focus time quiet.
 ---
 
-You'll connect your calendars. About 2 minutes.
+Connect your calendars. About 2 minutes.
 
 1. Open **Settings → Connectors → Calendar**.
 2. Select **Connect** for Mac Calendar, or **Sign in with Google**.
@@ -18,10 +18,10 @@ You'll connect your calendars. About 2 minutes.
 
 ## Use it
 
-- **Today**, or the clock below **Settings**, opens on **Month** and **Scheduled**; Enter opens **Day**. **Home** shows **Upcoming**.
+- **Today**, or the clock below **Settings**, opens on **Month** and **Scheduled**; Enter opens **Day**.
 - Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before** or **Hold alerts during this**. Links open, numbers and emails copy.
 
-**Join** opens 10 minutes before. Before a meeting, Scout hops and offers **Join**, or **Choose** for overlaps; **⌘J** too. Focus blocks hold chimes.
+Before a meeting, Scout offers **Join** (from 10 minutes before), **Snooze 2 min**, **Open** or **Choose**; **⌘J** too. Meetings clear at their end; focus blocks hold chimes.
 
 ## Let agents use it
 

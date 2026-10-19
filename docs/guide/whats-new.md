@@ -12,7 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                    | What to do                                                |
 | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Calendar: **N more**, resizable panel, links.                                                                   | See [Use it](calendar.md#use-it).                         |
+| Calendar: meeting bubble, **N more**, links.                                                                    | See [Use it](calendar.md#use-it).                         |
 | Spark Island opens only from Scout. **Hide in screen sharing**.                                                 | See [Spark Island](desktop-companion.md).                 |
 | Fixed: Terminal, tab close, Ask Spark and outpost glitches.                                                     | None.                                                     |
 | **Today** from macOS or Google: **Month**, nudges, **Join** at 10 min, **Choose** for clashes, agent access.    | See [Use it](calendar.md#use-it).                         |
