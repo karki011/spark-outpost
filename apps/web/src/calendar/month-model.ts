@@ -161,6 +161,7 @@ export function initials(name: string): string {
   const words = name
     .replace(/@.*/, '')
     .split(/[\s._-]+/)
+    .map((word) => word.replace(/[^\p{L}]/gu, ''))
     .filter(Boolean);
   const letters = words.length > 1 ? [words[0]![0], words.at(-1)![0]] : [words[0]?.[0]];
   return letters.join('').toUpperCase();

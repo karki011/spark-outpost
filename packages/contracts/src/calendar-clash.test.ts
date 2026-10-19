@@ -31,6 +31,7 @@ function meeting(title: string, from: number, to: number, extra: Partial<Calenda
     availability: 'busy',
     recurring: false,
     hasNotes: false,
+    hasLocation: false,
     busy: true,
     nudges: true,
     focus: false,

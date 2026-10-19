@@ -5,9 +5,11 @@ import { EventPopover } from './EventPopover.tsx';
 import { MonthBar } from './MonthBar.tsx';
 import { MonthGrid } from './MonthGrid.tsx';
 import { eventsByDay, monthGrid, weekStartDay } from './month-model.ts';
-import { ScheduledRail } from './ScheduledRail.tsx';
+import { useStoredPanelWidth } from '../ui/panel-width.ts';
+import { RAIL_WIDTH, ScheduledRail } from './ScheduledRail.tsx';
 import { calendarMap, clashMap } from './today-model.ts';
 import { useCalendarRange } from './use-calendar.ts';
+import { eventEnds, useEventClock } from './event-clock.ts';
 
 interface MonthViewProps {
   date: string;
@@ -28,7 +30,7 @@ interface OpenEvent {
 const NO_EVENTS: readonly CalendarEvent[] = [];
 
 export function MonthView(props: MonthViewProps) {
-  const { date, today, now, onDate } = props;
+  const { date, today, onDate } = props;
   const weekStart = useMemo(() => weekStartDay(), []);
   const titleId = useId();
   const month = date.slice(0, 7);
@@ -36,7 +38,10 @@ export function MonthView(props: MonthViewProps) {
   const query = useCalendarRange(grid.from, grid.to);
   const loading = query.isPending || query.isPlaceholderData;
   const [open, setOpen] = useState<OpenEvent | null>(null);
+  const [railWidth, setRailWidth] = useStoredPanelWidth(RAIL_WIDTH);
   const events = query.data?.events ?? NO_EVENTS;
+  const ends = useMemo(() => eventEnds(events), [events]);
+  const now = Math.max(props.now, useEventClock(ends, query.dataUpdatedAt));
   const byDay = useMemo(() => eventsByDay(events, grid.weeks.flat()), [events, grid]);
   const calendars = useMemo(() => calendarMap(query.data?.calendars), [query.data]);
   const selectedEvents = byDay.get(date) ?? NO_EVENTS;
@@ -78,6 +83,8 @@ export function MonthView(props: MonthViewProps) {
           byDay={byDay}
           calendars={calendars}
           loading={loading}
+          selected={open?.key ?? null}
+          now={now}
           weekStart={weekStart}
           onDate={pickDate}
           onOpenDay={props.onOpenDay}
@@ -91,6 +98,9 @@ export function MonthView(props: MonthViewProps) {
           calendars={calendars}
           clashes={clashes}
           loading={loading}
+          selected={open?.key ?? null}
+          width={railWidth}
+          onWidth={setRailWidth}
           onDate={pickDate}
           onOpenDay={props.onOpenDay}
           onOpenEvent={openEvent}

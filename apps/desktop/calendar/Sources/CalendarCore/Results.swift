@@ -58,8 +58,10 @@ public struct HelperEvent: Equatable, Encodable {
 
 public struct HelperAttendee: Equatable, Encodable {
     public var name: String
+    public var email: String?
     public var isMe: Bool
     public var status: MyStatus
+    public var room: Bool
 }
 
 public struct HelperEventDetail: Equatable, Encodable {

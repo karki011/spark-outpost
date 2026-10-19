@@ -10,8 +10,8 @@ describe('the notes snippet', () => {
   });
 
   it('leaves no bracket behind when Mac notes wrap a link', () => {
-    expect(linkFreeSnippet('Join Zoom Meeting (https://acme.zoom.us/j/1)\nTopics:\nRoadmap')).toBe(
-      'Join Zoom Meeting Topics: Roadmap',
+    expect(linkFreeSnippet('Join us (https://acme.example.com/j/1)\nTopics:\nRoadmap')).toBe(
+      'Join us Topics: Roadmap',
     );
     expect(linkFreeSnippet('Daily sync https://acme.zoom.us/j/123 <https://x.test/a>')).toBe(
       'Daily sync',

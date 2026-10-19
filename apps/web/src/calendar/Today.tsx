@@ -6,12 +6,13 @@ import { useCallback, useState } from 'react';
 import { Segmented } from '../ui/Segmented.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
+import { CopyToasts } from './copy-toast.tsx';
 import { DayView, type TodayProps } from './DayView.tsx';
 import { MonthView } from './MonthView.tsx';
 import { TodayStatePage } from './TodayStates.tsx';
 import { todayState } from './today-model.ts';
 import { localDate, useCalendarStatus } from './use-calendar.ts';
-import { useTodayEventRequests } from './today-request.ts';
+import { useTodayEventRequests, type TodayEventRequest } from './today-request.ts';
 
 type CalendarView = 'month' | 'day';
 
@@ -49,6 +50,8 @@ function TodayViews(props: TodayProps) {
   const [view, setView] = useCalendarView();
   const [picked, setPicked] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [flash, setFlash] = useState(0);
+  const [requested, setRequested] = useState<TodayEventRequest | null>(null);
   const date = picked ?? today;
   const pickDate = useCallback(
     (next: string) => setPicked(next === localDate(Date.now()) ? null : next),
@@ -63,12 +66,14 @@ function TodayViews(props: TodayProps) {
     [pickDate, setView],
   );
   const showEvent = useCallback(
-    (eventKey: string) => {
-      setPicked(null);
-      setSelected(eventKey);
+    (request: TodayEventRequest) => {
+      pickDate(request.date ?? localDate(Date.now()));
+      setSelected(request.eventKey);
+      setRequested(request);
+      setFlash((count) => count + 1);
       setView('day');
     },
-    [setView],
+    [pickDate, setView],
   );
   useTodayEventRequests(showEvent);
   const switcher = (
@@ -89,6 +94,8 @@ function TodayViews(props: TodayProps) {
         today={today}
         now={now}
         selected={selected}
+        flash={flash}
+        requested={requested?.date === date ? requested.eventKey : null}
         switcher={switcher}
         onDate={pickDate}
         onSelect={setSelected}
@@ -114,7 +121,11 @@ function TodayBody(props: TodayProps) {
   if (!status.data) return <Skeleton label="Loading your calendar" shape="cards" rows={3} />;
   const state = todayState(status.data);
   if (state !== 'ready') return <TodayStatePage state={state} />;
-  return <TodayViews {...props} />;
+  return (
+    <CopyToasts>
+      <TodayViews {...props} />
+    </CopyToasts>
+  );
 }
 
 export function Today(props: TodayProps) {

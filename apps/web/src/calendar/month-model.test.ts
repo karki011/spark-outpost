@@ -110,5 +110,7 @@ describe('what a day shows', () => {
     expect(initials('Alex Wong')).toBe('AW');
     expect(initials('ivan.marsh@example.com')).toBe('IM');
     expect(initials('Priya')).toBe('P');
+    expect(initials('33 Arch St-14-Bay Village (2)')).toBe('AV');
+    expect(initials('(2) 14')).toBe('');
   });
 });

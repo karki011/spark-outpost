@@ -88,8 +88,10 @@ export type HelperEvent = z.infer<typeof helperEventSchema>;
 
 export const helperAttendeeSchema = z.object({
   name: text(300),
+  email: text(300).nullable().optional(),
   isMe: z.boolean(),
   status: calendarMyStatusSchema,
+  room: z.boolean().optional(),
 });
 
 export const helperEventDetailSchema = z.object({

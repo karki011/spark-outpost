@@ -67,13 +67,17 @@ public struct StoreCalendar: Equatable {
 
 public struct StoreParticipant: Equatable {
     public var name: String
+    public var email: String?
     public var isCurrentUser: Bool
     public var status: MyStatus
+    public var room: Bool
 
-    public init(name: String, isCurrentUser: Bool, status: MyStatus) {
+    public init(name: String, email: String? = nil, isCurrentUser: Bool, status: MyStatus, room: Bool = false) {
         self.name = name
+        self.email = email
         self.isCurrentUser = isCurrentUser
         self.status = status
+        self.room = room
     }
 }
 

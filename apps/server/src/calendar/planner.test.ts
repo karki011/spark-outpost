@@ -29,6 +29,7 @@ function event(title: string, from: number, to: number, extra: Partial<CalendarE
     availability: 'busy',
     recurring: false,
     hasNotes: false,
+    hasLocation: false,
     busy: true,
     nudges: true,
     focus: false,

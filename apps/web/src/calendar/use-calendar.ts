@@ -65,15 +65,15 @@ export function useCalendarRange(from: string, to: string) {
 const DETAIL_STALE_MS = 5 * 60_000;
 
 function wantsDetail(event: CalendarEvent): boolean {
-  return event.hasNotes || event.attendeeCount > 1;
+  return event.hasNotes || event.hasLocation || event.attendeeCount > 1;
 }
 
-export function useEventDetail(event: CalendarEvent) {
+export function useEventDetail(event: CalendarEvent, always = false) {
   const occurrence = { eventId: event.id, start: event.start, calendarKey: event.calendarKey };
   return useQuery({
     queryKey: calendarKeys.detail(occurrence),
     queryFn: () => calendarApi.detail(occurrence),
-    enabled: wantsDetail(event),
+    enabled: always || wantsDetail(event),
     staleTime: DETAIL_STALE_MS,
     retry: false,
   });

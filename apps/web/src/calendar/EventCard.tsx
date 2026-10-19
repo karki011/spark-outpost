@@ -11,29 +11,12 @@ import { duration, span } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
 import { ClashTag } from './ClashTag.tsx';
 import { JoinButton } from './JoinButton.tsx';
-import { durationMinutes, initials } from './month-model.ts';
-import { peopleLine } from './event-text.ts';
+import { Attendees, EventLocation } from './EventDetails.tsx';
+import { durationMinutes } from './month-model.ts';
 import { joinHint } from './today-model.ts';
 import { useEventDetail } from './use-calendar.ts';
 
-const FACES_SHOWN = 3;
-
-function People({ names, count }: { names: readonly string[]; count: number }) {
-  const line = peopleLine(names, count);
-  if (!line) return null;
-  return (
-    <p className="rl-people">
-      {names.length > 0 && (
-        <span className="rl-faces" aria-hidden="true">
-          {names.slice(0, FACES_SHOWN).map((name, index) => (
-            <i key={`${name}-${index}`}>{initials(name)}</i>
-          ))}
-        </span>
-      )}
-      <span>{line}</span>
-    </p>
-  );
-}
+const PEOPLE_SHOWN = 2;
 
 function VideoChip({
   event,
@@ -68,10 +51,12 @@ interface EventCardProps {
   clashes: readonly string[] | undefined;
   now: number;
   isToday: boolean;
+  selected: boolean;
   onOpen: (event: CalendarEvent, anchor: HTMLElement) => void;
 }
 
-export function EventCard({ event, calendar, clashes, now, isToday, onOpen }: EventCardProps) {
+export function EventCard(props: EventCardProps) {
+  const { event, calendar, clashes, now, isToday, onOpen } = props;
   const detail = useEventDetail(event);
   const { start, end } = spanOf(event);
   const notes = detail.data?.snippet ?? '';
@@ -82,6 +67,7 @@ export function EventCard({ event, calendar, clashes, now, isToday, onOpen }: Ev
     <li
       className="rl-card"
       data-past={past || undefined}
+      data-selected={props.selected || undefined}
       data-focus={event.focus || undefined}
       data-free={!event.busy || undefined}
       style={swatch(calendar?.color ?? '') as CSSProperties}
@@ -91,6 +77,7 @@ export function EventCard({ event, calendar, clashes, now, isToday, onOpen }: Ev
         type="button"
         className="rl-open"
         aria-haspopup="dialog"
+        aria-expanded={props.selected}
         aria-label={`${event.title}, ${when}${calendar ? `, ${calendar.title}` : ''}${past ? ', ended' : ''}`}
         onClick={(click: MouseEvent<HTMLButtonElement>) => onOpen(event, click.currentTarget)}
       >
@@ -101,12 +88,19 @@ export function EventCard({ event, calendar, clashes, now, isToday, onOpen }: Ev
         <span>{when}</span>
         {length && <span>{length}</span>}
       </p>
+      <EventLocation location={detail.data?.location ?? null} event={event} now={now} />
       {clashes && (
         <p className="rl-tags">
           <ClashTag titles={clashes} />
         </p>
       )}
-      <People names={detail.data?.attendees ?? []} count={event.attendeeCount} />
+      <div className="rl-people">
+        <Attendees
+          people={detail.data?.attendees ?? []}
+          count={event.attendeeCount}
+          shown={PEOPLE_SHOWN}
+        />
+      </div>
       <VideoChip event={event} now={now} isToday={isToday} />
     </li>
   );

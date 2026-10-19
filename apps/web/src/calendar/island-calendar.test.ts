@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { CalendarNow, CalendarNudge } from '@spark-outpost/contracts';
+import type { CalendarEvent, CalendarNow, CalendarNudge } from '@spark-outpost/contracts';
 import { at, event, link } from './test-fixtures.ts';
 import {
   calendarLine,
@@ -9,6 +9,7 @@ import {
   nudgeText,
   tallyHeld,
 } from './island-calendar.ts';
+import { dismissNudge, NO_NUDGE_MARKS, snoozeNudge } from './nudge-marks.ts';
 
 const iso = (time: number) => new Date(time).toISOString();
 const CHAT = '00000000-0000-4000-8000-000000000001';
@@ -17,6 +18,17 @@ function nudge(kind: CalendarNudge['kind'], title: string, startsAt: number): Ca
   const base = { eventKey: `${title}@x`, title, startsAt: iso(startsAt), minutes: 10 };
   if (kind === 'wrap_up') return { ...base, kind, chats: [] };
   return { ...base, kind, group: [] };
+}
+
+function beforeNudge(lead: CalendarEvent, group: CalendarEvent[]): CalendarNudge {
+  return {
+    kind: 'before',
+    eventKey: lead.key,
+    title: lead.title,
+    startsAt: lead.start,
+    minutes: 10,
+    group,
+  };
 }
 
 function now(overrides: Partial<CalendarNow> = {}): CalendarNow {
@@ -38,6 +50,7 @@ const input = (calendar: CalendarNow | null, extra = {}) => ({
   waiting: 0,
   catchUp: null,
   dismissed: new Set<string>(),
+  marks: NO_NUDGE_MARKS,
   ...extra,
 });
 
@@ -182,5 +195,56 @@ describe('calendarLine', () => {
       `before:${design.key}`,
       `before:${room.key}`,
     ]);
+  });
+
+  describe('clearing itself', () => {
+    const standup = event('Standup', at(10), at(10, 15), { link: link('zoom') });
+    const design = event('Design sync', at(10), at(10, 30), { link: link('meet') });
+    const single = now({
+      upcoming: [standup],
+      nudge: beforeNudge(standup, [standup]),
+    });
+
+    it('keeps Join until the meeting ends, then shows nothing', () => {
+      expect(calendarLine(input(single, { at: at(10, 14, 59) }))?.event?.key).toBe(standup.key);
+      expect(calendarLine(input(single, { at: at(10, 15) }))).toBeNull();
+    });
+
+    it('clears a line left showing across sleep once the clock is read past the end', () => {
+      expect(calendarLine(input(single, { at: at(9, 50) }))).not.toBeNull();
+      expect(calendarLine(input(single, { at: at(13) }))).toBeNull();
+    });
+
+    it('drops a meeting the next sync no longer has', () => {
+      expect(calendarLine(input(now({ upcoming: [] }), { at: at(10, 5) }))).toBeNull();
+    });
+
+    it('drops each Choose meeting as it ends and becomes a single line', () => {
+      const grouped = now({
+        upcoming: [standup, design],
+        nudge: beforeNudge(standup, [standup, design]),
+      });
+      expect(calendarLine(input(grouped, { at: at(10, 5) }))?.choose).toHaveLength(2);
+      const later = calendarLine(input(grouped, { at: at(10, 20) }));
+      expect(later?.choose).toBeNull();
+      expect(later?.event?.key).toBe(design.key);
+      expect(calendarLine(input(grouped, { at: at(10, 30) }))).toBeNull();
+    });
+
+    it('hides a dismissed meeting for good and a snoozed one for two minutes', () => {
+      const end = Date.parse(standup.end);
+      const dismissed = dismissNudge(NO_NUDGE_MARKS, standup.key, end);
+      expect(calendarLine(input(single, { at: at(9, 51), marks: dismissed }))).toBeNull();
+      expect(calendarLine(input(single, { at: at(10, 5), marks: dismissed }))).toBeNull();
+      const snoozed = snoozeNudge(NO_NUDGE_MARKS, standup.key, end, at(9, 50));
+      expect(calendarLine(input(single, { at: at(9, 51), marks: snoozed }))).toBeNull();
+      expect(calendarLine(input(single, { at: at(9, 52), marks: snoozed }))).not.toBeNull();
+    });
+
+    it('never brings a snoozed meeting back after it ended', () => {
+      const end = Date.parse(standup.end);
+      const snoozed = snoozeNudge(NO_NUDGE_MARKS, standup.key, end, at(10, 14));
+      expect(calendarLine(input(single, { at: at(10, 16), marks: snoozed }))).toBeNull();
+    });
   });
 });

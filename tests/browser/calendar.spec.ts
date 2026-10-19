@@ -250,9 +250,9 @@ test('the resting island names the next meeting and joins it', async ({ page }) 
   await recordOpens(page);
   await connect(page);
   await openNotchIsland(page, { size: 'large', autoExpand: false });
-  const calendarLine = island(page).locator('.isl-calline');
-  await expect(calendarLine).toContainText(/^Standup in [1-5] min/);
-  await calendarLine.getByRole('button', { name: 'Join Standup' }).click();
+  const bubble = island(page).getByRole('group', { name: 'Meeting Standup' });
+  await expect(bubble).toContainText(/^In [1-5] min\s*· Standup/);
+  await bubble.getByRole('button', { name: 'Join Standup' }).click();
   await expect.poll(() => opened(page)).toEqual(['https://acme.zoom.us/j/123456789']);
 });
 

@@ -48,6 +48,7 @@ function line(kind: CalendarLine['kind'], text: string): CalendarLine {
     key: `${kind}:x`,
     eventKey: 'x',
     text,
+    event: null,
     join: null,
     choose: null,
     capture: null,

@@ -131,6 +131,7 @@ test('Today tags clashing meetings on the timeline and in the event panel', asyn
   const standup = today.getByRole('button', { name: /^Standup, / });
   await expect(standup).toHaveAccessibleName(/clashes with 2 meetings/);
   await expect(standup.locator('.tl-tags')).toBeHidden();
+  await expect(standup.locator('.tl-clash')).toHaveAttribute('title', /^Clashes with /);
   await customer.click();
   await expect(today.getByRole('region', { name: 'Customer call' })).toContainText(
     'clashes with Vendor sync',
