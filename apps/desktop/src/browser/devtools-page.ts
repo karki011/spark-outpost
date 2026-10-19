@@ -134,7 +134,7 @@ async function cookies(cdp: Cdp, url: string, values: boolean): Promise<BrowserC
     sameSite: cookie.sameSite ?? null,
     expires: cookie.session ? null : new Date(cookie.expires * 1000).toISOString(),
     bytes: bytes(cookie.name) + bytes(cookie.value),
-    ...(values ? { value: clip(cookie.value) } : {}),
+    ...(values && !cookie.httpOnly ? { value: clip(cookie.value) } : {}),
   }));
 }
 

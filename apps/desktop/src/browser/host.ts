@@ -162,8 +162,10 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
   const navigate = async (chatId: string, tab: PaneTab, typed: string) => {
     const url = addressToUrl(typed);
     if (!url) return;
-    tab.owner = 'user';
-    tab.runId = null;
+    if (!tab.handoff) {
+      tab.owner = 'user';
+      tab.runId = null;
+    }
     tab.lastAction = null;
     await tab.load(url);
     panes.noteChange(chatId);

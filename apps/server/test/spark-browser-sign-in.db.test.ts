@@ -431,6 +431,19 @@ describe('handing the tab to the user to sign in', () => {
     expect(audits.map((params) => params.result)).toEqual(['waiting', 'handed_back']);
   });
 
+  it('does not say the tab was handed back when it is gone by Done', async () => {
+    const chat = await projectChat();
+    const calling = chat.call('spark_browser_sign_in', { handOver: true });
+    const card = await pendingCard(t);
+    await eventually(async () => handOvers().length === 1);
+    fake.failure = new BrowserHostError('no_tab', 'There is no tab tab1 in this chat.');
+    await decideApproval(t.db, t.workspaceId, card.id, {
+      optionId: SPARK_ACTION_OPTION.confirm,
+      scope: 'once',
+    });
+    expect(await calling).toMatchObject({ outcome: 'tab_gone', tab: 'tab1' });
+  });
+
   it('lets the user cancel, and frees the tab', async () => {
     const chat = await projectChat();
     const calling = chat.call('spark_browser_sign_in', { handOver: true });

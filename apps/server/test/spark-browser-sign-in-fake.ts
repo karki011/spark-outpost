@@ -14,7 +14,8 @@ export class FakeBrowserHost implements BrowserHost {
 
   request(request: BrowserHostRequest): Promise<never> {
     this.requests.push(request);
-    const fails = request.op === 'sign_in' || request.op === 'act';
+    const releasing = request.op === 'hand_over' && request.handoff === null;
+    const fails = request.op === 'sign_in' || request.op === 'act' || releasing;
     if (this.failure && fails) return Promise.reject(this.failure);
     return Promise.resolve(this.answer(request) as never);
   }

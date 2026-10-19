@@ -22,6 +22,8 @@ export const HANDOFF_DONE_NOTE =
 export const HANDOFF_STILL_WAITING =
   'The user has not finished signing in yet, and the tab is still theirs. Call spark_browser_sign_in with handOver true again to keep waiting; Spark sets no limit.';
 export const HANDOFF_CANCELLED = 'The user cancelled the sign-in. Do not ask again unless they do.';
+export const HANDOFF_TAB_GONE =
+  'The tab you handed over is gone, so nothing was handed back. Open the site again and check whether it is signed in before asking the user again.';
 const NOT_A_PAGE = 'Open the sign-in page in your tab first; the tab is not on a web page.';
 
 interface Waiting {
@@ -146,12 +148,16 @@ export async function handOver(context: SparkToolContext, tab: string | undefine
     record(context, waiting, 'user_declined', stopped(context) ? 'stopped' : 'cancelled');
     return { outcome: 'cancelled', tab: tabId, site, message: HANDOFF_CANCELLED };
   }
+  if (!released) {
+    record(context, waiting, 'user_allowed', 'tab_gone');
+    return { outcome: 'tab_gone', tab: tabId, site, message: HANDOFF_TAB_GONE };
+  }
   record(context, waiting, 'user_allowed', 'handed_back');
   const hidden = await pageScrub(context);
   return {
     outcome: 'handed_back',
     tab: tabId,
-    page: hidden(originAndPath(released?.url ?? site)),
+    page: hidden(originAndPath(released.url)),
     note: HANDOFF_DONE_NOTE,
   };
 }

@@ -55,6 +55,7 @@ export class PaneTab {
   pinned = false;
   kept = false;
   handoff: BrowserHandoff | null = null;
+  handoffRun: string | null = null;
   agentBusy = 0;
   active = false;
   picking = false;
@@ -128,6 +129,10 @@ export class PaneTab {
 
   inAgentStorage(): boolean {
     return this.partition !== null && this.partition === agentPartition(this.chatId);
+  }
+
+  forgetLogs(): void {
+    this.live?.logs.reset();
   }
 
   view(): WebContentsView | null {
