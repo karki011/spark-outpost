@@ -100,6 +100,8 @@ test('the meeting card hangs from Scout with its details, opens Today and snooze
   await bubble(page).getByRole('button', { name: 'Open' }).click();
   const standup = await eventKeyOf(page, 'Standup', apiNow(), apiNow() + DAY);
   await expect.poll(() => opened(page)).toEqual([`settings:today:${standup}`]);
+  await expect(bubble(page)).toBeHidden();
+  await page.reload();
 
   await bubble(page).getByRole('button', { name: 'Snooze 2 min' }).click();
   await expect(bubble(page)).toBeHidden();

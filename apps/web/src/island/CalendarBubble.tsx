@@ -150,7 +150,12 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
         <button
           type="button"
           className="isl-calline-act"
-          onClick={() => leave(() => calendar.onOpenEvent(event.key))}
+          onClick={() =>
+            leave(() => {
+              calendar.onDismissNudge(event);
+              calendar.onOpenEvent(event.key);
+            })
+          }
         >
           Open
         </button>
