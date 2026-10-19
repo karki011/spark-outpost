@@ -15,6 +15,8 @@ const NOTHING: SparkAvailability = {
   outpost_draft: false,
   calendar_read: false,
   calendar_edit: false,
+  jira: false,
+  confluence: false,
 };
 
 const GROUPS: [keyof SparkAvailability, string[]][] = [
@@ -52,6 +54,8 @@ const GROUPS: [keyof SparkAvailability, string[]][] = [
   ],
   ['outpost', ['spark_outpost', 'spark_outpost_ask', 'spark_outpost_note']],
   ['outpost_draft', ['spark_outpost_draft']],
+  ['jira', ['spark_jira', 'spark_jira_edit']],
+  ['confluence', ['spark_confluence', 'spark_confluence_edit']],
 ];
 
 const names = (available: SparkAvailability, readOnly = false) =>
@@ -97,7 +101,7 @@ describe('which Spark tools a session is offered', () => {
 describe('what a session is told about tools it was not offered', () => {
   it('says how to get each missing group and when it arrives', () => {
     const note = unavailableNote(NOTHING);
-    expect(note).toContain('connect Jira or Linear in Settings → Connectors');
+    expect(note).toContain('connect Atlassian or Linear in Settings → Connectors');
     expect(note).toContain('connect Slack in Settings → Connectors');
     expect(note).toContain('connect GitHub in Settings → Connectors and link a project');
     expect(note).toContain('spark_map and spark_find (link a project to the chat)');

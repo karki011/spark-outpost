@@ -22,6 +22,7 @@ import { ObservedNote } from './ObservedNote.tsx';
 import { SignInFacts } from './SignInFacts.tsx';
 import { MacFacts, macByline, macNote } from './MacFacts.tsx';
 import { CalendarFacts, calendarByline, calendarNote } from './CalendarFacts.tsx';
+import { AtlassianFacts, atlassianByline, atlassianNote } from './AtlassianFacts.tsx';
 import { SiteFacts } from './SiteFacts.tsx';
 import { siteByline, siteNote } from './site-card-text.ts';
 import { PrFollowUpFacts, PrRoundFacts } from './PrFollowUpFacts.tsx';
@@ -67,7 +68,7 @@ function draftOf(action: SparkAction): Draft {
   return {
     title: 'title' in action ? action.title : '',
     description: action.action === 'create_ticket' ? action.description : '',
-    body: 'body' in action ? action.body : '',
+    body: 'body' in action ? (action.body ?? '') : '',
     type: action.action === 'create_ticket' ? action.type : null,
     priority: action.action === 'create_ticket' ? (action.priority ?? '') : '',
     labels: action.action === 'create_ticket' ? action.labels.join(', ') : '',
@@ -185,6 +186,10 @@ function Facts({ action }: { action: SparkAction }) {
     case 'calendar_read':
     case 'calendar_edit':
       return <CalendarFacts action={action} />;
+    case 'atlassian_read':
+    case 'jira_edit':
+    case 'confluence_edit':
+      return <AtlassianFacts action={action} />;
     case 'post_slack':
       return (
         <dl className="sac-facts">
@@ -214,7 +219,8 @@ function Facts({ action }: { action: SparkAction }) {
 function byline(action: SparkAction, agent: string, secretFiles?: readonly string[]): string {
   const site = siteByline(action, agent, secretFiles);
   if (site) return site;
-  const mac = macByline(action, agent) ?? calendarByline(action, agent);
+  const mac =
+    macByline(action, agent) ?? calendarByline(action, agent) ?? atlassianByline(action, agent);
   if (mac) return mac;
   if (action.action === 'pr_follow_up') {
     return 'Spark fixed the PR feedback in this chat. Confirm to push and reply on GitHub.';
@@ -228,7 +234,7 @@ function byline(action: SparkAction, agent: string, secretFiles?: readonly strin
 function confirmNote(action: SparkAction, secretFiles?: readonly string[]): string {
   const site = siteNote(action, secretFiles);
   if (site) return site;
-  const mac = macNote(action) ?? calendarNote(action);
+  const mac = macNote(action) ?? calendarNote(action) ?? atlassianNote(action);
   if (mac) return mac;
   if (action.action === 'pr_follow_up') {
     return 'Nothing is pushed or posted until you confirm. Uncheck anything to leave it out; a fix reply needs the push.';

@@ -10,7 +10,7 @@ summary: Pick a task to jump to its page, or search the guide for a button, card
 
 - [Set up Spark in 5 minutes](getting-started.md)
 - [Connect Claude, Codex or Z.ai](connect-a-provider.md)
-- [Connect GitHub, Jira or Linear](tickets-and-github.md)
+- [Connect GitHub, Atlassian or Linear](tickets-and-github.md)
 
 ## Work in a chat
 

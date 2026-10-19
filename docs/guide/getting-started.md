@@ -23,7 +23,7 @@ Only your name and one provider are required. Change the rest later in **Setting
 
 1. [Connect an AI provider](connect-a-provider.md): Claude, Codex or Z.ai.
 2. On **Tools**, check the **Git** card. If Git is missing, select **Install Xcode Command Line Tools**, then **Check again**.
-3. Optionally connect **GitHub**, **Jira** or **Linear**, then select **Continue**.
+3. Optionally connect **GitHub**, **Atlassian** or **Linear**, then select **Continue**.
 
 ![The Bring in your tools step with Git found](images/getting-started-tools-light.png)
 

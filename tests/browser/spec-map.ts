@@ -127,6 +127,7 @@ export const SPEC_GROUPS = {
   ],
   tasks: ['tasks'],
   tickets: [
+    'atlassian-connector',
     'connectors',
     'ticket-chat',
     'ticket-start',
@@ -274,7 +275,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/web/src/companion/', groups: ['home', 'island-desktop'] },
   {
     prefix: 'apps/web/src/connectors/',
-    groups: ['tickets', 'slack', 'ship-pr', 'settings-providers'],
+    groups: ['tickets', 'slack', 'ship-pr', 'settings-providers', 'home'],
   },
   {
     prefix: 'apps/web/src/conversations/',
@@ -358,6 +359,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/server/src/tasks/', groups: ['tasks'] },
   { prefix: 'apps/server/src/terminal/', groups: ['terminal-preview-browser'] },
   { prefix: 'apps/server/src/tickets/', groups: ['tickets'] },
+  { prefix: 'apps/server/src/atlassian/', groups: ['tickets'] },
   { prefix: 'apps/server/src/titles/', groups: ['chat', 'sidebar-projects'] },
   { prefix: 'apps/server/src/usage/', groups: ['chat', 'analytics-audit'] },
   { prefix: 'apps/desktop/', groups: ['island-desktop', 'terminal-preview-browser'] },

@@ -42,4 +42,4 @@ To approve each push, turn on **Ask before pushing and replying** in **Settings 
 
 In **Settings → Pull requests**, turn off **Follow up on pull requests**, or only **Fix failing checks**, **Handle review comments** or **Reply on GitHub threads**.
 
-**Next:** [Connect GitHub, Jira or Linear](tickets-and-github.md)
+**Next:** [Connect GitHub, Atlassian or Linear](tickets-and-github.md)

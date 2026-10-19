@@ -134,7 +134,7 @@ describe('spark_connectors', () => {
     expect(body.github.connected).toBe(false);
     expect(body.tickets).toEqual([
       expect.objectContaining({ source: 'Linear', connected: true, account: 'alex@example.test' }),
-      { source: 'Jira', connected: false },
+      { source: 'Jira (Atlassian)', connected: false },
     ]);
     expect(body.mcpServers).toEqual([
       expect.objectContaining({ name: 'slack', transport: 'http' }),
@@ -279,12 +279,16 @@ describe('the Spark tools server', () => {
       'spark_chat_history',
       'spark_chats',
       'spark_comment_ticket',
+      'spark_confluence',
+      'spark_confluence_edit',
       'spark_connectors',
       'spark_create_spark',
       'spark_create_ticket',
       'spark_docs',
       'spark_find',
       'spark_guide',
+      'spark_jira',
+      'spark_jira_edit',
       'spark_mac_act',
       'spark_mac_apps',
       'spark_mac_read',
@@ -325,8 +329,10 @@ describe('the Spark tools server', () => {
       'spark_assign_ticket',
       'spark_calendar_edit',
       'spark_comment_ticket',
+      'spark_confluence_edit',
       'spark_create_spark',
       'spark_create_ticket',
+      'spark_jira_edit',
       'spark_mac_act',
       'spark_outpost_ask',
       'spark_pr_follow_up_round',

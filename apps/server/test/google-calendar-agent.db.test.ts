@@ -133,7 +133,7 @@ describe('Google calendars through the agent tools', () => {
     expect(JSON.stringify(h.recorded.audited)).not.toContain('Secret offsite');
   });
 
-  it('asks before a delete even in Auto, then deletes', async () => {
+  it('deletes at once in Auto and says Google keeps it in its trash', async () => {
     putReview();
     const { account, key } = await connectGoogle();
     const deleting = await h.edit({
@@ -142,10 +142,9 @@ describe('Google calendars through the agent tools', () => {
       eventId: `google:${account.id}:review`,
       occurrence: tomorrowAt(14),
     });
-    expect(deleting.facts.outcome).toBe('waiting_for_user');
-    expect(g.fake.writes).toEqual([]);
-    await h.answer('confirm');
-    await expect.poll(() => g.fake.writes.map((write) => write.method)).toEqual(['DELETE']);
+    expect(deleting.facts.outcome).toBe('done');
+    expect(String(deleting.facts.message)).toContain('Google keeps deleted events in its trash.');
+    expect(g.fake.writes.map((write) => write.method)).toEqual(['DELETE']);
     expect(g.fake.eventOf(SUBJECT, EMAIL, 'review')).toBeNull();
   });
 

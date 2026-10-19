@@ -144,7 +144,7 @@ test('the Tickets screen has no serious colour-contrast or ARIA issues in any th
   await resetTicketFakes();
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openTickets(page);
-  await page.getByRole('button', { name: 'Connect Jira' }).click();
+  await page.getByRole('button', { name: 'Connect Atlassian' }).click();
   const found = await blockingViolations(page, 'tickets connect');
 
   await connectTickets(page);
@@ -219,9 +219,9 @@ test('Settings → Connectors has no serious colour-contrast or ARIA issues', as
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('tab', { name: 'Connectors' }).click();
-  const jira = connectorCard(page, 'jira');
+  const jira = connectorCard(page, 'atlassian');
   await connectorHead(jira).click();
-  const form = jira.getByRole('form', { name: 'Connect Jira' });
+  const form = jira.getByRole('form', { name: 'Connect Atlassian' });
   await form.getByLabel('Site URL').fill(STUB_URL);
   await form.getByLabel('Email').fill(JIRA_EMAIL);
   await form.getByLabel('API token').fill('jira_wrong_token_0123456789');

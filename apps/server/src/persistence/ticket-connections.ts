@@ -7,7 +7,16 @@ import {
 } from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
 
-export interface TicketConnectionRow {
+export type StoredReach = 'reachable' | 'denied' | null;
+
+export interface AtlassianProductRow {
+  jiraOn: boolean;
+  jiraReach: StoredReach;
+  confluenceOn: boolean;
+  confluenceReach: StoredReach;
+}
+
+export interface TicketConnectionRow extends AtlassianProductRow {
   source: TicketSourceId;
   apiUrl: string;
   email: string | null;
@@ -31,6 +40,10 @@ interface StoredTicketConnection {
   status_map: unknown;
   move_statuses: unknown;
   validated_at: Date;
+  jira_on: boolean;
+  jira_reach: StoredReach;
+  confluence_on: boolean;
+  confluence_reach: StoredReach;
 }
 
 function toConnection(row: StoredTicketConnection): TicketConnectionRow {
@@ -47,6 +60,10 @@ function toConnection(row: StoredTicketConnection): TicketConnectionRow {
     statusMap: statusMap.success ? statusMap.data : {},
     moveStatuses: moveStatuses.success ? moveStatuses.data : {},
     validatedAt: row.validated_at,
+    jiraOn: row.jira_on,
+    jiraReach: row.jira_reach,
+    confluenceOn: row.confluence_on,
+    confluenceReach: row.confluence_reach,
   };
 }
 
@@ -79,6 +96,7 @@ export interface SavedConnection {
   email: string | null;
   account: string;
   accountId: string;
+  products?: AtlassianProductRow;
 }
 
 export async function saveTicketConnection(
@@ -86,11 +104,15 @@ export async function saveTicketConnection(
   workspaceId: string,
   connection: SavedConnection,
 ): Promise<void> {
+  const products = connection.products;
   await db.query(
-    `INSERT INTO ticket_connections (workspace_id, source, api_url, email, account, account_id)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO ticket_connections (workspace_id, source, api_url, email, account, account_id,
+       jira_on, jira_reach, confluence_on, confluence_reach)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      ON CONFLICT (workspace_id, source) DO UPDATE SET api_url = EXCLUDED.api_url,
        email = EXCLUDED.email, account = EXCLUDED.account, account_id = EXCLUDED.account_id,
+       jira_on = EXCLUDED.jira_on, jira_reach = EXCLUDED.jira_reach,
+       confluence_on = EXCLUDED.confluence_on, confluence_reach = EXCLUDED.confluence_reach,
        validated_at = now()`,
     [
       workspaceId,
@@ -99,8 +121,34 @@ export async function saveTicketConnection(
       connection.email,
       connection.account,
       connection.accountId,
+      products?.jiraOn ?? true,
+      products?.jiraReach ?? (connection.source === 'jira' ? 'reachable' : null),
+      products?.confluenceOn ?? false,
+      products?.confluenceReach ?? null,
     ],
   );
+}
+
+export async function saveAtlassianProducts(
+  db: Queryable,
+  workspaceId: string,
+  products: { [Key in keyof AtlassianProductRow]?: AtlassianProductRow[Key] | undefined },
+): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `UPDATE ticket_connections SET jira_on = COALESCE($2, jira_on),
+       jira_reach = COALESCE($3, jira_reach),
+       confluence_on = COALESCE($4, confluence_on),
+       confluence_reach = COALESCE($5, confluence_reach)
+     WHERE workspace_id = $1 AND source = 'jira'`,
+    [
+      workspaceId,
+      products.jiraOn ?? null,
+      products.jiraReach ?? null,
+      products.confluenceOn ?? null,
+      products.confluenceReach ?? null,
+    ],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 export async function saveTicketAccountId(

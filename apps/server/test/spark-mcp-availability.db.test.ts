@@ -101,6 +101,8 @@ describe('what a Spark tools session can use', () => {
       outpost_draft: false,
       calendar_read: false,
       calendar_edit: false,
+      jira: false,
+      confluence: false,
     });
   });
 
@@ -183,7 +185,9 @@ describe('a running Spark tools session', () => {
     const running = await connectClient(await host.grant(scopeOf(chat.conversationId)));
     const before = (await running.listTools()).tools.map((tool) => tool.name);
     expect(before).not.toContain('spark_tickets');
-    expect(running.getInstructions()).toContain('connect Jira or Linear in Settings → Connectors');
+    expect(running.getInstructions()).toContain(
+      'connect Atlassian or Linear in Settings → Connectors',
+    );
 
     await saveLinearRow();
     await secrets.set('ticket:linear', 'lin_api_key');
@@ -196,7 +200,7 @@ describe('a running Spark tools session', () => {
     const after = (await next.listTools()).tools.map((tool) => tool.name);
     expect(after).toEqual(expect.arrayContaining([...before, 'spark_tickets']));
     expect(after).toContain('spark_create_ticket');
-    expect(next.getInstructions()).not.toContain('connect Jira or Linear');
+    expect(next.getInstructions()).not.toContain('connect Atlassian or Linear');
     await running.close();
     await next.close();
   });

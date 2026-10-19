@@ -14,7 +14,7 @@ How a ticket gets its pull requests, branches, commits and builds, and which pul
 
 ## Jira Cloud: dev-status (best effort)
 
-Spark's Jira connection is email + API token (Basic). It has no OAuth 3LO connection.
+Spark's Jira connection is the Atlassian connector's email + API token (Basic), see `ATLASSIAN.md`. It has no OAuth 3LO connection.
 
 Chosen: the endpoints the Jira issue view uses.
 

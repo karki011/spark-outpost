@@ -28,6 +28,6 @@ Before a meeting, Scout offers **Join** (from 10 minutes before), **Snooze 2 min
 1. On the Calendar card, turn on **Let agents read my calendar**.
 2. Turn on **Agents can edit** per calendar; Google asks first.
 
-Agents follow their [mode](spark-tools.md#when-actions-ask-first). In **Accept edits**, a vague request still shows a card. Deletes, events with guests and shared calendars always ask.
+Agents follow their [mode](spark-tools.md#when-actions-ask-first). In **Accept edits**, a vague request still shows a card. Events with guests and shared calendars always ask.
 
 **Next:** [Talk to Spark](voice.md)

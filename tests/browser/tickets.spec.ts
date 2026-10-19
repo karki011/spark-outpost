@@ -18,22 +18,22 @@ test.beforeEach(async () => {
   await resetTicketFakes();
 });
 
-test('the empty state connects Jira first, then checks a Linear key', async ({ page }) => {
+test('the empty state connects Atlassian first, then checks a Linear key', async ({ page }) => {
   await openTickets(page);
   await expect(page.getByRole('heading', { name: 'See your tickets here' })).toBeVisible();
   const cta = page.locator('.tk-cta .btn');
-  await expect(cta.first()).toHaveText('Connect Jira');
+  await expect(cta.first()).toHaveText('Connect Atlassian');
   await expect(cta.first()).toHaveClass(/primary/);
 
-  await page.getByRole('button', { name: 'Connect Jira' }).click();
-  const jira = page.getByRole('form', { name: 'Connect Jira' });
+  await page.getByRole('button', { name: 'Connect Atlassian' }).click();
+  const jira = page.getByRole('form', { name: 'Connect Atlassian' });
   await expect(jira.getByLabel('Site URL')).toBeFocused();
   await expect(jira.getByRole('link', { name: /Create an API token/ })).toHaveAttribute(
     'href',
     'https://id.atlassian.com/manage-profile/security/api-tokens',
   );
   await jira.getByRole('button', { name: 'Cancel' }).click();
-  await expect(page.getByRole('button', { name: 'Connect Jira' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Connect Atlassian' })).toBeFocused();
 
   await page.getByRole('button', { name: 'Connect Linear' }).click();
   const form = page.getByRole('form', { name: 'Connect Linear' });

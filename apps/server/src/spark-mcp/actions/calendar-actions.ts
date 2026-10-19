@@ -77,7 +77,11 @@ export async function performCalendarEdit(
   }
   if (action.op === 'delete') {
     await agentRemove(calendar, choice, target!, action.span);
-    return { message: `${DONE.delete} ${choice.title}.`, url: null };
+    const title = action.before?.title || 'the event';
+    const kept = googleTarget(choice.calendarId)
+      ? ' Google keeps deleted events in its trash.'
+      : '';
+    return { message: `Deleted ${title} from ${choice.title}.${kept}`, url: null };
   }
   if (!action.after) throw new CalendarAgentError('The card has no event to save.');
   const after = await agentSave(calendar, {

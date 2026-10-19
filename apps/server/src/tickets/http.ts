@@ -5,7 +5,7 @@ const REQUEST_TIMEOUT_MS = 20_000;
 const USER_AGENT = 'Spark-Outpost';
 
 export interface JsonCall {
-  method: 'GET' | 'POST' | 'PUT';
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
   url: string;
   authorization: string;
   body?: unknown;
@@ -15,6 +15,7 @@ export interface JsonCall {
 export interface JsonAnswer {
   status: number;
   data: unknown;
+  retryAfter?: string | null;
 }
 
 function parseJson(text: string): unknown {
@@ -50,7 +51,11 @@ export async function callJson(
       `Couldn't reach ${sourceName}. Check your connection and the site address, then try again.`,
     );
   }
-  return { status: response.status, data: parseJson(await response.text()) };
+  return {
+    status: response.status,
+    data: parseJson(await response.text()),
+    retryAfter: response.headers.get('retry-after'),
+  };
 }
 
 function detailOf(data: unknown): string {
@@ -58,16 +63,21 @@ function detailOf(data: unknown): string {
   const record = data as Record<string, unknown>;
   const messages = Array.isArray(record.errorMessages) ? record.errorMessages : [];
   const errors = Array.isArray(record.errors) ? record.errors : [];
+  const firstError =
+    errors[0] && typeof errors[0] === 'object'
+      ? (errors[0] as { message?: unknown; title?: unknown; detail?: unknown })
+      : null;
   const first =
-    messages[0] ??
-    (errors[0] && typeof errors[0] === 'object'
-      ? (errors[0] as { message?: unknown }).message
-      : null) ??
-    record.message;
+    messages[0] ?? firstError?.message ?? firstError?.detail ?? firstError?.title ?? record.message;
   return typeof first === 'string' ? redactText(first).slice(0, 200) : '';
 }
 
-export function failure(sourceName: string, action: string, answer: JsonAnswer): TicketApiError {
+export function failure(
+  sourceName: string,
+  action: string,
+  answer: JsonAnswer,
+  thing = 'ticket',
+): TicketApiError {
   if (answer.status === 401) {
     return new TicketApiError(
       401,
@@ -77,7 +87,16 @@ export function failure(sourceName: string, action: string, answer: JsonAnswer):
   if (answer.status === 403 || answer.status === 404) {
     return new TicketApiError(
       answer.status,
-      `${sourceName} denied access while ${action} (${answer.status}). Check that your account can see this ticket.`,
+      `${sourceName} denied access while ${action} (${answer.status}). Check that your account can see this ${thing}.`,
+    );
+  }
+  if (answer.status === 429) {
+    const seconds = Number(answer.retryAfter);
+    const wait =
+      Number.isFinite(seconds) && seconds > 0 ? `in ${Math.ceil(seconds)} seconds` : 'in a minute';
+    return new TicketApiError(
+      429,
+      `${sourceName} is limiting requests (429) while ${action}. Nothing changed; try again ${wait}.`,
     );
   }
   const detail = detailOf(answer.data);

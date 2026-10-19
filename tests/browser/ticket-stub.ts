@@ -7,6 +7,7 @@ import {
   type FakeJiraIssue,
 } from '../../apps/server/test/fake-jira.ts';
 import type { DevStatusMode, FakeDevelopment } from '../../apps/server/test/fake-jira-dev.ts';
+import { fakeConfluence } from '../../apps/server/test/fake-confluence.ts';
 import {
   fakeLinear,
   LINEAR_ME,
@@ -253,10 +254,15 @@ function seedVolume() {
 export function ticketFakes() {
   let linear = seedLinear();
   let jira = seedJira();
+  let confluence = fakeConfluence();
   return {
     reset() {
       linear = seedLinear();
       jira = seedJira();
+      confluence = fakeConfluence();
+    },
+    confluenceReachable(reachable: boolean) {
+      confluence.reachable = reachable;
     },
     volume() {
       jira = seedVolume();
@@ -285,12 +291,15 @@ export function ticketFakes() {
     handles(path: string): boolean {
       return (
         path.startsWith('/linear/') ||
+        path.startsWith('/wiki/') ||
         path.startsWith('/rest/api/3/') ||
         path.startsWith('/rest/dev-status/')
       );
     },
     handle(req: IncomingMessage, res: ServerResponse, path: string) {
-      return path.startsWith('/linear/') ? linear.handle(req, res) : jira.handle(req, res);
+      if (path.startsWith('/linear/')) return linear.handle(req, res);
+      if (path.startsWith('/wiki/')) return confluence.handle(req, res);
+      return jira.handle(req, res);
     },
   };
 }

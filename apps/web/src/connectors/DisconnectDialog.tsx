@@ -1,3 +1,4 @@
+import './disconnect-dialog.css';
 import { useEffect, useId, useRef, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
@@ -32,11 +33,11 @@ export function DisconnectDialog({ copy, onCancel, onConfirm }: DisconnectDialog
   };
   return createPortal(
     <div
-      className="cal-confirm-scrim"
+      className="cx-confirm-scrim"
       onMouseDown={(event) => event.target === event.currentTarget && onCancel()}
     >
       <div
-        className="cal-confirm"
+        className="cx-confirm"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -45,11 +46,11 @@ export function DisconnectDialog({ copy, onCancel, onConfirm }: DisconnectDialog
       >
         <h3 id={titleId}>{copy.title}</h3>
         <p id={textId}>{copy.text}</p>
-        <div className="cal-confirm-foot">
+        <div className="cx-confirm-foot">
           <button ref={cancelRef} type="button" className="btn line sm" onClick={onCancel}>
             Cancel
           </button>
-          <button type="button" className="btn sm cal-danger" onClick={onConfirm}>
+          <button type="button" className="btn sm cx-danger" onClick={onConfirm}>
             Disconnect
           </button>
         </div>

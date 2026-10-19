@@ -5,14 +5,18 @@ import type {
   UpdateTicketSettingsRequest,
 } from '@spark-outpost/contracts';
 import { ticketSourceNames } from '@spark-outpost/contracts';
+import { probeConfluence, productsView } from '../atlassian/products.ts';
+import { atlassianAccount, switchProducts } from '../atlassian/connect.ts';
 import type { Db } from '../persistence/db.ts';
 import {
   deleteTicketConnection,
   getTicketConnection,
   listTicketConnections,
+  saveAtlassianProducts,
   saveTicketAccountId,
   saveTicketConnection,
   updateTicketSettings,
+  type AtlassianProductRow,
   type TicketConnectionRow,
 } from '../persistence/ticket-connections.ts';
 import { forgetDevelopment } from '../persistence/ticket-development.ts';
@@ -20,7 +24,12 @@ import { recordTicketEvent } from '../persistence/ticket-events.ts';
 import type { SecretStore, TicketSecretId } from '../setup/secrets.ts';
 import { jiraSource } from './jira.ts';
 import { LINEAR_API_URL, linearSource } from './linear.ts';
-import { TicketApiError, TicketNotConnectedError, type TicketSource } from './source.ts';
+import {
+  TicketApiError,
+  TicketNotConnectedError,
+  type TicketAccount,
+  type TicketSource,
+} from './source.ts';
 
 export interface TicketDeps {
   db: Db;
@@ -32,8 +41,18 @@ export interface TicketDeps {
 
 export const secretIdFor = (source: TicketSourceId): TicketSecretId => `ticket:${source}`;
 
-async function savedSecret(deps: TicketDeps, source: TicketSourceId): Promise<string | null> {
+export async function savedSecret(
+  deps: TicketDeps,
+  source: TicketSourceId,
+): Promise<string | null> {
   return deps.secrets.get(secretIdFor(source)).catch(() => null);
+}
+
+export function atlassianAccessOf(
+  connection: Pick<TicketConnectionRow, 'apiUrl' | 'email'>,
+  secret: string,
+) {
+  return { siteUrl: connection.apiUrl, email: connection.email ?? '', apiToken: secret };
 }
 
 function sourceFor(
@@ -47,27 +66,45 @@ function sourceFor(
   if (connection.source === 'linear') {
     return linearSource(secret, connection, deps.fetch, connection.apiUrl);
   }
-  return jiraSource(
-    { siteUrl: connection.apiUrl, email: connection.email ?? '', apiToken: secret },
-    connection,
-    deps.fetch,
-  );
+  return jiraSource(atlassianAccessOf(connection, secret), connection, deps.fetch);
+}
+
+const CONFLUENCE_RECHECK_MS = 10 * 60_000;
+const confluenceChecks = new Map<string, number>();
+
+function checkConfluenceLater(deps: TicketDeps, row: TicketConnectionRow, secret: string | null) {
+  if (row.source !== 'jira' || row.confluenceReach !== null || !secret) return;
+  const last = confluenceChecks.get(deps.workspaceId);
+  if (last !== undefined && Date.now() - last < CONFLUENCE_RECHECK_MS) return;
+  confluenceChecks.set(deps.workspaceId, Date.now());
+  void probeConfluence(atlassianAccessOf(row, secret), deps.fetch)
+    .then(async (confluenceReach) => {
+      if (confluenceReach) {
+        await saveAtlassianProducts(deps.db, deps.workspaceId, { confluenceReach });
+      }
+    })
+    .catch(() => undefined);
 }
 
 export async function ticketConnections(deps: TicketDeps): Promise<TicketConnections> {
   const rows = await listTicketConnections(deps.db, deps.workspaceId);
   const connections = await Promise.all(
-    rows.map(async (row) => ({
-      source: row.source,
-      account: row.account,
-      siteUrl: row.source === 'jira' ? row.apiUrl : null,
-      validatedAt: row.validatedAt.toISOString(),
-      keySaved: (await savedSecret(deps, row.source)) !== null,
-      moveOnShip: row.moveOnShip,
-      moveOnMerge: row.moveOnMerge,
-      statusMap: row.statusMap,
-      moveStatuses: row.moveStatuses,
-    })),
+    rows.map(async (row) => {
+      const secret = await savedSecret(deps, row.source);
+      checkConfluenceLater(deps, row, secret);
+      return {
+        source: row.source,
+        account: row.account,
+        siteUrl: row.source === 'jira' ? row.apiUrl : null,
+        validatedAt: row.validatedAt.toISOString(),
+        keySaved: secret !== null,
+        moveOnShip: row.moveOnShip,
+        moveOnMerge: row.moveOnMerge,
+        statusMap: row.statusMap,
+        moveStatuses: row.moveStatuses,
+        atlassian: row.source === 'jira' ? productsView(row) : null,
+      };
+    }),
   );
   return { connections };
 }
@@ -97,15 +134,40 @@ function requestedAccess(deps: TicketDeps, request: SaveTicketConnectionRequest)
   };
 }
 
+interface Checked {
+  who: TicketAccount;
+  products?: AtlassianProductRow;
+}
+
+async function whoIs(
+  deps: TicketDeps,
+  row: ReturnType<typeof requestedAccess>['row'],
+  secret: string,
+): Promise<Checked> {
+  if (row.source === 'jira') {
+    return atlassianAccount(atlassianAccessOf(row, secret), deps.fetch);
+  }
+  try {
+    return { who: await sourceFor(deps, row, secret).whoami() };
+  } catch (error) {
+    if (error instanceof TicketApiError && error.status === 401) {
+      throw new TicketApiError(
+        401,
+        `${ticketSourceNames[row.source]} rejected this key (401). Check that it's active and copied in full.`,
+      );
+    }
+    throw error;
+  }
+}
+
 export async function saveConnection(
   deps: TicketDeps,
   request: SaveTicketConnectionRequest,
 ): Promise<TicketConnections> {
   const { row, secret } = requestedAccess(deps, request);
-  const name = ticketSourceNames[row.source];
-  let who: { id: string; name: string };
+  let checked: Checked;
   try {
-    who = await sourceFor(deps, row, secret).whoami();
+    checked = await whoIs(deps, row, secret);
   } catch (error) {
     await recordTicketEvent(deps.db, deps.workspaceId, {
       source: row.source,
@@ -113,26 +175,22 @@ export async function saveConnection(
       outcome: 'failed',
       detail: { site: row.apiUrl, error: (error as Error).message },
     });
-    if (error instanceof TicketApiError && error.status === 401) {
-      throw new TicketApiError(
-        401,
-        `${name} rejected this key (401). Check that it's active and copied in full.`,
-      );
-    }
     throw error;
   }
+  const { who, products } = checked;
   await deps.secrets.set(secretIdFor(row.source), secret);
   await forgetDevelopment(deps.db, deps.workspaceId, row.source);
   await saveTicketConnection(deps.db, deps.workspaceId, {
     ...row,
     account: who.name,
     accountId: who.id,
+    ...(products ? { products } : {}),
   });
   await recordTicketEvent(deps.db, deps.workspaceId, {
     source: row.source,
     action: 'connect',
     outcome: 'succeeded',
-    detail: { site: row.apiUrl, account: who.name },
+    detail: { site: row.apiUrl, account: who.name, ...(products ? { products } : {}) },
   });
   return ticketConnections(deps);
 }
@@ -157,7 +215,14 @@ export async function changeSettings(
   source: TicketSourceId,
   settings: UpdateTicketSettingsRequest,
 ): Promise<TicketConnections> {
-  const changed = await updateTicketSettings(deps.db, deps.workspaceId, source, settings);
+  const { jiraOn, confluenceOn, ...ticketSettings } = settings;
+  if (jiraOn !== undefined || confluenceOn !== undefined) {
+    await switchProducts(deps, source, { jiraOn, confluenceOn });
+  }
+  const changesTickets = Object.values(ticketSettings).some((value) => value !== undefined);
+  const changed =
+    !changesTickets ||
+    (await updateTicketSettings(deps.db, deps.workspaceId, source, ticketSettings));
   if (!changed) throw new TicketNotConnectedError(`${ticketSourceNames[source]} isn't connected.`);
   await recordTicketEvent(deps.db, deps.workspaceId, {
     source,
@@ -167,6 +232,12 @@ export async function changeSettings(
   });
   return ticketConnections(deps);
 }
+
+export const jiraLive = (connection: TicketConnectionRow) =>
+  connection.jiraOn && connection.jiraReach === 'reachable';
+
+export const confluenceLive = (connection: TicketConnectionRow) =>
+  connection.confluenceOn && connection.confluenceReach === 'reachable';
 
 export interface OpenSource {
   source: TicketSource;
@@ -179,6 +250,7 @@ export async function openSource(
 ): Promise<OpenSource | null> {
   const connection = await getTicketConnection(deps.db, deps.workspaceId, source);
   if (!connection) return null;
+  if (source === 'jira' && !jiraLive(connection)) return null;
   const secret = await savedSecret(deps, source);
   if (!secret) return null;
   return { source: sourceFor(deps, connection, secret), connection };
@@ -188,7 +260,9 @@ export async function requireSource(deps: TicketDeps, source: TicketSourceId): P
   const open = await openSource(deps, source);
   if (!open) {
     throw new TicketNotConnectedError(
-      `${ticketSourceNames[source]} isn't connected. Connect it in Settings → Connectors.`,
+      source === 'jira'
+        ? "Jira isn't on. Connect Atlassian in Settings → Connectors and turn on Jira."
+        : `${ticketSourceNames[source]} isn't connected. Connect it in Settings → Connectors.`,
     );
   }
   return open;

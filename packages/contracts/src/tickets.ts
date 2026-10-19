@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ATTACHMENTS_PER_MESSAGE } from './attachments.ts';
 import { ticketDevelopmentSchema } from './ticket-development.ts';
 import { nativeTerminalProviderSchema, sessionTypeSchema } from './native-terminal.ts';
+import { atlassianProductLive, atlassianProductsSchema } from './atlassian.ts';
 
 export const TICKET_KEY_MAX_LENGTH = 64;
 export const TICKET_SEARCH_MAX_LENGTH = 200;
@@ -173,8 +174,14 @@ export const ticketConnectionSchema = z.object({
   moveOnMerge: z.boolean(),
   statusMap: ticketStatusMapSchema,
   moveStatuses: ticketMoveStatusesSchema,
+  atlassian: atlassianProductsSchema.nullable().default(null),
 });
 export type TicketConnection = z.infer<typeof ticketConnectionSchema>;
+
+export function ticketsFlowFrom(connection: TicketConnection): boolean {
+  if (!connection.keySaved) return false;
+  return connection.source !== 'jira' || atlassianProductLive(connection.atlassian?.jira);
+}
 
 export const ticketConnectionsSchema = z.object({
   connections: z.array(ticketConnectionSchema),
@@ -188,7 +195,7 @@ export const jiraSiteUrlSchema = z
   .string()
   .trim()
   .max(300)
-  .regex(JIRA_SITE, 'Use your Jira site address, such as https://your-team.atlassian.net.')
+  .regex(JIRA_SITE, 'Use your Atlassian site address, such as https://your-team.atlassian.net.')
   .transform((value) => value.replace(/\/$/, '').toLowerCase());
 
 export const saveTicketConnectionRequestSchema = z.discriminatedUnion('source', [
@@ -199,7 +206,7 @@ export const saveTicketConnectionRequestSchema = z.discriminatedUnion('source', 
   z.object({
     source: z.literal('jira'),
     siteUrl: jiraSiteUrlSchema,
-    email: z.email('Use the email you sign in to Jira with.').max(320),
+    email: z.email('Use the email you sign in to Atlassian with.').max(320),
     apiToken: z.string().trim().min(10, 'Paste the full API token.').max(400),
   }),
 ]);
@@ -211,6 +218,8 @@ export const updateTicketSettingsRequestSchema = z
     moveOnMerge: z.boolean().optional(),
     statusMap: ticketStatusMapSchema.optional(),
     moveStatuses: ticketMoveStatusesSchema.optional(),
+    jiraOn: z.boolean().optional(),
+    confluenceOn: z.boolean().optional(),
   })
   .refine((body) => Object.values(body).some((value) => value !== undefined), {
     message: 'Change at least one setting.',

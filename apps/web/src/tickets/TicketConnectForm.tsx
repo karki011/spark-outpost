@@ -10,6 +10,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  ATLASSIAN_NAME,
   saveTicketConnectionRequestSchema,
   ticketSourceNames,
   type SaveTicketConnectionRequest,
@@ -68,7 +69,7 @@ const FIELDS: Record<TicketSourceId, FieldSpec[]> = {
       placeholder: 'yourcompany.atlassian.net',
       type: 'text',
       inputMode: 'url',
-      help: 'The address you open Jira at.',
+      help: 'The address you open Jira or Confluence at.',
     },
     {
       key: 'email',
@@ -131,7 +132,7 @@ export function TicketConnectForm({ source, onConnected, onCancel }: TicketConne
   const [values, setValues] = useState<Record<string, string>>({});
   const [invalid, setInvalid] = useState<CheckFailure | null>(null);
   const [revealed, setRevealed] = useState(false);
-  const name = ticketSourceNames[source];
+  const name = source === 'jira' ? ATLASSIAN_NAME : ticketSourceNames[source];
   const connect = useMutation({
     mutationFn: (body: SaveTicketConnectionRequest) =>
       atLeast(ticketsApi.connect(body), MIN_CHECK_MS),

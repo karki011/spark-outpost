@@ -32,6 +32,7 @@ Ticket, Slack and pull request tools need their connector; pull request and map 
 | The audit log, including actions that ran without review   | `spark_audit`                                                                                                         |
 | How Spark works, and this guide                            | `spark_guide`, `spark_docs`                                                                                           |
 | Your [calendar](calendar.md#let-agents-use-it)             | `spark_calendar`                                                                                                      |
+| Jira or Confluence                                         | `spark_jira`, `spark_confluence`                                                                                      |
 
 ## Tools that act
 
@@ -48,6 +49,8 @@ Ticket, Slack and pull request tools need their connector; pull request and map 
 | Use a [Mac app](mac-control.md)             | `spark_mac_apps`, `spark_mac_read`, `spark_mac_act`                                                     |
 | Keep one command running after the turn     | `spark_terminal_run`                                                                                    |
 | Change a calendar event                     | `spark_calendar_edit`                                                                                   |
+| Change or delete Jira issues                | `spark_jira_edit`                                                                                       |
+| Change Confluence pages                     | `spark_confluence_edit`                                                                                 |
 
 An MCP server card shows the exact command. Agents pass only variable and header names; you fill values in **Settings → MCP servers**.
 

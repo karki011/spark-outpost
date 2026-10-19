@@ -5,6 +5,7 @@ import {
   type DevStatusMode,
   type FakeDevelopment,
 } from './fake-jira-dev.ts';
+import { commentView, jiraEditRoute, type FakeJiraComment } from './fake-jira-edits.ts';
 
 export const JIRA_EMAIL = 'alex@example.test';
 export const JIRA_TOKEN = 'jira_fake_token_0123456789';
@@ -30,7 +31,7 @@ export interface FakeJiraIssue {
   reporter: string | null;
   created: string | null;
   labels: string[];
-  comments: { author: string; body: unknown; created: string }[];
+  comments: FakeJiraComment[];
   remoteLinks: { globalId: string; url: string; title: string }[];
   subtasks: string[];
 }
@@ -43,6 +44,7 @@ export interface FakeJira {
   jql: string[];
   denyAssign: Set<string>;
   closedTransitions: Set<string>;
+  faults: Map<string, number>;
   handle(req: IncomingMessage, res: ServerResponse): Promise<void>;
 }
 
@@ -138,7 +140,8 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
 const DEV_STATUS = /^\/rest\/dev-status\/latest\/issue\/(summary|detail)$/;
 const EXPECTED_AUTH = `Basic ${Buffer.from(`${JIRA_EMAIL}:${JIRA_TOKEN}`).toString('base64')}`;
 const PROJECT_STATUSES = /^\/rest\/api\/3\/project\/([^/]+)\/statuses$/;
-const ISSUE = /^\/rest\/api\/3\/issue\/([^/]+)(?:\/(remotelink|transitions|comment|assignee))?$/;
+const ISSUE =
+  /^\/rest\/api\/3\/issue\/([^/]+)(?:\/(remotelink|transitions|comment|assignee))?(?:\/(\d+))?$/;
 
 export function fakeJira(): FakeJira {
   const workflows: Record<string, Record<string, Category>> = {
@@ -157,6 +160,7 @@ export function fakeJira(): FakeJira {
   const jql: string[] = [];
   const denyAssign = new Set<string>();
   const closedTransitions = new Set<string>();
+  const faults = new Map<string, number>();
 
   const projectOf = (item: FakeJiraIssue) => item.key.split('-')[0]!;
   const categoryOf = (item: FakeJiraIssue) => workflows[projectOf(item)]![item.status]!;
@@ -185,11 +189,10 @@ export function fakeJira(): FakeJira {
       ...(item.created ? { created: item.created } : {}),
       labels: item.labels,
       comment: {
-        comments: item.comments.map((c) => ({
-          author: { displayName: c.author },
-          body: c.body,
-          created: c.created,
-        })),
+        comments: item.comments
+          .map((comment, index) => ({ comment, index }))
+          .filter(({ comment }) => comment.created !== 'deleted')
+          .map(({ comment, index }) => commentView(comment, index, jiraPeople)),
       },
       subtasks: item.subtasks.map((key) => {
         const sub = issues.find((entry) => entry.key === key)!;
@@ -238,6 +241,7 @@ export function fakeJira(): FakeJira {
     res: ServerResponse,
     key: string,
     sub: string | undefined,
+    commentId: string | undefined,
   ) {
     const item = issues.find((entry) => entry.key === decodeURIComponent(key));
     if (!item)
@@ -253,6 +257,19 @@ export function fakeJira(): FakeJira {
         item.remoteLinks.map((link) => ({ object: { url: link.url, title: link.title } })),
       );
     }
+    const handled = await jiraEditRoute({
+      req,
+      res,
+      url: new URL(req.url ?? '/', 'http://fake'),
+      item,
+      sub,
+      commentId,
+      issues,
+      body: () => readJson(req),
+      send,
+      people: jiraPeople,
+    });
+    if (handled) return;
     const body = await readJson(req);
     if (sub === 'assignee' && req.method === 'PUT') {
       if (denyAssign.has(projectOf(item))) {
@@ -280,10 +297,11 @@ export function fakeJira(): FakeJira {
     if (sub === 'comment') {
       item.comments.push({
         author: 'Alex Example',
+        authorId: JIRA_ME,
         body: body.body,
         created: new Date().toISOString(),
       });
-      return send(res, 201, { id: String(item.comments.length) });
+      return send(res, 201, { id: String(999 + item.comments.length) });
     }
     send(res, 405, { errorMessages: ['Method not allowed'] });
   }
@@ -355,6 +373,7 @@ export function fakeJira(): FakeJira {
     jql,
     denyAssign,
     closedTransitions,
+    faults,
     async handle(req, res) {
       if (req.headers.authorization !== EXPECTED_AUTH) {
         return send(res, 401, {
@@ -362,6 +381,13 @@ export function fakeJira(): FakeJira {
         });
       }
       const url = new URL(req.url ?? '/', 'http://fake');
+      const fault = faults.get(`${req.method} ${url.pathname}`);
+      if (fault) {
+        faults.delete(`${req.method} ${url.pathname}`);
+        res.writeHead(fault, { 'content-type': 'application/json', 'retry-after': '7' });
+        res.end(JSON.stringify({ errorMessages: [`Fake fault ${fault}`] }));
+        return;
+      }
       if (url.pathname === '/rest/api/3/myself') {
         return send(res, 200, {
           accountId: 'acc-1',
@@ -388,7 +414,7 @@ export function fakeJira(): FakeJira {
       const dev = DEV_STATUS.exec(url.pathname);
       if (dev) return devStatusRoute(res, url, dev[1]!);
       const match = ISSUE.exec(url.pathname);
-      if (match) return issueRoute(req, res, match[1]!, match[2]);
+      if (match) return issueRoute(req, res, match[1]!, match[2], match[3]);
       send(res, 404, { errorMessages: ['Not found'] });
     },
   };

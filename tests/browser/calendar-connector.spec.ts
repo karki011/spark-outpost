@@ -155,7 +155,7 @@ test('confirms Disconnect in a dialog that traps focus and cancels with Esc', as
   await page.keyboard.press('Shift+Tab');
   await expect(confirm).toBeFocused();
   await shoot(page, 'disconnect-dialog', page.locator('body'));
-  await axeInEveryTheme(page, '.cal-confirm');
+  await axeInEveryTheme(page, '.cx-confirm');
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   await expect(trigger(page)).toBeFocused();

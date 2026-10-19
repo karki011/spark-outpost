@@ -16,6 +16,19 @@
 .sac-facts code {
   font-size: 12px;
 }
+.sac-text {
+  max-height: 160px;
+  margin: 0;
+  padding: 6px 8px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  color: var(--text);
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .sac-files {
   margin: 0;
   padding: 0;

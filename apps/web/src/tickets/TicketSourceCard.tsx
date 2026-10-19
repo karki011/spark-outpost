@@ -18,7 +18,7 @@ import { ticketKeys, ticketsApi } from './tickets-api.ts';
 const GRACE_SECONDS = 5;
 
 interface TicketSourceCardProps {
-  source: TicketSourceId;
+  source: Exclude<TicketSourceId, 'jira'>;
   icon: ReactNode;
   description: string;
   open: boolean;

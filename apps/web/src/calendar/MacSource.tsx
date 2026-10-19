@@ -13,7 +13,7 @@ export const MAC_DISCONNECT = {
 };
 
 export const EDIT_HINT =
-  'Agents change events only on calendars switched on here. Deletes, events with guests and shared calendars always ask.';
+  'Agents change events only on calendars switched on here. Events with guests and shared calendars always ask; deletes follow the agent’s mode.';
 
 export function ErrorLine({ error }: { error: Error | null }) {
   if (!error) return null;

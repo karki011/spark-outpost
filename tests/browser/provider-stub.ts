@@ -150,6 +150,10 @@ const server = createServer((req, res) => {
     tickets.reset();
     return send(res, 200, { ok: true });
   }
+  if (path === '/tickets-test/confluence-off') {
+    tickets.confluenceReachable(false);
+    return send(res, 200, { ok: true });
+  }
   if (path === '/tickets-test/volume') {
     tickets.volume();
     return send(res, 200, { ok: true });

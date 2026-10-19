@@ -116,9 +116,9 @@ describe('a change to the user’s own event follows the mode', () => {
 
 const FLOOR_MODES = MODES.filter(([, , , asks]) => !asks);
 
-describe('the floor asks in every mode', () => {
+describe('a delete follows the mode', () => {
   for (const [provider, mode, name] of FLOOR_MODES) {
-    it(`asks before a delete in ${name}`, async () => {
+    it(`deletes at once in ${name} and says what it deleted`, async () => {
       await h.start({ mode, provider });
       const deleting = await h.edit({
         action: 'delete',
@@ -126,14 +126,33 @@ describe('the floor asks in every mode', () => {
         eventId: PLANNING.id,
         occurrence: PLANNING.start,
       });
-      expect(deleting.facts.outcome).toBe('waiting_for_user');
-      const card = await h.pending();
-      expect(card.payload.sparkAction).toMatchObject({ op: 'delete', floor: ['delete'] });
-      expect(h.fake.writes).toEqual([]);
-      await h.answer('confirm');
-      await expect.poll(() => h.fake.writes.map((write) => write.op)).toEqual(['remove']);
+      expect(deleting.facts).toMatchObject({ outcome: 'done' });
+      expect(String(deleting.facts.message)).toContain('Deleted Planning from');
+      expect(h.fake.writes.map((write) => write.op)).toEqual(['remove']);
+      const [card] = await h.cards();
+      expect(card).toMatchObject({ action: 'calendar_edit', decidedBy: 'level' });
     });
+  }
 
+  it('shows a card before a delete in Manual', async () => {
+    await h.start({ mode: 'default' });
+    const deleting = h.edit({
+      action: 'delete',
+      calendar: await h.key('work-1'),
+      eventId: PLANNING.id,
+      occurrence: PLANNING.start,
+    });
+    const card = await h.pending();
+    expect(card.payload.sparkAction).toMatchObject({ op: 'delete', floor: [] });
+    expect(h.fake.writes).toEqual([]);
+    await h.answer('confirm');
+    expect((await deleting).facts.outcome).toBe('waiting_for_user');
+    await expect.poll(() => h.fake.writes.map((write) => write.op)).toEqual(['remove']);
+  });
+});
+
+describe('the floor asks in every mode', () => {
+  for (const [provider, mode, name] of FLOOR_MODES) {
     it(`asks before changing an event with other people in ${name}`, async () => {
       await h.start({ mode, provider });
       const renaming = await h.edit({

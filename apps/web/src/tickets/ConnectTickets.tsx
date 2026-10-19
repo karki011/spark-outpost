@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ticketSourceNames, type TicketSourceId } from '@spark-outpost/contracts';
+import { ATLASSIAN_NAME, ticketSourceNames, type TicketSourceId } from '@spark-outpost/contracts';
 import { useExpandReveal } from '../ui/transitions.tsx';
 import { TicketConnectForm } from './TicketConnectForm.tsx';
 import { LinearMark, TicketGlyph } from './ticket-icons.tsx';
@@ -24,7 +24,7 @@ function ConnectButtons({
     <>
       <button ref={jiraRef} type="button" className="btn primary" onClick={() => onPick('jira')}>
         <TicketGlyph />
-        Connect Jira
+        Connect {ATLASSIAN_NAME}
       </button>
       <button ref={linearRef} type="button" className="btn line" onClick={() => onPick('linear')}>
         <LinearMark />
@@ -33,6 +33,9 @@ function ConnectButtons({
     </>
   );
 }
+
+const nameOf = (source: TicketSourceId) =>
+  source === 'jira' ? ATLASSIAN_NAME : ticketSourceNames[source];
 
 export function ConnectTickets() {
   const [source, setSource] = useState<TicketSourceId | null>(null);
@@ -50,18 +53,15 @@ export function ConnectTickets() {
         </span>
         <h2>See your tickets here</h2>
         <p>
-          Connect Jira or Linear and Spark sorts the tickets assigned to you into what needs you,
-          what&rsquo;s in flight and what&rsquo;s next. Search covers every ticket you can see, and
-          you can assign one to yourself.
+          Connect Atlassian (for Jira) or Linear and Spark sorts the tickets assigned to you into
+          what needs you, what&rsquo;s in flight and what&rsquo;s next. Search covers every ticket
+          you can see, and you can assign one to yourself.
         </p>
         <AnimatePresence initial={false} mode="wait">
           {source ? (
             <motion.div key={source} className="tk-connect-wrap" {...expand}>
-              <section
-                className="tk-connect-card"
-                aria-label={`Connect ${ticketSourceNames[source]}`}
-              >
-                <h3>Connect {ticketSourceNames[source]}</h3>
+              <section className="tk-connect-card" aria-label={`Connect ${nameOf(source)}`}>
+                <h3>Connect {nameOf(source)}</h3>
                 <TicketConnectForm source={source} onCancel={cancel} />
               </section>
             </motion.div>

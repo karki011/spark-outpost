@@ -1,14 +1,14 @@
 ---
-title: Connect GitHub, Jira or Linear
+title: Connect GitHub, Atlassian or Linear
 section: Projects and shipping
 type: how-to
 order: 330
-summary: Connect GitHub so Spark can open pull requests, connect Jira or Linear to bring in tickets, and keep tickets in step with pull requests.
+summary: Connect GitHub so Spark can open pull requests, connect Atlassian (Jira, Confluence) or Linear, and keep tickets in step with pull requests.
 ---
 
 You'll connect GitHub and your ticket tracker. About 3 minutes.
 
-Every connection is optional. Committing and pushing work without GitHub connected.
+Every connection is optional.
 
 ## Connect GitHub
 
@@ -24,21 +24,23 @@ Access renews itself; if it ends, select **Sign in again**. Sign-in needs github
 
 ![The GitHub card in Settings → Connectors](images/tickets-github-light.png)
 
-## Connect Jira or Linear
+## Connect Atlassian or Linear
 
-1. Open **Settings → Connectors** and select **Jira** or **Linear**.
-2. For Jira, enter the **Site URL**, **Email** and an **API token**. For Linear, enter an **API key**.
+1. Open **Settings → Connectors** and select **Atlassian** or **Linear**.
+2. For Atlassian, enter the **Site URL**, **Email** and an **API token**. For Linear, enter an **API key**.
 3. Select **Save and check**.
 
-Keys and tokens stay in your system keychain, never shown again. To stop, select **Disconnect** or **Remove token**.
+**Jira** and **Confluence** each get a switch; the card says when the token can't reach one.
+
+Keys stay in your keychain, never shown again. To stop, select **Disconnect** (Atlassian: **···** → **Disconnect…**).
 
 ## Keep tickets in sync with pull requests
 
-Each Jira or Linear card has two switches, on by default: **Move tickets to In review when a PR opens** and **Move tickets to Done when the PR merges**.
+Linear and **Jira tickets** on Atlassian have two switches, on by default: **Move tickets to In review when a PR opens** and **Move tickets to Done when the PR merges**.
 
 Under each switch, and for **Start work**, a picker lists your projects' statuses. **Automatic** uses the status named Done, In Review or In Progress, or the only fit; never Rejected, Cancelled or Duplicate.
 
-When several fit, Spark flags the ticket in **Tickets** and leaves it. Pick the status, then move it yourself.
+When several fit, Spark flags the ticket and leaves it for you.
 
 Spark always adds the PR link and never comments on tickets.
 
