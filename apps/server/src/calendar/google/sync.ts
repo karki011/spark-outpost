@@ -4,11 +4,12 @@ import {
   localDayStart,
   type HelperEvent,
 } from '@spark-outpost/contracts';
+import type { Invitee } from '../people.ts';
 import { GoogleApiError, listGoogleEvents, type GoogleApiDeps, type GoogleEvent } from './api.ts';
 import {
-  attendeeNames,
   googleEventId,
   googleHtmlLink,
+  googleInvitees,
   mapGoogleEvent,
   notesSnippet,
   notesText,
@@ -34,7 +35,7 @@ export interface StoredEvent {
   notes: string;
   snippet: string;
   link: string | null;
-  attendees: string[];
+  invitees: Invitee[];
 }
 
 export interface CalendarSync {
@@ -57,7 +58,7 @@ export function storedEvent(target: SyncTarget, raw: GoogleEvent): StoredEvent |
     notes: notesText(raw.description),
     snippet: notesSnippet(raw.description),
     link: googleHtmlLink(raw.htmlLink),
-    attendees: attendeeNames(raw.attendees),
+    invitees: googleInvitees(raw.attendees),
   };
 }
 

@@ -1,5 +1,4 @@
 import {
-  CALENDAR_ATTENDEES_MAX,
   CALENDAR_DEFAULT_SETTINGS,
   addLocalDays,
   dayShape,
@@ -29,6 +28,8 @@ import type { CalendarHost } from './host-client.ts';
 import { googleSourceId } from './google/map.ts';
 import type { GoogleSource } from './google/source.ts';
 import { planNudges, type PlannerChat } from './planner.ts';
+import { splitNotes } from './notes-text.ts';
+import { locationOf, peopleOf } from './people.ts';
 import { linkFreeSnippet } from './snippet.ts';
 import { lostNotice, rematchCalendars } from './rematch.ts';
 import {
@@ -272,7 +273,6 @@ export async function calendarState(
 }
 
 const WEEK_DAYS = 7;
-const ATTENDEE_NAME_MAX = 300;
 
 export function dayAndWeek(dayStart: number, now: number): CalendarSpan[] {
   const today = localDayStart(now);
@@ -367,15 +367,19 @@ export async function eventDetail(
     eventId: occurrence.eventId,
     start: occurrence.start,
   });
-  const attendees = detail.attendees
-    .filter((attendee) => !attendee.isMe && attendee.name.trim())
-    .map((attendee) => attendee.name.trim().slice(0, ATTENDEE_NAME_MAX))
-    .slice(0, CALENDAR_ATTENDEES_MAX);
+  const invitees = detail.attendees.map((attendee) => ({
+    name: attendee.name,
+    email: attendee.email ?? null,
+    isMe: attendee.isMe,
+    room: attendee.room ?? false,
+  }));
   return {
     title: detail.event.title,
     notes: detail.notes,
+    ...splitNotes(detail.notes),
     snippet: linkFreeSnippet(detail.notes),
     link: null,
-    attendees,
+    location: locationOf(detail.event.location, invitees),
+    attendees: peopleOf(invitees),
   };
 }

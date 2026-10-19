@@ -8,6 +8,8 @@ import { span } from './calendar-format.ts';
 import { ClashTag } from './ClashTag.tsx';
 import { JoinButton } from './JoinButton.tsx';
 import { countdown, overlapChat } from './today-model.ts';
+import { openTodayEvent } from './today-request.ts';
+import { eventEnds, stillOn, useEventClock } from './event-clock.ts';
 import { useCalendarNow, useCalendarState } from './use-calendar.ts';
 
 interface UpcomingCardProps {
@@ -31,7 +33,14 @@ function UpcomingRow(props: {
     <li className="upc">
       <span className="upc-cd">{countdown(event, now)}</span>
       <span className="upc-what">
-        <b>{event.title}</b>
+        <button
+          type="button"
+          className="upc-open"
+          aria-label={`Open ${event.title} in Today`}
+          onClick={() => openTodayEvent(event.key)}
+        >
+          {event.title}
+        </button>
         <small>{where}</small>
         <ClashTag titles={props.clashes} />
       </span>
@@ -50,12 +59,14 @@ export function UpcomingCard({ chats, now }: UpcomingCardProps) {
     () => new Map((query.data?.calendars ?? []).map((choice) => [choice.key, choice.title])),
     [query.data],
   );
+  const ends = useMemo(() => eventEnds(query.data?.upcoming ?? []), [query.data]);
+  const clock = useEventClock(ends, query.dataUpdatedAt);
   const clashes = useMemo(
     () => new Map((query.data?.clashes ?? []).map((clash) => [clash.eventKey, clash.titles])),
     [query.data],
   );
   if (!ready || !query.data) return null;
-  const upcoming = query.data.upcoming;
+  const upcoming = stillOn(query.data.upcoming, Math.max(now, clock));
   return (
     <HomeSection
       id="home-upcoming"

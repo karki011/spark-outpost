@@ -5,9 +5,9 @@ import { wrapTabFocus } from '../ui/focus-trap.ts';
 import { useDismiss } from '../ui/use-dismiss.ts';
 import { clampStart, useKeepInViewport } from '../ui/viewport-clamp.ts';
 import { ClashTag } from './ClashTag.tsx';
-import { peopleLine } from './event-text.ts';
+import { EventInfo } from './EventDetails.tsx';
 import { EventActions, EventMeta } from './EventPanel.tsx';
-import { localDate, useEventDetail } from './use-calendar.ts';
+import { localDate } from './use-calendar.ts';
 
 const GAP = 10;
 const WIDTH = 340;
@@ -39,7 +39,6 @@ export function EventPopover(props: EventPopoverProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const headingId = useId();
   const place = useMemo(() => placeBeside(anchor), [anchor]);
-  const detail = useEventDetail(event);
   useKeepInViewport(panelRef, true);
   useDismiss({
     open: true,
@@ -52,8 +51,6 @@ export function EventPopover(props: EventPopoverProps) {
     panelRef.current?.focus();
   }, [event.key]);
   const date = localDate(Date.parse(event.start));
-  const snippet = detail.data?.snippet ?? '';
-  const people = peopleLine(detail.data?.attendees ?? [], event.attendeeCount);
   const close = () => {
     onClose();
     if (anchor.isConnected) anchor.focus();
@@ -91,8 +88,7 @@ export function EventPopover(props: EventPopoverProps) {
           <ClashTag titles={props.clashes} />
         </p>
       )}
-      {snippet && <p className="mo-pop-notes">{snippet}</p>}
-      {people && <p className="mo-pop-people">{people}</p>}
+      <EventInfo event={event} now={props.now} />
       <EventActions
         event={event}
         isToday={date === props.today}

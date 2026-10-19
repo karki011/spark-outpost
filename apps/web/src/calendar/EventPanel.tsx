@@ -14,6 +14,7 @@ import { calendarApi, calendarKeys } from './calendar-api.ts';
 import { CalendarName } from './CalendarName.tsx';
 import { ClashTag } from './ClashTag.tsx';
 import { dateOf, span } from './calendar-format.ts';
+import { EventInfo } from './EventDetails.tsx';
 import { JoinButton } from './JoinButton.tsx';
 import { joinHint, openJoin } from './today-model.ts';
 
@@ -59,7 +60,7 @@ function JoinRow({ event, isToday, now }: { event: CalendarEvent; isToday: boole
   const host = link.unwrappedFrom
     ? `${link.host}, unwrapped from ${link.unwrappedFrom}`
     : link.host;
-  const when = open ? ' · opens in your browser or app' : hint ? ` · ${hint}` : '';
+  const when = open ? ' · opens in your browser or app' : hint ? ` · Join opens ${hint}` : '';
   return (
     <div className="td-join">
       <JoinButton
@@ -204,6 +205,7 @@ export function EventPanel({
           <ClashTag titles={clashes} />
         </p>
       )}
+      <EventInfo event={event} now={now} />
       <EventActions event={event} isToday={isToday} now={now} onStartChat={onStartChat} />
     </section>
   );

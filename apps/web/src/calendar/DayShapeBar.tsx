@@ -12,9 +12,9 @@ export function DayShapeBar({ shape, dayStart, label }: DayShapeBarProps) {
   const length = window.end - window.start;
   return (
     <span className="td-bar" role="img" aria-label={label}>
-      {shape.bars.map((bar) => (
+      {shape.bars.map((bar, index) => (
         <i
-          key={`${bar.start}-${bar.kind}`}
+          key={`${bar.start}-${bar.kind}-${index}`}
           data-kind={bar.kind}
           style={{
             left: `${((bar.start - window.start) / length) * 100}%`,

@@ -35,12 +35,19 @@
   min-width: 0;
 }
 
-.upc-what b {
+.upc-open {
   display: block;
+  max-width: 100%;
   overflow: hidden;
+  color: var(--text);
   font-weight: 500;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.upc-open:hover {
+  text-decoration: underline;
 }
 
 .upc-what small {

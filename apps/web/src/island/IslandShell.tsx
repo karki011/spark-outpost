@@ -14,7 +14,7 @@ import { useViewportWidth } from './island-parts.tsx';
 import { wingsFor } from './island-wings.tsx';
 import { keyHint } from './key-hints.tsx';
 import { PeekRow } from './PeekRow.tsx';
-import { CalendarRestLine } from './CalendarRestLine.tsx';
+import { CalendarLineView } from './CalendarRestLine.tsx';
 import { RestLine, scoutLabel, ScoutMarks } from './RestLine.tsx';
 import { DropScene } from './DropScene.tsx';
 import { ViewBody, type IslandShellProps } from './ShellBody.tsx';
@@ -222,12 +222,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
             <RestLine key={props.line.key} line={props.line} top={lineTop} onOpen={props.onLine} />
           )}
           {peeking && props.calendarLine && (
-            <CalendarRestLine
-              key={props.calendarLine.key}
-              line={props.calendarLine}
-              top={lineTop}
-              calendar={props.calendar}
-            />
+            <CalendarLineView line={props.calendarLine} top={lineTop} calendar={props.calendar} />
           )}
         </div>
       </div>

@@ -63,9 +63,9 @@ test('opens on the month with today selected and its events in the Scheduled rai
 
   const standup = scheduled(page).locator('.rl-card', { hasText: 'Standup' });
   await expect(standup).toContainText('Daily sync: what changed since yesterday.');
-  await expect(standup).toContainText('Alex Wong and Ivan Marsh');
+  const people = standup.getByRole('list', { name: 'People' });
+  await expect(people.getByRole('listitem')).toHaveText(['AWAlex Wong', 'IMIvan Marsh']);
   await expect(standup).not.toContainText('Spark Tester');
-  await expect(standup.locator('.rl-faces i')).toHaveText(['AW', 'IM']);
   await expect(standup.getByRole('button', { name: 'Join Zoom Standup' })).toBeEnabled();
   await expect(scheduled(page).locator('.rl-card', { hasText: 'Customer call' })).toContainText(
     /Microsoft Teams\s*Join opens from/,
@@ -123,7 +123,7 @@ test('steps the rail by day and opens the event popover, which Esc closes', asyn
   ]) {
     await expect(popover.getByRole('button', { name })).toBeVisible();
   }
-  await expect(popover).toContainText('Alex Wong and Ivan Marsh');
+  await expect(popover.getByRole('list', { name: 'People' })).toContainText('Alex Wong');
   await expect(popover).toHaveAttribute('aria-modal', 'true');
   await page.keyboard.press('Shift+Tab');
   await expect(popover.getByRole('button', { name: /^Hold alerts during this/ })).toBeFocused();
@@ -184,7 +184,8 @@ test('fills the window and shows more titles per day when the window is taller',
   await page.setViewportSize({ width: 1400, height: 1300 });
   await expect.poll(() => cell(page, now).locator('.mo-ev').count()).toBeGreaterThan(short);
   const rail = await scheduled(page).boundingBox();
-  expect(rail!.width).toBeLessThanOrEqual(262);
+  expect(rail!.width).toBeGreaterThanOrEqual(340);
+  expect(rail!.width).toBeLessThanOrEqual(362);
 });
 
 test('picks a month and year from the title with the keyboard', async ({ page }) => {

@@ -211,8 +211,10 @@ private func participant(_ participant: EKParticipant) -> StoreParticipant {
     let email = participant.url.scheme == "mailto" ? (participant.url as NSURL).resourceSpecifier : nil
     return StoreParticipant(
         name: participant.name ?? email ?? "",
+        email: email,
         isCurrentUser: participant.isCurrentUser,
-        status: participantStatus(participant.participantStatus)
+        status: participantStatus(participant.participantStatus),
+        room: participant.participantType == .room || participant.participantType == .resource
     )
 }
 

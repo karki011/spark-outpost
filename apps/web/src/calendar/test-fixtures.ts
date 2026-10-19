@@ -43,6 +43,7 @@ export function event(
     availability: 'busy',
     recurring: false,
     hasNotes: false,
+    hasLocation: false,
     busy: true,
     nudges: true,
     focus: false,

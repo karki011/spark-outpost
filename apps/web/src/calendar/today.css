@@ -105,9 +105,14 @@
   background: var(--accent);
 }
 
+.td-wrap:has(> .td-grid) {
+  max-width: none;
+  padding: 18px 24px 32px;
+}
+
 .td-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
   gap: 16px;
   align-items: start;
 }
@@ -349,7 +354,8 @@
 }
 
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
-  .td-wrap {
+  .td-wrap,
+  .td-wrap:has(> .td-grid) {
     padding: 26px 16px 32px;
   }
 }

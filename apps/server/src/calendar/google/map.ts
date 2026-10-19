@@ -6,6 +6,7 @@ import {
   type HelperCalendar,
   type HelperEvent,
 } from '@spark-outpost/contracts';
+import type { Invitee } from '../people.ts';
 import { linkFreeSnippet } from '../snippet.ts';
 import type { GoogleCalendarEntry, GoogleEvent } from './api.ts';
 
@@ -169,14 +170,13 @@ export function mapGoogleEvent(
   };
 }
 
-export function attendeeNames(attendees: GoogleEvent['attendees']): string[] {
-  return (attendees ?? [])
-    .filter((attendee) => !attendee.resource && !attendee.self)
-    .flatMap((attendee) => {
-      const name = (attendee.displayName ?? attendee.email ?? '').trim();
-      return name ? [name.slice(0, 300)] : [];
-    })
-    .slice(0, CALENDAR_ATTENDEES_MAX);
+export function googleInvitees(attendees: GoogleEvent['attendees']): Invitee[] {
+  return (attendees ?? []).slice(0, CALENDAR_ATTENDEES_MAX * 2).map((attendee) => ({
+    name: (attendee.displayName ?? '').slice(0, 300),
+    email: attendee.email?.slice(0, 300) ?? null,
+    isMe: attendee.self === true,
+    room: attendee.resource === true,
+  }));
 }
 
 export function googleHtmlLink(raw: string | undefined): string | null {

@@ -68,7 +68,13 @@ func helperDetail(_ event: StoreEvent) -> HelperEventDetail {
         event: helperEvent(event),
         notes: clip(event.notes ?? "", Limits.notes),
         attendees: event.attendees.prefix(Limits.attendees).map { attendee in
-            HelperAttendee(name: clip(attendee.name, Limits.shortText), isMe: attendee.isCurrentUser, status: attendee.status)
+            HelperAttendee(
+                name: clip(attendee.name, Limits.shortText),
+                email: attendee.email.map { clip($0, Limits.shortText) },
+                isMe: attendee.isCurrentUser,
+                status: attendee.status,
+                room: attendee.room
+            )
         },
         organizerIsMe: event.organizerIsCurrentUser,
         alarms: Array(event.alarms.prefix(Limits.alarms))

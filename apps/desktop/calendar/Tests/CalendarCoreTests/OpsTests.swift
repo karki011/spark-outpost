@@ -131,6 +131,20 @@ private let wideRange = #""from":"2020-01-01T00:00:00Z","to":"2030-01-01T00:00:0
         #expect(summary["hasNotes"] as? Bool == true)
     }
 
+    @Test func eventMarksRoomsAndCarriesEmails() throws {
+        let store = FakeStore()
+        var meeting = event("planning", 0, 30)
+        meeting.attendees = [
+            StoreParticipant(name: "Ana Lee", email: "ana@example.com", isCurrentUser: false, status: .accepted),
+            StoreParticipant(name: "33 Arch St-14-Bay Village (2)", email: "c_1@resource.calendar.google.com", isCurrentUser: false, status: .accepted, room: true),
+        ]
+        store.storedEvents = [meeting]
+        let result = try send(#"{"id":"d","op":"event","eventId":"planning","start":"\#(isoString(at(0)))"}"#, to: store).result()
+        let attendees = try #require(result["attendees"] as? [[String: Any]])
+        #expect(attendees.map { $0["email"] as? String } == ["ana@example.com", "c_1@resource.calendar.google.com"])
+        #expect(attendees.map { $0["room"] as? Bool } == [false, true])
+    }
+
     @Test func eventAndOpenAnswerNotFoundForAnotherStart() throws {
         let store = FakeStore()
         store.storedEvents = [event("e", 0, 10)]

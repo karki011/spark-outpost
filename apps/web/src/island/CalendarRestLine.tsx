@@ -2,6 +2,8 @@ import type { CSSProperties } from 'react';
 import type { CalendarLine } from '../calendar/island-calendar.ts';
 import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
 import { JoinButton } from '../calendar/JoinButton.tsx';
+import { CalendarBubble } from './CalendarBubble.tsx';
+import './island-bubble.css';
 
 interface CalendarRestLineProps {
   line: CalendarLine;
@@ -9,7 +11,15 @@ interface CalendarRestLineProps {
   calendar: IslandCalendar;
 }
 
-export function CalendarRestLine({ line, top, calendar }: CalendarRestLineProps) {
+export function CalendarLineView({ line, top, calendar }: CalendarRestLineProps) {
+  const speaks = line.event !== null && line.choose === null;
+  if (speaks && line.event) {
+    return <CalendarBubble key={line.event.key} event={line.event} top={top} calendar={calendar} />;
+  }
+  return <CalendarRestLine key={line.key} line={line} top={top} calendar={calendar} />;
+}
+
+function CalendarRestLine({ line, top, calendar }: CalendarRestLineProps) {
   return (
     <div
       className="isl-restline isl-calline"
