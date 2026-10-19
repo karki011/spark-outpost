@@ -9,7 +9,7 @@ import {
 } from '../src/tickets/connections.ts';
 import { productLive } from '../src/atlassian/session.ts';
 import { JIRA_EMAIL, JIRA_TOKEN } from './fake-jira.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { createTestDb, eventually, type TestDb } from './support.ts';
 import { startTicketStubs, type TicketStubs } from './ticket-support.ts';
 
 let t: TestDb;
@@ -101,7 +101,8 @@ describe('connecting Atlassian', () => {
       `UPDATE ticket_connections SET confluence_reach = NULL, confluence_on = false
        WHERE source = 'jira'`,
     );
-    expect((await atlassian()).atlassian?.confluence).toEqual({ reach: 'reachable', on: false });
+    expect((await atlassian()).atlassian?.confluence).toEqual({ reach: 'unchecked', on: false });
+    await eventually(async () => (await atlassian()).atlassian?.confluence.reach === 'reachable');
     stubs.confluence.reachable = false;
     expect((await atlassian()).atlassian?.confluence).toEqual({ reach: 'reachable', on: false });
   });

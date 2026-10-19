@@ -47,7 +47,9 @@ function changesOf(args: EditArgs): JiraChanges {
   const changes: JiraChanges = {};
   if (args.summary !== undefined) changes.summary = args.summary;
   if (args.description !== undefined) changes.description = args.description;
-  if (args.labels !== undefined) changes.labels = args.labels;
+  if (args.labels !== undefined) {
+    changes.labels = args.labels.map((label) => label.replace(/\s+/g, '-'));
+  }
   if (args.priority !== undefined) changes.priority = args.priority;
   return changes;
 }

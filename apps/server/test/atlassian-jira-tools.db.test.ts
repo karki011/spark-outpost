@@ -44,6 +44,7 @@ describe('spark_jira reads', () => {
     expect((await first).text).toContain('third-party text from Atlassian');
     await h.tools.call('spark_jira', { action: 'read', key: 'WEB-418' });
     expect(await sparkCards(h.t)).toEqual(['allowed']);
+    expect(JSON.stringify(h.recorded.audited)).toContain('allowedEarlier');
     expect(h.recordedObservations).toContain('Jira data (spark_jira)');
   });
 
@@ -150,6 +151,37 @@ describe('spark_jira_edit', () => {
     const card = await confirmCard(h.t);
     expect(card.payload.sparkResult).toMatchObject({ state: 'failed', message: JIRA_CHANGED });
     expect(issue('WEB-418')!.summary).toBe('Someone else');
+  });
+
+  it('shows labels on the card exactly as Jira will get them', async () => {
+    h = await startAtlassian('Label WEB-418', 'auto');
+    await h.tools.call('spark_jira_edit', {
+      action: 'update',
+      key: 'WEB-418',
+      labels: ['needs review'],
+    });
+    const { rows } = await h.t.db.query<{ payload: { sparkAction: Record<string, unknown> } }>(
+      `SELECT payload FROM approvals WHERE kind = 'spark_action'`,
+    );
+    expect(rows[0]!.payload.sparkAction).toMatchObject({ after: { labels: ['needs-review'] } });
+    expect(issue('WEB-418')!.labels).toEqual(['needs-review']);
+  });
+
+  it('finds the user’s account for a connection saved without one', async () => {
+    h = await startAtlassian('Fix my comment on WEB-418', 'auto');
+    await h.t.db.query(`UPDATE ticket_connections SET account_id = NULL WHERE source = 'jira'`);
+    const mine = seedComment('WEB-418', JIRA_ME, 'Typo here');
+    const edited = await h.tools.call('spark_jira_edit', {
+      action: 'edit_comment',
+      key: 'WEB-418',
+      commentId: mine,
+      body: 'Fixed here',
+    });
+    expect(edited.json()).toMatchObject({ outcome: 'done' });
+    const { rows } = await h.t.db.query<{ account_id: string }>(
+      `SELECT account_id FROM ticket_connections WHERE source = 'jira'`,
+    );
+    expect(rows[0]!.account_id).toBe(JIRA_ME);
   });
 
   it('reports a rate limit from Jira and changes nothing', async () => {

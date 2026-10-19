@@ -1,5 +1,6 @@
 import {
   getTicketConnection,
+  saveTicketAccountId,
   type TicketConnectionRow,
 } from '../persistence/ticket-connections.ts';
 import {
@@ -10,7 +11,9 @@ import {
   type TicketDeps,
 } from '../tickets/connections.ts';
 import { TicketNotConnectedError } from '../tickets/source.ts';
+import type { AtlassianAccess } from './access.ts';
 import { confluenceClient, type ConfluenceClient } from './confluence.ts';
+import { probeProducts } from './products.ts';
 import { jiraEdits, type JiraEdits } from './jira-edits.ts';
 
 export type AtlassianProduct = 'jira' | 'confluence';
@@ -36,6 +39,16 @@ export async function productLive(deps: TicketDeps, product: AtlassianProduct): 
   return live && (await savedSecret(deps, 'jira')) !== null;
 }
 
+async function backfilledAccountId(
+  deps: TicketDeps,
+  access: AtlassianAccess,
+): Promise<string | null> {
+  const { account } = await probeProducts(access, deps.fetch);
+  if (!account) return null;
+  await saveTicketAccountId(deps.db, deps.workspaceId, 'jira', account.id);
+  return account.id;
+}
+
 export async function openAtlassian(
   deps: TicketDeps,
   product: AtlassianProduct,
@@ -49,7 +62,7 @@ export async function openAtlassian(
   return {
     connection,
     siteUrl: connection.apiUrl,
-    accountId: connection.accountId,
+    accountId: connection.accountId ?? (await backfilledAccountId(deps, access)),
     jira: jiraEdits(access, deps.fetch),
     confluence: confluenceClient(access, deps.fetch),
   };

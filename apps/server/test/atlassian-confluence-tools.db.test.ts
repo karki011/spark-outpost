@@ -105,6 +105,19 @@ describe('spark_confluence_edit', () => {
     expect(page('9001').title).toBe('Release checklist');
   });
 
+  it('posts no comment when the page changed while the card waited', async () => {
+    h = await startAtlassian('Comment on the release page', 'default');
+    await h.tools.call('spark_confluence_edit', {
+      action: 'comment',
+      pageId: '9001',
+      body: 'Approved text',
+    });
+    page('9001').version = 4;
+    const card = await confirmCard(h.t);
+    expect(card.payload.sparkResult?.message).toContain('version 4 now, not 3');
+    expect(h.stubs.confluence.comments).toEqual([]);
+  });
+
   it('reports a conflict from Confluence as a reason to read again', async () => {
     h = await startAtlassian('Update the release checklist page', 'auto');
     h.stubs.confluence.faults.set('PUT /wiki/api/v2/pages/9001', 409);

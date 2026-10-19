@@ -83,6 +83,9 @@ export async function performConfluenceEdit(
     };
   }
   const current = await confluence.page(page.id!);
+  if (current.version !== page.version) {
+    throw new AtlassianChangedError(versionMoved(current.id, page.version ?? 0, current.version));
+  }
   if (action.op === 'comment') {
     const id = await confluence.comment(current.id, markdownToStorage(action.body ?? ''));
     return {
@@ -90,9 +93,6 @@ export async function performConfluenceEdit(
       url: current.url,
       output: { commentId: id },
     };
-  }
-  if (current.version !== page.version) {
-    throw new AtlassianChangedError(versionMoved(current.id, page.version ?? 0, current.version));
   }
   if (action.op === 'delete') {
     await confluence.remove(current.id);

@@ -187,9 +187,7 @@ export function jiraEdits(access: AtlassianAccess, fetchImpl: typeof fetch) {
       const fields = {
         ...(change.summary !== undefined ? { summary: change.summary } : {}),
         ...(change.description !== undefined ? { description: textToAdf(change.description) } : {}),
-        ...(change.labels !== undefined
-          ? { labels: change.labels.map((label) => label.replace(/\s+/g, '-')) }
-          : {}),
+        ...(change.labels !== undefined ? { labels: change.labels } : {}),
         ...(change.priority !== undefined ? { priority: { name: change.priority } } : {}),
       };
       await client.call(

@@ -69,24 +69,29 @@ function sourceFor(
   return jiraSource(atlassianAccessOf(connection, secret), connection, deps.fetch);
 }
 
-async function checkedRow(
-  deps: TicketDeps,
-  row: TicketConnectionRow,
-  secret: string | null,
-): Promise<TicketConnectionRow> {
-  if (row.source !== 'jira' || row.confluenceReach !== null || !secret) return row;
-  const confluenceReach = await probeConfluence(atlassianAccessOf(row, secret), deps.fetch);
-  if (!confluenceReach) return row;
-  await saveAtlassianProducts(deps.db, deps.workspaceId, { confluenceReach });
-  return { ...row, confluenceReach };
+const CONFLUENCE_RECHECK_MS = 10 * 60_000;
+const confluenceChecks = new Map<string, number>();
+
+function checkConfluenceLater(deps: TicketDeps, row: TicketConnectionRow, secret: string | null) {
+  if (row.source !== 'jira' || row.confluenceReach !== null || !secret) return;
+  const last = confluenceChecks.get(deps.workspaceId);
+  if (last !== undefined && Date.now() - last < CONFLUENCE_RECHECK_MS) return;
+  confluenceChecks.set(deps.workspaceId, Date.now());
+  void probeConfluence(atlassianAccessOf(row, secret), deps.fetch)
+    .then(async (confluenceReach) => {
+      if (confluenceReach) {
+        await saveAtlassianProducts(deps.db, deps.workspaceId, { confluenceReach });
+      }
+    })
+    .catch(() => undefined);
 }
 
 export async function ticketConnections(deps: TicketDeps): Promise<TicketConnections> {
   const rows = await listTicketConnections(deps.db, deps.workspaceId);
   const connections = await Promise.all(
-    rows.map(async (stored) => {
-      const secret = await savedSecret(deps, stored.source);
-      const row = await checkedRow(deps, stored, secret);
+    rows.map(async (row) => {
+      const secret = await savedSecret(deps, row.source);
+      checkConfluenceLater(deps, row, secret);
       return {
         source: row.source,
         account: row.account,

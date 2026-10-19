@@ -46,16 +46,17 @@ export async function clearAtlassianRead(
 ): Promise<ReadClearance> {
   const { scope, deps } = context;
   if (!scope.runId || !scope.conversationId || !scope.actions) throw new SparkToolError(NO_CARDS);
-  if (await readAllowedInChat(deps.db, scope.conversationId, product)) {
-    return { cleared: true, decision: 'allowed_earlier' };
-  }
-  const facts = await actionFacts(deps.db, scope.runId, 'atlassian_read');
   const run = actionRun(scope);
   const action: AtlassianReadAction = {
     action: 'atlassian_read',
     product,
     what: what.slice(0, 300),
   };
+  if (await readAllowedInChat(deps.db, scope.conversationId, product)) {
+    auditAction(run, action, { outcome: 'performing', allowedEarlier: true });
+    return { cleared: true, decision: 'allowed_earlier' };
+  }
+  const facts = await actionFacts(deps.db, scope.runId, 'atlassian_read');
   if (actionPath(facts) === 'perform') {
     auditAction(run, action, { outcome: 'performing', ranWithoutReview: true });
     return { cleared: true, decision: 'mode' };
