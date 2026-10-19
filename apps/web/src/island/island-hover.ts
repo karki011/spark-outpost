@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { hoverZone, shownBox } from './island-fit.ts';
+import { onScoutBody, shownBox } from './island-fit.ts';
 import { noteSeen } from './use-island-moments.ts';
 
 const MINUTE_MS = 60_000;
@@ -36,9 +36,8 @@ export function minuteOf(time: number): number {
   return Math.floor(time / MINUTE_MS) * MINUTE_MS;
 }
 
-function scoutRect(scout: HTMLElement): DOMRect {
-  const edge = scout.dataset.edge === undefined ? null : Number(scout.dataset.edge);
-  return DOMRect.fromRect(shownBox(scout.getBoundingClientRect(), edge));
+function scoutEdge(scout: HTMLElement): number | null {
+  return scout.dataset.edge === undefined ? null : Number(scout.dataset.edge);
 }
 
 function restingScout(island: HTMLElement | null): HTMLElement | null {
@@ -46,14 +45,20 @@ function restingScout(island: HTMLElement | null): HTMLElement | null {
 }
 
 export function coreRects(island: HTMLElement | null): DOMRect[] {
-  if (!island) return [];
-  const scout = restingScout(island);
-  return [island.getBoundingClientRect(), ...(scout ? [scoutRect(scout)] : [])];
+  return island && !island.matches('.peek') ? [island.getBoundingClientRect()] : [];
 }
 
-export function zoneRects(island: HTMLElement | null, reach: number, docked: boolean): DOMRect[] {
-  const scout = island?.matches('.tucked, .floating') ? restingScout(island) : null;
-  return scout ? [DOMRect.fromRect(hoverZone(scoutRect(scout), reach, docked))] : [];
+export function scoutRects(island: HTMLElement | null): DOMRect[] {
+  const scout = restingScout(island);
+  if (!scout) return [];
+  return [DOMRect.fromRect(shownBox(scout.getBoundingClientRect(), scoutEdge(scout)))];
+}
+
+export function onScout(island: HTMLElement | null, x: number, y: number): boolean {
+  const scout = island?.matches('.peek, [data-view="now"]')
+    ? island.querySelector<HTMLElement>('.isl-scout-wrap')
+    : null;
+  return scout ? onScoutBody(scout.getBoundingClientRect(), scoutEdge(scout), x, y) : false;
 }
 
 export function flatRowRects(row: HTMLElement | null): DOMRect[] {

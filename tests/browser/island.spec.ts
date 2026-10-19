@@ -4,6 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { decorateLatestRun } from './home-seed.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { pointAtScout } from './island-pointer.ts';
 
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
 
@@ -80,9 +81,8 @@ async function openIsland(page: Page) {
   await expect(island(page)).toBeVisible();
 }
 
-async function hoverIsland(page: Page, y = 8) {
-  await page.mouse.move(640, 300);
-  await page.mouse.move(640, y, { steps: 4 });
+async function hoverIsland(page: Page) {
+  await pointAtScout(page);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
 }
 
@@ -435,9 +435,9 @@ test('without a notch the blob peeks on its own, hover opens the full panel and 
   await page.waitForTimeout(400);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
 
-  const box = (await island(page).boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, 10);
+  await pointAtScout(page);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
+  const box = (await island(page).boundingBox())!;
   await expect(island(page)).not.toHaveClass(/\bbare\b/);
   await expect.poll(lastRest).toBeNull();
   expect((await island(page).boundingBox())!.y).toBe(0);
@@ -475,7 +475,7 @@ test('without a notch the blob peeks on its own, hover opens the full panel and 
   await expect(message).toHaveCount(0);
   await expect.poll(lastFocus).toBe(false);
 
-  await page.mouse.move(box.x + box.width / 2, 10, { steps: 4 });
+  await pointAtScout(page);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
   await island(page).getByRole('tab', { name: 'New chat' }).click();
   await expect(message).toBeFocused();

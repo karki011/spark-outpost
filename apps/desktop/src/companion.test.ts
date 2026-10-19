@@ -139,6 +139,16 @@ describe('desktop companion lifecycle', () => {
     );
   });
 
+  it('hides the island from screen sharing until turned off, then saves and announces the choice', () => {
+    const { companion, effects } = setup();
+    expect(companion.status().hideInShare).toBe(true);
+    expect(companion.setHideInShare(false)).toMatchObject({ hideInShare: false });
+    expect(effects.save).toHaveBeenLastCalledWith(expect.objectContaining({ hideInShare: false }));
+    expect(effects.changed).toHaveBeenLastCalledWith(
+      expect.objectContaining({ hideInShare: false }),
+    );
+  });
+
   it('notifies on this Mac until turned off, then saves and announces the choice', () => {
     const { companion, effects } = setup();
     expect(companion.status()).toMatchObject({ notify: true, notifyBlocked: false });

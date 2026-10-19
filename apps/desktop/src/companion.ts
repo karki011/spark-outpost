@@ -21,6 +21,7 @@ export interface CompanionStatus {
   sound: boolean;
   islandSize: IslandSize;
   autoExpand: boolean;
+  hideInShare: boolean;
   notify: boolean;
   notifyBlocked: boolean;
 }
@@ -46,6 +47,7 @@ export interface Companion {
   setSound(on: boolean): CompanionStatus;
   setIslandSize(size: IslandSize): CompanionStatus;
   setAutoExpand(on: boolean): CompanionStatus;
+  setHideInShare(on: boolean): CompanionStatus;
   setNotify(on: boolean): CompanionStatus;
   setNotifyBlocked(on: boolean): void;
   setPosition(position: IslandPosition): void;
@@ -75,6 +77,7 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
     sound: settings.sound,
     islandSize: settings.islandSize,
     autoExpand: settings.autoExpand,
+    hideInShare: settings.hideInShare,
     notify: settings.notify,
     notifyBlocked,
   });
@@ -167,6 +170,11 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
     },
     setAutoExpand(on) {
       commit({ ...settings, autoExpand: on });
+      publish();
+      return status();
+    },
+    setHideInShare(on) {
+      commit({ ...settings, hideInShare: on });
       publish();
       return status();
     },

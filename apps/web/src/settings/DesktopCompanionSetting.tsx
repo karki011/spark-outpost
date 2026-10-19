@@ -16,6 +16,7 @@ import { SettingRow } from './SettingRow.tsx';
 export const SHOW_ISLAND_LABEL = 'Show Spark Island';
 const CHIMES = 'Island chimes';
 const AUTO_EXPAND = 'Open requests by themselves';
+const HIDE_IN_SHARE = 'Hide in screen sharing';
 const NOTIFY = 'Dock badge and notifications';
 
 function notifyHint(status: CompanionStatus): string {
@@ -35,6 +36,7 @@ const DEFAULTS: Record<IslandAction, string> = { quick: 'Alt+Space', sessions: '
 const SHOWN_WITH_ISLAND = [
   ISLAND_SIZE_LABEL,
   AUTO_EXPAND,
+  HIDE_IN_SHARE,
   ...SHORTCUTS.map((shortcut) => shortcut.label),
   CHIMES,
 ];
@@ -46,6 +48,7 @@ export function islandRows(): string[] {
     NOTIFY,
     ISLAND_SIZE_LABEL,
     AUTO_EXPAND,
+    HIDE_IN_SHARE,
     ...SHORTCUTS.map((shortcut) => shortcut.label),
     CHIMES,
   ];
@@ -171,6 +174,7 @@ export function DesktopCompanionSetting() {
   const showId = useId();
   const chimesId = useId();
   const expandId = useId();
+  const shareId = useId();
   const notifyId = useId();
   if (!companionAvailable() || !status?.supported) return null;
   const desktop = sparkDesktop()!;
@@ -220,6 +224,20 @@ export function DesktopCompanionSetting() {
               }
               checked={status.autoExpand === true}
               onChange={(on) => void desktop.companion.setAutoExpand?.(on)}
+            />
+          )}
+          {desktop.companion.setHideInShare && (
+            <SwitchRow
+              id={shareId}
+              label={HIDE_IN_SHARE}
+              doc={{ page: 'desktop-companion', heading: 'turn-it-on-and-size-it' }}
+              hint={
+                status.hideInShare
+                  ? 'Screen sharing and recordings leave Spark Island out where macOS allows it.'
+                  : 'Off. Spark Island shows in screen sharing, recordings and screenshots.'
+              }
+              checked={status.hideInShare === true}
+              onChange={(on) => void desktop.companion.setHideInShare?.(on)}
             />
           )}
           {SHORTCUTS.map((shortcut) => (

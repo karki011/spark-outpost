@@ -31,6 +31,7 @@ export interface CompanionStatus {
   sound?: boolean;
   islandSize?: IslandSize;
   autoExpand?: boolean;
+  hideInShare?: boolean;
   notify?: boolean;
   notifyBlocked?: boolean;
 }
@@ -91,6 +92,7 @@ export interface SparkDesktop {
     setSound?(on: boolean): Promise<CompanionStatus>;
     setIslandSize?(size: IslandSize): Promise<CompanionStatus>;
     setAutoExpand?(on: boolean): Promise<CompanionStatus>;
+    setHideInShare?(on: boolean): Promise<CompanionStatus>;
     setNotify?(on: boolean): Promise<CompanionStatus>;
     onChange(callback: (status: CompanionStatus) => void): Unsubscribe;
   };
@@ -102,6 +104,7 @@ export interface SparkDesktop {
     onGeometry(callback: (geometry: IslandGeometry) => void): Unsubscribe;
     onCommand(callback: (action: IslandAction) => void): Unsubscribe;
     onEscape(callback: () => void): Unsubscribe;
+    onPointer?(callback: (point: { x: number; y: number }) => void): Unsubscribe;
     sparkFocused(): Promise<boolean>;
     pickFolder(): Promise<string | null>;
     pathForFile(file: File): string | null;

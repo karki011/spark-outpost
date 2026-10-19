@@ -20,6 +20,7 @@ import {
   VIEWPORT,
 } from './island-notch-desktop.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { pointAtScout } from './island-pointer.ts';
 
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
 const SIZES = ['full', 'small', 'medium', 'large', 'xlarge'] as const;
@@ -64,9 +65,8 @@ async function staysOn(page: Page, view: string) {
   await expect(island(page)).toHaveAttribute('data-view', view);
 }
 
-async function hover(page: Page, y: number) {
-  await page.mouse.move(640, 300);
-  await page.mouse.move(640, y, { steps: 4 });
+async function hover(page: Page) {
+  await pointAtScout(page);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
 }
 
@@ -98,7 +98,7 @@ for (const size of SIZES) {
     expect(await underNotch(page)).toEqual([]);
     await shot(page, `${size}-needs-you`);
 
-    await hover(page, 40);
+    await hover(page);
     const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
     await expect(waiting).toContainText(LONG_COMMAND);
     expect(await underNotch(page)).toEqual([]);
@@ -330,7 +330,7 @@ test('saved Full size shows blobs on a display without a notch and opens Home on
   expect(box.width).toBeLessThanOrEqual(420);
   expect(box.height).toBeLessThanOrEqual(90);
   await shot(page, 'full-flat');
-  await hover(page, 8);
+  await hover(page);
   await expect(island(page).getByRole('tab', { name: 'Home' })).toHaveAttribute(
     'aria-selected',
     'true',

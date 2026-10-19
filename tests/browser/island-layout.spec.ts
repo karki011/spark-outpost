@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { pointAtScout } from './island-pointer.ts';
 
 const PARTS = [
   '.isl-wlabel',
@@ -200,8 +201,7 @@ for (const width of [420, 1280]) {
       { title: 'Speed up cold start', run: { status: 'succeeded' } },
     ]);
     await expect(page.getByRole('button', { name: /^Chat: / })).toHaveCount(4);
-    await page.mouse.move(width / 2, 300);
-    await page.mouse.move(width / 2, 6, { steps: 4 });
+    await pointAtScout(page);
     await expect(island(page)).toHaveAttribute('data-view', 'panel');
     await expect(island(page).getByRole('region', { name: /^Now/ })).toBeVisible();
     await expectClean(page, 'home on hover');
@@ -239,8 +239,7 @@ for (const width of [420, 1280]) {
     );
     await page.mouse.move(width / 2, 600);
     await expect(island(page)).toHaveAttribute('data-view', 'peek');
-    await page.mouse.move(width / 2, 300);
-    await page.mouse.move(width / 2, 6, { steps: 4 });
+    await pointAtScout(page);
     const now = island(page).getByRole('region', { name: /^Now/ });
     await expect(now).toContainText(LONG);
     await expectClean(page, 'home after a run');
@@ -297,8 +296,7 @@ for (const { name, sparkFocused, expected } of [
     await page.waitForTimeout(1200);
     await expect(island(page)).toHaveAttribute('data-view', expected);
     if (expected === 'peek') await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
-    await page.mouse.move(640, 300);
-    await page.mouse.move(640, 6, { steps: 4 });
+    await pointAtScout(page);
     if (sparkFocused) {
       const now = island(page).getByRole('region', { name: 'Now: Deploy the site' });
       await now.getByRole('button', { name: 'Open Deploy the site' }).click();
@@ -373,8 +371,7 @@ test('hovering a collapsed Island opens the waiting chat, and leaving closes it'
   ]);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
-  await page.mouse.move(640, 300);
-  await page.mouse.move(640, 6, { steps: 4 });
+  await pointAtScout(page);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
   await expect(island(page).getByRole('tab', { name: /^Chats/ })).toHaveAttribute(
     'aria-selected',

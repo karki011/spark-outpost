@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                    | What to do                                                |
 | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Spark Island opens only from Scout. **Hide in screen sharing**.                                                 | See [Spark Island](desktop-companion.md).                 |
 | Simpler Calendar card.                                                                                          | None.                                                     |
 | Agents can read and change your calendar.                                                                       | See [Let agents use it](calendar.md#let-agents-use-it).   |
 | Fixed: Terminal, tab close, Ask Spark and outpost glitches.                                                     | None.                                                     |

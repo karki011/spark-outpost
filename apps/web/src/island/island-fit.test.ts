@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { IslandGeometry, IslandSize } from '../desktop/desktop-bridge.ts';
 import {
-  hoverZone,
   notchFit,
+  onScoutBody,
   restLineTop,
   restPose,
   restsQuietly,
@@ -123,59 +123,49 @@ describe('the resting blob', () => {
   });
 });
 
-describe('the resting hover zone', () => {
+describe('pointing at the resting blob', () => {
   const SIZES = ['full', 'small', 'medium', 'large', 'xlarge'] as const;
   const CENTRE = 640;
-  const zoneAt = (size: IslandSize, edge: number, docked: boolean) => {
-    const { blob, tuck, reach } = restMetrics(size);
-    const pose = restPose({ docked, edge, tuck, out: false });
-    const drawn = { x: CENTRE - blob / 2, y: docked ? pose.y : 200, width: blob, height: blob };
-    return hoverZone(shownBox(drawn, pose.edge), reach, docked);
+  const tucked = (size: IslandSize, edge: number) => {
+    const { blob, tuck } = restMetrics(size);
+    const pose = restPose({ docked: true, edge, tuck, out: false });
+    return { box: { x: CENTRE - blob / 2, y: pose.y, width: blob, height: blob }, edge: pose.edge };
   };
 
-  it('runs from the top edge of a flat display to a little past the half that shows', () => {
-    expect(SIZES.map((size) => zoneAt(size, 0, true))).toEqual([
-      { x: 592, y: 0, width: 96, height: 46 },
-      { x: 607, y: 0, width: 66, height: 32 },
-      { x: 600, y: 0, width: 80, height: 39 },
-      { x: 592, y: 0, width: 96, height: 46 },
-      { x: 550, y: 0, width: 180, height: 87 },
-    ]);
-  });
-
-  it('covers the menu bar strip above the blob under a notch', () => {
-    expect(SIZES.map((size) => zoneAt(size, 44, true))).toEqual([
-      { x: 592, y: 0, width: 96, height: 90 },
-      { x: 607, y: 0, width: 66, height: 76 },
-      { x: 600, y: 0, width: 80, height: 83 },
-      { x: 592, y: 0, width: 96, height: 90 },
-      { x: 550, y: 0, width: 180, height: 131 },
-    ]);
-  });
-
-  it('surrounds a floating blob on every side', () => {
-    expect(SIZES.map((size) => zoneAt(size, 0, false))).toEqual([
-      { x: 592, y: 181, width: 96, height: 96 },
-      { x: 607, y: 186, width: 66, height: 66 },
-      { x: 600, y: 184, width: 80, height: 80 },
-      { x: 592, y: 181, width: 96, height: 96 },
-      { x: 550, y: 168, width: 180, height: 180 },
-    ]);
-  });
-
-  it('is never tighter than the half of the blob that shows', () => {
+  it('counts the half of the body that shows at every size', () => {
     for (const size of SIZES) {
-      for (const edge of [0, 38, 44]) {
-        const { blob, tuck } = restMetrics(size);
-        const zone = zoneAt(size, edge, true);
-        expect(zone.x).toBeLessThan(CENTRE - blob / 2);
-        expect(zone.x + zone.width).toBeGreaterThan(CENTRE + blob / 2);
-        expect(zone.y + zone.height).toBeGreaterThan(edge + blob - tuck);
+      for (const edge of [0, 44]) {
+        const { box, edge: clip } = tucked(size, edge);
+        const bottom = box.y + (box.height * 58) / 64;
+        expect(onScoutBody(box, clip, CENTRE, (edge + bottom) / 2)).toBe(true);
+        expect(onScoutBody(box, clip, CENTRE, bottom - 1)).toBe(true);
       }
     }
   });
-});
 
+  it('ignores the transparent corners, the sides, below the body and above the edge', () => {
+    for (const size of SIZES) {
+      const { blob } = restMetrics(size);
+      const { box, edge } = tucked(size, 44);
+      const bottom = box.y + (box.height * 58) / 64;
+      expect(onScoutBody(box, edge, box.x + 1, bottom - 1)).toBe(false);
+      expect(onScoutBody(box, edge, box.x + box.width - 1, bottom - 1)).toBe(false);
+      expect(onScoutBody(box, edge, CENTRE - blob / 2 - 4, 46)).toBe(false);
+      expect(onScoutBody(box, edge, CENTRE + blob / 2 + 4, 46)).toBe(false);
+      expect(onScoutBody(box, edge, CENTRE, bottom + 2)).toBe(false);
+      expect(onScoutBody(box, edge, CENTRE, 43)).toBe(false);
+    }
+  });
+
+  it('takes the whole body of a floating blob and nothing round it', () => {
+    const box = { x: 600, y: 200, width: 80, height: 80 };
+    expect(onScoutBody(box, null, 640, 240)).toBe(true);
+    expect(onScoutBody(box, null, 640, 226)).toBe(true);
+    expect(onScoutBody(box, null, 640, 218)).toBe(false);
+    expect(onScoutBody(box, null, 610, 210)).toBe(false);
+    expect(onScoutBody({ ...box, width: 0 }, null, 640, 240)).toBe(false);
+  });
+});
 describe('the line beside the resting blob', () => {
   it('starts below the row of chat blobs and their badges', () => {
     expect(restLineTop(true, 0)).toBe(27);
