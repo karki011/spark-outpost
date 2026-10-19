@@ -13,6 +13,7 @@ async function fakeDesktop(page: Page) {
       sound: false,
       islandSize: localStorage.getItem('fake-desktop.island-size') ?? 'medium',
       autoExpand: true,
+      hideInShare: true,
       notify: true,
       notifyBlocked: false,
     };
@@ -65,6 +66,11 @@ async function fakeDesktop(page: Page) {
           setAutoExpand: async (on: boolean) => {
             calls.push(['autoExpand', on]);
             status.autoExpand = on;
+            return publish();
+          },
+          setHideInShare: async (on: boolean) => {
+            calls.push(['hideInShare', on]);
+            status.hideInShare = on;
             return publish();
           },
           setNotify: async (on: boolean) => {
@@ -263,6 +269,13 @@ test('the island opens these settings, and its chimes stay off until switched on
   await requests.click();
   await expect(requests).toHaveAttribute('aria-checked', 'false');
   await expect(spark).toContainText('marks the blobs');
+  const share = spark.getByRole('switch', { name: 'Hide in screen sharing' });
+  await expect(share).toHaveAttribute('aria-checked', 'true');
+  await share.click();
+  await expect(share).toHaveAttribute('aria-checked', 'false');
+  await expect(spark).toContainText('Spark Island shows in screen sharing');
+  await share.click();
+  await expect(share).toHaveAttribute('aria-checked', 'true');
   expect(
     await page.evaluate(() => (window as unknown as { desktopCalls: unknown[] }).desktopCalls),
   ).toEqual([
@@ -270,6 +283,8 @@ test('the island opens these settings, and its chimes stay off until switched on
     ['sound', true],
     ['size', 'full'],
     ['autoExpand', false],
+    ['hideInShare', false],
+    ['hideInShare', true],
   ]);
 
   await fromIsland('sparks');

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { pointAtScout } from './island-pointer.ts';
 
 const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
 
@@ -101,13 +102,12 @@ test('the resting island follows the chosen size live and still opens on hover',
 
   await setSize(page, 'xlarge');
   const extra = await restingBlob(page, 116, 61);
-  expect(Math.abs(extra.width - (116 + 2 * 32))).toBeLessThanOrEqual(1);
-  expect(Math.abs(extra.height - (116 - 61 + 32))).toBeLessThanOrEqual(1);
+  expect(Math.abs(extra.width - (116 + 2 * 14))).toBeLessThanOrEqual(1);
+  expect(Math.abs(extra.height - (116 - 61 + 14))).toBeLessThanOrEqual(1);
 
   await setSize(page, 'medium');
   await restingBlob(page, 48, 25);
-  await page.mouse.move(640, 300);
-  await page.mouse.move(640, 8, { steps: 4 });
+  await pointAtScout(page);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
   await expect.poll(() => lastRest(page)).toBeNull();
   await page.mouse.move(5, 600);
@@ -146,8 +146,7 @@ test('pending requests stay as blobs with one line at every size, including save
       .poll(async () => Math.abs(((await lastRest(page))?.height ?? 0) - height))
       .toBeLessThanOrEqual(1);
   }
-  await page.mouse.move(640, 300);
-  await page.mouse.move(640, 8, { steps: 4 });
+  await pointAtScout(page);
   const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
   await expect(waiting).toContainText('npm test');
   await page.mouse.move(5, 600);

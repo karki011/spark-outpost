@@ -123,6 +123,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         preload: options.preload,
         position: () => companion.position(),
         size: () => companion.status().islandSize,
+        hideInShare: () => companion.status().hideInShare,
         savePosition: (position) => companion.setPosition(position),
         log: options.log,
         onGone: () => {
@@ -204,6 +205,12 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   ipcMain.handle(IPC.companionSetAutoExpand, (event, on: unknown) =>
     fromSpark(event) && typeof on === 'boolean' ? companion.setAutoExpand(on) : companion.status(),
   );
+  ipcMain.handle(IPC.companionSetHideInShare, (event, on: unknown) => {
+    if (!fromSpark(event) || typeof on !== 'boolean') return companion.status();
+    const status = companion.setHideInShare(on);
+    island?.setHideInShare(on);
+    return status;
+  });
   ipcMain.handle(IPC.companionSetNotify, (event, on: unknown) =>
     fromSpark(event) && typeof on === 'boolean' ? companion.setNotify(on) : companion.status(),
   );
@@ -309,6 +316,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.companionSetSound,
         IPC.companionSetIslandSize,
         IPC.companionSetAutoExpand,
+        IPC.companionSetHideInShare,
         IPC.companionSetNotify,
         IPC.islandGeometry,
         IPC.islandSparkFocused,

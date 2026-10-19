@@ -14,6 +14,7 @@ import {
   type ProbeResult,
 } from './perf-probe.ts';
 import { seedTourChats } from './tour-seed.ts';
+import { pointAtScout } from './island-pointer.ts';
 
 test.use({ trace: 'off' });
 
@@ -44,8 +45,7 @@ async function addSteps(conversationId: string, count: number) {
 }
 
 async function hoverOpen(page: Page) {
-  await page.mouse.move(640, 300);
-  await page.mouse.move(640, 8, { steps: 4 });
+  await pointAtScout(page);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
 }
 

@@ -3,7 +3,7 @@ import { ISLAND_SIZES, restMetrics } from './island-size.ts';
 
 describe('island size', () => {
   it('keeps the small island at its original resting shape', () => {
-    expect(restMetrics('small')).toEqual({ blob: 38, tuck: 20, reach: 14 });
+    expect(restMetrics('small')).toEqual({ blob: 38, tuck: 20 });
   });
 
   it('grows the blob and its tuck together', () => {

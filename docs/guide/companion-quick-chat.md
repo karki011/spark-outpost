@@ -6,7 +6,7 @@ order: 412
 summary: Start a chat from any app with ⌥Space, find a chat and ask for an update with ⌥⇧Space, ask Spark a question, and change the shortcuts.
 ---
 
-You'll start a chat, check on another and ask Spark a question from any app. About 2 minutes.
+You'll start, check and ask about chats from any app. About 2 minutes.
 
 ## Start a chat
 
@@ -33,19 +33,19 @@ You'll start a chat, check on another and ask Spark a question from any app. Abo
 
 ![A chat's details in Chats with a written update and the Ask for update, Reply and Open in Spark buttons](images/companion-island-sessions-light.png)
 
-An update comes from what Spark tracks. It doesn't interrupt the agent.
+Updates never interrupt the agent.
 
 ## Ask Spark
 
 1. In the panel, select **New chat**, then **Ask Spark**, or press **⌘4**.
-2. Type a question, such as "Who needs me?" or "What did I spend today?", and press **Enter**.
+2. Type a question, such as "Who needs me?", and press **Enter**.
 
-Who needs you, what's running and today's spend are answered at once. Other questions use a [fast model](settings.md#spark-assistant).
+Who needs you, what's running and today's spend answer at once; others use a [fast model](settings.md#spark-assistant).
 
 ## Change a shortcut
 
 1. Open **Settings → Notifications** and scroll to **Spark Island**.
 2. Select **Change** next to **Quick chat shortcut** or **Sessions shortcut**.
-3. Press the new keys: at least one modifier with a letter, number or Space. **Reset** restores the default.
+3. Press the new keys, with at least one modifier. **Reset** restores the default.
 
 **Next:** [Update the app](updates.md)

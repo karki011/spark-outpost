@@ -63,6 +63,7 @@ describe('companion settings file', () => {
       islandSize: 'full',
       islandSizePicked: false,
       autoExpand: true,
+      hideInShare: true,
       notify: true,
     });
   });
@@ -98,6 +99,12 @@ describe('companion settings file', () => {
     expect(parseSettings(JSON.stringify({ autoExpand: 'no' })).autoExpand).toBe(true);
   });
 
+  it('hides the island from screen sharing unless that was turned off', () => {
+    expect(parseSettings('{}').hideInShare).toBe(true);
+    expect(parseSettings(JSON.stringify({ hideInShare: false })).hideInShare).toBe(false);
+    expect(parseSettings(JSON.stringify({ hideInShare: 'no' })).hideInShare).toBe(true);
+  });
+
   it('notifies on this Mac unless that was turned off', () => {
     expect(parseSettings('{}').notify).toBe(true);
     expect(parseSettings(JSON.stringify({ notify: false })).notify).toBe(false);
@@ -123,6 +130,7 @@ describe('companion settings file', () => {
       islandSize: 'small' as const,
       islandSizePicked: true,
       autoExpand: false,
+      hideInShare: false,
       notify: false,
     };
     await saveSettings(file, settings);

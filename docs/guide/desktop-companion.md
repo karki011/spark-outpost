@@ -13,16 +13,17 @@ You'll answer agents from Spark Island. About 2 minutes.
 1. Open **Settings → Notifications**, **Spark Island**.
 2. Switch **Show Spark Island** on or off.
 3. Pick a **Spark Island size**.
-4. **Island chimes** play when a chat needs you, finishes or fails, except needs and failures in the chat you're viewing.
+4. **Island chimes** play when a chat needs you, finishes or fails, except in the chat you're viewing.
+5. **Hide in screen sharing** keeps it out of shares; some apps may still show it.
 
 ![The Spark Island settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 
-Drag Scout to place it. At top centre it docks, half hidden while nothing happens.
+Drag Scout to place it. At top centre it docks, half hidden when quiet.
 
 ## Open it
 
-1. Point at Scout: **Home** opens until the pointer leaves.
-2. Click inside to keep it open. **Esc** closes it.
+1. Point at Scout itself: **Home** opens until the pointer leaves.
+2. Click inside to keep it open; **Esc** closes it.
 
 ![Spark Island Home with the Now card and Needs you listing a waiting approval and a finished chat](images/companion-island-home-light.png)
 
@@ -34,7 +35,7 @@ Steps show verbs and file names, never secrets. See [Spark Island states](status
 
 A request shows a line beside Scout, such as **Approve: run npm test · Review**; select it for the card. Finished and failed chats show there.
 
-With **Open requests by themselves** on, a card opens once and stays until you answer.
+With **Open requests by themselves** on, a card opens once until you answer.
 
 1. Press **⌥Space** to focus it.
 2. Press **Y** to allow once or **N** to deny.
@@ -51,7 +52,7 @@ Edit cards show the first changed lines, never secret files.
 
 ## When Spark Island is off
 
-With **Dock badge and notifications** on, the Dock icon counts waiting chats and a notification names the chat, or counts several. Select it to open.
+With **Dock badge and notifications** on, the Dock counts waiting chats and a notification names them. Select it to open.
 
 ## Inside the app
 
