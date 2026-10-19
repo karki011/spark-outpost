@@ -20,15 +20,6 @@ function startsLabel(event: CalendarEvent, at: number): string {
   return minutes === 0 ? 'Now' : `In ${minutes} min`;
 }
 
-function firstLine(text: string): string {
-  return (
-    text
-      .split('\n')
-      .map((line) => line.trim())
-      .find(Boolean) ?? ''
-  );
-}
-
 function peopleText(names: readonly string[]): string {
   const shown = names.slice(0, PEOPLE_SHOWN).join(', ');
   const rest = names.length - PEOPLE_SHOWN;
@@ -39,11 +30,11 @@ function BubbleMore({ event, calendar }: { event: CalendarEvent; calendar: Islan
   const detail = useEventDetail(event, true).data;
   const { start, end } = spanOf(event);
   const names = (detail?.attendees ?? []).map((person) => person.name);
-  const agenda = firstLine(detail?.agenda ?? '');
+  const agenda = detail?.snippet ?? '';
   return (
     <div className="isl-bubble-more">
       <p className="isl-bubble-meta">
-        {startsLabel(event, calendar.at)} · {span(start, end)} · {calendar.calendarName(event)}
+        {span(start, end)} · {calendar.calendarName(event)}
       </p>
       {names.length > 0 && <p className="isl-bubble-people">{peopleText(names)}</p>}
       <ClashTag titles={calendar.clashes.get(event.key)} />
@@ -103,6 +94,7 @@ export function CalendarBubble({ event, top, calendar }: CalendarBubbleProps) {
         <button
           type="button"
           className="isl-bubble-x"
+          title="Dismiss"
           aria-label={`Dismiss the nudge for ${event.title}`}
           onClick={() => calendar.onDismissNudge(event)}
         >

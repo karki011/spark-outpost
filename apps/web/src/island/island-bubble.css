@@ -18,23 +18,23 @@
 .isl-bubble::after {
   content: '';
   position: absolute;
-  top: 12px;
   width: 0;
   height: 0;
   border-style: solid;
 }
 
 .isl-bubble::before {
-  left: -9px;
-  border-width: 6px 9px 6px 0;
-  border-color: transparent var(--island-line) transparent transparent;
+  top: -9px;
+  left: 12px;
+  border-width: 0 6px 9px 6px;
+  border-color: transparent transparent var(--island-line) transparent;
 }
 
 .isl-bubble::after {
-  left: -7px;
-  top: 13px;
-  border-width: 5px 8px 5px 0;
-  border-color: transparent var(--island) transparent transparent;
+  top: -7px;
+  left: 13px;
+  border-width: 0 5px 8px 5px;
+  border-color: transparent transparent var(--island) transparent;
 }
 
 .isl-bubble-row {
@@ -75,7 +75,11 @@
   color: var(--muted);
 }
 
-.isl-bubble-x:hover {
+.isl-bubble .isl-bubble-x {
+  color: var(--muted);
+}
+
+.isl-bubble .isl-bubble-x:hover {
   background: var(--raise);
   color: var(--text);
 }
@@ -88,6 +92,7 @@
 .isl-bubble-x svg {
   width: 12px;
   height: 12px;
+  color: currentColor;
 }
 
 .isl-bubble-meta,
@@ -100,7 +105,11 @@
 }
 
 .isl-bubble-agenda {
+  max-width: 100%;
+  overflow: hidden;
   color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .isl-bubble-more {

@@ -1,3 +1,4 @@
+import './more-events.css';
 import {
   useEffect,
   useId,

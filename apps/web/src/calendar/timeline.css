@@ -43,7 +43,10 @@
 .tl-ev {
   position: absolute;
   z-index: 1;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
   overflow: hidden;
   padding: 3px 9px;
   border: 1px solid var(--line-strong);

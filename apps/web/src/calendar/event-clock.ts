@@ -24,7 +24,8 @@ export function useEventClock(times: readonly number[], refreshedAt = 0): number
   const [now, setNow] = useState(Date.now);
   const key = useMemo(() => [...new Set(times)].sort((a, b) => a - b).join(','), [times]);
   useEffect(() => {
-    setNow(Date.now());
+    const reread = setTimeout(() => setNow(Date.now()), 0);
+    return () => clearTimeout(reread);
   }, [key, refreshedAt]);
   useEffect(() => {
     const boundaries = key === '' ? [] : key.split(',').map(Number);
