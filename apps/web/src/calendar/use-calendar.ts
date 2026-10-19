@@ -12,12 +12,13 @@ import { todayState, type TodayState } from './today-model.ts';
 
 const NOW_EVERY_MS = 30_000;
 
-export function useCalendarStatus() {
+export function useCalendarStatus(refetchInterval: number | false = false) {
   const { remote } = useRemoteClient();
   const query = useQuery({
     queryKey: calendarKeys.status,
     queryFn: calendarApi.status,
     enabled: !remote,
+    refetchInterval,
   });
   const { refetch } = query;
   useEffect(() => {

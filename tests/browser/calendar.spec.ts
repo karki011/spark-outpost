@@ -14,6 +14,7 @@ import { island, openNotchIsland } from './island-notch-desktop.ts';
 import { decorateLatestRun } from './home-seed.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { apiNow, matchApiClock } from './api-clock.ts';
+import { calendarCard, chooseCalendars } from './calendar-card.ts';
 import { FAKE_CALENDAR_STATE } from './stub-config.ts';
 
 test.skip(process.env.SPARK_FAKE_CALENDAR !== '1', 'needs SPARK_FAKE_CALENDAR=1');
@@ -115,11 +116,11 @@ test('connects from Today through the Calendar connector card', async ({ page })
     today(page).getByRole('heading', { name: 'See your day next to your chats' }),
   ).toBeVisible();
   await today(page).getByRole('button', { name: 'Connect calendar' }).click();
-  const card = page.locator('[data-connector="calendar"]');
-  await expect(card).toContainText('Connect macOS Calendar');
+  const card = calendarCard(page);
+  await expect(card).toContainText('Every calendar already on this Mac');
   await card.getByRole('button', { name: 'Connect', exact: true }).click();
-  await expect(card).toContainText('macOS Calendar · 2 accounts · 2 of 2 calendars');
-  await expect(card.getByRole('checkbox', { name: 'Include Spark Work' })).toBeChecked();
+  await expect(card).toContainText(/2 calendars( · next: .+)?/);
+  await expect(card.getByRole('region', { name: 'Mac Calendar' })).toContainText('Connected');
   await expect(card.getByText('shared')).toBeVisible();
   const agents = card.getByRole('switch', { name: 'Let agents read my calendar' });
   await expect(agents).toBeEnabled();
@@ -129,12 +130,17 @@ test('connects from Today through the Calendar connector card', async ({ page })
     'true',
   );
   await expect(card).not.toContainText('Counts as busy');
+  await chooseCalendars(page, 'Mac Calendar');
+  await expect(card.getByRole('checkbox', { name: 'Include Spark Work' })).toBeChecked();
   await card.getByRole('checkbox', { name: 'Include Spark Family' }).uncheck();
+  await card.getByRole('button', { name: 'Done' }).click();
+  await expect(card.getByRole('button', { name: 'Options for Mac Calendar' })).toBeFocused();
   await expect(card.getByRole('switch', { name: 'Nudge, Spark Family' })).toBeDisabled();
   await expect(card.getByRole('switch', { name: 'Nudge, Spark Family' })).toHaveAttribute(
     'aria-checked',
     'false',
   );
+  await expect(card.getByText('hidden', { exact: true })).toBeVisible();
 });
 
 test('shows the denied state with Open Calendar settings', async ({ page }) => {
@@ -166,9 +172,7 @@ test('asks to choose calendars when none is included', async ({ page }) => {
   await expect(today(page).getByRole('heading', { name: 'No calendars included' })).toBeVisible();
   await today(page).getByRole('button', { name: 'Choose calendars' }).click();
   await expect(
-    page
-      .locator('[data-connector="calendar"]')
-      .getByRole('checkbox', { name: 'Include Spark Work' }),
+    calendarCard(page).getByRole('checkbox', { name: 'Include Spark Work' }),
   ).not.toBeChecked();
 });
 

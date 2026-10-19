@@ -98,6 +98,14 @@ export const STATUS: Pair[] = [
     bg: ['var(--danger)'],
     kind: 'text',
   },
+  {
+    id: 'button.danger-label',
+    group: 'Status text',
+    label: 'Disconnect button label (panel on danger)',
+    fg: 'var(--panel)',
+    bg: ['var(--danger)'],
+    kind: 'text',
+  },
 ];
 
 export const FORMS: Pair[] = [

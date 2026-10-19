@@ -59,24 +59,42 @@ export function todayState(status: CalendarStatus): TodayState {
   return 'ready';
 }
 
+export const CALENDAR_TAGLINE =
+  'See today’s meetings, get a nudge before they start, join in one click.';
+
 const STATE_LINE: Record<Exclude<TodayState, 'ready' | 'none'>, string> = {
   web: 'Lives in the Mac app',
   helper: 'The calendar helper isn’t available',
   denied: 'Calendars access is off for Spark Outpost',
-  connect: 'Not connected',
+  connect: CALENDAR_TAGLINE,
 };
 
-export function connectorLine(status: CalendarStatus): { state: TodayState; text: string } {
+export function hasCalendarSource(status: CalendarStatus): boolean {
+  return status.connected || status.google.accounts.length > 0;
+}
+
+export function nextMeeting(
+  upcoming: readonly CalendarEvent[] | undefined,
+  now: number,
+): CalendarEvent | null {
+  return (upcoming ?? []).find((event) => spanOf(event).start > now) ?? null;
+}
+
+export function connectorLine(
+  status: CalendarStatus,
+  next: CalendarEvent | null = null,
+  now = Date.now(),
+): { state: TodayState; text: string } {
   const state = todayState(status);
+  if (!hasCalendarSource(status)) return { state, text: CALENDAR_TAGLINE };
   if (state !== 'ready' && state !== 'none') return { state, text: STATE_LINE[state] };
-  const total = status.accounts.reduce((sum, account) => sum + account.calendars.length, 0);
-  const macAccounts = status.accounts.filter((account) => account.kind !== 'google').length;
-  const google = status.google.accounts;
+  const included = includedCalendars(status);
   const parts = [
-    ...(status.connected ? [`macOS Calendar · ${countLabel(macAccounts, 'account')}`] : []),
-    ...(google.length > 0 ? [countLabel(google.length, 'Google account')] : []),
-    `${includedCalendars(status)} of ${countLabel(total, 'calendar')}`,
-    ...(google.some((account) => account.state === 'sign_in_again') ? ['Sign in again'] : []),
+    included === 0 ? 'No calendars included' : countLabel(included, 'calendar'),
+    ...(next ? [`next: ${next.title} ${countdown(next, now)}`] : []),
+    ...(status.google.accounts.some((account) => account.state === 'sign_in_again')
+      ? ['Sign in again']
+      : []),
   ];
   return { state, text: parts.join(' · ') };
 }

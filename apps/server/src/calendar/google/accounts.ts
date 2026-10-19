@@ -41,6 +41,7 @@ export interface LiveAccount {
   message: string | null;
   failures: number;
   synced: boolean;
+  syncedAt: number | null;
 }
 
 export function liveAccount(row: GoogleAccountRow): LiveAccount {
@@ -53,6 +54,7 @@ export function liveAccount(row: GoogleAccountRow): LiveAccount {
     message: row.needsSignIn ? SIGN_IN_AGAIN : null,
     failures: 0,
     synced: false,
+    syncedAt: null,
   };
 }
 
@@ -235,6 +237,7 @@ export async function pollAccount(
     account.message = null;
     account.failures = 0;
     account.synced = true;
+    account.syncedAt = deps.now();
     return { changed: changed || recovered, nextInMs: GOOGLE_POLL_MS };
   } catch (error) {
     if (needsSignInAgain(error)) return signInAgain(deps, account);

@@ -2,6 +2,7 @@ import './calendar-card.css';
 import type { CalendarStatus } from '@spark-outpost/contracts';
 import { CalendarAccounts, CalendarRows, RowsHeader } from './CalendarAccounts.tsx';
 import { CalendarName } from './CalendarName.tsx';
+import { MAC_CALENDAR } from './MacSource.tsx';
 import { useCalendarChoices } from './use-calendar-choices.ts';
 
 export const NUDGE_CALENDARS_LABEL = 'Calendars that nudge';
@@ -18,9 +19,9 @@ export function CalendarNudgeList({ status }: { status: CalendarStatus }) {
         </small>
       </p>
       {mac.length > 0 && (
-        <section className="cal-source" aria-label="macOS Calendar">
+        <section className="cal-source" aria-label={MAC_CALENDAR}>
           <div className="cal-src-h">
-            <h3>macOS Calendar</h3>
+            <h3>{MAC_CALENDAR}</h3>
           </div>
           <CalendarAccounts accounts={mac} onChange={change} />
         </section>

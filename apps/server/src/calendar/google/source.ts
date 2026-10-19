@@ -278,6 +278,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
           state: account.state,
           message: account.message,
           canEdit: account.row.canEdit,
+          syncedAt: account.syncedAt === null ? null : new Date(account.syncedAt).toISOString(),
         })),
         signIn: signIn?.flow() ?? IDLE_FLOW,
       };
