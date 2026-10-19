@@ -26,7 +26,7 @@ A paired device can answer an agent's browser cards; the Browser pane stays on t
 
 Messages shown aren't stored.
 
-**Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device**. It names the chat, never a command; [meeting alerts](calendar.md) say only "Meeting in 10 min". Push services see the **Sender contact**. A chat you've opened isn't pushed, and opening Spark on the device clears seen ones.
+**Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device**. It names the chat, never a command; [meeting alerts](calendar.md) say "Meeting in 10 min". Seen chats aren't pushed. Push services see the **Sender contact**.
 
 A device you're using gets none. iPhone needs iOS 16.4 or later and Spark on the Home Screen: save a passkey first, then sign in with it there.
 

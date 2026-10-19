@@ -82,7 +82,7 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 | **Open requests by themselves**, **Island chimes**                                                                                                   | On, off                                | [Spark Island](desktop-companion.md#answer-a-card)             |
 | **Hide in screen sharing**                                                                                                                           | On                                     | [Spark Island](desktop-companion.md#turn-it-on-and-size-it)    |
 | **Quick chat shortcut**, **Sessions shortcut**                                                                                                       | ⌥Space, ⌥⇧Space                        | [Change a shortcut](companion-quick-chat.md#change-a-shortcut) |
-| Mac app: **Add today’s calendar to the brief**, **Meetings**, **Hold chimes during**, **Calendars that nudge**, **Meeting alerts on paired devices** | On, 10 min, **Focus blocks**, all, off | [See your day](calendar.md)                                    |
+| Mac app: **Add today’s calendar to the brief**, **Meetings**, **Meeting alerts**, **Alert at**, **Join meetings automatically**, **Hold chimes during**, **Calendars that nudge**, **Meeting alerts on paired devices** | On, 10 min, **Center of the screen**, 1 min before, off, **Focus blocks**, all, off | [See your day](calendar.md)                                    |
 
 ## App
 
