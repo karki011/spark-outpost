@@ -2,12 +2,12 @@ import { Blobatar } from 'blobatar/react';
 import * as expressions from 'blobatar/expression';
 import type { BlobExpression } from './blob-expression.ts';
 
-export type ConnectorId = 'github' | 'jira' | 'linear' | 'slack' | 'calendar';
+export type ConnectorId = 'github' | 'atlassian' | 'linear' | 'slack' | 'calendar';
 
 const CONNECTOR_SEED: Record<ConnectorId, { name: string; hue: number }> = {
   calendar: { name: 'connector:calendar', hue: 28 },
   github: { name: 'connector:github', hue: 145 },
-  jira: { name: 'connector:jira', hue: 232 },
+  atlassian: { name: 'connector:atlassian', hue: 222 },
   linear: { name: 'connector:linear', hue: 268 },
   slack: { name: 'connector:slack', hue: 352 },
 };

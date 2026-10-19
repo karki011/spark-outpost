@@ -20,6 +20,11 @@ import {
   calendarReadActionSchema,
 } from './calendar-actions.ts';
 import { ticketSourceIdSchema, ticketStatusSchema } from './tickets.ts';
+import {
+  atlassianActionLabels,
+  atlassianActionSchemas,
+  atlassianQuestion,
+} from './atlassian-actions.ts';
 
 export const SPARK_ACTION_KIND = 'spark_action' as const;
 
@@ -248,6 +253,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   postSlackActionSchema,
   calendarReadActionSchema,
   calendarEditActionSchema,
+  ...atlassianActionSchemas,
 ]);
 export type SparkAction = z.infer<typeof sparkActionSchema>;
 export type SparkActionName = SparkAction['action'];
@@ -292,6 +298,9 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   post_slack: ['body'],
   calendar_read: [],
   calendar_edit: [],
+  atlassian_read: [],
+  jira_edit: [],
+  confluence_edit: [],
 };
 
 export function editableFields(action: SparkActionName): readonly (keyof SparkActionEdits)[] {
@@ -429,6 +438,7 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
     confirm: 'Save change',
     doing: 'Changing the event…',
   },
+  ...atlassianActionLabels,
 };
 
 const SLACK_POST_AS_YOU_QUESTION = 'Post this to Slack as you?';
@@ -442,7 +452,7 @@ export function sparkActionQuestion(action: SparkAction): string {
   if (action.action === 'mac_act') return `Let the agent press buttons and menus in ${action.app}?`;
   if (action.action === 'mac_press') return `Press ${action.what} in ${action.app}?`;
   if (action.action === 'calendar_edit') return calendarEditQuestion(action);
-  return sparkActionLabels[action.action].question;
+  return atlassianQuestion(action) ?? sparkActionLabels[action.action].question;
 }
 
 export const sparkResultStateSchema = z.enum(['waiting', 'running', 'done', 'failed', 'unknown']);

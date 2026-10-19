@@ -121,7 +121,7 @@ async function connectors(context: SparkToolContext) {
   const ticketSources = ticketSourceIdSchema.options.map((source) => {
     const connection = tickets.connections.find((entry) => entry.source === source);
     return {
-      source: ticketSourceNames[source],
+      source: source === 'jira' ? 'Jira (Atlassian)' : ticketSourceNames[source],
       connected: connection !== undefined && connection.keySaved,
       ...(connection
         ? {
@@ -131,6 +131,7 @@ async function connectors(context: SparkToolContext) {
             moveOnShip: connection.moveOnShip,
             moveOnMerge: connection.moveOnMerge,
             moveStatuses: connection.moveStatuses,
+            ...(connection.atlassian ? { atlassian: connection.atlassian } : {}),
             ...(connection.keySaved ? {} : { problem: 'The saved key is missing; reconnect it.' }),
           }
         : {}),

@@ -6,6 +6,7 @@ import type {
   TicketSourceId,
   VoiceEvent,
 } from '@spark-outpost/contracts';
+import { ticketsFlowFrom } from '@spark-outpost/contracts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { homeApi, homeKeys } from '../home/home-api.ts';
 import type { FastState } from '../island/ask-fast-path.ts';
@@ -94,7 +95,7 @@ function useLists(
         key: ticket.key,
         title: ticket.title,
       })),
-      sources: (sources ?? []).filter((entry) => entry.keySaved).map((entry) => entry.source),
+      sources: (sources ?? []).filter(ticketsFlowFrom).map((entry) => entry.source),
     }),
     [chats, projects, tickets, sources],
   );

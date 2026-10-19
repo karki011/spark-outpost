@@ -8,7 +8,7 @@ summary: Find what needs you in the Tickets inbox, start a chat from a ticket, a
 
 You'll start work from a ticket. About 2 minutes.
 
-First [connect Jira or Linear](tickets-and-github.md#connect-jira-or-linear).
+First [connect Atlassian or Linear](tickets-and-github.md#connect-atlassian-or-linear).
 
 ## Find your tickets
 

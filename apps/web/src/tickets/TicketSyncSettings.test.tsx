@@ -21,6 +21,10 @@ const jira: TicketConnection = {
   moveOnMerge: true,
   statusMap: {},
   moveStatuses: {},
+  atlassian: {
+    jira: { reach: 'reachable', on: true },
+    confluence: { reach: 'denied', on: false },
+  },
 };
 
 const steady = { choices: ['In Progress', 'In Review'], to: 'In Progress', problem: null };

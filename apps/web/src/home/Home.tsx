@@ -3,7 +3,7 @@ import './home-panels.css';
 import './home-needs.css';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ticketItemId, type ConversationSummary } from '@spark-outpost/contracts';
+import { ticketItemId, ticketsFlowFrom, type ConversationSummary } from '@spark-outpost/contracts';
 import { BlobScout, type ScoutMood } from '../brand/BlobScout.tsx';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
 import { queueDraft } from '../chat/composer/pending-draft.ts';
@@ -60,7 +60,7 @@ function useConnectHint() {
     queryKey: ticketKeys.connections,
     queryFn: ticketsApi.connections,
   });
-  const connected = (connections.data?.connections ?? []).some((entry) => entry.keySaved);
+  const connected = (connections.data?.connections ?? []).some(ticketsFlowFrom);
   return {
     show:
       attention.loaded && connections.isSuccess && !connected

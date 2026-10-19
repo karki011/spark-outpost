@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ticketSourceNames } from '@spark-outpost/contracts';
+import { ATLASSIAN_NAME, ticketSourceNames } from '@spark-outpost/contracts';
 import { ConnectorBlob, type ConnectorId } from '../brand/ConnectorBlob.tsx';
 import { BranchIcon } from '../ui/icons.tsx';
 import { activeLine } from '../ship/GitHubCard.tsx';
 import { githubApi, shipKeys } from '../ship/ship-api.ts';
+import { atlassianLine } from '../tickets/AtlassianCard.tsx';
 import { whereLine } from '../tickets/TicketSourceCard.tsx';
 import { ticketKeys, ticketsApi } from '../tickets/tickets-api.ts';
 import { gitLabel, gitStatusQuery } from './git-status.ts';
@@ -29,7 +30,7 @@ const NO_TOOLS: SummaryItem = {
   key: 'tools',
   icon: <span className="tools-dot" aria-hidden="true" />,
   title: <b>Connect tools anytime in Settings</b>,
-  detail: 'GitHub, Jira, and Linear',
+  detail: 'GitHub, Atlassian, and Linear',
 };
 
 export function useToolItems(): SummaryItem[] {
@@ -40,6 +41,10 @@ export function useToolItems(): SummaryItem[] {
   if (github.data?.active) items.push(toolItem('github', 'GitHub', activeLine(github.data)));
   for (const connection of tickets.data?.connections ?? []) {
     if (!connection.keySaved) continue;
+    if (connection.source === 'jira') {
+      items.push(toolItem('atlassian', ATLASSIAN_NAME, atlassianLine(connection)));
+      continue;
+    }
     const name = ticketSourceNames[connection.source];
     items.push(toolItem(connection.source, name, whereLine(connection)));
   }

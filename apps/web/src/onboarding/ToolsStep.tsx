@@ -5,6 +5,7 @@ import { CalendarCard } from '../calendar/CalendarCard.tsx';
 import { CALENDAR_PATH } from '../ui/icons.tsx';
 import { GitHubCard } from '../ship/GitHubCard.tsx';
 import { SLACK_DESCRIPTION, SlackCard } from '../slack/SlackCard.tsx';
+import { ATLASSIAN_DESCRIPTION, AtlassianCard } from '../tickets/AtlassianCard.tsx';
 import { TicketSourceCard } from '../tickets/TicketSourceCard.tsx';
 import { GitCheck } from './GitCheck.tsx';
 
@@ -48,9 +49,9 @@ export const connectors: Connector[] = [
     ),
   },
   {
-    id: 'jira',
-    name: 'Jira',
-    description: 'Sort your tickets, search every issue you can see, and start work from one.',
+    id: 'atlassian',
+    name: 'Atlassian',
+    description: ATLASSIAN_DESCRIPTION,
     icon: (
       <ToolIcon>
         <path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" />
@@ -106,7 +107,17 @@ export function ConnectorGrid() {
             />
           );
         }
-        if (connector.id === 'jira' || connector.id === 'linear') {
+        if (connector.id === 'atlassian') {
+          return (
+            <AtlassianCard
+              key={connector.id}
+              icon={connector.icon}
+              open={openId === connector.id}
+              onToggle={() => toggle(connector.id)}
+            />
+          );
+        }
+        if (connector.id === 'linear') {
           return (
             <TicketSourceCard
               key={connector.id}
@@ -142,8 +153,8 @@ export function ToolsStep() {
       <h2 id="onbTitle">Bring in your tools</h2>
       <p className="lede">
         Spark checks for Git first, since every Do chat works in its own git worktree. GitHub lets
-        Ship open pull requests. Jira and Linear bring your tickets into Spark. Slack notifies you
-        and shares threads.
+        Ship open pull requests. Atlassian and Linear bring your tickets into Spark. Slack notifies
+        you and shares threads.
       </p>
       <GitCheck />
       <ConnectorGrid />

@@ -5,7 +5,7 @@ import { anchorFor } from '../conversations/menu-anchor.ts';
 import { DotsIcon } from '../ui/icons.tsx';
 import type { RowsView } from './CalendarAccounts.tsx';
 import { CalendarName } from './CalendarName.tsx';
-import { DisconnectDialog, type DisconnectCopy } from './DisconnectDialog.tsx';
+import { DisconnectDialog, type DisconnectCopy } from '../connectors/DisconnectDialog.tsx';
 
 type Panel = 'choose' | 'edit';
 

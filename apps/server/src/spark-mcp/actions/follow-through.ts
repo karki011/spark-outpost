@@ -1,5 +1,6 @@
 import {
   applySparkEdits,
+  isAtlassianAction,
   isCalendarAction,
   type SparkAction,
   type SparkResult,
@@ -32,8 +33,9 @@ async function audit(
   action: SparkAction,
   result: SparkResult,
 ): Promise<void> {
-  const payload = isCalendarAction(action.action)
-    ? redactValue({ action: auditedAction(action), outcome: result.state })
+  const lean = isCalendarAction(action.action) || isAtlassianAction(action.action);
+  const payload = lean
+    ? redactValue({ action: auditedAction(action), outcome: result.state, url: result.url })
     : redactValue({ action, outcome: result.state, result });
   await insertFinishedRunEntries(deps.db, runId, [
     {

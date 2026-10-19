@@ -1,0 +1,70 @@
+.at-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.at-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+}
+
+.at-account p {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}
+
+.at-account small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.at-account .icon-btn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+}
+
+.at-account .icon-btn:hover,
+.at-account .icon-btn[aria-expanded='true'] {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.at-account .icon-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.at-products {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.at-sub {
+  margin: 6px 0 2px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.ctx.at-menu {
+  z-index: 110;
+}

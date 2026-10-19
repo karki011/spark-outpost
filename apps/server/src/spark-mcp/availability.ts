@@ -4,6 +4,7 @@ import { macRunRefusal } from '../mac-control/offered.ts';
 import { outpostNeeds } from '../outposts/outpost-availability.ts';
 import { gitHubStatus } from '../ship/github/access.ts';
 import { openSlack } from '../slack/connection.ts';
+import { productLive } from '../atlassian/session.ts';
 import { connectedSources } from '../tickets/connections.ts';
 import {
   gitHubDepsFor,
@@ -29,6 +30,8 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   outpost_draft: true,
   calendar_read: true,
   calendar_edit: true,
+  jira: true,
+  confluence: true,
 };
 
 async function chatHasProject(deps: SparkToolDeps, scope: SparkScope): Promise<boolean> {
@@ -47,14 +50,18 @@ export async function sparkAvailability(
   deps: SparkToolDeps,
   scope: SparkScope,
 ): Promise<SparkAvailability> {
-  const [sources, slack, project, outposts, macRefused, calendar] = await Promise.all([
-    connectedSources(ticketDepsFor(deps, scope)),
-    openSlack(slackDepsFor(deps, scope)),
-    chatHasProject(deps, scope),
-    outpostNeeds(deps.db, scope),
-    deps.mac ? macRunRefusal(deps.db, scope) : Promise.resolve('off' as const),
-    calendarOffer(deps, scope),
-  ]);
+  const tickets = ticketDepsFor(deps, scope);
+  const [sources, slack, project, outposts, macRefused, calendar, jira, confluence] =
+    await Promise.all([
+      connectedSources(tickets),
+      openSlack(slackDepsFor(deps, scope)),
+      chatHasProject(deps, scope),
+      outpostNeeds(deps.db, scope),
+      deps.mac ? macRunRefusal(deps.db, scope) : Promise.resolve('off' as const),
+      calendarOffer(deps, scope),
+      productLive(tickets, 'jira'),
+      productLive(tickets, 'confluence'),
+    ]);
   const gitHub = project ? await gitHubReach(deps, scope) : { connected: false, ownLogin: false };
   return {
     tickets: sources.length > 0,
@@ -67,6 +74,8 @@ export async function sparkAvailability(
     mac: macRefused === null,
     calendar_read: calendar.read,
     calendar_edit: calendar.edit,
+    jira,
+    confluence,
     ...outposts,
   };
 }
@@ -82,10 +91,12 @@ const HOW_TO_GET: Record<
     | 'outpost_draft'
     | 'calendar_read'
     | 'calendar_edit'
+    | 'jira'
   >,
   string
 > = {
-  tickets: 'ticket tools (connect Jira or Linear in Settings → Connectors)',
+  tickets: 'ticket tools (connect Atlassian or Linear in Settings → Connectors)',
+  confluence: 'Confluence tools (turn Confluence on in Atlassian)',
   slack: 'Slack tools (connect Slack in Settings → Connectors)',
   pull_requests:
     'pull request tools (connect GitHub in Settings → Connectors and link a project to the chat)',

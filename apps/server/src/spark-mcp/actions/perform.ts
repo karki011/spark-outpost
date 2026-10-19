@@ -16,6 +16,11 @@ import {
 } from './ticket-actions.ts';
 import { performPostSlack } from './slack-actions.ts';
 import { performCalendarEdit } from './calendar-actions.ts';
+import {
+  performAtlassianRead,
+  performConfluenceEdit,
+  performJiraEdit,
+} from './atlassian-perform.ts';
 import type { Performed } from './performed.ts';
 
 export const OPEN_PR_RETIRED =
@@ -91,6 +96,12 @@ export function performSparkAction(
       });
     case 'calendar_edit':
       return performCalendarEdit(context, action);
+    case 'atlassian_read':
+      return performAtlassianRead(action);
+    case 'jira_edit':
+      return performJiraEdit(context, action);
+    case 'confluence_edit':
+      return performConfluenceEdit(context, action);
     case 'pr_follow_up':
       return Promise.reject(new Error('PR feedback is pushed by the follow-up round.'));
   }

@@ -31,7 +31,9 @@ export type SparkToolNeed =
   | 'outpost'
   | 'outpost_draft'
   | 'calendar_read'
-  | 'calendar_edit';
+  | 'calendar_edit'
+  | 'jira'
+  | 'confluence';
 
 export interface SparkTool {
   name: string;

@@ -70,6 +70,18 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     'add|create|schedule|book|put|move|reschedule|shift|change|update|rename|edit|delete|remove|cancel|set',
     'calendar|events?|meetings?|appointments?|blocks?|reminders?|alarms?|alerts?|today|tomorrow|tonight|\\d{1,2}:\\d{2}|\\d{1,2} ?(?:am|pm)',
   ),
+  atlassian_read: asked(
+    'read|look|check|see|find|search|show|list|summari[sz]e|open|query',
+    'jira|jql|confluence|cql|wiki|pages?|docs?|spaces?|tickets?|issues?|[A-Z][A-Z0-9]+-\\d+',
+  ),
+  jira_edit: asked(
+    'change|update|edit|rename|retitle|rewrite|set|fix|delete|remove|label|reprioriti[sz]e',
+    'tickets?|issues?|comments?|[A-Z][A-Z0-9]+-\\d+|summary|description|labels?|priority',
+  ),
+  confluence_edit: asked(
+    'create|write|add|draft|publish|change|update|edit|rename|rewrite|delete|remove|trash|comment|post',
+    'confluence|wiki|pages?|docs?|comments?',
+  ),
 };
 
 export function explicitlyAsked(action: SparkActionName, request: string): boolean {

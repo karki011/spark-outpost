@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import {
   SPARK_ACTION_KIND,
+  atlassianAuditFacts,
+  atlassianCardSubject,
   calendarAuditFacts,
+  isAtlassianAction,
   isCalendarAction,
   SPARK_ACTION_OPTION,
   sparkActionLabels,
@@ -37,6 +40,8 @@ const SENDS_TO: Partial<Record<SparkAction['action'], string>> = {
   transition_ticket: 'to your ticket tracker',
   assign_ticket: 'to your ticket tracker',
   post_slack: 'to Slack',
+  jira_edit: 'to Jira',
+  confluence_edit: 'to Confluence',
 };
 
 export interface ActionRun {
@@ -72,7 +77,10 @@ function cardTitle(action: SparkAction): string {
   ) {
     return question;
   }
-  if (action.action === 'calendar_read') return question;
+  if (action.action === 'calendar_read' || action.action === 'atlassian_read') return question;
+  if (action.action === 'jira_edit' || action.action === 'confluence_edit') {
+    return `${question} ${atlassianCardSubject(action)}`;
+  }
   if (action.action === 'calendar_edit') {
     return `${question} ${action.after?.title ?? action.before?.title ?? ''}`.trim();
   }
@@ -154,6 +162,7 @@ export function auditedAction(action: SparkAction): unknown {
   if (action.action === 'calendar_read' || action.action === 'calendar_edit') {
     return calendarAuditFacts(action);
   }
+  if (isAtlassianAction(action.action)) return atlassianAuditFacts(action as never);
   return action;
 }
 
@@ -233,7 +242,9 @@ export async function proposeAction(
   auditAction(run, action, {
     outcome: 'performing',
     approvalId: card.id,
-    ...(isCalendarAction(action.action) ? { ranWithoutReview: true } : {}),
+    ...(isCalendarAction(action.action) || isAtlassianAction(action.action)
+      ? { ranWithoutReview: true }
+      : {}),
   });
   const target = options.sendsTo === undefined ? SENDS_TO[action.action] : options.sendsTo;
   if (target && observed.length > 0) {

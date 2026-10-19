@@ -23,14 +23,14 @@ test.beforeEach(async () => {
   await resetTicketFakes();
 });
 
-test('Settings connects Jira after a visible check and collapses into a summary', async ({
+test('Settings connects Atlassian after a visible check and collapses into a summary', async ({
   page,
 }) => {
   await openConnectors(page);
   const cards = page.locator('.cgrid > li');
-  await expect(cards.nth(1)).toHaveAttribute('data-connector', 'jira');
+  await expect(cards.nth(1)).toHaveAttribute('data-connector', 'atlassian');
   await expect(cards.nth(3)).toHaveAttribute('data-connector', 'slack');
-  const jira = connectorCard(page, 'jira');
+  const jira = connectorCard(page, 'atlassian');
   await expect(connectorHead(jira)).toHaveAttribute('aria-expanded', 'false');
   await expect(connectorHead(connectorCard(page, 'linear'))).toHaveAttribute(
     'aria-expanded',
@@ -43,7 +43,7 @@ test('Settings connects Jira after a visible check and collapses into a summary'
     'aria-expanded',
     'false',
   );
-  const form = jira.getByRole('form', { name: 'Connect Jira' });
+  const form = jira.getByRole('form', { name: 'Connect Atlassian' });
   await expect(form.getByLabel('Site URL')).toBeFocused();
   const tokenLink = form.getByRole('link', { name: /Create an API token/ });
   await expect(tokenLink).toHaveAttribute(
@@ -65,27 +65,27 @@ test('Settings connects Jira after a visible check and collapses into a summary'
 
   const started = Date.now();
   await form.getByRole('button', { name: 'Save and check' }).click();
-  await expect(form.getByRole('status')).toHaveText('Checking with Jira…');
+  await expect(form.getByRole('status')).toHaveText('Checking with Atlassian…');
   await expect(form.locator('.cb[data-mood="checking"]')).toBeVisible();
   await expect(form.getByRole('status')).toHaveText('Connected!');
   expect(Date.now() - started).toBeGreaterThanOrEqual(MIN_CHECK_MS);
   await expect(form.locator('.cb[data-mood="happy"]')).toBeVisible();
 
   await expect(form).toBeHidden();
-  await expect(connectorStatus(jira)).toHaveText(`Connected to ${STUB_URL} as ${JIRA_EMAIL}`);
+  await expect(connectorStatus(jira)).toHaveText(`${STUB_URL} · ${JIRA_EMAIL}`);
   await expect(jira.locator('.pill-ok')).toHaveText('Connected');
   await expect(jira).not.toContainText(JIRA_TOKEN);
 });
 
-test('a rejected Jira token shows a sad check and the error next to the token', async ({
+test('a rejected Atlassian token shows a sad check and the error next to the token', async ({
   page,
 }) => {
   await openConnectors(page);
-  const jira = connectorCard(page, 'jira');
+  const jira = connectorCard(page, 'atlassian');
   await connectorHead(jira).click();
-  const form = jira.getByRole('form', { name: 'Connect Jira' });
+  const form = jira.getByRole('form', { name: 'Connect Atlassian' });
   await form.getByRole('button', { name: 'Save and check' }).click();
-  await expect(form.getByRole('alert')).toContainText('Use your Jira site address');
+  await expect(form.getByRole('alert')).toContainText('Use your Atlassian site address');
   await expect(form.getByLabel('Site URL')).toBeFocused();
   await expect(form.locator('.cb')).toHaveCount(0);
 
@@ -97,8 +97,8 @@ test('a rejected Jira token shows a sad check and the error next to the token', 
   const token = form.getByLabel('API token');
   await expect(token).toHaveAttribute('aria-invalid', 'true');
   await expect(token).toBeFocused();
-  await expect(form.getByRole('alert')).toContainText('Jira rejected this key (401)');
-  await expect(token).toHaveAccessibleDescription(/Jira rejected this key/);
+  await expect(form.getByRole('alert')).toContainText('Atlassian rejected this token (401)');
+  await expect(token).toHaveAccessibleDescription(/Atlassian rejected this token/);
 
   await token.fill(JIRA_TOKEN);
   await expect(form.locator('.cb')).toHaveCount(0);
@@ -109,10 +109,11 @@ test('a rejected Jira token shows a sad check and the error next to the token', 
 test('Disconnect waits for Undo, and the ticket update switches save @packaged', async ({
   page,
 }) => {
-  await connectTickets(page, ['jira']);
+  await connectTickets(page, ['linear']);
   await openConnectors(page);
-  const jira = connectorCard(page, 'jira');
-  await expect(connectorStatus(jira)).toHaveText(`Connected to ${STUB_URL} as ${JIRA_EMAIL}`);
+  const jira = connectorCard(page, 'linear');
+  const connected = /^Connected to Linear as /;
+  await expect(connectorStatus(jira)).toHaveText(connected);
 
   await connectorHead(jira).click();
   const merge = jira.getByRole('switch', { name: 'Move tickets to Done when the PR merges' });
@@ -123,15 +124,17 @@ test('Disconnect waits for Undo, and the ticket update switches save @packaged',
 
   await jira.getByRole('button', { name: 'Disconnect' }).click();
   const grace = page.locator('.toast.grace');
-  await expect(grace).toContainText('Disconnecting Jira…');
-  await expect(connectorStatus(jira)).toHaveText('Disconnecting Jira…');
+  await expect(grace).toContainText('Disconnecting Linear…');
+  await expect(connectorStatus(jira)).toHaveText('Disconnecting Linear…');
   await grace.getByRole('button', { name: 'Undo' }).click();
   await expect(grace).toBeHidden();
-  await expect(connectorStatus(jira)).toHaveText(`Connected to ${STUB_URL} as ${JIRA_EMAIL}`);
+  await expect(connectorStatus(jira)).toHaveText(connected);
   expect(await connections(page)).toHaveLength(1);
 
   await jira.getByRole('button', { name: 'Disconnect' }).click();
-  await expect(jira.getByRole('form', { name: 'Connect Jira' })).toBeVisible({ timeout: 10_000 });
+  await expect(jira.getByRole('form', { name: 'Connect Linear' })).toBeVisible({
+    timeout: 10_000,
+  });
   await expect(jira.locator('.pill-ok')).toHaveCount(0);
   expect(await connections(page)).toEqual([]);
 });
@@ -149,7 +152,7 @@ test('The status pickers list real statuses, warn when unclear, and a choice cha
   });
   await connectTickets(page, ['jira']);
   await openConnectors(page);
-  const jira = connectorCard(page, 'jira');
+  const jira = connectorCard(page, 'atlassian');
   await connectorHead(jira).click();
 
   const doneNotes = jira.getByRole('list', { name: 'Done status by project' });
