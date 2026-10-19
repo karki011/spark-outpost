@@ -51,6 +51,7 @@ function TodayViews(props: TodayProps) {
   const [picked, setPicked] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [flash, setFlash] = useState(0);
+  const [requested, setRequested] = useState<TodayEventRequest | null>(null);
   const date = picked ?? today;
   const pickDate = useCallback(
     (next: string) => setPicked(next === localDate(Date.now()) ? null : next),
@@ -68,6 +69,7 @@ function TodayViews(props: TodayProps) {
     (request: TodayEventRequest) => {
       pickDate(request.date ?? localDate(Date.now()));
       setSelected(request.eventKey);
+      setRequested(request);
       setFlash((count) => count + 1);
       setView('day');
     },
@@ -93,6 +95,7 @@ function TodayViews(props: TodayProps) {
         now={now}
         selected={selected}
         flash={flash}
+        requested={requested?.date === date ? requested.eventKey : null}
         switcher={switcher}
         onDate={pickDate}
         onSelect={setSelected}

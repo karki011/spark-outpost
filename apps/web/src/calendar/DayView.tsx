@@ -52,6 +52,7 @@ interface DayViewProps extends TodayProps {
   now: number;
   selected: string | null;
   flash: number;
+  requested: string | null;
   switcher: ReactNode;
   onDate: (date: string) => void;
   onSelect: (eventKey: string | null) => void;
@@ -66,6 +67,7 @@ export function DayView({
   now,
   selected,
   flash,
+  requested,
   switcher,
   onDate,
   onSelect,
@@ -150,7 +152,7 @@ export function DayView({
           />
         </section>
         <div className="td-side">
-          {!event && selected && settled ? (
+          {!event && selected !== null && selected === requested && settled ? (
             <section className="hpanel td-none" aria-labelledby="td-gone-h">
               <h2 id="td-gone-h">Event not found</h2>
               <p className="td-hint" role="status">
