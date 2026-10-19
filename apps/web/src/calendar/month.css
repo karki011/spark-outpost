@@ -287,11 +287,25 @@
   background: var(--panel);
 }
 
+.mo-ev[data-selected] {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
 .mo-cell[data-past] .mo-ev,
 .mo-cell[data-past] .mo-at,
 .mo-cell[data-out] .mo-ev,
 .mo-cell[data-out] .mo-at {
   color: var(--faint);
+}
+
+.mo-ev[data-ended],
+.mo-ev[data-ended] .mo-at {
+  color: var(--faint);
+}
+
+.mo-ev[data-ended]::before {
+  opacity: 0.45;
 }
 
 .mo-cell[data-past] .mo-ev::before {

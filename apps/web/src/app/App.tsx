@@ -77,7 +77,7 @@ import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { useShareOnScreenChat } from '../island/on-screen-chat.ts';
 import { startIdleMotion } from './idle-motion.ts';
 import '../ui/controls.css';
-import { requestTodayEvent } from '../calendar/today-request.ts';
+import { openTodayEvent, useTodayOpener } from '../calendar/today-request.ts';
 
 const StableChatView = memo(ChatView);
 
@@ -202,14 +202,11 @@ function ChatShell({ entering }: { entering: boolean }) {
   );
   useChatRequests(openChat);
   const startCalendarChat = useStableCallback((text: string) => queueDraft(startDraft(), text));
-  const openTodayEvent = useCallback(
-    (eventKey: string) => {
-      setSettings(null);
-      setView('today');
-      requestTodayEvent(eventKey);
-    },
-    [setSettings, setView],
-  );
+  const showToday = useCallback(() => {
+    setSettings(null);
+    setView('today');
+  }, [setSettings, setView]);
+  useTodayOpener(showToday);
   useSlackPresence(remote);
   useNotificationChats(remote, openChat);
   useEffect(() => sparkDesktop()?.help?.onOpenFeedback(requestFeedback), []);
@@ -239,7 +236,7 @@ function ChatShell({ entering }: { entering: boolean }) {
         requestSettingFocus(SHOW_ISLAND_LABEL);
         setSettings('notifications');
       }),
-    [setSettings, openTodayEvent],
+    [setSettings],
   );
 
   const openAtCard = (chat: ConversationSummary) => {

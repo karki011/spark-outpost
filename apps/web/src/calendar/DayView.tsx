@@ -21,6 +21,8 @@ import {
   visibleEvents,
 } from './today-model.ts';
 import { useCalendarDay } from './use-calendar.ts';
+import { useRevealEvent } from './use-reveal-event.ts';
+import { eventEnds, useEventClock } from './event-clock.ts';
 import { CalendarFilters, WeekStrip } from './WeekStrip.tsx';
 
 export interface TodayProps {
@@ -49,6 +51,7 @@ interface DayViewProps extends TodayProps {
   today: string;
   now: number;
   selected: string | null;
+  flash: number;
   switcher: ReactNode;
   onDate: (date: string) => void;
   onSelect: (eventKey: string | null) => void;
@@ -62,6 +65,7 @@ export function DayView({
   today,
   now,
   selected,
+  flash,
   switcher,
   onDate,
   onSelect,
@@ -75,6 +79,10 @@ export function DayView({
   const overlaps = useOverlaps(day, isToday, now, chats);
   const calendars = useMemo(() => calendarMap(day?.calendars), [day]);
   const clashes = useMemo(() => clashMap(day?.events), [day]);
+  const ends = useMemo(() => eventEnds(day?.events ?? []), [day]);
+  const clock = Math.max(now, useEventClock(ends, query.dataUpdatedAt));
+  const settled = day !== undefined && day.date === date && !stale;
+  useRevealEvent(selected, flash, settled);
   const pick = (next: string) => {
     onDate(next);
     onSelect(null);
@@ -134,14 +142,22 @@ export function DayView({
             gaps={noGaps(shown)}
             overlaps={new Set(overlaps.map((overlap) => overlap.event.key))}
             clashes={clashes}
-            now={isToday ? now : null}
+            now={isToday ? clock : null}
+            clock={clock}
             selected={selected}
             panelId={panelId}
             onSelect={onSelect}
           />
         </section>
         <div className="td-side">
-          {event ? (
+          {!event && selected && settled ? (
+            <section className="hpanel td-none" aria-labelledby="td-gone-h">
+              <h2 id="td-gone-h">Event not found</h2>
+              <p className="td-hint" role="status">
+                This event is no longer on your calendar.
+              </p>
+            </section>
+          ) : event ? (
             <EventPanel
               key={event.key}
               id={panelId}

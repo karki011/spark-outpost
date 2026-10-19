@@ -8,6 +8,7 @@ import {
   type CalendarEvent,
 } from '@spark-outpost/contracts';
 import { WarnIcon } from '../ui/icons.tsx';
+import { hasEnded } from './event-clock.ts';
 import { clock, span as spanText } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
 import { block, HOUR_PX, hourMarks, offset, placeEvents } from './timeline-model.ts';
@@ -27,6 +28,7 @@ interface DayTimelineProps {
   overlaps: ReadonlySet<string>;
   clashes: ReadonlyMap<string, readonly string[]>;
   now: number | null;
+  clock: number;
   selected: string | null;
   panelId: string;
   onSelect: (key: string) => void;
@@ -53,6 +55,7 @@ function EventBlock(props: {
   lane: number;
   lanes: number;
   span: number;
+  ended: boolean;
   timeline: TimelineSpan;
   calendars: ReadonlyMap<string, CalendarChoice>;
   clashes: readonly string[];
@@ -83,6 +86,8 @@ function EventBlock(props: {
     <button
       type="button"
       className="tl-ev"
+      data-event-key={event.key}
+      data-ended={props.ended || undefined}
       data-kind={kind}
       data-overlap={props.overlap || undefined}
       data-short={short || undefined}
@@ -139,6 +144,7 @@ function AllDayEvents(props: DayTimelineProps) {
             <button
               type="button"
               className="tl-allday-ev"
+              data-event-key={event.key}
               style={swatch(calendar?.color ?? '') as CSSProperties}
               aria-expanded={selected}
               aria-controls={selected ? props.panelId : undefined}
@@ -173,6 +179,9 @@ function TimedEvents(props: DayTimelineProps) {
           <span>{clock(at)}</span>
         </div>
       ))}
+      {now !== null && now > span.start && (
+        <div className="tl-past" style={{ height: offset(now, span) }} aria-hidden="true" />
+      )}
       <div className="tl-lane">
         {props.free.map((free) => {
           const place = block(free.start, free.end, span);
@@ -194,6 +203,7 @@ function TimedEvents(props: DayTimelineProps) {
             lane={lane}
             lanes={lanes}
             span={share}
+            ended={hasEnded(event, props.clock)}
             timeline={span}
             calendars={props.calendars}
             clashes={props.clashes.get(event.key) ?? NO_CLASHES}

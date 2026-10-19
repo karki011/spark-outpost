@@ -110,6 +110,12 @@
   background: var(--accent-soft);
 }
 
+.rl-card[data-selected] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
 .rl-card[data-free] {
   border-style: dashed;
 }

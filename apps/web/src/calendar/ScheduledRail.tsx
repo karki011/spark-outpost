@@ -23,6 +23,7 @@ interface ScheduledRailProps {
   calendars: ReadonlyMap<string, CalendarChoice>;
   clashes: ReadonlyMap<string, readonly string[]>;
   loading: boolean;
+  selected: string | null;
   width: number | null;
   onWidth: (width: number | null) => void;
   onDate: (date: string) => void;
@@ -112,6 +113,7 @@ export function ScheduledRail(props: ScheduledRailProps) {
                 clashes={clashes.get(item.event.key)}
                 now={now}
                 isToday={isToday}
+                selected={item.event.key === props.selected}
                 onOpen={props.onOpenEvent}
               />
             ),

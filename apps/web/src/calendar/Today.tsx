@@ -12,7 +12,7 @@ import { MonthView } from './MonthView.tsx';
 import { TodayStatePage } from './TodayStates.tsx';
 import { todayState } from './today-model.ts';
 import { localDate, useCalendarStatus } from './use-calendar.ts';
-import { useTodayEventRequests } from './today-request.ts';
+import { useTodayEventRequests, type TodayEventRequest } from './today-request.ts';
 
 type CalendarView = 'month' | 'day';
 
@@ -50,6 +50,7 @@ function TodayViews(props: TodayProps) {
   const [view, setView] = useCalendarView();
   const [picked, setPicked] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [flash, setFlash] = useState(0);
   const date = picked ?? today;
   const pickDate = useCallback(
     (next: string) => setPicked(next === localDate(Date.now()) ? null : next),
@@ -64,12 +65,13 @@ function TodayViews(props: TodayProps) {
     [pickDate, setView],
   );
   const showEvent = useCallback(
-    (eventKey: string) => {
-      setPicked(null);
-      setSelected(eventKey);
+    (request: TodayEventRequest) => {
+      pickDate(request.date ?? localDate(Date.now()));
+      setSelected(request.eventKey);
+      setFlash((count) => count + 1);
       setView('day');
     },
-    [setView],
+    [pickDate, setView],
   );
   useTodayEventRequests(showEvent);
   const switcher = (
@@ -90,6 +92,7 @@ function TodayViews(props: TodayProps) {
         today={today}
         now={now}
         selected={selected}
+        flash={flash}
         switcher={switcher}
         onDate={pickDate}
         onSelect={setSelected}

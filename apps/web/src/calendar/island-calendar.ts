@@ -7,6 +7,8 @@ import type {
 import type { Chime } from '../island/island-sound.ts';
 import { countLabel } from '../ui/count-label.ts';
 import { clock, minutesUntil } from './calendar-format.ts';
+import { stillOn } from './event-clock.ts';
+import { nudgeHidden, type NudgeMarks } from './nudge-marks.ts';
 import { joinTarget } from './today-model.ts';
 
 export interface HeldTally {
@@ -29,6 +31,7 @@ export interface CalendarLine {
   key: string;
   eventKey: string | null;
   text: string;
+  event: CalendarEvent | null;
   join: CalendarEvent | null;
   choose: CalendarEvent[] | null;
   capture: CalendarCapture | null;
@@ -41,6 +44,7 @@ export interface CalendarLineInput {
   waiting: number;
   catchUp: CatchUp | null;
   dismissed: ReadonlySet<string>;
+  marks: NudgeMarks;
 }
 
 export function tallyHeld(tally: HeldTally, chime: Chime): HeldTally {
@@ -101,6 +105,7 @@ function holdLine(now: CalendarNow, join: CalendarEvent | null): CalendarLine | 
     key: `hold:${hold.eventKey}`,
     eventKey: hold.eventKey,
     text: `${label} · alerts held until ${clock(Date.parse(hold.until))}`,
+    event: null,
     join,
     choose: null,
     capture: null,
@@ -116,6 +121,7 @@ function captureLine(now: CalendarNow, dismissed: ReadonlySet<string>): Calendar
     key: `capture:${capture.eventKey}`,
     eventKey: capture.eventKey,
     text: `${capture.title} ended · anything to capture?`,
+    event: null,
     join: null,
     choose: null,
     capture,
@@ -123,14 +129,15 @@ function captureLine(now: CalendarNow, dismissed: ReadonlySet<string>): Calendar
   };
 }
 
-function joinLine(now: CalendarNow, at: number): CalendarLine | null {
-  const target = joinTarget(now.upcoming, at);
-  if (!target?.link) return null;
+function joinLine(now: CalendarNow, input: CalendarLineInput): CalendarLine | null {
+  const target = joinTarget(stillOn(now.upcoming, input.at), input.at);
+  if (!target?.link || nudgeHidden(input.marks, target.key, input.at)) return null;
   return {
     kind: 'join',
     key: `join:${target.key}`,
     eventKey: target.key,
-    text: startsIn(target.title, target.start, at),
+    text: startsIn(target.title, target.start, input.at),
+    event: target,
     join: target,
     choose: null,
     capture: null,
@@ -155,6 +162,7 @@ function catchUpLine(text: string): CalendarLine {
     key: 'catch-up',
     eventKey: null,
     text,
+    event: null,
     join: null,
     choose: null,
     capture: null,
@@ -162,28 +170,44 @@ function catchUpLine(text: string): CalendarLine {
   };
 }
 
-function nudgeLine(now: CalendarNow, nudge: CalendarNudge, input: CalendarLineInput): CalendarLine {
+function liveNudge(now: CalendarNow, nudge: CalendarNudge, at: number): CalendarNudge | null {
+  if (nudge.kind === 'wrap_up') return nudge;
+  const fallback = meetingOf(now, nudge.eventKey);
+  const members = nudge.group.length > 0 ? nudge.group : fallback ? [fallback] : [];
+  if (members.length === 0) return nudge;
+  const group = stillOn(members, at);
+  if (group.length === 0) return null;
+  const lead = group.find((event) => event.key === nudge.eventKey) ?? group[0]!;
+  return { ...nudge, eventKey: lead.key, title: lead.title, startsAt: lead.start, group };
+}
+
+function nudgeLine(now: CalendarNow, shown: CalendarNudge, input: CalendarLineInput) {
+  const nudge = liveNudge(now, shown, input.at);
+  if (!nudge) return null;
   const group = nudgeGroupOf(nudge);
   const text = nudgeText(nudge, input.at, input.waiting);
   if (group.length > 1) {
     return {
-      kind: 'nudge',
+      kind: 'nudge' as const,
       key: `${nudge.kind}:${nudge.eventKey}:${group.length}`,
       eventKey: nudge.eventKey,
       text,
+      event: null,
       join: null,
       choose: group,
       capture: null,
       dismiss: null,
     };
   }
+  if (nudgeHidden(input.marks, nudge.eventKey, input.at)) return null;
   const nudged = meetingOf(now, nudge.eventKey);
   return {
-    kind: 'nudge',
+    kind: 'nudge' as const,
     key: `${nudge.kind}:${nudge.eventKey}`,
     eventKey: nudge.eventKey,
     text,
-    join: nudged?.link ? nudged : joinTarget(now.upcoming, input.at),
+    event: nudged,
+    join: nudged?.link ? nudged : joinTarget(stillOn(now.upcoming, input.at), input.at),
     choose: null,
     capture: null,
     dismiss: null,
@@ -194,11 +218,12 @@ export function calendarLine(input: CalendarLineInput): CalendarLine | null {
   const { now, at } = input;
   const caughtUp = input.catchUp ? catchUpText(input.catchUp) : null;
   if (!now?.active) return caughtUp ? catchUpLine(caughtUp) : null;
-  if (now.nudge) return nudgeLine(now, now.nudge, input);
-  const held = holdLine(now, joinTarget(now.upcoming, at));
+  const nudged = now.nudge ? nudgeLine(now, now.nudge, input) : null;
+  if (nudged) return nudged;
+  const held = holdLine(now, joinTarget(stillOn(now.upcoming, at), at));
   if (held) return held;
   if (caughtUp) return catchUpLine(caughtUp);
   const capture = captureLine(now, input.dismissed);
   if (capture) return capture;
-  return joinLine(now, at);
+  return joinLine(now, input);
 }

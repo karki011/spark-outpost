@@ -11,6 +11,7 @@ import type { CalendarChoice, CalendarEvent } from '@spark-outpost/contracts';
 import { countLabel } from '../ui/count-label.ts';
 import { clock, dayTitle } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
+import { hasEnded } from './event-clock.ts';
 import { MoreEvents } from './MoreEvents.tsx';
 import { keyMove, preview, type MonthCell, type MonthGridModel } from './month-model.ts';
 import { useTitlesThatFit } from './use-titles-fit.ts';
@@ -24,6 +25,8 @@ interface MonthGridProps {
   byDay: ReadonlyMap<string, CalendarEvent[]>;
   calendars: ReadonlyMap<string, CalendarChoice>;
   loading: boolean;
+  selected: string | null;
+  now: number;
   weekStart: number;
   onDate: (date: string) => void;
   onOpenDay: (date: string) => void;
@@ -57,6 +60,8 @@ interface CellProps {
   selected: boolean;
   limit: number;
   calendars: ReadonlyMap<string, CalendarChoice>;
+  openKey: string | null;
+  now: number;
   onDate: (date: string) => void;
   onOpenDay: (date: string) => void;
   onOpenEvent: (event: CalendarEvent, anchor: HTMLElement) => void;
@@ -68,6 +73,8 @@ const DayCell = memo(function DayCell({
   selected,
   limit,
   calendars,
+  openKey,
+  now,
   ...actions
 }: CellProps) {
   const { shown, more } = preview(events, limit);
@@ -103,6 +110,8 @@ const DayCell = memo(function DayCell({
             aria-hidden="true"
             className="mo-ev"
             data-focus={event.focus || undefined}
+            data-selected={event.key === openKey || undefined}
+            data-ended={hasEnded(event, now) || undefined}
             style={swatch(calendars.get(event.calendarKey)?.color ?? '') as CSSProperties}
             title={eventLabel(event)}
             onClick={openEvent(event)}
@@ -195,6 +204,8 @@ export function MonthGrid(props: MonthGridProps) {
                 selected={cell.date === date}
                 limit={limit}
                 calendars={props.calendars}
+                openKey={cell.date === date ? props.selected : null}
+                now={props.now}
                 onDate={onDate}
                 onOpenDay={onOpenDay}
                 onOpenEvent={props.onOpenEvent}

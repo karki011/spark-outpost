@@ -12,7 +12,17 @@ import {
   type CatchUp,
   type HeldTally,
 } from './island-calendar.ts';
+import { eventEnds, stillOn, useEventClock } from './event-clock.ts';
+import {
+  dismissNudge,
+  NO_NUDGE_MARKS,
+  purgeMarks,
+  snoozeEnds,
+  snoozeNudge,
+  type NudgeMarks,
+} from './nudge-marks.ts';
 import { todayState } from './today-model.ts';
+import { openTodayEvent } from './today-request.ts';
 import { useCalendarNow, useCalendarStatus } from './use-calendar.ts';
 
 const NO_MEETINGS: readonly CalendarEvent[] = [];
@@ -21,7 +31,7 @@ const NO_CLASHES: ReadonlyMap<string, readonly string[]> = new Map();
 function openToday(eventKey: string): void {
   const desktop = sparkDesktop();
   if (desktop?.island.openSettings) desktop.island.openSettings(`today:${eventKey}`);
-  else window.open('/', '_blank', 'noopener');
+  else openTodayEvent(eventKey);
 }
 
 const DISMISSED_KEY = 'spark-outpost.calendar-capture-dismissed';
@@ -58,6 +68,8 @@ export interface IslandCalendar {
   onChoose: (line: CalendarLine) => void;
   onCapture: (line: CalendarLine) => void;
   onDismiss: (line: CalendarLine) => void;
+  onSnooze: (event: CalendarEvent) => void;
+  onDismissNudge: (event: CalendarEvent) => void;
 }
 
 function useHeldChimes(holdLabel: string | null) {
@@ -107,16 +119,30 @@ function useChoosing(home: IslandHomePanel) {
   return { choosing: home.open ? choosing : null, choose };
 }
 
+function useNudgeClock(live: ReturnType<typeof useCalendarNow>['data'] | null, updatedAt: number) {
+  const [marks, setMarks] = useState<NudgeMarks>(NO_NUDGE_MARKS);
+  const times = useMemo(() => {
+    const nudged = live?.nudge && live.nudge.kind !== 'wrap_up' ? live.nudge.group : [];
+    return [...eventEnds([...(live?.upcoming ?? []), ...nudged]), ...snoozeEnds(marks)];
+  }, [live, marks]);
+  const clock = useEventClock(times, updatedAt);
+  const kept = purgeMarks(marks, clock);
+  if (kept !== marks) setMarks(kept);
+  return { marks: kept, clock, setMarks };
+}
+
 export function useIslandCalendar(
-  at: number,
+  minute: number,
   waiting: number,
   onQuickChat: (text: string) => void,
   home: IslandHomePanel,
 ): IslandCalendar {
   const status = useCalendarStatus();
   const ready = status.data !== undefined && todayState(status.data) === 'ready';
-  const now = useCalendarNow(ready).data ?? null;
-  const live = ready ? now : null;
+  const nowQuery = useCalendarNow(ready);
+  const live = ready ? (nowQuery.data ?? null) : null;
+  const nudges = useNudgeClock(live, nowQuery.dataUpdatedAt);
+  const at = Math.max(minute, nudges.clock);
   const holdLabel = live?.hold ? (live.hold.focus ? 'Focus' : live.hold.title) : null;
   const held = useHeldChimes(holdLabel);
   const [dismissed, setDismissed] = useState(readDismissed);
@@ -126,7 +152,14 @@ export function useIslandCalendar(
       saveDismissed(next);
       return next;
     });
-  const line = calendarLine({ now: live, at, waiting, catchUp: held.catchUp, dismissed });
+  const line = calendarLine({
+    now: live,
+    at,
+    waiting,
+    catchUp: held.catchUp,
+    dismissed,
+    marks: nudges.marks,
+  });
   const { choosing, choose } = useChoosing(home);
   const clashes = useMemo(
     () =>
@@ -142,13 +175,19 @@ export function useIslandCalendar(
     line,
     hold: held.hold,
     at,
-    upcoming: live?.upcoming ?? NO_MEETINGS,
+    upcoming: live ? stillOn(live.upcoming, at) : NO_MEETINGS,
     clashes,
     choosing,
     calendarName: (event) => names.get(event.calendarKey) ?? 'Calendar',
     hopKeys: hopKeys(live),
     onOpenEvent: (eventKey) => openToday(eventKey),
     onChoose: choose,
+    onSnooze: (event) =>
+      nudges.setMarks((current) =>
+        snoozeNudge(current, event.key, Date.parse(event.end), Date.now()),
+      ),
+    onDismissNudge: (event) =>
+      nudges.setMarks((current) => dismissNudge(current, event.key, Date.parse(event.end))),
     onDismiss: (shown) => {
       if (shown.dismiss === 'catch_up') held.clearCatchUp();
       if (shown.capture) dismiss(shown.capture.eventKey);

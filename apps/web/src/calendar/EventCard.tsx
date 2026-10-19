@@ -51,10 +51,12 @@ interface EventCardProps {
   clashes: readonly string[] | undefined;
   now: number;
   isToday: boolean;
+  selected: boolean;
   onOpen: (event: CalendarEvent, anchor: HTMLElement) => void;
 }
 
-export function EventCard({ event, calendar, clashes, now, isToday, onOpen }: EventCardProps) {
+export function EventCard(props: EventCardProps) {
+  const { event, calendar, clashes, now, isToday, onOpen } = props;
   const detail = useEventDetail(event);
   const { start, end } = spanOf(event);
   const notes = detail.data?.snippet ?? '';
@@ -65,6 +67,7 @@ export function EventCard({ event, calendar, clashes, now, isToday, onOpen }: Ev
     <li
       className="rl-card"
       data-past={past || undefined}
+      data-selected={props.selected || undefined}
       data-focus={event.focus || undefined}
       data-free={!event.busy || undefined}
       style={swatch(calendar?.color ?? '') as CSSProperties}
@@ -74,6 +77,7 @@ export function EventCard({ event, calendar, clashes, now, isToday, onOpen }: Ev
         type="button"
         className="rl-open"
         aria-haspopup="dialog"
+        aria-expanded={props.selected}
         aria-label={`${event.title}, ${when}${calendar ? `, ${calendar.title}` : ''}${past ? ', ended' : ''}`}
         onClick={(click: MouseEvent<HTMLButtonElement>) => onOpen(event, click.currentTarget)}
       >

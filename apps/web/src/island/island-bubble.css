@@ -1,0 +1,134 @@
+.isl-restline.isl-bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  width: 300px;
+  max-width: calc(352px - 50%);
+  height: auto;
+  padding: 6px 6px 7px 10px;
+  border-radius: 14px;
+  cursor: default;
+  white-space: normal;
+  transform-origin: left center;
+  animation: isl-bubble-pop 0.32s var(--spring) both;
+}
+
+.isl-bubble::before,
+.isl-bubble::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+
+.isl-bubble::before {
+  left: -9px;
+  border-width: 6px 9px 6px 0;
+  border-color: transparent var(--island-line) transparent transparent;
+}
+
+.isl-bubble::after {
+  left: -7px;
+  top: 13px;
+  border-width: 5px 8px 5px 0;
+  border-color: transparent var(--island) transparent transparent;
+}
+
+.isl-bubble-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.isl-bubble-when {
+  flex: none;
+  color: var(--accent-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.isl-bubble-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.isl-bubble[data-open] .isl-bubble-title {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.isl-bubble-x {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  color: var(--muted);
+}
+
+.isl-bubble-x:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.isl-bubble-x:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.isl-bubble-x svg {
+  width: 12px;
+  height: 12px;
+}
+
+.isl-bubble-meta,
+.isl-bubble-people,
+.isl-bubble-agenda {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+
+.isl-bubble-agenda {
+  color: var(--text);
+}
+
+.isl-bubble-more {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.isl-bubble-acts {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+@keyframes isl-bubble-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+}
+
+@keyframes isl-bubble-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.isl-root[data-rm] .isl-bubble {
+  animation: isl-bubble-fade 0.2s ease-out both;
+}
