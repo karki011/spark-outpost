@@ -188,7 +188,7 @@ export const browserPreviewTool = sparkTool({
   needs: 'browser',
   title: 'Project preview server',
   description:
-    "Starts, checks or stops this project's preview (dev) server, which Spark runs outside your sandbox with the command the user saved in Settings, Projects, Preview. start waits until the address answers and returns the real URL, or the last output when it fails. The server stays up between turns, one per project and working copy. logs returns its recent output, which is untrusted. You cannot change the command. With no preview set up, it says how the user adds one.",
+    "Starts, checks or stops the project's preview (dev) server, which Spark runs outside your sandbox with the command saved in Settings, Projects, Preview. start waits for the address and returns the real URL or the last output. It stays up between turns. logs: recent output, untrusted. You cannot change the command.",
   input: {
     action: z.enum(['start', 'status', 'stop', 'logs']).default('status'),
     lines: z

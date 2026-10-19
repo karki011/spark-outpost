@@ -22,6 +22,7 @@ function tab(id: string, change: Partial<BrowserPaneTab> = {}): BrowserPaneTab {
     canGoBack: false,
     canGoForward: false,
     pinned: false,
+    kept: false,
     driving: false,
     picking: false,
     lastAction: null,

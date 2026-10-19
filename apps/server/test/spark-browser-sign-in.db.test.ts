@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -25,6 +25,7 @@ import { createTestDb, type TestDb } from './support.ts';
 
 const ORIGIN = 'https://staging.example.com';
 const ECHO = `${PLANTED.username} / ${PLANTED.password}`;
+const FILE_SECRET = 'sk_test_9f8e7d6c5b4a3210';
 
 class FakeBrowserHost implements BrowserHost {
   readonly requests: BrowserHostRequest[] = [];
@@ -104,6 +105,22 @@ class FakeBrowserHost implements BrowserHost {
             method: null,
           },
         ],
+        requests: [
+          {
+            at: '2026-10-05T10:00:02.000Z',
+            method: 'GET',
+            url: `${ORIGIN}/api/me?u=${encodeURIComponent(PLANTED.username)}&k=${FILE_SECRET}&offset=5`,
+            status: 200,
+            type: 'Fetch',
+            initiator: null,
+            startMs: 0,
+            endMs: 40,
+            encodedBytes: 10,
+            decodedBytes: 20,
+            fromCache: false,
+            failed: null,
+          },
+        ],
         dropped: 0,
       };
     }
@@ -128,6 +145,7 @@ beforeEach(async () => {
   secrets = memorySecretStore();
   base = realpathSync(mkdtempSync(path.join(tmpdir(), 'spark-sign-in-tool-')));
   mkdirSync(path.join(base, 'site'));
+  writeFileSync(path.join(base, 'site', '.env'), `STRIPE_SECRET_KEY=${FILE_SECRET}\n`);
   logged = (['log', 'info', 'warn', 'error'] as const).map((level) =>
     vi.spyOn(console, level).mockImplementation(() => undefined),
   );
@@ -330,6 +348,19 @@ describe('spark_browser_sign_in', () => {
     ]);
   });
 
+  it('checks the page after it settled, names where it ended and keeps that tab open', async () => {
+    const chat = await projectChat();
+    const saved = await save();
+    fake.url = 'https://auth.example.com/u/login?state=abc';
+    const refused = await chat.call('spark_browser_sign_in', { signIn: saved.id });
+    expect(fake.ops('page')[0]).toMatchObject({ settle: true });
+    expect(refused.reason).toContain(
+      `saved for ${ORIGIN}, and the tab is on https://auth.example.com`,
+    );
+    expect(refused.reason).toContain('after the page finished loading and redirecting');
+    expect(fake.ops('keep')).toEqual([expect.objectContaining({ tab: 'tab1' })]);
+  });
+
   it('passes on the plain reason when the browser finds no form', async () => {
     const chat = await projectChat();
     await save();
@@ -342,6 +373,7 @@ describe('spark_browser_sign_in', () => {
       outcome: 'not_signed_in',
       reason: 'Spark could not find a sign-in form on this page. Nothing was filled.',
     });
+    expect(fake.ops('keep')).toHaveLength(1);
     expect(signInAudits().at(-1)).toMatchObject({ decision: 'failed', result: 'no_form' });
   });
 
@@ -421,9 +453,16 @@ describe('a planted sign-in never reaches the agent or the record', () => {
     const chat = await projectChat();
     await save();
     const probed = await chat.call('spark_browser_logs', { filter: PLANTED.password.slice(0, 6) });
-    expect(fake.ops('logs')[0]).toMatchObject({ filter: undefined, limit: 200 });
+    expect(fake.ops('logs')[0]).toMatchObject({ limit: 200 });
+    expect(fake.ops('logs')[0]).not.toHaveProperty('filter');
     expect(probed.entries).toBe(0);
     const plain = await chat.call('spark_browser_logs', { filter: 'ready' });
     expect(plain.entries).toBe(1);
+    const network = await chat.call('spark_browser_logs', { kind: 'network', filter: 'sk_test' });
+    expect(network.entries).toBe(0);
+    await chat.call('spark_browser_logs', { kind: 'network' });
+    const shown = chat.results.at(-1)!;
+    expect(shown).toContain(`u=${SIGN_IN_HIDDEN}&k=[redacted:secret_value]&offset=5`);
+    expect(shown).not.toContain(FILE_SECRET);
   });
 });

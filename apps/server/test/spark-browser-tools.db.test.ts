@@ -106,10 +106,26 @@ class FakeBrowserHost implements BrowserHost {
           {
             at: '2026-10-04T10:00:00.000Z',
             level: 'error',
-            text: 'GET http://localhost:47611/missing.json?… key sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123456789',
+            text: 'Failed to load key sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123456789',
             source: null,
-            status: 404,
+            status: null,
+            method: null,
+          },
+        ],
+        requests: [
+          {
+            at: '2026-10-04T10:00:00.000Z',
             method: 'GET',
+            url: 'http://localhost:47611/missing.json?v=sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123456789',
+            status: 404,
+            type: 'Fetch',
+            initiator: 'script http://localhost:47611/errors.js:3:1',
+            startMs: 4,
+            endMs: 9,
+            encodedBytes: 120,
+            decodedBytes: 0,
+            fromCache: false,
+            failed: null,
           },
         ],
         dropped: 0,
@@ -284,10 +300,15 @@ describe('reading a local page', () => {
   it('redacts secrets in logs and marks them untrusted', async () => {
     await start();
     const logs = await call('spark_browser_logs', { kind: 'network' });
-    expect(logs.facts).toMatchObject({ kind: 'network', entries: 1 });
+    expect(logs.facts).toMatchObject({ kind: 'network', entries: 1, maxInFlight: 1 });
     expect(logs.texts[1]).toContain('<page_evidence');
-    expect(logs.texts[1]).toContain('[error] 404 GET http://localhost:47611/missing.json');
+    expect(logs.texts[1]).toContain(
+      '+4ms → +9ms (5ms) · GET · 404 · Fetch · http://localhost:47611/missing.json?v=',
+    );
     expect(logs.texts[1]).not.toContain('abcdefghijklmnopqrstuvwxyz0123456789');
+    const errors = await call('spark_browser_logs');
+    expect(errors.texts[1]).toContain('[error] Failed to load key');
+    expect(errors.texts[1]).not.toContain('abcdefghijklmnopqrstuvwxyz0123456789');
   });
 
   it('lists tabs', async () => {

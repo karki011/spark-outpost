@@ -2,8 +2,10 @@ import {
   BROWSER_READ_MAX_CHARS,
   type BrowserBox,
   type BrowserReadMode,
+  type BrowserReadScope,
 } from '@spark-outpost/contracts';
 import type { Cdp } from './cdp.ts';
+import { mainRegionOf } from './main-scope.ts';
 import { quadBox } from './mask.ts';
 import { modalDialogOf } from './modal-scope.ts';
 import { outlineOf, pageOfLines, pageTextOf, type AxNode } from './outline.ts';
@@ -33,6 +35,7 @@ export async function sensitiveBackendIds(cdp: Cdp): Promise<number[]> {
 
 export interface ReadRequest {
   mode: BrowserReadMode;
+  scope?: BrowserReadScope | undefined;
   ref?: string | undefined;
   offset: number;
   maxChars?: number | undefined;
@@ -58,8 +61,19 @@ export async function readPage(
   const scope = dialog && pageRef ? { dialog: true, pageRef } : {};
   const maxChars = request.maxChars ?? BROWSER_READ_MAX_CHARS;
   if (request.mode === 'text') {
-    const lines = pageTextOf(nodes, sensitive, rootBackendId);
-    return { ...pageOfLines(lines, request.offset, maxChars), masked: 0, leftOut: 0, ...scope };
+    const wantsMain = request.scope === 'main' && rootBackendId === null;
+    const main = wantsMain ? mainRegionOf(nodes, sensitive) : null;
+    const lines = pageTextOf(nodes, sensitive, main ?? rootBackendId);
+    const mainFacts = wantsMain
+      ? { main: main === null ? ('whole_page' as const) : ('found' as const) }
+      : {};
+    return {
+      ...pageOfLines(lines, request.offset, maxChars),
+      masked: 0,
+      leftOut: 0,
+      ...scope,
+      ...mainFacts,
+    };
   }
   const outline = outlineOf(nodes, { refs, sensitive, rootBackendId });
   if (!outline) throw new PageToolError('no_ref', 'That part of the page is gone. Read it again.');

@@ -133,6 +133,13 @@ function record(
 
 const notSignedIn = (reason: string) => ({ outcome: 'not_signed_in', reason });
 
+async function keepTab(context: SparkToolContext, tab: string): Promise<void> {
+  const session = browserSession(context);
+  await session.host
+    .request({ op: 'keep', chatId: session.chatId, runId: session.runId, tab })
+    .catch(() => undefined);
+}
+
 async function fill(context: SparkToolContext, attempt: Attempt, clearance: Clearance) {
   const session = browserSession(context);
   const { row, page } = attempt;
@@ -140,6 +147,7 @@ async function fill(context: SparkToolContext, attempt: Attempt, clearance: Clea
   const secret = await readSignInSecret({ get: context.deps.secrets.fresh }, row.keychain_ref);
   if (!secret) {
     record(context, attempt, 'failed', { ...approval, result: 'missing_from_keychain' });
+    await keepTab(context, page.tabId);
     return notSignedIn(SIGN_IN_MISSING_SECRET);
   }
   const hidden = scrubberFor([secret]) ?? ((text: string) => text);
@@ -174,6 +182,7 @@ async function fill(context: SparkToolContext, attempt: Attempt, clearance: Clea
   } catch (error) {
     if (!(error instanceof BrowserHostError)) throw error;
     record(context, attempt, 'failed', { ...approval, result: error.code });
+    await keepTab(context, page.tabId);
     return notSignedIn(hidden(asToolError(error).message));
   }
 }
@@ -189,7 +198,7 @@ async function signIn(args: SignInArgs, context: SparkToolContext) {
   const row = chosen(await projectRows(context, session.chatId), args.signIn);
   const page = await session.host
     .request(
-      { op: 'page', chatId: session.chatId, runId: session.runId, tab: args.tab },
+      { op: 'page', chatId: session.chatId, runId: session.runId, tab: args.tab, settle: true },
       context.signal,
     )
     .catch((error: unknown) => {
@@ -199,12 +208,16 @@ async function signIn(args: SignInArgs, context: SparkToolContext) {
   const problem = signInOriginProblem(row.origin, page.url);
   if (problem) {
     record(context, attempt, 'refused_origin');
-    return notSignedIn(`${problem} Nothing was filled.`);
+    await keepTab(context, page.tabId);
+    return notSignedIn(
+      `${problem} Spark checked after the page finished loading and redirecting. Nothing was filled.`,
+    );
   }
   const clearance = await clearSignIn(context, row);
   if (clearance.decision === 'waiting_for_user' || clearance.decision === 'user_declined') {
     record(context, attempt, clearance.decision, { approvalId: clearance.approvalId });
     const waiting = clearance.decision === 'waiting_for_user';
+    if (waiting) await keepTab(context, page.tabId);
     return {
       outcome: waiting ? 'waiting_for_user' : 'declined',
       signIn: row.label,
@@ -240,7 +253,7 @@ const browserSignInsTool = sparkTool({
   needs: 'browser',
   title: 'Saved sign-ins',
   description:
-    "The test sign-ins the user saved for this chat's project: label and site only. Usernames and passwords stay in the Mac keychain and are never returned by any tool.",
+    "Saved test sign-ins of this chat's project: label and site. Values stay in the keychain and no tool returns them.",
   input: {},
   run: (_args, context) => signIns(context),
 });
@@ -251,7 +264,7 @@ const browserSignInTool = sparkTool({
   acts: true,
   title: 'Sign in with a saved sign-in',
   description:
-    'Asks Spark to type a saved username and password into the sign-in form of a Browser pane tab and submit it. Works only when the tab is on exactly the saved site (https, or a local development host), on the page itself and not in a frame; it handles a username page followed by a password page. The first use of a sign-in in a chat waits for the user on a card, in every agent mode. Returns form_submitted with the page it landed on, or the reason nothing was filled. It never returns the values, and the fields it filled stay masked.',
+    "Spark types a saved username and password into the tab's sign-in form (one page, or username then password) and submits it, only on exactly the saved site (https or a local host), never in a frame. First use in a chat asks the user on a card, in every mode. Returns form_submitted and the page, or why nothing was filled; never the values.",
   input: {
     signIn: z.string().min(1).max(60).describe('Label or id from spark_browser_signins.'),
     tab: tabInput,

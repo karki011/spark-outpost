@@ -51,6 +51,8 @@ export class PaneTab {
   owner: BrowserTabOwner;
   runId: string | null;
   pinned = false;
+  kept = false;
+  agentBusy = 0;
   active = false;
   picking = false;
   driving = false;
@@ -95,7 +97,7 @@ export class PaneTab {
       url: this.currentUrl(),
       owner: this.owner,
       active: this.active,
-      pinned: this.pinned,
+      pinned: this.pinned || this.kept,
       failed: this.error !== null,
       lastUsed: this.lastUsed,
     };
@@ -116,6 +118,7 @@ export class PaneTab {
       canGoBack: history?.canGoBack() ?? false,
       canGoForward: history?.canGoForward() ?? false,
       pinned: this.pinned,
+      kept: this.kept,
       driving: this.driving,
       picking: this.picking,
       lastAction: this.lastAction,
@@ -209,7 +212,11 @@ export class PaneTab {
       this.note({ loading: false, error: description || 'The page did not load.' });
     });
     contents.on('context-menu', (_event, params) => this.hooks.contextMenu(this, params));
+    contents.on('before-mouse-event', (_event, mouse) => {
+      if (mouse.type === 'mouseDown') this.userUsed();
+    });
     contents.on('before-input-event', (event, input) => {
+      if (input.type === 'keyDown') this.userUsed();
       if (!isAddShortcut(input, process.platform)) return;
       event.preventDefault();
       this.hooks.addShortcut(this);
@@ -222,6 +229,18 @@ export class PaneTab {
     this.partition = partition;
     this.hooks.viewCreated(view);
     return this.live;
+  }
+
+  private userUsed(): void {
+    if (this.owner !== 'agent' || this.agentBusy > 0 || this.kept) return;
+    this.kept = true;
+    this.hooks.changed();
+  }
+
+  keep(): void {
+    if (this.owner !== 'agent' || this.kept) return;
+    this.kept = true;
+    this.hooks.changed();
   }
 
   private note(change: { loading?: boolean; title?: string; error?: string | null }): void {

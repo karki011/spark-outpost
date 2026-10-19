@@ -75,9 +75,9 @@ describe('page log capture', () => {
     expect(logs.console.recent(undefined, 10).map((entry) => entry.text)).toEqual([
       'from the new page',
     ]);
-    expect(logs.network.recent(undefined, 10).map((entry) => entry.text)).toEqual([
-      'GET http://localhost:3000/new.json?…',
-    ]);
+    expect(
+      logs.network.all().map((entry) => `${entry.method} ${entry.url} ${entry.status}`),
+    ).toEqual(['GET http://localhost:3000/new.json?token=[redacted] 200']);
     expect(logs.console.dropped()).toBe(0);
   });
 

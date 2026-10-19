@@ -84,6 +84,16 @@
   box-shadow: 0 0 0 1px var(--accent);
 }
 
+.bp-agent-life {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .bp-agent-did {
   min-width: 0;
   overflow: hidden;

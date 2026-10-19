@@ -181,7 +181,7 @@ test('the address bar, tabs and badges drive the shell', async ({ page }) => {
     );
   }, id);
   await expect(pane.getByText('Spark is driving')).toBeVisible();
-  await expect(pane.locator('.bp-status')).toBeHidden();
+  await expect(pane.getByRole('group', { name: 'Agent tab' })).toBeVisible();
 });
 
 test('a dialog over the pane swaps the page for its snapshot', async ({ page }) => {

@@ -107,6 +107,7 @@ export const browserPaneTabSchema = browserTabSchema.extend({
   canGoBack: z.boolean(),
   canGoForward: z.boolean(),
   pinned: z.boolean(),
+  kept: z.boolean().default(false),
   driving: z.boolean(),
   picking: z.boolean(),
   lastAction: z.string().max(200).nullable(),

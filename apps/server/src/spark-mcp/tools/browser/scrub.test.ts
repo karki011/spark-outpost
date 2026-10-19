@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SIGN_IN_HIDDEN, scrubberFor } from './scrub.ts';
+import { SIGN_IN_HIDDEN, scrubberFor, secretFileScrubber } from './scrub.ts';
 
 const secret = { username: 'vault-user@example.test', password: 'p@ss "word" 1' };
 const scrub = scrubberFor([secret])!;
@@ -31,5 +31,18 @@ describe('hiding saved sign-ins in what agents read', () => {
 
   it('leaves other text alone', () => {
     expect(scrub('Dashboard for example.test')).toBe('Dashboard for example.test');
+  });
+});
+
+describe('hiding secret file values in what agents read', () => {
+  const value = 'sk_live_51Hx9Qa/Z';
+  const files = secretFileScrubber([value])!;
+
+  it('hides a value from a secret file, also URL-encoded, with its own mark', () => {
+    expect(files(`https://api.example/x?key=${value}&q=1`)).toBe(
+      'https://api.example/x?key=[redacted:secret_value]&q=1',
+    );
+    expect(files(`?t=${encodeURIComponent(value)}`)).toBe('?t=[redacted:secret_value]');
+    expect(secretFileScrubber([])).toBeNull();
   });
 });

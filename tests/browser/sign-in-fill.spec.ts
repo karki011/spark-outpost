@@ -120,7 +120,11 @@ test('a page that repeats the sign-in does not get it to the agent', async ({ pa
 
   const consoleLines = logs.console.recent(undefined, 50).map((entry) => entry.text);
   expect(consoleLines.join('\n')).toContain(PASSWORD);
-  const network = logs.network.recent(undefined, 50).map((entry) => entry.text);
+  await expect
+    .poll(() => logs.network.all().some((entry) => entry.url.includes('welcome.html?')))
+    .toBe(true);
+  const network = logs.network.all().map((entry) => entry.url);
+  expect(network.join('\n')).toContain('password=[redacted]');
   expect(network.join('\n')).not.toContain(PASSWORD);
 
   const hidden = scrubberFor([VALUES])!;
