@@ -25,6 +25,7 @@ import {
   atlassianActionSchemas,
   atlassianQuestion,
 } from './atlassian-actions.ts';
+import { browserActionLabels, browserActionSchemas, browserQuestion } from './browser-actions.ts';
 
 export const SPARK_ACTION_KIND = 'spark_action' as const;
 
@@ -159,37 +160,6 @@ export const updateTeammateActionSchema = z.object({
   changed: z.array(z.string()).max(20),
 });
 
-export const readPageActionSchema = z.object({
-  action: z.literal('read_page'),
-  origin: z.string().max(300),
-  path: z.string().max(500),
-  title: z.string().max(300),
-  what: z.enum(['read', 'screenshot', 'logs']),
-});
-export type ReadPageAction = z.infer<typeof readPageActionSchema>;
-export const openPageActionSchema = z.object({
-  action: z.literal('open_page'),
-  origin: z.string().max(300),
-  path: z.string().max(500),
-});
-export type OpenPageAction = z.infer<typeof openPageActionSchema>;
-export const actPageActionSchema = z.object({
-  action: z.literal('act_page'),
-  origin: z.string().max(300),
-  path: z.string().max(500),
-  title: z.string().max(300),
-  did: z.string().max(200),
-  userTab: z.boolean(),
-});
-export type ActPageAction = z.infer<typeof actPageActionSchema>;
-export const browserSignInActionSchema = z.object({
-  action: z.literal('browser_sign_in'),
-  signInId: z.uuid(),
-  projectId: z.uuid(),
-  label: z.string().max(60),
-  origin: z.string().max(300),
-});
-export type BrowserSignInAction = z.infer<typeof browserSignInActionSchema>;
 const macApp = {
   app: z.string().max(200),
   bundleId: z.string().max(200),
@@ -243,10 +213,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   updateMcpServerActionSchema,
   switchMcpServerActionSchema,
   removeMcpServerActionSchema,
-  readPageActionSchema,
-  openPageActionSchema,
-  actPageActionSchema,
-  browserSignInActionSchema,
+  ...browserActionSchemas,
   macUseAppActionSchema,
   macActActionSchema,
   macPressActionSchema,
@@ -292,6 +259,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   open_page: [],
   act_page: [],
   browser_sign_in: [],
+  browser_handoff: [],
   mac_use_app: [],
   mac_act: [],
   mac_press: [],
@@ -388,26 +356,6 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
     confirm: 'Remove server',
     doing: 'Removing the MCP server…',
   },
-  read_page: {
-    question: 'Let the agent read this page?',
-    confirm: 'Allow for this chat',
-    doing: 'Allowing the page…',
-  },
-  open_page: {
-    question: 'Let the agent open this site?',
-    confirm: 'Allow for this chat',
-    doing: 'Allowing the site…',
-  },
-  act_page: {
-    question: 'Let the agent click and type on this site?',
-    confirm: 'Allow for this chat',
-    doing: 'Allowing the site…',
-  },
-  browser_sign_in: {
-    question: 'Use this saved sign-in?',
-    confirm: 'Allow for this chat',
-    doing: 'Allowing the sign-in…',
-  },
   mac_use_app: {
     question: 'Let the agent use this app in this chat?',
     confirm: 'Allow for this chat',
@@ -439,14 +387,14 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
     doing: 'Changing the event…',
   },
   ...atlassianActionLabels,
+  ...browserActionLabels,
 };
 
 const SLACK_POST_AS_YOU_QUESTION = 'Post this to Slack as you?';
 
 export function sparkActionQuestion(action: SparkAction): string {
-  if (action.action === 'browser_sign_in') {
-    return `Sign in to ${action.origin} as ${action.label}?`;
-  }
+  const browser = browserQuestion(action);
+  if (browser) return browser;
   if (action.action === 'post_slack' && action.asYou) return SLACK_POST_AS_YOU_QUESTION;
   if (action.action === 'mac_use_app') return `Let the agent use ${action.app} in this chat?`;
   if (action.action === 'mac_act') return `Let the agent press buttons and menus in ${action.app}?`;

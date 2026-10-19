@@ -25,6 +25,7 @@ export async function withDesktopBrowser(page: Page) {
       canGoForward: false,
       pinned: false,
       kept: false,
+      handoff: null,
       driving: false,
       picking: false,
       lastAction: null,

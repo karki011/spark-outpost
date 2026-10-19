@@ -1,6 +1,6 @@
 # Browser pane
 
-> **Status: "see" and "act" built.** The user browses in a pane next to a chat; agents open any `http(s)` address or project file, read it (outline, text, screenshot, console and network logs) and act on it (click, type, keys, scroll, back, forward, reload) in the visible tab; the user selects an element or a region for the next message. Spark can also fill a saved test sign-in for an agent ([Saved sign-ins](#saved-sign-ins)). Opening sites and acting were added on 2026-10-12 at the owner's request ([Acting on a page](#acting-on-a-page), [Policy](#policy), [Kept blocks](#kept-blocks), [Decided](#decided)); the full network log, the main-region read and the agent tab banner on 2026-10-19 ([Network log](#network-log)). Mac app only: the tools are not registered and the Browser tab is hidden when there is no desktop shell.
+> **Status: "see" and "act" built.** The user browses in a pane next to a chat; agents open any `http(s)` address or project file, read it (outline, text, screenshot, console and network logs) and act on it (click, type, keys, scroll, back, forward, reload) in the visible tab; the user selects an element or a region for the next message. Spark can also fill a saved test sign-in for an agent ([Saved sign-ins](#saved-sign-ins)). Opening sites and acting were added on 2026-10-12 at the owner's request ([Acting on a page](#acting-on-a-page), [Policy](#policy), [Kept blocks](#kept-blocks), [Decided](#decided)); the full network log, the main-region read and the agent tab banner on 2026-10-19 ([Network log](#network-log)), and sign-ins with several sites and handing the tab to the user to sign in the same day ([Saved sign-ins](#saved-sign-ins), [Signing in yourself](#signing-in-yourself)). Mac app only: the tools are not registered and the Browser tab is hidden when there is no desktop shell.
 
 Spark is a moderator here too: it honours the agent's mode, keeps a few hard rails, and records what happened.
 
@@ -117,21 +117,22 @@ Verified in the adapters' sources, not with a live model: `claude-agent-acp` 0.8
 
 On a site outside this computer, opening, reading and acting use the Spark action policy (`actionPath`), the same one tickets, Slack and MCP servers use: no card in Auto, Bypass permissions, Approve for me and Full access, or in Accept edits when the user's message asked; a card otherwise. The autonomy level plays no part. Local pages never show a card.
 
-| Call                                                        | Card                                                                                         | Recorded                                |
-| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `open` a local page or project file                         | None, in every mode                                                                          | Audit                                   |
-| `preview` start, stop, status, logs; `open` with no address | None, in every mode: the command is the user's, saved in Settings, and no tool can change it | Audit, and `preview_events`             |
-| `open` an external site                                     | The policy above; otherwise **Let the agent open this site?**                                | Audit; a send (below)                   |
-| `act` on a local page                                       | None, in every mode                                                                          | Audit                                   |
-| `act` on an external page in an agent tab                   | The policy above; otherwise **Let the agent click and type on this site?**                   | Audit; `type` is a send (below)         |
-| `act` on an external page in a tab the user owns            | The same card in every mode, until the user allowed it for that site in this chat            | Audit                                   |
-| `act` `type` into a password, card or code field            | None; refused in every mode, with a pointer to `spark_browser_sign_in`                       | Audit (`refused`)                       |
-| An address or typed text holding a secret file's value      | **Send a secret value?** with hold to confirm, in every mode, once per send, naming the file | Audit                                   |
-| `tabs`                                                      | None                                                                                         | Audit                                   |
-| `read`, `screenshot`, `logs` on a local page                | None, in every mode                                                                          | Audit                                   |
-| `signins`                                                   | None                                                                                         | Audit                                   |
-| `sign_in`                                                   | **Sign in to … as …?**, the first time a chat uses that sign-in, in every mode               | Audit, every use                        |
-| `read`, `screenshot`, `logs` on an external page            | The policy above; otherwise **Let the agent read this page?**                                | Audit, and a `web_page` run observation |
+| Call                                                        | Card                                                                                                                             | Recorded                                |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `open` a local page or project file                         | None, in every mode                                                                                                              | Audit                                   |
+| `preview` start, stop, status, logs; `open` with no address | None, in every mode: the command is the user's, saved in Settings, and no tool can change it                                     | Audit, and `preview_events`             |
+| `open` an external site                                     | The policy above; otherwise **Let the agent open this site?**                                                                    | Audit; a send (below)                   |
+| `act` on a local page                                       | None, in every mode                                                                                                              | Audit                                   |
+| `act` on an external page in an agent tab                   | The policy above; otherwise **Let the agent click and type on this site?**                                                       | Audit; `type` is a send (below)         |
+| `act` on an external page in a tab the user owns            | The same card in every mode, until the user allowed it for that site in this chat                                                | Audit                                   |
+| `act` `type` into a password, card or code field            | None; refused in every mode, with a pointer to `spark_browser_sign_in`                                                           | Audit (`refused`)                       |
+| An address or typed text holding a secret file's value      | **Send a secret value?** with hold to confirm, in every mode, once per send, naming the file                                     | Audit                                   |
+| `tabs`                                                      | None                                                                                                                             | Audit                                   |
+| `read`, `screenshot`, `logs` on a local page                | None, in every mode                                                                                                              | Audit                                   |
+| `signins`                                                   | None                                                                                                                             | Audit                                   |
+| `sign_in`                                                   | **Sign in to … as …?** naming the site it types into, the first time a chat uses that sign-in with that site list, in every mode | Audit, every use                        |
+| `sign_in` with `handOver`                                   | **… is waiting for you to sign in to …** with **Done** and **Cancel**, every time, in every mode; Mac only                       | Audit, start and end                    |
+| `read`, `screenshot`, `logs` on an external page            | The policy above; otherwise **Let the agent read this page?**                                                                    | Audit, and a `web_page` run observation |
 
 - **One card per site per chat.** Allowing a card covers that origin for the rest of the chat (`allowedEarlier`): an open allowance covers opening and reading, a read allowance reading, an act allowance acting. An allowance for the agent's tab does not cover a tab the user owns. A secret-value card is never remembered.
 - **Sends.** Opening an external address and typing into an external page are sends off this computer. They use the existing read-then-send mechanism (`RunObservations`): when the turn read a secret file, a web page on another site or other work data and the mode runs the send, it runs with a `spark/egress` audit entry and a non-blocking `sent_out` flag, once per destination per turn; when the mode asks, the card carries the note. A page the agent read on the same site is not counted against a send to that site. Clicks, keys and scrolling are not sends.
@@ -190,32 +191,33 @@ By the owner on 2026-10-19:
 
 - **The network log is on for every page** and keeps the full address, with secret-looking query values redacted, so an agent can check which requests ran, with which parameters, and whether they overlapped. Headers and bodies are still never recorded.
 - **An agent tab the user used is kept** until the user closes it.
+- **A saved sign-in may list several sites**, added only by the user on the Mac, and an agent may **hand its tab to the user** to finish a sign-in Spark can't type. The user's own pane sessions are still never shared with an agent tab.
 
 Terminal sessions are offered the tools and follow the observed mode, as before; Spark's cards work there only during a turn.
 
 ## Saved sign-ins
 
-A user saves test sign-ins per project in Settings → Projects → **Saved sign-ins**: a label, a site origin, a username and a password. An agent asks Spark to use one by label; Spark types it into the page. The agent never holds the values.
+A user saves test sign-ins per project in Settings → Projects → **Saved sign-ins**: a label, a site origin (where sign-in starts), **Other sign-in sites** (up to 8 more origins the sign-in may type on, such as the app's auth host and its identity provider), a username and a password. Only the user adds sites, on the Mac. An agent asks Spark to use one by label; Spark types it into the page. The agent never holds the values.
 
 **Who holds what**
 
-| Place                             | Holds                                                                                             |
-| --------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Keychain (`signin:<id>`)          | `{ username, password }` as JSON, through the same `SecretStore` as provider, Jev and MCP secrets |
-| `browser_sign_ins` (0124)         | `id`, `project_id`, `label`, `origin`, `keychain_ref`, `created_at`, `updated_at`                 |
-| API (`/projects/:id/sign-ins`)    | Takes values on create and edit; returns label, origin and a masked username (`a•••@example.com`) |
-| Approval payload, events, audit   | Sign-in id, project id, label and origin. The card reads the masked username from the API         |
-| Worker → main (`sign_in` request) | The values, once per fill, over the worker's `parentPort`; never logged, never in a response      |
-| The page                          | The values, typed as input into its own form                                                      |
+| Place                             | Holds                                                                                                                            |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Keychain (`signin:<id>`)          | `{ username, password }` as JSON, through the same `SecretStore` as provider, Jev and MCP secrets                                |
+| `browser_sign_ins` (0124, 0189)   | `id`, `project_id`, `label`, `origin`, `sites`, `refused_site`, `keychain_ref`, `created_at`, `updated_at`                       |
+| API (`/projects/:id/sign-ins`)    | Takes values on create and edit; returns label, origin and a masked username (`a•••@example.com`)                                |
+| Approval payload, events, audit   | Sign-in id, project id, label, origin, the site it types into and the site list. The card reads the masked username from the API |
+| Worker → main (`sign_in` request) | The values, once per fill, over the worker's `parentPort`; never logged, never in a response                                     |
+| The page                          | The values, typed as input into its own form                                                                                     |
 
 The feature needs the shell: the Settings block is disabled and the tools are not registered without it. Removing a sign-in, removing its project or a reset deletes the keychain entries. A removed project that is restored with Undo comes back without its sign-ins.
 
 **Rules, enforced in code**
 
-- **Origin.** `signInOriginProblem` (contracts) requires the tab's top-level origin to equal the saved origin exactly, and the scheme to be https or the host local (`localhost`, `127.0.0.1`, `[::1]`, `*.localhost`, `*.test`). The worker asks main for the tab with `settle`, so main first waits for the page to finish loading and redirecting (`pageSettles`, the sign-in timing), then checks before it posts a card or reads the keychain; a mismatch names the origin the tab actually ended on and keeps the tab open. Main checks again from `Page.getFrameTree` before the first field and again before the password, including after the username step of a two-step sign-in.
+- **Origin.** `signInOriginProblem` (contracts) requires the tab's top-level origin to equal one of the sign-in's sites (`signInSites`: the origin, then the other sites) exactly, and the scheme to be https or the host local (`localhost`, `127.0.0.1`, `[::1]`, `*.localhost`, `*.test`). The worker asks main for the tab with `settle`, so main first waits for the page to finish loading and redirecting (`pageSettles`, the sign-in timing), then checks before it posts a card or reads the keychain; a mismatch names the sites and the origin the tab actually ended on, keeps the tab open and stores that origin as the row's `refused_site`, which Settings shows with **Add this site** (adding it clears it). Main gets the site list in the `sign_in` request and checks again from `Page.getFrameTree` before the username, before the password, and after the username step of a two-step sign-in, so a redirect to a site that is not listed stops the fill before the next field.
 - **Fields.** Main reads `DOM.getDocument` and decides alone (`sign-in-fields.ts`): one visible password input inside a `<form>` of the page itself, the one username-like text input of that form, and a submit control. A username-only form is the first step; Spark submits it and waits up to 6 s for the password form on the same origin. More than one candidate form, more than one password field, a `new-password` field, a password field outside a form or inside any frame, or two unmarked text fields: it fails with a plain reason and fills nothing.
 - **Typing.** `DOM.focus`, a check through the accessibility tree that the field has the focus, select-all, `Input.insertText`, then Enter. No script runs in the page, and the agent supplies nothing but the label.
-- **Card.** `spark_browser_sign_in` posts a `browser_sign_in` Spark action that is always a confirm card, whatever the agent mode or autonomy. A user's **Allow for this chat** is found again by chat, sign-in id and origin, so an edited origin asks again.
+- **Card.** `spark_browser_sign_in` posts a `browser_sign_in` Spark action that is always a confirm card, whatever the agent mode or autonomy. The card names the site Spark is about to type into and lists the sign-in's sites. A user's **Allow for this chat** is found again by chat, sign-in id and the exact site list, so an edited origin or a changed list asks again.
 - **Result.** `form_submitted` with the origin and path the tab ended on, or the reason. Never the values or their lengths. Whether the site accepted the sign-in is for the agent to read from the page.
 - **Audit.** Each call writes a `spark/browser` entry: tool, label, saved origin, page, decision (`user_allowed`, `allowed_earlier`, `user_declined`, `waiting_for_user`, `refused_origin`, `failed`), who decided, and the outcome.
 
@@ -228,7 +230,19 @@ The feature needs the shell: the Settings block is disabled and the tools are no
 
 **Why a sign-in is tied to a site.** The values are typed into whatever page holds the form, so the saved origin is the only thing that says the page is the one the user meant. A page on another site, a look-alike host, plain http or another port could be a phishing page or an open redirect someone planted; an exact origin match with https keeps the values on the site the user chose. A redirect chain (the app sends the tab to its identity provider, which may send it on to another) ends on a page whose origin is often not the app's: Spark checks the origin where the chain settled, before the first field, and again before the password and after a username step, so a hop to another origin mid-flow stops the fill. The result names the origin the tab ended on, so the user can see which site the sign-in would need.
 
+Several sites keep that rule: each one is an exact origin the user typed on the Mac, and nothing an agent or a page says adds one. **Add this site** shows the origin a refused sign-in ended on so the user can decide; Settings says to add it only if that is where the app sends them to sign in.
+
 **What this does not stop.** The page receives the values, as any sign-in form does. An agent that can change that site's code or read its server's output can make the site reveal what was typed, and a page can show a value in a form the scrubber does not know (reversed, encoded, drawn in an image). A screenshot of a page that prints the username shows it. That is why the form says test accounts only.
+
+## Signing in yourself
+
+Single sign-on, a one-time code, a passkey or a captcha can't be typed by Spark, so `spark_browser_sign_in` with `handOver: true` hands the agent's tab to the user (`handoff.ts`).
+
+- **Start.** The worker asks for the tab with `settle`, posts a `browser_handoff` Spark action (`agent`, `site`, `tabId`; options **Done** and **Cancel**) in every mode, and sends main `hand_over` with the handoff. Main refuses a tab the user owns (handing it over would share the user's session) and marks the tab (`PaneTab.handoff`, with the holding run in `handoffRun`), keeps it, selects it, and the pane opens on it with **<agent> is waiting for you to sign in to <site>** and **Done** / **Cancel** (`HandoffBanner`), which decide that card through the approvals API; the card in the chat works too.
+- **The user signs in** in that tab, in the agent's own partition for a website, so the session the user creates is the agent tab's and nothing is shared with the user's own pane cookies. While the tab is held, agent calls on it answer `user_signing_in`, and an address the user types in the bar loads in place without making the tab the user's (`host.ts`), so the tab stays in the agent's partition. Spark records no keys or text the user types.
+- **The wait** is the card's: no timer of Spark's own. The call returns `waiting_for_user` after 55 minutes so the CLI's one-hour tool timeout never cuts it, and calling again resumes the same card. **Done** returns `handed_back` with the page the tab is on; **Cancel** returns `cancelled`; the turn's **Stop** frees the tab and returns `cancelled`. If the tab is gone when the user selects **Done** (closed, or main restarted), the call returns `tab_gone`, never `handed_back`. The end of the run that holds the tab releases it too, whichever run opened the tab.
+- **On every release** (Done, Cancel, Stop, the end of the run) main clears the tab's console and network log, since a page can log what the user typed, and adds every text input and textarea on the page to the tab's `filled` set, so a username the user typed shows `[masked]` in reads and screenshots like a field Spark filled.
+- **Paired devices** see the card but can't answer it (`macOnlyCard`); the user answers on the Mac.
 
 ## User pointing
 
@@ -251,7 +265,7 @@ The feature needs the shell: the Settings block is disabled and the tools are no
 - **Numbered annotations:** extend `BrowserPick` and `pick-files.ts`.
 - **Highlighted text in frames by keyboard:** the right-click menu covers frames; **⌘⇧A** reads the main frame only.
 - **Downloads:** none built; `will-download` is cancelled in `sessions.ts`.
-- **Sign-ins, later:** one-time codes, passkeys, sign-in through another identity provider, sharing across projects, import and export, and a secret store on other systems.
+- **Sign-ins, later:** Spark typing one-time codes or using passkeys itself, sharing across projects, import and export, and a secret store on other systems. Another identity provider works as an extra site, and anything Spark can't type goes through [Signing in yourself](#signing-in-yourself).
 - Frames: the outline covers the main frame only.
 - A deleted chat's tabs are dropped only by the idle timer; nothing tells main that a chat is gone.
 - The pane tells main which folders `file://` may load (the chat's projects and worktree); the agent path reads them from the database instead.

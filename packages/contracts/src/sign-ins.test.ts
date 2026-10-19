@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { maskUsername, signInOriginOf, signInOriginProblem } from './sign-ins.ts';
+import { maskUsername, signInOriginOf, signInOriginProblem, signInSites } from './sign-ins.ts';
 
 describe('the site of a saved sign-in', () => {
   it.each([
@@ -33,9 +33,9 @@ describe('matching a tab to a saved sign-in', () => {
   const saved = 'https://example.com';
 
   it('accepts any page of exactly that origin', () => {
-    expect(signInOriginProblem(saved, 'https://example.com/login?next=%2F#top')).toBeNull();
-    expect(signInOriginProblem('http://localhost:3000', 'http://localhost:3000/')).toBeNull();
-    expect(signInOriginProblem('http://shop.test', 'http://shop.test/account')).toBeNull();
+    expect(signInOriginProblem([saved], 'https://example.com/login?next=%2F#top')).toBeNull();
+    expect(signInOriginProblem(['http://localhost:3000'], 'http://localhost:3000/')).toBeNull();
+    expect(signInOriginProblem(['http://shop.test'], 'http://shop.test/account')).toBeNull();
   });
 
   it.each([
@@ -50,22 +50,59 @@ describe('matching a tab to a saved sign-in', () => {
     ['a blank tab', 'about:blank'],
     ['nonsense', 'not a url'],
   ])('refuses %s', (_name, page) => {
-    expect(signInOriginProblem(saved, page)).toEqual(expect.any(String));
+    expect(signInOriginProblem([saved], page)).toEqual(expect.any(String));
   });
 
   it('refuses plain http on a host that is not local, even when it was saved that way', () => {
     expect(
-      signInOriginProblem('http://intranet.example.com', 'http://intranet.example.com/'),
+      signInOriginProblem(['http://intranet.example.com'], 'http://intranet.example.com/'),
     ).toEqual(expect.any(String));
   });
 
   it('refuses a local page for a sign-in saved for another local port', () => {
-    expect(signInOriginProblem('http://localhost:3000', 'http://localhost:3001/')).toEqual(
+    expect(signInOriginProblem(['http://localhost:3000'], 'http://localhost:3001/')).toEqual(
       expect.any(String),
     );
-    expect(signInOriginProblem('http://localhost:3000', 'http://127.0.0.1:3000/')).toEqual(
+    expect(signInOriginProblem(['http://localhost:3000'], 'http://127.0.0.1:3000/')).toEqual(
       expect.any(String),
     );
+  });
+});
+
+describe('a sign-in with several sites', () => {
+  const sites = signInSites({
+    origin: 'https://app.cloudzero.example',
+    sites: [
+      'https://auth.cloudzero.example',
+      'https://cloudzero.okta.example',
+      'https://app.cloudzero.example',
+    ],
+  });
+
+  it('lists the start site first and each site once', () => {
+    expect(sites).toEqual([
+      'https://app.cloudzero.example',
+      'https://auth.cloudzero.example',
+      'https://cloudzero.okta.example',
+    ]);
+  });
+
+  it('types on any listed site and names the list and the tab when it is elsewhere', () => {
+    expect(signInOriginProblem(sites, 'https://cloudzero.okta.example/login/step')).toBeNull();
+    expect(signInOriginProblem(sites, 'https://auth.cloudzero.example/u/login')).toBeNull();
+    const elsewhere = signInOriginProblem(sites, 'https://accounts.google.example/signin');
+    expect(elsewhere).toContain(
+      'types only on https://app.cloudzero.example, https://auth.cloudzero.example or https://cloudzero.okta.example',
+    );
+    expect(elsewhere).toContain('the tab is on https://accounts.google.example');
+    expect(elsewhere).toContain('Add this site');
+  });
+
+  it('refuses everything when one listed site is not a valid sign-in site', () => {
+    expect(
+      signInOriginProblem(['https://app.example', 'http://auth.example'], 'https://app.example/'),
+    ).toContain('not valid');
+    expect(signInOriginProblem([], 'https://app.example/')).toContain('not valid');
   });
 });
 

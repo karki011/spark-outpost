@@ -5,14 +5,16 @@ import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SPARK_ACTION_OPTION, type BrowserHostRequest } from '@spark-outpost/contracts';
-import { BrowserHostError, type BrowserHost } from '../src/browser/host-client.ts';
-import { createSignIn } from '../src/browser/sign-ins.ts';
+import { BrowserHostError } from '../src/browser/host-client.ts';
+import { createSignIn, updateSignIn } from '../src/browser/sign-ins.ts';
 import { decideApproval } from '../src/persistence/approvals.ts';
+import { macOnlyCard } from '../src/remote/policy.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { startSparkMcpHost, type SparkMcpHost } from '../src/spark-mcp/host.ts';
 import { SIGN_IN_HIDDEN } from '../src/spark-mcp/tools/browser/scrub.ts';
 import { linkedConversation, sendDo } from './approval-support.ts';
 import { PLANTED, everyStoredValue, plantedIn } from './sign-in-support.ts';
+import { ECHO, FILE_SECRET, FakeBrowserHost, ORIGIN } from './spark-browser-sign-in-fake.ts';
 import {
   connectClient,
   fullAutoChat,
@@ -21,112 +23,7 @@ import {
   toolDeps,
   type RecordedHooks,
 } from './spark-mcp-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
-
-const ORIGIN = 'https://staging.example.com';
-const ECHO = `${PLANTED.username} / ${PLANTED.password}`;
-const FILE_SECRET = 'sk_test_9f8e7d6c5b4a3210';
-
-class FakeBrowserHost implements BrowserHost {
-  readonly requests: BrowserHostRequest[] = [];
-  url = `${ORIGIN}/login`;
-  failure: BrowserHostError | null = null;
-  owner: 'user' | 'agent' = 'user';
-
-  request(request: BrowserHostRequest): Promise<never> {
-    this.requests.push(request);
-    const fails = request.op === 'sign_in' || request.op === 'act';
-    if (this.failure && fails) return Promise.reject(this.failure);
-    return Promise.resolve(this.answer(request) as never);
-  }
-
-  ops(op: BrowserHostRequest['op']) {
-    return this.requests.filter((request) => request.op === op);
-  }
-
-  private answer(request: BrowserHostRequest): unknown {
-    const facts = {
-      tabId: 'tab1',
-      url: this.url,
-      title: `Welcome ${PLANTED.username}`,
-      place: 'external',
-      owner: this.owner,
-    };
-    if (request.op === 'sign_in') {
-      this.url = `${ORIGIN}/home?u=${encodeURIComponent(PLANTED.username)}&p=${encodeURIComponent(PLANTED.password)}`;
-      return { ...facts, url: this.url, steps: 1 };
-    }
-    if (request.op === 'tabs') {
-      return {
-        tabs: [
-          {
-            id: 'tab1',
-            title: facts.title,
-            url: this.url,
-            owner: 'user',
-            active: true,
-            place: 'local',
-          },
-        ],
-      };
-    }
-    if (request.op === 'read') {
-      return {
-        ...facts,
-        place: 'local',
-        mode: request.mode,
-        text: `- textbox "Email" [ref_1] value="${PLANTED.username}"\n- paragraph "debug ${ECHO}"\n- paragraph "${PLANTED.password.slice(0, 9)}…"`,
-        total: 3,
-        offset: 0,
-        nextOffset: null,
-        masked: 1,
-      };
-    }
-    if (request.op === 'logs') {
-      return {
-        ...facts,
-        place: 'local',
-        kind: request.kind,
-        entries: [
-          {
-            at: '2026-10-05T10:00:00.000Z',
-            level: 'log',
-            text: `signing in ${ECHO}`,
-            source: null,
-            status: null,
-            method: null,
-          },
-          {
-            at: '2026-10-05T10:00:01.000Z',
-            level: 'log',
-            text: 'ready',
-            source: null,
-            status: null,
-            method: null,
-          },
-        ],
-        requests: [
-          {
-            at: '2026-10-05T10:00:02.000Z',
-            method: 'GET',
-            url: `${ORIGIN}/api/me?u=${encodeURIComponent(PLANTED.username)}&k=${FILE_SECRET}&offset=5`,
-            status: 200,
-            type: 'Fetch',
-            initiator: null,
-            startMs: 0,
-            endMs: 40,
-            encodedBytes: 10,
-            decodedBytes: 20,
-            fromCache: false,
-            failed: null,
-          },
-        ],
-        dropped: 0,
-      };
-    }
-    return facts;
-  }
-}
+import { createTestDb, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
 let base: string;
@@ -245,7 +142,7 @@ describe('spark_browser_signins', () => {
     const chat = await projectChat();
     const saved = await save();
     const listed = await chat.call('spark_browser_signins');
-    expect(listed.signIns).toEqual([{ id: saved.id, label: 'Staging admin', site: ORIGIN }]);
+    expect(listed.signIns).toEqual([{ id: saved.id, label: 'Staging admin', sites: [ORIGIN] }]);
     expect(plantedIn(chat.results.join('\n'))).toEqual([]);
     expect(chat.results.join('\n')).not.toContain('v•••');
   });
@@ -270,6 +167,8 @@ describe('spark_browser_sign_in', () => {
       action: 'browser_sign_in',
       label: 'Staging admin',
       origin: ORIGIN,
+      site: ORIGIN,
+      sites: [ORIGIN],
     });
     expect(result).toMatchObject({
       outcome: 'form_submitted',
@@ -279,7 +178,7 @@ describe('spark_browser_sign_in', () => {
       steps: 1,
     });
     expect(fake.ops('sign_in')).toEqual([
-      expect.objectContaining({ tab: 'tab1', origin: ORIGIN, ...PLANTED }),
+      expect.objectContaining({ tab: 'tab1', sites: [ORIGIN], ...PLANTED }),
     ]);
   });
 
@@ -355,10 +254,43 @@ describe('spark_browser_sign_in', () => {
     const refused = await chat.call('spark_browser_sign_in', { signIn: saved.id });
     expect(fake.ops('page')[0]).toMatchObject({ settle: true });
     expect(refused.reason).toContain(
-      `saved for ${ORIGIN}, and the tab is on https://auth.example.com`,
+      `types only on ${ORIGIN}, and the tab is on https://auth.example.com`,
     );
     expect(refused.reason).toContain('after the page finished loading and redirecting');
     expect(fake.ops('keep')).toEqual([expect.objectContaining({ tab: 'tab1' })]);
+    const { rows } = await t.db.query('SELECT refused_site FROM browser_sign_ins');
+    expect(rows).toEqual([{ refused_site: 'https://auth.example.com' }]);
+  });
+
+  it('types on any of the sign-in’s sites, and asks again when the list changes', async () => {
+    const chat = await projectChat('bypassPermissions');
+    const saved = await createSignIn({ db: t.db, secrets }, projectId, {
+      label: 'Staging admin',
+      origin: ORIGIN,
+      sites: ['https://auth.example.com'],
+      ...PLANTED,
+    });
+    fake.url = 'https://auth.example.com/u/login';
+    const { card } = await signInAllowing(chat);
+    expect(card.title).toBe('Sign in to https://auth.example.com as Staging admin?');
+    expect(fake.ops('sign_in')).toEqual([
+      expect.objectContaining({ sites: [ORIGIN, 'https://auth.example.com'] }),
+    ]);
+    fake.url = 'https://auth.example.com/u/login';
+    await chat.call('spark_browser_sign_in', { signIn: saved.id });
+    expect(await cardCount()).toBe(1);
+
+    await updateSignIn({ db: t.db, secrets }, projectId, saved.id, {
+      label: 'Staging admin',
+      origin: ORIGIN,
+      sites: ['https://auth.example.com', 'https://example.okta.com'],
+    });
+    fake.url = 'https://example.okta.com/signin';
+    await signInAllowing(chat);
+    expect(await cardCount()).toBe(2);
+    expect(fake.ops('sign_in').at(-1)).toMatchObject({
+      sites: [ORIGIN, 'https://auth.example.com', 'https://example.okta.com'],
+    });
   });
 
   it('passes on the plain reason when the browser finds no form', async () => {
@@ -409,6 +341,7 @@ describe('spark_browser_sign_in', () => {
         decision: 'user_allowed',
         signIn: 'Staging admin',
         signInOrigin: ORIGIN,
+        signInSites: [ORIGIN],
         by: 'user',
         approvalId: card.id,
         result: 'form_submitted',
@@ -464,5 +397,73 @@ describe('a planted sign-in never reaches the agent or the record', () => {
     const shown = chat.results.at(-1)!;
     expect(shown).toContain(`u=${SIGN_IN_HIDDEN}&k=[redacted:secret_value]&offset=5`);
     expect(shown).not.toContain(FILE_SECRET);
+  });
+});
+
+describe('handing the tab to the user to sign in', () => {
+  const handOvers = () =>
+    fake.ops('hand_over') as Extract<BrowserHostRequest, { op: 'hand_over' }>[];
+
+  it('holds the tab with a card until the user selects Done, then gives it back', async () => {
+    const chat = await projectChat('bypassPermissions');
+    const calling = chat.call('spark_browser_sign_in', { handOver: true });
+    const card = await pendingCard(t);
+    expect(card.title).toBe(`Claude is waiting for you to sign in to ${ORIGIN}`);
+    expect(card.payload.sparkAction).toEqual({
+      action: 'browser_handoff',
+      agent: 'Claude',
+      site: ORIGIN,
+      tabId: 'tab1',
+    });
+    expect(card.options.map((option) => option.name)).toEqual(['Done', 'Cancel']);
+    await eventually(async () => handOvers().length === 1);
+    expect(handOvers()[0]!.handoff).toEqual({ agent: 'Claude', site: ORIGIN, approvalId: card.id });
+    await decideApproval(t.db, t.workspaceId, card.id, {
+      optionId: SPARK_ACTION_OPTION.confirm,
+      scope: 'once',
+    });
+    expect(await calling).toMatchObject({ outcome: 'handed_back', tab: 'tab1' });
+    expect(handOvers().at(-1)!.handoff).toBeNull();
+    expect(fake.ops('sign_in')).toEqual([]);
+    const audits = (recorded.audited as { params: Record<string, unknown> }[])
+      .map((entry) => entry.params)
+      .filter((params) => params.action === 'hand_over');
+    expect(audits.map((params) => params.result)).toEqual(['waiting', 'handed_back']);
+  });
+
+  it('does not say the tab was handed back when it is gone by Done', async () => {
+    const chat = await projectChat();
+    const calling = chat.call('spark_browser_sign_in', { handOver: true });
+    const card = await pendingCard(t);
+    await eventually(async () => handOvers().length === 1);
+    fake.failure = new BrowserHostError('no_tab', 'There is no tab tab1 in this chat.');
+    await decideApproval(t.db, t.workspaceId, card.id, {
+      optionId: SPARK_ACTION_OPTION.confirm,
+      scope: 'once',
+    });
+    expect(await calling).toMatchObject({ outcome: 'tab_gone', tab: 'tab1' });
+  });
+
+  it('lets the user cancel, and frees the tab', async () => {
+    const chat = await projectChat();
+    const calling = chat.call('spark_browser_sign_in', { handOver: true });
+    const card = await pendingCard(t);
+    await decideApproval(t.db, t.workspaceId, card.id, {
+      optionId: SPARK_ACTION_OPTION.decline,
+      scope: 'once',
+    });
+    expect(await calling).toMatchObject({ outcome: 'cancelled' });
+    expect(handOvers().at(-1)!.handoff).toBeNull();
+  });
+
+  it('frees the tab when the user stops the turn, and is never answered from a paired device', async () => {
+    const chat = await projectChat();
+    const calling = chat.call('spark_browser_sign_in', { handOver: true });
+    const card = await pendingCard(t);
+    expect(macOnlyCard(card.payload)).toBe(true);
+    await eventually(async () => handOvers().length === 1);
+    recorded.stop();
+    expect(await calling).toMatchObject({ outcome: 'cancelled' });
+    expect(handOvers().at(-1)!.handoff).toBeNull();
   });
 });

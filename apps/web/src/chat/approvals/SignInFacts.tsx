@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { BrowserSignInAction } from '@spark-outpost/contracts';
+import type { BrowserHandoffAction, BrowserSignInAction } from '@spark-outpost/contracts';
 import { signInKeys, signInsApi } from '../../api/sign-ins.ts';
 
 function usernameOf(
@@ -21,14 +21,37 @@ export function SignInFacts({ action }: { action: BrowserSignInAction }) {
   });
   return (
     <dl className="sac-facts">
-      <dt>Site</dt>
+      <dt>Types into</dt>
       <dd>
-        <code>{action.origin}</code>
+        <code>{action.site ?? action.origin}</code>
       </dd>
+      {action.sites && action.sites.length > 1 && (
+        <>
+          <dt>Its sites</dt>
+          <dd>
+            {action.sites.map((site) => (
+              <code key={site}>{site} </code>
+            ))}
+          </dd>
+        </>
+      )}
       <dt>Sign-in</dt>
       <dd>{action.label}</dd>
       <dt>Username</dt>
       <dd>{usernameOf(action, saved.data, saved.isError)}</dd>
+    </dl>
+  );
+}
+
+export function HandoffFacts({ action }: { action: BrowserHandoffAction }) {
+  return (
+    <dl className="sac-facts">
+      <dt>Site</dt>
+      <dd>
+        <code>{action.site}</code>
+      </dd>
+      <dt>Where</dt>
+      <dd>The agent’s tab in this chat’s Browser pane</dd>
     </dl>
   );
 }

@@ -174,6 +174,44 @@
   display: none;
 }
 
+.bp-handoff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 0 14px 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.bp-handoff p {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+}
+
+.bp-handoff p span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.bp-handoff-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.bp-handoff .bp-handoff-error {
+  flex-basis: 100%;
+  color: var(--danger);
+}
+
 .bp-picking {
   flex: 1;
   min-width: 0;

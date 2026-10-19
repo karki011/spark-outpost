@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { browserAvailable, dismissAgentOpened, useAgentOpened } from './browser-store.ts';
+import {
+  browserAvailable,
+  dismissAgentOpened,
+  useAgentOpened,
+  useHandoff,
+} from './browser-store.ts';
 
 const STORAGE_KEY = 'spark-outpost.browser-pane.open';
 const REMEMBERED_CHATS = 100;
@@ -59,10 +64,11 @@ export interface BrowserPaneChoice {
 export function useBrowserPane(chatId: string): BrowserPaneChoice | null {
   const open = useBrowserPaneOpen(chatId);
   const agentOpened = useAgentOpened(chatId);
+  const handoff = useHandoff(chatId);
 
   useEffect(() => {
-    if (agentOpened) setBrowserPaneOpen(chatId, true);
-  }, [chatId, agentOpened]);
+    if (agentOpened || handoff) setBrowserPaneOpen(chatId, true);
+  }, [chatId, agentOpened, handoff]);
 
   return useMemo(() => {
     if (!browserAvailable()) return null;

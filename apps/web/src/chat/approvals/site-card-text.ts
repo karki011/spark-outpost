@@ -8,6 +8,12 @@ export function siteByline(
   secretFiles: readonly string[] | undefined,
 ): string | null {
   if (action.action === 'read_page') return `${agent} wants to read a page in the browser.`;
+  if (action.action === 'browser_sign_in') {
+    return `${agent} asks Spark to sign in on a page in the browser.`;
+  }
+  if (action.action === 'browser_handoff') {
+    return `${agent} handed you its browser tab to sign in to ${action.site}.`;
+  }
   if (action.action === 'open_page') {
     return secretFiles
       ? `${agent} wants to open an address that holds a value from ${secretFiles.join(', ')}.`
@@ -26,6 +32,12 @@ export function siteNote(
   action: SparkAction,
   secretFiles: readonly string[] | undefined,
 ): string | null {
+  if (action.action === 'browser_sign_in') {
+    return 'Spark types the saved username and password into this site, and only on the sites saved for this sign-in. The agent never sees them. Allowing covers this sign-in for the rest of this chat.';
+  }
+  if (action.action === 'browser_handoff') {
+    return 'Sign in yourself in the Browser pane: single sign-on, a code or a passkey. The agent never sees what you type and gets the tab back, signed in, when you select Done.';
+  }
   if (
     action.action !== 'read_page' &&
     action.action !== 'open_page' &&

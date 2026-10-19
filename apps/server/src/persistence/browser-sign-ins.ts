@@ -5,6 +5,8 @@ export interface SignInRow {
   project_id: string;
   label: string;
   origin: string;
+  sites: string[];
+  refused_site: string | null;
   keychain_ref: string;
   created_at: Date;
   updated_at: Date;
@@ -15,10 +17,12 @@ export interface NewSignInRow {
   projectId: string;
   label: string;
   origin: string;
+  sites: readonly string[];
   keychainRef: string;
 }
 
-const COLUMNS = 'id, project_id, label, origin, keychain_ref, created_at, updated_at';
+const COLUMNS =
+  'id, project_id, label, origin, sites, refused_site, keychain_ref, created_at, updated_at';
 const UNIQUE_VIOLATION = '23505';
 
 export class SignInLabelTakenError extends Error {
@@ -59,9 +63,9 @@ export async function getSignInRow(
 export async function insertSignInRow(db: Queryable, row: NewSignInRow): Promise<SignInRow> {
   const { rows } = await labelChecked(
     db.query<SignInRow>(
-      `INSERT INTO browser_sign_ins (id, project_id, label, origin, keychain_ref)
-       VALUES ($1, $2, $3, $4, $5) RETURNING ${COLUMNS}`,
-      [row.id, row.projectId, row.label, row.origin, row.keychainRef],
+      `INSERT INTO browser_sign_ins (id, project_id, label, origin, sites, keychain_ref)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING ${COLUMNS}`,
+      [row.id, row.projectId, row.label, row.origin, [...row.sites], row.keychainRef],
     ),
   );
   return rows[0]!;
@@ -71,13 +75,17 @@ export async function updateSignInRow(
   db: Queryable,
   projectId: string,
   id: string,
-  change: { label: string; origin: string },
+  change: { label: string; origin: string; sites: readonly string[] },
 ): Promise<SignInRow | null> {
   const { rows } = await labelChecked(
     db.query<SignInRow>(
-      `UPDATE browser_sign_ins SET label = $3, origin = $4, updated_at = now()
+      `UPDATE browser_sign_ins
+       SET label = $3, origin = $4, sites = $5,
+           refused_site = CASE WHEN refused_site = ANY($5::text[]) OR refused_site = $4
+                               THEN NULL ELSE refused_site END,
+           updated_at = now()
        WHERE project_id = $1 AND id = $2 RETURNING ${COLUMNS}`,
-      [projectId, id, change.label, change.origin],
+      [projectId, id, change.label, change.origin, [...change.sites]],
     ),
   );
   return rows[0] ?? null;
@@ -110,4 +118,8 @@ export async function signInRefs(db: Queryable, projectId?: string): Promise<str
     [projectId ?? null],
   );
   return rows.map((row) => row.keychain_ref);
+}
+
+export async function noteRefusedSite(db: Queryable, id: string, site: string): Promise<void> {
+  await db.query('UPDATE browser_sign_ins SET refused_site = $2 WHERE id = $1', [id, site]);
 }

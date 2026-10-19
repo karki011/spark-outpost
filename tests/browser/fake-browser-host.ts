@@ -54,7 +54,7 @@ function answer(request: BrowserHostRequest): unknown {
   }
   if (request.op === 'sign_in') {
     tab.typed = [request.username, request.password];
-    tab.url = `${request.origin}/home?as=${encodeURIComponent(request.username)}`;
+    tab.url = `${request.sites[0]}/home?as=${encodeURIComponent(request.username)}`;
     tab.title = `Welcome ${request.username}`;
     return { ...facts(), steps: 1 };
   }
@@ -88,6 +88,10 @@ function answer(request: BrowserHostRequest): unknown {
     };
   }
   if (request.op === 'end_run') return { closed: 0 };
+  if (request.op === 'keep') return { kept: true };
+  if (request.op === 'hand_over') {
+    return { ...facts(), masked: request.handoff ? 0 : 2 };
+  }
   if (request.op === 'page') {
     return { ...facts(), target: request.ref ? (TARGETS[request.ref] ?? null) : null };
   }

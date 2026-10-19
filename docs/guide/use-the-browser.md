@@ -18,8 +18,6 @@ Chat and Terminal links open here; **⌘**-click opens yours.
 
 ## Let the agent look and browse
 
-Ask: "Check the sign-in page".
-
 | The agent can                            | It can't                          |
 | ---------------------------------------- | --------------------------------- |
 | Open any web address or project file     | Reach Spark's ports               |
@@ -29,14 +27,14 @@ Ask: "Check the sign-in page".
 
 **Agent** tabs close with the turn unless pinned or you used them. Its network log shows addresses and timings, secrets hidden.
 
-Websites follow the [agent mode](agent-mode.md); acting on your own tab always asks. Page text is untrusted.
+Websites follow the [agent mode](agent-mode.md); acting on your tab always asks. Page text is untrusted.
 
 ## Let Spark run your dev server
 
 1. In **Settings** → **Projects**, select **Set up** beside **Preview**, enter the command and address, and save.
 2. In the pane, select **Start preview**.
 
-It runs between turns; **Show output** opens its **Preview** terminal. Agents can start it, not change it.
+It runs between turns; **Show output** shows it. Agents can't change it.
 
 ## Point at something
 
@@ -47,9 +45,9 @@ Right-click highlighted text: **Add to chat** or **Ask about this** (**⌘⇧A**
 
 ## Save a test sign-in
 
-1. In **Settings** → **Projects**, select **Add** beside **Saved sign-ins**: a label, site and test account.
+1. In **Settings** → **Projects**, select **Add** beside **Saved sign-ins**: label, site, **Other sign-in sites**, test account.
 2. Ask the agent to sign in; allow the card once per chat.
 
-Spark types them only on the saved site, checked after redirects; the agent never sees them. Agent tabs start signed out.
+Spark types only on those sites; the agent never sees them. Refused? **Add this site**. For SSO, the agent hands you its tab: sign in, then **Done**.
 
 **Next:** [Make a Spark](sparks.md)

@@ -2,6 +2,7 @@ import { WebContentsView, type ContextMenuParams, type Session } from 'electron'
 import {
   browserPlaceOf,
   classifyBrowserUrl,
+  type BrowserHandoff,
   type BrowserPaneTab,
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
@@ -52,6 +53,8 @@ export class PaneTab {
   runId: string | null;
   pinned = false;
   kept = false;
+  handoff: BrowserHandoff | null = null;
+  handoffRun: string | null = null;
   agentBusy = 0;
   active = false;
   picking = false;
@@ -87,6 +90,10 @@ export class PaneTab {
     return this.title;
   }
 
+  forgetLogs(): void {
+    this.live?.logs.reset();
+  }
+
   view(): WebContentsView | null {
     return this.live?.view ?? null;
   }
@@ -119,6 +126,7 @@ export class PaneTab {
       canGoForward: history?.canGoForward() ?? false,
       pinned: this.pinned,
       kept: this.kept,
+      handoff: this.handoff,
       driving: this.driving,
       picking: this.picking,
       lastAction: this.lastAction,

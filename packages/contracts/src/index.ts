@@ -121,3 +121,4 @@ export * from './calendar-google.ts';
 export * from './calendar-actions.ts';
 export * from './atlassian.ts';
 export * from './atlassian-actions.ts';
+export * from './browser-actions.ts';
