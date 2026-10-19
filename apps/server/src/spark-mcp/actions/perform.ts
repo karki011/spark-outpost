@@ -72,7 +72,12 @@ export function performSparkAction(
       });
     case 'browser_sign_in':
       return Promise.resolve({
-        message: `The agent can use ${action.label} on ${action.origin} in this chat.`,
+        message: `The agent can use ${action.label} on ${(action.sites ?? [action.origin]).join(', ')} in this chat.`,
+        url: null,
+      });
+    case 'browser_handoff':
+      return Promise.resolve({
+        message: `You finished in the tab; the agent goes on from ${action.site}.`,
         url: null,
       });
     case 'mac_use_app':

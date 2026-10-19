@@ -100,6 +100,13 @@ export function useAgentOpened(chatId: string): string | null {
   return useSyncExternalStore(subscribe, () => chats.get(chatId)?.agentOpened ?? null);
 }
 
+export function useHandoff(chatId: string): string | null {
+  return useSyncExternalStore(
+    subscribe,
+    () => chats.get(chatId)?.tabs.find((tab) => tab.handoff)?.handoff?.approvalId ?? null,
+  );
+}
+
 export function onBrowserPick(listener: (pick: BrowserPick) => void): () => void {
   connect();
   pickListeners.add(listener);

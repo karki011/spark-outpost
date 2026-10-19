@@ -15,6 +15,7 @@ import { pageSettles } from './page-settle.ts';
 import type { BrowserPanes } from './panes.ts';
 import { agentOpenProblem } from './request-guard.ts';
 import { SIGN_IN_TIMING, SignInError, signInOnPage } from './sign-in.ts';
+import { textFieldNodes, type DomNode } from './sensitive-nodes.ts';
 import type { PaneTab } from './tab.ts';
 import { chooseOpenTab } from './tab-rules.ts';
 
@@ -53,10 +54,18 @@ function targetTab(panes: BrowserPanes, chatId: string, wanted: string | undefin
       wanted ? `There is no tab ${wanted} in this chat.` : 'No tab is open in this chat yet.',
     );
   }
+  refuseHeld(tab);
+  return tab;
+}
+
+const SIGNING_IN =
+  'The user is signing in on this tab. Wait for spark_browser_sign_in to return, then go on.';
+
+function refuseHeld(tab: PaneTab): void {
   if (tab.picking) {
     throw new BrowserOpError('user_picking', 'The user is selecting on this tab. Try again soon.');
   }
-  return tab;
+  if (tab.handoff) throw new BrowserOpError('user_signing_in', SIGNING_IN);
 }
 
 async function open(panes: BrowserPanes, request: Request<'open'>, signal: AbortSignal) {
@@ -86,9 +95,7 @@ async function open(panes: BrowserPanes, request: Request<'open'>, signal: Abort
         })
       : panes.tab(request.chatId, choice.tabId);
   if (!tab) throw new BrowserOpError('tab_limit', 'This chat has too many tabs.');
-  if (tab.picking) {
-    throw new BrowserOpError('user_picking', 'The user is selecting on this tab. Try again soon.');
-  }
+  refuseHeld(tab);
   if (tab.owner === 'agent') tab.runId = request.runId;
   return panes.whileDriving(tab, async () => {
     if (choice.action === 'reuse') await tab.wake();
@@ -170,10 +177,10 @@ async function signIn(panes: BrowserPanes, request: Request<'sign_in'>, signal: 
   const tab = targetTab(panes, request.chatId, request.tab);
   return panes.whileDriving(tab, async () => {
     const { cdp } = await tab.wake();
-    const { origin, username, password } = request;
+    const { sites, username, password } = request;
     const done = await signInOnPage(
       cdp,
-      { origin, username, password },
+      { sites, username, password },
       { signal, filled: (node) => tab.filled.add(node) },
     );
     return { ...tabFacts(tab), url: done.url.slice(0, 4096), steps: done.steps };
@@ -249,6 +256,27 @@ function keep(panes: BrowserPanes, request: Request<'keep'>) {
   return { kept: tab?.kept ?? false };
 }
 
+async function handOver(panes: BrowserPanes, request: Request<'hand_over'>) {
+  const tab = panes.tab(request.chatId, request.tab);
+  if (!tab) throw new BrowserOpError('no_tab', `There is no tab ${request.tab} in this chat.`);
+  if (request.handoff) {
+    tab.handoff = request.handoff;
+    tab.keep();
+    panes.select(request.chatId, tab.id);
+    panes.noteChange(request.chatId);
+    return { ...tabFacts(tab), masked: 0 };
+  }
+  tab.handoff = null;
+  const { cdp } = await tab.wake();
+  const fields = await cdp
+    .send<{ root: DomNode }>('DOM.getDocument', { depth: -1, pierce: true })
+    .then(({ root }) => textFieldNodes(root))
+    .catch((): number[] => []);
+  for (const node of fields) tab.filled.add(node);
+  panes.noteChange(request.chatId);
+  return { ...tabFacts(tab), masked: fields.length };
+}
+
 export async function runBrowserOp(
   panes: BrowserPanes,
   request: BrowserHostRequest,
@@ -262,6 +290,7 @@ export async function runBrowserOp(
     if (request.op === 'logs') return await logs(panes, request);
     if (request.op === 'page') return await page(panes, request, signal);
     if (request.op === 'keep') return keep(panes, request);
+    if (request.op === 'hand_over') return await handOver(panes, request);
     if (request.op === 'act') return await act(panes, request, signal);
     if (request.op === 'sign_in') return await signIn(panes, request, signal);
     return {

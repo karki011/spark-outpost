@@ -185,7 +185,7 @@ describe('a saved sign-in typed into an agent tab', () => {
         chatId: CHAT,
         runId: null,
         tab: opened.tabId,
-        origin: SITE,
+        sites: [SITE],
         username: 'vault-user@example.test',
         password: 'vault-Passw0rd!-unit',
       },

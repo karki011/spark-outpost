@@ -66,6 +66,8 @@ describe('saved sign-ins of a project', () => {
       'keychain_ref',
       'created_at',
       'updated_at',
+      'sites',
+      'refused_site',
     ]);
     expect(plantedIn(await everyStoredValue(t))).toEqual([]);
     expect(JSON.parse((await secrets.get(`signin:${saved.id}`))!)).toEqual(PLANTED);
@@ -162,5 +164,43 @@ describe('saved sign-ins of a project', () => {
     });
     expect(edited.status).toBe(400);
     expect(edited.body.error).toContain('missing from the keychain');
+  });
+
+  it('keeps other sign-in sites as origins and clears a refused site once it is added', async () => {
+    const saved = await add({
+      ...STAGING,
+      sites: [
+        'auth.example.com/u/login',
+        'https://example.okta.com',
+        'https://staging.example.com',
+      ],
+    });
+    expect(saved.sites).toEqual(['https://auth.example.com', 'https://example.okta.com']);
+    const refused = await client.send('post', url(), {
+      ...STAGING,
+      label: 'Bad',
+      sites: ['http://idp.example.com'],
+    });
+    expect(refused.status).toBe(400);
+
+    await t.db.query(`UPDATE browser_sign_ins SET refused_site = 'https://login.example.net'`);
+    expect((await listed())[0]).toMatchObject({ refusedSite: 'https://login.example.net' });
+    const kept = await client.send('put', url(saved.id), {
+      label: 'Staging owner',
+      origin: STAGING.origin,
+    });
+    expect(kept.body).toMatchObject({
+      sites: saved.sites,
+      refusedSite: 'https://login.example.net',
+    });
+    const added = await client.send('put', url(saved.id), {
+      label: 'Staging owner',
+      origin: STAGING.origin,
+      sites: [...saved.sites, 'https://login.example.net'],
+    });
+    expect(added.body).toMatchObject({
+      sites: ['https://auth.example.com', 'https://example.okta.com', 'https://login.example.net'],
+      refusedSite: null,
+    });
   });
 });

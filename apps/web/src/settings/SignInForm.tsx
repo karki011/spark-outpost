@@ -18,6 +18,12 @@ function fieldsFor(saved: SavedSignIn | null): readonly FieldSpec[] {
     { field: 'label', label: 'Label', placeholder: 'Staging admin', type: 'text' },
     { field: 'origin', label: 'Site', placeholder: 'https://staging.example.com', type: 'text' },
     {
+      field: 'sites',
+      label: 'Other sign-in sites',
+      placeholder: 'https://login.example.com, https://example.okta.com',
+      type: 'text',
+    },
+    {
       field: 'username',
       label: 'Username',
       placeholder: kept ? `Leave empty to keep ${saved.username}` : 'test@example.com',
@@ -114,7 +120,8 @@ export function SignInForm({ project, saved, onDone }: SignInFormProps) {
       })}
       <p className="set-hint" id={`${ids}-note`}>
         Use test accounts only. The username and password are stored in the Mac keychain, and agents
-        never see them: Spark types them into this site when you allow it.
+        never see them: Spark types them only into these sites when you allow it. Add a site when
+        the app sends you to another one to sign in.
       </p>
       {failure && (
         <p className="set-hint" role="alert">

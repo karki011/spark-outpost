@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   BROWSER_TABS_MAX,
   BROWSER_URL_MAX,
+  browserHandoffSchema,
   browserPlaceSchema,
   browserTabSchema,
 } from './browser.ts';
@@ -14,7 +15,12 @@ import {
   browserActTargetSchema,
 } from './browser-act.ts';
 import { BROWSER_NETWORK_CAPACITY, browserNetworkEntrySchema } from './browser-network.ts';
-import { SIGN_IN_ORIGIN_MAX, SIGN_IN_PASSWORD_MAX, SIGN_IN_USERNAME_MAX } from './sign-ins.ts';
+import {
+  SIGN_IN_ORIGIN_MAX,
+  SIGN_IN_SITES_MAX,
+  SIGN_IN_PASSWORD_MAX,
+  SIGN_IN_USERNAME_MAX,
+} from './sign-ins.ts';
 
 export const BROWSER_HOST_ENV = 'SPARK_BROWSER_HOST';
 export const BROWSER_REQUEST_TIMEOUT_MS = 30_000;
@@ -86,6 +92,12 @@ export const browserHostRequestSchema = z.discriminatedUnion('op', [
   }),
   z.object({ op: z.literal('keep'), ...chat, tab: z.string().min(1).max(40) }),
   z.object({
+    op: z.literal('hand_over'),
+    ...chat,
+    tab: z.string().min(1).max(40),
+    handoff: browserHandoffSchema.nullable(),
+  }),
+  z.object({
     op: z.literal('act'),
     ...chat,
     tab,
@@ -101,7 +113,10 @@ export const browserHostRequestSchema = z.discriminatedUnion('op', [
     op: z.literal('sign_in'),
     ...chat,
     tab: z.string().min(1).max(40),
-    origin: z.string().min(1).max(SIGN_IN_ORIGIN_MAX),
+    sites: z
+      .array(z.string().min(1).max(SIGN_IN_ORIGIN_MAX))
+      .min(1)
+      .max(SIGN_IN_SITES_MAX + 1),
     username: z.string().min(1).max(SIGN_IN_USERNAME_MAX),
     password: z.string().min(1).max(SIGN_IN_PASSWORD_MAX),
   }),
@@ -177,6 +192,11 @@ export const browserEndRunResultSchema = z.object({ closed: z.number().int().non
 
 export const browserKeepResultSchema = z.object({ kept: z.boolean() });
 
+export const browserHandOverResultSchema = z.object({
+  ...tabFacts,
+  masked: z.number().int().nonnegative(),
+});
+
 export const browserPageResultSchema = z.object({
   ...tabFacts,
   target: browserActTargetSchema.nullable().optional(),
@@ -208,6 +228,7 @@ export const browserHostResultSchemas = {
   logs: browserLogsResultSchema,
   end_run: browserEndRunResultSchema,
   keep: browserKeepResultSchema,
+  hand_over: browserHandOverResultSchema,
   page: browserPageResultSchema,
   act: browserActResultSchema,
   sign_in: browserSignInResultSchema,
@@ -219,6 +240,7 @@ export const browserHostErrorCodeSchema = z.enum([
   'not_allowed',
   'tab_limit',
   'user_picking',
+  'user_signing_in',
   'load_failed',
   'no_form',
   'sensitive_field',

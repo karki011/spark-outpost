@@ -102,12 +102,20 @@ export const browserTabSchema = z.object({
 });
 export type BrowserTab = z.infer<typeof browserTabSchema>;
 
+export const browserHandoffSchema = z.object({
+  agent: z.string().max(60),
+  site: z.string().max(300),
+  approvalId: z.uuid(),
+});
+export type BrowserHandoff = z.infer<typeof browserHandoffSchema>;
+
 export const browserPaneTabSchema = browserTabSchema.extend({
   loading: z.boolean(),
   canGoBack: z.boolean(),
   canGoForward: z.boolean(),
   pinned: z.boolean(),
   kept: z.boolean().default(false),
+  handoff: browserHandoffSchema.nullable().default(null),
   driving: z.boolean(),
   picking: z.boolean(),
   lastAction: z.string().max(200).nullable(),

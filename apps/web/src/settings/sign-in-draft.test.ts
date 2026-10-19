@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { SavedSignIn } from '@spark-outpost/contracts';
-import { checkedSignIn, draftOf } from './sign-in-draft.ts';
+import { checkedSignIn, draftOf, withSite } from './sign-in-draft.ts';
 
 const saved: SavedSignIn = {
   id: '5a0f0e7e-7f2a-4d4e-9c1b-2f6f6c0a1b11',
   projectId: '5a0f0e7e-7f2a-4d4e-9c1b-2f6f6c0a1b12',
   label: 'Staging admin',
   origin: 'https://staging.example.com',
+  sites: ['https://auth.example.com'],
+  refusedSite: null,
   username: 'a•••@example.com',
   createdAt: '2026-10-05T10:00:00.000Z',
   updatedAt: '2026-10-05T10:00:00.000Z',
@@ -17,6 +19,7 @@ describe('the saved sign-in form', () => {
     expect(draftOf(saved)).toEqual({
       label: 'Staging admin',
       origin: 'https://staging.example.com',
+      sites: 'https://auth.example.com',
       username: '',
       password: '',
     });
@@ -30,7 +33,11 @@ describe('the saved sign-in form', () => {
 
   it('keeps the saved values when an edit leaves them empty', () => {
     const { request } = checkedSignIn({ ...draftOf(saved), label: ' Staging owner ' }, saved);
-    expect(request).toEqual({ label: 'Staging owner', origin: 'https://staging.example.com' });
+    expect(request).toEqual({
+      label: 'Staging owner',
+      origin: 'https://staging.example.com',
+      sites: ['https://auth.example.com'],
+    });
   });
 
   it('sends only the value that was typed again', () => {
@@ -38,6 +45,7 @@ describe('the saved sign-in form', () => {
     expect(request).toEqual({
       label: 'Staging admin',
       origin: 'https://staging.example.com',
+      sites: ['https://auth.example.com'],
       password: 'new-Passw0rd',
     });
   });
@@ -50,5 +58,26 @@ describe('the saved sign-in form', () => {
   it('refuses plain http on a public host', () => {
     const draft = { ...draftOf(saved), origin: 'http://staging.example.com' };
     expect(checkedSignIn(draft, saved).errors.origin).toContain('Plain http');
+  });
+
+  it('reads other sign-in sites one per line or comma, as origins', () => {
+    const draft = {
+      ...draftOf(saved),
+      sites: 'auth.example.com/u/login, https://acme.okta.example\nhttps://auth.example.com',
+    };
+    expect(checkedSignIn(draft, saved).request?.sites).toEqual([
+      'https://auth.example.com',
+      'https://acme.okta.example',
+    ]);
+    const bad = checkedSignIn({ ...draftOf(saved), sites: 'http://idp.example.com' }, saved);
+    expect(bad.errors.sites).toContain('http://idp.example.com');
+  });
+
+  it('adds a refused site to what is saved', () => {
+    expect(withSite(saved, 'https://acme.okta.example')).toEqual({
+      label: 'Staging admin',
+      origin: 'https://staging.example.com',
+      sites: ['https://auth.example.com', 'https://acme.okta.example'],
+    });
   });
 });

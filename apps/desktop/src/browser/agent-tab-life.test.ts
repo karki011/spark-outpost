@@ -112,3 +112,61 @@ describe('the page check before a sign-in', () => {
     expect((await asked).url).toBe('https://auth.example.com/login');
   });
 });
+
+describe('a tab handed to the user to sign in', () => {
+  const handoff = {
+    agent: 'Claude',
+    site: 'https://idp.example.com',
+    approvalId: '33333333-2222-4333-8444-555555555555',
+  };
+
+  it('shows the handoff, keeps the tab, refuses the agent and masks what the user typed after', async () => {
+    const tabId = await agentOpens('https://idp.example.com/login');
+    const handOver = (held: typeof handoff | null) =>
+      runBrowserOp(
+        panes,
+        { op: 'hand_over', chatId: CHAT, runId: RUN, tab: tabId, handoff: held },
+        signal,
+      );
+    await handOver(handoff);
+    const tab = panes.tab(CHAT, tabId)!;
+    expect(tab.paneTab()).toMatchObject({ handoff, kept: true, active: true });
+    await expect(
+      runBrowserOp(
+        panes,
+        { op: 'read', chatId: CHAT, runId: RUN, tab: tabId, mode: 'text', offset: 0 },
+        signal,
+      ),
+    ).rejects.toMatchObject({ code: 'user_signing_in' });
+
+    net.answer = (method) =>
+      method === 'DOM.getDocument'
+        ? {
+            root: {
+              backendNodeId: 1,
+              nodeName: 'HTML',
+              children: [
+                { backendNodeId: 7, nodeName: 'INPUT', attributes: ['type', 'email'] },
+                { backendNodeId: 8, nodeName: 'INPUT', attributes: ['type', 'checkbox'] },
+                { backendNodeId: 9, nodeName: 'TEXTAREA' },
+              ],
+            },
+          }
+        : {};
+    expect(await handOver(null)).toMatchObject({ masked: 2 });
+    expect(tab.paneTab().handoff).toBeNull();
+    expect([...tab.filled].sort()).toEqual([7, 9]);
+    expect(await endTurn()).toEqual({ closed: 0 });
+  });
+
+  it('lets go of the handoff when the turn ends', async () => {
+    const tabId = await agentOpens('https://idp.example.com/login');
+    await runBrowserOp(
+      panes,
+      { op: 'hand_over', chatId: CHAT, runId: RUN, tab: tabId, handoff },
+      signal,
+    );
+    await endTurn();
+    expect(panes.tab(CHAT, tabId)!.paneTab()).toMatchObject({ handoff: null, kept: true });
+  });
+});

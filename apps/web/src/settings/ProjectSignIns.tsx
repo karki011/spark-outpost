@@ -1,12 +1,13 @@
 import './project-preview.css';
 import './project-sign-ins.css';
 import { useId, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { SIGN_INS_NEED_APP, type Project, type SavedSignIn } from '@spark-outpost/contracts';
 import { signInKeys, signInsApi } from '../api/sign-ins.ts';
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 import { SettingRow } from './SettingRow.tsx';
 import { SignInForm } from './SignInForm.tsx';
+import { withSite } from './sign-in-draft.ts';
 
 const LABEL = 'Saved sign-ins';
 const HINT =
@@ -22,6 +23,34 @@ interface ListProps {
   onEdit: (next: Editing) => void;
 }
 
+function AddThisSite({ project, signIn }: { project: Project; signIn: SavedSignIn }) {
+  const queryClient = useQueryClient();
+  const add = useMutation({
+    mutationFn: (site: string) => signInsApi.update(project.id, signIn.id, withSite(signIn, site)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: signInKeys.project(project.id) }),
+  });
+  const site = signIn.refusedSite;
+  if (site === null) return null;
+  return (
+    <p className="signin-refused" role="status">
+      <span>
+        An agent’s tab ended on <code>{site}</code>, so Spark typed nothing. Add it only if this is
+        where the app sends you to sign in.
+      </span>
+      <button
+        type="button"
+        className="btn line sm"
+        disabled={add.isPending}
+        aria-label={`Add this site, ${site}, to ${signIn.label}`}
+        onClick={() => add.mutate(site)}
+      >
+        Add this site
+      </button>
+      {add.error && <span role="alert">{add.error.message}</span>}
+    </p>
+  );
+}
+
 function SignInList({ project, signIns, editing, onEdit }: ListProps) {
   return (
     <ul className="signin-list" aria-label={`Saved sign-ins in ${project.name}`}>
@@ -31,7 +60,10 @@ function SignInList({ project, signIns, editing, onEdit }: ListProps) {
           <li key={signIn.id}>
             <div className="signin-item">
               <span className="signin-label">{signIn.label}</span>
-              <code className="signin-origin">{signIn.origin}</code>
+              <code className="signin-origin">
+                {signIn.origin}
+                {signIn.sites.length > 0 && ` +${signIn.sites.length}`}
+              </code>
               <span className="signin-user">{signIn.username ?? LOST}</span>
               <button
                 type="button"
@@ -43,6 +75,7 @@ function SignInList({ project, signIns, editing, onEdit }: ListProps) {
                 Edit
               </button>
             </div>
+            <AddThisSite project={project} signIn={signIn} />
             {open && <SignInForm project={project} saved={signIn} onDone={() => onEdit(null)} />}
           </li>
         );

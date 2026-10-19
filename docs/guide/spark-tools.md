@@ -45,7 +45,7 @@ Ticket, Slack and pull request tools need their connector; pull request and map 
 | Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                              |
 | Add, change, switch or remove an MCP server | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
 | Open a site; act on a page                  | `spark_browser_open`, `spark_browser_act`                                                               |
-| Use a saved sign-in (always asks)           | `spark_browser_sign_in`                                                                                 |
+| Sign in, or hand you the tab (always asks)  | `spark_browser_sign_in`                                                                                 |
 | Use a [Mac app](mac-control.md)             | `spark_mac_apps`, `spark_mac_read`, `spark_mac_act`                                                     |
 | Keep one command running after the turn     | `spark_terminal_run`                                                                                    |
 | Change a calendar event                     | `spark_calendar_edit`                                                                                   |

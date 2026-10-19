@@ -247,6 +247,10 @@ export class BrowserPanes {
       (tab) => tab.owner === 'agent' && tab.runId === runId && !tab.pinned && !tab.kept,
     );
     for (const tab of closing) this.close(chatId, tab.id);
+    for (const tab of this.tabsOf(chatId)) {
+      if (tab.runId === runId) tab.handoff = null;
+    }
+    this.noteChange(chatId);
     return closing.length;
   }
 

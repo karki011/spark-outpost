@@ -107,11 +107,13 @@ function baseName(path: string): string {
   return path.split('/').at(-1) ?? path;
 }
 
-export const MAC_CARD_REFUSAL = 'Mac control and calendar cards are answered on your Mac.';
+export const MAC_CARD_REFUSAL =
+  'Mac control, calendar and browser sign-in cards are answered on your Mac.';
 
 export function macOnlyCard(payload: unknown): boolean {
   const parsed = approvalPayloadSchema.safeParse(payload);
   const action = parsed.success ? parsed.data.sparkAction?.action : undefined;
+  if (action === 'browser_handoff') return true;
   return action !== undefined && (isMacAction(action) || isCalendarAction(action));
 }
 

@@ -15,7 +15,7 @@ const SITE = 'http://vault.test';
 const LOOK_ALIKE = 'http://vault.test.evil.test';
 const USERNAME = 'vault-user@example.test';
 const PASSWORD = 'vault-Passw0rd!-real 7';
-const VALUES = { origin: SITE, username: USERNAME, password: PASSWORD };
+const VALUES = { sites: [SITE], username: USERNAME, password: PASSWORD };
 const TYPES: Record<string, string> = {
   '.html': 'text/html',
   '.js': 'text/javascript',

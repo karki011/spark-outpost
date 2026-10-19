@@ -1,13 +1,20 @@
 import { z } from 'zod';
 import {
   SPARK_ACTION_KIND,
+  browserOrigin,
   originAndPath,
+  signInOriginOf,
   signInOriginProblem,
+  signInSites,
   type BrowserSignInAction,
 } from '@spark-outpost/contracts';
 import { BrowserHostError } from '../../../browser/host-client.ts';
 import { SIGN_IN_MISSING_SECRET, readSignInSecret } from '../../../browser/sign-ins.ts';
-import { listSignInRows, type SignInRow } from '../../../persistence/browser-sign-ins.ts';
+import {
+  listSignInRows,
+  noteRefusedSite,
+  type SignInRow,
+} from '../../../persistence/browser-sign-ins.ts';
 import type { Queryable } from '../../../persistence/db.ts';
 import { actionRun, postCard, RESULT_WAIT_MS } from '../../actions/confirm.ts';
 import { SparkToolError, sparkTool, type SparkToolContext } from '../../tool.ts';
@@ -20,6 +27,7 @@ import {
   type BrowserDecision,
 } from './context.ts';
 import { cardDecision } from './gate.ts';
+import { handOver } from './handoff.ts';
 import type { PageFacts } from './read-flow.ts';
 import { scrubberFor } from './scrub.ts';
 import { allowedNote } from '../allowed-note.ts';
@@ -53,6 +61,10 @@ function chosen(rows: readonly SignInRow[], wanted: string): SignInRow {
   return row;
 }
 
+function sitesKey(row: SignInRow): string {
+  return JSON.stringify(signInSites(row));
+}
+
 async function allowedEarlier(db: Queryable, conversationId: string, row: SignInRow) {
   const { rows } = await db.query(
     `SELECT 1 FROM approvals a JOIN runs r ON r.id = a.run_id
@@ -60,9 +72,9 @@ async function allowedEarlier(db: Queryable, conversationId: string, row: SignIn
        AND a.decided_by = 'user'
        AND a.payload->'sparkAction'->>'action' = 'browser_sign_in'
        AND a.payload->'sparkAction'->>'signInId' = $3
-       AND a.payload->'sparkAction'->>'origin' = $4
+       AND a.payload->'sparkAction'->'sites' = $4::jsonb
      LIMIT 1`,
-    [conversationId, SPARK_ACTION_KIND, row.id, row.origin],
+    [conversationId, SPARK_ACTION_KIND, row.id, sitesKey(row)],
   );
   return rows.length > 0;
 }
@@ -75,7 +87,11 @@ interface Clearance {
   approvalId?: string;
 }
 
-async function clearSignIn(context: SparkToolContext, row: SignInRow): Promise<Clearance> {
+async function clearSignIn(
+  context: SparkToolContext,
+  row: SignInRow,
+  site: string,
+): Promise<Clearance> {
   const run = actionRun(context.scope);
   const conversationId = context.scope.conversationId!;
   if (await allowedEarlier(context.deps.db, conversationId, row)) {
@@ -87,6 +103,8 @@ async function clearSignIn(context: SparkToolContext, row: SignInRow): Promise<C
     projectId: row.project_id,
     label: row.label,
     origin: row.origin,
+    site,
+    sites: signInSites(row),
   };
   const card = await postCard(context.deps.db, run, action, {
     path: 'confirm',
@@ -125,6 +143,7 @@ function record(
     detail: {
       signIn: row.label,
       signInOrigin: row.origin,
+      signInSites: signInSites(row),
       by: decidedByUser ? 'user' : decision === 'waiting_for_user' ? null : 'spark',
       ...detail,
     },
@@ -158,7 +177,7 @@ async function fill(context: SparkToolContext, attempt: Attempt, clearance: Clea
         chatId: session.chatId,
         runId: session.runId,
         tab: page.tabId,
-        origin: row.origin,
+        sites: signInSites(row),
         username: secret.username,
         password: secret.password,
       },
@@ -188,11 +207,23 @@ async function fill(context: SparkToolContext, attempt: Attempt, clearance: Clea
 }
 
 interface SignInArgs {
-  signIn: string;
+  signIn?: string | undefined;
   tab?: string | undefined;
+  handOver?: boolean | undefined;
+}
+
+const NO_LABEL =
+  'Pass signIn with a label from spark_browser_signins, or handOver true to let the user sign in themselves.';
+
+async function noteRefused(context: SparkToolContext, row: SignInRow, url: string): Promise<void> {
+  const origin = browserOrigin(url);
+  const site = origin === null ? null : signInOriginOf(origin);
+  if (site !== null) await noteRefusedSite(context.deps.db, row.id, site);
 }
 
 async function signIn(args: SignInArgs, context: SparkToolContext) {
+  if (args.handOver) return handOver(context, args.tab);
+  if (!args.signIn) throw new SparkToolError(NO_LABEL);
   const session = browserSession(context);
   actionRun(context.scope);
   const row = chosen(await projectRows(context, session.chatId), args.signIn);
@@ -205,15 +236,16 @@ async function signIn(args: SignInArgs, context: SparkToolContext) {
       throw asToolError(error);
     });
   const attempt = { row, page };
-  const problem = signInOriginProblem(row.origin, page.url);
+  const problem = signInOriginProblem(signInSites(row), page.url);
   if (problem) {
     record(context, attempt, 'refused_origin');
+    await noteRefused(context, row, page.url);
     await keepTab(context, page.tabId);
     return notSignedIn(
       `${problem} Spark checked after the page finished loading and redirecting. Nothing was filled.`,
     );
   }
-  const clearance = await clearSignIn(context, row);
+  const clearance = await clearSignIn(context, row, browserOrigin(page.url) ?? row.origin);
   if (clearance.decision === 'waiting_for_user' || clearance.decision === 'user_declined') {
     record(context, attempt, clearance.decision, { approvalId: clearance.approvalId });
     const waiting = clearance.decision === 'waiting_for_user';
@@ -221,7 +253,7 @@ async function signIn(args: SignInArgs, context: SparkToolContext) {
     return {
       outcome: waiting ? 'waiting_for_user' : 'declined',
       signIn: row.label,
-      site: row.origin,
+      site: browserOrigin(page.url) ?? row.origin,
       message: waiting ? WAITING_FOR_SIGN_IN : SIGN_IN_DECLINED,
     };
   }
@@ -240,11 +272,11 @@ async function signIns(context: SparkToolContext) {
     decision: 'local',
   });
   return {
-    signIns: rows.map((row) => ({ id: row.id, label: row.label, site: row.origin })),
+    signIns: rows.map((row) => ({ id: row.id, label: row.label, sites: signInSites(row) })),
     note:
       rows.length === 0
         ? 'No sign-ins are saved for this chat’s project. The user adds them in Settings, Projects, Saved sign-ins.'
-        : 'Pass a label to spark_browser_sign_in while a tab is on that exact site. Spark types the values; you never see them.',
+        : 'Pass a label to spark_browser_sign_in while a tab is on one of its sites. Spark types the values; you never see them. For SSO, MFA or a passkey, pass handOver true so the user signs in.',
   };
 }
 
@@ -253,7 +285,7 @@ const browserSignInsTool = sparkTool({
   needs: 'browser',
   title: 'Saved sign-ins',
   description:
-    "Saved test sign-ins of this chat's project: label and site. Values stay in the keychain and no tool returns them.",
+    "Saved test sign-ins of this chat's project: label and sites. Values stay in the keychain and no tool returns them.",
   input: {},
   run: (_args, context) => signIns(context),
 });
@@ -264,10 +296,16 @@ const browserSignInTool = sparkTool({
   acts: true,
   title: 'Sign in with a saved sign-in',
   description:
-    "Spark types a saved username and password into the tab's sign-in form (one page, or username then password) and submits it, only on exactly the saved site (https or a local host), never in a frame. First use in a chat asks the user on a card, in every mode. Returns form_submitted and the page, or why nothing was filled; never the values.",
+    "Spark types a saved username and password into the tab's sign-in form (one page, or username then password) and submits it, only on the sign-in's own sites (https or a local host), never in a frame. First use in a chat asks on a card, in every mode. handOver: the user signs in themselves in your tab (SSO, MFA, passkey) and the call waits until they are done. Never returns the values.",
   input: {
-    signIn: z.string().min(1).max(60).describe('Label or id from spark_browser_signins.'),
+    signIn: z
+      .string()
+      .min(1)
+      .max(60)
+      .optional()
+      .describe('Label or id from spark_browser_signins.'),
     tab: tabInput,
+    handOver: z.boolean().optional(),
   },
   run: signIn,
 });

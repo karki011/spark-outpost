@@ -21,6 +21,7 @@ import {
   useChatBrowser,
 } from './browser-store.ts';
 import { BrowserTabs } from './BrowserTabs.tsx';
+import { HandoffBanner } from './HandoffBanner.tsx';
 import { defaultBrowserUrl, openInDefaultBrowser } from './chat-links.ts';
 import { PreviewBadge, PreviewStart } from './PreviewControls.tsx';
 import { tabLabel } from './tab-label.ts';
@@ -280,6 +281,7 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
         )}
         <PreviewBadge chatId={chatId} />
       </div>
+      {tab?.handoff && <HandoffBanner key={tab.handoff.approvalId} handoff={tab.handoff} />}
       <div className="bp-view" id="bp-view" ref={view}>
         {blank && <StartPage chatId={chatId} tab={tab} />}
         {!blank && browser.snapshot && (

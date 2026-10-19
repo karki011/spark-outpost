@@ -71,6 +71,7 @@ function cardTitle(action: SparkAction): string {
   const question = sparkActionQuestion(action);
   if (
     action.action === 'browser_sign_in' ||
+    action.action === 'browser_handoff' ||
     action.action === 'mac_use_app' ||
     action.action === 'mac_act' ||
     action.action === 'mac_press'
@@ -110,13 +111,14 @@ export interface CardPlan {
   observed: readonly string[];
   secretSend?: readonly string[];
   confirmName?: string;
+  declineName?: string;
 }
 
 export async function postCard(
   db: Queryable,
   run: ActionRun,
   action: SparkAction,
-  { path, requested, observed, secretSend, confirmName }: CardPlan,
+  { path, requested, observed, secretSend, confirmName, declineName }: CardPlan,
 ): Promise<Approval> {
   const card = await insertApproval(
     db,
@@ -144,7 +146,11 @@ export async function postCard(
           name: confirmName ?? sparkActionLabels[action.action].confirm,
           kind: 'allow_once',
         },
-        { optionId: SPARK_ACTION_OPTION.decline, name: 'Don’t', kind: 'reject_once' },
+        {
+          optionId: SPARK_ACTION_OPTION.decline,
+          name: declineName ?? 'Don’t',
+          kind: 'reject_once',
+        },
       ],
       reason: null,
     },

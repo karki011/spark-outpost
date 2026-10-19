@@ -133,7 +133,7 @@ test('Settings adds, edits and deletes a sign-in without ever showing it back @p
     Password: PASSWORD,
   });
   await expect(form).toContainText('Plain http works only for local addresses.');
-  await form.getByLabel('Site').fill('https://staging.example.com/login');
+  await form.getByLabel('Site', { exact: true }).fill('https://staging.example.com/login');
   await shoot(page, '.set-builders:has(.signin-form)', 'settings-sign-in-form');
   await page.keyboard.press('Enter');
 
@@ -217,11 +217,11 @@ test('an agent signs in through Spark after the user allows it, and never sees t
   await linkedChat(page, repo);
 
   await send(page, '#build #spark spark_browser_signins');
-  await expect(page.getByText(/"label":"Staging admin","site":"http:\/\/vault\.test"/)).toBeVisible(
-    {
-      timeout: 45_000,
-    },
-  );
+  await expect(
+    page.getByText(/"label":"Staging admin","sites":\["http:\/\/vault\.test"\]/),
+  ).toBeVisible({
+    timeout: 45_000,
+  });
 
   await send(page, '#build #spark spark_browser_open {"url":"http://vault.test/login.html"}');
   await expect(page.getByText(/"outcome":"opened"/)).toBeVisible({ timeout: 45_000 });

@@ -76,6 +76,8 @@ function saved(row: SignInRow, secret: SignInSecret | null): SavedSignIn {
     projectId: row.project_id,
     label: row.label,
     origin: row.origin,
+    sites: row.sites,
+    refusedSite: row.refused_site,
     username: secret ? maskUsername(secret.username) : null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
@@ -86,6 +88,11 @@ function originOf(typed: string): string {
   const origin = signInOriginOf(typed);
   if (!origin) throw new SignInProblem(SIGN_IN_ORIGIN_HELP);
   return origin;
+}
+
+function sitesOf(origin: string, typed: readonly string[] | undefined): string[] {
+  const sites = (typed ?? []).map(originOf).filter((site) => site !== origin);
+  return [...new Set(sites)];
 }
 
 export async function listSignIns(deps: SignInDeps, projectId: string): Promise<SavedSignIn[]> {
@@ -111,6 +118,7 @@ export async function createSignIn(
     projectId,
     label: request.label,
     origin,
+    sites: sitesOf(origin, request.sites),
     keychainRef: keychainRef(id),
   });
   try {
@@ -138,7 +146,12 @@ export async function updateSignIn(
     throw new SignInProblem(SIGN_IN_MISSING_SECRET);
   }
   const secret = { username, password };
-  const row = await updateSignInRow(deps.db, projectId, id, { label: request.label, origin });
+  const sites = request.sites === undefined ? before.sites : request.sites;
+  const row = await updateSignInRow(deps.db, projectId, id, {
+    label: request.label,
+    origin,
+    sites: sitesOf(origin, sites),
+  });
   if (!row) throw new SignInProblem(SIGN_IN_NOT_FOUND);
   if (request.username !== undefined || request.password !== undefined) {
     await writeSecret(deps.secrets, row.keychain_ref, secret);

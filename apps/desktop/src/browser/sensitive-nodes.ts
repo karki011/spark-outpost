@@ -43,3 +43,35 @@ export function sensitiveNodes(root: DomNode): number[] {
   }
   return found;
 }
+
+const NOT_TYPED = new Set([
+  'hidden',
+  'checkbox',
+  'radio',
+  'submit',
+  'button',
+  'reset',
+  'image',
+  'file',
+  'range',
+  'color',
+]);
+
+function isTextField(node: DomNode): boolean {
+  const tag = node.nodeName.toUpperCase();
+  if (tag === 'TEXTAREA') return true;
+  if (tag !== 'INPUT') return false;
+  return !NOT_TYPED.has((attributesOf(node).get('type') ?? '').toLowerCase());
+}
+
+export function textFieldNodes(root: DomNode): number[] {
+  const found: number[] = [];
+  const pending: DomNode[] = [root];
+  while (pending.length > 0) {
+    const node = pending.pop()!;
+    if (isTextField(node)) found.push(node.backendNodeId);
+    pending.push(...(node.children ?? []), ...(node.shadowRoots ?? []));
+    if (node.contentDocument) pending.push(node.contentDocument);
+  }
+  return found;
+}

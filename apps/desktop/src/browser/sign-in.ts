@@ -22,7 +22,7 @@ export class SignInError extends Error {
 }
 
 export interface SignInValues {
-  origin: string;
+  sites: readonly string[];
   username: string;
   password: string;
 }
@@ -61,8 +61,8 @@ async function pageUrl(cdp: Cdp): Promise<string> {
   return frameTree.frame.url;
 }
 
-async function requireOrigin(cdp: Cdp, origin: string): Promise<void> {
-  const problem = signInOriginProblem(origin, await pageUrl(cdp));
+async function requireOrigin(cdp: Cdp, sites: readonly string[]): Promise<void> {
+  const problem = signInOriginProblem(sites, await pageUrl(cdp));
   if (problem) throw new SignInError('not_allowed', `${problem} Nothing more was filled.`);
 }
 
@@ -99,13 +99,13 @@ type Credentials = Extract<SignInPlan, { step: 'credentials' }>;
 
 async function passwordStep(
   cdp: Cdp,
-  origin: string,
+  sites: readonly string[],
   timing: SignInTiming,
   signal: AbortSignal,
 ): Promise<Credentials> {
   const deadline = Date.now() + timing.fieldMs;
   for (;;) {
-    await requireOrigin(cdp, origin);
+    await requireOrigin(cdp, sites);
     const plan = await planOf(cdp).catch((): SignInPlan => ({
       step: 'none',
       reason: SIGN_IN_REASONS.notFound,
@@ -128,10 +128,11 @@ async function fillCredentials(
   filled: number[],
 ): Promise<void> {
   if (plan.username !== null) {
+    await requireOrigin(cdp, values.sites);
     filled.push(plan.username);
     await typeInto(cdp, plan.username, values.username);
   }
-  await requireOrigin(cdp, values.origin);
+  await requireOrigin(cdp, values.sites);
   filled.push(plan.password);
   await typeInto(cdp, plan.password, values.password);
 }
@@ -144,7 +145,7 @@ async function run(
   filled: number[],
 ): Promise<SignInOutcome> {
   await cdp.send('Page.enable');
-  await requireOrigin(cdp, values.origin);
+  await requireOrigin(cdp, values.sites);
   await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true }).catch(() => undefined);
   const first = await planOf(cdp);
   if (first.step === 'none') throw new SignInError('no_form', first.reason);
@@ -153,10 +154,11 @@ async function run(
     await submit(cdp, timing, signal);
     return { url: await pageUrl(cdp), steps: 1 };
   }
+  await requireOrigin(cdp, values.sites);
   filled.push(first.username);
   await typeInto(cdp, first.username, values.username);
   await submit(cdp, timing, signal);
-  const second = await passwordStep(cdp, values.origin, timing, signal);
+  const second = await passwordStep(cdp, values.sites, timing, signal);
   await fillCredentials(cdp, second, values, filled);
   await submit(cdp, timing, signal);
   return { url: await pageUrl(cdp), steps: 2 };

@@ -79,9 +79,9 @@ class FakePage {
   }
 }
 
-const values = { origin: ORIGIN, username: USERNAME, password: PASSWORD };
-const signIn = (page: FakePage, origin = ORIGIN) =>
-  signInOnPage(page.cdp, { ...values, origin }, { timing: TIMING });
+const values = { username: USERNAME, password: PASSWORD };
+const signIn = (page: FakePage, origin = ORIGIN, more: string[] = []) =>
+  signInOnPage(page.cdp, { ...values, sites: [origin, ...more] }, { timing: TIMING });
 
 async function refusal(work: Promise<unknown>): Promise<SignInError> {
   const error = await work.then(
@@ -103,10 +103,14 @@ describe('signing in on a page', () => {
       current.emit('Page.loadEventFired');
     };
     const hidden: number[] = [];
-    const outcome = await signInOnPage(page.cdp, values, {
-      timing: TIMING,
-      filled: (node) => hidden.push(node),
-    });
+    const outcome = await signInOnPage(
+      page.cdp,
+      { ...values, sites: [ORIGIN] },
+      {
+        timing: TIMING,
+        filled: (node) => hidden.push(node),
+      },
+    );
     expect(page.typed).toEqual([
       { node: login.username.backendNodeId, text: USERNAME },
       { node: login.password.backendNodeId, text: PASSWORD },
@@ -180,6 +184,34 @@ describe('signing in on a page', () => {
     const error = await refusal(signIn(page));
     expect(error.code).toBe('not_allowed');
     expect(page.typed.map((entry) => entry.text)).toEqual([USERNAME]);
+  });
+
+  it('follows a username step to a listed sign-in site and types the password there', async () => {
+    const page = new FakePage();
+    page.dom = usernameStepDom().root;
+    page.onSubmit = (current) => {
+      if (current.submits > 1) return;
+      current.dom = passwordStepDom().root;
+      current.url = 'https://acme.okta.example/signin/verify';
+    };
+    const outcome = await signIn(page, ORIGIN, ['https://acme.okta.example']);
+    expect(outcome.steps).toBe(2);
+    expect(page.typed.map((entry) => entry.text)).toEqual([USERNAME, PASSWORD]);
+  });
+
+  it('types nothing when a listed site redirects to one that is not listed before the form', async () => {
+    const page = new FakePage();
+    page.dom = loginDom().root;
+    let checks = 0;
+    const answer = page.cdp.send;
+    page.cdp.send = (method, params) => {
+      if (method === 'Page.getFrameTree' && ++checks === 2) page.url = 'https://evil.example/login';
+      return answer(method, params);
+    };
+    const error = await refusal(signIn(page, ORIGIN, ['https://acme.okta.example']));
+    expect(error.code).toBe('not_allowed');
+    expect(error.message).toContain('the tab is on https://evil.example');
+    expect(page.typed).toEqual([]);
   });
 
   it('gives up when no password field follows the username step', async () => {

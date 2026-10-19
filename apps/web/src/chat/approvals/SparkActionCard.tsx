@@ -19,7 +19,7 @@ import { HoldToConfirm } from '../../ui/HoldToConfirm.tsx';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { isAllow } from './approval-outcome.ts';
 import { ObservedNote } from './ObservedNote.tsx';
-import { SignInFacts } from './SignInFacts.tsx';
+import { HandoffFacts, SignInFacts } from './SignInFacts.tsx';
 import { MacFacts, macByline, macNote } from './MacFacts.tsx';
 import { CalendarFacts, calendarByline, calendarNote } from './CalendarFacts.tsx';
 import { AtlassianFacts, atlassianByline, atlassianNote } from './AtlassianFacts.tsx';
@@ -179,6 +179,8 @@ function Facts({ action }: { action: SparkAction }) {
       return <SiteFacts action={action} />;
     case 'browser_sign_in':
       return <SignInFacts action={action} />;
+    case 'browser_handoff':
+      return <HandoffFacts action={action} />;
     case 'mac_use_app':
     case 'mac_act':
     case 'mac_press':
@@ -225,9 +227,6 @@ function byline(action: SparkAction, agent: string, secretFiles?: readonly strin
   if (action.action === 'pr_follow_up') {
     return 'Spark fixed the PR feedback in this chat. Confirm to push and reply on GitHub.';
   }
-  if (action.action === 'browser_sign_in') {
-    return `${agent} asks Spark to sign in on a page in the browser.`;
-  }
   return `${agent} asks Spark to do this for you.`;
 }
 
@@ -238,9 +237,6 @@ function confirmNote(action: SparkAction, secretFiles?: readonly string[]): stri
   if (mac) return mac;
   if (action.action === 'pr_follow_up') {
     return 'Nothing is pushed or posted until you confirm. Uncheck anything to leave it out; a fix reply needs the push.';
-  }
-  if (action.action === 'browser_sign_in') {
-    return 'Spark types the saved username and password into this site. The agent never sees them. Allowing covers this sign-in for the rest of this chat.';
   }
   if (editableFields(action.action).length === 0) {
     return 'Nothing happens until you confirm. Spark does it as soon as you confirm, even after the agent has finished.';
