@@ -96,6 +96,7 @@ export async function evaluateInPage(
   filled: ReadonlySet<number>,
   timeoutMs = BROWSER_EVAL_TIMEOUT_MS,
 ): Promise<EvaluateOutcome> {
+  const before = await protectedValues(cdp, filled);
   const evaluated = await withinTime(
     cdp.send<Evaluated>('Runtime.evaluate', {
       expression,
@@ -114,7 +115,7 @@ export async function evaluateInPage(
       thrown.text ??
       'Error')
     : null;
-  const values = await protectedValues(cdp, filled);
+  const values = [...new Set([...before, ...(await protectedValues(cdp, filled))])];
   const value = maskValues(answer.value, values);
   const exception = failure === null ? null : maskValues(failure, values);
   const truncated = value.text.length > BROWSER_EVAL_RESULT_MAX;

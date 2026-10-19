@@ -77,6 +77,29 @@ describe('running an expression in the page', () => {
     expect(cdp.sent).toContain('Page.createIsolatedWorld');
   });
 
+  it('masks a value the script read and then cleared from its field', async () => {
+    let cleared = false;
+    const cdp = page({
+      'Runtime.evaluate': (params) => {
+        if (params.contextId) return { result: {} };
+        cleared = true;
+        return { result: { type: 'string', value: PASSWORD } };
+      },
+      'DOM.getDocument': () => document,
+      'Page.getFrameTree': () => ({ frameTree: { frame: { id: 'main' } } }),
+      'Page.createIsolatedWorld': () => ({ executionContextId: 77 }),
+      'DOM.resolveNode': (params) => ({
+        object: { objectId: `node-${String(params.backendNodeId)}` },
+      }),
+      'Runtime.callFunctionOn': (params) => ({
+        result: { value: !cleared && params.objectId === 'node-5' ? PASSWORD : '' },
+      }),
+    });
+    const outcome = await evaluateInPage(cdp, 'takeAndClear()', new Set());
+    expect(outcome.value).not.toContain(PASSWORD);
+    expect(outcome.masked).toBe(1);
+  });
+
   it('reports a thrown error with its stack, masked too', async () => {
     const cdp = pageReturning(
       {
@@ -115,7 +138,10 @@ describe('running an expression in the page', () => {
   });
 
   it('stops waiting for a promise that never settles', async () => {
-    const cdp = page({ 'Runtime.evaluate': () => new Promise(() => undefined) });
+    const cdp = page({
+      'Runtime.evaluate': () => new Promise(() => undefined),
+      'DOM.getDocument': () => ({ root: { backendNodeId: 1, nodeName: '#document' } }),
+    });
     await expect(evaluateInPage(cdp, 'new Promise(() => {})', new Set(), 30)).rejects.toThrow(
       EVAL_TOO_SLOW,
     );
