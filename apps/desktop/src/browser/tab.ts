@@ -54,6 +54,7 @@ export class PaneTab {
   pinned = false;
   kept = false;
   handoff: BrowserHandoff | null = null;
+  handoffRun: string | null = null;
   agentBusy = 0;
   active = false;
   picking = false;
@@ -87,6 +88,10 @@ export class PaneTab {
 
   currentTitle(): string {
     return this.title;
+  }
+
+  forgetLogs(): void {
+    this.live?.logs.reset();
   }
 
   view(): WebContentsView | null {

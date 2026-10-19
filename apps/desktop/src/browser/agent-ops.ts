@@ -256,25 +256,44 @@ function keep(panes: BrowserPanes, request: Request<'keep'>) {
   return { kept: tab?.kept ?? false };
 }
 
+const NOT_YOUR_TAB =
+  'Hand over only a tab you opened; this tab is the user’s. Open the sign-in page in your own tab first.';
+
 async function handOver(panes: BrowserPanes, request: Request<'hand_over'>) {
   const tab = panes.tab(request.chatId, request.tab);
   if (!tab) throw new BrowserOpError('no_tab', `There is no tab ${request.tab} in this chat.`);
-  if (request.handoff) {
-    tab.handoff = request.handoff;
-    tab.keep();
-    panes.select(request.chatId, tab.id);
+  if (!request.handoff) {
+    const masked = await releaseHandoff(tab);
     panes.noteChange(request.chatId);
-    return { ...tabFacts(tab), masked: 0 };
+    return { ...tabFacts(tab), masked };
   }
+  if (tab.owner !== 'agent') throw new BrowserOpError('not_allowed', NOT_YOUR_TAB);
+  tab.handoff = request.handoff;
+  tab.handoffRun = request.runId;
+  tab.keep();
+  panes.select(request.chatId, tab.id);
+  panes.noteChange(request.chatId);
+  return { ...tabFacts(tab), masked: 0 };
+}
+
+async function releaseHandoff(tab: PaneTab): Promise<number> {
   tab.handoff = null;
+  tab.handoffRun = null;
+  tab.forgetLogs();
   const { cdp } = await tab.wake();
   const fields = await cdp
     .send<{ root: DomNode }>('DOM.getDocument', { depth: -1, pierce: true })
     .then(({ root }) => textFieldNodes(root))
     .catch((): number[] => []);
   for (const node of fields) tab.filled.add(node);
-  panes.noteChange(request.chatId);
-  return { ...tabFacts(tab), masked: fields.length };
+  return fields.length;
+}
+
+async function endRun(panes: BrowserPanes, request: Request<'end_run'>) {
+  if (!request.runId) return { closed: 0 };
+  const held = panes.tabsOf(request.chatId).filter((tab) => tab.handoffRun === request.runId);
+  for (const tab of held) await releaseHandoff(tab).catch(() => 0);
+  return { closed: panes.closeRunTabs(request.chatId, request.runId) };
 }
 
 export async function runBrowserOp(
@@ -293,9 +312,7 @@ export async function runBrowserOp(
     if (request.op === 'hand_over') return await handOver(panes, request);
     if (request.op === 'act') return await act(panes, request, signal);
     if (request.op === 'sign_in') return await signIn(panes, request, signal);
-    return {
-      closed: request.runId ? panes.closeRunTabs(request.chatId, request.runId) : 0,
-    };
+    return await endRun(panes, request);
   } catch (error) {
     if (error instanceof BrowserOpError) throw error;
     if (error instanceof PageToolError) throw new BrowserOpError(error.code, error.message);
