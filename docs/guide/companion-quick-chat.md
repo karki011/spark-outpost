@@ -19,7 +19,7 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 
 ## Drop files or a folder
 
-1. Drag files or a folder from Finder onto Scout or the open island.
+1. Drag files or a folder from Finder onto the island. Scout reaches for them.
 2. Files join a new chat, or your reply when a chat is open in **Chats**. Secret files such as `.env` are skipped.
 3. For a folder, pick **Start a chat here** or **Add as project**. **Esc** cancels.
 
