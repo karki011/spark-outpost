@@ -10,6 +10,8 @@ import type {
   InstallResult,
   IslandRegions,
   IslandSize,
+  MeetingAlertAction,
+  MeetingAlertPayload,
   MacControlStatus,
   MacIndicator,
   SignedInSite,
@@ -99,6 +101,22 @@ export interface SparkDesktop {
   };
   attention?: {
     report(report: AttentionReport): void;
+  };
+  meetingAlert?: {
+    show(payload: MeetingAlertPayload): void;
+    hide(): void;
+    onAction(callback: (action: unknown) => void): Unsubscribe;
+    presence(): Promise<unknown>;
+    autoJoined(): void;
+    onPayload(callback: (payload: unknown) => void): Unsubscribe;
+    onPlace(callback: (place: unknown) => void): Unsubscribe;
+    onLeave(callback: () => void): Unsubscribe;
+    act(action: MeetingAlertAction): void;
+    gone(): void;
+    ready(): void;
+    focus(): void;
+    setRegions(regions: IslandRegions): void;
+    pointerMoved(): void;
   };
   viewing?: {
     report(chatId: string | null): void;

@@ -63,6 +63,7 @@ import { useSetAside } from './set-aside.ts';
 import { useFastState } from './use-fast-state.ts';
 import { useIslandData } from './use-island-data.ts';
 import { islandViewedChat, useIslandViewing } from './use-island-viewing.ts';
+import { PANEL_ANNOUNCEMENTS } from './panel-announcements.ts';
 import { useGreeting, useMoments } from './use-island-moments.ts';
 import { useThemeSync } from './use-theme-sync.ts';
 import { SpeechSeedContext } from '../voice/speech-seed.tsx';
@@ -75,13 +76,6 @@ const NO_IDS: string[] = [];
 const NO_SNOOZE: ReadonlySet<string> = new Set();
 const NO_HIDDEN: ReadonlySet<string> = new Set();
 const PANEL_KEYS = ['home', 'sessions', 'quick', 'ask'] as const;
-const PANEL_ANNOUNCEMENTS: Record<Panel, string> = {
-  home: 'Spark Island open. Home shows what is happening now.',
-  quick: 'New chat composer open. Enter to send, Escape to close; your draft is kept.',
-  sessions: 'Chats open. Type to search, arrows to move, Enter to open.',
-  ask: 'Ask Spark open.',
-};
-
 type Opener = 'hover' | 'user';
 
 export function IslandApp() {
@@ -213,7 +207,11 @@ export function IslandApp() {
       setDraft((current) => ({ ...current, text }));
       openPanel('quick');
     },
-    { open: panel === 'home', show: () => openPanel('home') },
+    {
+      open: panel === 'home',
+      show: () => openPanel('home'),
+      note: (title) => setNote({ title, sub: '' }),
+    },
   );
   const calendarLine = view.kind === 'peek' && !sparkFocused && !line ? calendar.line : null;
 

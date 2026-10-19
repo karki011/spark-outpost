@@ -28,6 +28,9 @@ interface ConnectionRow {
   phone_alerts: boolean;
   brief_block: boolean;
   agents_read: boolean;
+  alert_style: string;
+  alert_lead: number;
+  auto_join: boolean;
   notice: string | null;
 }
 
@@ -41,6 +44,9 @@ function settingsOf(row: ConnectionRow): CalendarSettings {
     phoneAlerts: row.phone_alerts,
     briefBlock: row.brief_block,
     agentsRead: row.agents_read,
+    alertStyle: row.alert_style,
+    alertLead: row.alert_lead,
+    autoJoin: row.auto_join,
   });
   return parsed.success ? parsed.data : CALENDAR_DEFAULT_SETTINGS;
 }
@@ -88,6 +94,9 @@ const SETTING_COLUMNS: Record<keyof CalendarSettingsPatch, string> = {
   phoneAlerts: 'phone_alerts',
   briefBlock: 'brief_block',
   agentsRead: 'agents_read',
+  alertStyle: 'alert_style',
+  alertLead: 'alert_lead',
+  autoJoin: 'auto_join',
 };
 
 export async function updateSettings(

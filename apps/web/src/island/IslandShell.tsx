@@ -6,6 +6,7 @@ import {
   type CSSProperties,
   type RefObject,
 } from 'react';
+import './island-skin.css';
 import './island-bubble.css';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { setMotionMode } from '../app/idle-motion.ts';

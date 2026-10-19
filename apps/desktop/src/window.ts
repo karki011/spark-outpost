@@ -1,4 +1,5 @@
-import { BrowserWindow, session, shell } from 'electron';
+import { appendFileSync } from 'node:fs';
+import { app, BrowserWindow, session, shell } from 'electron';
 import { targetsApi, withApiToken } from './api-token.ts';
 import type { ChannelConfig } from './channel.ts';
 import { linkTarget } from './link-target.ts';
@@ -23,10 +24,16 @@ function openViewer(url: string, origin: string): void {
   void viewer.loadURL(url);
 }
 
+function openExternal(url: string): void {
+  const fake = app.isPackaged ? undefined : process.env.SPARK_FAKE_OPEN_EXTERNAL;
+  if (fake) appendFileSync(fake, `${new URL(url).host}\n`, { mode: 0o600 });
+  else void shell.openExternal(url);
+}
+
 function openLink(url: string, origin: string): void {
   const target = linkTarget(url, origin);
   if (target === 'viewer') openViewer(url, origin);
-  if (target === 'browser') void shell.openExternal(url);
+  if (target === 'browser') openExternal(url);
 }
 
 export function attachApiToken(origin: string, token: string): void {

@@ -1,10 +1,4 @@
 .isl-root {
-  --island: var(--panel);
-  --notch: #000;
-  --island-line: var(--line);
-  --island-shadow: 0 12px 34px color-mix(in srgb, var(--rail) 45%, transparent);
-  --card: color-mix(in srgb, var(--raise) 70%, var(--panel));
-  --card-line: var(--line);
   position: fixed;
   inset: 0;
   pointer-events: none;

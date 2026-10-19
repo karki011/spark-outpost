@@ -1,5 +1,5 @@
 import { app, BrowserWindow, globalShortcut, screen, type Display } from 'electron';
-import { NO_ISLAND_REGIONS, type IslandRegions } from '@spark-outpost/contracts';
+import type { IslandRegions } from '@spark-outpost/contracts';
 import type { IslandPosition, IslandSize, ShortcutAction } from './companion-settings.ts';
 import type { IslandHandle } from './companion.ts';
 import {
@@ -23,7 +23,8 @@ import {
 import { emulatedNotch, readNotches, type Notches } from './notch-probe.ts';
 import { escapeGuard } from './island-escape.ts';
 import { setIslandFocus } from './island-focus.ts';
-import { pointerOnIsland, pollDelay, windowPoint } from './island-pointer.ts';
+import { windowPoint } from './island-pointer.ts';
+import { regionPointer } from './region-pointer.ts';
 import { ISLAND_LEVEL, ISLAND_PATH, islandWindowOptions } from './island-options.ts';
 import { islandVisibility } from './island-visibility.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
@@ -38,6 +39,8 @@ export interface IslandWindow extends IslandHandle {
   setInteractive(on: boolean): void;
   setRegions(regions: IslandRegions): void;
   pointerMoved(): void;
+  center(): Point | null;
+  post(channel: string, payload: unknown): void;
   setFocusable(on: boolean): void;
   drag(phase: DragPhase, pointer: Point): void;
   setRestSize(size: Size | null): void;
@@ -76,13 +79,9 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const window = new BrowserWindow(islandWindowOptions(options.preload, start));
   let dragging: { origin: Point; pointer: Point } | null = null;
   let rest: Size | null = null;
-  let interactive = false;
-  let held = false;
-  let regions: IslandRegions = NO_ISLAND_REGIONS;
   let requested: Rect | null = null;
   let logged = '';
   let sentTop = 0;
-  let pointerPoll: ReturnType<typeof setTimeout> | null = null;
   let lastPointer = '';
 
   window.setAlwaysOnTop(true, ISLAND_LEVEL);
@@ -114,49 +113,19 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const resting = (): Size | null =>
     placed?.docked && !geometry().notch && !dragging ? rest : null;
 
-  const watchesPointer = () => !interactive && resting() !== null;
-
-  const forwardPointer = (cursor: Point, bounds: Rect) => {
-    const point = watchesPointer() ? windowPoint(cursor, bounds) : null;
+  const forwardPointer = (cursor: Point, bounds: Rect, interactive: boolean) => {
+    const point = !interactive && resting() !== null ? windowPoint(cursor, bounds) : null;
     const key = point ? `${point.x},${point.y}` : '';
     if (key === lastPointer) return;
     lastPointer = key;
     if (point) send(IPC.islandPointer, point);
   };
 
-  const applyMouse = () => {
-    if (window.isDestroyed()) return;
-    const cursor = screen.getCursorScreenPoint();
-    const bounds = window.getBounds();
-    const next = held || (window.isVisible() && pointerOnIsland(cursor, bounds, regions));
-    if (next !== interactive) {
-      interactive = next;
-      window.setIgnoreMouseEvents(!interactive, { forward: true });
-    }
-    forwardPointer(cursor, bounds);
-  };
+  const pointer = regionPointer(window, { afterApply: forwardPointer });
 
   const stopPointerPoll = () => {
-    if (pointerPoll !== null) clearTimeout(pointerPoll);
-    pointerPoll = null;
+    pointer.stop();
     lastPointer = '';
-  };
-
-  const pollPointer = () => {
-    pointerPoll = null;
-    if (window.isDestroyed() || !window.isVisible()) {
-      stopPointerPoll();
-      return;
-    }
-    applyMouse();
-    pointerPoll = setTimeout(
-      pollPointer,
-      pollDelay(screen.getCursorScreenPoint(), window.getBounds(), regions),
-    );
-  };
-
-  const startPointerPoll = () => {
-    if (pointerPoll === null) pollPointer();
   };
 
   const report = (reason: string) => {
@@ -169,7 +138,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const moveTo = (position: Point, animate = false) => {
     requested = islandBounds(position, resting());
     window.setBounds(requested, animate);
-    applyMouse();
+    pointer.apply();
   };
 
   const settle = () => {
@@ -218,7 +187,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     window.showInactive();
     report(reason);
     settle();
-    startPointerPoll();
+    pointer.start();
   };
   const reveal = revealGate(() => {
     if (!visibility.hidden()) showNow('shown');
@@ -277,20 +246,18 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       visibility.summon();
       reveal.ready();
       if (!window.isVisible()) window.showInactive();
-      startPointerPoll();
+      pointer.start();
       send(IPC.islandCommand, action);
     },
-    setInteractive: (on) => {
-      held = on;
-      applyMouse();
-      startPointerPoll();
+    setInteractive: pointer.hold,
+    setRegions: pointer.setRegions,
+    pointerMoved: pointer.apply,
+    center: () => {
+      if (window.isDestroyed() || !window.isVisible()) return null;
+      const bounds = window.getBounds();
+      return { x: bounds.x + bounds.width / 2, y: bounds.y };
     },
-    setRegions: (next) => {
-      regions = next;
-      applyMouse();
-      startPointerPoll();
-    },
-    pointerMoved: applyMouse,
+    post: send,
     setFocusable: (on) => {
       setIslandFocus(window, on);
       escape.arm(on && !window.isDestroyed());
@@ -307,7 +274,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       rest = size;
       if (!changed || window.isDestroyed() || dragging || !placed) return;
       moveTo(placed.position);
-      startPointerPoll();
+      pointer.start();
       report(size ? 'resting' : 'expanded');
     },
     drag: (phase, pointer) => {

@@ -1,4 +1,4 @@
-import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import {
   clashText,
   JOIN_LEAD_MS,
@@ -16,6 +16,7 @@ import {
   timeRow,
 } from '../calendar/meeting-card.ts';
 import { openJoin } from '../calendar/today-model.ts';
+import { countdownSeconds } from '../calendar/alert/alert-model.ts';
 import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
 import { useEventDetail } from '../calendar/use-calendar.ts';
 import { ClockIcon, PeopleIcon, VideoIcon, WarnIcon, XIcon } from '../ui/icons.tsx';
@@ -57,6 +58,31 @@ function JoinAction({ event, at }: { event: CalendarEvent; at: number }) {
   }
   if (at >= end) return null;
   return <span className="isl-meet-later">Join opens at {clock(start - JOIN_LEAD_MS)}</span>;
+}
+
+function AutoJoin({ event, calendar }: { event: CalendarEvent; calendar: IslandCalendar }) {
+  const countdown = calendar.countdown;
+  const [now, setNow] = useState(Date.now);
+  const active = countdown?.eventKey === event.key;
+  useEffect(() => {
+    if (!active) return;
+    const timer = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(timer);
+  }, [active]);
+  if (!active || !countdown) return null;
+  return (
+    <div className="isl-meet-acts" role="status">
+      <span className="isl-meet-countdown">
+        Joining in {countdownSeconds(countdown.deadline, now)} s
+      </span>
+      <button type="button" className="isl-calline-act" onClick={calendar.onCancelJoin}>
+        Cancel
+      </button>
+      <button type="button" className="isl-calline-act primary" onClick={calendar.onJoinNow}>
+        Join now
+      </button>
+    </div>
+  );
 }
 
 export function CalendarBubble({ event, top, calendar, compact }: CalendarBubbleProps) {
@@ -111,6 +137,7 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
         </ul>
       )}
       {!compact && agenda && <p className="isl-meet-agenda">{agenda}</p>}
+      <AutoJoin event={event} calendar={calendar} />
       <div className="isl-meet-acts">
         <JoinAction event={event} at={calendar.at} />
         <button
@@ -123,7 +150,7 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
         <button
           type="button"
           className="isl-calline-act"
-          onClick={() => calendar.onOpenEvent(event.key)}
+          onClick={() => leave(() => calendar.onOpenEvent(event.key))}
         >
           Open
         </button>

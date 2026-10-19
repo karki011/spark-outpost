@@ -45,6 +45,22 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
   attention: {
     report: (report: unknown) => ipcRenderer.send(IPC.attentionReport, report),
   },
+  meetingAlert: {
+    show: (payload: unknown) => ipcRenderer.send(IPC.meetingAlertShow, payload),
+    hide: () => ipcRenderer.send(IPC.meetingAlertHide),
+    onAction: (callback: (action: unknown) => void) => listen(IPC.meetingAlertAction, callback),
+    presence: () => ipcRenderer.invoke(IPC.presenceGet),
+    autoJoined: () => ipcRenderer.send(IPC.meetingAutoJoined),
+    onPayload: (callback: (payload: unknown) => void) => listen(IPC.meetingAlertPayload, callback),
+    onPlace: (callback: (place: unknown) => void) => listen(IPC.meetingAlertPlace, callback),
+    onLeave: (callback: () => void) => listen(IPC.meetingAlertLeave, callback),
+    act: (action: unknown) => ipcRenderer.send(IPC.meetingAlertAct, action),
+    gone: () => ipcRenderer.send(IPC.meetingAlertGone),
+    ready: () => ipcRenderer.send(IPC.meetingAlertReady),
+    focus: () => ipcRenderer.send(IPC.meetingAlertFocus),
+    setRegions: (regions: unknown) => ipcRenderer.send(IPC.meetingAlertRegions, regions),
+    pointerMoved: () => ipcRenderer.send(IPC.meetingAlertPointerMoved),
+  },
   viewing: {
     report: (chatId: string | null) => ipcRenderer.send(IPC.viewingReport, chatId),
     get: () => ipcRenderer.invoke(IPC.viewedGet),

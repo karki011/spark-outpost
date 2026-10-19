@@ -1,17 +1,12 @@
-.isl-root {
-  --isl-thread: var(--muted);
-  --isl-thread-w: 1.5px;
-}
-
 .isl-thread {
   position: absolute;
   left: 50%;
   top: var(--thread-top);
-  width: var(--isl-thread-w);
+  width: var(--thread-w);
   height: var(--thread-len);
   translate: -50% 0;
   border-radius: 1px;
-  background: var(--isl-thread);
+  background: var(--thread);
   pointer-events: none;
   transform-origin: 50% 0;
   animation: isl-thread-in 0.35s var(--out) both;
@@ -26,7 +21,7 @@
   height: 7px;
   translate: -50% 0;
   border-radius: 50%;
-  background: var(--isl-thread);
+  background: var(--thread);
   pointer-events: none;
 }
 
@@ -187,6 +182,13 @@
   padding: 0 12px;
   border-radius: 13px;
   font-size: 12px;
+}
+
+.isl-meet-countdown {
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .isl-meet-later {

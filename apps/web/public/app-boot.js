@@ -1,5 +1,7 @@
 globalThis.__zod_globalConfig = { jitless: true };
-if (location.pathname === '/island') document.documentElement.dataset.island = '';
+if (location.pathname === '/island' || location.pathname === '/meeting-alert') {
+  document.documentElement.dataset.island = '';
+}
 try {
   var key = 'spark-outpost.theme';
   var desktop = window.sparkDesktop && window.sparkDesktop.theme;

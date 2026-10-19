@@ -28,6 +28,7 @@ import { isSize } from './island-geometry.ts';
 import { trayTemplate } from './island-options.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
 import { appLayout } from './layout.ts';
+import { startMeetingAlertHost } from './meeting-alert-host.ts';
 import { startViewingHost } from './viewing-host.ts';
 import { startVoiceHost, type VoiceHost } from './voice/host.ts';
 
@@ -169,6 +170,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     });
   app.on('browser-window-focus', reportFocus);
   app.on('browser-window-blur', reportFocus);
+  app.on('did-become-active', reportFocus);
   ipcMain.handle(IPC.islandSparkFocused, (event) => fromIsland(event) && sparkFocused());
   ipcMain.handle(IPC.islandPickFolder, async (event) => {
     if (!fromIsland(event)) return null;
@@ -211,6 +213,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     if (!fromSpark(event) || typeof on !== 'boolean') return companion.status();
     const status = companion.setHideInShare(on);
     island?.setHideInShare(on);
+    meetingAlert.setHideInShare(on);
     return status;
   });
   ipcMain.handle(IPC.companionSetNotify, (event, on: unknown) =>
@@ -286,6 +289,17 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     onChange: (viewed) => attention?.viewing(viewed),
   });
 
+  const meetingAlert = startMeetingAlertHost({
+    origin: options.origin,
+    preload: options.preload,
+    trusted: fromSpark,
+    fromIsland,
+    islandCenter: () => island?.center() ?? null,
+    sendToIsland: (channel, payload) => island?.post(channel, payload),
+    hideInShare: () => companion.status().hideInShare,
+    log: options.log,
+  });
+
   const layout = appLayout({
     isPackaged: app.isPackaged,
     appPath: app.getAppPath(),
@@ -323,6 +337,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     dispose: () => {
       attention?.dispose();
       viewing.dispose();
+      meetingAlert.dispose();
       voice?.dispose();
       companion.shutdown();
       globalShortcut.unregisterAll();
@@ -358,6 +373,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       }
       app.off('browser-window-focus', reportFocus);
       app.off('browser-window-blur', reportFocus);
+      app.off('did-become-active', reportFocus);
       tray.destroy();
     },
   };

@@ -85,6 +85,7 @@ export function startViewingHost(options: ViewingHostOptions): ViewingHost {
   ipcMain.handle(IPC.viewedGet, (event) => (options.trusted(event) ? viewed : []));
   app.on('browser-window-focus', settle);
   app.on('browser-window-blur', settle);
+  app.on('did-become-active', settle);
 
   return {
     viewed: () => viewed,
@@ -93,6 +94,7 @@ export function startViewingHost(options: ViewingHostOptions): ViewingHost {
       ipcMain.removeHandler(IPC.viewedGet);
       app.off('browser-window-focus', settle);
       app.off('browser-window-blur', settle);
+      app.off('did-become-active', settle);
       for (const name of WINDOW_EVENTS) mainWindow?.off(name as 'focus', settle);
     },
   };

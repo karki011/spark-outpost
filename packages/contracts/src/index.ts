@@ -121,6 +121,7 @@ export * from './calendar-bridge.ts';
 export * from './calendar-api.ts';
 export * from './calendar-google.ts';
 export * from './calendar-actions.ts';
+export * from './meeting-alert.ts';
 export * from './atlassian.ts';
 export * from './atlassian-actions.ts';
 export * from './browser-actions.ts';

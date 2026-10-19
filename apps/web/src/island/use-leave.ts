@@ -12,7 +12,13 @@ export function useLeave() {
   const leave = (action: () => void) => {
     if (leaving) return;
     setLeaving(true);
-    timer.current = setTimeout(action, reduced ? FADE_MS : LEAVE_MS);
+    timer.current = setTimeout(
+      () => {
+        action();
+        setLeaving(false);
+      },
+      reduced ? FADE_MS : LEAVE_MS,
+    );
   };
   return { leaving, leave };
 }

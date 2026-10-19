@@ -43,7 +43,13 @@ const MacIndicatorApp = lazy(() =>
     default: module.MacIndicatorApp,
   })),
 );
+const MeetingAlertApp = lazy(() =>
+  import('./calendar/alert/MeetingAlertApp.tsx').then((module) => ({
+    default: module.MeetingAlertApp,
+  })),
+);
 const island = window.location.pathname === '/island';
+const meetingAlert = window.location.pathname === '/meeting-alert';
 const macIndicator = window.location.pathname === '/mac-indicator';
 
 function Root() {
@@ -51,6 +57,13 @@ function Root() {
     return (
       <Suspense fallback={null}>
         <IslandApp />
+      </Suspense>
+    );
+  }
+  if (meetingAlert) {
+    return (
+      <Suspense fallback={null}>
+        <MeetingAlertApp />
       </Suspense>
     );
   }
