@@ -26,6 +26,7 @@ import type { GoogleClientConfig } from '../google/config.ts';
 import { splitGoogleEventId } from '../google/map.ts';
 import { googleAccounts, type GoogleAccountRow } from '../google/store.ts';
 import { collectEvents, fullSync, storedEvent, type CalendarSync } from '../google/sync.ts';
+import { peopleOf } from '../people.ts';
 import { dateKey } from '../service.ts';
 import { savedChoices } from '../store.ts';
 import { CalendarAgentError, type AgentEventDetail } from './detail.ts';
@@ -90,7 +91,7 @@ function detailOf(target: GoogleTarget, raw: GoogleEvent): AgentEventDetail | nu
   return {
     event: stored.event,
     notes: stored.notes,
-    attendees: stored.attendees,
+    attendees: peopleOf(stored.invitees).map((person) => person.name),
     others: humans.filter((attendee) => !attendee.self).length,
     alarmMinutes: reminderMinutes(raw),
   };

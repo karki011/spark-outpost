@@ -7,6 +7,7 @@ import {
   type CalendarChoice,
   type CalendarEvent,
 } from '@spark-outpost/contracts';
+import { WarnIcon } from '../ui/icons.tsx';
 import { clock, span as spanText } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
 import { block, HOUR_PX, hourMarks, offset, placeEvents } from './timeline-model.ts';
@@ -14,7 +15,8 @@ import type { NoGap, TimelineSpan } from './today-model.ts';
 import { CalendarName } from './CalendarName.tsx';
 
 const NO_CLASHES: readonly string[] = [];
-const NARROW_LANES = 3;
+const SHORT_MS = 30 * 60_000;
+const NARROW_SHARE = 0.34;
 
 interface DayTimelineProps {
   span: TimelineSpan;
@@ -50,6 +52,7 @@ function EventBlock(props: {
   event: CalendarEvent;
   lane: number;
   lanes: number;
+  span: number;
   timeline: TimelineSpan;
   calendars: ReadonlyMap<string, CalendarChoice>;
   clashes: readonly string[];
@@ -67,26 +70,41 @@ function EventBlock(props: {
     top: place.top,
     height: place.height,
     left: `${(props.lane / props.lanes) * 100}%`,
-    width: `calc(${100 / props.lanes}% - 4px)`,
+    width: `calc(${(props.span / props.lanes) * 100}% - 4px)`,
   } as CSSProperties;
   const kind = event.focus ? 'focus' : event.busy ? 'busy' : 'free';
   const service = event.link ? ` · ${CALENDAR_SERVICE_NAMES[event.link.service]}` : '';
   const marks = tags(event, calendars, props.clashes);
+  const clash = clashText(props.clashes);
+  const short = end - start < SHORT_MS;
+  const narrow = props.span / props.lanes < NARROW_SHARE;
+  const compact = short || narrow;
   return (
     <button
       type="button"
       className="tl-ev"
       data-kind={kind}
       data-overlap={props.overlap || undefined}
-      data-short={end - start < 30 * 60_000 || undefined}
-      data-narrow={props.lanes >= NARROW_LANES || undefined}
+      data-short={short || undefined}
+      data-compact={compact || undefined}
+      data-clash={(compact && clash) || undefined}
       style={style}
       aria-expanded={props.selected}
       aria-controls={props.selected ? props.panelId : undefined}
       aria-label={`${event.title}, ${spanText(start, end)}, ${calendar?.title ?? 'Calendar'}${marks.length ? `, ${marks.join(', ')}` : ''}`}
       onClick={() => props.onSelect(event.key)}
     >
-      {marks.length > 0 && (
+      <b>{event.title}</b>
+      {compact && clash && (
+        <span
+          className="tl-clash"
+          title={`Clashes with ${props.clashes.join(', ')}`}
+          aria-hidden="true"
+        >
+          <WarnIcon />
+        </span>
+      )}
+      {!compact && marks.length > 0 && (
         <span className="tl-tags" aria-hidden="true">
           {marks.map((mark) => (
             <span
@@ -100,7 +118,6 @@ function EventBlock(props: {
           ))}
         </span>
       )}
-      <b>{event.title}</b>
       <span className="tl-meta">
         {spanText(start, end)} · <CalendarName name={calendar?.title ?? 'Calendar'} />
         {service}
@@ -170,12 +187,13 @@ function TimedEvents(props: DayTimelineProps) {
             </div>
           );
         })}
-        {placeEvents(props.events).map(({ event, lane, lanes }) => (
+        {placeEvents(props.events).map(({ event, lane, lanes, span: share }) => (
           <EventBlock
             key={event.key}
             event={event}
             lane={lane}
             lanes={lanes}
+            span={share}
             timeline={span}
             calendars={props.calendars}
             clashes={props.clashes.get(event.key) ?? NO_CLASHES}

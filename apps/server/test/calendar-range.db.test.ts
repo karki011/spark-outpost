@@ -113,7 +113,7 @@ describe('the calendar range', () => {
     }
   });
 
-  it('keeps Mac attendee names to 300 characters and leaves out the user', async () => {
+  it('keeps Mac attendee names to 300 characters and leaves out the user and rooms', async () => {
     const [event] = host.events;
     host.detail = {
       event: event!,
@@ -121,6 +121,13 @@ describe('the calendar range', () => {
       attendees: [
         { name: 'Me', isMe: true, status: 'accepted' },
         { name: 'A'.repeat(400), isMe: false, status: 'accepted' },
+        {
+          name: 'Bay Village',
+          email: 'c_1@resource.calendar.google.com',
+          isMe: false,
+          status: 'accepted',
+        },
+        { name: '33 Arch St-14', isMe: false, status: 'accepted', room: true },
       ],
       organizerIsMe: false,
     };
@@ -129,6 +136,7 @@ describe('the calendar range', () => {
       start: event!.start,
     });
     const detail = calendarEventDetailSchema.parse(response.body);
-    expect(detail.attendees).toEqual(['A'.repeat(300)]);
+    expect(detail.attendees).toEqual([{ name: 'A'.repeat(300), email: null }]);
+    expect(detail.location).toBe('Bay Village, 33 Arch St-14');
   });
 });

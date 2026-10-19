@@ -43,6 +43,8 @@ import {
   storedEvent,
   type StoredEvent,
 } from './sync.ts';
+import { splitNotes } from '../notes-text.ts';
+import { locationOf, peopleOf } from '../people.ts';
 import { forgetMarksOf } from '../store.ts';
 
 function accountUids(account: LiveAccount): string[] {
@@ -307,9 +309,11 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       return {
         title: found.event.title,
         notes: found.notes,
+        ...splitNotes(found.notes),
         snippet: found.snippet,
         link: found.link,
-        attendees: found.attendees,
+        location: locationOf(found.event.location, found.invitees),
+        attendees: peopleOf(found.invitees),
       };
     },
     async signIn(request) {

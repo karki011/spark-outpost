@@ -19,7 +19,7 @@ You'll connect your calendars. About 2 minutes.
 ## Use it
 
 - **Today**, or the clock below **Settings**, opens on **Month** and **Scheduled**; Enter opens **Day**. **Home** shows **Upcoming**.
-- Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before** or **Hold alerts during this**.
+- Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before** or **Hold alerts during this**. Links open, numbers and emails copy.
 
 **Join** opens 10 minutes before. Before a meeting, Scout hops and offers **Join**, or **Choose** for overlaps; **⌘J** too. Focus blocks hold chimes.
 

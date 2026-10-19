@@ -107,3 +107,182 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.cal-toasts {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  z-index: 60;
+  width: min(320px, calc(100vw - 32px));
+  translate: -50% 0;
+}
+
+.cal-link {
+  display: inline;
+  padding: 0;
+  color: var(--accent-text);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
+.cal-link:hover {
+  text-decoration-color: currentColor;
+}
+
+.cal-link[aria-disabled='true'] {
+  color: var(--muted);
+  cursor: default;
+  text-decoration-style: dotted;
+}
+
+.cal-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.cal-agenda,
+.cal-conf p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cal-agenda {
+  max-height: 16em;
+  overflow: auto;
+}
+
+.cal-conf summary {
+  width: fit-content;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.cal-conf p {
+  margin-top: 6px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.cal-where {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.cal-where-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cal-people {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cal-people li {
+  min-width: 0;
+}
+
+.cal-person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 2px 4px 2px 0;
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-size: 12.5px;
+  text-align: left;
+}
+
+button.cal-person:hover {
+  background: var(--panel);
+}
+
+.cal-person i {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.cal-person-text {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cal-person-name,
+.cal-person small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-person-name {
+  flex: 0 1 auto;
+}
+
+.cal-person-text:has(small) .cal-person-name {
+  max-width: 60%;
+}
+
+.cal-person small {
+  flex: 1 1 0;
+  color: var(--faint);
+  font-size: 11.5px;
+}
+
+.cal-people-more,
+.cal-people-count {
+  margin: 0;
+  padding-left: 30px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cal-people-count {
+  padding-left: 0;
+}
+
+.cal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  margin: 8px 0 12px;
+}

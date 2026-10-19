@@ -91,9 +91,15 @@ describe('a Google range outside the synced window', () => {
     expect(calendarEventDetailSchema.parse(response.body)).toEqual({
       title: 'planning',
       notes: 'Agenda\nJoin: https://meet.google.com/abc-defg-hij',
+      agenda: 'Agenda\nJoin: https://meet.google.com/abc-defg-hij',
+      conference: '',
       snippet: 'Agenda Join:',
       link: 'https://www.google.com/calendar/event?eid=plan',
-      attendees: ['Alex Wong', 'ivan@example.com'],
+      location: 'Room 4',
+      attendees: [
+        { name: 'Alex Wong', email: 'alex@example.com' },
+        { name: 'ivan@example.com', email: 'ivan@example.com' },
+      ],
     });
     expect(h.fake.requests.slice(before).map((request) => request.path)).toEqual([
       `/calendar/v3/calendars/${encodeURIComponent(EMAIL)}/events/planning`,

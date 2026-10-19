@@ -3,19 +3,18 @@ import { useSidebarLayout } from '../conversations/sidebar-layout.tsx';
 import { DOCK_QUERY, PHONE_QUERY, ROOMY_DOCK_QUERY, useMediaQuery } from '../ui/breakpoints.ts';
 import type { TaskOverview } from '@spark-outpost/contracts';
 import type { BrowserPaneChoice } from '../browser/pane-open.ts';
+import {
+  clampPanelWidth,
+  readPanelWidth,
+  savePanelWidth,
+  type PanelWidthLimits,
+} from '../ui/panel-width.ts';
 
 const STORAGE_KEY = 'spark-wp';
 const WIDTH_KEY = 'spark-outpost.work-panel.width';
 export const WORK_PANEL_MIN_WIDTH = 340;
 export const WORK_PANEL_MAX_WIDTH = 640;
 export const WORK_PANEL_DEFAULT_WIDTH = 432;
-
-export interface PanelWidthLimits {
-  key: string;
-  min: number;
-  max: number;
-  fallback: number;
-}
 
 export const WORK_PANEL_LIMITS: PanelWidthLimits = {
   key: WIDTH_KEY,
@@ -65,28 +64,6 @@ export function forgetPanelChoice(): void {
   for (const listener of cleared) listener();
 }
 
-export function clampPanelWidth(width: number, limits = WORK_PANEL_LIMITS): number {
-  return Math.round(Math.min(limits.max, Math.max(limits.min, width)));
-}
-
-function readWidth(limits = WORK_PANEL_LIMITS): number | null {
-  try {
-    const saved = Number(localStorage.getItem(limits.key));
-    return saved > 0 ? clampPanelWidth(saved, limits) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveWidth(width: number | null, limits = WORK_PANEL_LIMITS): void {
-  try {
-    if (width === null) localStorage.removeItem(limits.key);
-    else localStorage.setItem(limits.key, String(width));
-  } catch {
-    return;
-  }
-}
-
 function usePanelDocks(): boolean {
   const docks = useMediaQuery(DOCK_QUERY);
   const roomy = useMediaQuery(ROOMY_DOCK_QUERY);
@@ -110,8 +87,8 @@ export function useWorkPanelState(opensByDefault = true): WorkPanelState {
   const [chosen, setChosen] = useState(readSaved);
   const docked = chosen ?? opensByDefault;
   const [sheet, setSheet] = useState(false);
-  const [width, setWidthState] = useState(() => readWidth());
-  const [browserWidth, setBrowserWidthState] = useState(() => readWidth(BROWSER_PANEL_LIMITS));
+  const [width, setWidthState] = useState(() => readPanelWidth(WORK_PANEL_LIMITS));
+  const [browserWidth, setBrowserWidthState] = useState(() => readPanelWidth(BROWSER_PANEL_LIMITS));
 
   useEffect(() => {
     const onCleared = () => setChosen(null);
@@ -127,14 +104,14 @@ export function useWorkPanelState(opensByDefault = true): WorkPanelState {
     width,
     browserWidth,
     setWidth(next) {
-      const clamped = next === null ? null : clampPanelWidth(next);
+      const clamped = next === null ? null : clampPanelWidth(next, WORK_PANEL_LIMITS);
       setWidthState(clamped);
-      saveWidth(clamped);
+      savePanelWidth(clamped, WORK_PANEL_LIMITS);
     },
     setBrowserWidth(next) {
       const clamped = next === null ? null : clampPanelWidth(next, BROWSER_PANEL_LIMITS);
       setBrowserWidthState(clamped);
-      saveWidth(clamped, BROWSER_PANEL_LIMITS);
+      savePanelWidth(clamped, BROWSER_PANEL_LIMITS);
     },
     setOpen(open) {
       if (wide) {

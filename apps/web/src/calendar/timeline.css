@@ -56,11 +56,33 @@
 }
 
 .tl-ev b {
-  display: block;
+  display: -webkit-box;
   overflow: hidden;
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.tl-ev[data-short] b {
+  -webkit-line-clamp: 1;
+}
+
+.tl-ev[data-clash] b {
+  padding-right: 16px;
+}
+
+.tl-clash {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  display: inline-grid;
+  color: var(--warn);
+}
+
+.tl-clash svg {
+  width: 13px;
+  height: 13px;
 }
 
 .tl-meta {
@@ -104,10 +126,15 @@
 }
 
 .tl-tags {
-  float: right;
-  display: flex;
-  gap: 6px;
-  margin-left: 6px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tl-tag + .tl-tag::before {
+  content: ' · ';
+  color: var(--faint);
 }
 
 .tl-tag {
@@ -121,10 +148,6 @@
 
 .tl-tag[data-clash] {
   color: var(--warn);
-}
-
-.tl-ev[data-narrow] .tl-tags {
-  display: none;
 }
 
 .tl-gap {

@@ -187,11 +187,20 @@ export const calendarOccurrenceSchema = z
   .strict();
 export type CalendarOccurrence = z.infer<typeof calendarOccurrenceSchema>;
 
+export const calendarPersonSchema = z.object({
+  name: z.string().max(300),
+  email: z.string().max(300).nullable(),
+});
+export type CalendarPerson = z.infer<typeof calendarPersonSchema>;
+
 export const calendarEventDetailSchema = z.object({
   title: z.string().max(1_000),
   notes: z.string().max(20_000),
+  agenda: z.string().max(20_000),
+  conference: z.string().max(20_000),
   snippet: z.string().max(CALENDAR_SNIPPET_MAX),
   link: z.url().nullable(),
-  attendees: z.array(z.string().max(300)).max(CALENDAR_ATTENDEES_MAX),
+  location: z.string().max(2_000).nullable(),
+  attendees: z.array(calendarPersonSchema).max(CALENDAR_ATTENDEES_MAX),
 });
 export type CalendarEventDetail = z.infer<typeof calendarEventDetailSchema>;

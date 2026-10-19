@@ -11,6 +11,7 @@ import type { CalendarChoice, CalendarEvent } from '@spark-outpost/contracts';
 import { countLabel } from '../ui/count-label.ts';
 import { clock, dayTitle } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
+import { MoreEvents } from './MoreEvents.tsx';
 import { keyMove, preview, type MonthCell, type MonthGridModel } from './month-model.ts';
 import { useTitlesThatFit } from './use-titles-fit.ts';
 
@@ -93,12 +94,13 @@ const DayCell = memo(function DayCell({
       <span className="mo-num" aria-hidden="true">
         {new Date(cell.dayStart).getDate()}
       </span>
-      <span className="mo-evs" aria-hidden="true">
+      <span className="mo-evs">
         {shown.map((event) => (
           <button
             key={event.key}
             type="button"
             tabIndex={-1}
+            aria-hidden="true"
             className="mo-ev"
             data-focus={event.focus || undefined}
             style={swatch(calendars.get(event.calendarKey)?.color ?? '') as CSSProperties}
@@ -109,7 +111,16 @@ const DayCell = memo(function DayCell({
             <span className="mo-ev-title">{event.title}</span>
           </button>
         ))}
-        {more > 0 && <span className="mo-more">{more} more</span>}
+        {more > 0 && (
+          <MoreEvents
+            date={cell.date}
+            events={events.slice(shown.length)}
+            calendars={calendars}
+            focusable={selected}
+            onDate={actions.onDate}
+            onOpenEvent={actions.onOpenEvent}
+          />
+        )}
       </span>
     </div>
   );

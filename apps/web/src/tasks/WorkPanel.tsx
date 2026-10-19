@@ -11,7 +11,8 @@ import { AutonomySection } from './AutonomySection.tsx';
 import { TerminalWork } from '../terminal/usage/TerminalWork.tsx';
 import { TaskDetails, type WorkTab } from './TaskDetails.tsx';
 import { CloseIcon, PanelIcon } from './TaskIcons.tsx';
-import { WORK_PANEL_LIMITS, type PanelView, type PanelWidthLimits } from './work-panel-state.ts';
+import type { PanelWidthLimits } from '../ui/panel-width.ts';
+import { WORK_PANEL_LIMITS, type PanelView } from './work-panel-state.ts';
 import { WorkPanelResizer } from './WorkPanelResizer.tsx';
 
 interface AutonomySetting {

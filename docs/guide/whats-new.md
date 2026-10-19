@@ -12,11 +12,10 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                    | What to do                                                |
 | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Calendar: **N more**, resizable panel, links.                                                                   | See [Use it](calendar.md#use-it).                         |
 | Spark Island opens only from Scout. **Hide in screen sharing**.                                                 | See [Spark Island](desktop-companion.md).                 |
-| Simpler Calendar card.                                                                                          | None.                                                     |
-| Agents can read and change your calendar.                                                                       | See [Let agents use it](calendar.md#let-agents-use-it).   |
 | Fixed: Terminal, tab close, Ask Spark and outpost glitches.                                                     | None.                                                     |
-| **Today** from macOS or Google, full-window **Month**, nudges, **Join** at 10 min, **Choose** for clashes.      | See [Use it](calendar.md#use-it).                         |
+| **Today** from macOS or Google: **Month**, nudges, **Join** at 10 min, **Choose** for clashes, agent access.    | See [Use it](calendar.md#use-it).                         |
 | Prompt cache countdown and **Cache hit**.                                                                       | See [Prompt cache](statuses-and-limits.md#prompt-cache).  |
 | Claude plan ring.                                                                                               | See [Limits](statuses-and-limits.md#limits).              |
 | **Revert file** undoes one file.                                                                                | See [Review changes](review-changes.md#keep-or-revert).   |

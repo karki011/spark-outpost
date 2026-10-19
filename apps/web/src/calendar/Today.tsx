@@ -6,6 +6,7 @@ import { useCallback, useState } from 'react';
 import { Segmented } from '../ui/Segmented.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
+import { CopyToasts } from './copy-toast.tsx';
 import { DayView, type TodayProps } from './DayView.tsx';
 import { MonthView } from './MonthView.tsx';
 import { TodayStatePage } from './TodayStates.tsx';
@@ -114,7 +115,11 @@ function TodayBody(props: TodayProps) {
   if (!status.data) return <Skeleton label="Loading your calendar" shape="cards" rows={3} />;
   const state = todayState(status.data);
   if (state !== 'ready') return <TodayStatePage state={state} />;
-  return <TodayViews {...props} />;
+  return (
+    <CopyToasts>
+      <TodayViews {...props} />
+    </CopyToasts>
+  );
 }
 
 export function Today(props: TodayProps) {
