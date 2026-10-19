@@ -2,6 +2,14 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.21
+
+- Calendar: agents can read your calendar when you turn on Let agents read my calendar, and create, move or delete events on calendars where you turn on Agents can edit. Each change shows a card unless the chat's mode runs Spark actions at once; deleting always asks. For a Google calendar, Google asks for edit permission only when you turn on Agents can edit.
+- Calendar: Month fills the window, with one header row, a month and year picker, start times and calendar colors on each event, and a slimmer day panel.
+- Calendar: the Calendar card is friendlier: pick Mac Calendar or Google to start, see each account with its calendars and Nudge switches, add more with Add calendar, and Disconnect asks first.
+- Spark Island: it opens only when you point at Scout, and clicks beside it reach the app underneath. Hide in screen sharing, on by default under Settings → Spark Island, keeps it out of screen recordings and shares.
+- Fixes: Terminal sessions use the full height of the window again, a question typed into Ask Spark before it loads is kept, and closing a new shell tab no longer asks to stop it.
+
 ## 0.1.0-beta.20
 
 - Calendar: connect Google Calendar directly with Add Google account, alongside macOS Calendar, and add more than one account. An event on both shows once. Spark only reads your calendars, and Google sign-in expires every 7 days until Spark's Google app is verified.
