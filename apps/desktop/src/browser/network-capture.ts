@@ -102,10 +102,10 @@ export class NetworkLog {
     this.lost += extra;
   }
 
-  private finish(id: string, change: Partial<BrowserNetworkEntry>): void {
+  private finish(id: string, change: () => Partial<BrowserNetworkEntry>): void {
     const entry = this.open.get(id);
     if (!entry) return;
-    Object.assign(entry, change);
+    Object.assign(entry, change());
     this.open.delete(id);
   }
 
@@ -113,12 +113,12 @@ export class NetworkLog {
     const id = String(params.requestId);
     const redirect = params.redirectResponse as ResponseFacts | undefined;
     if (redirect && this.open.has(id)) {
-      this.finish(id, {
+      this.finish(id, () => ({
         status: redirect.status ?? null,
         endMs: this.ms(params.timestamp),
         encodedBytes: redirect.encodedDataLength ?? null,
         fromCache: fromCache(redirect),
-      });
+      }));
     }
     const request = (params.request ?? {}) as { url?: string; method?: string };
     const wall = typeof params.wallTime === 'number' ? params.wallTime * 1000 : Date.now();
@@ -162,10 +162,10 @@ export class NetworkLog {
 
   loadingFinished(params: Params): void {
     const encoded = typeof params.encodedDataLength === 'number' ? params.encodedDataLength : null;
-    this.finish(String(params.requestId), {
+    this.finish(String(params.requestId), () => ({
       endMs: this.ms(params.timestamp),
       encodedBytes: encoded === null ? null : Math.round(encoded),
-    });
+    }));
   }
 
   loadingFailed(params: Params): void {
@@ -173,10 +173,10 @@ export class NetworkLog {
       params.canceled === true
         ? 'canceled'
         : String(params.blockedReason ?? params.errorText ?? 'failed');
-    this.finish(String(params.requestId), {
+    this.finish(String(params.requestId), () => ({
       endMs: this.ms(params.timestamp),
       failed: clip(why, 200),
-    });
+    }));
   }
 
   all(): BrowserNetworkEntry[] {

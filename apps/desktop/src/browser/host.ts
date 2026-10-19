@@ -193,8 +193,13 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     } else if (action.command === 'pin') {
       tab.pinned = action.pinned;
       panes.noteChange(chatId);
-    } else if (action.command === 'pick') await pick(tab, action.mode);
-    else tab.history(action.command);
+    } else if (action.command === 'pick') {
+      tab.keep();
+      await pick(tab, action.mode);
+    } else {
+      tab.keep();
+      tab.history(action.command);
+    }
   };
 
   const guarded =

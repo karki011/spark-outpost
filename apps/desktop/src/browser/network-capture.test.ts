@@ -94,8 +94,11 @@ describe('the network log of a page', () => {
     log.loadingFinished({ requestId: '1', timestamp: T0 + 9 });
     expect(log.all()).toHaveLength(3);
     log.clear();
+    log.loadingFinished({ requestId: '4', timestamp: T0 + 5 });
+    log.loadingFailed({ requestId: '5', timestamp: T0 + 6, canceled: true });
     sent(log, '9', 'https://b.example/', 20);
-    expect(log.all()).toEqual([expect.objectContaining({ startMs: 0 })]);
+    sent(log, '10', 'https://b.example/app.js', 20.01);
+    expect(log.all().map((entry) => entry.startMs)).toEqual([0, 10]);
     expect(log.dropped()).toBe(0);
   });
 });
