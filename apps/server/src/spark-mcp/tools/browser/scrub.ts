@@ -1,3 +1,5 @@
+import { redacted } from '../../../audit/redact.ts';
+import { projectSecretValues } from '../../../audit/secret-values.ts';
 import { projectSignInSecrets, type SignInSecret } from '../../../browser/sign-ins.ts';
 import { SparkToolError, type SparkToolContext } from '../../tool.ts';
 import { chatHome } from './context.ts';
@@ -24,30 +26,38 @@ function clippedTail(text: string, end: number, needle: string): number {
   return 0;
 }
 
-function withoutClippedTails(text: string, needles: readonly string[]): string {
+function withoutClippedTails(text: string, needles: readonly string[], mark: string): string {
   let result = text;
   let at = result.indexOf(CLIP_MARK);
   while (at !== -1) {
     const size = Math.max(...needles.map((needle) => clippedTail(result, at, needle)));
     if (size > 0) {
-      result = `${result.slice(0, at - size)}${SIGN_IN_HIDDEN}${result.slice(at)}`;
-      at += SIGN_IN_HIDDEN.length - size;
+      result = `${result.slice(0, at - size)}${mark}${result.slice(at)}`;
+      at += mark.length - size;
     }
     at = result.indexOf(CLIP_MARK, at + 1);
   }
   return result;
 }
 
-export function scrubberFor(secrets: readonly SignInSecret[]): Scrub | null {
-  const values = secrets.flatMap((secret) => [secret.username, secret.password]);
+function valueScrubber(values: readonly string[], mark: string): Scrub | null {
   const needles = [...new Set(values.flatMap(spellings))]
     .filter((needle) => needle.length > 0)
     .sort((a, b) => b.length - a.length);
   if (needles.length === 0) return null;
   return (text) => {
-    const whole = needles.reduce((kept, needle) => kept.split(needle).join(SIGN_IN_HIDDEN), text);
-    return withoutClippedTails(whole, needles);
+    const whole = needles.reduce((kept, needle) => kept.split(needle).join(mark), text);
+    return withoutClippedTails(whole, needles, mark);
   };
+}
+
+export function scrubberFor(secrets: readonly SignInSecret[]): Scrub | null {
+  const values = secrets.flatMap((secret) => [secret.username, secret.password]);
+  return valueScrubber(values, SIGN_IN_HIDDEN);
+}
+
+export function secretFileScrubber(values: readonly string[]): Scrub | null {
+  return valueScrubber(values, redacted('secret_value'));
 }
 
 export async function signInScrub(context: SparkToolContext): Promise<Scrub | null> {
@@ -59,4 +69,15 @@ export async function signInScrub(context: SparkToolContext): Promise<Scrub | nu
     throw new SparkToolError(KEYCHAIN_UNREADABLE);
   });
   return scrubberFor(secrets);
+}
+
+export async function pageScrub(context: SparkToolContext): Promise<Scrub> {
+  const signIns = await signInScrub(context);
+  const conversationId = context.scope.conversationId;
+  const roots = conversationId ? (await chatHome(context.deps.db, conversationId)).roots : [];
+  const files = secretFileScrubber(await projectSecretValues(roots));
+  return (text) => {
+    const withoutSignIns = signIns ? signIns(text) : text;
+    return files ? files(withoutSignIns) : withoutSignIns;
+  };
 }

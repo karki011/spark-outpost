@@ -244,7 +244,7 @@ export class BrowserPanes {
 
   closeRunTabs(chatId: string, runId: string): number {
     const closing = this.tabsOf(chatId).filter(
-      (tab) => tab.owner === 'agent' && tab.runId === runId && !tab.pinned,
+      (tab) => tab.owner === 'agent' && tab.runId === runId && !tab.pinned && !tab.kept,
     );
     for (const tab of closing) this.close(chatId, tab.id);
     return closing.length;
@@ -259,11 +259,13 @@ export class BrowserPanes {
     const held = this.driving.get(tab.id);
     if (held) clearTimeout(held);
     tab.driving = true;
+    tab.agentBusy += 1;
     tab.touch();
     this.noteChange(tab.chatId);
     try {
       return await work();
     } finally {
+      tab.agentBusy -= 1;
       const timer = setTimeout(() => {
         this.driving.delete(tab.id);
         tab.driving = false;

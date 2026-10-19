@@ -1,7 +1,6 @@
 import type { Cdp } from './cdp.ts';
 import { BoundedLog, withoutQuery } from './bounded-log.ts';
-
-const PENDING_MAX = 400;
+import { NetworkLog } from './network-capture.ts';
 
 interface RemoteValue {
   type?: string;
@@ -17,7 +16,7 @@ function argText(arg: RemoteValue): string {
 
 export interface PageLogs {
   console: BoundedLog;
-  network: BoundedLog;
+  network: NetworkLog;
   reset(): void;
   stop(): void;
 }
@@ -30,8 +29,7 @@ export function fromTheShell(text: string): boolean {
 
 export async function capturePageLogs(cdp: Cdp): Promise<PageLogs> {
   const consoleLog = new BoundedLog();
-  const network = new BoundedLog();
-  const pending = new Map<string, { method: string; url: string }>();
+  const network = new NetworkLog();
 
   const onConsole = (params: Record<string, unknown>) => {
     const args = (params.args as RemoteValue[] | undefined) ?? [];
@@ -70,48 +68,16 @@ export async function capturePageLogs(cdp: Cdp): Promise<PageLogs> {
       method: null,
     });
   };
-  const onRequest = (params: Record<string, unknown>) => {
-    const request = (params.request ?? {}) as { url?: string; method?: string };
-    if (pending.size >= PENDING_MAX) pending.delete(pending.keys().next().value!);
-    pending.set(String(params.requestId), {
-      method: request.method ?? 'GET',
-      url: withoutQuery(request.url ?? ''),
-    });
-  };
-  const onResponse = (params: Record<string, unknown>) => {
-    const sent = pending.get(String(params.requestId));
-    const response = (params.response ?? {}) as { status?: number; url?: string };
-    pending.delete(String(params.requestId));
-    const status = response.status ?? null;
-    network.push({
-      level: status !== null && status >= 400 ? 'error' : 'info',
-      text: `${sent?.method ?? 'GET'} ${sent?.url ?? withoutQuery(response.url ?? '')}`,
-      source: null,
-      status,
-      method: sent?.method ?? null,
-    });
-  };
-  const onFailed = (params: Record<string, unknown>) => {
-    const sent = pending.get(String(params.requestId));
-    pending.delete(String(params.requestId));
-    if (!sent || params.canceled === true) return;
-    const why = String(params.blockedReason ?? params.errorText ?? 'failed');
-    network.push({
-      level: 'error',
-      text: `${sent.method} ${sent.url} failed: ${why}`,
-      source: null,
-      status: null,
-      method: sent.method,
-    });
-  };
-
   const handlers: Record<string, (params: Record<string, unknown>) => void> = {
     'Runtime.consoleAPICalled': onConsole,
     'Runtime.exceptionThrown': onException,
     'Log.entryAdded': onLogEntry,
-    'Network.requestWillBeSent': onRequest,
-    'Network.responseReceived': onResponse,
-    'Network.loadingFailed': onFailed,
+    'Network.requestWillBeSent': (params) => network.requestWillBeSent(params),
+    'Network.responseReceived': (params) => network.responseReceived(params),
+    'Network.requestServedFromCache': (params) => network.servedFromCache(params),
+    'Network.dataReceived': (params) => network.dataReceived(params),
+    'Network.loadingFinished': (params) => network.loadingFinished(params),
+    'Network.loadingFailed': (params) => network.loadingFailed(params),
   };
   const stop = cdp.listen((method, params) => handlers[method]?.(params));
   await cdp.send('Runtime.enable');
@@ -120,7 +86,6 @@ export async function capturePageLogs(cdp: Cdp): Promise<PageLogs> {
   const reset = () => {
     consoleLog.clear();
     network.clear();
-    pending.clear();
   };
   return { console: consoleLog, network, reset, stop };
 }

@@ -145,6 +145,30 @@ function StartPage({ chatId, tab }: { chatId: string; tab: BrowserPaneTab | null
   );
 }
 
+function AgentTabNote({ chatId, tab }: { chatId: string; tab: BrowserPaneTab }) {
+  if (tab.pinned) return null;
+  if (tab.kept) {
+    return (
+      <span className="bp-agent-life" role="status">
+        Kept open until you close it
+      </span>
+    );
+  }
+  return (
+    <span className="bp-agent-life" role="group" aria-label="Agent tab">
+      <span>Closes when this turn ends</span>
+      <span aria-hidden="true">·</span>
+      <button
+        type="button"
+        className="bp-link"
+        onClick={() => sendBrowserCommand(chatId, { command: 'pin', tabId: tab.id, pinned: true })}
+      >
+        Pin to keep
+      </button>
+    </span>
+  );
+}
+
 export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserPaneProps) {
   const { chatId } = home;
   const browser = useChatBrowser(chatId);
@@ -248,6 +272,7 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
             </button>
           </span>
         )}
+        {tab?.owner === 'agent' && tab.url !== '' && <AgentTabNote chatId={chatId} tab={tab} />}
         {tab?.owner === 'agent' && tab.lastAction && (
           <span className="bp-agent-did" role="status">
             Agent: {tab.lastAction}

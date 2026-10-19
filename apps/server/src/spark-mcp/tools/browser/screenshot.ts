@@ -145,7 +145,7 @@ export const browserScreenshotTool = sparkTool({
   needs: 'browser',
   title: 'Screenshot a page',
   description:
-    'Takes a screenshot of a Browser pane tab (the visible part, the full page, or one element by ref), at most 1280 px wide, with password and card fields painted over. The user sees it in the chat. Returns the image when the model can take one, otherwise a file path and a short description. A page on an external site the user opened follows the agent mode.',
+    'Screenshot of a tab (visible part, full page or a ref), at most 1280 px wide, password and card fields painted over; the user sees it in the chat. Returns the image, or a file path for a text-only model. External pages follow the agent mode.',
   input: {
     tab: tabInput,
     ref: z.string().max(20).optional().describe('A ref_N from spark_browser_read to crop to.'),

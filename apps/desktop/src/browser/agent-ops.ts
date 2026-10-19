@@ -11,9 +11,10 @@ import { actOnPage } from './agent-act.ts';
 import { PageToolError, boxOf, readPage } from './page-read.ts';
 import { RefError, pageDocument, resolveRef, type RefindFor } from './ref-resolve.ts';
 import { capturePage } from './page-tools.ts';
+import { pageSettles } from './page-settle.ts';
 import type { BrowserPanes } from './panes.ts';
 import { agentOpenProblem } from './request-guard.ts';
-import { SignInError, signInOnPage } from './sign-in.ts';
+import { SIGN_IN_TIMING, SignInError, signInOnPage } from './sign-in.ts';
 import type { PaneTab } from './tab.ts';
 import { chooseOpenTab } from './tab-rules.ts';
 
@@ -147,12 +148,21 @@ async function screenshot(panes: BrowserPanes, request: Request<'screenshot'>) {
 async function logs(panes: BrowserPanes, request: Request<'logs'>) {
   const tab = targetTab(panes, request.chatId, request.tab);
   const live = await tab.wake();
-  const log = request.kind === 'console' ? live.logs.console : live.logs.network;
+  if (request.kind === 'network') {
+    return {
+      ...tabFacts(tab),
+      kind: request.kind,
+      entries: [],
+      requests: live.logs.network.all(),
+      dropped: live.logs.network.dropped(),
+    };
+  }
   return {
     ...tabFacts(tab),
     kind: request.kind,
-    entries: log.recent(request.filter, request.limit),
-    dropped: log.dropped(),
+    entries: live.logs.console.recent(request.filter, request.limit),
+    requests: [],
+    dropped: live.logs.console.dropped(),
   };
 }
 
@@ -178,8 +188,12 @@ async function boundNode(tab: PaneTab, ref: string | undefined, refindFor: Refin
 
 const MOVED = 'The element changed since it was checked, so nothing was done. Read the page again.';
 
-async function page(panes: BrowserPanes, request: Request<'page'>) {
+async function page(panes: BrowserPanes, request: Request<'page'>, signal: AbortSignal) {
   const tab = targetTab(panes, request.chatId, request.tab);
+  if (request.settle) {
+    const { cdp } = await tab.wake();
+    await pageSettles(cdp, SIGN_IN_TIMING, signal);
+  }
   const bound = await boundNode(tab, request.ref, request.action ?? null);
   if (bound === null) return tabFacts(tab);
   const { cdp } = await tab.wake();
@@ -229,6 +243,12 @@ async function act(panes: BrowserPanes, request: Request<'act'>, signal: AbortSi
   });
 }
 
+function keep(panes: BrowserPanes, request: Request<'keep'>) {
+  const tab = panes.tab(request.chatId, request.tab);
+  tab?.keep();
+  return { kept: tab?.kept ?? false };
+}
+
 export async function runBrowserOp(
   panes: BrowserPanes,
   request: BrowserHostRequest,
@@ -240,7 +260,8 @@ export async function runBrowserOp(
     if (request.op === 'read') return await read(panes, request);
     if (request.op === 'screenshot') return await screenshot(panes, request);
     if (request.op === 'logs') return await logs(panes, request);
-    if (request.op === 'page') return await page(panes, request);
+    if (request.op === 'page') return await page(panes, request, signal);
+    if (request.op === 'keep') return keep(panes, request);
     if (request.op === 'act') return await act(panes, request, signal);
     if (request.op === 'sign_in') return await signIn(panes, request, signal);
     return {

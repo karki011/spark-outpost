@@ -13,6 +13,7 @@ import {
   browserActKindSchema,
   browserActTargetSchema,
 } from './browser-act.ts';
+import { BROWSER_NETWORK_CAPACITY, browserNetworkEntrySchema } from './browser-network.ts';
 import { SIGN_IN_ORIGIN_MAX, SIGN_IN_PASSWORD_MAX, SIGN_IN_USERNAME_MAX } from './sign-ins.ts';
 
 export const BROWSER_HOST_ENV = 'SPARK_BROWSER_HOST';
@@ -31,6 +32,9 @@ const boundNode = {
 
 export const browserReadModeSchema = z.enum(['tree', 'text']);
 export type BrowserReadMode = z.infer<typeof browserReadModeSchema>;
+
+export const browserReadScopeSchema = z.enum(['page', 'main']);
+export type BrowserReadScope = z.infer<typeof browserReadScopeSchema>;
 
 export const browserLogKindSchema = z.enum(['console', 'network']);
 export type BrowserLogKind = z.infer<typeof browserLogKindSchema>;
@@ -51,6 +55,7 @@ export const browserHostRequestSchema = z.discriminatedUnion('op', [
     ...chat,
     tab,
     mode: browserReadModeSchema,
+    scope: browserReadScopeSchema.optional(),
     ref: z.string().max(20).optional(),
     offset: z.number().int().min(0),
     maxChars: z.number().int().min(BROWSER_READ_MIN_CHARS).max(BROWSER_READ_MAX_CHARS).optional(),
@@ -77,7 +82,9 @@ export const browserHostRequestSchema = z.discriminatedUnion('op', [
     tab,
     ref: z.string().max(20).optional(),
     action: browserActKindSchema.optional(),
+    settle: z.boolean().optional(),
   }),
+  z.object({ op: z.literal('keep'), ...chat, tab: z.string().min(1).max(40) }),
   z.object({
     op: z.literal('act'),
     ...chat,
@@ -133,6 +140,7 @@ export const browserReadResultSchema = z.object({
   leftOut: z.number().int().nonnegative().default(0),
   dialog: z.boolean().optional(),
   pageRef: z.string().max(20).optional(),
+  main: z.enum(['found', 'whole_page']).optional(),
 });
 export type BrowserReadResult = z.infer<typeof browserReadResultSchema>;
 
@@ -160,11 +168,14 @@ export const browserLogsResultSchema = z.object({
   ...tabFacts,
   kind: browserLogKindSchema,
   entries: z.array(browserLogEntrySchema).max(BROWSER_LOG_ENTRIES_MAX),
+  requests: z.array(browserNetworkEntrySchema).max(BROWSER_NETWORK_CAPACITY).default([]),
   dropped: z.number().int().nonnegative(),
 });
 export type BrowserLogsResult = z.infer<typeof browserLogsResultSchema>;
 
 export const browserEndRunResultSchema = z.object({ closed: z.number().int().nonnegative() });
+
+export const browserKeepResultSchema = z.object({ kept: z.boolean() });
 
 export const browserPageResultSchema = z.object({
   ...tabFacts,
@@ -196,6 +207,7 @@ export const browserHostResultSchemas = {
   screenshot: browserScreenshotResultSchema,
   logs: browserLogsResultSchema,
   end_run: browserEndRunResultSchema,
+  keep: browserKeepResultSchema,
   page: browserPageResultSchema,
   act: browserActResultSchema,
   sign_in: browserSignInResultSchema,

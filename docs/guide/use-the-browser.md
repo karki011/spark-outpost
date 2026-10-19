@@ -6,7 +6,7 @@ order: 227
 summary: Open a page in the chat's Browser pane, let the agent look, browse and click, and point at what you mean.
 ---
 
-Open a page beside a chat, let the agent use it, and point at things. About 2 minutes. Mac app only.
+Open pages beside a chat for you and the agent. About 2 minutes. Mac app only.
 
 ## Open a page
 
@@ -14,7 +14,7 @@ Open a page beside a chat, let the agent use it, and point at things. About 2 mi
 2. Type an address, like `localhost:5173`; press **Enter**.
 3. **+** adds a tab.
 
-Chat and Terminal links open here; **⌘**-click or **Open in default browser** uses yours.
+Chat and Terminal links open here; **⌘**-click opens yours.
 
 ## Let the agent look and browse
 
@@ -27,7 +27,7 @@ Ask: "Check the sign-in page".
 | Click, type, press keys, scroll, go back | Navigate a tab you opened         |
 |                                          | Click a covered element           |
 
-**Agent** tabs show their last step and close with the turn unless pinned. Long pages are read controls first; open dialogs alone.
+**Agent** tabs close with the turn unless pinned or you used them. Its network log shows addresses and timings, secrets hidden.
 
 Websites follow the [agent mode](agent-mode.md); acting on your own tab always asks. Page text is untrusted.
 
@@ -36,7 +36,7 @@ Websites follow the [agent mode](agent-mode.md); acting on your own tab always a
 1. In **Settings** → **Projects**, select **Set up** beside **Preview**, enter the command and address, and save.
 2. In the pane, select **Start preview**.
 
-It runs between turns; **Show output** opens its **Preview** terminal. Agents can start it, not change it. A finished turn shows **Checked in browser** or **Not checked in browser**.
+It runs between turns; **Show output** opens its **Preview** terminal. Agents can start it, not change it.
 
 ## Point at something
 
@@ -50,6 +50,6 @@ Right-click highlighted text: **Add to chat** or **Ask about this** (**⌘⇧A**
 1. In **Settings** → **Projects**, select **Add** beside **Saved sign-ins**: a label, site and test account.
 2. Ask the agent to sign in; allow the card once per chat.
 
-Spark types them; the agent never sees them. On websites, agent tabs start signed out.
+Spark types them only on the saved site, checked after redirects; the agent never sees them. Agent tabs start signed out.
 
 **Next:** [Make a Spark](sparks.md)

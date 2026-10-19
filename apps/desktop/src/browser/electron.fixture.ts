@@ -151,6 +151,10 @@ export class FakeContents extends EventEmitter {
     return this.url;
   }
 
+  cdpEmit(method: string, params: Record<string, unknown> = {}): void {
+    for (const listener of this.cdpListeners) listener(method, params);
+  }
+
   isDestroyed(): boolean {
     return this.destroyed;
   }
