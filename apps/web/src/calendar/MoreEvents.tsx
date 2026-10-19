@@ -41,6 +41,7 @@ export function MoreEvents({ date, events, calendars, focusable, ...actions }: M
   const buttonRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<number | undefined>(undefined);
+  const returning = useRef(false);
   const listId = useId();
   useEffect(() => () => window.clearTimeout(closeTimer.current), []);
   useLayoutEffect(() => {
@@ -50,6 +51,7 @@ export function MoreEvents({ date, events, calendars, focusable, ...actions }: M
 
   const show = () => {
     window.clearTimeout(closeTimer.current);
+    if (returning.current) return;
     setOpen(true);
   };
   const hideSoon = () => {
@@ -67,7 +69,9 @@ export function MoreEvents({ date, events, calendars, focusable, ...actions }: M
     event.preventDefault();
     event.stopPropagation();
     setOpen(false);
+    returning.current = true;
     buttonRef.current?.focus();
+    returning.current = false;
   };
   const pick = (event: CalendarEvent) => (click: MouseEvent) => {
     click.stopPropagation();

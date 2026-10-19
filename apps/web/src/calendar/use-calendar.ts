@@ -65,7 +65,7 @@ export function useCalendarRange(from: string, to: string) {
 const DETAIL_STALE_MS = 5 * 60_000;
 
 function wantsDetail(event: CalendarEvent): boolean {
-  return event.hasNotes || event.attendeeCount > 1;
+  return event.hasNotes || event.hasLocation || event.attendeeCount > 1;
 }
 
 export function useEventDetail(event: CalendarEvent, always = false) {

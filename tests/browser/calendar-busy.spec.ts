@@ -120,6 +120,8 @@ test('the popover links the description, collapses the dial-ins and joins in the
 
 test('a street address opens in Maps and a room shows as the location', async ({ page }) => {
   await openToday(page);
+  const lunch = scheduled(page).locator('.rl-card', { hasText: 'Lunch' });
+  await expect(lunch.locator('.cal-where')).toContainText('1 Infinite Loop, Cupertino');
   await scheduled(page)
     .getByRole('button', { name: /^Planning offsite, / })
     .click();
@@ -153,6 +155,8 @@ test('N more lists the hidden events on hover and focus, and opens one', async (
   await page.keyboard.press('Tab');
   await expect(more).toBeFocused();
   await expect(list).toBeVisible();
+  await page.keyboard.press('Tab');
+  await expect(list.getByRole('button').first()).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(list).toBeHidden();
   await expect(more).toBeFocused();

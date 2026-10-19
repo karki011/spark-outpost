@@ -98,7 +98,11 @@ export function busyEvents(event: MakeEvent, anchor: number, dayStart: number): 
       attendees: [me, ...team(2), room],
     }),
     event('busy-1on1', '1:1 with Priya', 'fake-work', at(11), 30),
-    event('busy-lunch', 'Lunch', 'fake-family', at(12, 30), 45, { attendeeCount: 0 }),
+    event('busy-lunch', 'Lunch', 'fake-family', at(12, 30), 45, {
+      attendeeCount: 0,
+      othersInvited: false,
+      location: '1 Infinite Loop, Cupertino, CA 95014',
+    }),
     event('busy-vendor', 'Vendor sync', 'fake-work', at(13, 30), 30),
     event('busy-hiring', 'Hiring debrief', 'fake-work', at(14), 30),
     event('busy-support', 'Support rotation', 'fake-work', at(14, 30), 60),
