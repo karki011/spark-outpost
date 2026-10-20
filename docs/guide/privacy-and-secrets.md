@@ -15,7 +15,7 @@ Your chats, settings and code stay on your computer; keys live in your keychain.
 | **Your AI provider**                       | Your messages, and files, output, Slack messages and events the agent reads. | [`.sparkignore`](sparkignore.md) for files                       |
 | **Jev**, if connected                      | Redacted PR comments, short turn facts, Map file contents.                   | See [what Jev reads](jev.md#what-jev-reads)                      |
 | **GitHub, Atlassian, Linear, MCP servers** | What you or an agent sends; a clone talks to its host.                       | Disconnect them                                                  |
-| **Sites agents open**                      | Addresses, typed text; never your sign-ins.                                  | [Agent mode](agent-mode.md)                                      |
+| **Sites agents open**                      | Addresses, typed text, your cookies there.                                   | [Agent mode](agent-mode.md)                                      |
 | **Apple or Google push**                   | Encrypted notifications; sender contact.                                     | **Notify this device**                                           |
 | **Slack**                                  | Notifications, confirmed posts; never direct messages.                       | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
 | **Hugging Face**                           | The speech model, once.                                                      | [Voice](voice.md)                                                |

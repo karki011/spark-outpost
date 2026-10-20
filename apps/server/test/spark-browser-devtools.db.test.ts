@@ -20,6 +20,8 @@ import { createTestDb, type TestDb } from './support.ts';
 
 const SECRET = 'sk_live_4f3e2d1c0b9a8877';
 const SITE = 'https://shop.example.com';
+const AUTH_VALUE = 'auth-value-from-the-users-sign-in';
+const COOKIE_VALUE = 'cookie-value-from-the-users-sign-in';
 
 class FakeHost implements BrowserHost {
   readonly requests: BrowserHostRequest[] = [];
@@ -56,11 +58,26 @@ class FakeHost implements BrowserHost {
     if (request.op === 'storage') {
       return {
         ...facts,
-        partition: 'agent',
         valuesShown: request.values,
-        local: [{ key: 'cart', bytes: 30, ...(request.values ? { value: `t=${SECRET}` } : {}) }],
+        local: [
+          { key: 'cart', bytes: 30, ...(request.values ? { value: `t=${SECRET}` } : {}) },
+          { key: 'sb-ref-auth-token', bytes: 40, value: AUTH_VALUE },
+          { key: 'theme', bytes: 9, value: 'dark' },
+        ],
         session: [],
-        cookies: [],
+        cookies: [
+          {
+            name: 'sid',
+            domain: 'shop.example.com',
+            path: '/',
+            secure: true,
+            httpOnly: false,
+            sameSite: null,
+            expires: null,
+            bytes: 30,
+            value: COOKIE_VALUE,
+          },
+        ],
       };
     }
     if (request.op === 'performance') {
@@ -192,11 +209,24 @@ describe('spark_browser_devtools', () => {
     expect(stored.body).toContain('"key": "cart"');
     expect(stored.body).not.toContain(SECRET);
     expect(fake.ops('storage')).toEqual([expect.objectContaining({ values: true })]);
+    expect(stored.body).not.toContain(AUTH_VALUE);
+    expect(stored.body).not.toContain(COOKIE_VALUE);
+    expect(stored.body).toContain('"masked": true');
+    expect(stored.body).toContain('"value": "dark"');
     const timing = await call({ action: 'performance' });
     expect(timing.body).toContain('"lcpMs": 900');
     expect(audits().map((params) => params.action)).toEqual(
       expect.arrayContaining(['read', 'read']),
     );
+  });
+
+  it('shows no storage value from a tab the user owns, whatever the host returns', async () => {
+    await chat('auto');
+    fake.owner = 'user';
+    const stored = await call({ action: 'storage', values: true });
+    expect(stored.body).toContain('"key": "theme"');
+    expect(stored.body).not.toContain('"value"');
+    expect(stored.body).not.toContain(COOKIE_VALUE);
   });
 
   it('needs an expression for eval and a ref or selector for inspect', async () => {

@@ -10,8 +10,9 @@ import { SettingRow } from './SettingRow.tsx';
 
 const LABEL = 'Keep sign-ins in the browser';
 const ON_HINT =
-  'Sites you sign in to in the Browser pane stay signed in for every chat in this project. Cookies are stored on this Mac.';
-const OFF_HINT = 'Each chat starts signed out, and nothing is kept when it closes.';
+  'Sites you or an agent sign in to in the Browser pane stay signed in for every chat in this project, and agent tabs use them too. Cookies are stored on this Mac.';
+const OFF_HINT =
+  'Each chat starts signed out, its agent tabs share its sign-ins, and nothing is kept when it closes.';
 const WEB_HINT = 'The Browser pane is available in the Mac app.';
 
 function sitesKey(projectId: string) {

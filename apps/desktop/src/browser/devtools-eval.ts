@@ -1,5 +1,10 @@
-import { BROWSER_EVAL_RESULT_MAX, BROWSER_EVAL_TIMEOUT_MS } from '@spark-outpost/contracts';
+import {
+  BROWSER_EVAL_RESULT_MAX,
+  BROWSER_EVAL_TIMEOUT_MS,
+  browserOrigin,
+} from '@spark-outpost/contracts';
 import type { Cdp } from './cdp.ts';
+import { storageSecrets } from './devtools-page.ts';
 import { PageToolError, sensitiveBackendIds } from './page-read.ts';
 import { callOnNode, releaseWorld, sparkWorld } from './spark-world.ts';
 
@@ -82,6 +87,23 @@ export async function protectedValues(cdp: Cdp, filled: ReadonlySet<number>): Pr
   return values;
 }
 
+export const SECRETS_UNREADABLE =
+  'Spark could not read the page’s cookies and storage to mask them, so it returns no result.';
+
+async function hiddenValues(
+  cdp: Cdp,
+  filled: ReadonlySet<number>,
+  pageUrl: string,
+): Promise<string[]> {
+  const fields = await protectedValues(cdp, filled);
+  const origin = browserOrigin(pageUrl);
+  const webOrigin = origin === null || origin === 'file://' ? null : origin;
+  const stored = await storageSecrets(cdp, webOrigin).catch(() => {
+    throw new PageToolError('failed', SECRETS_UNREADABLE);
+  });
+  return [...fields, ...stored];
+}
+
 function withinTime<T>(work: Promise<T>, ms: number): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
   const late = new Promise<never>((_resolve, reject) => {
@@ -94,9 +116,10 @@ export async function evaluateInPage(
   cdp: Cdp,
   expression: string,
   filled: ReadonlySet<number>,
+  pageUrl: string,
   timeoutMs = BROWSER_EVAL_TIMEOUT_MS,
 ): Promise<EvaluateOutcome> {
-  const before = await protectedValues(cdp, filled);
+  const before = await hiddenValues(cdp, filled, pageUrl);
   const evaluated = await withinTime(
     cdp.send<Evaluated>('Runtime.evaluate', {
       expression,
@@ -115,7 +138,7 @@ export async function evaluateInPage(
       thrown.text ??
       'Error')
     : null;
-  const values = [...new Set([...before, ...(await protectedValues(cdp, filled))])];
+  const values = [...new Set([...before, ...(await hiddenValues(cdp, filled, pageUrl))])];
   const value = maskValues(answer.value, values);
   const exception = failure === null ? null : maskValues(failure, values);
   const truncated = value.text.length > BROWSER_EVAL_RESULT_MAX;
