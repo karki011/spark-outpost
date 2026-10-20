@@ -167,7 +167,6 @@ export function DayView({
               date={day.date}
               calendars={calendars}
               clashes={clashes.get(event.key)}
-              isToday={isToday}
               now={now}
               onStartChat={onStartChat}
             />

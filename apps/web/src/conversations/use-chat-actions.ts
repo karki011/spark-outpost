@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   isTerminalRunStatus,
@@ -8,6 +8,7 @@ import {
   type UpdateConversationRequest,
 } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
+import { hasUnsentWork } from '../chat/composer/unsent-work.ts';
 import { projectsApi } from '../api/projects.ts';
 import { movedProjectIds } from './sidebar-groups.ts';
 import { copyChatLink } from './use-copy-chat-link.tsx';
@@ -51,7 +52,7 @@ interface ChatActionsOptions {
   selectedId: string | null;
   nextChatId: (excluding: string) => string | null;
   onSelect: (id: string) => void;
-  onNew: () => void;
+  onNew: () => string;
 }
 
 export function useChatActions({
@@ -65,6 +66,11 @@ export function useChatActions({
   const client = useQueryClient();
   const [deleting, setDeleting] = useState<ReadonlySet<string>>(new Set());
   const [flashId, setFlashId] = useState<string | null>(null);
+  const shownId = useRef(selectedId);
+
+  useEffect(() => {
+    shownId.current = selectedId;
+  }, [selectedId]);
 
   const setDeletingId = (id: string, on: boolean) =>
     setDeleting((current) => {
@@ -167,17 +173,21 @@ export function useChatActions({
 
   const archive = async (chat: ConversationSummary, archived: boolean) => {
     const stamp = archived ? new Date().toISOString() : null;
+    const wasOpen = chat.id === shownId.current;
     if (!(await update(chat, { archived }, { archivedAt: stamp }))) return;
     if (!archived) {
       flash(chat.id);
       toaster.show({ text: `Restored ${chat.title} to Active` });
       return;
     }
+    const newChatId = wasOpen ? onNew() : null;
     toaster.show({
       text: `Archived ${chat.title}`,
       undo: () => {
         flash(chat.id);
         void update({ ...chat, archivedAt: stamp }, { archived: false }, { archivedAt: null });
+        const untouched = newChatId !== null && !hasUnsentWork(newChatId);
+        if (untouched && shownId.current === newChatId) onSelect(chat.id);
       },
     });
   };

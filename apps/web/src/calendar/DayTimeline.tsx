@@ -11,12 +11,11 @@ import { WarnIcon } from '../ui/icons.tsx';
 import { hasEnded } from './event-clock.ts';
 import { clock, hourMark, span as spanText } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
-import { block, HOUR_PX, hourMarks, offset, placeEvents } from './timeline-model.ts';
+import { block, blockRows, HOUR_PX, hourMarks, offset, placeEvents } from './timeline-model.ts';
 import type { NoGap, TimelineSpan } from './today-model.ts';
 import { CalendarName } from './CalendarName.tsx';
 
 const NO_CLASHES: readonly string[] = [];
-const SHORT_MS = 30 * 60_000;
 const NARROW_SHARE = 0.34;
 
 interface DayTimelineProps {
@@ -79,9 +78,10 @@ function EventBlock(props: {
   const service = event.link ? ` · ${CALENDAR_SERVICE_NAMES[event.link.service]}` : '';
   const marks = tags(event, calendars, props.clashes);
   const clash = clashText(props.clashes);
-  const short = end - start < SHORT_MS;
+  const { rows, titleLines } = blockRows(place.height);
   const narrow = props.span / props.lanes < NARROW_SHARE;
-  const compact = short || narrow;
+  const showTags = rows === 3 && !narrow && marks.length > 0;
+  const clashIcon = Boolean(clash) && !showTags;
   return (
     <button
       type="button"
@@ -90,17 +90,23 @@ function EventBlock(props: {
       data-ended={props.ended || undefined}
       data-kind={kind}
       data-overlap={props.overlap || undefined}
-      data-short={short || undefined}
-      data-compact={compact || undefined}
-      data-clash={(compact && clash) || undefined}
-      style={style}
+      data-rows={rows}
+      data-clash={clashIcon || undefined}
+      style={{ ...style, '--tl-title-lines': titleLines } as CSSProperties}
       aria-expanded={props.selected}
       aria-controls={props.selected ? props.panelId : undefined}
       aria-label={`${event.title}, ${spanText(start, end)}, ${calendar?.title ?? 'Calendar'}${marks.length ? `, ${marks.join(', ')}` : ''}`}
       onClick={() => props.onSelect(event.key)}
     >
-      <b>{event.title}</b>
-      {compact && clash && (
+      {rows === 1 ? (
+        <span className="tl-one">
+          <b>{event.title}</b>
+          <span className="tl-at"> · {clock(start)}</span>
+        </span>
+      ) : (
+        <b>{event.title}</b>
+      )}
+      {clashIcon && (
         <span
           className="tl-clash"
           title={`Clashes with ${props.clashes.join(', ')}`}
@@ -109,7 +115,7 @@ function EventBlock(props: {
           <WarnIcon />
         </span>
       )}
-      {!compact && marks.length > 0 && (
+      {showTags && (
         <span className="tl-tags" aria-hidden="true">
           {marks.map((mark) => (
             <span
@@ -123,10 +129,12 @@ function EventBlock(props: {
           ))}
         </span>
       )}
-      <span className="tl-meta">
-        {spanText(start, end)} · <CalendarName name={calendar?.title ?? 'Calendar'} />
-        {service}
-      </span>
+      {rows > 1 && (
+        <span className="tl-meta">
+          {spanText(start, end)} · <CalendarName name={calendar?.title ?? 'Calendar'} />
+          {service}
+        </span>
+      )}
     </button>
   );
 }

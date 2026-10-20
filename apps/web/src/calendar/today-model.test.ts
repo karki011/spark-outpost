@@ -7,7 +7,6 @@ import {
   connectorLine,
   nextMeeting,
   countdown,
-  joinHint,
   joinTarget,
   noGaps,
   overlapChat,
@@ -272,10 +271,5 @@ describe('Join', () => {
     expect(joinTarget([standup], at(9, 20))?.title).toBe('Standup');
     expect(joinTarget([standup], at(9, 45))).toBeNull();
     expect(joinTarget([noLink], at(9, 30))).toBeNull();
-  });
-
-  it('says when Join opens', () => {
-    expect(joinHint(standup, at(9))).toBe('from 9:20 AM');
-    expect(joinHint(standup, at(9, 21))).toBeNull();
   });
 });

@@ -64,7 +64,7 @@ const NO_OUTPOSTS: readonly Outpost[] = [];
 interface ConversationListProps {
   selectedId: string | null;
   onSelect: (id: string) => void;
-  onNew: () => void;
+  onNew: () => string;
   onNewInProject: (projectId: string) => void;
 }
 

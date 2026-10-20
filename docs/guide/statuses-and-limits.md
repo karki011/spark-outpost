@@ -18,7 +18,7 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 
 ## Chat list
 
-A dot shows what happened since you last opened the chat, on paired devices too. Point at it for detail.
+A dot shows what happened since you last opened the chat, also on paired devices; point at it.
 
 | Dot                         | Means                                                                      |
 | --------------------------- | -------------------------------------------------------------------------- |

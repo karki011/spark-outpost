@@ -111,9 +111,7 @@
 }
 
 .rl-card[data-selected] {
-  border-color: var(--accent);
   background: var(--accent-soft);
-  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .rl-card[data-free] {
@@ -128,6 +126,11 @@
 .rl-card[data-past] .rl-time,
 .rl-card[data-past] .rl-notes {
   color: var(--faint);
+}
+
+.rl-card[data-selected] .rl-open,
+.rl-card[data-selected] .rl-time {
+  color: var(--accent-text);
 }
 
 .rl-card[data-past] .rl-strip {

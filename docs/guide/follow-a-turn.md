@@ -14,17 +14,17 @@ You'll follow, stop and queue a turn. About 2 minutes.
 2. Select the step count, then **Thinking** to read it.
 3. **Show work panel** has the plan, files and cost; **Agent TV** is in the **…** menu.
 
-When the agent needs you, the line says **Waiting for you**. Select it or press **⌘⇧Y**.
+When the agent needs you, select **Waiting for you** or press **⌘⇧Y**.
 
-Command output shows in the reply; failed ones stay open. **Open in terminal** shows it in a [dock tab](terminals.md#watch-an-agents-command).
+Failed command output stays open in the reply. **Open in terminal** shows it in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 
-1. Select **Stop**, which replaces the send button. Its sub-agents stop too.
+1. Select **Stop**. Its sub-agents and background work stop too.
 
 ## Background work
 
-A Claude agent may reply while background agents still run. The chat shows **Waiting on 1 background agent**, not Done, then continues. **Enter** reaches the agent; **Stop background tasks** ends the work.
+When a Claude agent replies while background agents still run, the chat shows **Waiting on 1 background agent**, then continues. **Enter** reaches it; **Stop background tasks** ends them.
 
 ## Queue messages
 
@@ -44,8 +44,8 @@ Only text can be queued.
 
 ## Delete a running chat
 
-1. In the chat's **…** menu, select **Delete**, then **Confirm delete**. Running work stops.
-2. To restore it, select **Undo**.
+1. In the chat's **…** menu, select **Delete**, then **Confirm delete**; running work stops.
+2. **Undo** restores it.
 
 ## After a turn
 

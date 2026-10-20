@@ -287,11 +287,6 @@
   background: var(--panel);
 }
 
-.mo-ev[data-selected] {
-  background: var(--accent-soft);
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-
 .mo-cell[data-past] .mo-ev,
 .mo-cell[data-past] .mo-at,
 .mo-cell[data-out] .mo-ev,
@@ -310,6 +305,15 @@
 
 .mo-cell[data-past] .mo-ev::before {
   opacity: 0.45;
+}
+
+.mo-cell .mo-ev[data-selected] {
+  background: var(--accent-soft);
+}
+
+.mo-cell .mo-ev[data-selected],
+.mo-cell .mo-ev[data-selected] .mo-at {
+  color: var(--accent-text);
 }
 
 .mo-more-wrap {

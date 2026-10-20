@@ -111,6 +111,8 @@ export const SPEC_GROUPS = {
     'sign-ins',
   ],
   'sidebar-projects': [
+    'archive-current',
+    'compact-chrome',
     'project-clone',
     'project-work-place',
     'projects',
@@ -168,6 +170,7 @@ export const SPEC_GROUPS = {
     'calendar-busy',
     'calendar-clash',
     'calendar-connector',
+    'calendar-day',
     'calendar-google',
     'calendar-month',
     'calendar-nudges',

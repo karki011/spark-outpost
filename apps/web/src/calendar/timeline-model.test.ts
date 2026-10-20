@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { at, event } from './test-fixtures.ts';
-import { placeEvents } from './timeline-model.ts';
+import { block, blockRows, placeEvents } from './timeline-model.ts';
 
 const layout = (events: ReturnType<typeof event>[]) =>
   Object.fromEntries(
@@ -46,5 +46,21 @@ describe('placeEvents', () => {
     ]);
     expect(placed.Lunch).toEqual({ lane: 0, lanes: 1, span: 1 });
     expect(placed.B).toEqual({ lane: 1, lanes: 2, span: 1 });
+  });
+});
+
+describe('blockRows', () => {
+  const span = { start: at(8), end: at(18) };
+  const rows = (minutes: number) =>
+    blockRows(block(at(14), at(14) + minutes * 60_000, span).height);
+
+  it('fits one line in a 15-minute block and two in a 30-minute one', () => {
+    expect(rows(15)).toEqual({ rows: 1, titleLines: 1 });
+    expect(rows(30)).toEqual({ rows: 2, titleLines: 1 });
+  });
+
+  it('adds the tags line once there is room and a second title line after that', () => {
+    expect(rows(45)).toEqual({ rows: 3, titleLines: 1 });
+    expect(rows(60)).toEqual({ rows: 3, titleLines: 2 });
   });
 });

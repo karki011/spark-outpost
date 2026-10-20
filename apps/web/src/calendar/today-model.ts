@@ -4,7 +4,6 @@ import {
   clashList,
   isMeeting,
   joinOpen,
-  JOIN_LEAD_MS,
   spanOf,
   type CalendarChoice,
   type CalendarEvent,
@@ -13,7 +12,7 @@ import {
 } from '@spark-outpost/contracts';
 import { isRunning } from '../conversations/row-state.ts';
 import { countLabel } from '../ui/count-label.ts';
-import { clock, duration, minutesUntil } from './calendar-format.ts';
+import { duration, minutesUntil } from './calendar-format.ts';
 
 export type TodayState = 'web' | 'helper' | 'denied' | 'connect' | 'none' | 'ready';
 
@@ -187,11 +186,6 @@ export function joinTarget(events: readonly CalendarEvent[], now: number): Calen
       .filter((event) => event.link && joinOpen(spanOf(event), now))
       .toSorted((a, b) => spanOf(a).start - spanOf(b).start)[0] ?? null
   );
-}
-
-export function joinHint(event: CalendarEvent, now: number): string | null {
-  const opensAt = spanOf(event).start - JOIN_LEAD_MS;
-  return now < opensAt ? `from ${clock(opensAt)}` : null;
 }
 
 export function openJoin(url: string): void {
