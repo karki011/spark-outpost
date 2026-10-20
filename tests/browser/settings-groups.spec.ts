@@ -59,6 +59,7 @@ test('the sections sit under six groups, each tab described by its group', async
     'Projects',
     'Chats & autonomy',
     'Pull requests',
+    'Spark rules',
     'Connectors',
     'MCP servers',
     'Notifications',

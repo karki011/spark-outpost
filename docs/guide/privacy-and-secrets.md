@@ -15,7 +15,7 @@ Your chats, settings and code stay on your computer; keys live in your keychain.
 | **Your AI provider**                       | Your messages, and files, output, Slack messages and events the agent reads. | [`.sparkignore`](sparkignore.md) for files                       |
 | **Jev**, if connected                      | Redacted PR comments, short turn facts, Map file contents.                   | See [what Jev reads](jev.md#what-jev-reads)                      |
 | **GitHub, Atlassian, Linear, MCP servers** | What you or an agent sends; a clone talks to its host.                       | Disconnect them                                                  |
-| **Sites agents open**                      | Addresses, typed text; never your sign-ins.                                  | [Agent mode](agent-mode.md)                                      |
+| **Sites agents open**                      | Addresses, typed text, your cookies there.                                   | [Agent mode](agent-mode.md)                                      |
 | **Apple or Google push**                   | Encrypted notifications; sender contact.                                     | **Notify this device**                                           |
 | **Slack**                                  | Notifications, confirmed posts; never direct messages.                       | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
 | **Hugging Face**                           | The speech model, once.                                                      | [Voice](voice.md)                                                |
@@ -39,8 +39,6 @@ In replies, audit logs, tool results, errors, Jev and [recorded Terminal session
 - Anything in `.sparkignore`. Agents can read [secret files](protected-paths.md#secret-files), so your provider sees them. Ship commits neither.
 - Through [Spark's own tools](spark-tools.md#what-the-tools-never-return): file contents, terminal output, secrets, keys.
 - [Browser pane](use-the-browser.md): password and card fields, saved sign-ins. Cookies stay on this Mac.
-
-After private reads, Spark notes [sends elsewhere](approvals.md#sending-data-out-after-reading-secrets).
 
 ## When you reset
 

@@ -37,6 +37,7 @@ import {
   type NewApproval,
 } from '../persistence/approvals.ts';
 import type { Db } from '../persistence/db.ts';
+import { ghRulesForRun } from '../persistence/spark-rules.ts';
 import { LeaseLostError, type AppendOptions } from '../persistence/run-events.ts';
 import type { GateAnswer, PermissionGate } from '../providers/provider.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
@@ -375,6 +376,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       instructionGrants,
       shell: request.kind === 'execute' ? await parseShell(request.command) : null,
       agentAsks: Boolean(request.agentReason),
+      ghRules: await ghRulesForRun(deps.db, deps.runId),
       ...(await publishContext(deps.db, deps.publish, request)),
     };
     const { decision, secretReads } = await withPrefetchedFiles(
@@ -389,12 +391,14 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       return readSecrets(await ask(request, decision.reason, signal, decision), secretReads);
     }
     if (decision.verdict === 'reject') {
-      const denied = await insertApproval(deps.db, newApproval(request, decision.reason), {
+      const ruled = decision.sparkRule ? { sparkRule: decision.sparkRule } : {};
+      const denied = await insertApproval(deps.db, newApproval(request, decision.reason, ruled), {
         status: 'denied',
         decidedBy: 'policy',
         optionId: rejectOption(request.options)?.optionId ?? null,
       });
       observe(request, { verdict: 'reject', by: 'policy', approvalId: denied.id });
+      if (decision.sparkRule) await emit(runEvents.approvalDecided(denied));
       return policyBlocked(reject(request, blockedNote(what, decision.reason), denied.id));
     }
     const option = allowOption(request.options);

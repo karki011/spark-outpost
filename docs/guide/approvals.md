@@ -6,7 +6,7 @@ order: 512
 summary: The agent's mode and Spark autonomy, why an approval card appears, what never goes on without you, and what happens when nobody answers.
 ---
 
-The **agent's mode** decides what the agent may do without asking. **Spark autonomy** decides what Spark does with the result. Spark follows the mode, adding only a few hard rails.
+The **agent's mode** decides what the agent may do without asking; **Spark autonomy**, what Spark does with the result. Spark adds only a few hard rails.
 
 | Layer              | Decides                                | Details                                                                                  |
 | ------------------ | -------------------------------------- | ---------------------------------------------------------------------------------------- |
@@ -31,7 +31,6 @@ In **Bypass permissions**, **Approve for me** or **Full access**, Spark doesn't 
 
 - Each such tool call is marked **Ran without review** in the audit log.
 - An action that crosses a protected path, or pushes a branch that isn't the chat's own, gets a card, such as "Bolt wrote outside the project: ~/x.txt", with **Revert** and **Dismiss**.
-- The chat shows **Waiting for you** in the chat list and **Flagged by Spark** on the island until you answer.
 
 ## Sending data out after reading secrets
 

@@ -105,6 +105,7 @@ interface RunFacts {
   request: string | null;
   outpost_run: boolean | null;
   from_user: boolean | null;
+  spark_rule_retry?: boolean | null;
 }
 
 async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
@@ -116,6 +117,8 @@ async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
                 ELSE r.agent_mode END) END AS mode,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'outpost' AS outpost_run,
+            COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
+              = 'spark_rule' AS spark_rule_retry,
             (SELECT post.from_user FROM outpost_posts post
              WHERE post.id = r.user_message_id) AS from_user
      FROM runs r JOIN conversations c ON c.id = r.conversation_id
@@ -132,6 +135,7 @@ function runText(run: RunFacts): UserTextInput {
   return {
     userRequest: run.request ?? '',
     outpostRequest: run.outpost_run === true ? { fromUser: run.from_user === true } : null,
+    sparkRuleRetry: run.spark_rule_retry === true,
   };
 }
 

@@ -6,9 +6,7 @@ order: 330
 summary: Connect GitHub so Spark can open pull requests, connect Atlassian (Jira, Confluence) or Linear, and keep tickets in step with pull requests.
 ---
 
-You'll connect GitHub and your ticket tracker. About 3 minutes.
-
-Every connection is optional.
+You'll connect GitHub and your ticket tracker, each optional. About 3 minutes.
 
 ## Connect GitHub
 
@@ -40,7 +38,7 @@ Linear and **Jira tickets** on Atlassian have two switches, on by default: **Mov
 
 Under each switch, and for **Start work**, a picker lists your projects' statuses. **Automatic** uses the status named Done, In Review or In Progress, or the only fit; never Rejected, Cancelled or Duplicate.
 
-When several fit, Spark flags the ticket and leaves it for you.
+When several fit, Spark flags the ticket for you.
 
 Spark always adds the PR link and never comments on tickets.
 

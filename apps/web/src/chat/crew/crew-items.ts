@@ -50,6 +50,7 @@ function answeredOrPending(approval: Approval): boolean {
     approval.status === 'pending' ||
     approval.decidedBy === 'user' ||
     approval.payload.sparkResult !== undefined ||
+    approval.payload.sparkRule !== undefined ||
     isCheckpoint(approval)
   );
 }

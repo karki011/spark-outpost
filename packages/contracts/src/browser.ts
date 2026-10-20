@@ -148,6 +148,8 @@ export const browserPlacementSchema = z.object({
 });
 export type BrowserPlacement = z.infer<typeof browserPlacementSchema>;
 
+export const BROWSER_FIND_MAX = 500;
+
 export const browserCommandSchema = z.discriminatedUnion('command', [
   z.object({ command: z.literal('new_tab'), url: z.string().max(BROWSER_URL_MAX).nullable() }),
   z.object({
@@ -158,10 +160,22 @@ export const browserCommandSchema = z.discriminatedUnion('command', [
   z.object({ command: z.literal('back'), tabId: z.string() }),
   z.object({ command: z.literal('forward'), tabId: z.string() }),
   z.object({ command: z.literal('reload'), tabId: z.string() }),
+  z.object({ command: z.literal('hard_reload'), tabId: z.string() }),
   z.object({ command: z.literal('stop'), tabId: z.string() }),
   z.object({ command: z.literal('devtools'), tabId: z.string() }),
   z.object({ command: z.literal('select'), tabId: z.string() }),
   z.object({ command: z.literal('close'), tabId: z.string() }),
+  z.object({ command: z.literal('reopen') }),
+  z.object({ command: z.literal('copy_url'), tabId: z.string() }),
+  z.object({
+    command: z.literal('find'),
+    tabId: z.string(),
+    text: z.string().min(1).max(BROWSER_FIND_MAX),
+    forward: z.boolean(),
+    next: z.boolean(),
+  }),
+  z.object({ command: z.literal('stop_find'), tabId: z.string() }),
+  z.object({ command: z.literal('focus'), tabId: z.string() }),
   z.object({ command: z.literal('pin'), tabId: z.string(), pinned: z.boolean() }),
   z.object({
     command: z.literal('pick'),
@@ -170,6 +184,14 @@ export const browserCommandSchema = z.discriminatedUnion('command', [
   }),
 ]);
 export type BrowserCommand = z.infer<typeof browserCommandSchema>;
+
+export const browserFoundSchema = z.object({
+  chatId: z.uuid(),
+  tabId: z.string(),
+  active: z.number().int().min(0),
+  matches: z.number().int().min(0),
+});
+export type BrowserFound = z.infer<typeof browserFoundSchema>;
 
 export const browserBoxSchema = z.object({
   x: z.number(),

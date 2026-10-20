@@ -6,7 +6,7 @@ order: 518
 summary: What Jev decides and never does, what it reads, what it costs, and what happens without it.
 ---
 
-Jev is an optional advisor from TypeSafe. It answers short questions outside your chats, and Spark's rules take over whenever Jev is unsure or not connected. Jev is never asked during a turn.
+Jev is an optional advisor from TypeSafe. It answers short questions outside your chats, never during a turn; Spark's rules take over when Jev is unsure or not connected.
 
 ## What Jev decides
 

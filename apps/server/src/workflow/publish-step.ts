@@ -6,6 +6,7 @@ import {
 } from '../orchestration/agent-publish.ts';
 import { NO_PULL_REQUEST } from '../orchestration/no-pull-request.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
+import type { Queryable } from '../persistence/db.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { opensDraftPullRequests } from '../persistence/pr-settings.ts';
 import { watchesForConversation } from '../persistence/pr-watches.ts';
@@ -21,7 +22,7 @@ import type { ShipDeps } from '../ship/prepare.ts';
 import { publishedLine, publishedState, type Published } from '../ship/published.ts';
 import type { Append, RunControl, TurnDeps, TurnResult } from './agent-turn.ts';
 import { closeMessage } from './execute-run.ts';
-import { publishPrompt, type PublishReason } from './publish-prompt.ts';
+import { publishPrompt, type AdoptedPrompt, type PublishReason } from './publish-prompt.ts';
 import { promptAgain } from './publish-step-again.ts';
 import { commitWithoutRemote } from './publish-step-commit.ts';
 import { holdReplyText } from './publish-step-lead.ts';
@@ -122,6 +123,21 @@ function resultLine(reason: PublishReason, published: Published, branch: string)
   return publishedLine(published, branch);
 }
 
+async function adoptedPrompt(
+  db: Queryable,
+  root: string,
+  branch: string,
+): Promise<AdoptedPrompt | null> {
+  const record = await chatWorktreeAt(db, root).catch(() => null);
+  if (!record?.adopted?.pushes || record.branch !== branch) return null;
+  const remote = await pickRemote(root, branch).catch(() => null);
+  return {
+    author: record.adopted.author,
+    pull: record.adopted.number,
+    remote: remote?.name ?? 'origin',
+  };
+}
+
 async function publishedByAgent(
   deps: PublishStepDeps,
   turn: Publishing,
@@ -134,6 +150,7 @@ async function publishedByAgent(
     reason: turn.reason,
     draftAsked: await opensDraftPullRequests(db, workspaceId),
     pullBase: plan.pullBase,
+    adopted: await adoptedPrompt(db, plan.root, plan.branch),
   });
   if (!prompt) return turn.reply;
   await closeMessage(turn.append, await withWorkMessage(turn.append, turn.reply), true);

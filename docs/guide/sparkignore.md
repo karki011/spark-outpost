@@ -35,7 +35,7 @@ Matching files are closed, unlike [secret files](protected-paths.md#secret-files
 
 - Agents can't read or change them; commands that touch them ask first.
 - They're left out of the **@** file picker.
-- Their contents are never sent to Jev. Without Jev, nothing is sent for the Map at all.
+- Their contents never go to Jev.
 
 A listed file can still show as a dot on the Map. Its contents are never read.
 
@@ -43,7 +43,7 @@ A listed file can still show as a dot on the Map. Its contents are never read.
 
 Chat text is sent to the agent's provider and saved with the chat. Paste keys only into the key field in **Settings → AI providers**.
 
-When a message looks like it has a secret in it, Spark holds it and shows "Paste API keys in Settings → AI providers instead."
+When a message seems to hold a secret, Spark holds it and shows "Paste API keys in Settings → AI providers instead."
 
 1. Press **Enter** to pick **Remove it**. Each secret becomes `[removed]` to review and send.
 2. Or select **Send anyway**, or press **Esc** to edit the message yourself.

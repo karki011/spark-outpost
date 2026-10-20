@@ -45,7 +45,7 @@ Changes apply to chats that haven't picked their own. **Per chat** effort keeps 
 
 1. Get an API key from the **TypeSafe console**.
 2. In **Settings → AI providers**, select the **Jev** tile under **Advisor**.
-3. Paste the key and verify it. Verifying is free, and the key goes to your system keychain.
+3. Paste the key and verify it, for free; the key goes to your system keychain.
 
 To remove Jev, hold **Hold to remove the Jev key** under **Danger zone**.
 

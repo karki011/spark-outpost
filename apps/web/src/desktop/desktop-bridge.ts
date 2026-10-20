@@ -69,6 +69,8 @@ export interface DesktopBrowser {
   onSnapshot(callback: (snapshot: BrowserSnapshot) => void): Unsubscribe;
   onPicked(callback: (pick: BrowserPick) => void): Unsubscribe;
   onSelectedText(callback: (selected: BrowserSelectedText) => void): Unsubscribe;
+  onShortcut(callback: (event: unknown) => void): Unsubscribe;
+  onFound(callback: (found: unknown) => void): Unsubscribe;
 }
 
 export interface DesktopMacControl {

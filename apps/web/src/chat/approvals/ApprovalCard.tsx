@@ -33,6 +33,7 @@ import { askReason, askerName, fromSandbox } from './ask-reason.ts';
 import { ObservedNote } from './ObservedNote.tsx';
 import { RetryAction } from './RetryAction.tsx';
 import { SparkActionCard } from './SparkActionCard.tsx';
+import { SparkRuleCard } from './SparkRuleCard.tsx';
 import { McpSettingsButton, isMcpAction } from '../../settings/mcp/McpActionFacts.tsx';
 
 interface ApprovalCardProps {
@@ -194,6 +195,7 @@ export function ApprovalCard({ approval: incoming, ...rest }: ApprovalCardProps)
   const [local, setLocal] = useState<ApprovalDecidedValue | null>(null);
   const approval =
     local && incoming.status === 'pending' ? mergeDecision([incoming], local)[0]! : incoming;
+  if (approval.payload.sparkRule) return <SparkRuleCard approval={approval} />;
   if (approval.status !== 'pending' || retired(approval)) {
     return <ResolvedApproval approval={approval} />;
   }

@@ -1,21 +1,29 @@
-import { BrowserWindow, WebContentsView, type ContextMenuParams, type Session } from 'electron';
+import {
+  BrowserWindow,
+  WebContentsView,
+  type ContextMenuParams,
+  type Input,
+  type Session,
+} from 'electron';
 import {
   browserPlaceOf,
+  browserShortcut,
   classifyBrowserUrl,
+  type BrowserShortcut,
   type BrowserHandoff,
   type BrowserPaneTab,
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
 import { attachCdp, type Cdp } from './cdp.ts';
+import type { InputMarks } from './clipboard-permission.ts';
 import { capturePageLogs, type PageLogs } from './page-capture.ts';
 import { RefMap, tabRefNumbers } from './ref-map.ts';
-import { agentPartition, navigationAllowed } from './request-guard.ts';
+import { navigationAllowed } from './request-guard.ts';
 import { isAddShortcut, isDevtoolsShortcut } from './selection-menu.ts';
 import type { TabFacts } from './tab-rules.ts';
 
 export interface TabHooks {
-  partition(owner: BrowserTabOwner, url: string): string;
-  session(partition: string): Session;
+  session(): Session;
   allowed(url: string): boolean;
   changed(): void;
   popup(url: string, opener: PaneTab): void;
@@ -24,6 +32,8 @@ export interface TabHooks {
   visited(url: string): void;
   contextMenu(tab: PaneTab, params: ContextMenuParams): void;
   addShortcut(tab: PaneTab): void;
+  paneShortcut(tab: PaneTab, shortcut: BrowserShortcut): void;
+  found(tab: PaneTab, active: number, matches: number): void;
   devtoolsSession(): Session;
 }
 
@@ -45,6 +55,27 @@ const BLANK = 'about:blank';
 const BLOCKED = 'Spark does not let a page in the Browser pane go to that address.';
 const VIEW_RADIUS = 10;
 
+const MENU_SHORTCUTS: ReadonlySet<BrowserShortcut> = new Set([
+  'close_tab',
+  'reload',
+  'hard_reload',
+]);
+
+function paneShortcutOf(input: Input): BrowserShortcut | null {
+  const shortcut = browserShortcut(
+    {
+      code: input.code,
+      meta: input.meta,
+      ctrl: input.control,
+      shift: input.shift,
+      alt: input.alt,
+      composing: input.isComposing,
+    },
+    process.platform === 'darwin',
+  );
+  return shortcut && !MENU_SHORTCUTS.has(shortcut) ? shortcut : null;
+}
+
 export class PaneTab {
   readonly id: string;
   readonly chatId: string;
@@ -57,7 +88,10 @@ export class PaneTab {
   handoff: BrowserHandoff | null = null;
   handoffRun: string | null = null;
   agentBusy = 0;
+  agentDoneAt: number | null = null;
+  private userInputAt: number | null = null;
   active = false;
+  shown = false;
   picking = false;
   driving = false;
   lastAction: string | null = null;
@@ -68,7 +102,6 @@ export class PaneTab {
   private title = '';
   private loading = false;
   private live: LiveTab | null = null;
-  private partition: string | null = null;
   private opening: Promise<LiveTab> | null = null;
   private waking: Promise<LiveTab> | null = null;
   private readonly hooks: TabHooks;
@@ -127,8 +160,13 @@ export class PaneTab {
     if (window && !window.isDestroyed()) window.close();
   }
 
-  inAgentStorage(): boolean {
-    return this.partition !== null && this.partition === agentPartition(this.chatId);
+  inputMarks(): InputMarks {
+    return {
+      shown: this.shown,
+      agentBusy: this.agentBusy,
+      userInputAt: this.userInputAt,
+      agentDoneAt: this.agentDoneAt,
+    };
   }
 
   forgetLogs(): void {
@@ -187,31 +225,17 @@ export class PaneTab {
     return this.opening;
   }
 
-  private crosses(url: string): boolean {
-    return this.partition !== null && this.partition !== this.hooks.partition(this.owner, url);
-  }
-
   private steer(event: { preventDefault(): void }, url: string, redirect: boolean): void {
     const web = navigationAllowed(url);
-    if (!web || !this.hooks.allowed(url)) {
-      event.preventDefault();
-      if (redirect || web) this.note({ loading: false, error: BLOCKED });
-      return;
-    }
-    if (!this.crosses(url)) return;
+    if (web && this.hooks.allowed(url)) return;
     event.preventDefault();
-    this.moveTo(url);
-  }
-
-  private moveTo(url: string): void {
-    setImmediate(() => void this.load(url));
+    if (redirect || web) this.note({ loading: false, error: BLOCKED });
   }
 
   private async open(): Promise<LiveTab> {
-    const partition = this.hooks.partition(this.owner, this.url);
     const view = new WebContentsView({
       webPreferences: {
-        session: this.hooks.session(partition),
+        session: this.hooks.session(),
         sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
@@ -239,10 +263,6 @@ export class PaneTab {
       if (details.isMainFrame && !details.isSameDocument) this.live?.logs.reset();
     });
     contents.on('did-navigate', (_event, url, code) => {
-      if (this.crosses(url)) {
-        this.moveTo(url);
-        return;
-      }
       this.refs.clear();
       this.filled.clear();
       this.status = code > 0 ? code : null;
@@ -260,12 +280,22 @@ export class PaneTab {
       if (!isMainFrame || code === -3) return;
       this.note({ loading: false, error: description || 'The page did not load.' });
     });
+    contents.on('found-in-page', (_event, result) => {
+      if (result.finalUpdate) this.hooks.found(this, result.activeMatchOrdinal, result.matches);
+    });
     contents.on('context-menu', (_event, params) => this.hooks.contextMenu(this, params));
     contents.on('before-mouse-event', (_event, mouse) => {
       if (mouse.type === 'mouseDown') this.userUsed();
     });
     contents.on('before-input-event', (event, input) => {
       if (input.type === 'keyDown') this.userUsed();
+      const shortcut =
+        input.type === 'keyDown' && this.agentBusy === 0 ? paneShortcutOf(input) : null;
+      if (shortcut) {
+        event.preventDefault();
+        this.hooks.paneShortcut(this, shortcut);
+        return;
+      }
       if (isDevtoolsShortcut(input, process.platform)) {
         event.preventDefault();
         this.openDevtools();
@@ -280,12 +310,12 @@ export class PaneTab {
     const logs = await capturePageLogs(cdp);
     await cdp.send('Page.enable');
     this.live = { view, cdp, logs };
-    this.partition = partition;
     this.hooks.viewCreated(view);
     return this.live;
   }
 
   private userUsed(): void {
+    if (this.agentBusy === 0) this.userInputAt = Date.now();
     if (this.owner !== 'agent' || this.agentBusy > 0 || this.kept) return;
     this.kept = true;
     this.hooks.changed();
@@ -304,17 +334,9 @@ export class PaneTab {
     this.hooks.changed();
   }
 
-  private async viewFor(url: string): Promise<LiveTab> {
-    this.url = url;
-    const live = await this.ensure();
-    if (!this.crosses(url)) return live;
-    this.sleep();
-    this.url = url;
-    return this.ensure();
-  }
-
   async load(url: string, signal?: AbortSignal): Promise<void> {
-    const { view } = await this.viewFor(url);
+    const { view } = await this.ensure();
+    this.url = url;
     this.title = '';
     this.error = null;
     this.status = null;
@@ -346,7 +368,18 @@ export class PaneTab {
     return this.waking;
   }
 
-  history(step: 'back' | 'forward' | 'reload' | 'stop'): boolean {
+  find(text: string, forward: boolean, next: boolean): void {
+    const contents = this.live?.view.webContents;
+    if (!contents || contents.isDestroyed()) return;
+    contents.findInPage(text, { forward, findNext: !next, matchCase: false });
+  }
+
+  stopFind(): void {
+    const contents = this.live?.view.webContents;
+    if (contents && !contents.isDestroyed()) contents.stopFindInPage('clearSelection');
+  }
+
+  history(step: 'back' | 'forward' | 'reload' | 'hard_reload' | 'stop'): boolean {
     const contents = this.live?.view.webContents;
     if (!contents || contents.isDestroyed()) return false;
     const history = contents.navigationHistory;
@@ -355,6 +388,7 @@ export class PaneTab {
     if (step === 'back') history.goBack();
     if (step === 'forward') history.goForward();
     if (step === 'reload') contents.reload();
+    if (step === 'hard_reload') contents.reloadIgnoringCache();
     if (step === 'stop') contents.stop();
     this.touch();
     return true;
@@ -366,7 +400,7 @@ export class PaneTab {
     this.url = this.currentUrl();
     this.closeDevtools();
     this.live = null;
-    this.partition = null;
+    this.shown = false;
     this.loading = false;
     this.picking = false;
     this.lastAction = null;

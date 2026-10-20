@@ -9,6 +9,7 @@ import {
   type Decision,
 } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
+import { sparkRuleReason } from './gh-rules.ts';
 import type { OwnRepo } from './own-repo.ts';
 import { ghRailReason, type PublishGrant, type TaskBranch } from './publish-policy.ts';
 
@@ -55,17 +56,20 @@ const ELSEWHERE: readonly (readonly [string, string])[] = [
   ['gh api repos/other/repo/pulls/12/comments/55/replies -f body=Fixed', 'gh api'],
   ['gh api repos/acme/app/issues/77/comments -f body=Fixed', 'gh api'],
   ['gh api graphql --input reply.json', 'gh api'],
-  ['gh issue comment 12 --body "Fixed"', 'gh issue comment'],
 ];
 
-const NEVER: readonly (readonly [string, string])[] = [
-  ['gh pr merge 12 --squash', 'gh pr merge'],
-  ['gh pr review 12 --approve', 'gh pr review'],
+const RULED: readonly (readonly [string, string])[] = [
+  ['gh issue comment 12 --body "Fixed"', 'gh issue comment'],
   ['gh pr review 12 --request-changes --body no', 'gh pr review'],
   ['gh pr review 12 --comment --body "Looks fine"', 'gh pr review'],
   ['gh pr close 12', 'gh pr close'],
   ['gh pr reopen 12', 'gh pr reopen'],
   ['gh pr ready 12', 'gh pr ready'],
+];
+
+const NEVER: readonly (readonly [string, string])[] = [
+  ['gh pr merge 12 --squash', 'gh pr merge'],
+  ['gh pr review 12 --approve', 'gh pr review'],
   ['gh api -X PUT repos/acme/app/pulls/12/merge', 'gh api'],
   ['gh api -X PUT repos/acme/app/pulls/12/reviews/9/dismissals -f message=x', 'gh api'],
   ['gh api -X PATCH repos/acme/app/pulls/12 -f state=closed', 'gh api'],
@@ -186,6 +190,23 @@ describe('merging, reviewing, dismissing, closing and reopening', () => {
       for (const grant of GRANTS) {
         for (const posture of POSTURES) {
           refusedByName(chatRun(posture, grant, command, own), posture, grant, named);
+        }
+      }
+    }
+  });
+});
+
+describe('other gh writes on the own pull request or elsewhere', () => {
+  it.each(RULED)('are refused by the Other commands Spark rule: %s', (command, prefix) => {
+    const rule = { group: 'other' as const, prefix };
+    for (const own of [FOLLOWED, NOT_FOLLOWED]) {
+      for (const grant of GRANTS) {
+        for (const posture of POSTURES) {
+          expect(chatRun(posture, grant, command, own)).toEqual({
+            verdict: 'reject',
+            reason: sparkRuleReason(rule),
+            sparkRule: rule,
+          });
         }
       }
     }

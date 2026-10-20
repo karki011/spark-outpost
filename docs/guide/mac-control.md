@@ -19,14 +19,13 @@ What the agent reads goes to the model provider. Paired devices never get Mac co
 
 ## What asks and what never happens
 
-| The agent                                                 | Spark                                                       |
-| --------------------------------------------------------- | ----------------------------------------------------------- |
-| Reads or uses an app for the first time in a chat         | Asks in every mode: **Let the agent use … in this chat?**   |
-| Presses a send, delete, submit or publish control         | Asks each time, in every mode                               |
-| Presses Return or Enter on the focused control            | Asks each time, in every mode                               |
-| Presses anything else                                     | Follows the [agent mode](agent-mode.md), like Spark actions |
-| Buys, pays, transfers or creates an account               | Refuses                                                     |
-| Opens System Settings, passwords, a web browser, or Spark | Refuses; agents use the [Browser pane](use-the-browser.md)  |
+| The agent                                                                                | Spark                                                       |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Reads or uses an app for the first time in a chat                                        | Asks in every mode: **Let the agent use … in this chat?**   |
+| Presses a send, delete, submit or publish control, or Return or Enter on the focused one | Asks each time, in every mode                               |
+| Presses anything else                                                                    | Follows the [agent mode](agent-mode.md), like Spark actions |
+| Buys, pays, transfers or creates an account                                              | Refuses                                                     |
+| Opens System Settings, passwords, a web browser, or Spark                                | Refuses; agents use the [Browser pane](use-the-browser.md)  |
 
 Answer these cards on the Mac; the agent is told you allowed it. Agents can't type into other apps yet.
 

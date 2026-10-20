@@ -9,7 +9,7 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 ## A run seems stuck
 
 - **You see:** a chat that doesn't move.
-- **Why:** it's usually waiting for you or running a long command.
+- **Why:** usually it waits for you or runs a long command.
 - **Fix:** read the line above the message box. **Waiting for you** jumps to the card. Anything else, like **Running · pnpm test**, is working.
 - **Still stuck:** select **Stop**, then send a new message.
 
@@ -17,12 +17,12 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 
 - **You see:** the **This turn was interrupted** card.
 - **Why:** Spark Outpost stopped mid-run.
-- **Fix:** select **Continue from here** to resume the session, or **Start fresh**. Nothing retries by itself.
+- **Fix:** **Continue from here** resumes the session; or **Start fresh**. Nothing retries by itself.
 
 ## A card expired
 
 - **You see:** **Expired** on an approval card and "waited for you" on the turn.
-- **Why:** nobody answered within 30 minutes, so it was declined.
+- **Why:** unanswered for 30 minutes, it was declined.
 - **Fix:** select **Try again** under the turn.
 - **Still stuck:** [allow the command](answer-approvals.md#let-a-command-run-without-asking) for the project.
 
@@ -43,5 +43,5 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 ## A change wasn't published
 
 - **You see:** "Not published: …" at the end of a reply, or no pull request at **Full auto → PR**.
-- **Why:** the publish step failed or was stopped. A later turn that changes no files doesn't try again.
+- **Why:** the publish step failed or was stopped; a later turn that changes no files doesn't retry.
 - **Fix:** ask the agent to push and open the pull request, or [ship](ship-and-pull-requests.md) it yourself.

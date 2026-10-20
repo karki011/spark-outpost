@@ -89,6 +89,7 @@ export function openedLine(opened: PrWatch['opened'], agentName: (id: string) =>
   if (opened.via === 'ship') return 'Opened by Spark';
   if (opened.via === 'terminal') return 'Opened from the terminal';
   if (opened.via === 'discovery') return 'Found on this chat’s branch';
+  if (opened.via === 'adopted') return opened.by ? `Adopted from @${opened.by}` : 'Adopted';
   return opened.by ? `Opened by ${agentName(opened.by)}` : 'Opened by the agent';
 }
 

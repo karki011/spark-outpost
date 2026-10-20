@@ -105,7 +105,7 @@ export const browserOpenTool = sparkTool({
   needs: 'browser',
   title: 'Open a page in the browser',
   description:
-    "Opens an http(s) address or a project file in this chat's Browser pane while the user watches; returns final address, title, status, tab id. No url: the project's preview. External sites follow the agent mode; Spark's ports and other schemes are refused. Website tabs start signed out (see spark_browser_sign_in). Never navigates the user's tab.",
+    "Opens an http(s) address or a project file in this chat's Browser pane while the user watches; returns final address, title, status, tab id. No url: the project's preview. External sites follow the agent mode; Spark's ports and other schemes are refused. Your tabs share the user's pane sign-ins. Never navigates the user's tab.",
   input: {
     url: z
       .string()

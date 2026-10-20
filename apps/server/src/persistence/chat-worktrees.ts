@@ -1,5 +1,6 @@
 import {
   DEFAULT_WORK_PLACE,
+  type AdoptedPull,
   workPlaceSchema,
   type ConversationSummary,
   type WorkPlace,
@@ -20,6 +21,7 @@ export interface ChatWorktree {
   landedCommit: string | null;
   inPlace: boolean;
   ownsBranch: boolean;
+  adopted?: AdoptedPull | null;
 }
 
 interface Row {
@@ -36,6 +38,22 @@ interface Row {
   landed_commit: string | null;
   in_place: boolean;
   owns_branch: boolean;
+  adopted_pull?: number | null;
+  adopted_author?: string | null;
+  adopted_url?: string | null;
+  adopted_head?: string | null;
+  adopted_pushes?: boolean | null;
+}
+
+function adoptedOf(row: Row): AdoptedPull | null {
+  if (!row.adopted_pull || !row.adopted_head) return null;
+  return {
+    number: row.adopted_pull,
+    author: row.adopted_author ?? '',
+    url: row.adopted_url ?? '',
+    head: row.adopted_head,
+    pushes: row.adopted_pushes === true,
+  };
 }
 
 function toRecord(row: Row): ChatWorktree {
@@ -53,7 +71,17 @@ function toRecord(row: Row): ChatWorktree {
     landedCommit: row.landed_commit,
     inPlace: row.in_place,
     ownsBranch: row.owns_branch,
+    adopted: adoptedOf(row),
   };
+}
+
+export async function saveAdoption(db: Queryable, id: string, adopted: AdoptedPull): Promise<void> {
+  await db.query(
+    `UPDATE chat_worktrees SET adopted_pull = $2, adopted_author = $3, adopted_url = $4,
+       adopted_head = $5, adopted_pushes = $6
+     WHERE id = $1`,
+    [id, adopted.number, adopted.author, adopted.url, adopted.head, adopted.pushes],
+  );
 }
 
 export async function insertChatWorktree(db: Queryable, record: ChatWorktree): Promise<void> {
@@ -111,6 +139,11 @@ export async function chatWorktreeAt(db: Queryable, path: string): Promise<ChatW
     [path],
   );
   return rows[0] ? toRecord(rows[0]) : null;
+}
+
+export async function adoptedBranchAt(db: Queryable, path: string): Promise<string | null> {
+  const record = await chatWorktreeAt(db, path);
+  return record?.ownsBranch && record.adopted?.pushes ? record.branch : null;
 }
 
 export async function branchesStackedOn(db: Queryable, path: string): Promise<string[]> {

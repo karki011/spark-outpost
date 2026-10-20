@@ -4,6 +4,7 @@ import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { PinIcon, PlusIcon, SpinnerIcon, UnpinIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { sendBrowserCommand } from './browser-store.ts';
+import { PANE_KEYS } from './pane-shortcuts.ts';
 import { tabLabel } from './tab-label.ts';
 
 interface BrowserTabsProps {
@@ -72,6 +73,7 @@ function PageTab({
         type="button"
         className="bp-tab-x"
         aria-label={`Close ${label}`}
+        aria-keyshortcuts={tab.active ? PANE_KEYS.close.aria : undefined}
         onClick={() => sendBrowserCommand(chatId, { command: 'close', tabId: tab.id })}
       >
         <CloseIcon />
@@ -81,7 +83,7 @@ function PageTab({
 }
 
 export function BrowserTabs({ chatId, tabs }: BrowserTabsProps) {
-  const newTip = useTooltip('New tab', { side: 'bottom' });
+  const newTip = useTooltip('New tab', { side: 'bottom', keys: PANE_KEYS.newTab.shown });
   const active = tabs.find((tab) => tab.active) ?? null;
   const activeId = active?.id ?? null;
   const focusableId = activeId ?? tabs[0]?.id ?? null;
@@ -120,6 +122,7 @@ export function BrowserTabs({ chatId, tabs }: BrowserTabsProps) {
         type="button"
         className="icon-btn bp-new"
         aria-label="New tab"
+        aria-keyshortcuts={PANE_KEYS.newTab.aria}
         {...newTip.triggerProps}
         onClick={() => sendBrowserCommand(chatId, { command: 'new_tab', url: null })}
       >

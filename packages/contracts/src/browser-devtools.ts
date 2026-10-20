@@ -75,6 +75,7 @@ const storageItemSchema = z.object({
   key: z.string().max(300),
   bytes: z.number().int().nonnegative(),
   value: z.string().max(BROWSER_STORAGE_VALUE_MAX).optional(),
+  masked: z.literal(true).optional(),
 });
 
 const cookieSchema = z.object({
@@ -86,12 +87,10 @@ const cookieSchema = z.object({
   sameSite: z.string().max(20).nullable(),
   expires: z.string().max(40).nullable(),
   bytes: z.number().int().nonnegative(),
-  value: z.string().max(BROWSER_STORAGE_VALUE_MAX).optional(),
 });
 export type BrowserCookieFacts = z.infer<typeof cookieSchema>;
 
 export const browserStorageShape = {
-  partition: z.enum(['agent', 'user']),
   valuesShown: z.boolean(),
   local: z.array(storageItemSchema).max(BROWSER_STORAGE_ITEMS_MAX),
   session: z.array(storageItemSchema).max(BROWSER_STORAGE_ITEMS_MAX),
