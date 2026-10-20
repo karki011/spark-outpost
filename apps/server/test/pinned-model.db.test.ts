@@ -61,7 +61,6 @@ async function pinnedChat(send: ReturnType<typeof client>, model: string, provid
   await send('patch', `/api/conversations/${id}/settings`, {
     provider,
     model,
-    routing: 'pinned',
   }).expect(200);
   return id;
 }

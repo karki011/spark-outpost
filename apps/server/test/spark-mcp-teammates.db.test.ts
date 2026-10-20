@@ -85,7 +85,6 @@ describe('jobs handed to a Spark by an @mention', () => {
       depth: 'direct',
       depthSource: 'user',
       risk: 'read-only',
-      routing: 'pinned',
     });
     const child = await insertChildRun(
       t.db,

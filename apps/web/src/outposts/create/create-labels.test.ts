@@ -17,9 +17,9 @@ const CONTEXT = {
 };
 
 describe('the agent of a chat', () => {
-  it('reads Auto for the default model and the mode by its own name', () => {
+  it('names the default model and the mode by its own name', () => {
     expect(agentView(CODEX, CODEX_CAPABILITIES)).toMatchObject({
-      agent: 'Codex Auto',
+      agent: 'Codex GPT-5',
       mode: 'Approve for me',
       modeId: 'agent',
     });
@@ -47,7 +47,7 @@ describe('how a chat is shown in the list', () => {
       faceId: draft.newChatId,
       title: 'New chat in api',
       tag: 'New',
-      meta: 'api · Codex Auto · Approve for me',
+      meta: 'api · Codex GPT-5 · Approve for me',
     });
   });
 

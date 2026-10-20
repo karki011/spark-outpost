@@ -74,7 +74,6 @@ async function settingsOf(id: string) {
     provider: settings.provider,
     model: settings.model,
     effort: settings.effort,
-    routing: settings.routing,
   };
 }
 
@@ -94,7 +93,6 @@ describe('Spark assistant settings', () => {
       provider: 'claude',
       model: 'sonnet',
       effort: 'low',
-      routing: 'pinned',
     });
   });
 
@@ -110,7 +108,7 @@ describe('Spark assistant settings', () => {
     });
 
     expect((await save({ ...FAST, modelChoice: 'default' })).status).toBe(200);
-    expect(await settingsOf(id)).toMatchObject({ provider: 'claude', routing: 'auto' });
+    expect(await settingsOf(id)).toMatchObject({ provider: 'claude' });
     expect((await resolveChatSettings(t.db, id)).model).not.toBe('sonnet');
   });
 
@@ -142,7 +140,7 @@ describe('Spark assistant settings', () => {
     await capture('claude', [{ id: 'opus[1m]', label: 'Opus 5.5', description: null }], 'opus[1m]');
     const id = await assistantId();
     expect((await view()).runsOn).toMatchObject({ model: null, noFastModel: true, effort: 'low' });
-    expect(await settingsOf(id)).toMatchObject({ routing: 'auto', effort: 'low' });
+    expect(await settingsOf(id)).toMatchObject({ model: null, effort: 'low' });
   });
 
   it('refuses a provider that is not connected and a pick without a model', async () => {

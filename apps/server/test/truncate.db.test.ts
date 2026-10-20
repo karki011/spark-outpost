@@ -33,7 +33,6 @@ async function seedRun(): Promise<string> {
     depth: 'direct',
     depthSource: 'rules',
     risk: 'read-only',
-    routing: 'auto',
   });
   return sent.run.id;
 }

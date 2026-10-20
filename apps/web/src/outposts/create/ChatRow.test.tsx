@@ -11,7 +11,7 @@ const VIEW = {
   faceId: '0c000000-0000-4000-8000-000000000009',
   title: 'New chat in api',
   tag: 'New' as const,
-  meta: 'api · Codex Auto · Approve for me',
+  meta: 'api · Codex GPT-5 · Approve for me',
 };
 
 function renderRow(problems: ChatProblem[] = [], text = '') {
@@ -31,7 +31,7 @@ describe('ChatRow', () => {
       screen.getByRole<HTMLInputElement>('textbox', { name: 'Handle for New chat in api' }).value,
     ).toBe('api');
     expect(screen.getByText('New')).toBeTruthy();
-    expect(screen.getByText('api · Codex Auto · Approve for me')).toBeTruthy();
+    expect(screen.getByText('api · Codex GPT-5 · Approve for me')).toBeTruthy();
     expect(row.querySelector('.op-chat-mark')?.textContent).toBe('First message2 files');
   });
 

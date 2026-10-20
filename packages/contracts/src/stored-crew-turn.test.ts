@@ -8,14 +8,22 @@ import { planLineSchema } from './plans.ts';
 import { agentRoleSchema } from './roles.ts';
 import stored from './stored-crew-turn.fixture.json' with { type: 'json' };
 
+function withoutRouting<T extends { routing: string }>(record: T): Omit<T, 'routing'> {
+  return Object.fromEntries(Object.entries(record).filter(([key]) => key !== 'routing')) as Omit<
+    T,
+    'routing'
+  >;
+}
+
 describe('a crew turn stored before the harness was removed', () => {
   it('was written by the released contracts', () => {
     expect(stored.capturedWith).toContain('0.1.0-beta.11');
   });
 
-  it('still reads whole: every helper, role, piece, card and Jev decision', () => {
+  it('still reads whole but for the retired Auto routing: every helper, role, piece, card and Jev decision', () => {
     const read = orchestrationSchema.parse(stored.orchestration);
-    expect(read).toEqual(stored.orchestration);
+    expect(stored.orchestration.routing).toBe('auto');
+    expect(read).toEqual(withoutRouting(stored.orchestration));
     expect(new Set(read.crew.map((member) => member.role))).toEqual(new Set(stored.roles));
     expect(read.pieces?.pieces.map((piece) => piece.key)).toEqual(['P1', 'P2']);
     expect(read.checkpoints.map((card) => card.kind)).toEqual([
@@ -35,7 +43,7 @@ describe('a crew turn stored before the harness was removed', () => {
   });
 
   it('still reads the intake record, messages to helpers and the saved plan line', () => {
-    expect(adviceSummarySchema.parse(stored.advice)).toEqual(stored.advice);
+    expect(adviceSummarySchema.parse(stored.advice)).toEqual(withoutRouting(stored.advice));
     expect(stored.memberMessages.map((message) => memberMessageSchema.parse(message))).toEqual(
       stored.memberMessages,
     );

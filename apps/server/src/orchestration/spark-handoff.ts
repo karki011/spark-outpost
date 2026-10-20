@@ -147,7 +147,6 @@ export async function handToSparks(h: Handoff): Promise<RunInput | 'finished'> {
     depth: 'direct',
     depthSource: 'user',
     risk: 'read-only',
-    routing: 'pinned',
   });
   await updateOrchestration(deps.db, lease.runId, { phase: 'scouting' });
   const context = await jobContext(deps.db, input);

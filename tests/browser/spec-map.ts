@@ -151,6 +151,7 @@ export const SPEC_GROUPS = {
     'mac-control-settings',
     'mcp-settings',
     'model-availability',
+    'model-default',
     'models',
     'onboarding',
     'onboarding-providers',

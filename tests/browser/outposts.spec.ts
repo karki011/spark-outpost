@@ -369,7 +369,9 @@ test('adds a chat to an outpost from its row menu with the keyboard', async ({ p
   await expect(options).toBeFocused();
   await openOutpost(page);
   await expect(chip(page, 'docs')).toBeVisible();
-  await expect(thread(page).locator('.op-notice').last()).toHaveText(/^@docs joined · Claude Auto/);
+  await expect(thread(page).locator('.op-notice').last()).toHaveText(
+    /^@docs joined · Claude Fake Fast/,
+  );
 
   await chip(page, 'docs').click();
   await expect(

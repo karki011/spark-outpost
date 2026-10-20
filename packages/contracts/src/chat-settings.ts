@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { modelRoutingSchema } from './advice.ts';
 import {
   agentModeOptionSchema,
   configOptionInfoSchema,
@@ -27,6 +26,14 @@ export type ModelOption = z.infer<typeof modelOptionSchema>;
 
 export function shortModelLabel(label: string): string {
   return label.replace(/\s*\(.*\)\s*$/, '').trim() || label;
+}
+
+const AGENT_DEFAULT_MODEL = 'default';
+
+export function shownModelName(option: Pick<ModelOption, 'id' | 'label' | 'description'>): string {
+  const described = option.description?.split('·')[0]?.trim();
+  if (option.id === AGENT_DEFAULT_MODEL && described) return shortModelLabel(described);
+  return shortModelLabel(option.label);
 }
 
 export const RETIRING_WITHIN_DAYS = 30;
@@ -70,7 +77,6 @@ export const chatSettingsSchema = z.object({
   agentMode: z.string().nullable().default(null),
   level: involvementLevelSchema.nullable(),
   options: configValuesSchema.default({}),
-  routing: modelRoutingSchema.optional(),
 });
 export type ChatSettings = z.infer<typeof chatSettingsSchema>;
 
@@ -82,7 +88,6 @@ export const updateChatSettingsRequestSchema = z
     agentMode: z.string().min(1).max(200).nullable(),
     level: involvementLevelSchema.nullable(),
     options: configValuesSchema,
-    routing: modelRoutingSchema,
     projectIds: z
       .array(z.uuid())
       .max(CONVERSATION_PROJECTS_MAX)

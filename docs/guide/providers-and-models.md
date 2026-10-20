@@ -18,7 +18,7 @@ You'll change a provider's defaults, reconnect it, read the model cards and conn
 
 **How to connect** shows the **Account** and usable **Models**. If the default isn't usable, select **Switch to …**.
 
-Changes apply to new chats; **Model** only to chats off **Auto**. **Per chat** effort keeps each chat's own.
+Changes apply to chats that haven't picked their own. **Per chat** effort keeps each chat's own.
 
 ## Sign in again, switch or disconnect
 

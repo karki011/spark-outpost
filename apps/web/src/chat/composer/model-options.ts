@@ -26,12 +26,6 @@ export function cleanDescription(option: CapabilityOption): string | null {
   return description;
 }
 
-export function buttonLabel(option: CapabilityOption): string {
-  const described = option.description?.split('·')[0]?.trim();
-  if (option.id === AGENT_DEFAULT && described) return shortLabel(described);
-  return shortLabel(option.label);
-}
-
 export function optionLabel(
   option: Pick<CapabilityOption, 'id' | 'label'>,
   capabilities: Pick<ProviderCapabilities, 'defaultModel'> | undefined,
@@ -100,7 +94,7 @@ export function selectableEfforts(
 }
 
 export function currentModel(
-  settings: ChatSettings,
+  settings: Pick<ChatSettings, 'model'>,
   capabilities: ProviderCapabilities | undefined,
 ): CapabilityOption | null {
   const models = capabilities?.models ?? [];

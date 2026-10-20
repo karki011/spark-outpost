@@ -32,7 +32,6 @@ export function turnDriver(parts: DriverParts, choice: DriverChoice): TurnDriver
         projectIds: [project.id],
         provider,
         level: AUTONOMY_LEVEL,
-        routing: 'pinned',
         ...setup,
       });
       return { conversationId, repo };

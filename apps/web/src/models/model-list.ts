@@ -41,7 +41,7 @@ const RETIREMENT_SHOWN_DAYS = 90;
 const DAY_MS = 86_400_000;
 
 export function cardsNote(checkedAt: string): string {
-  return `Vendor facts checked ${checkedAt}. Spark picks no model: a chat on Auto runs the agent's default.`;
+  return `Vendor facts checked ${checkedAt}. Spark picks no model: a chat runs your default model until it picks another.`;
 }
 
 export function usedBySpark(view: ModelCardView): boolean {

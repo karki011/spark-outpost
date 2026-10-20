@@ -77,9 +77,6 @@ function startCodex(rejects: string[] = [SOL_61]) {
 
 async function send(content: string, model: string | null = SOL_61, conversationId = randomUUID()) {
   await createConversation(t.db, t.workspaceId, conversationId);
-  await t.db.query(`UPDATE conversations SET model_routing = 'pinned' WHERE id = $1`, [
-    conversationId,
-  ]);
   const sent = await sendUserMessage(
     t.db,
     conversationId,

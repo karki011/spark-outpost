@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   isRetiring,
-  type ModelRouting,
   type ProviderCapabilities,
   type ProviderSetup,
 } from '@spark-outpost/contracts';
@@ -23,43 +22,19 @@ interface ModelListProps {
   loading: boolean;
   selected: string | null;
   onSelect: (model: string) => void;
-  routing?: ModelRouting;
-  onAuto?: (() => void) | null;
 }
 
-function AutoOption({ checked, onSelect }: { checked: boolean; onSelect: () => void }) {
-  return (
-    <button type="button" className="mopt" role="radio" aria-checked={checked} onClick={onSelect}>
-      <span>
-        <b>Auto</b>
-        <small>The agent’s default model.</small>
-      </span>
-      <TickIcon />
-    </button>
-  );
-}
-
-export function ModelList({
-  provider,
-  capabilities,
-  loading,
-  selected,
-  onSelect,
-  routing = 'pinned',
-  onAuto = null,
-}: ModelListProps) {
+export function ModelList({ provider, capabilities, loading, selected, onSelect }: ModelListProps) {
   const [showRetiring, setShowRetiring] = useState(false);
   const now = new Date();
   const models = capabilities?.models ?? [];
   const options = visibleModels(models, selected, showRetiring, now);
   const hasRetiring = models.some((model) => isRetiring(model, now));
-  const auto = routing === 'auto' && onAuto !== null;
-  const unusable = auto ? null : unusableChoice(selected, capabilities);
+  const unusable = unusableChoice(selected, capabilities);
   return (
     <>
       {unusable && <UnusableModelNotice issue={unusable} onSwitch={onSelect} />}
       <div role="radiogroup" aria-label={`${provider.name} model`}>
-        {onAuto && <AutoOption checked={auto} onSelect={onAuto} />}
         {models.length === 0 && (
           <p className="mempty">
             {loading ? `Asking ${provider.name} for its models…` : 'No models reported yet.'}
@@ -75,7 +50,7 @@ export function ModelList({
               type="button"
               className="mopt"
               role="radio"
-              aria-checked={!auto && option.id === selected}
+              aria-checked={option.id === selected}
               onClick={() => onSelect(option.id)}
             >
               <span>
