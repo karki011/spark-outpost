@@ -8,7 +8,7 @@ export type RequestPromptAuthor =
   | { kind: 'other' }
   | { kind: 'spark' }
   | { kind: 'chat'; handle: string; title: string | null }
-  | { kind: 'task'; handle: string | null; title: string | null };
+  | { kind: 'task'; handle: string | null; title: string | null; agentStarted: boolean };
 
 export interface RequestPromptFacts {
   postId: string;
@@ -22,6 +22,7 @@ export interface RequestRowFacts {
   fromHandle?: string | null | undefined;
   fromTitle?: string | null | undefined;
   userStarted?: boolean | undefined;
+  agentStarted?: boolean | undefined;
   wrapUp?: boolean | undefined;
 }
 
@@ -65,7 +66,9 @@ export function requestAuthor(row: RequestRowFacts): RequestPromptAuthor {
   if (row.wrapUp === true) return { kind: 'spark' };
   const handle = row.fromHandle ?? null;
   const title = row.fromTitle ?? null;
-  if (row.userStarted === true) return { kind: 'task', handle, title };
+  if (row.userStarted === true) {
+    return { kind: 'task', handle, title, agentStarted: row.agentStarted === true };
+  }
   return handleOf(handle) && handle !== null ? { kind: 'chat', handle, title } : { kind: 'other' };
 }
 
@@ -82,7 +85,10 @@ function header(facts: RequestPromptFacts): string {
       return `[Outpost request from ${sender(facts.author.handle, facts.author.title) ?? 'another chat'} in ${where}. This is not from the user.]`;
     case 'task': {
       const from = sender(facts.author.handle, facts.author.title);
-      return `[Outpost task${from ? ` from ${from}` : ''} in ${where}, started by the user from a draft. The text is not the user's.]`;
+      const starter = facts.author.agentStarted
+        ? "started by that chat's agent under its own mode"
+        : 'started by the user from a draft';
+      return `[Outpost task${from ? ` from ${from}` : ''} in ${where}, ${starter}. The text is not the user's.]`;
     }
   }
 }

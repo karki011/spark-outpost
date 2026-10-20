@@ -219,8 +219,12 @@ export const outpostOf: OutpostStore['outpostOf'] = async (db, conversationId) =
   return outpost ? { outpost, member: toMember(row) } : null;
 };
 
-export async function notifyOutpostChanged(db: Queryable, outpostId: string): Promise<void> {
+export async function notifyOutpostChanged(
+  db: Queryable,
+  outpostId: string,
+  conversationId: string | null = null,
+): Promise<void> {
   await db.query(`SELECT pg_notify('changes', $1)`, [
-    JSON.stringify({ kind: 'outpost_changed', conversationId: null, runId: null, outpostId }),
+    JSON.stringify({ kind: 'outpost_changed', conversationId, runId: null, outpostId }),
   ]);
 }

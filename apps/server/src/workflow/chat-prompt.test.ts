@@ -76,6 +76,14 @@ describe('chatPrompt', () => {
     expect(prompt).toContain(text.SPLIT_UNCLEAR);
   });
 
+  it('offers starting sub-chats only when the run has the start tool', () => {
+    const prompt = build({ outpostStartTool: true });
+    expect(prompt).toContain(text.SPLIT_SUB_CHATS_START);
+    expect(prompt).toContain('spark_outpost_start');
+    expect(prompt).not.toContain("The user starts them; you don't.");
+    expect(build({})).not.toContain('spark_outpost_start');
+  });
+
   it('describes a checkout, a missing repo name and a folder without a branch', () => {
     expect(build({}, { place: 'checkout' })).toContain("(the user's checkout of shop)");
     expect(build({}, { repo: null })).toContain('Branch: spark/add-export (a worktree)\n');

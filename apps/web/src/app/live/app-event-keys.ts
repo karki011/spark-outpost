@@ -9,6 +9,7 @@ import { auditKeys } from '../../audit/audit-api.ts';
 import { mapKeys } from '../../map/map-api.ts';
 import { outpostKeys } from '../../outposts/outposts-api.ts';
 import { prWatchesKey } from '../../chat/pull-request/pr-follow-up-api.ts';
+import { chatDraftsKey } from '../../chat/outpost/chat-drafts.ts';
 import { diffKeys } from '../../diff/diff-api.ts';
 import { homeKeys } from '../../home/home-api.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
@@ -143,7 +144,9 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
     case 'preview':
       return [{ queryKey: previewKeys.all }];
     case 'outpost_changed':
-      return [list, outposts];
+      return event.conversationId
+        ? [list, outposts, { queryKey: chatDraftsKey(event.conversationId), exact: true }]
+        : [list, outposts];
     case 'agent_terminal':
       return event.conversationId
         ? [{ queryKey: agentTerminalKeys.chat(event.conversationId), exact: true }]

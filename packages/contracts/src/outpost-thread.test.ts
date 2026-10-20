@@ -21,6 +21,7 @@ function post(number: number, extra: Partial<OutpostPost> = {}): OutpostPost {
     fromRunId: null,
     fromHandle: null,
     userStarted: false,
+    agentStarted: false,
     held: false,
     toConversationId: null,
     toHandle: null,

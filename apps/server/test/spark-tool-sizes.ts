@@ -15,6 +15,7 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   mac: false,
   outpost: false,
   outpost_draft: false,
+  outpost_start: false,
   calendar_read: false,
   calendar_edit: false,
   jira: false,

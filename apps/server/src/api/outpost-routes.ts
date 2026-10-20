@@ -12,6 +12,7 @@ import {
   type OutpostDetail,
   type OutpostDraft,
   type OutpostPost,
+  type StartDraftResponse,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { draftsOfChat, getDraft } from '../persistence/outpost-drafts.ts';
@@ -34,6 +35,7 @@ import { introViews } from '../outposts/intro-view.ts';
 import { joinOutpost, leaveOutpost, postToOutpost } from '../outposts/post-service.ts';
 import { toOutpostPost } from '../outposts/post-view.ts';
 import { DRAFT_NOT_FOUND, startOutpost, type FolderExists } from '../outposts/start-outpost.ts';
+import { auditDraftStart, draftStartedMessage, startDraft } from '../outposts/draft-start.ts';
 import { toStories, UNKNOWN_STACK } from '../outposts/story-view.ts';
 import { paramId, parseBody } from './validation.ts';
 
@@ -163,6 +165,17 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
       createdAt: draft.createdAt,
     };
     res.json(view);
+  });
+
+  router.post('/outposts/drafts/:id/start', async (req, res) => {
+    const result = await startDraft(service, paramId(req), 'user');
+    if (!result.already) await auditDraftStart(db, result, 'user');
+    const response: StartDraftResponse = {
+      outpostId: result.outpostId,
+      message: draftStartedMessage(result),
+      failed: result.failed,
+    };
+    res.status(result.already ? 200 : 201).json(response);
   });
 
   router.get('/conversations/:id/outpost-drafts', async (req, res) => {

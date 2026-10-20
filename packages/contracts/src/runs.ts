@@ -84,6 +84,7 @@ export const runSchema = z.object({
       fromUser: z.boolean(),
       fromSpark: z.boolean().default(false),
       userStarted: z.boolean().default(false),
+      agentStarted: z.boolean().default(false),
     })
     .optional(),
 });

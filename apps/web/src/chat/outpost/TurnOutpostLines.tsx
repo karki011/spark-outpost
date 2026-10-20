@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
-import type { ConversationSummary } from '@spark-outpost/contracts';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ChatDraft, ConversationSummary } from '@spark-outpost/contracts';
 import { outpostKeys, outpostsApi } from '../../outposts/outposts-api.ts';
 import { chatDraftsQuery } from './chat-drafts.ts';
 import { draftsInTurn, sentInTurn, type TurnWindow } from './chat-lines.ts';
-import { DraftLine } from './DraftLine.tsx';
+import { DraftLine, type DraftStartState } from './DraftLine.tsx';
 import { useOutpostSeam, type OutpostSeam } from './outpost-seam.ts';
 import { SentLine } from './SentLine.tsx';
 
@@ -30,6 +30,45 @@ function SentLines({ outpostId, chatId, run, seam }: SentLinesProps) {
   ));
 }
 
+function useStartDraft(chatId: string, draftId: string): DraftStartState {
+  const client = useQueryClient();
+  const start = useMutation({
+    mutationFn: () => outpostsApi.startDraft(draftId),
+    onSettled: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: chatDraftsQuery(chatId).queryKey }),
+        client.invalidateQueries({ queryKey: outpostKeys.all }),
+      ]),
+  });
+  return {
+    onStart: () => start.mutate(),
+    pending: start.isPending,
+    error: start.error?.message ?? null,
+  };
+}
+
+interface ChatDraftLineProps {
+  chatId: string;
+  draft: ChatDraft;
+  seam: OutpostSeam;
+  onOpenDraft: (draftId: string) => void;
+}
+
+function ChatDraftLine({ chatId, draft, seam, onOpenDraft }: ChatDraftLineProps) {
+  const start = useStartDraft(chatId, draft.id);
+  const outpostId = draft.outpostId;
+  const outpost = seam.outposts.find((listed) => listed.id === outpostId);
+  return (
+    <DraftLine
+      draft={draft}
+      outpostName={outpost?.name}
+      onReview={seam.canManage ? () => onOpenDraft(draft.id) : undefined}
+      start={seam.canManage ? undefined : start}
+      onOpenOutpost={outpostId && outpost ? () => seam.onOpenOutpost(outpostId) : undefined}
+    />
+  );
+}
+
 interface DraftLinesProps {
   chatId: string;
   runId: string;
@@ -43,19 +82,15 @@ function DraftLines({ chatId, runId, seam, onOpenDraft }: DraftLinesProps) {
     select: (list) => draftsInTurn(list.drafts, runId),
     notifyOnChangeProps: ['data'],
   });
-  return (drafts.data ?? []).map((draft) => {
-    const outpostId = draft.outpostId;
-    const outpost = seam.outposts.find((listed) => listed.id === outpostId);
-    return (
-      <DraftLine
-        key={draft.id}
-        draft={draft}
-        outpostName={outpost?.name}
-        onReview={seam.canManage ? () => onOpenDraft(draft.id) : undefined}
-        onOpenOutpost={outpostId && outpost ? () => seam.onOpenOutpost(outpostId) : undefined}
-      />
-    );
-  });
+  return (drafts.data ?? []).map((draft) => (
+    <ChatDraftLine
+      key={draft.id}
+      chatId={chatId}
+      draft={draft}
+      seam={seam}
+      onOpenDraft={onOpenDraft}
+    />
+  ));
 }
 
 interface TurnOutpostLinesProps {

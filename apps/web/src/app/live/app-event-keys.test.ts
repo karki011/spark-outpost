@@ -37,6 +37,7 @@ const cached: Record<string, QueryKey> = {
   previewProject: ['preview', 'project', A],
   outpostList: ['outposts', 'list'],
   outpostDetail: ['outposts', 'detail', A],
+  draftsA: ['conversations', A, 'outpost-drafts'],
   terminalRemoteA: ['terminal-remote', A],
   terminalRemoteB: ['terminal-remote', B],
 };
@@ -94,6 +95,15 @@ describe('app event invalidation', () => {
 
   it('an outpost change refreshes the outposts and the sidebar list, where a chat carries its outpost', async () => {
     expect(await invalidatedBy(event('outpost_changed', null))).toEqual([
+      'list',
+      'outpostDetail',
+      'outpostList',
+    ]);
+  });
+
+  it('an outpost change named for a chat also refreshes that chat’s draft lines', async () => {
+    expect(await invalidatedBy(event('outpost_changed', A))).toEqual([
+      'draftsA',
       'list',
       'outpostDetail',
       'outpostList',

@@ -79,6 +79,10 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     'change|update|edit|rename|retitle|rewrite|set|fix|delete|remove|label|reprioriti[sz]e',
     'tickets?|issues?|comments?|[A-Z][A-Z0-9]+-\\d+|summary|description|labels?|priority',
   ),
+  start_outpost: asked(
+    'start|split|spin up|kick off|launch|create|open|run',
+    'sub-?chats?|chats?|outposts?|sub-?tasks?',
+  ),
   confluence_edit: asked(
     'create|write|add|draft|publish|change|update|edit|rename|rewrite|delete|remove|trash|comment|post',
     'confluence|wiki|pages?|docs?|comments?',

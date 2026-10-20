@@ -16,7 +16,7 @@ You'll use Spark on another device; work stays on the Mac. About 5 minutes. Need
 
 **Devices** renames or revokes a device, passkeys included; **Remove old entry** clears a duplicate. **What paired devices can do** holds the switches. On a phone, **More** holds **Pause Spark**, Remote control and Settings; Map and Mac-only tools are hidden.
 
-Creating or deleting an [outpost](outposts.md), changing its chats and starting a proposed story stay on the Mac.
+Creating or deleting an [outpost](outposts.md) and changing its chats stay on the Mac. A proposed story's **Start** works here, as proposed.
 
 A paired device can answer an agent's browser cards; the Browser pane stays on the Mac.
 

@@ -238,8 +238,10 @@ describe('outpost story', () => {
       ...from,
       fromSpark: false,
       userStarted: true,
+      agentStarted: false,
     });
     expect(runSchema.shape.outpost.parse(from)?.userStarted).toBe(false);
+    expect(runSchema.shape.outpost.parse(from)?.agentStarted).toBe(false);
   });
 
   it('carries a draft line as a run activity', () => {

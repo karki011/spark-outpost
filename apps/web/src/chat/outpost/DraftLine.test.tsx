@@ -37,11 +37,29 @@ describe('DraftLine', () => {
         onOpenOutpost={onOpenOutpost}
       />,
     );
-    expect(container.textContent).toBe('Started 3 chats · 1 stackedOrders launchOpen outpost');
+    expect(container.textContent).toBe(
+      'Started outpost Orders launch with 3 chats · 1 stackedOpen',
+    );
     expect(screen.queryByRole('button', { name: 'Review and start' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Open outpost Orders launch' }));
     expect(onOpenOutpost).toHaveBeenCalledTimes(1);
     expect(onReview).not.toHaveBeenCalled();
+  });
+
+  it('offers Start where the draft cannot be reviewed, and shows why a start failed', () => {
+    const onStart = vi.fn();
+    const { container, rerender } = render(
+      <DraftLine draft={PROPOSED} start={{ onStart, pending: false, error: null }} />,
+    );
+    expect(container.textContent).not.toContain('on your Mac');
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    expect(onStart).toHaveBeenCalledTimes(1);
+    rerender(<DraftLine draft={PROPOSED} start={{ onStart, pending: true, error: null }} />);
+    expect(screen.getByRole('button', { name: 'Starting…' })).toHaveProperty('disabled', true);
+    rerender(
+      <DraftLine draft={PROPOSED} start={{ onStart, pending: false, error: 'Project gone.' }} />,
+    );
+    expect(screen.getByRole('alert').textContent).toBe('Project gone.');
   });
 
   it('is plain text when the started outpost is not known here', () => {

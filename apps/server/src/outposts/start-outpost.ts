@@ -52,6 +52,8 @@ export interface StartDeps extends PostServiceDeps {
   folderExists?: FolderExists;
 }
 
+export type StartedBy = 'user' | 'agent';
+
 export interface StartOutcome {
   created: boolean;
   failed: FailedMember[];
@@ -212,6 +214,7 @@ async function sendStory(
   deps: StartDeps,
   { plan }: Story,
   left: ReadonlySet<string>,
+  startedBy: StartedBy,
 ): Promise<FailedMember[]> {
   const failed: FailedMember[] = [];
   const sent = new Set<string>();
@@ -223,7 +226,9 @@ async function sendStory(
     const refusal =
       post.afterPostId !== null && !sent.has(post.afterPostId)
         ? parentNotSent(handleOfPost.get(post.afterPostId) ?? '')
-        : await refusalOf(() => postStoryRequest(deps, post));
+        : await refusalOf(() =>
+            postStoryRequest(deps, { ...post, agentStarted: startedBy === 'agent' }),
+          );
     if (refusal === null) sent.add(post.id);
     else failed.push({ conversationId, handle, message: firstMessageNotSent(handle, refusal) });
   }
@@ -247,6 +252,7 @@ async function sendStory(
 export async function startOutpost(
   deps: StartDeps,
   request: CreateOutpostRequest,
+  startedBy: StartedBy = 'user',
 ): Promise<StartOutcome> {
   const story = await storyOf(deps, request);
   const { created } = await openOutpost(deps, request);
@@ -263,7 +269,7 @@ export async function startOutpost(
     return refuseEmptyStart(deps, claim, failed);
   }
   const unsent = story
-    ? await sendStory(deps, story, left)
+    ? await sendStory(deps, story, left, startedBy)
     : await sendFirstMessages(deps, request, left);
   return { created, failed: [...failed, ...unsent] };
 }

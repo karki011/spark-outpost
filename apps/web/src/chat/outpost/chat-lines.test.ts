@@ -74,8 +74,13 @@ describe('labels', () => {
     expect(draftLabel(draft({ chats: 4, stacked: 2 }))).toBe('Proposed 4 chats · 2 stacked');
   });
 
-  it('says Started once the user started the draft', () => {
-    expect(draftLabel(draft({ startedAt: '2026-10-09T10:30:00.000Z' }))).toBe('Started 3 chats');
+  it('says Started once the draft started, naming the outpost when it is known', () => {
+    const started = draft({ startedAt: '2026-10-09T10:30:00.000Z' });
+    expect(draftLabel(started)).toBe('Started 3 chats');
+    expect(draftLabel(started, 'Docs split')).toBe('Started outpost Docs split with 3 chats');
+    expect(draftLabel({ ...started, chats: 1 }, 'Docs split')).toBe(
+      'Started outpost Docs split with 1 chat',
+    );
   });
 
   it('takes the first line that has text', () => {

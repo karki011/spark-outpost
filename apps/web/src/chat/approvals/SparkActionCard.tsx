@@ -24,6 +24,7 @@ import { MacFacts, macByline, macNote } from './MacFacts.tsx';
 import { CalendarFacts, calendarByline, calendarNote } from './CalendarFacts.tsx';
 import { AtlassianFacts, atlassianByline, atlassianNote } from './AtlassianFacts.tsx';
 import { SiteFacts } from './SiteFacts.tsx';
+import { OutpostStartFacts, outpostStartByline, outpostStartNote } from './OutpostStartFacts.tsx';
 import { siteByline, siteNote } from './site-card-text.ts';
 import { PrFollowUpFacts, PrRoundFacts } from './PrFollowUpFacts.tsx';
 import { McpActionFacts } from '../../settings/mcp/McpActionFacts.tsx';
@@ -212,6 +213,8 @@ function Facts({ action }: { action: SparkAction }) {
           </Fact>
         </dl>
       );
+    case 'start_outpost':
+      return <OutpostStartFacts action={action} />;
     case 'open_pr':
     case 'pr_follow_up':
       return null;
@@ -222,7 +225,10 @@ function byline(action: SparkAction, agent: string, secretFiles?: readonly strin
   const site = siteByline(action, agent, secretFiles);
   if (site) return site;
   const mac =
-    macByline(action, agent) ?? calendarByline(action, agent) ?? atlassianByline(action, agent);
+    macByline(action, agent) ??
+    calendarByline(action, agent) ??
+    atlassianByline(action, agent) ??
+    outpostStartByline(action, agent);
   if (mac) return mac;
   if (action.action === 'pr_follow_up') {
     return 'Spark fixed the PR feedback in this chat. Confirm to push and reply on GitHub.';
@@ -233,7 +239,8 @@ function byline(action: SparkAction, agent: string, secretFiles?: readonly strin
 function confirmNote(action: SparkAction, secretFiles?: readonly string[]): string {
   const site = siteNote(action, secretFiles);
   if (site) return site;
-  const mac = macNote(action) ?? calendarNote(action) ?? atlassianNote(action);
+  const mac =
+    macNote(action) ?? calendarNote(action) ?? atlassianNote(action) ?? outpostStartNote(action);
   if (mac) return mac;
   if (action.action === 'pr_follow_up') {
     return 'Nothing is pushed or posted until you confirm. Uncheck anything to leave it out; a fix reply needs the push.';

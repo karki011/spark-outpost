@@ -47,6 +47,7 @@ interface PostRow {
   opening: boolean;
   after_post_id: string | null;
   user_started: boolean;
+  agent_started: boolean;
 }
 
 interface FactsRow extends PostRow {
@@ -140,6 +141,7 @@ function toPost(row: PostRow): StoredPost {
     opening: row.opening,
     afterPostId: row.after_post_id,
     userStarted: row.user_started,
+    agentStarted: row.agent_started,
   };
 }
 
@@ -187,9 +189,9 @@ async function insertPost(db: Queryable, post: NewPost): Promise<StoredPost> {
   const { rows } = await db.query<PostRow>(
     `INSERT INTO outpost_posts (id, outpost_id, kind, body, from_user, from_conversation_id,
        from_run_id, request_hash, waits, from_handle, to_handle, to_conversation_id, guest,
-       batch_id, observed, attachment_ids, opening, after_post_id, user_started)
+       batch_id, observed, attachment_ids, opening, after_post_id, user_started, agent_started)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb,
-       $16::uuid[], $17, $18, $19)
+       $16::uuid[], $17, $18, $19, $20)
      ON CONFLICT DO NOTHING
      RETURNING *`,
     [
@@ -212,6 +214,7 @@ async function insertPost(db: Queryable, post: NewPost): Promise<StoredPost> {
       post.opening ?? false,
       post.afterPostId ?? null,
       post.userStarted ?? false,
+      post.agentStarted ?? false,
     ],
   );
   if (rows[0]) return toPost(rows[0]);

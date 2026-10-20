@@ -28,6 +28,7 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   mac: true,
   outpost: true,
   outpost_draft: true,
+  outpost_start: true,
   calendar_read: true,
   calendar_edit: true,
   jira: true,
@@ -89,6 +90,7 @@ const HOW_TO_GET: Record<
     | 'pull_request_create'
     | 'outpost'
     | 'outpost_draft'
+    | 'outpost_start'
     | 'calendar_read'
     | 'calendar_edit'
     | 'jira'
