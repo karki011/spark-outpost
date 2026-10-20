@@ -49,3 +49,18 @@ export function snoozeEnds(marks: NudgeMarks): number[] {
     mark.snoozedUntil === null ? [] : [mark.snoozedUntil],
   );
 }
+
+export function withServerDismissed(
+  marks: NudgeMarks,
+  events: readonly { key: string; end: string; dismissed: boolean }[],
+): NudgeMarks {
+  const dismissed = events.filter(
+    (event) => event.dismissed && marks.get(event.key)?.dismissed !== true,
+  );
+  if (dismissed.length === 0) return marks;
+  const next = new Map(marks);
+  for (const event of dismissed) {
+    next.set(event.key, { end: Date.parse(event.end), dismissed: true, snoozedUntil: null });
+  }
+  return next;
+}

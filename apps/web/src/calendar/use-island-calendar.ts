@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type {
   CalendarEvent,
   ConversationSummary,
@@ -6,7 +7,7 @@ import type {
 } from '@spark-outpost/contracts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import type { Chime, ChimeHold } from '../island/island-sound.ts';
-import { calendarApi } from './calendar-api.ts';
+import { calendarApi, calendarKeys } from './calendar-api.ts';
 import {
   calendarLine,
   chatStates,
@@ -21,9 +22,11 @@ import { eventEnds, stillOn, useEventClock } from './event-clock.ts';
 import {
   dismissNudge,
   NO_NUDGE_MARKS,
+  nudgeHidden,
   purgeMarks,
   snoozeEnds,
   snoozeNudge,
+  withServerDismissed,
   type NudgeMarks,
 } from './nudge-marks.ts';
 import { todayState } from './today-model.ts';
@@ -133,14 +136,34 @@ function useChoosing(home: IslandHomePanel) {
 
 function useNudgeClock(live: ReturnType<typeof useCalendarNow>['data'] | null, updatedAt: number) {
   const [marks, setMarks] = useState<NudgeMarks>(NO_NUDGE_MARKS);
-  const times = useMemo(() => {
-    const nudged = live?.nudge && live.nudge.kind !== 'wrap_up' ? live.nudge.group : [];
-    return [...eventEnds([...(live?.upcoming ?? []), ...nudged]), ...snoozeEnds(marks)];
-  }, [live, marks]);
+  const nudged = live?.nudge && live.nudge.kind !== 'wrap_up' ? live.nudge.group : null;
+  const times = useMemo(
+    () => [...eventEnds([...(live?.upcoming ?? []), ...(nudged ?? [])]), ...snoozeEnds(marks)],
+    [live, nudged, marks],
+  );
   const clock = useEventClock(times, updatedAt);
   const kept = purgeMarks(marks, clock);
   if (kept !== marks) setMarks(kept);
-  return { marks: kept, clock, setMarks };
+  const saved = useMemo(
+    () => withServerDismissed(kept, [...(live?.upcoming ?? []), ...(nudged ?? [])]),
+    [kept, live, nudged],
+  );
+  return { marks: saved, clock, setMarks };
+}
+
+function useDismissForGood() {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (events: readonly CalendarEvent[]) => {
+      const saves = events.map((event) =>
+        calendarApi.mark({ eventKey: event.key, end: event.end, kind: 'dismiss', on: true }),
+      );
+      void Promise.allSettled(saves).then(() =>
+        queryClient.invalidateQueries({ queryKey: calendarKeys.all }),
+      );
+    },
+    [queryClient],
+  );
 }
 
 export function useIslandCalendar(
@@ -155,6 +178,7 @@ export function useIslandCalendar(
   const nowQuery = useCalendarNow(ready);
   const live = ready ? (nowQuery.data ?? null) : null;
   const nudges = useNudgeClock(live, nowQuery.dataUpdatedAt);
+  const dismissForGood = useDismissForGood();
   const at = Math.max(minute, nudges.clock);
   const holdLabel = live?.hold ? (live.hold.focus ? 'Focus' : live.hold.title) : null;
   const held = useHeldChimes(holdLabel);
@@ -189,6 +213,7 @@ export function useIslandCalendar(
     setMarks: nudges.setMarks,
     names,
     note: home.note,
+    onDismissed: dismissForGood,
   });
   const clashes = useMemo(
     () =>
@@ -200,7 +225,9 @@ export function useIslandCalendar(
     line: line && lineUnderAlert(line, autoJoin.alert) ? null : line,
     hold: held.hold,
     at,
-    upcoming: live ? stillOn(live.upcoming, at) : NO_MEETINGS,
+    upcoming: live
+      ? stillOn(live.upcoming, at).filter((event) => !nudgeHidden(nudges.marks, event.key, at))
+      : NO_MEETINGS,
     clashes,
     choosing,
     calendarName: (event) => names.get(event.calendarKey) ?? 'Calendar',
@@ -215,8 +242,10 @@ export function useIslandCalendar(
       nudges.setMarks((current) =>
         snoozeNudge(current, event.key, Date.parse(event.end), Date.now()),
       ),
-    onDismissNudge: (event) =>
-      nudges.setMarks((current) => dismissNudge(current, event.key, Date.parse(event.end))),
+    onDismissNudge: (event) => {
+      nudges.setMarks((current) => dismissNudge(current, event.key, Date.parse(event.end)));
+      dismissForGood([event]);
+    },
     onDismiss: (shown) => {
       if (shown.dismiss === 'catch_up') held.clearCatchUp();
       if (shown.capture) dismiss(shown.capture.eventKey);

@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
+import { createElement, type ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CalendarNow, MeetingAlertPayload } from '@spark-outpost/contracts';
+import type { CalendarEvent, CalendarNow, MeetingAlertPayload } from '@spark-outpost/contracts';
+import { calendarApi } from './calendar-api.ts';
 import { at, event, link, status } from './test-fixtures.ts';
 
 const calendarState = vi.hoisted(() => ({ now: null as CalendarNow | null, updatedAt: 0 }));
@@ -34,17 +37,17 @@ function fakeBridge() {
 
 const standup = event('Standup', at(10, 30), at(10, 45), { link: link('zoom') });
 
-function nowWith(): CalendarNow {
+function nowWith(meeting: CalendarEvent = standup): CalendarNow {
   return {
     active: true,
-    upcoming: [standup],
+    upcoming: [meeting],
     nudge: {
       kind: 'before',
-      eventKey: standup.key,
-      title: standup.title,
-      startsAt: standup.start,
+      eventKey: meeting.key,
+      title: meeting.title,
+      startsAt: meeting.start,
       minutes: 5,
-      group: [standup],
+      group: [meeting],
     },
     hold: null,
     capture: null,
@@ -55,10 +58,18 @@ function nowWith(): CalendarNow {
 
 function mount() {
   const home = { open: false, show: () => undefined, note: () => undefined };
-  return renderHook(() => useIslandCalendar(Date.now(), 0, [], () => undefined, home));
+  const client = new QueryClient();
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client }, children);
+  return renderHook(() => useIslandCalendar(Date.now(), 0, [], () => undefined, home), {
+    wrapper,
+  });
 }
 
+const marked = vi.spyOn(calendarApi, 'mark');
+
 beforeEach(() => {
+  marked.mockResolvedValue({ ok: true });
   vi.useFakeTimers();
   vi.setSystemTime(at(10, 29, 10));
   calendarState.now = nowWith();
@@ -66,6 +77,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  marked.mockReset();
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -95,7 +107,49 @@ describe('useIslandCalendar meeting alert', () => {
     act(() => hook.result.current.onSnooze(standup));
     await act(async () => vi.advanceTimersByTimeAsync(10));
     expect(hook.result.current.line).toBeNull();
+    expect(hook.result.current.upcoming).toEqual([]);
     await act(async () => vi.advanceTimersByTimeAsync(121_000));
     expect(hook.result.current.line?.event?.key).toBe(standup.key);
+  });
+
+  it('saves Dismiss from the centre card so the meeting stays quiet', async () => {
+    const bridge = fakeBridge();
+    const hook = mount();
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    act(() => bridge.act({ kind: 'dismiss', key: standup.key, eventKey: null }));
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    expect(bridge.shown.at(-1)).toBeNull();
+    expect(marked).toHaveBeenCalledWith({
+      eventKey: standup.key,
+      end: standup.end,
+      kind: 'dismiss',
+      on: true,
+    });
+    expect(hook.result.current.upcoming).toEqual([]);
+    expect(hook.result.current.line).toBeNull();
+    await act(async () => vi.advanceTimersByTimeAsync(5 * 60_000));
+    expect(bridge.shown.at(-1)).toBeNull();
+  });
+
+  it('shows no card, line or meeting row for a meeting Spark has saved as dismissed', async () => {
+    calendarState.now = nowWith({ ...standup, dismissed: true });
+    const bridge = fakeBridge();
+    const hook = mount();
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    expect(bridge.shown.filter(Boolean)).toEqual([]);
+    expect(hook.result.current.line).toBeNull();
+    expect(hook.result.current.upcoming).toEqual([]);
+  });
+
+  it('dismisses the bubble for good and clears the meeting row', async () => {
+    vi.setSystemTime(at(10, 26));
+    fakeBridge();
+    const hook = mount();
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    act(() => hook.result.current.onDismissNudge(standup));
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    expect(hook.result.current.line).toBeNull();
+    expect(hook.result.current.upcoming).toEqual([]);
+    expect(marked).toHaveBeenCalledTimes(1);
   });
 });

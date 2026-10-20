@@ -151,6 +151,9 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
         >
           Snooze 2 min
         </button>
+        <button type="button" className="isl-calline-act" onClick={dismiss}>
+          Dismiss
+        </button>
         <button
           type="button"
           className="isl-calline-act"
