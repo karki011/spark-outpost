@@ -12,7 +12,7 @@ import { changeSparkPause } from '../../workflow/spark-pause-change.ts';
 import { stopRun } from '../../workflow/stop-run.ts';
 import { ticketDepsFor } from '../deps.ts';
 import { SparkToolError, type SparkToolContext } from '../tool.ts';
-import { cardRefusalFor } from './ask-spark-limits.ts';
+import { ASK_SPARK_REFUSALS, cardRefusalFor } from './ask-spark-limits.ts';
 import type { Performed } from './performed.ts';
 
 export const ANSWERED_BY_ASK_SPARK = 'Answered by Ask Spark';
@@ -20,6 +20,7 @@ export const ANSWERED_BY_ASK_SPARK = 'Answered by Ask Spark';
 interface ChatFacts {
   title: string;
   terminal: boolean;
+  archived: boolean;
 }
 
 export async function chatFacts(
@@ -27,13 +28,18 @@ export async function chatFacts(
   workspaceId: string,
   conversationId: string,
 ): Promise<ChatFacts> {
-  const { rows } = await db.query<{ title: string; session_type: string | null }>(
-    'SELECT title, session_type FROM conversations WHERE id = $1 AND workspace_id = $2',
+  const { rows } = await db.query<{
+    title: string;
+    session_type: string | null;
+    archived: boolean;
+  }>(
+    `SELECT title, session_type, archived_at IS NOT NULL AS archived FROM conversations
+     WHERE id = $1 AND workspace_id = $2`,
     [conversationId, workspaceId],
   );
   const row = rows[0];
   if (!row) throw new SparkToolError('That chat no longer exists.');
-  return { title: row.title, terminal: row.session_type === 'terminal' };
+  return { title: row.title, terminal: row.session_type === 'terminal', archived: row.archived };
 }
 
 export async function sendAsAssistant(
@@ -103,6 +109,7 @@ async function sendMessage(context: SparkToolContext, action: AskSparkAction): P
   const { deps, scope } = context;
   const chatId = required(action.conversationId, 'chat');
   const chat = await chatFacts(deps.db, scope.workspaceId, chatId);
+  if (chat.archived) throw new SparkToolError(ASK_SPARK_REFUSALS.archived);
   await sendAsAssistant(deps.db, chatId, required(action.text, 'message'));
   return {
     message: `Sent the message to “${chat.title}”.`,

@@ -51,7 +51,7 @@ async function targetChat(context: SparkToolContext, reference: string | undefin
   }
   const chat = await chatFacts(context.deps.db, context.scope.workspaceId, id);
   if (chat.terminal) throw new SparkToolError(ASK_SPARK_REFUSALS.terminal);
-  return { id, title: chat.title };
+  return { id, title: chat.title, archived: chat.archived };
 }
 
 const startChatTool = sparkTool({
@@ -87,6 +87,7 @@ const sendTool = sparkTool({
   input: { chat: chatIdInput, message: z.string().trim().min(1).max(ASK_SPARK_TEXT_MAX) },
   run: async (args, context) => {
     const chat = await targetChat(context, args.chat);
+    if (chat.archived) throw new SparkToolError(ASK_SPARK_REFUSALS.archived);
     return proposeAction(
       context,
       action({

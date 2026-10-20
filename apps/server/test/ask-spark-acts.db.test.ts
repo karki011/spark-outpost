@@ -288,6 +288,30 @@ describe('Ask Spark acts', () => {
     }
   });
 
+  it('never reopens a chat archived while its send card waited', async () => {
+    const { conversationId } = await startChat(t, 'Old work');
+    const harness = await open();
+    await harness.call('spark_send_to_chat', { chat: conversationId, message: 'One more thing' });
+    await pendingCard(t);
+    await t.db.query('UPDATE conversations SET archived_at = now() WHERE id = $1', [
+      conversationId,
+    ]);
+    const done = await confirmCard(t);
+    expect(done.payload.sparkResult?.state).toBe('failed');
+    const { rows } = await t.db.query<{ archived: boolean; runs: number }>(
+      `SELECT archived_at IS NOT NULL AS archived,
+         (SELECT count(*)::int FROM runs WHERE conversation_id = $1) AS runs
+       FROM conversations WHERE id = $1`,
+      [conversationId],
+    );
+    expect(rows[0]).toEqual({ archived: true, runs: 1 });
+    const refused = await harness.call('spark_send_to_chat', {
+      chat: conversationId,
+      message: 'x',
+    });
+    expect(refused.text).toBe(ASK_SPARK_REFUSALS.archived);
+  });
+
   it('in Manual leaves the other card alone until Do it', async () => {
     const { runId } = await startChat(t, 'Deploy');
     const waiting = await card(runId);

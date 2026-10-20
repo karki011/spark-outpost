@@ -32,6 +32,7 @@ export const ASK_SPARK_REFUSALS = {
   noOption: 'This card has no Allow once or Deny answer, so it stays with you.',
   terminal: 'Ask Spark does not act on Terminal sessions. Use the session itself.',
   assistantChat: 'Ask Spark does not act on its own conversation.',
+  archived: 'That chat is archived. Open it from Archived first if you want to message it.',
 } as const;
 
 interface Route {
@@ -197,22 +198,28 @@ function sentenceAround(text: string, at: number): string {
   return text.slice(start + 1, ends.length > 0 ? Math.min(...ends) : text.length);
 }
 
-export function namesChat(question: string, title: string): boolean {
-  const name = title.trim().toLowerCase();
-  return name.length >= LINKED_TITLE_MIN && question.toLowerCase().includes(name);
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export function askedToAnswer(question: string, answer: AskSparkAnswer): boolean {
+export function namesChat(text: string, title: string): boolean {
+  const name = title.trim();
+  if (name.length < LINKED_TITLE_MIN) return false;
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(name)}(?![\\p{L}\\p{N}])`, 'iu').test(text);
+}
+
+export function askedToAnswer(question: string, answer: AskSparkAnswer, title: string): boolean {
   const text = question.trim();
   if (text.includes('?')) return false;
   const command = new RegExp(
     `(?:^|[.!;:,]\\s*|\\b(?:please|then|and|now|just)\\s+)(${ANSWER_VERBS[answer]})\\b`,
-    'i',
+    'gi',
   );
-  const match = command.exec(text);
-  if (!match) return false;
-  const verbAt = match.index + match[0].length - (match[1]?.length ?? 0);
-  return !HOLDS_BACK.test(sentenceAround(text, verbAt));
+  return [...text.matchAll(command)].some((match) => {
+    const verbAt = match.index + match[0].length - (match[1]?.length ?? 0);
+    const sentence = sentenceAround(text, verbAt);
+    return !HOLDS_BACK.test(sentence) && namesChat(sentence, title);
+  });
 }
 
 async function questionOf(db: Queryable, runId: string): Promise<string> {
@@ -233,6 +240,6 @@ export async function assistantPath(
   if (action.action !== 'ask_spark' || action.op !== 'answer_card') return 'perform';
   const question = await questionOf(db, runId);
   const { chat } = await cardRefusalFor(db, workspaceId, action.approvalId ?? PLACEHOLDER);
-  const asked = askedToAnswer(question, action.answer ?? 'deny');
-  return asked && chat && namesChat(question, chat.title) ? 'perform' : 'confirm';
+  if (!chat) return 'confirm';
+  return askedToAnswer(question, action.answer ?? 'deny', chat.title) ? 'perform' : 'confirm';
 }
