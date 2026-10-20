@@ -5,6 +5,7 @@ import {
   shownModelName,
   type InvolvementLevel,
   type ProviderCapabilities,
+  type ProviderConnection,
   type ProviderId,
   type ProviderSetup,
 } from '@spark-outpost/contracts';
@@ -27,6 +28,19 @@ interface DoneStepProps {
   level: InvolvementLevel;
 }
 
+function modelName(
+  connection: ProviderConnection,
+  capabilities: ProviderCapabilities | undefined,
+): string {
+  const listed = connection.models.find((option) => option.id === connection.model);
+  if (listed) return listed.label;
+  const reported = connection.model
+    ? capabilities?.models.find((option) => option.id === connection.model)
+    : currentModel(connection, capabilities);
+  if (reported) return shownModelName(reported);
+  return connection.model ?? 'CLI default model';
+}
+
 function providerItem(
   provider: ProviderSetup,
   capabilities: ProviderCapabilities | undefined,
@@ -35,11 +49,7 @@ function providerItem(
 ): SummaryItem | null {
   const connection = provider.connection;
   if (!connection) return null;
-  const reported = currentModel(connection, capabilities);
-  const model = reported
-    ? shownModelName(reported)
-    : (connection.models.find((option) => option.id === connection.model)?.label ??
-      'CLI default model');
+  const model = modelName(connection, capabilities);
   const effort = connection.effort
     ? (provider.efforts.find((option) => option.id === connection.effort)?.label ??
       connection.effort)
