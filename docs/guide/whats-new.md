@@ -12,7 +12,7 @@ Newest first.
 
 | What changed                                                                                                 | What to do                                                        |
 | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| No **Auto** model; chats show the model they run.                                                            | See [Pick a model](agent-mode.md#pick-a-model).                   |
+| Model picker changed: no **Auto**; chats show their model.                                                   | See [Pick a model](agent-mode.md#pick-a-model).                   |
 | Claude chats show **Waiting on…** for background agents, not Done.                                           | See [Background work](follow-a-turn.md#background-work).          |
 | Archiving the open chat opens a new chat; display fixes.                                                     | —                                                                 |
 | Today: readable notes, tidy short meetings, early **Join**.                                                  | See [Use it](calendar.md#use-it).                                 |
