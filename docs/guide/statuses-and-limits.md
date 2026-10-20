@@ -8,24 +8,24 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 
 ## Provider tiles
 
-| Status                                  | Means                                      |
-| --------------------------------------- | ------------------------------------------ |
-| **Not set up**                          | Nothing connected yet.                     |
-| **CLI not installed**                   | Install `claude` or `codex` first.         |
-| **Needs sign-in**                       | Sign in to the CLI.                        |
-| **Connected · Local CLI** / **API key** | Ready.                                     |
-| **Error**                               | Open the tile; **Test** says what's wrong. |
+| Status                                  | Means                              |
+| --------------------------------------- | ---------------------------------- |
+| **Not set up**                          | Nothing connected yet.             |
+| **CLI not installed**                   | Install `claude` or `codex` first. |
+| **Needs sign-in**                       | Sign in to the CLI.                |
+| **Connected · Local CLI** / **API key** | Ready.                             |
+| **Error**                               | **Test** says what's wrong.        |
 
 ## Chat list
 
-A dot shows what happened since you last opened the chat, also on paired devices; point at it.
+A dot shows what happened since you last opened the chat; point at it.
 
-| Dot                         | Means                                                                      |
-| --------------------------- | -------------------------------------------------------------------------- |
-| **Working**: a pulsing ring | A turn, background agents or a Terminal session are running.               |
-| **Waiting for you**: amber  | A card, a question, or a Terminal session waiting for input or permission. |
-| **Done**: green             | A turn finished.                                                           |
-| **Couldn't finish**: red    | A turn failed or was interrupted.                                          |
+| Dot                         | Means                                                        |
+| --------------------------- | ------------------------------------------------------------ |
+| **Working**: a pulsing ring | A turn, background agents or a Terminal session are running. |
+| **Waiting for you**: amber  | A card, a question, or a Terminal session waiting on you.    |
+| **Done**: green             | A turn finished.                                             |
+| **Couldn't finish**: red    | A turn failed or was interrupted.                            |
 
 ## Chats and Sparks
 
@@ -41,7 +41,7 @@ A dot shows what happened since you last opened the chat, also on paired devices
 | Status        | Means                                                                                       |
 | ------------- | ------------------------------------------------------------------------------------------- |
 | **Sent**      | The chat is busy, failed or stopped, something is paused, or it reads **Waiting for @api**. |
-| **Working**   | Its turn is running; the line under it says what it's doing.                                |
+| **Working**   | Its turn runs; the line below says what it's doing.                                         |
 | **Needs you** | An approval card waits, or the reply ends **Needs you: …**.                                 |
 | **Answered**  | The answer is under the request.                                                            |
 | **Failed**    | The turn failed and the line says why, or **Not delivered: …**.                             |
@@ -49,14 +49,14 @@ A dot shows what happened since you last opened the chat, also on paired devices
 
 ## Ticket groups
 
-| Group                      | Holds                                              |
-| -------------------------- | -------------------------------------------------- |
-| **Needs you**              | A linked chat waits, or a rule flagged it.         |
-| **In progress with Spark** | A linked chat is running.                          |
-| **Started**                | In progress in your tracker, with no chat running. |
-| **Up next**                | Assigned to you and not started.                   |
-| **In review / PR open**    | In review, or its PR is open, with a checks badge. |
-| **Done recently**          | Done, or its PR merged, in the last 7 days.        |
+| Group                      | Holds                                         |
+| -------------------------- | --------------------------------------------- |
+| **Needs you**              | A linked chat waits, or a rule flagged it.    |
+| **In progress with Spark** | A linked chat is running.                     |
+| **Started**                | In progress in your tracker, no chat running. |
+| **Up next**                | Assigned to you and not started.              |
+| **In review / PR open**    | In review or PR open, with a checks badge.    |
+| **Done recently**          | Done, or its PR merged, in the last 7 days.   |
 
 ## Map status
 

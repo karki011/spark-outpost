@@ -1,7 +1,7 @@
 import { backgroundParking } from './background-parking.ts';
 import type { ParkedTurns } from './parked-turns.ts';
 import type { RunSnapshot } from '../persistence/run-snapshots.ts';
-import type { RunEvent } from '@spark-outpost/contracts';
+import { STOPPED_BY_QUIT, type RunEvent } from '@spark-outpost/contracts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { auditSparkHandoff } from './spark-audit.ts';
 import { editsFiles, liveTurn, sessionBrief } from './turn-facts.ts';
@@ -234,7 +234,7 @@ export async function runAgentTurn(
         append,
       });
   const redaction = createRedactionFilter(secretValues);
-  const parking = backgroundParking(deps.parked, lease.runId);
+  const parking = backgroundParking(deps.parked, lease.runId, () => control.stop('quit'));
   const watch = { ...input, db: deps.db, runId: lease.runId, observations };
   const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
@@ -453,6 +453,7 @@ export async function runAgentTurn(
     await tasks.replied(text);
     const codexPlan = proposedPlan(text);
     if (codexPlan) await plans.propose(codexPlan, 'codex');
+    if (control.reason() === 'quit') return await ended(result('cancelled', STOPPED_BY_QUIT));
     return await ended(result(control.signal.aborted ? 'cancelled' : 'succeeded'));
   } catch (error) {
     if (error instanceof LeaseLostError || control.reason() === 'lease_lost') {
@@ -467,6 +468,7 @@ export async function runAgentTurn(
     await settleAudit();
     const reason = control.reason();
     if (reason === 'cancelled') return ended(result('cancelled'));
+    if (reason === 'quit') return ended(result('cancelled', STOPPED_BY_QUIT));
     await recordErrorDetails(deps.db, lease.runId, error).catch(() => undefined);
     const failed = failureMessage(error, reason);
     const { workspaceId, provider } = input;

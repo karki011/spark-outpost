@@ -307,7 +307,8 @@ function seedChars(input: RunInput): number {
 }
 
 function resumableStop(input: RunInput, result: TurnEnd): boolean {
-  if (result.outcome !== 'cancelled' || result.stopReason !== 'cancelled') return false;
+  const stopped = result.stopReason === 'cancelled' || result.stopReason === 'quit';
+  if (result.outcome !== 'cancelled' || !stopped) return false;
   return input.parentRunId !== null || result.messageId !== null;
 }
 

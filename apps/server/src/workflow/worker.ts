@@ -128,6 +128,7 @@ export function startWorker(given: WorkerOptions): Worker {
       stopped = true;
       wake();
       await loop;
+      options.parked?.quit();
       await Promise.allSettled([...active]);
       await live.closeAll();
     },
