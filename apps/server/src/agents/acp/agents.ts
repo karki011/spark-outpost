@@ -56,6 +56,7 @@ export interface AgentDefinition {
   streamsCommandOutput?: boolean;
   inputExcludesCache?: boolean;
   usageReadings?: UsageReadings;
+  windowAtResult?: boolean;
   conversationMode: string;
   readsProjectFolders: boolean;
   repoStyle: RepoStyle;
@@ -253,6 +254,7 @@ const claudeSessions = {
   askMode: 'default',
   doMode: CLAUDE_DO_MODE,
   usageReadings: 'start_and_end',
+  windowAtResult: true,
   readsProjectFolders: true,
   conversationSessionMeta: (repo?: ClaudeRepoOptions | null) =>
     claudeSessionMeta([], [], repo ?? null),

@@ -3,15 +3,11 @@ import { agentLabel, introLine, taskLine, TASK_EXCERPT_MAX } from '../src/outpos
 
 describe('agentLabel', () => {
   it('names the agent and its model', () => {
-    expect(agentLabel({ provider: 'Codex', model: 'GPT-5', auto: false })).toBe('Codex GPT-5');
-  });
-
-  it('says Auto when rules pick the model each turn', () => {
-    expect(agentLabel({ provider: 'Claude', model: 'Opus', auto: true })).toBe('Claude Auto');
+    expect(agentLabel({ provider: 'Codex', model: 'GPT-5' })).toBe('Codex GPT-5');
   });
 
   it('names the agent alone when no model is known', () => {
-    expect(agentLabel({ provider: 'Claude', model: null, auto: false })).toBe('Claude');
+    expect(agentLabel({ provider: 'Claude', model: null })).toBe('Claude');
   });
 });
 
@@ -23,8 +19,8 @@ describe('introLine', () => {
   });
 
   it('leaves out what is not known', () => {
-    expect(introLine({ handle: 'fe', project: null, agent: 'Claude Auto', mode: null })).toBe(
-      '@fe joined · Claude Auto',
+    expect(introLine({ handle: 'fe', project: null, agent: 'Claude Opus 5.5', mode: null })).toBe(
+      '@fe joined · Claude Opus 5.5',
     );
     expect(introLine({ handle: 'fe', project: null, agent: null, mode: null })).toBe('@fe joined');
   });

@@ -101,8 +101,8 @@ async function startRound(conversationId: string): Promise<string> {
     [runId, conversationId, messageId],
   );
   await runSql(
-    `INSERT INTO orchestrations (run_id, phase, depth, depth_source, risk, routing)
-     VALUES ($1, 'building', 'execute', 'rules', 'edits', 'pinned')`,
+    `INSERT INTO orchestrations (run_id, phase, depth, depth_source, risk)
+     VALUES ($1, 'building', 'execute', 'rules', 'edits')`,
     [runId],
   );
   await runSql(

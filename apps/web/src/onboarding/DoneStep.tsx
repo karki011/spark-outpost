@@ -1,14 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useQueries } from '@tanstack/react-query';
-import type {
-  InvolvementLevel,
-  ProviderCapabilities,
-  ProviderId,
-  ProviderSetup,
+import {
+  shownModelName,
+  type InvolvementLevel,
+  type ProviderCapabilities,
+  type ProviderConnection,
+  type ProviderId,
+  type ProviderSetup,
 } from '@spark-outpost/contracts';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../api/client.ts';
 import { modeSummary } from '../chat/composer/mode-summary.ts';
+import { currentModel } from '../chat/composer/model-options.ts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
 import { UserBlob } from '../brand/UserBlob.tsx';
@@ -25,6 +28,19 @@ interface DoneStepProps {
   level: InvolvementLevel;
 }
 
+function modelName(
+  connection: ProviderConnection,
+  capabilities: ProviderCapabilities | undefined,
+): string {
+  const listed = connection.models.find((option) => option.id === connection.model);
+  if (listed) return listed.label;
+  const reported = connection.model
+    ? capabilities?.models.find((option) => option.id === connection.model)
+    : currentModel(connection, capabilities);
+  if (reported) return shownModelName(reported);
+  return connection.model ?? 'CLI default model';
+}
+
 function providerItem(
   provider: ProviderSetup,
   capabilities: ProviderCapabilities | undefined,
@@ -33,9 +49,7 @@ function providerItem(
 ): SummaryItem | null {
   const connection = provider.connection;
   if (!connection) return null;
-  const model =
-    connection.models.find((option) => option.id === connection.model)?.label ??
-    'CLI default model';
+  const model = modelName(connection, capabilities);
   const effort = connection.effort
     ? (provider.efforts.find((option) => option.id === connection.effort)?.label ??
       connection.effort)

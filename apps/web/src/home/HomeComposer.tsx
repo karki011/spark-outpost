@@ -5,6 +5,7 @@ import {
   titleFromMessage,
   type Attachment,
   type ConversationDetail,
+  type ProviderSetup,
   type UpdateChatSettingsRequest,
 } from '@spark-outpost/contracts';
 import { api, newDraftId, queryKeys } from '../api/client.ts';
@@ -33,16 +34,20 @@ interface Started {
   kept: boolean;
 }
 
-function carriedSettings(detail: ConversationDetail | undefined): UpdateChatSettingsRequest | null {
+function carriedSettings(
+  detail: ConversationDetail | undefined,
+  providers: readonly ProviderSetup[],
+): UpdateChatSettingsRequest | null {
   if (!detail || detail.conversation.teammate) return null;
   const { settings } = detail;
+  const defaultModel = providers.find((provider) => provider.id === settings.provider)?.connection
+    ?.model;
   const carried: UpdateChatSettingsRequest = {};
   if (settings.provider) carried.provider = settings.provider;
-  if (settings.model) carried.model = settings.model;
+  if (settings.model && settings.model !== defaultModel) carried.model = settings.model;
   if (settings.effort) carried.effort = settings.effort;
   if (settings.agentMode) carried.agentMode = settings.agentMode;
   if (settings.level) carried.level = settings.level;
-  if (settings.routing) carried.routing = settings.routing;
   if (Object.keys(settings.options).length > 0) carried.options = settings.options;
   return carried;
 }
@@ -71,7 +76,7 @@ export function HomeComposer(props: HomeComposerProps) {
   const attachments = useAttachments();
   const send = useMutation({
     mutationFn: async (message: Outgoing) => {
-      const carried = carriedSettings(detail.data);
+      const carried = carriedSettings(detail.data, connected);
       await api.sendMessage(
         draftId,
         crypto.randomUUID(),

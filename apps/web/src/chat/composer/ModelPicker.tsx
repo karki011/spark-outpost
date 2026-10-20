@@ -5,6 +5,7 @@ import {
   DEFAULT_INVOLVEMENT_LEVEL,
   combinationLine,
   modeKind,
+  shownModelName,
   type ChatSettings,
   type ProviderId,
   type ProviderSetup,
@@ -24,7 +25,7 @@ import { ModeOptions } from './ModeOptions.tsx';
 import { PickerNav, type PickerRow, type PickerSection } from './PickerNav.tsx';
 import { ProviderSwitch } from './ProviderSwitch.tsx';
 import { ExitingInert } from './ExitingInert.tsx';
-import { buttonLabel, currentModel, selectableEfforts, unusableChoice } from './model-options.ts';
+import { currentModel, selectableEfforts, unusableChoice } from './model-options.ts';
 import { useChatSettingsUpdate, type PickerRequest } from './use-picker-command.ts';
 import { permissionState } from './mode-summary.ts';
 import { unlistedPinName } from './shown-model.ts';
@@ -117,11 +118,9 @@ export function ModelPicker({
     : (permission.description ?? permission.label);
   const configOptions = capabilities?.options ?? [];
   const unusable = unusableChoice(settings.model, capabilities) !== null;
-  const listedLabel = model ? buttonLabel(model) : `${setup?.name ?? provider} default`;
+  const listedLabel = model ? shownModelName(model) : `${setup?.name ?? provider} default`;
   const pinnedLabel = unlistedPinName(settings, capabilities, runs) ?? listedLabel;
-  const pinnedName = unusable ? `${pinnedLabel} (unavailable)` : pinnedLabel;
-  const auto = settings.routing === 'auto';
-  const modelName = auto ? 'Auto' : pinnedName;
+  const modelName = unusable ? `${pinnedLabel} (unavailable)` : pinnedLabel;
 
   const effort = efforts.find((option) => option.id === settings.effort);
 
@@ -273,9 +272,7 @@ export function ModelPicker({
                           capabilities={capabilities}
                           loading={queryFor(provider)?.isFetching ?? false}
                           selected={model?.id ?? null}
-                          onSelect={(next) => update.mutate({ model: next, routing: 'pinned' })}
-                          routing={settings.routing ?? 'pinned'}
-                          onAuto={() => update.mutate({ routing: 'auto' })}
+                          onSelect={(next) => update.mutate({ model: next })}
                         />
                       )}
                       {activeSection === 'effort' && (

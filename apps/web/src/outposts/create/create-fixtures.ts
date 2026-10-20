@@ -127,7 +127,6 @@ export function seedCreateQueries(client: QueryClient): void {
     agentMode: 'agent',
     level: 'full-auto',
     options: {},
-    routing: 'auto',
   });
   client.setQueryData(queryKeys.capabilities('codex'), CODEX_CAPABILITIES);
 }

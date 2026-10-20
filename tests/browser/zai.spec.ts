@@ -98,10 +98,10 @@ test('Z.ai connects with an API key, says who bills it, and runs a chat', async 
     'true',
   );
   const models = page.getByRole('radiogroup', { name: 'Z.ai (GLM) model' });
-  await expect(models.getByRole('radio', { name: /^Auto/ })).toBeChecked();
-  await expect(models.getByRole('radio', { name: /^GLM-5\.3 \(default\)/ })).toBeVisible();
+  await expect(models.getByRole('radio', { name: /^Auto/ })).toHaveCount(0);
+  await expect(models.getByRole('radio', { name: /^GLM-5\.3 \(default\)/ })).toBeChecked();
   await expect(page.getByRole('button', { name: /^Model and effort/ })).toHaveAccessibleName(
-    'Model and effort: Auto',
+    'Model and effort: GLM-5.3',
   );
   await page.keyboard.press('Escape');
 

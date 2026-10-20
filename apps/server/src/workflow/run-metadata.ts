@@ -8,6 +8,7 @@ import type { Db } from '../persistence/db.ts';
 import type { ProviderCapabilityReport, ProviderOutput } from '../providers/provider.ts';
 import { cardFor } from '../model-cards/cards.ts';
 import { estimateCostUsd } from '../usage/prices.ts';
+import { contextWindows, type KnownWindow } from '../usage/context-window.ts';
 import type { RunInput } from './run-input.ts';
 
 export async function recordCapabilities(
@@ -49,17 +50,33 @@ export function mergeById<T extends { id: string }>(
   return [...kept, ...reported.filter((item) => !keptIds.has(item.id))];
 }
 
-export async function recordUsage(
-  db: Db,
-  runId: string,
-  usage: Extract<ProviderOutput, { kind: 'usage' }>,
-): Promise<void> {
+type UsageOutput = Extract<ProviderOutput, { kind: 'usage' }>;
+
+export async function recordUsage(db: Db, runId: string, usage: UsageOutput): Promise<void> {
   await db.query(
     `UPDATE runs SET context_used = $2, context_size = $3, cost_usd = COALESCE($4, cost_usd),
        cost_source = CASE WHEN $4::numeric IS NULL THEN cost_source ELSE 'reported' END
      WHERE id = $1`,
     [runId, usage.contextUsed, usage.contextSize, usage.costUsd],
   );
+}
+
+interface SpendSession {
+  knownWindow: KnownWindow | null;
+  usage(output: UsageOutput): Promise<UsageOutput>;
+}
+
+export function spendRecorder(
+  db: Db,
+  runId: string,
+  provider: string,
+  session: SpendSession | null,
+): (output: UsageOutput) => Promise<void> {
+  const windows = contextWindows(provider, session?.knownWindow ?? null);
+  return async (output) => {
+    const settled = windows.settle(output);
+    await recordUsage(db, runId, session ? await session.usage(settled) : settled);
+  };
 }
 
 export async function recordTokens(

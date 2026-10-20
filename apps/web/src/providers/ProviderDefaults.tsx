@@ -77,8 +77,7 @@ export function defaultIssue(
   };
 }
 
-const MODEL_NOTE =
-  "New chats start on Auto, which runs this model, or the agent's own default when none is picked here.";
+const MODEL_NOTE = 'New chats start on this model. A chat can pick another in its model picker.';
 const PER_CHAT = 'per-chat';
 const PER_CHAT_NOTE = 'Each chat keeps its own effort.';
 
@@ -132,8 +131,9 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
       queryClient.setQueryData(setupKey, state);
       if (update.model !== undefined) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.capabilities(provider.id) });
+        void queryClient.invalidateQueries({ queryKey: ['chat-defaults'] });
       }
-      if (update.effort !== undefined) {
+      if (update.model !== undefined || update.effort !== undefined) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
       }
     },

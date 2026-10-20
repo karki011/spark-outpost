@@ -5,7 +5,11 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { CreateOutpostRequest, StartMember } from '@spark-outpost/contracts';
 import { saveAttachment } from '../src/persistence/attachments.ts';
-import { resolveChatSettings, saveCapabilities } from '../src/persistence/chat-settings.ts';
+import {
+  draftChatSettings,
+  resolveChatSettings,
+  saveCapabilities,
+} from '../src/persistence/chat-settings.ts';
 import { listConversations, pruneEmptyConversations } from '../src/persistence/conversations.ts';
 import { listPosts } from '../src/persistence/outpost-posts.ts';
 import { acceptTask } from '../src/persistence/outpost-tasks.ts';
@@ -112,7 +116,6 @@ describe('starting an outpost', () => {
       provider: 'codex',
       model: 'gpt-5',
       agentMode: 'ask-every-action',
-      routing: 'pinned',
       level: 'full-auto',
     });
     const linked = await t.db.query<{ project_id: string }>(
@@ -126,10 +129,9 @@ describe('starting an outpost', () => {
     const api = newMember({ model: null, agentMode: null });
     await startOutpost(deps, request([api]));
 
-    expect(await resolveChatSettings(t.db, api.new.conversationId)).toMatchObject({
-      provider: 'codex',
-      routing: 'auto',
-    });
+    const settings = await resolveChatSettings(t.db, api.new.conversationId);
+    expect(settings.provider).toBe('codex');
+    expect(settings.model).toBe((await draftChatSettings(t.db, t.workspaceId)).model);
   });
 
   it.each([
@@ -165,7 +167,7 @@ describe('starting an outpost', () => {
 
     expect(lines).toEqual([
       {
-        body: '@fe joined · Codex Auto · Approve for me',
+        body: '@fe joined · Codex GPT-5 · Approve for me',
         intro: { conversationId: web, task: null },
       },
       {

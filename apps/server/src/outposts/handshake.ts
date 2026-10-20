@@ -1,7 +1,6 @@
 import { clipAtWord } from '@spark-outpost/contracts';
 
 export const TASK_EXCERPT_MAX = 120;
-const AUTO_MODEL = 'Auto';
 
 export interface IntroFacts {
   handle: string;
@@ -13,12 +12,10 @@ export interface IntroFacts {
 export interface AgentFacts {
   provider: string;
   model: string | null;
-  auto: boolean;
 }
 
-export function agentLabel({ provider, model, auto }: AgentFacts): string {
-  const picked = auto ? AUTO_MODEL : model;
-  return picked ? `${provider} ${picked}` : provider;
+export function agentLabel({ provider, model }: AgentFacts): string {
+  return model ? `${provider} ${model}` : provider;
 }
 
 export function introLine({ handle, project, agent, mode }: IntroFacts): string {

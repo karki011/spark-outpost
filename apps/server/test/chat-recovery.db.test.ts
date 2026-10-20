@@ -64,7 +64,6 @@ async function crewTurnMidBuild(conversationId: string) {
     depth: 'execute',
     depthSource: 'rules',
     risk: 'edits',
-    routing: 'auto',
   });
   const builder = await insertChildRun(
     t.db,

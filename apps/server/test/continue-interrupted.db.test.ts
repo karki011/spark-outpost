@@ -93,7 +93,6 @@ afterEach(async () => {
 
 async function midTurn(content = REQUEST) {
   const { id } = await createConversation(t.db, t.workspaceId, randomUUID());
-  await t.db.query(`UPDATE conversations SET model_routing = 'pinned' WHERE id = $1`, [id]);
   const sent = await sendUserMessage(t.db, id, { id: randomUUID(), content }, TARGET);
   worker.wake();
   await eventually(async () => {

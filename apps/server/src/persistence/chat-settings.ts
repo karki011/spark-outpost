@@ -8,7 +8,6 @@ import {
   type ConfigValues,
   type InvolvementLevel,
   type ChatSettings,
-  type ModelRouting,
   type ProviderCapabilities,
   type ProviderId,
   type UpdateChatSettingsRequest,
@@ -36,7 +35,6 @@ type Overrides = Partial<Record<ProviderId, ProviderChoices>>;
 interface SettingsRow {
   workspace_id: string;
   provider: ProviderId | null;
-  model_routing?: ModelRouting | undefined;
   overrides: Overrides;
   default_provider: ProviderId | null;
   default_level: InvolvementLevel | null;
@@ -61,13 +59,11 @@ const NO_CHAT_SETTINGS: ChatSettings = {
   options: {},
 };
 
-const NEW_CHAT_ROUTING: ModelRouting = 'auto';
-
 export class ConversationMissingError extends Error {}
 
 async function settingsRow(db: Queryable, conversationId: string): Promise<SettingsRow> {
   const { rows } = await db.query<SettingsRow>(
-    `SELECT c.workspace_id, c.provider, c.overrides, c.model_routing, p.default_provider,
+    `SELECT c.workspace_id, c.provider, c.overrides, p.default_provider,
        p.default_level
      FROM conversations c LEFT JOIN profiles p ON p.workspace_id = c.workspace_id
      WHERE c.id = $1`,
@@ -125,16 +121,14 @@ function effectiveSettings(
   const connection = connections.get(provider)!;
   const chosen = row.overrides[provider] ?? {};
   const agentMode = chosen.agentMode ?? connection.agentMode ?? defaultModeFor(provider);
-  const pinned = row.model_routing === 'auto' ? undefined : chosen.model;
   return {
     provider,
-    model: pinned ?? connection.model,
+    model: chosen.model ?? connection.model,
     effort: chosen.effort ?? connection.effort,
     permission: permissionFor(provider, agentMode, connection.modes),
     agentMode,
     level: chosen.level ?? row.default_level ?? DEFAULT_INVOLVEMENT_LEVEL,
     options: chosen.options ?? {},
-    ...(row.model_routing ? { routing: row.model_routing } : {}),
   };
 }
 
@@ -155,7 +149,6 @@ export async function draftChatSettings(db: Queryable, workspaceId: string): Pro
     {
       provider: null,
       overrides: {},
-      model_routing: NEW_CHAT_ROUTING,
       default_provider: rows[0]?.default_provider ?? null,
       default_level: rows[0]?.default_level ?? null,
     },
@@ -189,20 +182,17 @@ export async function updateChatSettings(
   else if (update.level !== undefined) choices.level = update.level;
   if (update.options) choices.options = { ...choices.options, ...update.options };
   const overrides: Overrides = { ...row.overrides, [provider]: choices };
-  const routing = update.routing ?? (update.model ? 'pinned' : row.model_routing);
-  await db.query(
-    `UPDATE conversations SET provider = $2, overrides = $3,
-       model_routing = COALESCE($4, model_routing)
-     WHERE id = $1`,
-    [conversationId, provider, JSON.stringify(overrides), routing ?? null],
-  );
+  await db.query(`UPDATE conversations SET provider = $2, overrides = $3 WHERE id = $1`, [
+    conversationId,
+    provider,
+    JSON.stringify(overrides),
+  ]);
   return effectiveSettings(
     {
       provider,
       overrides,
       default_provider: row.default_provider,
       default_level: row.default_level,
-      model_routing: routing,
     },
     connections,
   );

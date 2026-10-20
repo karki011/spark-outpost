@@ -103,7 +103,9 @@ test('two existing chats become an outpost with the keyboard alone', async ({ pa
   await expect(outpostRow(page, NAME)).toHaveAttribute('aria-current', 'page');
   await expect(main.getByRole('button', { name: /^You and 2 chats/ })).toBeVisible();
   await expect(notices(page)).toHaveCount(2);
-  await expect(notices(page).filter({ hasText: '@frontend joined · Claude Auto' })).toHaveCount(1);
+  await expect(notices(page).filter({ hasText: '@frontend joined · Claude Opus 5.5' })).toHaveCount(
+    1,
+  );
   await expect(notices(page).filter({ hasText: 'ask each other' })).toHaveCount(0);
   await expect(notices(page).locator('.chat-face')).toHaveCount(2);
   await expect(chip(page, 'frontend')).toBeVisible();
@@ -126,7 +128,7 @@ test('a new chat with a first message and a file starts working when the outpost
   await expect(dialog.getByRole('textbox', { name: 'Handle', exact: true })).toHaveValue(
     'storefront',
   );
-  await expect(dialog.getByRole('button', { name: 'Agent: Claude Auto' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Agent: Claude Opus 5.5' })).toBeVisible();
   await dialog.getByRole('button', { name: /^Permissions: / }).click();
   await page
     .getByRole('dialog', { name: /^Permissions/ })
@@ -146,7 +148,7 @@ test('a new chat with a first message and a file starts working when the outpost
 
   const row = dialog.locator('.op-chat-row');
   await expect(row).toContainText('New chat in storefront');
-  await expect(row).toContainText('storefront · Claude Auto · Accept edits');
+  await expect(row).toContainText('storefront · Claude Opus 5.5 · Accept edits');
   await expect(row.locator('.op-chat-mark')).toHaveText('First message1 file');
 
   await dialog.getByRole('button', { name: 'Add another chat' }).click();
@@ -186,7 +188,7 @@ test('a new chat with a first message and a file starts working when the outpost
   await expect(outpostPage(page, NAME)).toBeVisible();
   const intro = notices(page).filter({ hasText: '@storefront joined' });
   await expect(intro.locator('.op-intro-line')).toHaveText(
-    '@storefront joined · storefront · Claude Auto · Accept edits',
+    '@storefront joined · storefront · Claude Opus 5.5 · Accept edits',
   );
   await expect(intro.locator('.op-intro-task')).toHaveText(
     'Task: Add an optional userId filter and follow the attached contract.',
