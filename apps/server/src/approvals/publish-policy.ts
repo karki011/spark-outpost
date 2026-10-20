@@ -4,12 +4,12 @@ import {
   gitPublishesBesidesPush,
   hostingCommands,
   hostingRead,
-  publishesCode,
   publishesThroughGit,
   pushTargets,
   reachesHosting,
   type PushTarget,
 } from './git-commands.ts';
+import { followsRule, NO_GH_RULES, type GhRules } from './gh-rules.ts';
 import { namesAnotherRepo, ownPullReply, type OwnRepo } from './own-repo.ts';
 
 export interface FollowUpRound {
@@ -34,9 +34,15 @@ export interface StackBase {
   onRemote: boolean;
 }
 
+export interface AdoptedBranch {
+  author: string;
+  pull: number;
+}
+
 export interface TaskBranch {
   branch: string;
   protectedBranches: readonly string[];
+  adopted?: AdoptedBranch | null;
   pull?: number | null;
   stackBase?: StackBase | null;
   pullBase?: string | null;
@@ -59,7 +65,11 @@ export type PublishVerdict =
   { kind: 'allow'; basis: PublishBasis } | { kind: 'refuse'; reason: string };
 
 export const NO_TASK_BRANCH_REASON =
-  "Only this chat's own spark/ branch can be pushed, and this run isn't on one";
+  "Only this chat's own spark/ branch, or the pull request branch the user adopted for it, can be pushed, and this run isn't on one";
+
+export function adoptedForceReason(branch: string, adopted: AdoptedBranch): string {
+  return `${branch} is @${adopted.author}'s pull request #${adopted.pull}: Spark never force pushes it. Update it by merging, then push without force`;
+}
 export const REMOTE_RAIL_REASON =
   'Changing git remotes, mailing patches and hosting CLIs other than gh stay refused';
 
@@ -178,6 +188,14 @@ function writesHosting(program: Program): boolean {
   return !hostingRead(program);
 }
 
+function writesUnder(command: string, rules: GhRules): (program: Program) => boolean {
+  return (program) => writesHosting(program) && !followsRule(program, command, rules);
+}
+
+export function publishesUnder(command: string, rules: GhRules): boolean {
+  return publishesThroughGit(command) || hostingCommands(command).some(writesUnder(command, rules));
+}
+
 function hostingRefusal(
   command: string,
   task: TaskBranch,
@@ -247,8 +265,9 @@ export function publishRefusal(
   command: string,
   task: TaskBranch | null,
   own: OwnRepo | null = null,
+  rules: GhRules = NO_GH_RULES,
 ): string | null {
-  return refusalAmong(command, task, writesHosting, own);
+  return refusalAmong(command, task, writesUnder(command, rules), own);
 }
 
 export function onlyRepliesOnOwnPull(command: string, own: OwnRepo | null): boolean {
@@ -260,9 +279,9 @@ export function onlyRepliesOnOwnPull(command: string, own: OwnRepo | null): bool
   );
 }
 
-function publishActions(command: string): PublishAction[] {
+function publishActions(command: string, rules: GhRules): PublishAction[] {
   const pushes = pushTargets(command).length > 0;
-  const pulls = hostingCommands(command).some(writesHosting);
+  const pulls = hostingCommands(command).some(writesUnder(command, rules));
   return [...(pushes ? (['push'] as const) : []), ...(pulls ? (['pull'] as const) : [])];
 }
 
@@ -271,13 +290,14 @@ export function publishVerdict(
   posture: ModePosture,
   context: PublishContext,
   own: OwnRepo | null = null,
+  rules: GhRules = NO_GH_RULES,
 ): PublishVerdict | null {
   if (!reachesHosting(command) || onlyRepliesOnOwnPull(command, own)) return null;
-  const basis = publishBasis(posture, context.grant, publishActions(command));
+  const basis = publishBasis(posture, context.grant, publishActions(command, rules));
   if (!basis) return null;
-  if (!publishesCode(command)) {
+  if (!publishesUnder(command, rules)) {
     return viewsOwnPull(command, context.task) ? { kind: 'allow', basis } : null;
   }
-  const refused = publishRefusal(command, context.task, own);
+  const refused = publishRefusal(command, context.task, own, rules);
   return refused ? { kind: 'refuse', reason: refused } : { kind: 'allow', basis };
 }

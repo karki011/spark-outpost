@@ -34,6 +34,4 @@ The **Story** bar under the outpost's chats reads, for example, **Checkout · 1 
 | A request from **Spark** | Every sub-task ended. The proposing chat answers once, changing and publishing nothing.                                  |
 | **Pause**                | Also holds waiting sub-tasks.                                                                                            |
 
-On a [paired device](use-your-phone.md), **Start** starts a draft as proposed.
-
 **Next:** [Choose where a chat works](where-spark-works.md)

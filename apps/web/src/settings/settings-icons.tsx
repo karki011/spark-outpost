@@ -57,6 +57,10 @@ export const PULL_REQUESTS_ICON = (
   </>
 );
 
+export const SPARK_RULES_ICON = (
+  <path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6zM9 12l2 2 4-4" />
+);
+
 export const CONNECTORS_ICON = <path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5" />;
 
 export const MCP_ICON = (

@@ -60,6 +60,13 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 | **Open pull requests as**                        | **Ready for review** | [Ship a change](ship-and-pull-requests.md#ready-for-review-or-draft) |
 | **Follow up on pull requests**, and its switches | On                   | [PR feedback](pr-follow-up.md#turn-it-off)                           |
 
+**Spark rules**:
+
+| Row                  | Default                      | Read more                                     |
+| -------------------- | ---------------------------- | --------------------------------------------- |
+| **Run a workflow**   | **Follows the agent's mode** | [Spark rules](protected-paths.md#spark-rules) |
+| **Allowed commands** | None                         | [Spark rules](protected-paths.md#spark-rules) |
+
 ## Connections
 
 | Section         | Holds                                                           | Read more                             |

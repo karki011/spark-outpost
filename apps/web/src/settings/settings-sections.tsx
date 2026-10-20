@@ -27,6 +27,7 @@ import { McpSection } from './mcp/McpSection.tsx';
 import { NotificationsSection } from './NotificationsSection.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
 import { PULL_REQUEST_ROWS, PullRequestsSection } from './PullRequestSettings.tsx';
+import { SPARK_RULES_ROWS, SparkRulesSection } from './SparkRulesSection.tsx';
 import { TERMINAL_RECORD_LABEL } from './TerminalRecordSetting.tsx';
 import { UPDATE_ROWS, UpdatesSection, updatesAvailable } from './UpdatesSection.tsx';
 import { VOICE_ROWS, VoiceSection, voiceAvailable } from './VoiceSection.tsx';
@@ -194,6 +195,14 @@ export const SETTINGS_SECTIONS = [
     remoteSwitch: 'settings',
     rows: () => PULL_REQUEST_ROWS,
     render: ({ setup }) => setup && <PullRequestsSection profile={setup.profile} />,
+  },
+  {
+    id: 'rules',
+    group: 'work',
+    label: 'Spark rules',
+    icon: icons.SPARK_RULES_ICON,
+    rows: () => SPARK_RULES_ROWS,
+    render: () => <SparkRulesSection />,
   },
   {
     id: 'tools',

@@ -13,9 +13,16 @@ By default each chat in a mode that can change files gets its own git worktree o
 ## For one chat
 
 1. In the context bar, select the branch chip next to the project.
-2. Pick **New branch from** _branch_, a branch under **Or continue a branch**, or **Edit my files directly instead**.
+2. Pick **New branch from** _branch_, a branch under **Or continue a branch**, **Work on a pull request…** or **Edit my files directly instead**.
 
 Hover the chip to see where the branch started and how pull requests open.
+
+## Work on a pull request
+
+**Work on a pull request…**, in the chip or **Work** panel, adopts one. Only you can, on the Mac.
+
+- The agent pushes there without force, merges to update and handles [feedback](pr-follow-up.md).
+- A fork needs maintainer edits allowed. Otherwise, or for a protected branch, the chat gets a `spark/` branch from it.
 
 ## For every chat in a project
 
@@ -32,7 +39,5 @@ Hover the chip to see where the branch started and how pull requests open.
 A new worktree starts from the latest `origin` default branch, unless your checkout has its own commits or you picked a branch.
 
 When its lockfile differs from your checkout's, Spark installs dependencies there and says so if that fails.
-
-> **Tip:** Keep worktrees on for modes that never ask, so mistakes stay out of your checkout.
 
 **Next:** [Keep files and keys away from agents](sparkignore.md)

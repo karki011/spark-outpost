@@ -6,7 +6,7 @@ order: 324
 summary: How a sub-task that starts after another in the same project builds on that branch, where its pull request points, and how to update and merge the stack.
 ---
 
-A sub-task that starts after another in the same project branches from that chat's `spark/*` branch, and its pull request targets it. Spark first commits the chat's kept changes there. Updating is a merge; nothing rebases or force pushes.
+A sub-task that starts after another in the same project branches from that chat's `spark/*` branch, and its pull request targets it. Spark first commits the chat's kept changes there. Updating is a merge; nothing rebases.
 
 ## Parallel or stacked
 
@@ -22,16 +22,16 @@ The proposing chat picks parallel or stacked; change it before you [start the st
 
 The **Story** bar shows each pull request as a chip, such as **#124 → #123** or **#124 → main**, with warnings as text.
 
-| Warning or line                             | Do                                                                                                                                                                   |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "@api has commits that @fe does not have"   | Select **Update from @api** and send the request. `@fe` merges that branch.                                                                                          |
-| "Merging this now would not reach main"     | Select **Update from the default branch**, so `@fe`'s pull request targets it.                                                                                       |
-| **Needs you: @api's branch is not pushed.** | Have `@api` push first. Until then Spark refuses `@fe`'s push, because it carries `@api`'s commits. A mode that runs without review gets a [flag](cards.md) instead. |
+| Warning or line                             | Do                                                                                                                                                      |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "@api has commits that @fe does not have"   | Select **Update from @api** and send the request. `@fe` merges that branch.                                                                             |
+| "Merging this now would not reach main"     | Select **Update from the default branch**, so `@fe`'s pull request targets it.                                                                          |
+| **Needs you: @api's branch is not pushed.** | Have `@api` push first; until then Spark refuses `@fe`'s push, which carries `@api`'s commits. A mode that runs without review gets a [flag](cards.md). |
 
 ## What stays the same
 
 - A chat pushes only its own `spark/*` branch and never force pushes.
-- Nothing merges. Merge the pull requests yourself, in the order the bar shows.
-- Once `@api`'s pull request is merged or closed, a new pull request from `@fe` targets the default branch.
+- Nothing merges; merge them yourself, in the bar's order.
+- Once `@api`'s pull request merges or closes, `@fe`'s new pull request targets the default branch.
 
 See [Ship a change](ship-and-pull-requests.md) and [What an outpost request may do](outpost-permissions.md).

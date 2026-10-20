@@ -52,6 +52,7 @@ export interface RunInput {
   continuesRunId?: string | null;
   modelSwitch?: ModelSwitch | null;
   followUpRound?: boolean;
+  sparkRuleRetry?: boolean;
   outpostRequest?: OutpostRequest | null;
   turnTimes?: TurnTimes | null;
   agentCycle?: boolean;
@@ -112,6 +113,7 @@ interface RunRow extends OutpostRow {
   start_as: StartAs | null;
   run_level: InvolvementLevel | null;
   follow_up_round: boolean | null;
+  spark_rule_retry: boolean | null;
   started_at: Date;
   previous_started_at: Date | null;
   agent_mode: string | null;
@@ -204,6 +206,8 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             COALESCE(m.content, '') AS content, r.source = 'agent_cycle' AS agent_cycle,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'pr_follow_up' AS follow_up_round,
+            COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
+              = 'spark_rule' AS spark_rule_retry,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'outpost' AS outpost_run,
             op.from_user AS outpost_from_user, o.name AS outpost_name,
@@ -305,6 +309,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     parentRunId: null,
     userRequest: row.content,
     followUpRound: row.follow_up_round === true,
+    sparkRuleRetry: row.spark_rule_retry === true,
     outpostRequest: outpostRequestOf(row, row.user_message_id),
     turnTimes: {
       startedAt: row.started_at.toISOString(),
@@ -422,6 +427,7 @@ function childInput(runId: string, row: RunRow): RunInput {
     parentRunId: row.parent_run_id,
     userRequest: row.content,
     followUpRound: row.follow_up_round === true,
+    sparkRuleRetry: row.spark_rule_retry === true,
     outpostRequest: outpostRequestOf(row, row.user_message_id),
     role: row.run_role,
     askTitle: false,

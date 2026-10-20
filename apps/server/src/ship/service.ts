@@ -15,6 +15,7 @@ import { saveTaskShip, type TaskShip } from '../persistence/task-ships.ts';
 import { opensDraftPullRequests } from '../persistence/pr-settings.ts';
 import { watchPullRequest } from '../persistence/pr-watches.ts';
 import { addTaskLink } from '../persistence/tasks.ts';
+import { adoptedBranchAt } from '../persistence/chat-worktrees.ts';
 import { safeToPush } from './branch.ts';
 import {
   branchTip,
@@ -146,9 +147,10 @@ async function commitStep(
 async function pushStep(deps: ShipDeps, plan: ShipPlan, progress: Progress) {
   const remote = plan.remote!;
   const defaultBranch = await remoteDefaultBranch(plan.root!, remote.name);
-  if (
-    !safeToPush(plan.branch, deps.branchPrefix, [plan.baseBranch, defaultBranch, 'main', 'master'])
-  ) {
+  const guarded = [plan.baseBranch, defaultBranch, 'main', 'master'];
+  const adopted = await adoptedBranchAt(deps.db, plan.root!);
+  const ours = adopted === plan.branch && !guarded.includes(plan.branch);
+  if (!ours && !safeToPush(plan.branch, deps.branchPrefix, guarded)) {
     throw new ShipBlockedError(`Ship only pushes its own ${deps.branchPrefix}/ branches.`);
   }
   const internal = await harnessCommitsToPush(plan.root!, remote.name, plan.branch);

@@ -3,6 +3,8 @@ import { agentConfigRoutes } from './agent-config-routes.ts';
 import { analyticsRoutes } from './analytics-routes.ts';
 import type { AppEventFeed } from './app-events.ts';
 import { approvalRoutes } from './approval-routes.ts';
+import { sparkRulesRoutes } from './spark-rules-routes.ts';
+import { adoptPullRoutes } from './adopt-pull-routes.ts';
 import { attachmentRoutes } from './attachment-routes.ts';
 import { jsonBody } from './json-body.ts';
 import { auditRoutes } from './audit-routes.ts';
@@ -142,6 +144,8 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', chatTicketRoutes(options));
   app.use('/api', slackRoutes(options));
   app.use('/api', approvalRoutes(options));
+  app.use('/api', sparkRulesRoutes(options));
+  app.use('/api', adoptPullRoutes(options));
   app.use('/api', modelCardRoutes(options));
   app.use('/api', homeRoutes(options));
   app.use('/api', teammateRoutes(options));

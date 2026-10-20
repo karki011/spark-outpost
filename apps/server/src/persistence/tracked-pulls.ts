@@ -179,7 +179,7 @@ const ADOPT = `ON CONFLICT ${PULL_KEY} DO UPDATE SET
 
 const KEEP = `ON CONFLICT ${PULL_KEY} DO NOTHING`;
 
-const OPENED_HERE: ReadonlySet<PrOpenedVia> = new Set(['ship', 'agent']);
+const OPENED_HERE: ReadonlySet<PrOpenedVia> = new Set(['ship', 'agent', 'adopted']);
 
 export interface Tracked {
   pull: TrackedPull;

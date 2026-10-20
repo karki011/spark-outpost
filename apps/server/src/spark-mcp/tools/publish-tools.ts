@@ -11,7 +11,7 @@ import { gitHubDepsFor } from '../deps.ts';
 import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
 
 export const NOT_AUTHORIZED =
-  "Publishing isn't authorized in this turn. It needs the user's message to ask for a push or pull request, the chat at Full auto → PR, or an Auto or Bypass permissions (Full access) mode, in a chat working on its own spark/ branch. Leave the change in the working tree and tell the user.";
+  "Publishing isn't authorized in this turn. It needs the user's message to ask for a push or pull request, the chat at Full auto → PR, or an Auto or Bypass permissions (Full access) mode, in a chat working on its own spark/ branch or the pull request branch the user adopted for it. Leave the change in the working tree and tell the user.";
 
 export const PUSH_ONLY =
   "The user's message asked for the push and no pull request, and nothing else in this turn allows one. Tell the user the branch is pushed.";
@@ -56,7 +56,7 @@ export const pushTool = sparkTool({
   acts: true,
   needs: 'publish',
   description:
-    "Push this chat's own spark/ branch to its remote, run by Spark in the user's login-shell environment so the repository's pre-push hook has the registry and tool logins a terminal has (your own shell does not). Use it instead of `git push` when publishing is authorized. Never skips hooks, never force-pushes, pushes no other branch. Returns whether it pushed and the last lines of git and hook output with secrets hidden; a hook can take minutes.",
+    "Push this chat's own branch (its spark/ branch, or the pull request branch the user adopted for it) to its remote, run by Spark in the user's login-shell environment so the repository's pre-push hook has the registry and tool logins a terminal has (your own shell does not). Use it instead of `git push` when publishing is authorized. Never skips hooks, never force-pushes, pushes no other branch. Returns whether it pushed and the last lines of git and hook output with secrets hidden; a hook can take minutes.",
   input: {},
   run: (_args, context) => push(context),
 });

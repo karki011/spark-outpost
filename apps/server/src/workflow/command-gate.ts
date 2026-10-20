@@ -35,6 +35,8 @@ import { forcePushDefault } from './approval-gate.ts';
 import { approvalPayload, displayTitle, subject } from './approval-payload.ts';
 import { publishContext } from './publish-context.ts';
 import { ownRepoFor } from './send-context.ts';
+import { ruleSettingReason } from '../approvals/gh-rules.ts';
+import { ghRulesForRun } from '../persistence/spark-rules.ts';
 
 export interface SparkCommandScope {
   db: Queryable;
@@ -111,6 +113,7 @@ async function factsFor(
     own: await ownRepoFor(scope.db, scope.runId, request),
     secretSend: await secretSend(request),
     shell: await parseShell(request.command),
+    ghRules: await ghRulesForRun(scope.db, scope.runId),
     ...(await publishContext(scope.db, scope.publish, request)),
   };
 }
@@ -175,7 +178,10 @@ export async function reviewSparkCommand(
     }),
     UNDECIDED,
   );
-  if (decision.verdict === 'reject') return refused(scope, request, decision.reason);
+  if (decision.verdict === 'reject') {
+    const reason = decision.sparkRule ? ruleSettingReason(decision.sparkRule) : decision.reason;
+    return refused(scope, request, reason);
+  }
   if (decision.verdict === 'allow') {
     const effects = { sent: decision.sent ?? null, observed: [], sendsTo: null, secretReads };
     return { verdict: 'allow', request, audit: auditOf(scope, request, 'mode', null), effects };

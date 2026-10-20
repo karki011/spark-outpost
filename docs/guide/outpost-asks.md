@@ -6,7 +6,7 @@ order: 517
 summary: How an agent in an outpost asks another member, leaves a note or reads the thread, where you see it, and why such a request is never your message.
 ---
 
-In an outpost an agent can ask another member for work or an answer, without you passing it on. The request is the agent's, never yours: it runs under the receiving chat's own mode and autonomy.
+In an outpost an agent can ask another member for work or an answer directly. The request is the agent's, never yours, and runs under the receiving chat's mode and autonomy.
 
 ## What an agent can do
 
@@ -15,7 +15,7 @@ In an outpost an agent can ask another member for work or an answer, without you
 | Asks `@api`                              | A request from `@fe` marked **not from you** in the thread, and **To @api** under `@fe`'s turn. |
 | Waits for the answer, or goes on         | The answer under the request. One it didn't wait for reaches it at its next turn.               |
 | Leaves a note                            | A note in the thread. Members read it at their next turn; it starts no work.                    |
-| Reads the outpost                        | Nothing new. Reading another member's notes or answer counts as reading private work data.      |
+| Reads the outpost                        | Nothing new. Reading members' notes or answers is a private work-data read.                     |
 | [Proposes sub-tasks](outpost-stories.md) | A draft that you review and start.                                                              |
 
 In the receiving chat the turn is headed **From @fe** · **not from you**.
@@ -30,6 +30,6 @@ In the receiving chat the turn is headed **From @fe** · **not from you**.
 | While the outpost is paused, an agent can't ask.      | **Resume** first.                                                                              |
 | What a turn read travels with its request and answer. | A later send off this computer is [flagged](privacy-and-secrets.md) in the receiving chat too. |
 
-There are no caps or timers. Every request is in the thread; **Cancel** it or stop its turn.
+No caps or timers. Every request is in the thread; **Cancel** it or stop its turn.
 
 See [What an outpost request may do](outpost-permissions.md) and the [outpost tools](spark-tools.md#outpost-tools).

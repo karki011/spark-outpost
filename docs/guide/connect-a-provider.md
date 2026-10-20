@@ -27,7 +27,7 @@ Z.ai bills its own key, never your Claude account.
    ![The AI providers tiles with Claude and Jev connected](images/providers-tiles-light.png)
 
 2. Under **How to connect**, pick **Local CLI** and select **Detect and verify**.
-3. Or pick **API key**, paste the key into the key field and select **Verify key**.
+3. Or pick **API key**, paste the key and select **Verify key**.
 4. Wait for **Connected**, then select **Send test message** under **Test**.
 5. Under **Defaults for new chats**, pick the **Model**, **Mode** and **Effort**.
 
