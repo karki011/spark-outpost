@@ -4,7 +4,7 @@ import type { AcpProviderOptions } from './acp-provider.ts';
 import { changedParts } from './connection-key.ts';
 import type { LiveConnection } from './live-connection.ts';
 import type { LivePool } from './live-connections.ts';
-import { betweenTurns, regrant, restores } from './live-tools.ts';
+import { betweenTurns, regrant, rebinds } from './live-tools.ts';
 import type { SparkTools } from './spark-tools.ts';
 import type { LaunchPlan } from './turn-launch.ts';
 
@@ -46,7 +46,7 @@ export async function liveReuse(
     return null;
   }
   if (!live.tools) return { connection: live, tools: null };
-  if (!restores(options.sparkTools) || !turn.sparkScope) {
+  if (!rebinds(options.sparkTools) || !turn.sparkScope) {
     await pool.close(conversationId);
     return null;
   }
@@ -68,12 +68,14 @@ export async function keepLive(
 ): Promise<boolean> {
   if (!turn.live || signal.aborted || !KEPT_STOPS.has(stopReason)) return false;
   if (connection.gone() || !connection.opened()) return false;
-  if (connection.tools) {
-    if (!restores(options.sparkTools) || !turn.sparkScope) return false;
-    const idle = betweenTurns(turn.sparkScope, () => connection.whenBound());
-    await regrant(options.sparkTools, connection.tools, idle);
-  }
+  const access = options.sparkTools;
+  const scope = turn.sparkScope;
+  if (connection.tools && (!rebinds(access) || !scope)) return false;
   pool.keep(turn.live.conversationId, connection);
+  if (connection.tools && rebinds(access) && scope) {
+    const idle = betweenTurns(scope, () => connection.whenBound());
+    await regrant(access, connection.tools, idle);
+  }
   pool.settled(turn.live.conversationId);
   return true;
 }

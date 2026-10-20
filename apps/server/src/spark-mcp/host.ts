@@ -22,6 +22,7 @@ export interface SparkMcpHost {
   browser: boolean;
   grant(scope: SparkScope): Promise<SparkGrant>;
   restore(scope: SparkScope, key: string): Promise<SparkGrant>;
+  rebind(scope: SparkScope, key: string): Promise<SparkGrant>;
   close(): Promise<void>;
 }
 
@@ -202,6 +203,15 @@ export async function startSparkMcpHost(
       if (!GRANT_KEY.test(key) || grants.has(key))
         throw new Error('That Spark tools grant cannot be restored.');
       return register(scope, key, '');
+    },
+    async rebind(scope, key) {
+      if (!GRANT_KEY.test(key)) throw new Error('That Spark tools grant cannot be rebound.');
+      const before = grants.get(key)?.scope;
+      const grant = await register(scope, key, '');
+      if (before?.runId && before.runId !== scope.runId) {
+        void endMacRun(deps.mac, before.conversationId, before.runId);
+      }
+      return grant;
     },
     async close() {
       grants.clear();

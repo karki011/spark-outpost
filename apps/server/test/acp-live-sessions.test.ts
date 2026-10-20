@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
-import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
+import { createAcpProvider, LOST_CYCLE } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions, type AgentDefinition } from '../src/agents/acp/agents.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
 import type {
@@ -227,6 +227,14 @@ describe('ACP provider with one live session per chat', { timeout: 30_000 }, () 
     expect(continued.text).toBe('Woke up on my own: checked.');
     expect(log.count('session/prompt')).toBe(1);
     expect(log.count('initialize')).toBe(1);
+  });
+
+  it('fails the agent’s own turn when its session is already gone', async () => {
+    const log = methodLog(store);
+    const target = chat(providerFor(claude, log.file));
+
+    await expect(send(target, { continuation: true })).rejects.toThrow(LOST_CYCLE);
+    expect(log.methods()).toEqual([]);
   });
 
   it('records a cycle that opens with a usage update as one run, up to its real end', async () => {

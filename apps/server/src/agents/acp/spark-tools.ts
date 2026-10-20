@@ -8,7 +8,7 @@ import type { SparkToolsHint } from './spark-instructions.ts';
 import { acpMcpServer, supportsTransport, type NamedMcpServer } from './repo-session.ts';
 
 export type SparkToolsAccess = Pick<SparkMcpHost, 'grant'> &
-  Partial<Pick<SparkMcpHost, 'browser' | 'restore'>>;
+  Partial<Pick<SparkMcpHost, 'browser' | 'rebind'>>;
 
 export interface SparkTools {
   name: string;

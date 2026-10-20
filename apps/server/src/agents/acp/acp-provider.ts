@@ -24,6 +24,8 @@ import { discardScratch, planLaunch, spawnConnection, type LaunchPlan } from './
 import { converse } from './turn-converse.ts';
 import { keepLive, liveReuse } from './live-turn.ts';
 
+export const LOST_CYCLE =
+  'The agent stopped before Spark could record what it did on its own. Send a message to pick up from there.';
 export interface AcpProviderOptions {
   definition: AgentDefinition;
   launch?: AgentLaunch;
@@ -151,7 +153,7 @@ async function runSession(
   else signal.addEventListener('abort', onAbort, { once: true });
   try {
     if (turn.live?.continuation && !pool.get(turn.live.conversationId)?.opened()) {
-      channel.close();
+      channel.close(new ProviderError(LOST_CYCLE));
       return;
     }
     const plan = await planLaunch(options, turn, legacyPermissions);

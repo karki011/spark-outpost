@@ -9,10 +9,10 @@ export interface LiveTools {
   grant: SparkGrant;
 }
 
-type Restoring = SparkToolsAccess & Required<Pick<SparkToolsAccess, 'restore'>>;
+type Rebinding = SparkToolsAccess & Required<Pick<SparkToolsAccess, 'rebind'>>;
 
-export function restores(access: SparkToolsAccess | undefined): access is Restoring {
-  return access?.restore !== undefined;
+export function rebinds(access: SparkToolsAccess | undefined): access is Rebinding {
+  return access?.rebind !== undefined;
 }
 
 export function liveTools(tools: SparkTools): LiveTools {
@@ -21,12 +21,11 @@ export function liveTools(tools: SparkTools): LiveTools {
 }
 
 export async function regrant(
-  access: Restoring,
+  access: Rebinding,
   live: LiveTools,
   scope: SparkScope,
 ): Promise<SparkTools> {
-  live.grant.revoke();
-  live.grant = await access.restore(scope, live.key);
+  live.grant = await access.rebind(scope, live.key);
   return { ...live.hint, grant: live.grant };
 }
 

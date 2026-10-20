@@ -207,6 +207,7 @@ export async function startLiveConnection(spec: ConnectionSpec): Promise<LiveCon
     waiting: () => wanted,
     onUnbound(listener) {
       unboundListeners.add(listener);
+      if (wanted) listener();
     },
     onGone(listener) {
       goneListeners.add(listener);

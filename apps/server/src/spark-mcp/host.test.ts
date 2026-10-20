@@ -74,6 +74,33 @@ describe('Spark tools host', () => {
     expect((await post(grant.url, auth)).status).toBe(401);
   });
 
+  it('rebinds a grant to a new scope without ending a call already in flight', async () => {
+    let release = () => {};
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const grant = await host.grant({ ...scope, rebinds: true, beforeToolCall: () => waiting });
+    const auth = { Authorization: `Bearer ${grant.token}` };
+    const call = JSON.stringify({
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'tools/call',
+      params: { name: 'spark_providers', arguments: {} },
+    });
+    const inFlight = post(grant.url, auth, call);
+
+    const rebinding = host.rebind({ ...scope, runId: null }, sparkGrantKey(grant.token));
+    expect((await post(grant.url, auth)).status).toBe(200);
+    const rebound = await rebinding;
+    release();
+
+    expect((await inFlight).status).toBe(200);
+    expect((await post(grant.url, auth)).status).toBe(200);
+    await expect(host.rebind(scope, grant.token)).rejects.toThrow('cannot be rebound');
+    rebound.revoke();
+    expect((await post(grant.url, auth)).status).toBe(401);
+  });
+
   it('listens on another port when the one it had is taken', async () => {
     const other = await startSparkMcpHost(deps(), undefined, host.port);
     expect(other.port).not.toBe(host.port);

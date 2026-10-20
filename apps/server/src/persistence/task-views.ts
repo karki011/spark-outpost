@@ -68,11 +68,12 @@ const runsQuery = `
   SELECT r.id, r.task_id, r.provider, COALESCE(r.used_model, r.model) AS model,
     COALESCE(r.used_effort, r.effort) AS effort, r.status, r.plan_version,
     COALESCE(r.total_tokens, r.input_tokens + r.output_tokens) AS tokens,
-    r.cost_usd, r.cost_source, r.mode, r.duration_ms, r.created_at, m.content AS request,
+    r.cost_usd, r.cost_source, r.mode, r.duration_ms, r.created_at,
+    COALESCE(m.content, '') AS request,
     CASE WHEN r.parent_run_id IS NOT NULL THEN r.agent_label END AS label,
     CASE WHEN r.parent_run_id IS NOT NULL THEN r.route->>'planStep' END AS step,
     r.role, r.route->>'name' AS name
-  FROM runs r JOIN messages m ON m.id = r.user_message_id
+  FROM runs r LEFT JOIN messages m ON m.id = r.user_message_id
   WHERE r.task_id = ANY($1::uuid[])
     AND NOT (r.role IS NULL AND EXISTS (SELECT 1 FROM runs c WHERE c.parent_run_id = r.id))
   ORDER BY r.created_at, r.id`;
