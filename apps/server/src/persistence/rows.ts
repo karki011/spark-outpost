@@ -9,6 +9,11 @@ import {
   titleSourceSchema,
   subagentWaitSchema,
   waitingOnLabel,
+  agentsWorkingLabel,
+  applySubagentEvent,
+  emptySubagentRoster,
+  parseRunEvent,
+  rosterCounts,
   type AgentRole,
   type Attachment,
   type ConversationSummary,
@@ -99,6 +104,7 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   latest_run_error: string | null;
   latest_run_step: string | null;
   latest_run_wait?: unknown;
+  latest_run_agents?: unknown;
   latest_run_provider: string | null;
   latest_run_interruption_choice?: InterruptionChoice | null;
   latest_run_asking_reply?: string | null;
@@ -236,8 +242,20 @@ function latestWait(row: ConversationSummaryRow) {
   return parsed.success && parsed.data.waitingOn > 0 ? parsed.data : null;
 }
 
+function latestAgents(row: ConversationSummaryRow): { working: number; total: number } {
+  const events = Array.isArray(row.latest_run_agents) ? row.latest_run_agents : [];
+  let roster = emptySubagentRoster;
+  for (const payload of events) {
+    const event = parseRunEvent(payload);
+    if (event) roster = applySubagentEvent(roster, event);
+  }
+  return rosterCounts(roster);
+}
+
 function latestStep(row: ConversationSummaryRow): string | null {
   const wait = latestWait(row);
+  const agents = latestAgents(row);
+  if (wait && agents.working > 0) return agentsWorkingLabel(agents.working, agents.total);
   if (wait) return waitingOnLabel(wait.waitingOn, wait.background);
   return row.latest_run_step === null ? null : friendlyStep(row.latest_run_step);
 }

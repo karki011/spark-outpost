@@ -235,12 +235,11 @@ export function waitingOnLabel(count: number, background?: BackgroundWait | null
   return `Waiting on ${waitedOn(count, background)}`;
 }
 
-const SUMMARY_ORDER: readonly SubagentState[] = ['working', 'done', 'failed', 'cancelled'];
+export function agentsWorkingLabel(working: number, total: number): string {
+  return `${working} of ${total} ${total === 1 ? 'agent' : 'agents'} working`;
+}
 
-export function subagentSummary(rows: readonly Pick<SubagentRow, 'state'>[]): string {
-  const parts = SUMMARY_ORDER.flatMap((state) => {
-    const count = rows.filter((row) => row.state === state).length;
-    return count > 0 ? [`${count} ${state}`] : [];
-  });
-  return `${subagentCount(rows.length)} · ${parts.join(', ')}`;
+export function rosterCounts(roster: SubagentRoster): { working: number; total: number } {
+  const working = roster.rows.filter((row) => row.state === 'working').length;
+  return { working, total: roster.rows.length };
 }

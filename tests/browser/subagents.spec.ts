@@ -26,30 +26,38 @@ async function ask(page: Page, text: string) {
 }
 
 const mood = (page: Page) => page.locator('.msg.ai .mood').last();
-const rowsIn = (scope: ReturnType<Page['locator']>) =>
+const cardsIn = (scope: ReturnType<Page['locator']>) =>
   scope.getByRole('list', { name: 'Sub-agents' }).getByRole('listitem');
+const agentsLine = (turn: ReturnType<Page['locator']>) => turn.locator('.sl-text');
 
-test('a turn lists its sub-agents, says the agent waits on them, and stops them with the turn', async ({
+test('a turn shows its sub-agents as one line and as cards in the work panel, and stops them with the turn', async ({
   page,
 }) => {
   const input = await ask(page, 'Split the work #build #subagentshold');
   const turn = page.locator('.msg.ai').last();
-  const summary = turn.getByRole('button', { name: '2 sub-agents · 2 working' });
-  await expect(summary).toBeVisible({ timeout: 30_000 });
+  await expect(agentsLine(turn)).toHaveText('Waiting on 2 agents · writing up when all finish', {
+    timeout: 30_000,
+  });
+  await expect(turn.locator('.sl-scout[data-working]')).toHaveCount(2);
   await expect(mood(page)).toHaveText('waiting on 2 sub-agents');
   await expect(turn.locator('.ai-head .steps-head')).toHaveText(/^\d+ steps$/);
+  await expect(cardsIn(turn)).toHaveCount(0);
+  await expect(turn).not.toContainText('Read routes.ts');
 
-  const rows = rowsIn(turn);
-  await expect(rows).toHaveCount(2);
-  await expect(rows.nth(0)).toContainText('Explore');
-  await expect(rows.nth(0)).toContainText('Working');
-  await expect(rows.nth(0)).toContainText('Read routes.ts');
-  await expect(rows.nth(0)).toContainText('Find the routes');
-  await expect(rows.nth(1)).toContainText('Tests');
+  await turn.getByRole('button', { name: 'View agents' }).click();
+  const panel = page.locator('#work-panel');
+  const heading = panel.getByRole('heading', { name: 'Agents · 2' });
+  await expect(heading).toBeFocused();
+  const cards = cardsIn(panel);
+  await expect(cards).toHaveCount(2);
+  await expect(cards.nth(0)).toHaveAttribute('data-state', 'working');
+  await expect(cards.nth(0)).toContainText('Explore');
+  await expect(cards.nth(0)).toContainText('Find the routes');
+  await expect(cards.nth(0)).toContainText('Now: Read routes.ts');
+  await expect(cards.nth(1)).toContainText('Tests');
 
   const sidebar = page.getByRole('navigation', { name: 'Chats' });
   await expect(sidebar.locator('.row.st-running.active')).toHaveCount(1);
-  await expect(sidebar.getByText('Waiting on 2 sub-agents')).toHaveCount(0);
 
   await input.fill('still typing');
   await expect(input).toBeFocused();
@@ -60,18 +68,9 @@ test('a turn lists its sub-agents, says the agent waits on them, and stops them 
   );
   await shot(page, 'subagents-chat-waiting.png');
 
-  await summary.focus();
-  await page.keyboard.press('Enter');
-  await expect(summary).toHaveAttribute('aria-expanded', 'false');
-  await expect(rows).toHaveCount(0);
-  await page.keyboard.press('Enter');
-  await expect(rows).toHaveCount(2);
-  await expect(summary).toBeFocused();
-
   await toggleHeaderPane(page, 'Agent TV');
   const tv = page.getByRole('dialog', { name: 'Agent TV' });
-  await expect(tv.getByRole('button', { name: '2 sub-agents · 2 working' })).toBeVisible();
-  await expect(rowsIn(tv)).toHaveCount(2);
+  await expect(cardsIn(tv)).toHaveCount(2);
   await tv.getByRole('radio', { name: 'List' }).click();
   await expect(tv.getByRole('list', { name: 'Running' })).toContainText(
     /waiting on 2 sub-agents/i,
@@ -88,14 +87,11 @@ test('a turn lists its sub-agents, says the agent waits on them, and stops them 
     timeout: 15_000,
   });
   await expect(mood(page)).toHaveText('waiting on 2 sub-agents');
-  await expect(summary).toBeVisible();
   await shot(page, 'subagents-enter-while-waiting.png');
 
   await page.getByRole('button', { name: 'Stop', exact: true }).click();
-  await expect(turn.getByRole('button', { name: '2 sub-agents · 2 cancelled' })).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(sidebar.getByText('Waiting on 2 sub-agents')).toHaveCount(0);
+  await expect(agentsLine(turn)).toHaveText('2 agents · 2 stopped', { timeout: 30_000 });
+  await expect(turn.locator('.sl-scout[data-working]')).toHaveCount(0);
 });
 
 test('a finished turn keeps its sub-agents, nested ones under their parent, after a reload', async ({
@@ -104,39 +100,41 @@ test('a finished turn keeps its sub-agents, nested ones under their parent, afte
   await ask(page, 'Split the work #build #subagents');
   await expect(mood(page)).toHaveText('done', { timeout: 30_000 });
   const turn = page.locator('.msg.ai').last();
-  const summary = turn.getByRole('button', { name: '3 sub-agents · 2 done, 1 failed' });
-  await expect(summary).toBeVisible();
+  await expect(agentsLine(turn)).toHaveText('3 agents · 2 done · 1 failed');
   await expect(turn.locator('.md').last()).toContainText('All done');
   await expect(turn).not.toContainText('child words');
+  await expect(turn).not.toContainText('pnpm test');
 
   await page.reload();
   const again = page.locator('.msg.ai').last();
-  const rows = rowsIn(again);
-  await expect(rows).toHaveCount(3);
-  await expect(rows.nth(0)).toContainText('Explore');
-  await expect(rows.nth(1)).toContainText('Nested');
-  await expect(rows.nth(1)).toHaveAttribute('data-nested', 'true');
-  await expect(rows.nth(2)).toContainText('Tests');
-  await expect(rows.nth(2)).toContainText('Failed');
-  await expect(rows.nth(0)).toContainText('4 steps · 3.4k tokens · 41s');
-  const explore = again.getByRole('button', { name: 'Explore' });
+  await again.getByRole('button', { name: 'View agents' }).click();
+  const panel = page.locator('#work-panel');
+  const cards = cardsIn(panel);
+  await expect(cards).toHaveCount(3);
+  await expect(cards.nth(0)).toContainText('Explore');
+  await expect(cards.nth(1)).toContainText('Nested');
+  await expect(cards.nth(1)).toHaveAttribute('data-nested', 'true');
+  await expect(cards.nth(2)).toContainText('Tests');
+  await expect(cards.nth(2)).toContainText('Failed');
+  await expect(cards.nth(0)).toContainText('41s · 3K tok');
+  const explore = panel.getByRole('button', { name: 'Explore' });
   await explore.focus();
   await page.keyboard.press('Enter');
   await expect(explore).toHaveAttribute('aria-expanded', 'true');
-  const steps = again.getByRole('list', { name: 'Steps of Explore' }).getByRole('listitem');
+  const steps = panel.getByRole('list', { name: 'Steps of Explore' }).getByRole('listitem');
   await expect(steps).toHaveText([
     'Starting a subagent',
     'Read routes.ts',
     'Edit routes.ts',
     'pnpm test',
   ]);
-  await expect(rows.nth(0)).toContainText('Changed routes.ts');
-  await expect(rows.nth(0)).toContainText('Ran pnpm test');
-  await expect(rows.nth(0)).toContainText('Found 4 routes and moved them.');
+  await expect(cards.nth(0)).toContainText('Changed routes.ts');
+  await expect(cards.nth(0)).toContainText('Ran pnpm test');
+  await expect(cards.nth(0)).toContainText('Found 4 routes and moved them.');
+  await shot(page, 'subagents-chat-finished.png');
   await page.getByRole('tab', { name: 'Cost' }).click();
   await expect(page.locator('.cost-split')).toContainText('Sub-agents 3.4K');
   await expect(page.getByRole('list', { name: 'Usage by sub-agent' })).toContainText('Explore');
-  await shot(page, 'subagents-chat-finished.png');
 });
 
 test('a Claude turn that ends with background work running waits on it instead of saying done', async ({
@@ -174,5 +172,5 @@ test('a Claude turn picks up again on its own when its background work reports',
   const turn = page.locator('.msg.ai').last();
   await expect(turn).toContainText('Schema finished: turns live in events.', { timeout: 30_000 });
   await expect(mood(page)).toHaveText('done');
-  await expect(turn.getByRole('button', { name: '1 sub-agent · 1 done' })).toBeVisible();
+  await expect(agentsLine(turn)).toHaveText('1 agent · 1 done');
 });
