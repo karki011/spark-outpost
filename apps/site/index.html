@@ -88,6 +88,11 @@
             own names. When the mode asks, you get a card with the agent's reason.
           </p>
           <p>
+            Each chat keeps its agent running between messages. Its sub-agents show as cards with
+            what each one is doing, and the agent can start sub-chats in an outpost when the work
+            spans repos.
+          </p>
+          <p>
             A safety floor holds in every chat: only the chat's own <code>spark/</code> branch is
             pushed, never with plain force, and instruction files and git hooks ask first. Where a
             mode never asks, Spark can't stop a step; it marks it ran without review and flags any

@@ -10,14 +10,14 @@ Run Claude Code and Codex side by side on your Mac. Follow every step, answer th
 
 <!-- release-downloads:start -->
 
-<a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.23-arm64.dmg"><img alt="Download for Mac, Apple silicon" src="https://img.shields.io/badge/Download_for_Mac-Apple_silicon-2bb39a?style=for-the-badge&logo=apple&logoColor=white"></a> <a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.23-x64.dmg"><img alt="Download for Mac, Intel" src="https://img.shields.io/badge/Download_for_Mac-Intel-555555?style=for-the-badge&logo=apple&logoColor=white"></a>
+<a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.24-arm64.dmg"><img alt="Download for Mac, Apple silicon" src="https://img.shields.io/badge/Download_for_Mac-Apple_silicon-2bb39a?style=for-the-badge&logo=apple&logoColor=white"></a> <a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.24-x64.dmg"><img alt="Download for Mac, Intel" src="https://img.shields.io/badge/Download_for_Mac-Intel-555555?style=for-the-badge&logo=apple&logoColor=white"></a>
 
-Free beta · [0.1.0-beta.23](releases/0.1.0-beta.23.md) · macOS 12+ (Mac control needs 14) · [All versions](releases/README.md)
+Free beta · [0.1.0-beta.24](releases/0.1.0-beta.24.md) · macOS 12+ (Mac control needs 14) · [All versions](releases/README.md)
 
 <!-- release-downloads:end -->
 
 <p>
-<a href="apps/desktop/CHANGELOG.md"><img alt="Version 0.1.0-beta.23" src="https://img.shields.io/badge/version-0.1.0--beta.23-2bb39a"></a>
+<a href="apps/desktop/CHANGELOG.md"><img alt="Version 0.1.0-beta.24" src="https://img.shields.io/badge/version-0.1.0--beta.24-2bb39a"></a>
 <img alt="macOS 12 or later" src="https://img.shields.io/badge/macOS-12%2B-111111?logo=apple&logoColor=white">
 <img alt="Apple silicon and Intel" src="https://img.shields.io/badge/arch-arm64%20%7C%20x64-555555">
 <img alt="Agent Client Protocol" src="https://img.shields.io/badge/protocol-ACP-6e56cf">
@@ -42,7 +42,7 @@ Free beta · [0.1.0-beta.23](releases/0.1.0-beta.23.md) · macOS 12+ (Mac contro
 
 ### Your agents, your modes
 
-Claude Code and Codex with their own permission modes, shown with their own names. Spark keeps a safety floor in every mode: secret files, git hooks and config, and pushes are guarded.
+Claude Code and Codex with their own permission modes, shown with their own names. Spark keeps a safety floor in every mode: secret files, git hooks and config, and pushes are guarded. Each chat keeps its agent running between messages; its sub-agents appear as cards in the Work panel, and the agent can start sub-chats in an outpost when the work spans repos.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/guide/images/chats-and-modes-permissions-dark.png">

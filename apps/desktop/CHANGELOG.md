@@ -2,6 +2,18 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.24
+
+- Chats keep one agent session running between messages, so replies start sooner. Background agents keep working after the reply: the turn shows Waiting on… until they finish, work the agent starts on its own appears as Continued on its own, and an idle chat's session closes after 30 minutes.
+- Sub-agents: the chat shows one line, Waiting on N agents, with View. The Work panel's Agents section has a card for each sub-agent with its purpose, current step and latest command, also in Agent TV.
+- Outposts: a chat's agent can start sub-chats itself, following its mode, or propose them for you to start. A paired phone can start a proposed draft.
+- Model picker: Auto is gone. Every chat names the model it runs, and new chats start on your default from Settings.
+- Context ring: it shows the model's real window during a turn instead of jumping to a high percentage.
+- Quit no longer waits on a chat that is waiting on background agents; that turn ends as Stopped by Quit and the next message picks up.
+- Today: event notes are readable, short meetings fit their blocks, the picked event is shown by colour, and Join is always visible, subtle until 10 minutes before.
+- Fixes: the undo toast keeps its timer, the context bar no longer overlaps the composer, and archiving the open chat opens a new chat.
+- Download links for every release are in the repository's README and releases folder.
+
 ## 0.1.0-beta.23
 
 - Browser pane: the network log shows each request's full address with secret values hidden, plus its start, end and duration, so overlapping requests are visible; OPTIONS requests are hidden by default and you can filter by method, address and status. Agents can read just a page's main content.
