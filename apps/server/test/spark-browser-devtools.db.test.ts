@@ -220,6 +220,15 @@ describe('spark_browser_devtools', () => {
     );
   });
 
+  it('shows no storage value from a tab the user owns, whatever the host returns', async () => {
+    await chat('auto');
+    fake.owner = 'user';
+    const stored = await call({ action: 'storage', values: true });
+    expect(stored.body).toContain('"key": "theme"');
+    expect(stored.body).not.toContain('"value"');
+    expect(stored.body).not.toContain(COOKIE_VALUE);
+  });
+
   it('needs an expression for eval and a ref or selector for inspect', async () => {
     await chat('auto');
     const result = (await client!.callTool({

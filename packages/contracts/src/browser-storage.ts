@@ -97,6 +97,6 @@ export function withoutStorageSecrets<Item extends ShownItem>(item: Item): Item 
   return shown;
 }
 
-export function withoutCookieValue<Cookie extends object>(cookie: Cookie): Cookie {
-  return Object.fromEntries(Object.entries(cookie).filter(([key]) => key !== 'value')) as Cookie;
+export function withoutValue<Shown extends object>(shown: Shown): Shown {
+  return Object.fromEntries(Object.entries(shown).filter(([key]) => key !== 'value')) as Shown;
 }

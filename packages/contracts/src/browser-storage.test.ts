@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   secretStorageItem,
   storageSecretParts,
-  withoutCookieValue,
+  withoutValue,
   withoutStorageSecrets,
 } from './browser-storage.ts';
 
@@ -61,6 +61,6 @@ describe('which storage values are kept from agents', () => {
       bytes: 9,
       value: 'dark',
     });
-    expect(withoutCookieValue({ name: 'lang', value: 'en' })).toEqual({ name: 'lang' });
+    expect(withoutValue({ name: 'lang', value: 'en' })).toEqual({ name: 'lang' });
   });
 });

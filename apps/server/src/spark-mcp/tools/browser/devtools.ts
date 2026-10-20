@@ -7,7 +7,7 @@ import {
   browserDevtoolsActionSchema,
   redactText,
   untrustedPage,
-  withoutCookieValue,
+  withoutValue,
   withoutStorageSecrets,
   type BrowserDevtoolsAction,
   type BrowserStorageResult,
@@ -51,11 +51,12 @@ const NOTES: Record<Exclude<BrowserDevtoolsAction, 'eval'>, string> = {
 };
 
 function withoutSecrets(found: BrowserStorageResult): BrowserStorageResult {
+  const item = found.owner === 'agent' ? withoutStorageSecrets : withoutValue;
   return {
     ...found,
-    local: found.local.map(withoutStorageSecrets),
-    session: found.session.map(withoutStorageSecrets),
-    cookies: found.cookies.map(withoutCookieValue),
+    local: found.local.map(item),
+    session: found.session.map(item),
+    cookies: found.cookies.map(withoutValue),
   };
 }
 
