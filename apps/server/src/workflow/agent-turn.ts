@@ -1,3 +1,5 @@
+import { backgroundParking } from './background-parking.ts';
+import type { ParkedTurns } from './parked-turns.ts';
 import type { RunSnapshot } from '../persistence/run-snapshots.ts';
 import type { RunEvent } from '@spark-outpost/contracts';
 import { sparkPreferences } from '../persistence/setup.ts';
@@ -116,6 +118,7 @@ export interface TurnDeps {
   inboxPollMs?: number;
   browserPane?: boolean;
   assistantIdle?: AssistantIdleCompaction;
+  parked?: Pick<ParkedTurns, 'park'>;
 }
 
 export interface TurnOptions {
@@ -247,6 +250,7 @@ export async function runAgentTurn(
         append,
       });
   const redaction = createRedactionFilter(secretValues);
+  const parking = backgroundParking(deps.parked, lease.runId);
   const watch = { ...input, db: deps.db, runId: lease.runId, observations };
   const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
@@ -441,7 +445,7 @@ export async function runAgentTurn(
         if (finalStarts) titles?.startMessage(redaction.pending());
         await sayText(redaction.push(output.delta));
       }
-      if (output.kind === 'background_work') await sayText(redaction.finish());
+      if (parking.observe(output)) await sayText(redaction.finish());
       await commands.observe(output);
     }
     await events.close();
@@ -486,6 +490,7 @@ export async function runAgentTurn(
     );
     return ended(result('failed', shown));
   } finally {
+    parking.release();
     modeWatch?.dispose();
     await inbox
       ?.dispose()

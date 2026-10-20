@@ -13,6 +13,7 @@ import {
 import { getMemberMessage } from '../src/persistence/member-messages.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { sendNow } from '../src/workflow/queue-drain.ts';
+import { ParkedTurns } from '../src/workflow/parked-turns.ts';
 import { BACKGROUND_OUTCOME_MESSAGE, recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import { stopRun } from '../src/workflow/stop-run.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
@@ -35,6 +36,7 @@ function begin(leaseSeconds = 30) {
     providers: new Map([['claude', provider]]),
     leaseSeconds,
     concurrency: 1,
+    parked: new ParkedTurns(),
     pollMs: 20,
     cancelPollMs: 20,
   });
@@ -145,6 +147,20 @@ describe('a Claude chat whose turn ends with background work running', { timeout
     expect((await getRun(t.db, runId))?.status).toBe('running');
     await stopRun(t.db, runId);
     await settled(runId);
+  });
+
+  it('frees its worker slot while it waits, so other chats still run', async () => {
+    begin();
+    const waiting = await send('#backgroundforever');
+    await eventually(
+      async () => (await latestRun(waiting.conversationId))?.step === WAITING,
+      20_000,
+    );
+    const other = await send('Hi');
+    expect((await settled(other.runId)).status).toBe('succeeded');
+    expect((await getRun(t.db, waiting.runId))?.status).toBe('running');
+    await stopRun(t.db, waiting.runId);
+    await settled(waiting.runId);
   });
 
   it('says it lost track of the background work when Spark stopped during the wait', async () => {
