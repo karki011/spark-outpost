@@ -49,7 +49,12 @@ describe('branchTip', () => {
 });
 
 describe('showsPlaceMenu', () => {
-  const fresh = { place: 'worktree' as const, requestedBranch: null, current: null };
+  const fresh = {
+    place: 'worktree' as const,
+    requestedBranch: null,
+    current: null,
+    projectId: null,
+  };
 
   it('hides the picker until the workspace loads and once the chat has a branch', () => {
     expect(showsPlaceMenu(undefined, 'main')).toBe(false);
@@ -62,6 +67,7 @@ describe('showsPlaceMenu', () => {
       baseBranch: null,
       baseRef: null,
       createdAt: null,
+      adopted: null,
     };
     expect(showsPlaceMenu({ ...fresh, current }, 'main')).toBe(false);
   });
