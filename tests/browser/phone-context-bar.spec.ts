@@ -3,7 +3,9 @@ import { expect, test, type Page } from '@playwright/test';
 import type { RemoteSession } from '../../packages/contracts/src/remote.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { editedChat } from './edited-chat.ts';
+import { pickPermission } from './permissions-kit.ts';
 import { chatRepo, type ChatRepo } from './project-chat-kit.ts';
+import { seedChats } from './sidebar-seed.ts';
 import {
   DESKTOP,
   expectNoSidewaysScroll,
@@ -99,6 +101,10 @@ function crowdedChips(page: Page, rows: string): Promise<string[]> {
         if (box.left < -0.5 || box.right > document.documentElement.clientWidth + 0.5) {
           problems.push(`${chip.getAttribute('class')} leaves the screen`);
         }
+        const frame = (row.closest('.ctxbar') ?? row).getBoundingClientRect();
+        if (box.left < frame.left - 0.5 || box.right > frame.right + 0.5) {
+          problems.push(`${chip.getAttribute('class')} leaves its bar`);
+        }
       });
     }
     return problems;
@@ -118,6 +124,12 @@ test.beforeEach(async ({ page }) => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
   await page.setViewportSize(DESKTOP);
   await chatInOutpost(page);
+  await page.getByRole('button', { name: /^Model and effort/ }).click();
+  await pickPermission(page, 'Full auto');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: /^Permissions: / })).toHaveAccessibleName(
+    'Permissions: Bypass permissions',
+  );
 });
 
 test.afterEach(() => repo.remove());
@@ -200,4 +212,23 @@ test('the desktop context bar keeps its chips, with no autonomy or Details chip'
   await expect(detailsChip(page)).toHaveCount(0);
   await expect(bar(page).getByRole('button', { name: /^Spark autonomy/ })).toHaveCount(0);
   expect(await crowdedChips(page, '.ctxbar')).toEqual([]);
+});
+
+test('a chat with no project and a new chat fit at 320px with no Details chip', async ({
+  browser,
+}) => {
+  await seedChats([{ title: 'Plain question' }]);
+  const page = await openTouch(browser, { width: 320, height: 700 }, 'chats');
+  await page.getByRole('button', { name: 'Plain question', exact: true }).dispatchEvent('click');
+  await expect(bar(page).getByRole('button', { name: 'Choose project' })).toBeVisible();
+  await expect(detailsChip(page)).toHaveCount(0);
+  expect(await crowdedChips(page, '.ctxbar, .ctx-row, .comp-bar')).toEqual([]);
+  await expectNoSidewaysScroll(page);
+
+  await page.getByRole('button', { name: 'New chat', exact: true }).first().dispatchEvent('click');
+  await expect(bar(page).getByRole('group', { name: 'New session' })).toBeVisible();
+  expect(await crowdedChips(page, '.ctxbar, .ctx-row, .comp-bar')).toEqual([]);
+  await expectNoSidewaysScroll(page);
+  await shot(page, 'context-bar-new-chat');
+  await page.close();
 });

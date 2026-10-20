@@ -47,6 +47,8 @@ export async function openWorkPanel(page: Page): Promise<boolean> {
   const panel = workPanel(page);
   const wasOpen = await panel.evaluate((element) => element.classList.contains('on'));
   if (!wasOpen) await page.getByRole('button', { name: 'Show work panel' }).click();
+  const section = panel.getByRole('button', { name: /^Spark autonomy/ });
+  if ((await section.getAttribute('aria-expanded')) === 'false') await section.click();
   await expect(autonomyLevels(page)).toBeVisible();
   return wasOpen;
 }

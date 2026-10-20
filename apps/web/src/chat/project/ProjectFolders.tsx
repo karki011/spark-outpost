@@ -114,8 +114,8 @@ export function ProjectFolders({
     <div className="ctxbar-wrap">
       {details ? (
         <div className="ctxbar compact">
+          {lead}
           <div className="ctx-row">
-            {lead}
             {!folderInDetails && folderChip}
             {children}
           </div>

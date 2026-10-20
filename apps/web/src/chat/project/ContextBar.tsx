@@ -92,6 +92,7 @@ export function ContextBar({
     <WorkPlaceMenu conversationId={conversationId} projectId={primary.id} checkoutBranch={branch} />
   );
   const setupChip = setup && <AgentSetup key={primary.id} repos={repos} labelled={phone} />;
+  const hasDetails = Boolean(branchChip) || Boolean(placeMenu) || setup;
 
   if (phone) {
     return (
@@ -115,12 +116,14 @@ export function ContextBar({
         {branchChip}
         <TalkToChip conversationId={conversationId} />
         <MemberChip conversationId={conversationId} />
-        <DetailsChip
-          open={detailsOpen}
-          controls={detailsId}
-          attention={attention && !detailsOpen}
-          onToggle={() => setDetailsOpen((open) => !open)}
-        />
+        {hasDetails && (
+          <DetailsChip
+            open={detailsOpen}
+            controls={detailsId}
+            attention={attention && !detailsOpen}
+            onToggle={() => setDetailsOpen((open) => !open)}
+          />
+        )}
         {suggestion}
       </ProjectFolders>
     );
