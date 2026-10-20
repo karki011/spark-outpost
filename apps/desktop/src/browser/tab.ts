@@ -305,7 +305,8 @@ export class PaneTab {
     });
     contents.on('before-input-event', (event, input) => {
       if (input.type === 'keyDown') this.userUsed();
-      const shortcut = input.type === 'keyDown' ? paneShortcutOf(input) : null;
+      const shortcut =
+        input.type === 'keyDown' && this.agentBusy === 0 ? paneShortcutOf(input) : null;
       if (shortcut) {
         event.preventDefault();
         this.hooks.paneShortcut(this, shortcut);

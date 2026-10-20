@@ -7,8 +7,31 @@ import {
   type BrowserShortcut,
 } from '@spark-outpost/contracts';
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
+import type { ShortcutKeys } from '../ui/Keys.tsx';
 import { MAC } from '../ui/shortcuts.ts';
 import { sendBrowserCommand } from './browser-store.ts';
+
+export interface PaneKeys {
+  shown: ShortcutKeys;
+  aria: string;
+}
+
+function paneKeys(key: string, shift = false): PaneKeys {
+  const label = key === 'BracketLeft' ? '[' : key === 'BracketRight' ? ']' : key;
+  const shown = MAC
+    ? ['⌘', ...(shift ? ['⇧'] : []), label]
+    : ['Ctrl', ...(shift ? ['Shift'] : []), label];
+  const aria = [MAC ? 'Meta' : 'Control', ...(shift ? ['Shift'] : []), label].join('+');
+  return { shown, aria };
+}
+
+export const PANE_KEYS = {
+  back: paneKeys('BracketLeft'),
+  forward: paneKeys('BracketRight'),
+  reload: paneKeys('R'),
+  newTab: paneKeys('T'),
+  close: paneKeys('W'),
+};
 
 export interface PaneShortcutUi {
   focusAddress(): void;
@@ -73,7 +96,9 @@ export function usePageShortcuts(
   enabled: boolean,
 ): void {
   const latest = useRef(run);
-  latest.current = run;
+  useEffect(() => {
+    latest.current = run;
+  });
   useEffect(() => {
     const browser = desktopBrowser();
     if (!enabled || !browser) return;

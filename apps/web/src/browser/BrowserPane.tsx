@@ -32,7 +32,13 @@ import { BrowserTabs } from './BrowserTabs.tsx';
 import { FindBar } from './FindBar.tsx';
 import { HandoffBanner } from './HandoffBanner.tsx';
 import { defaultBrowserUrl, openInDefaultBrowser } from './chat-links.ts';
-import { chromeShortcut, runPaneShortcut, usePageShortcuts } from './pane-shortcuts.ts';
+import {
+  PANE_KEYS,
+  chromeShortcut,
+  runPaneShortcut,
+  usePageShortcuts,
+  type PaneKeys,
+} from './pane-shortcuts.ts';
 import { PreviewBadge, PreviewStart } from './PreviewControls.tsx';
 import { tabLabel } from './tab-label.ts';
 import { hiddenPlacement, useViewPlacement, type BrowserHome } from './use-view-placement.ts';
@@ -48,14 +54,22 @@ interface BrowserPaneProps {
 
 interface ToolButtonProps {
   label: string;
+  keys?: PaneKeys;
   disabled?: boolean;
   pressed?: boolean;
   onClick(): void;
   children: ReactNode;
 }
 
-function ToolButton({ label, disabled = false, pressed, onClick, children }: ToolButtonProps) {
-  const tip = useTooltip(label, { side: 'top' });
+function ToolButton({
+  label,
+  keys,
+  disabled = false,
+  pressed,
+  onClick,
+  children,
+}: ToolButtonProps) {
+  const tip = useTooltip(label, keys ? { side: 'top', keys: keys.shown } : { side: 'top' });
   return (
     <>
       <button
@@ -63,6 +77,7 @@ function ToolButton({ label, disabled = false, pressed, onClick, children }: Too
         className="icon-btn bp-tool"
         aria-label={label}
         aria-pressed={pressed}
+        aria-keyshortcuts={keys?.aria}
         disabled={disabled}
         {...tip.triggerProps}
         onClick={onClick}
@@ -269,10 +284,20 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
         {trail}
       </div>
       <div className="bp-bar">
-        <ToolButton label="Back" disabled={!tab?.canGoBack} onClick={() => act('back')}>
+        <ToolButton
+          label="Back"
+          keys={PANE_KEYS.back}
+          disabled={!tab?.canGoBack}
+          onClick={() => act('back')}
+        >
           <NavBackIcon />
         </ToolButton>
-        <ToolButton label="Forward" disabled={!tab?.canGoForward} onClick={() => act('forward')}>
+        <ToolButton
+          label="Forward"
+          keys={PANE_KEYS.forward}
+          disabled={!tab?.canGoForward}
+          onClick={() => act('forward')}
+        >
           <NavForwardIcon />
         </ToolButton>
         {tab?.loading ? (
@@ -280,7 +305,12 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
             <StopIcon />
           </ToolButton>
         ) : (
-          <ToolButton label="Reload" disabled={blank} onClick={() => act('reload')}>
+          <ToolButton
+            label="Reload"
+            keys={PANE_KEYS.reload}
+            disabled={blank}
+            onClick={() => act('reload')}
+          >
             <ReloadIcon />
           </ToolButton>
         )}

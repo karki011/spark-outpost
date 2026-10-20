@@ -43,7 +43,10 @@ export function FindBar({ chatId, tabId, request, onClose }: FindBarProps) {
     input.current?.select();
   }, [request]);
 
-  useEffect(() => () => sendBrowserCommand(chatId, { command: 'stop_find', tabId }), [chatId, tabId]);
+  useEffect(
+    () => () => sendBrowserCommand(chatId, { command: 'stop_find', tabId }),
+    [chatId, tabId],
+  );
 
   const find = (value: string, forward: boolean, next: boolean) => {
     if (value === '') sendBrowserCommand(chatId, { command: 'stop_find', tabId });

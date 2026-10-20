@@ -140,6 +140,32 @@ describe('pane tab keys and clipboard writes', () => {
     expect(session.permissionAnswers(WRITE, contents)).toEqual({ request: true, check: true });
   });
 
+  it('answers a page copy command by the same rule and loads the copy guard', async () => {
+    const { tab, contents, session } = await opened();
+    const allowed = () => panes.pageCopyAllowed(contents as never);
+    expect(session.preloads.some((file) => file.endsWith('copy-guard-preload.cjs'))).toBe(true);
+    expect(allowed()).toBe(false);
+    click(contents);
+    expect(allowed()).toBe(true);
+    let during = true;
+    await panes.whileDriving(tab, async () => {
+      during = allowed();
+    });
+    expect(during).toBe(false);
+    expect(allowed()).toBe(false);
+    expect(panes.pageCopyAllowed({ id: -1 } as never)).toBe(false);
+  });
+
+  it('runs no pane shortcut while an agent acts on the tab', async () => {
+    const { tab, contents } = await opened();
+    let prevented = true;
+    await panes.whileDriving(tab, async () => {
+      prevented = pressed(contents, key('KeyW'));
+    });
+    expect(prevented).toBe(false);
+    expect(shortcuts).toEqual([]);
+  });
+
   it('denies a write a few seconds after the last user input', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     const { contents, session } = await opened();

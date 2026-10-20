@@ -1,7 +1,12 @@
 import { session, type Session, type WebContents } from 'electron';
 import type { SignedInSite } from '@spark-outpost/contracts';
 import { MEDIA_GUARD_ID, mediaGuardPreload } from '../media-guard.ts';
-import { pagePermissionAllowed, type InputMarks } from './clipboard-permission.ts';
+import {
+  COPY_GUARD_ID,
+  copyGuardPreload,
+  pagePermissionAllowed,
+  type InputMarks,
+} from './clipboard-permission.ts';
 import {
   isBrowserPartition,
   projectPartition,
@@ -37,6 +42,7 @@ export function browserSession(partition: string, guards: SessionGuards): Sessio
     filePath: mediaGuardPreload(),
     id: MEDIA_GUARD_ID,
   });
+  target.registerPreloadScript({ type: 'frame', filePath: copyGuardPreload(), id: COPY_GUARD_ID });
   target.setDevicePermissionHandler(() => false);
   target.webRequest.onBeforeRequest((details, callback) => {
     const allowed = requestAllowed(details.url, {

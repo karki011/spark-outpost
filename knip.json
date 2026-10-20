@@ -39,6 +39,7 @@
         "src/server-entry.ts",
         "src/boot-preload.ts",
         "src/media-guard-preload.ts",
+        "src/copy-guard-preload.ts",
         "src/runtime-host.ts"
       ],
       "project": ["src/**/*.ts", "scripts/**/*.ts"]

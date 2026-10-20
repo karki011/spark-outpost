@@ -10,7 +10,7 @@ import {
   type BrowserShortcut,
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
-import type { InputMarks } from './clipboard-permission.ts';
+import { CLIPBOARD_WRITE, pagePermissionAllowed, type InputMarks } from './clipboard-permission.ts';
 import {
   partitionFor,
   requestAllowed,
@@ -226,6 +226,10 @@ export class BrowserPanes {
   inputMarks(contents: WebContents | null): InputMarks | null {
     if (!contents) return null;
     return this.byContents.get(contents.id)?.inputMarks() ?? null;
+  }
+
+  pageCopyAllowed(contents: WebContents): boolean {
+    return pagePermissionAllowed(CLIPBOARD_WRITE, this.inputMarks(contents), Date.now());
   }
 
   private attach(view: WebContentsView, tab: PaneTab): void {

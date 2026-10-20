@@ -246,6 +246,9 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
       }
     };
 
+  ipcMain.on(IPC.browserPageCopyAllowed, (event) => {
+    event.returnValue = panes.pageCopyAllowed(event.sender);
+  });
   ipcMain.handle(
     IPC.browserState,
     guarded((_event, chatId) => panes.state(browserIdSchema.parse(chatId))),
@@ -300,6 +303,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     windowClosed: () => panes.sleepAll(),
     dispose() {
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);
+      ipcMain.removeAllListeners(IPC.browserPageCopyAllowed);
       try {
         panes.dispose();
       } catch (error) {

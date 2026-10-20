@@ -1,5 +1,12 @@
+import path from 'node:path';
+
 export const CLIPBOARD_WRITE = 'clipboard-sanitized-write';
 export const USER_GESTURE_MS = 5000;
+export const COPY_GUARD_ID = 'spark-copy-guard';
+
+export function copyGuardPreload(dir: string = import.meta.dirname): string {
+  return path.join(dir, 'copy-guard-preload.cjs');
+}
 
 export interface InputMarks {
   active: boolean;

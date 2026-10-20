@@ -80,6 +80,7 @@ export const IPC = {
   browserSelectedText: 'browser:selected-text',
   browserShortcut: 'browser:shortcut',
   browserFound: 'browser:found',
+  browserPageCopyAllowed: 'browser:page-copy-allowed',
   macControlStatus: 'mac-control:status',
   macControlPrompt: 'mac-control:prompt',
   macControlOpenSettings: 'mac-control:open-settings',

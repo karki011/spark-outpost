@@ -45,8 +45,7 @@ export async function withDesktopBrowser(page: Page) {
       browserPick: (pick: unknown) => pickListeners.forEach((listener) => listener(pick)),
       browserSelectedText: (selected: unknown) =>
         textListeners.forEach((listener) => listener(selected)),
-      browserShortcut: (event: unknown) =>
-        shortcutListeners.forEach((listener) => listener(event)),
+      browserShortcut: (event: unknown) => shortcutListeners.forEach((listener) => listener(event)),
       browserFound: (found: unknown) => foundListeners.forEach((listener) => listener(found)),
       sparkDesktop: {
         platform: 'darwin',
