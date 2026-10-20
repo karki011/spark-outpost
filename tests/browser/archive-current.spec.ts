@@ -44,6 +44,16 @@ test('archiving the open chat goes to a new chat, and Undo brings it back', asyn
   await expect(sidebar(page).getByRole('listitem').filter({ hasText: 'Open chat' })).toBeVisible();
 });
 
+test('archiving the chat shown on load, without picking it, goes to a new chat', async ({
+  page,
+}) => {
+  await openChats(page);
+  await expect(header(page)).toHaveText('Open chat');
+  await archive(page, 'Open chat');
+  await expect(header(page)).not.toHaveText(/Open chat|Other chat/);
+  await expect(message(page)).toHaveValue('');
+});
+
 test('Undo keeps a new chat the user has started typing in', async ({ page }) => {
   await openChat(page, 'Open chat');
   await archive(page, 'Open chat');

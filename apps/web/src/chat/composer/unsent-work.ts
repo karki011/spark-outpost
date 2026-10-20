@@ -2,16 +2,16 @@ import { useEffect } from 'react';
 
 const unsent = new Set<string>();
 
-export function useUnsentText(conversationId: string, hasText: boolean): void {
+export function useUnsentWork(conversationId: string, hasWork: boolean): void {
   useEffect(() => {
-    if (!hasText) return;
+    if (!hasWork) return;
     unsent.add(conversationId);
     return () => {
       unsent.delete(conversationId);
     };
-  }, [conversationId, hasText]);
+  }, [conversationId, hasWork]);
 }
 
-export function hasUnsentText(conversationId: string): boolean {
+export function hasUnsentWork(conversationId: string): boolean {
   return unsent.has(conversationId);
 }

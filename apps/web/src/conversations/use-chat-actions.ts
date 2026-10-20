@@ -8,7 +8,7 @@ import {
   type UpdateConversationRequest,
 } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
-import { hasUnsentText } from '../chat/composer/unsent-text.ts';
+import { hasUnsentWork } from '../chat/composer/unsent-work.ts';
 import { projectsApi } from '../api/projects.ts';
 import { movedProjectIds } from './sidebar-groups.ts';
 import { copyChatLink } from './use-copy-chat-link.tsx';
@@ -173,19 +173,20 @@ export function useChatActions({
 
   const archive = async (chat: ConversationSummary, archived: boolean) => {
     const stamp = archived ? new Date().toISOString() : null;
+    const wasOpen = chat.id === shownId.current;
     if (!(await update(chat, { archived }, { archivedAt: stamp }))) return;
     if (!archived) {
       flash(chat.id);
       toaster.show({ text: `Restored ${chat.title} to Active` });
       return;
     }
-    const newChatId = chat.id === shownId.current ? onNew() : null;
+    const newChatId = wasOpen ? onNew() : null;
     toaster.show({
       text: `Archived ${chat.title}`,
       undo: () => {
         flash(chat.id);
         void update({ ...chat, archivedAt: stamp }, { archived: false }, { archivedAt: null });
-        const untouched = newChatId !== null && !hasUnsentText(newChatId);
+        const untouched = newChatId !== null && !hasUnsentWork(newChatId);
         if (untouched && shownId.current === newChatId) onSelect(chat.id);
       },
     });
