@@ -68,6 +68,15 @@ describe('mentionedChats', () => {
     expect(mentionedChats('Fix the New chat in pipeline-pocket.', chats)).toEqual([]);
   });
 
+  it('links no chat whose title another chat shares', () => {
+    const twins = [
+      { conversationId: A, title: 'Fix login' },
+      { conversationId: B, title: 'fix login' },
+      { conversationId: '33333333-3333-4333-8333-333333333333', title: 'login' },
+    ];
+    expect(mentionedChats('Fix login is waiting.', twins)).toEqual([]);
+  });
+
   it('links at most three chats', () => {
     const many = ['alpha', 'bravo', 'charlie', 'delta'].map((title, index) => ({
       conversationId: `${index}`,

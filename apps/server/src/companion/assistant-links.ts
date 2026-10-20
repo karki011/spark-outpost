@@ -70,18 +70,27 @@ function linkable(title: string): boolean {
   return trimmed.length >= LINKED_TITLE_MIN && trimmed !== UNTITLED_CONVERSATION;
 }
 
+function byTitle(chats: readonly AssistantChatLink[]): Map<string, AssistantChatLink[]> {
+  const grouped = new Map<string, AssistantChatLink[]>();
+  for (const chat of chats.filter((entry) => linkable(entry.title))) {
+    const key = chat.title.trim().toLowerCase();
+    grouped.set(key, [...(grouped.get(key) ?? []), chat]);
+  }
+  return grouped;
+}
+
 export function mentionedChats(
   answer: string,
   chats: readonly AssistantChatLink[],
 ): AssistantChatLink[] {
   const found: { link: AssistantChatLink; at: number }[] = [];
   const taken: [number, number][] = [];
-  const longestFirst = chats
-    .filter((chat) => linkable(chat.title))
-    .toSorted((a, b) => b.title.length - a.title.length);
-  for (const chat of longestFirst) {
+  const longestFirst = [...byTitle(chats).values()].toSorted(
+    (a, b) => b[0]!.title.trim().length - a[0]!.title.trim().length,
+  );
+  for (const same of longestFirst) {
     const pattern = new RegExp(
-      `(?<![\\p{L}\\p{N}])${escaped(chat.title.trim())}(?![\\p{L}\\p{N}])`,
+      `(?<![\\p{L}\\p{N}])${escaped(same[0]!.title.trim())}(?![\\p{L}\\p{N}])`,
       'giu',
     );
     const free = [...answer.matchAll(pattern)]
@@ -89,7 +98,7 @@ export function mentionedChats(
       .find(([start, end]) => !taken.some(([from, to]) => start < to && end > from));
     if (!free) continue;
     taken.push(free);
-    found.push({ link: chat, at: free[0] });
+    if (same.length === 1) found.push({ link: same[0]!, at: free[0] });
   }
   return found
     .toSorted((a, b) => a.at - b.at)
