@@ -101,6 +101,7 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
   const history = useHistory();
   const now = useMinuteClock();
   const [text, setText] = useState('');
+  const [dictated, setDictated] = useState(false);
   const [asks, setAsks] = useState<PendingAsk[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const secrets = useSecretGuard(text);
@@ -171,8 +172,9 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
     const question = text.trim();
     if (!question || secrets.blocks(text)) return;
     setText('');
-    const spoken = heard.current === question;
+    const spoken = heard.current === question || dictated;
     heard.current = null;
+    setDictated(false);
     send(question, spoken);
   };
 
@@ -287,7 +289,10 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
           <span className="isl-sp" />
           <MicButton
             className="isl-chip"
-            onText={(heard) => setText((now) => joinDictation(now, heard))}
+            onText={(spoken) => {
+              setDictated(true);
+              setText((now) => joinDictation(now, spoken));
+            }}
           />
           <button
             type="button"

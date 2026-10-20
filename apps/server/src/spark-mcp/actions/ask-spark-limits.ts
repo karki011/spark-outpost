@@ -181,19 +181,28 @@ const ANSWER_VERBS: Record<AskSparkAnswer, string> = {
   deny: 'deny|reject|decline|refuse',
 };
 
-const NEGATION = /\b(?:not|never|don['’]?t|do not|no)\b/i;
+const HOLDS_BACK =
+  /\b(?:not|never|no|nothing|none|nobody|neither|nor|without|unless|until|yet|wait|hold|stop|don['’]?t|won['’]?t|can['’]?t|shouldn['’]?t)\b/i;
+
+function sentenceAround(text: string, at: number): string {
+  const start = Math.max(...['.', '!', ';', '\n'].map((mark) => text.lastIndexOf(mark, at)));
+  const ends = ['.', '!', ';', '\n']
+    .map((mark) => text.indexOf(mark, at))
+    .filter((index) => index >= 0);
+  return text.slice(start + 1, ends.length > 0 ? Math.min(...ends) : text.length);
+}
 
 export function askedToAnswer(question: string, answer: AskSparkAnswer): boolean {
   const text = question.trim();
-  if (text.endsWith('?')) return false;
+  if (text.includes('?')) return false;
   const command = new RegExp(
-    `(?:^|[.!;:,]\\s*|\\b(?:please|then|and|now|just)\\s+)(?:${ANSWER_VERBS[answer]})\\b`,
+    `(?:^|[.!;:,]\\s*|\\b(?:please|then|and|now|just)\\s+)(${ANSWER_VERBS[answer]})\\b`,
     'i',
   );
   const match = command.exec(text);
   if (!match) return false;
-  const before = text.slice(Math.max(0, match.index - 20), match.index + match[0].length);
-  return !NEGATION.test(before);
+  const verbAt = match.index + match[0].length - (match[1]?.length ?? 0);
+  return !HOLDS_BACK.test(sentenceAround(text, verbAt));
 }
 
 async function questionOf(db: Queryable, runId: string): Promise<string> {

@@ -98,5 +98,10 @@ describe('askedToAnswer', () => {
     expect(askedToAnswer('Do not approve the deploy card', 'allow_once')).toBe(false);
     expect(askedToAnswer("Don't allow anything yet", 'allow_once')).toBe(false);
     expect(askedToAnswer('Tell me who is allowed to deploy', 'allow_once')).toBe(false);
+    expect(askedToAnswer('Please approve nothing yet', 'allow_once')).toBe(false);
+    expect(askedToAnswer('Approve no cards today', 'allow_once')).toBe(false);
+    expect(askedToAnswer('Allow it. Is that safe? Thanks', 'allow_once')).toBe(false);
+    expect(askedToAnswer('Deny it unless the tests pass', 'deny')).toBe(false);
+    expect(askedToAnswer('Run the checks. Then approve the deploy card', 'allow_once')).toBe(true);
   });
 });

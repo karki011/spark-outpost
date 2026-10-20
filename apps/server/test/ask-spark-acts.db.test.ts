@@ -304,6 +304,22 @@ describe('Ask Spark acts', () => {
     expect((await getApproval(t.db, waiting.id))?.status).toBe('pending');
   });
 
+  it('leaves no chat or queued message behind when starting the chat fails', async () => {
+    await setActs('act');
+    const project = await createProject(t.db, t.workspaceId, process.cwd());
+    await t.db.query('DELETE FROM provider_connections WHERE workspace_id = $1', [t.workspaceId]);
+    const harness = await open();
+    const result = await harness.call('spark_start_chat', {
+      project: project.project.name,
+      task: 'Add a CONTRIBUTING file',
+    });
+    expect(result.isError).toBe(true);
+    const chats = await t.db.query('SELECT 1 FROM conversations WHERE id <> $1', [assistant]);
+    expect(chats.rowCount).toBe(0);
+    const queued = await t.db.query('SELECT 1 FROM chat_queue');
+    expect(queued.rowCount).toBe(0);
+  });
+
   it('keeps a queued Ask Spark message its own through Send now, and never steers with it', async () => {
     const { conversationId, runId } = await startChat(t, 'Busy');
     await t.db.query(`UPDATE runs SET status = 'running' WHERE id = $1`, [runId]);

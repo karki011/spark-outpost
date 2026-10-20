@@ -1,7 +1,7 @@
 import type { AskSparkAction } from '@spark-outpost/contracts';
 import { sparkToolsOffered } from '../../agents/acp/spark-tools.ts';
 import { decideApproval } from '../../persistence/approvals.ts';
-import { addToQueue } from '../../persistence/chat-queue.ts';
+import { addToQueue, takeQueued } from '../../persistence/chat-queue.ts';
 import { createConversation } from '../../persistence/conversations.ts';
 import type { Db } from '../../persistence/db.ts';
 import { newId } from '../../persistence/ids.ts';
@@ -41,8 +41,14 @@ export async function sendAsAssistant(
   conversationId: string,
   content: string,
 ): Promise<void> {
-  await addToQueue(db, conversationId, { id: newId(), content, origin: 'assistant' });
-  await drainQueue(db, conversationId, chatTarget(db));
+  const id = newId();
+  await addToQueue(db, conversationId, { id, content, origin: 'assistant' });
+  try {
+    await drainQueue(db, conversationId, chatTarget(db));
+  } catch (error) {
+    await takeQueued(db, conversationId, id);
+    throw error;
+  }
 }
 
 async function activeRun(db: Db, conversationId: string): Promise<string | null> {
@@ -73,7 +79,13 @@ async function startChat(context: SparkToolContext, action: AskSparkAction): Pro
   const summary = await createConversation(deps.db, scope.workspaceId, id, {
     projectIds: action.projectId ? [action.projectId] : [],
   });
-  await sendAsAssistant(deps.db, id, required(action.text, 'task'));
+  await sendAsAssistant(deps.db, id, required(action.text, 'task')).catch(async (error) => {
+    await deps.db.query(
+      'DELETE FROM conversations c WHERE c.id = $1 AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)',
+      [id],
+    );
+    throw error;
+  });
   const project = action.projectId ? await projectName(deps.db, action.projectId) : null;
   return {
     message: project ? `Started a new chat in ${project}.` : 'Started a new chat.',
