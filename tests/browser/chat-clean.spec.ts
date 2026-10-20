@@ -10,9 +10,9 @@ const SHOTS = process.env.CHAT_CLEAN_SHOTS ?? '';
 const ANSWER = [
   "I can't open the repo's files from this chat because it isn't linked to a project.",
   '',
-  '## feature-web-apps',
-  '- **GitHub:** `acme/feature-web-apps`, default branch `main`',
-  '- **Local path:** `~/Documents/feature-web-apps`',
+  '## orders-web-app',
+  '- **GitHub:** `acme/orders-web-app`, default branch `main`',
+  '- **Local path:** `~/Documents/orders-web-app`',
   '- **No Spark chats yet** in this project',
   '- **The Map is still being built**',
   '',
@@ -22,10 +22,10 @@ const ANSWER = [
   '| #2183 | ben-dalton | draft, CI failing on greptile-gate |',
   '',
   '```sh',
-  'gh pr list --repo acme/feature-web-apps --state open --json number,title,author,isDraft',
+  'gh pr list --repo acme/orders-web-app --state open --json number,title,author,isDraft',
   '```',
   '',
-  'To dig into the code, start a chat in the **feature-web-apps** project.',
+  'To dig into the code, start a chat in the **orders-web-app** project.',
 ].join('\n');
 
 async function sql<T extends object>(text: string, values: unknown[] = []): Promise<T[]> {

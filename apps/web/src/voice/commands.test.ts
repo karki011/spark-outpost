@@ -11,7 +11,7 @@ import { ticketKey, tokens } from './normalise.ts';
 
 const lists: SpeechLists = {
   projects: [
-    { id: 'p1', name: 'feature-web-apps', folder: '/Users/me/code/feature-web-apps' },
+    { id: 'p1', name: 'orders-web-app', folder: '/Users/me/code/orders-web-app' },
     { id: 'p2', name: 'spark-outpost', folder: '/Users/me/spark-outpost' },
     { id: 'p3', name: 'Billing', folder: '/Users/me/billing-service' },
   ],
@@ -54,7 +54,7 @@ describe('ticket keys', () => {
 describe('matchCommand', () => {
   it('fills a new chat with the project, ticket and task from the design’s phrase', () => {
     const command = matchCommand(
-      'Spark, start a chat in feature web apps for C P four nine zero eight four add creator email',
+      'Spark, start a chat in orders web app for C P four nine zero eight four add creator email',
       lists,
     );
     expect(command).toMatchObject({
@@ -67,7 +67,7 @@ describe('matchCommand', () => {
 
   it('copes with what whisper actually heard for it', () => {
     const command = matchCommand(
-      'Start a chat and feature, web apps, for CP-49084, at Creator Email.',
+      'Start a chat and orders, web app, for CP-49084, at Creator Email.',
       lists,
     );
     expect(command).toMatchObject({
@@ -201,13 +201,13 @@ describe('matchConfirmation', () => {
 
 describe('fuzzy matching', () => {
   it('scores a folder name heard as words', () => {
-    expect(similarity('feature web apps', 'feature-web-apps')).toBe(1);
+    expect(similarity('orders web app', 'orders-web-app')).toBe(1);
     expect(similarity('spark out post', 'spark-outpost')).toBeGreaterThan(0.85);
     expect(similarity('zebra', 'Billing')).toBeLessThan(0.6);
   });
 
   it('builds a hint from names and ticket prefixes', () => {
-    expect(speechHint(lists)).toContain('feature-web-apps');
+    expect(speechHint(lists)).toContain('orders-web-app');
     expect(speechHint(lists)).toContain('CP');
     expect(speechHint(lists).length).toBeLessThanOrEqual(600);
   });

@@ -17,7 +17,7 @@ import { OUTSIDE_DELETE_REASON, outsideDeleteReason, outsideWriteReason } from '
 import { parseShell } from './shell-parse.ts';
 
 const HOME = '/Users/x';
-const REPO = `${HOME}/feature-web-apps`;
+const REPO = `${HOME}/orders-web-app`;
 const WT = `${REPO}/.spark/worktrees/01a10e7d-5b1c-4f0e-9a51-0c2d3e4f5a6b`;
 const PAGE = 'libs/ui/explorer/src/pages/index.tsx';
 const HOOK = 'hooks/use-drilldown-tree.ts';

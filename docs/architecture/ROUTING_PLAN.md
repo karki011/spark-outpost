@@ -230,19 +230,19 @@ A provider switch doesn't have to lose the conversation, but it does lose the pr
 
 See [ELECTRON_PLAN.md](ELECTRON_PLAN.md): the scan and agents stay out of Electron's main process, and the app keeps Postgres, bundled.
 
-### 11. First test repo: `feature-web-apps`
+### 11. First test repo: `orders-web-app`
 
 A private Nx monorepo, cloned for read-only use into a scratch folder. The profile:
 
 - 5,443 tracked files, 1,736 commits, 83 MB of git history;
 - TypeScript almost entirely: 2,513 `.ts`, 1,799 `.tsx`, plus JSON, Markdown, YAML and a little Python and shell;
-- an Nx + pnpm monorepo: 133 `project.json` projects under `libs/ui` (2,552 files), `libs/features` (1,264), `libs/foundations` (720) and `apps/web` (405);
+- an Nx + pnpm monorepo with over a hundred `project.json` projects, most of them UI and feature libraries;
 - it has `CLAUDE.md`, `AGENTS.md` and `.claude/agents`;
 - a warm ripgrep search for one identifier across the whole repo took 0.16 s (130 matching files).
 
 It's a good test of the monorepo signals: one request can touch one Nx project or many. "Training" here means building a labelled task set and tuning our wording and thresholds; nothing trains Jev itself.
 
-**Privacy:** the local scan never leaves the machine. Jev is an external service (TypeSafe), and its state includes this repo's file paths, symbol names and the task text. The repository's owner allowed this for `feature-web-apps` on 2026-09-27. Any other private repository needs its owner's confirmation.
+**Privacy:** the local scan never leaves the machine. Jev is an external service (TypeSafe), and its state includes this repo's file paths, symbol names and the task text. The repository's owner allowed this for `orders-web-app` on 2026-09-27. Any other private repository needs its owner's confirmation.
 
 ### 12. Cache-aware routing and the route score (September 30, 2026, policy `route-score-1-cache-aware`)
 
@@ -340,7 +340,7 @@ The constants are in `advisor/policy.ts` and were fitted so that current benchma
 
 ## Rollout
 
-0. **Prototype and load-test the scan.** Build the indexer and the per-task scan. Measure on a small repo, `feature-web-apps` (5,443 files, 133 Nx projects) and a 100,000-file repo: first index time, per-task scan time, cache size, and API response time while five projects scan at once. Continue only if per-task scans stay under 2 s and the API stays responsive.
+0. **Prototype and load-test the scan.** Build the indexer and the per-task scan. Measure on a small repo, `orders-web-app` (5,443 files, 133 Nx projects) and a 100,000-file repo: first index time, per-task scan time, cache size, and API response time while five projects scan at once. Continue only if per-task scans stay under 2 s and the API stays responsive.
 1. **Shadow.** Build steps 1–3 and log Jev's route next to the rule's route, as `autoWouldUse` does today. No behaviour change.
 2. **Label.** Collect about 50 real tasks with outcomes, plus a seeded corpus of coding tasks with preferred tiers (pi's 24-task file is a template).
 3. **Compare.** Rules vs Jev text-only vs Jev with evidence, on pass rate first, then preferred tier, escalations, Keep rate and cost per successful task. The evidence only ships if it beats text-only.
@@ -356,6 +356,6 @@ The constants are in `advisor/policy.ts` and were fitted so that current benchma
 - Do `tree-sitter-wasms` grammars load in the `@vscode/tree-sitter-wasm` runtime? (The prototype checks.)
 - Is the per-file size estimate right? The prototype measures it.
 - Should the verifier be Jev alone, or Jev plus the Critic for large diffs?
-- May `feature-web-apps` metadata (paths, symbol names, task text) be sent to Jev? (Section 11.)
+- May `orders-web-app` metadata (paths, symbol names, task text) be sent to Jev? (Section 11.)
 
 Decided since the first draft: the grammar package (section 2), effort from the provider default (section 1), user-driven provider switches with a handoff (section 9), running without Jev (section 8), keeping Postgres for the desktop app (section 10), and decomposition by the coordinator (section 7).

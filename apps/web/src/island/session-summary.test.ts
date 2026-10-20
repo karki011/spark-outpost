@@ -59,8 +59,8 @@ function terminal(state: string, updatedAt = '2026-10-02T12:30:00.000Z') {
       conversationId: RUN,
       provider: 'claude',
       state,
-      cwd: '/Users/ada/code/feature-web-apps',
-      label: 'my files · feature-web-apps',
+      cwd: '/Users/ada/code/orders-web-app',
+      label: 'my files · orders-web-app',
       updatedAt,
       resumeAvailable: false,
       runId: null,
@@ -155,13 +155,13 @@ describe('what a session card says', () => {
 });
 
 describe('the facts under a session', () => {
-  const names = new Map([['p1', 'feature-web-apps']]);
+  const names = new Map([['p1', 'orders-web-app']]);
 
   it('names the project and branch of a chat and leaves out what is unknown', () => {
     const linked = chat({ projectIds: ['gone', 'p1'], branch: 'spark/fix-billing' });
     expect(sessionFacts(linked, undefined, names, [])).toEqual({
       terminal: false,
-      parts: ['feature-web-apps', 'spark/fix-billing'],
+      parts: ['orders-web-app', 'spark/fix-billing'],
       modeNote: null,
       changedAt: '2026-10-02T12:00:00.000Z',
     });
@@ -175,19 +175,19 @@ describe('the facts under a session', () => {
     const facts = sessionFacts(terminal('ready'), detail(null, 'auto'), names, MODES);
     expect(facts).toEqual({
       terminal: true,
-      parts: ['Auto', 'feature-web-apps'],
+      parts: ['Auto', 'orders-web-app'],
       modeNote: 'Mode when the last prompt started: Auto',
       changedAt: '2026-10-02T12:30:00.000Z',
     });
     expect(sessionFacts(terminal('ready'), detail(null, 'secret'), names, MODES).parts).toEqual([
-      'feature-web-apps',
+      'orders-web-app',
     ]);
     const inWorktree = {
       ...terminal('ready'),
       projectIds: ['p1'],
       terminal: { ...terminal('ready').terminal, cwd: '/worktrees/01a131a4-77aa-4c0e-9d5e' },
     } as ReturnType<typeof terminal>;
-    expect(sessionFacts(inWorktree, undefined, names, MODES).parts).toEqual(['feature-web-apps']);
+    expect(sessionFacts(inWorktree, undefined, names, MODES).parts).toEqual(['orders-web-app']);
     const older = terminal('ready', '2026-10-01T00:00:00.000Z');
     expect(sessionFacts(older, undefined, names, MODES).changedAt).toBe('2026-10-02T12:00:00.000Z');
   });

@@ -44,8 +44,13 @@ test('a request line takes the pointer as soon as it appears, with no hover firs
   expect(Date.now() - shownAt).toBeLessThan(REST_DELAY_MS);
   expect((await restSize(page))!.height).toBeGreaterThanOrEqual(box.y + box.height);
 
-  expect(await takesPointerAt(page, box.x + box.width + 6, right.y)).toBe(false);
-  expect(await takesPointerAt(page, right.x, box.y + box.height + 6)).toBe(false);
+  await line(page).evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished)).then(() => null),
+  );
+  const settled = (await line(page).boundingBox())!;
+  const middle = settled.y + settled.height / 2;
+  expect(await takesPointerAt(page, settled.x + settled.width + 6, middle)).toBe(false);
+  expect(await takesPointerAt(page, right.x, settled.y + settled.height + 6)).toBe(false);
 
   await line(page).click();
   await expect(island(page)).toHaveAttribute('data-view', 'card');

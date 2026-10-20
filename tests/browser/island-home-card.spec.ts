@@ -39,7 +39,7 @@ async function makeTerminal(conversationId: string, state: string) {
   await sql(`UPDATE conversations SET session_type = 'terminal' WHERE id = $1`, [conversationId]);
   await sql(
     `INSERT INTO native_terminal_sessions (id, conversation_id, provider, state, cwd, label)
-     VALUES ($1, $2, 'claude', $3, '/Users/ada/code/feature-web-apps', 'my files · feature-web-apps')`,
+     VALUES ($1, $2, 'claude', $3, '/Users/ada/code/orders-web-app', 'my files · orders-web-app')`,
     [randomUUID(), conversationId, state],
   );
 }
@@ -64,7 +64,7 @@ async function addStep(conversationId: string, name: string, finished: boolean) 
 }
 
 async function addProject(page: Page): Promise<string> {
-  const root = path.join(mkdtempSync(path.join(tmpdir(), 'island-home-')), 'feature-web-apps');
+  const root = path.join(mkdtempSync(path.join(tmpdir(), 'island-home-')), 'orders-web-app');
   mkdirSync(root);
   const response = await page.request.post('/api/projects', { data: { rootPath: root } });
   expect(response.ok()).toBe(true);
@@ -109,7 +109,7 @@ for (const theme of ['graphite', 'apricot']) {
     await expect(nowCard(page).locator('.isl-now-said')).toHaveText(
       'Last reply: The branch is feature/web-apps, two commits ahead of main.',
     );
-    await expect(facts(page)).toContainText('feature-web-apps');
+    await expect(facts(page)).toContainText('orders-web-app');
     await expect(facts(page).locator('time')).toHaveText('2 h ago');
     await expect(nowCard(page).getByRole('button', { name: `Open ${LONG_TITLE}` })).toHaveText(
       'Open',
@@ -134,7 +134,7 @@ test('a Terminal session is labelled in words with its folder, and has no Reply'
   await open(page);
   await expect(nowCard(page).locator('.isl-now-note')).toHaveText('Terminal sessionIdle');
   await expect(facts(page).locator('.isl-now-fact')).toHaveText(
-    /^Claude · (\S.* · )?feature-web-apps$/,
+    /^Claude · (\S.* · )?orders-web-app$/,
   );
   await expect(facts(page).locator('time')).toHaveText('just now');
   await expect(nowCard(page).locator('.isl-now-chip svg')).toHaveCount(0);

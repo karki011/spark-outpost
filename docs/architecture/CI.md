@@ -1,18 +1,18 @@
 # Continuous integration
 
-GitHub Actions runs `.github/workflows/ci.yml` on every pull request, on every push to `main` and on demand (`workflow_dispatch`). It runs the same commands a contributor runs locally; nothing in it signs, packages, publishes or deploys. One run per ref: a new push cancels the run it supersedes.
+GitHub Actions runs `.github/workflows/ci.yml` on demand (`workflow_dispatch`, Actions → CI → Run workflow) and, once the repository is public, on every pull request and every push to `main`. While the repository is private, a pull request or push starts a run whose jobs all skip, so it spends no minutes. It runs the same commands a contributor runs locally; nothing in it signs, packages, publishes or deploys. One run per ref: a new push cancels the run it supersedes.
 
 ## Jobs
 
-| Job                    | Runner        | What it runs                                                                                                                                                                |
-| ---------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `check`                | ubuntu-latest | `pnpm check`                                                                                                                                                                |
-| `db (N/3)`             | ubuntu-latest | `pnpm test:db --shard=N/3 --maxWorkers=4` against a PostgreSQL 17 container                                                                                                 |
-| `browser (N/8)`        | ubuntu-latest | `pnpm exec playwright test --shard=N/8 --retries=1` over every spec except the `*-perf` specs, against a production build of the web app, one worker per shard              |
-| `browser (fake-hosts)` | ubuntu-latest | the specs that skip without a fake host (`calendar*.spec.ts`, `browser-agent`, `shot-order`, `sign-ins`, `sign-in-sites`) with `SPARK_FAKE_CALENDAR=1 SPARK_FAKE_BROWSER=1` |
-| `swift (<helper>)`     | macos-15      | `pnpm desktop:mac-control --test`, `pnpm desktop:calendar --test` and `pnpm desktop:voice --test`: on a manual run, or when a helper changed and the repository is public   |
-| `changes`              | ubuntu-latest | decides whether a Swift helper changed                                                                                                                                      |
-| `ci-ok`                | ubuntu-latest | fails unless every job above passed or was skipped                                                                                                                          |
+| Job                    | Runner        | What it runs                                                                                                                                                                        |
+| ---------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `check`                | ubuntu-latest | `pnpm check`                                                                                                                                                                        |
+| `db (N/3)`             | ubuntu-latest | `pnpm test:db --shard=N/3 --maxWorkers=4` against a PostgreSQL 17 container                                                                                                         |
+| `browser (N/8)`        | ubuntu-latest | `pnpm exec playwright test --shard=N/8 --retries=1 --reporter=list,html` over every spec except the `*-perf` specs, against a production build of the web app, one worker per shard |
+| `browser (fake-hosts)` | ubuntu-latest | the specs that skip without a fake host (`calendar*.spec.ts`, `browser-agent`, `shot-order`, `sign-ins`, `sign-in-sites`) with `SPARK_FAKE_CALENDAR=1 SPARK_FAKE_BROWSER=1`         |
+| `swift (<helper>)`     | macos-15      | `pnpm desktop:mac-control --test`, `pnpm desktop:calendar --test` and `pnpm desktop:voice --test`: on a manual run, or when a helper changed and the repository is public           |
+| `changes`              | ubuntu-latest | decides whether a Swift helper changed                                                                                                                                              |
+| `ci-ok`                | ubuntu-latest | fails unless every job above passed or was skipped                                                                                                                                  |
 
 - **Setup** (`.github/actions/setup`): pnpm from `packageManager`, Node from `.nvmrc` with the pnpm store cached, `pnpm install --frozen-lockfile`, and a git identity for tests that commit. `ELECTRON_SKIP_BINARY_DOWNLOAD=1` keeps the Electron binary out of every job. On Linux it also matches what the tests expect from a Mac: zsh as `SHELL`, and unprivileged user namespaces, which Codex's sandbox (bubblewrap) needs and Ubuntu 24.04 restricts by default.
 - **Database** (`.github/actions/postgres`): `postgres:17`, pinned by digest, on `127.0.0.1:5432` with the C locale (as `pnpm db:setup` creates it) and `max_connections=300`. `TEST_DATABASE_URL` and `DATABASE_URL` point at `spark_outpost_test` with a throwaway password that exists only in CI. Each shard is its own runner, so it gets its own database and the slot 0 ports.
@@ -22,7 +22,7 @@ GitHub Actions runs `.github/workflows/ci.yml` on every pull request, on every p
 
 ## Minutes
 
-While the repository is private, the free plan has 2,000 Actions minutes a month and counts macOS minutes ten times, so the macOS jobs run only when started by hand. Standard Linux runners on a private repository have 2 CPUs, which is why the db tests are sharded and the browser specs get one retry. A run uses roughly 150–200 Linux minutes. Once the repository is public, standard runners are free and have 4 CPUs, and the Swift jobs run whenever a helper changes.
+While the repository is private, the free plan has 2,000 Actions minutes a month and counts macOS minutes ten times, so CI runs only when started by hand. Standard Linux runners on a private repository have 2 CPUs, which is why the db tests are sharded and the browser specs get one retry. A run uses roughly 150–200 Linux minutes. Once the repository is public, standard runners are free and have 4 CPUs, and the Swift jobs run whenever a helper changes.
 
 ## Security
 

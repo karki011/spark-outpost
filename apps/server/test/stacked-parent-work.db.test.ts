@@ -94,6 +94,8 @@ async function waitsFor(postId: string): Promise<string | null> {
 }
 
 async function childWorktree(web: string): Promise<ChatWorktree> {
+  await worker?.stop();
+  worker = null;
   const input = await loadRunInput(t.db, await sendDo(t, web, 'Build the page.'));
   await placeChat({ db: t.db, branchPrefix: 'spark' }, input, true);
   return (await primaryChatWorktree(t.db, web))!;

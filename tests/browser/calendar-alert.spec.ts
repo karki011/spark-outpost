@@ -165,6 +165,14 @@ test('the hanging card offers Join, Snooze and Dismiss, and Esc dismisses once c
   await expect
     .poll(() => alertWindow(page, (window) => window.alertRegions.at(-1)?.boxes.length ?? 0))
     .toBe(2);
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .map((animation) => animation.finished),
+    ).then(() => null),
+  );
 
   await card.getByRole('button', { name: 'Snooze 1 min' }).click({ force: true });
   expect(await alertWindow(page, (window) => window.alertFocus)).toBe(0);

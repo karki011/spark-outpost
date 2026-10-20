@@ -194,11 +194,11 @@ time, process CPU, peak RSS and phase timings (`--repo name=/path`, `--budget`, 
 
 Intel Mac, 2026-09-30:
 
-| Repo                             | Files / areas / edges | Full build                       | CPU budget     | Unchanged rebuild | One-file commit | Peak RSS |
-| -------------------------------- | --------------------- | -------------------------------- | -------------- | ----------------- | --------------- | -------- |
-| Spark Outpost (clone)            | 1,930 / 86 / 5,710    | 26 s (index 22.7 s, graph 2.8 s) | 1.0 → 0.81 CPU | 1.7 s             | 2.0 s           | 752 MB   |
-| Spark Outpost (clone)            | same                  | 62 s                             | 0.3 → 0.30 CPU | 3.3 s             | 3.6 s           | 681 MB   |
-| feature-web-apps (nx, read-only) | 5,487 / 268 / 12,642  | 93 s incl. 268 Jev calls (61 s)  | 1.0 → 0.37 CPU | 3.9 s             | n/a             | 782 MB   |
+| Repo                           | Files / areas / edges | Full build                       | CPU budget     | Unchanged rebuild | One-file commit | Peak RSS |
+| ------------------------------ | --------------------- | -------------------------------- | -------------- | ----------------- | --------------- | -------- |
+| Spark Outpost (clone)          | 1,930 / 86 / 5,710    | 26 s (index 22.7 s, graph 2.8 s) | 1.0 → 0.81 CPU | 1.7 s             | 2.0 s           | 752 MB   |
+| Spark Outpost (clone)          | same                  | 62 s                             | 0.3 → 0.30 CPU | 3.3 s             | 3.6 s           | 681 MB   |
+| orders-web-app (nx, read-only) | 5,487 / 268 / 12,642  | 93 s incl. 268 Jev calls (61 s)  | 1.0 → 0.37 CPU | 3.9 s             | n/a             | 782 MB   |
 
 The first full index dominates time and memory (tree-sitter parse worker); later refreshes stay
 under ~300 MB. Jev labelling: 86 areas cost $0.026 (630k input tokens, ~7.3k per area, ~230 ms

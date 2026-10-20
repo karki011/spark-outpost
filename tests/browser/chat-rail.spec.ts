@@ -1,4 +1,6 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import type { ConversationDetail } from '../../packages/contracts/src/conversations.ts';
@@ -240,7 +242,8 @@ test.describe('working chats', () => {
     repo = chatRepo();
     await page.setViewportSize(WIDE);
     await projectChat(page, repo, 'Full auto');
-    await send(page, `${BUILD_REQUEST} #build`);
+    const gate = path.join(mkdtempSync(path.join(tmpdir(), 'spark-rail-tv-')), 'done');
+    await send(page, `${BUILD_REQUEST} #build #holdbuild=${gate}`);
 
     const dock = rail(page).locator('.crail-tv');
     await expect(dock).toBeVisible({ timeout: 30_000 });
@@ -262,6 +265,7 @@ test.describe('working chats', () => {
     await expect(tv).toBeVisible();
     await tv.getByRole('button', { name: 'Close Agent TV' }).click();
     await expect(tv).toBeHidden();
+    writeFileSync(gate, '');
 
     await expect(page.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0, {
       timeout: 120_000,
