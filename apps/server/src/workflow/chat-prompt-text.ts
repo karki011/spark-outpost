@@ -6,6 +6,8 @@ export const SPLIT_SUB_AGENTS =
   '- Independent parts inside this repo and branch (searching, reviewing, edits to separate files): use your own sub-agents.';
 export const SPLIT_SUB_CHATS =
   "- Work that spans repos, needs separate branches or pull requests, or is big enough that the user should steer each part: propose sub-chats with spark_outpost_draft and say why. The user starts them; you don't.";
+export const SPLIT_SUB_CHATS_START =
+  '- Work that spans repos, needs separate branches or pull requests, or has parts that can run in parallel chats: split it into sub-chats and say why. Start them with spark_outpost_start when the user asked for it or the work needs it; propose them with spark_outpost_draft when the user should review the split first.';
 export const SPLIT_UNCLEAR = '- If the request is unclear, ask one question and stop.';
 
 export const ENGINEERING = [

@@ -64,7 +64,6 @@ describe('a chat on the single-session turn', () => {
           projectIds: ['project-1'],
           provider: id,
           level: 'hands-off',
-          routing: 'pinned',
           model: PROVIDER_SETUPS[id].model,
           effort: 'high',
           agentMode: PROVIDER_SETUPS[id].modes.auto,

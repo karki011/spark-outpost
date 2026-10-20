@@ -13,8 +13,10 @@ Newest first.
 | What changed                                                                                                                      | What to do                                                        |
 | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | Sub-agents: one line, cards in the work panel.                                                                                    | See [Follow a turn](follow-a-turn.md#see-whats-happening).        |
+| Agents can start sub-chats themselves; phones can **Start** a draft.                                                              | See [Start it](outpost-stories.md#start-it-from-a-chat).          |
+| Model picker changed: no **Auto**; chats show their model.                                                                        | See [Pick a model](agent-mode.md#pick-a-model).                   |
 | Agents stay running between messages; **Continued on its own** turns; **Waiting on…** for background agents; **Stopped by Quit**. | See [Background work](follow-a-turn.md#background-work).          |
-| Archiving the open chat opens a new chat; display fixes.                                                                          | —                                                                 |
+| Archiving the open chat opens a new chat; display and context ring fixes.                                                         | —                                                                 |
 | Today: readable notes, tidy short meetings, early **Join**.                                                                       | See [Use it](calendar.md#use-it).                                 |
 | No line, chime or notification for a chat you're viewing. Spark Island takes the first click.                                     | See [Spark Island](desktop-companion.md#answer-a-card).           |
 | Browser: developer tools, network log, multi-site sign-ins, SSO handoff.                                                          | See [Use the browser](use-the-browser.md).                        |

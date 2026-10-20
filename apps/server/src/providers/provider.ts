@@ -246,9 +246,11 @@ export type ProviderOutput =
   | {
       kind: 'usage';
       contextUsed: number;
-      contextSize: number;
+      contextSize: number | null;
       costUsd: number | null;
       readings?: UsageReadings;
+      model?: string;
+      provisionalWindow?: boolean;
     }
   | { kind: 'tokens'; tokens: TokenUsage }
   | { kind: 'request_usage'; request: RequestUsage }

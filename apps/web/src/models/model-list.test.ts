@@ -95,7 +95,7 @@ describe('model list', () => {
   it('says that Spark picks no model', () => {
     const note = cardsNote('2026-10-01');
     expect(note).toBe(
-      "Vendor facts checked 2026-10-01. Spark picks no model: a chat on Auto runs the agent's default.",
+      'Vendor facts checked 2026-10-01. Spark picks no model: a chat runs your default model until it picks another.',
     );
     expect(note).not.toMatch(/rules pick|Jev/);
   });

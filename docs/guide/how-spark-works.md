@@ -24,12 +24,12 @@ Spark adds nothing to the reply except a line about publishing.
 
 The agent decides. Spark never splits a turn into roles.
 
-| Work                                                | Who does it                                                                          |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| A small change                                      | The agent itself.                                                                    |
-| Independent parts in one repo and branch            | The agent's own sub-agents, in the work panel and Agent TV; gated, audited.          |
-| Several repos, branches or pull requests            | Sub-chats in an [outpost](outpost-stories.md) that the agent proposes and you start. |
-| A job for a [Spark](sparks.md) you mention with `@` | That Spark, in the same chat.                                                        |
+| Work                                                | Who does it                                                                      |
+| --------------------------------------------------- | -------------------------------------------------------------------------------- |
+| A small change                                      | The agent itself.                                                                |
+| Independent parts in one repo and branch            | The agent's own sub-agents, in the work panel and Agent TV; gated, audited.      |
+| Several repos, branches or pull requests            | Sub-chats in an [outpost](outpost-stories.md) that the agent starts or proposes. |
+| A job for a [Spark](sparks.md) you mention with `@` | That Spark, in the same chat.                                                    |
 
 ## What Spark leaves to the agent
 

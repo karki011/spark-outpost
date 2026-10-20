@@ -34,6 +34,7 @@ function held(over: Partial<StoredPost> = {}): StoredPost {
     opening: true,
     afterPostId: PARENT,
     userStarted: true,
+    agentStarted: false,
     ...over,
   };
 }

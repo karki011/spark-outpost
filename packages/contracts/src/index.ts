@@ -80,6 +80,7 @@ export * from './outpost-state.ts';
 export * from './outpost-thread.ts';
 export * from './outpost-story.ts';
 export * from './outpost-stack.ts';
+export * from './outpost-start-action.ts';
 export * from './map.ts';
 export * from './companion.ts';
 export * from './desktop-updates.ts';

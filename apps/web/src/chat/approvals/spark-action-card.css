@@ -13,6 +13,9 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.sac-edit {
+  margin: 8px 14px 0;
+}
 .sac-facts code {
   font-size: 12px;
 }

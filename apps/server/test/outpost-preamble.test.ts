@@ -56,6 +56,7 @@ function post(change: Partial<StoredPost>): StoredPost {
     opening: false,
     afterPostId: null,
     userStarted: false,
+    agentStarted: false,
     ...change,
   };
 }

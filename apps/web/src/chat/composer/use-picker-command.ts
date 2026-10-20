@@ -59,7 +59,7 @@ export function usePickerCommand({
       return;
     }
     if (match) {
-      update.mutate({ model: match.id, routing: 'pinned' });
+      update.mutate({ model: match.id });
       notify(`Model set to ${shortLabel(match.label)}.`);
       return;
     }

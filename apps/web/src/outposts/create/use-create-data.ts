@@ -37,7 +37,7 @@ export function choiceOf(settings: ChatSettings | undefined): AgentChoice {
   if (!settings?.provider) return NO_AGENT;
   return {
     provider: settings.provider,
-    model: settings.routing === 'auto' ? null : settings.model,
+    model: settings.model,
     agentMode: settings.agentMode,
   };
 }

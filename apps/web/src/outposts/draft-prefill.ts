@@ -1,14 +1,9 @@
 import {
   OUTPOST_NAME_MAX,
-  chatModeRank,
-  leadModeLimit,
-  modeKind,
-  modePosture,
+  cappedMode,
   type DraftChat,
   type ModePosture,
   type OutpostDraft,
-  type ProviderCapabilities,
-  type ProviderId,
 } from '@spark-outpost/contracts';
 import {
   emptyChat,
@@ -20,7 +15,7 @@ import {
   type JoinedOutpost,
   type NewId,
 } from './create/create-draft.ts';
-import { defaultMode, type CreateBase } from './create/use-create-data.ts';
+import type { CreateBase } from './create/use-create-data.ts';
 
 export interface DraftSource {
   id: string;
@@ -38,30 +33,6 @@ type PrefillBase = Pick<
   CreateBase,
   'chats' | 'projects' | 'projectNames' | 'providers' | 'defaults' | 'capabilitiesOf'
 >;
-
-function rankOf(
-  provider: ProviderId,
-  mode: string | null,
-  capabilities: ProviderCapabilities | undefined,
-): number {
-  return chatModeRank(modePosture(provider, mode, modeKind(capabilities?.modes ?? [], mode)));
-}
-
-export function cappedMode(
-  provider: ProviderId,
-  wanted: string | null,
-  capabilities: ProviderCapabilities | undefined,
-  lead: ModePosture,
-): string | null {
-  const limit = leadModeLimit(lead);
-  const effective = wanted ?? defaultMode(provider, capabilities);
-  if (rankOf(provider, effective, capabilities) <= limit) return wanted;
-  const allowed = (capabilities?.modes ?? [])
-    .map((mode) => ({ id: mode.id, rank: rankOf(provider, mode.id, capabilities) }))
-    .filter((mode) => mode.rank <= limit);
-  const highest = Math.max(...allowed.map((mode) => mode.rank));
-  return allowed.find((mode) => mode.rank === highest)?.id ?? wanted;
-}
 
 function usualAgent(base: PrefillBase, lead: DraftLead): AgentChoice {
   const own = lead.agent;

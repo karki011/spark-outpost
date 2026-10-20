@@ -129,9 +129,8 @@ describe('retiring models as defaults', () => {
     const picked = await send('patch', `/api/conversations/${id}/settings`, {
       provider: 'claude',
       model: 'haiku',
-      routing: 'pinned',
     }).expect(200);
-    expect(picked.body).toMatchObject({ model: 'haiku', routing: 'pinned' });
+    expect(picked.body).toMatchObject({ model: 'haiku' });
   });
 
   it('starts a new connection on Opus 5.5 in Auto, and keeps saved choices on reconnect', async () => {

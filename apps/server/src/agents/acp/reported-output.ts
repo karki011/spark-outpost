@@ -7,7 +7,13 @@ import { offeredCapabilities } from './capabilities.ts';
 export function asReported(definition: AgentDefinition, output: ProviderOutput): ProviderOutput {
   if (output.kind === 'usage') {
     const readings = definition.usageReadings ? { readings: definition.usageReadings } : {};
-    return { ...output, ...readings, ...(definition.estimatesCost ? { costUsd: null } : {}) };
+    const provisional = definition.windowAtResult === true && output.costUsd === null;
+    return {
+      ...output,
+      ...readings,
+      ...(provisional ? { provisionalWindow: true } : {}),
+      ...(definition.estimatesCost ? { costUsd: null } : {}),
+    };
   }
   if (output.kind === 'tokens' && definition.inputExcludesCache) {
     return { ...output, tokens: withCachedInput(output.tokens) };

@@ -69,6 +69,7 @@ export function post(number: number, overrides: Partial<OutpostPost> = {}): Outp
     fromRunId: null,
     fromHandle: null,
     userStarted: false,
+    agentStarted: false,
     held: false,
     toConversationId: API_CHAT,
     toHandle: 'api',

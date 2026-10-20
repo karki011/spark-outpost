@@ -8,6 +8,7 @@ export type RunOutpost = NonNullable<Run['outpost']>;
 
 type Sender = Pick<RunOutpost, 'fromUser' | 'fromHandle'> & {
   userStarted?: boolean;
+  agentStarted?: boolean;
   fromSpark?: boolean;
 };
 
@@ -20,7 +21,10 @@ export function requestSender(outpost: Sender): string {
 
 export function requestNote(outpost: Sender): string | null {
   if (outpost.fromUser) return null;
-  return outpost.userStarted ? 'started by you, not written by you' : 'not from you';
+  if (!outpost.userStarted) return 'not from you';
+  return outpost.agentStarted
+    ? 'started by its agent, not by you'
+    : 'started by you, not written by you';
 }
 
 interface RequestHeaderProps {

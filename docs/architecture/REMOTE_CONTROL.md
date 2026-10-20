@@ -391,6 +391,8 @@ In the outpost paragraph, two words change:
 
 > … never to a paired device or through Tailscale. A paired device may read an outpost, post, cancel, pause and rename; …
 
+Since October 20, 2026 a paired device may also start a draft as proposed and answer the agent's start card; see [PHONE_REMOTE.md](PHONE_REMOTE.md) and the outpost paragraph in `AGENTS.md`.
+
 ### Decisions
 
 1. **The name.** "Remote control" for the page, the left bar item and the main switch; "paired device" for what connects. Recommend: yes, with the label table above.

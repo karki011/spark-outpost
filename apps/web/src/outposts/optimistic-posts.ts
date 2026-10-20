@@ -18,6 +18,7 @@ function drawn(detail: OutpostDetail, id: string, body: string, now: string): Ou
     fromRunId: null,
     fromHandle: null,
     userStarted: false,
+    agentStarted: false,
     held: false,
     toConversationId: null,
     toHandle: null,

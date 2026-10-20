@@ -321,7 +321,6 @@ export interface OrchestrationRow {
   depth: Orchestration['depth'];
   depth_source: Orchestration['depthSource'];
   risk: Orchestration['risk'];
-  routing: Orchestration['routing'];
   retries: number;
   active_ms: number;
   tool_calls: number;
@@ -351,7 +350,6 @@ export function buildOrchestration(
     depthSource: row.depth_source,
     risk: row.risk,
     level: row.level ?? UNSET_RUN_LEVEL,
-    routing: row.routing,
     provider: row.provider,
     planVersion: row.plan_version,
     retries: row.retries,

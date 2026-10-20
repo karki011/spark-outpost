@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { shownModelName } from '@spark-outpost/contracts';
 import {
-  buttonLabel,
   cleanDescription,
   currentModel,
   formatTokens,
@@ -45,12 +45,12 @@ describe('composer model options', () => {
     expect(currentModel(settings, capabilities)?.id).toBe('default');
     expect(shortLabel('Default (recommended)')).toBe('Default');
     expect(currentModel({ ...settings, model: 'haiku' }, capabilities)?.label).toBe('Haiku 4.5');
-    expect(buttonLabel(capabilities.models[0]!)).toBe('Opus 5.5');
+    expect(shownModelName(capabilities.models[0]!)).toBe('Opus 5.5');
     expect(currentModel({ ...settings, model: 'retired-model' }, capabilities)?.id).toBe('default');
     expect(
-      buttonLabel({ id: 'default', label: 'Default', description: 'Opus (1M context) · Best' }),
+      shownModelName({ id: 'default', label: 'Default', description: 'Opus (1M context) · Best' }),
     ).toBe('Opus');
-    expect(buttonLabel(capabilities.models[1]!)).toBe('Haiku 4.5');
+    expect(shownModelName(capabilities.models[1]!)).toBe('Haiku 4.5');
   });
 
   it('drops a description prefix that repeats the model name', () => {

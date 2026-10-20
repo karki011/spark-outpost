@@ -66,6 +66,7 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_outpost_ask: 'Asking another chat',
   spark_outpost_note: 'Leaving a note in the outpost',
   spark_outpost_draft: 'Proposing sub-task chats',
+  spark_outpost_start: 'Starting sub-task chats',
 };
 
 const AGENT_TOOL_STEPS: Readonly<Record<string, string>> = {

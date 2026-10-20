@@ -77,7 +77,7 @@ test.describe('plain chats', () => {
     await expect(workPanel(page)).toBeHidden();
     const rows = rail(page).getByRole('list', { name: 'This chat' });
     await expect(rows.getByRole('button', { name: 'Not linked. Choose project' })).toBeVisible();
-    await expect(rows).toContainText('Claude · Auto');
+    await expect(rows).toContainText('Claude · Opus 5.5');
     await expect(rows).toContainText('tokens');
     await expect(outline(page)).toHaveCount(0);
     await shoot(page, 'short-2000');

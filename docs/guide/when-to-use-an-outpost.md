@@ -34,6 +34,6 @@ Each answer lands under its request with its branch, files and pull request, so 
 | --------------------------------- | ---------------------------------- |
 | Asking a chat that isn't a member | Add the chat to the outpost first. |
 
-Agents can [ask each other](outpost-asks.md), and a chat can [propose a story](outpost-stories.md) of sub-tasks for you to start.
+Agents can [ask each other](outpost-asks.md), and a chat can [start or propose a story](outpost-stories.md) of sub-tasks.
 
 To set one up, see [Work across chats in an outpost](outposts.md). For what a request may do, see [What an outpost request may do](outpost-permissions.md).

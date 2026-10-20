@@ -30,6 +30,7 @@ export type SparkToolNeed =
   | 'mac'
   | 'outpost'
   | 'outpost_draft'
+  | 'outpost_start'
   | 'calendar_read'
   | 'calendar_edit'
   | 'jira'

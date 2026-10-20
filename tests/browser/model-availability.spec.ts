@@ -61,7 +61,7 @@ async function ask(page: Page, text: string): Promise<void> {
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const picker = page.getByRole('button', { name: /^Model and effort/ });
-  await expect(picker).toHaveAccessibleName('Model and effort: Auto');
+  await expect(picker).toHaveAccessibleName('Model and effort: GPT-6.1 Sol');
   await picker.click();
   await page
     .getByRole('dialog', { name: 'Model, effort, and permissions' })
@@ -143,7 +143,7 @@ test('a default the sign-in cannot use is flagged on the provider screen with a 
 
   await expandSection(codex, 'Defaults for new chats');
   await expect(codex.getByRole('region', { name: 'Defaults for new chats' })).toContainText(
-    "New chats start on Auto, which runs this model, or the agent's own default when none is picked here.",
+    'New chats start on this model. A chat can pick another in its model picker.',
   );
   const notice = codex.getByRole('status').filter({ hasText: 'default model' });
   await expect(notice).toContainText(

@@ -46,7 +46,7 @@ import {
   recordRunMetrics,
   recordSessionSettings,
   recordTokens,
-  recordUsage,
+  spendRecorder,
 } from './run-metadata.ts';
 import { TEST_RUNNER_ALLOWLIST } from '../approvals/command-kinds.ts';
 import { proposedPlan } from '../plans/codex-plan.ts';
@@ -298,10 +298,7 @@ export async function runAgentTurn(
     const shown = asAgentReads(input);
     turnSession = await turnSessionFor(deps, shown);
     const session = turnSession;
-    const recordSpend = async (output: Extract<ProviderOutput, { kind: 'usage' }>) => {
-      const counted = session ? await session.usage(output) : output;
-      await recordUsage(deps.db, lease.runId, counted);
-    };
+    const recordSpend = spendRecorder(deps.db, lease.runId, input.provider, session);
     const recordRequest = (request: RequestUsage) =>
       recordRequestUsage(deps.db, lease.runId, request, new Date());
     const userMcp = input.assistant

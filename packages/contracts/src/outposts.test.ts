@@ -61,6 +61,7 @@ const detail: OutpostDetail = {
       fromRunId: null,
       fromHandle: 'fe',
       userStarted: false,
+      agentStarted: false,
       held: false,
       toConversationId: BACKEND,
       toHandle: 'api',
@@ -255,6 +256,7 @@ describe('outpost fields on existing contracts', () => {
       fromUser: true,
       fromSpark: false,
       userStarted: false,
+      agentStarted: false,
     };
     expect(runSchema.shape.outpost.parse(from)).toEqual(from);
     expect(runSchema.shape.outpost.parse(undefined)).toBeUndefined();

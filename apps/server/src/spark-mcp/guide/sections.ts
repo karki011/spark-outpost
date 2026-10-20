@@ -10,7 +10,7 @@ export const guideSections: GuideSection[] = [
     id: 'overview',
     title: 'What Spark Outpost is',
     keywords: ['spark', 'outpost', 'overview', 'what', 'product'],
-    text: `Spark Outpost is a local-first workspace where you give a goal to an AI agent, follow meaningful progress, make decisions when needed, and get results. One chat is one agent session (Claude, Codex or Z.ai): the user's message goes to the agent as typed, and the agent decides whether to plan, use its own sub-agents, or propose sub-chats in an outpost that the user starts.
+    text: `Spark Outpost is a local-first workspace where you give a goal to an AI agent, follow meaningful progress, make decisions when needed, and get results. One chat is one agent session (Claude, Codex or Z.ai): the user's message goes to the agent as typed, and the agent decides whether to plan, use its own sub-agents, or split the work into sub-chats in an outpost, which it starts itself (asking first when its mode asks) or proposes for the user to start.
 
 Spark moderates around the agent: the approval gate and safety floor, the audit, a worktree and branch per chat, the publish step, pull request follow-up and its own tools. Spark splits no turn into roles, runs no checks of its own and picks no model. A conversation is a durable record; a provider session is one replaceable execution resource inside it.`,
   },

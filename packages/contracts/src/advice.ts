@@ -10,8 +10,6 @@ export const depthSchema = z.enum(['direct', 'execute', 'plan_execute', 'plan_ex
 export type Depth = z.infer<typeof depthSchema>;
 
 export const gateDecisionSchema = z.enum(['act', 'ask', 'fallback']);
-export const modelRoutingSchema = z.enum(['pinned', 'auto']);
-export type ModelRouting = z.infer<typeof modelRoutingSchema>;
 
 export const jevStatusSchema = z.enum([
   'answered',
@@ -112,7 +110,6 @@ export const adviceSummarySchema = z.object({
   policyVersion: z.string().optional(),
   calls: z.record(z.string(), intakeCallSchema).optional(),
   notAsked: z.record(z.string(), z.string()).optional(),
-  routing: modelRoutingSchema,
   rules: intakeAnswerSchema,
   jev: jevIntakeSchema.nullable(),
   jevStatus: jevStatusSchema,

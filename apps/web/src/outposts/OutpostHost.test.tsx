@@ -161,7 +161,7 @@ describe('OutpostHost', () => {
         startedAt: null,
       });
       client.setQueryData(queryKeys.conversation(API_CHAT), {
-        settings: { provider: 'codex', model: null, routing: 'auto', agentMode: 'agent' },
+        settings: { provider: 'codex', model: null, agentMode: 'agent' },
       });
       renderHost();
       fireEvent.click(screen.getByRole('button', { name: 'Review draft' }));

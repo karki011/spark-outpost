@@ -59,6 +59,12 @@ describe('explicitlyAsked', () => {
     ['calendar_edit', 'move that event to 17:00', true],
     ['calendar_edit', 'delete the meeting', true],
     ['calendar_edit', "what's on my calendar tomorrow", false],
+    ['start_outpost', 'Split this into two parallel sub-chats and start them', true],
+    ['start_outpost', 'start an outpost for the api and web work', true],
+    ['start_outpost', 'kick off two separate chats for this', true],
+    ['start_outpost', 'run the chat tests', false],
+    ['start_outpost', "open this chat's settings", false],
+    ['start_outpost', 'create a chat title helper', false],
   ] as const)('%s for "%s" is %s', (action, request, expected) => {
     expect(explicitlyAsked(action, request)).toBe(expected);
   });

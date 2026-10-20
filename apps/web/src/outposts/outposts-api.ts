@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   createOutpostResponseSchema,
+  startDraftResponseSchema,
   outpostDraftSchema,
   outpostDetailSchema,
   outpostSchema,
@@ -10,6 +11,7 @@ import {
   type MemberRequest,
   type Outpost,
   type OutpostDetail,
+  type StartDraftResponse,
   type UpdateOutpostRequest,
 } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
@@ -38,6 +40,7 @@ const outpostPaths = {
   cancelPost: (id: string, postId: string) => `/outposts/${id}/posts/${postId}/cancel`,
   startNow: (id: string, postId: string) => `/outposts/${id}/posts/${postId}/start-now`,
   draft: (id: string) => `/outposts/drafts/${id}`,
+  startDraft: (id: string) => `/outposts/drafts/${id}/start`,
 };
 
 function changed(path: string, init: RequestInit): Promise<OutpostDetail> {
@@ -71,4 +74,6 @@ export const outpostsApi = {
     changed(outpostPaths.startNow(id, postId), { method: 'POST', body: '{}' }),
   getDraft: (id: string): Promise<ProposedDraft> =>
     request(proposedDraftSchema, outpostPaths.draft(id)),
+  startDraft: (id: string): Promise<StartDraftResponse> =>
+    request(startDraftResponseSchema, outpostPaths.startDraft(id), { method: 'POST', body: '{}' }),
 };

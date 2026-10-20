@@ -6,7 +6,7 @@ import {
   countingIds,
   createData,
 } from './create/create-fixtures.ts';
-import { cappedMode, fromDraft, type DraftLead } from './draft-prefill.ts';
+import { fromDraft, type DraftLead } from './draft-prefill.ts';
 import { DOCS_CHAT, FE_CHAT, OUTPOST_ID, WEB_PROJECT, chat } from './test-fixtures.ts';
 
 const DRAFT_ID = '0e100000-0000-4000-8000-000000000001';
@@ -54,34 +54,6 @@ function source(chats: DraftChat[], name?: string) {
 function lead(posture: DraftLead['posture'], outpost: DraftLead['outpost'] = null): DraftLead {
   return { conversationId: DOCS_CHAT, posture, outpost };
 }
-
-describe('cappedMode', () => {
-  it('keeps a mode that asks at least as often as the lead', () => {
-    expect(cappedMode('claude', 'default', CLAUDE_CAPABILITIES, 'edits')).toBe('default');
-    expect(cappedMode('claude', 'acceptEdits', CLAUDE_CAPABILITIES, 'edits')).toBe('acceptEdits');
-  });
-
-  it('keeps no mode when the agent default is within the lead', () => {
-    expect(cappedMode('claude', null, CLAUDE_CAPABILITIES, 'auto')).toBeNull();
-  });
-
-  it('lowers a mode above the lead to the highest one the lead allows', () => {
-    expect(cappedMode('claude', 'bypassPermissions', CLAUDE_CAPABILITIES, 'edits')).toBe(
-      'acceptEdits',
-    );
-    expect(cappedMode('claude', null, CLAUDE_CAPABILITIES, 'read_only')).toBe('plan');
-    expect(cappedMode('codex', 'agent', CODEX_CAPABILITIES, 'asks')).toBe('read-only');
-  });
-
-  it('treats a lead in an unknown mode as one that asks', () => {
-    expect(cappedMode('claude', 'auto', CLAUDE_CAPABILITIES, 'unknown')).toBe('default');
-  });
-
-  it('never raises: with no lower mode known it keeps what was wanted', () => {
-    expect(cappedMode('claude', null, undefined, 'read_only')).toBeNull();
-    expect(cappedMode('claude', 'auto', undefined, 'read_only')).toBe('auto');
-  });
-});
 
 describe('fromDraft', () => {
   it('lists the lead as an existing chat and each proposed chat as a new one', () => {
