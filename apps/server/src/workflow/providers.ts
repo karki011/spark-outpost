@@ -2,7 +2,7 @@ import { createAcpProvider } from '../agents/acp/acp-provider.ts';
 import { agentDefinitions, type AgentDefinition } from '../agents/acp/agents.ts';
 import { ZAI_MODELS } from '../agents/acp/zai.ts';
 import { FAKE_PROVIDER_NAME, createFakeProvider } from '../providers/fake.ts';
-import type { Provider } from '../providers/provider.ts';
+import type { Provider, ProviderTurn } from '../providers/provider.ts';
 import { childEnvironment } from '../setup/environment.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import type { AgentRuntime, SparkToolsAccess } from '../agents/acp/spark-tools.ts';
@@ -46,10 +46,15 @@ function fakeAcpProvider(
   });
 }
 
+function usesAcp(turn: ProviderTurn): boolean {
+  return turn.prompt.includes(FAKE_ACP_TRIGGER) || turn.live?.continuation === true;
+}
+
 function crewFake(fake: Provider, acp: Provider): Provider {
   return {
     name: acp.name,
-    run: (turn) => (turn.prompt.includes(FAKE_ACP_TRIGGER) ? acp : fake).run(turn),
+    run: (turn) => (usesAcp(turn) ? acp : fake).run(turn),
+    ...(acp.sessions ? { sessions: acp.sessions } : {}),
   };
 }
 

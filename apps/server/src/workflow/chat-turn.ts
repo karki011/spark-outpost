@@ -50,6 +50,13 @@ async function afterReply(
   return result;
 }
 
+async function runAgentCycle(start: Start, input: RunInput): Promise<void> {
+  const { deps, lease, append, control, hooks } = start;
+  const reply = await runAgentTurn(deps, lease, input, append, control);
+  const result = await afterReply({ deps, lease, input, append, control }, hooks, reply);
+  await finishRun(append, input.identity, result, true);
+}
+
 async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): Promise<void> {
   const append = runAppender(deps.db, lease);
   const control = startControl(deps, lease);
@@ -57,6 +64,7 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
   let input = await loadRunInput(deps.db, lease.runId);
   try {
     await append(runEvents.started(input.identity), { transition: { status: 'running' } });
+    if (input.agentCycle) return await runAgentCycle(start, input);
     await auditOutpostRequest(deps.db, lease, input);
     input = await noteProjectMove(deps.db, input, append);
     const placed = await placeChatOrStop(deps, input, append, false);

@@ -40,8 +40,9 @@ export interface MessageRow {
 export interface RunRow {
   id: string;
   conversation_id: string;
-  user_message_id: string;
+  user_message_id: string | null;
   provider: string;
+  source?: string | null;
   status: RunStatus;
   error: string | null;
   cancel_requested_at: Date | null;
@@ -172,6 +173,7 @@ export function toRun(row: RunRow): Run {
     interruptionChoice: row.interruption_choice ?? null,
     modelSwitch: modelSwitchSchema.safeParse(row.model_switch).data ?? null,
     errorDetails: row.error_details ?? null,
+    ...(row.source === 'agent_cycle' ? { agentCycle: true } : {}),
     ...runOutpost(row),
   };
 }

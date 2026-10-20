@@ -54,6 +54,7 @@ export interface RunInput {
   followUpRound?: boolean;
   outpostRequest?: OutpostRequest | null;
   turnTimes?: TurnTimes | null;
+  agentCycle?: boolean;
 }
 
 export interface OutpostRequest {
@@ -93,6 +94,7 @@ interface OutpostRow {
 
 interface RunRow extends OutpostRow {
   user_message_id: string;
+  agent_cycle: boolean;
   conversation_id: string;
   workspace_id: string;
   run_model: string | null;
@@ -196,7 +198,8 @@ async function loadHistory(
 
 export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
   const { rows } = await db.query<RunRow>(
-    `SELECT r.user_message_id, r.conversation_id, c.workspace_id, r.provider, m.content,
+    `SELECT r.user_message_id, r.conversation_id, c.workspace_id, r.provider,
+            COALESCE(m.content, '') AS content, r.source = 'agent_cycle' AS agent_cycle,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'pr_follow_up' AS follow_up_round,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
@@ -241,7 +244,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
                   ORDER BY cp.position, cp.created_at LIMIT 1)
             ) AS in_chat_worktree
      FROM runs r
-     JOIN messages m ON m.id = r.user_message_id
+     LEFT JOIN messages m ON m.id = r.user_message_id
      JOIN conversations c ON c.id = r.conversation_id
      LEFT JOIN outpost_posts op ON op.id = r.user_message_id
      LEFT JOIN outposts o ON o.id = op.outpost_id
@@ -254,6 +257,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
   const row = rows[0];
   if (!row) throw new Error(`Run ${runId} was not found.`);
   if (row.parent_run_id) return withUsableModel(db, childInput(runId, row));
+  if (row.agent_cycle) return withUsableModel(db, agentCycleInput(runId, row));
   const history = await db.query<HistoryRow>(
     `SELECT m.id, m.role, m.content, m.created_at,
             EXISTS (
@@ -364,6 +368,32 @@ function settingsOf(row: RunRow): AgentSettings {
     effort: row.run_effort ?? row.effort,
     mode: row.agent_mode,
     options: row.config_values ?? {},
+  };
+}
+
+function agentCycleInput(runId: string, row: RunRow): RunInput {
+  return {
+    identity: { runId, threadId: row.conversation_id },
+    workspaceId: row.workspace_id,
+    prompt: '',
+    attachments: [],
+    provider: row.provider,
+    history: [],
+    settings: settingsOf(row),
+    projectRoots: row.project_roots,
+    mode: row.run_mode,
+    level: row.run_level ?? UNSET_RUN_LEVEL,
+    agentMode: row.agent_mode,
+    parentRunId: null,
+    userRequest: '',
+    followUpRound: false,
+    outpostRequest: null,
+    role: null,
+    askTitle: false,
+    assistant: row.assistant,
+    previousMessageId: null,
+    chatWorktree: row.in_chat_worktree,
+    agentCycle: true,
   };
 }
 

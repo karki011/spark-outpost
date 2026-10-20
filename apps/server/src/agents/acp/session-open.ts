@@ -25,6 +25,7 @@ export interface OpenedSession {
   session: acp.ActiveSession;
   continued: boolean;
   freshReason: string | null;
+  live?: boolean;
 }
 
 export interface ReplayFilter {
@@ -194,6 +195,7 @@ export function sessionOutput(
     additionalDirectories: [...(request.additionalDirectories ?? [])],
     continued: opened.continued,
     freshReason: opened.continued ? null : (opened.freshReason ?? planned),
+    ...(opened.live ? { live: true } : {}),
   };
 }
 

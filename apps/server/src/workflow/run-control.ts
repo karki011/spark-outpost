@@ -2,7 +2,7 @@ import { renewLease, type Lease } from '../persistence/jobs.ts';
 import { isCancelRequested } from '../persistence/run-events.ts';
 import type { TurnDeps } from './agent-turn.ts';
 
-export type StopReason = 'cancelled' | 'lease_lost' | 'approval_timeout';
+export type StopReason = 'cancelled' | 'quit' | 'lease_lost' | 'approval_timeout';
 
 export interface RunControl {
   signal: AbortSignal;

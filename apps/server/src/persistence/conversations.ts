@@ -246,7 +246,7 @@ export interface RunTarget {
   modelSwitch?: ModelSwitch | null;
 }
 
-async function runMode(
+export async function runMode(
   db: Queryable,
   conversationId: string,
   permission: string | null,

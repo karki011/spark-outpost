@@ -284,7 +284,7 @@ export async function prepareTurnSession(
         });
         return;
       }
-      if (result.outcome !== 'succeeded' || (chatTurn && !result.messageId)) {
+      if (result.outcome !== 'succeeded' || (chatTurn && !result.messageId && !input.agentCycle)) {
         await closeProviderSession(db, rowId, RESUME_REASONS.unfinished);
         return;
       }
@@ -320,7 +320,8 @@ function seedChars(input: RunInput): number {
 }
 
 function resumableStop(input: RunInput, result: TurnEnd): boolean {
-  if (result.outcome !== 'cancelled' || result.stopReason !== 'cancelled') return false;
+  const stopped = result.stopReason === 'cancelled' || result.stopReason === 'quit';
+  if (result.outcome !== 'cancelled' || !stopped) return false;
   return input.parentRunId !== null || result.messageId !== null;
 }
 
@@ -368,9 +369,11 @@ export async function removeWorkdirs(paths: readonly string[]): Promise<void> {
 export async function sweepSessions(
   db: Db,
   limits: SweepLimits = DEFAULT_SWEEP_LIMITS,
+  inUse: readonly string[] = [],
 ): Promise<number> {
   const closed = await sweepProviderSessions(db, limits);
   for (const workdir of await idleWorkdirs(db, limits.idleMs)) {
+    if (inUse.includes(workdir)) continue;
     await removeWorkdirs([workdir]);
     await forgetWorkdir(db, workdir);
   }

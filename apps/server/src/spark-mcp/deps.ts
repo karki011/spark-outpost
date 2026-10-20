@@ -71,6 +71,7 @@ export interface SparkScope {
   publish?: PublishScope | null | undefined;
   commands?: SparkCommandScope;
   beforeToolCall?: () => Promise<void>;
+  rebinds?: boolean;
 }
 
 export function ticketDepsFor(deps: SparkToolDeps, scope: SparkScope): TicketDeps {

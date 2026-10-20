@@ -87,6 +87,7 @@ function asSecondPrompt(input: RunInput, prompt: string): RunInput {
     continuesRunId: null,
     planning: false,
     plansFirst: false,
+    agentCycle: false,
   };
 }
 

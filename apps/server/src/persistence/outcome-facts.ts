@@ -119,6 +119,7 @@ async function followUps(db: Queryable, turn: TurnRow) {
      LEFT JOIN messages m ON m.id = r.user_message_id
      WHERE c.workspace_id = $1 AND r.id <> $2
        AND r.parent_run_id IS NULL AND r.role IS DISTINCT FROM 'digest'
+       AND r.source IS DISTINCT FROM 'agent_cycle'
        AND r.created_at > $3 AND r.created_at <= $4
      ORDER BY r.created_at
      LIMIT 50`,

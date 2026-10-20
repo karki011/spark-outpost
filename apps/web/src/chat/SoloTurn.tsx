@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
   isTerminalRunStatus,
   waitingOnLabel,
+  STOPPED_BY_QUIT,
   type Approval,
   type ConversationDetail,
   type Message,
@@ -208,7 +209,11 @@ export function SoloTurn({
   const publishing = replies.publishText !== '' || commands.publish.length > 0;
   const interrupted = run.status === 'outcome_unknown';
   const shown = child?.modelSwitch || child?.errorDetails ? child : run;
-  const error = finished ? (interrupted ? null : run.error) : stream.error;
+  const error = finished
+    ? interrupted || run.status === 'cancelled'
+      ? null
+      : run.error
+    : stream.error;
   const checkpoints = finished ? turnCheckpoints(run.id, detail) : [];
   const revertible = finished
     ? [run, child].find(
@@ -287,7 +292,11 @@ export function SoloTurn({
       {cards.pending.map(approvalCard)}
       <AgreedReplyLine detail={detail} message={assistantMessage} finished={finished} />
       {finished && <AgentTerminalsRunning terminals={terminals} />}
-      {run.status === 'cancelled' && <p className="ai-note">Stopped before finishing.</p>}
+      {run.status === 'cancelled' && (
+        <p className="ai-note">
+          {run.error === STOPPED_BY_QUIT ? STOPPED_BY_QUIT : 'Stopped before finishing.'}
+        </p>
+      )}
       <ModelSwitchNote change={finished ? shown.modelSwitch : stream.modelSwitch} />
       <ErrorLine
         error={error}

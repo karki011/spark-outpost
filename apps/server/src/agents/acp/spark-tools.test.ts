@@ -3,6 +3,7 @@ import type * as acp from '@agentclientprotocol/sdk';
 import { agentDefinitions } from './agents.ts';
 import {
   openSparkTools,
+  sparkToolsHint,
   sparkAcpServer,
   sparkReserved,
   withCodexSparkServer,
@@ -40,20 +41,30 @@ function claudeServers(request: acp.NewSessionRequest): Record<string, ClaudeHtt
 
 describe('Spark tools for agent sessions', () => {
   it('opens only with a host and a scope, and steps aside from a Codex server called spark', async () => {
-    expect(await openSparkTools(undefined, scope, [])).toBeNull();
-    expect(await openSparkTools(access, undefined, [])).toBeNull();
-    expect((await openSparkTools(access, scope, []))?.name).toBe('spark');
-    expect((await openSparkTools(access, scope, ['spark']))?.name).toBe('spark_outpost');
+    expect(await openSparkTools(undefined, scope, sparkToolsHint(undefined, scope, []))).toBeNull();
+    expect(
+      await openSparkTools(access, undefined, sparkToolsHint(access, undefined, [])),
+    ).toBeNull();
+    expect((await openSparkTools(access, scope, sparkToolsHint(access, scope, [])))?.name).toBe(
+      'spark',
+    );
+    expect(
+      (await openSparkTools(access, scope, sparkToolsHint(access, scope, ['spark'])))?.name,
+    ).toBe('spark_outpost');
     expect(sparkReserved(['notes'])).toEqual(['notes', 'spark', 'spark_outpost']);
   });
 
   it('knows whether the host has the Browser pane', async () => {
-    expect((await openSparkTools(access, scope, []))?.browser).toBe(false);
-    expect((await openSparkTools({ ...access, browser: true }, scope, []))?.browser).toBe(true);
+    expect((await openSparkTools(access, scope, sparkToolsHint(access, scope, [])))?.browser).toBe(
+      false,
+    );
+    const browsing = { ...access, browser: true };
+    const hint = sparkToolsHint(browsing, scope, []);
+    expect((await openSparkTools(browsing, scope, hint))?.browser).toBe(true);
   });
 
   it('sends Claude an HTTP server with the session token, but nothing to Codex or agents without HTTP', async () => {
-    const tools = await openSparkTools(access, scope, []);
+    const tools = await openSparkTools(access, scope, sparkToolsHint(access, scope, []));
     expect(sparkAcpServer(tools, agentDefinitions.claude, withHttp)).toEqual({
       name: 'spark',
       config: expect.objectContaining({
@@ -75,7 +86,10 @@ describe('Spark tools for agent sessions', () => {
       }),
     };
     const config = JSON.parse(
-      withCodexSparkServer(env, await openSparkTools(access, scope, [])).CODEX_CONFIG!,
+      withCodexSparkServer(
+        env,
+        await openSparkTools(access, scope, sparkToolsHint(access, scope, [])),
+      ).CODEX_CONFIG!,
     );
     expect(config).toEqual({
       web_search: 'disabled',
@@ -93,7 +107,7 @@ describe('Spark tools for agent sessions', () => {
   });
 
   it('gives a Claude tool call an hour before the pinned CLI gives up, where it had 60 seconds', async () => {
-    const tools = await openSparkTools(access, scope, []);
+    const tools = await openSparkTools(access, scope, sparkToolsHint(access, scope, []));
     const meta = { claudeCode: { options: { tools: ['Read'], strictMcpConfig: true } } };
     const request = withSparkServer(
       { cwd: '/work/app', mcpServers: [], _meta: meta },
@@ -119,7 +133,7 @@ describe('Spark tools for agent sessions', () => {
   });
 
   it('keeps the other Claude servers and sends an agent without Claude options the plain server', async () => {
-    const tools = await openSparkTools(access, scope, []);
+    const tools = await openSparkTools(access, scope, sparkToolsHint(access, scope, []));
     const spark = sparkAcpServer(tools, agentDefinitions.claude, withHttp);
     const notes = { type: 'http', url: 'https://notes.example/mcp' };
     const meta = { claudeCode: { options: { mcpServers: { notes } } } };

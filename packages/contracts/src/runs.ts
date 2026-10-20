@@ -40,6 +40,7 @@ export const interruptionChoiceSchema = z.enum(['continue', 'fresh']);
 export type InterruptionChoice = z.infer<typeof interruptionChoiceSchema>;
 
 export const CONTINUE_MESSAGE = 'Continue from here';
+export const STOPPED_BY_QUIT = 'Stopped by Quit.';
 
 export const messageSourceSchema = z.enum(['ui', 'e2e', 'bench']);
 export type MessageSource = z.infer<typeof messageSourceSchema>;
@@ -47,7 +48,7 @@ export type MessageSource = z.infer<typeof messageSourceSchema>;
 export const runSchema = z.object({
   id: z.uuid(),
   conversationId: z.uuid(),
-  userMessageId: z.uuid(),
+  userMessageId: z.uuid().nullable(),
   provider: z.string(),
   status: runStatusSchema,
   error: z.string().nullable(),
@@ -75,6 +76,7 @@ export const runSchema = z.object({
   interruptionChoice: interruptionChoiceSchema.nullable().optional(),
   modelSwitch: modelSwitchSchema.nullable().optional(),
   errorDetails: z.string().nullable().optional(),
+  agentCycle: z.boolean().optional(),
   outpost: z
     .object({
       postId: z.uuid(),

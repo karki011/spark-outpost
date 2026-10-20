@@ -83,7 +83,9 @@ export async function finishRun(
   try {
     await closeMessage(append, result, recordMessage);
     if (result.outcome === 'cancelled') {
-      await append(runEvents.cancelled(identity), { transition: { status: 'cancelled' } });
+      await append(runEvents.cancelled(identity), {
+        transition: { status: 'cancelled', ...(result.error ? { error: result.error } : {}) },
+      });
     } else if (result.outcome === 'failed') {
       const message = result.error ?? 'The run failed.';
       await append(runEvents.error(message, 'provider_error'), {

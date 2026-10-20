@@ -21,6 +21,7 @@ export function updateSink(sink: UpdateSink): (update: SessionUpdate) => Promise
   const { live, mapper, push } = sink;
   return async (update) => {
     if (update.sessionUpdate === 'config_option_update') live.adopt(update.configOptions);
+    if (update.sessionUpdate === 'current_mode_update') live.adoptMode(update.currentModeId);
     push(mapper.map(update));
     push(sink.ranModel.see(update));
     push(sink.commands.see(update));

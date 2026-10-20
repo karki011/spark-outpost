@@ -88,6 +88,7 @@ export function offersMode(options: readonly acp.SessionConfigOption[], mode: st
 export interface SettingsSession {
   options(): acp.SessionConfigOption[];
   adopt(options: readonly acp.SessionConfigOption[]): void;
+  adoptMode(mode: string): void;
   setMode(mode: string): Promise<void>;
   setValue(configId: string, value: string | boolean): Promise<void>;
   leaveUnpinned(model: string): void;
@@ -99,16 +100,19 @@ function settingsSession(ctx: Requester, session: SessionHandle): SettingsSessio
   let legacy = legacyOptions(session.newSessionResponse);
   let unpinned: string | null = null;
   const all = () => withLegacy(configOptions, legacy);
-  const setLegacyMode = async (mode: string) => {
-    await ctx.request(acp.methods.agent.session.setMode, {
-      sessionId: session.sessionId,
-      modeId: mode,
-    });
+  const noteLegacyMode = (mode: string) => {
     legacy = legacy.map((option) =>
       option.id === LEGACY_MODE_OPTION && option.type === 'select'
         ? { ...option, currentValue: mode }
         : option,
     );
+  };
+  const setLegacyMode = async (mode: string) => {
+    await ctx.request(acp.methods.agent.session.setMode, {
+      sessionId: session.sessionId,
+      modeId: mode,
+    });
+    noteLegacyMode(mode);
   };
   const setValue = async (configId: string, value: string | boolean) => {
     const response = await ctx.request(acp.methods.agent.session.setConfigOption, {
@@ -122,6 +126,13 @@ function settingsSession(ctx: Requester, session: SessionHandle): SettingsSessio
     options: all,
     adopt(options) {
       configOptions = [...options];
+    },
+    adoptMode(mode) {
+      noteLegacyMode(mode);
+      const modes = findOption(configOptions, 'mode');
+      configOptions = configOptions.map((option) =>
+        option === modes && option.type === 'select' ? { ...option, currentValue: mode } : option,
+      );
     },
     setValue,
     leaveUnpinned(model) {
@@ -150,12 +161,13 @@ export async function applySessionSettings(
   settings: AgentSettings,
   mode: ModeWish = { wanted: definition.conversationMode },
   resumed = false,
+  kept: SettingsSession | null = null,
 ): Promise<AppliedSettings> {
   const initial = withLegacy(
     session.newSessionResponse.configOptions ?? [],
     legacyOptions(session.newSessionResponse),
   );
-  const live = settingsSession(ctx, session);
+  const live = kept ?? settingsSession(ctx, session);
   const notes: string[] = mode.note ? [mode.note] : [];
   const defaultNote = (wish: ConfigWish, reason: string) =>
     `Using ${definition.name}'s default ${wish.category === 'model' ? 'model' : 'effort'}; ${wish.label ?? wish.value} ${reason}`;
