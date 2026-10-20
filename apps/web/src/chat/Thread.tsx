@@ -83,7 +83,7 @@ export const Thread = memo(function Thread({
     if (pendingCount > 0) follow();
   }, [pendingCount, follow]);
 
-  if (turns.length === 0 && pendingCount === 0) {
+  if (turns.length === 0 && pendingCount === 0 && topics.after.length === 0) {
     return (
       <div className="thread-wrap">
         <div className="thread">
