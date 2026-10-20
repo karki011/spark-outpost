@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
+import { pointAtScout } from './island-pointer.ts';
 import {
   focusCalls,
   island,
@@ -256,7 +257,7 @@ test('a request that opened by itself stays open under the pointer and away from
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
 });
 
-test('after one answer in the chat panel the card that slides up cannot be answered at once', async ({
+test('after one answer in the inbox the next request of that chat cannot be answered at once', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -268,19 +269,19 @@ test('after one answer in the chat panel the card that slides up cannot be answe
       approvals: [install.approval, { kind: 'execute', title: 'npm test', command: 'npm test' }],
     },
   ]);
-  await page.getByRole('button', { name: /^Chat: Add the image library/ }).click();
-  const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
-  const allow = waiting.getByRole('button', { name: 'Allow', exact: true });
-  await expect(allow).toHaveCount(2);
+  await pointAtScout(page);
+  const waiting = island(page).getByRole('region', { name: /^Needs you/ });
+  const allow = waiting.getByRole('button', { name: /^Allow/ });
+  await expect(allow).toBeEnabled();
   const pending = async () =>
     (await sql(`SELECT count(*)::int AS n FROM approvals WHERE status = 'pending'`)).rows[0]!.n;
-  await allow.first().click();
-  await expect(waiting.locator('.appr')).toHaveCount(1);
-  await allow.click({ force: true });
-  await expect(waiting).toHaveAttribute('data-arming', 'true');
+  await allow.click();
+  await expect.poll(pending).toBe(1);
+  await expect(waiting).toContainText('npm test');
+  await expect(allow).toBeDisabled();
   await page.waitForTimeout(300);
   expect(await pending()).toBe(1);
-  await expect(waiting).not.toHaveAttribute('data-arming');
+  await expect(allow).toBeEnabled();
   await allow.click();
   await expect.poll(pending).toBe(0);
 });

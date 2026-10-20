@@ -28,6 +28,8 @@ import { MicButton } from '../voice/MicButton.tsx';
 import { useSeed } from '../voice/speech-seed.tsx';
 import { joinDictation } from '../voice/use-dictation.ts';
 
+export type FollowUp = Pick<ConversationSummary, 'id' | 'title'>;
+
 export interface QuickDraft {
   text: string;
   projectId: string | null | undefined;
@@ -45,7 +47,7 @@ interface QuickChatProps {
   compose: Compose;
   draftId: string;
   draft: QuickDraft;
-  followUp: ConversationSummary | null;
+  followUp: FollowUp | null;
   projects: readonly Project[];
   focusDelay: number;
   onDraft: (draft: QuickDraft) => void;
@@ -153,6 +155,16 @@ export function QuickChat(props: QuickChatProps) {
       onDraft({ ...draft, text: seed.text, projectId: seed.projectId });
       setTicket(seed.ticket);
       setMoveTicket(true);
+    },
+    submit,
+  );
+
+  useSeed(
+    'reply',
+    (seed) => {
+      if (followUp?.id !== seed.chatId) return;
+      onDraft({ ...draft, text: seed.text });
+      textRef.current?.focus({ preventScroll: true });
     },
     submit,
   );

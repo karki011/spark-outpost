@@ -1,5 +1,11 @@
-.td-views {
+.td-tools {
+  display: flex;
+  align-items: center;
   align-self: center;
+  gap: 10px;
+}
+
+.td-views {
   width: 168px;
 }
 

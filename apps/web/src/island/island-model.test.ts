@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
 import { fastAnswer } from './ask-fast-path.ts';
 import {
-  hoverOpens,
+  hoverOpensHome,
   islandView,
   newMoments,
-  chatWidth,
   panelWidth,
   nextStreak,
   peekClearance,
@@ -87,14 +86,13 @@ describe('island state machine', () => {
     const card = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
     expect(islandView(quiet).kind).toBe('peek');
     expect(islandView({ ...quiet, cards: [card] }).kind).toBe('peek');
-    expect(hoverOpens(islandView(quiet))).toEqual({ kind: 'home' });
-    expect(hoverOpens(islandView({ ...quiet, cards: [card], nudge: true }), card)).toEqual({
-      kind: 'card',
-      card,
-    });
-    expect(hoverOpens(islandView({ ...quiet, panel: 'quick' }))).toBeNull();
-    expect(hoverOpens(islandView({ ...quiet, note: true }))).toBeNull();
-    expect(hoverOpens(islandView({ ...quiet, cards: [card], review: card.chat.id }))).toBeNull();
+    expect(hoverOpensHome(islandView(quiet))).toBe(true);
+    expect(hoverOpensHome(islandView({ ...quiet, cards: [card], nudge: true }))).toBe(true);
+    expect(hoverOpensHome(islandView({ ...quiet, panel: 'quick' }))).toBe(false);
+    expect(hoverOpensHome(islandView({ ...quiet, note: true }))).toBe(false);
+    expect(hoverOpensHome(islandView({ ...quiet, cards: [card], review: card.chat.id }))).toBe(
+      false,
+    );
   });
 
   it('rests as blobs alone at every size while one chat works, narrower than any row', () => {
@@ -115,13 +113,12 @@ describe('island state machine', () => {
     const card = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
     const inputs = { ...quiet, hoverOnly: true, full: true, cards: [card], nudge: true };
     expect(islandView(inputs)).toEqual({ kind: 'peek' });
-    expect(hoverOpens(islandView(inputs))).toEqual({ kind: 'home' });
-    expect(hoverOpens(islandView(inputs), card)).toEqual({ kind: 'card', card });
+    expect(hoverOpensHome(islandView(inputs))).toBe(true);
     expect(quickShortcutTarget(null, islandView(inputs), card)).toEqual({
       kind: 'review',
       chatId: 'a',
     });
-    expect(islandView({ ...inputs, panel: 'sessions' }).kind).toBe('panel');
+    expect(islandView({ ...inputs, panel: 'home' }).kind).toBe('panel');
     expect(islandView({ ...inputs, review: 'a' }).kind).toBe('card');
   });
 
@@ -132,8 +129,8 @@ describe('island state machine', () => {
     expect(islandView({ ...full, cards: [card] })).toEqual({ kind: 'now', card: null });
     const asking = islandView({ ...full, cards: [card], nudge: true });
     expect(asking).toEqual({ kind: 'now', card });
-    expect(hoverOpens(asking)).toEqual({ kind: 'card', card });
-    expect(hoverOpens(islandView(full))).toEqual({ kind: 'home' });
+    expect(hoverOpensHome(asking)).toBe(true);
+    expect(hoverOpensHome(islandView(full))).toBe(true);
     expect(quickShortcutTarget(null, asking)).toEqual({ kind: 'review', chatId: 'a' });
     expect(quickShortcutTarget(null, islandView(full))).toEqual({ kind: 'quick' });
     expect(islandView({ ...full, cards: [card], review: 'a' }).kind).toBe('card');
@@ -161,7 +158,7 @@ describe('island state machine', () => {
       total: 2,
     });
     expect(islandView({ ...quiet, cards, review: 'gone' }).kind).toBe('peek');
-    expect(islandView({ ...quiet, cards, nudge: true, panel: 'sessions' }).kind).toBe('panel');
+    expect(islandView({ ...quiet, cards, nudge: true, panel: 'home' }).kind).toBe('panel');
     expect(islandView({ ...quiet, panel: 'quick', note: true }).kind).toBe('note');
   });
 
@@ -425,16 +422,11 @@ describe('Ask Spark fast path', () => {
 describe('panel width', () => {
   it('grows with the screen between a floor and a ceiling', () => {
     expect([1280, 1512, 1728, 1920, 3008].map((screen) => panelWidth('home', screen))).toEqual([
-      720, 756, 864, 920, 920,
+      560, 560, 622, 640, 640,
     ]);
     expect([1280, 1728, 1920].map((screen) => panelWidth('quick', screen))).toEqual([
       640, 726, 760,
     ]);
-    expect(panelWidth('sessions', 1920)).toBe(panelWidth('ask', 1920));
-  });
-
-  it('never narrows an open chat below its reading width', () => {
-    expect(chatWidth(1280)).toBe(690);
-    expect(chatWidth(1920)).toBe(760);
+    expect(panelWidth('quick', 1920)).toBe(panelWidth('ask', 1920));
   });
 });

@@ -302,13 +302,20 @@ export async function calendarMarks(
     'SELECT uid, occurrence_start, kind FROM calendar_marks WHERE workspace_id = $1',
     [workspaceId],
   );
-  const remind = new Set<string>();
-  const hold = new Set<string>();
+  const marks = {
+    remind: new Set<string>(),
+    hold: new Set<string>(),
+    dismissed: new Set<string>(),
+  };
+  const byKind: Record<CalendarMarkKind, Set<string>> = {
+    remind_5: marks.remind,
+    hold: marks.hold,
+    dismiss: marks.dismissed,
+  };
   for (const row of rows) {
-    const key = `${row.uid}@${row.occurrence_start.toISOString()}`;
-    (row.kind === 'hold' ? hold : remind).add(key);
+    byKind[row.kind]?.add(`${row.uid}@${row.occurrence_start.toISOString()}`);
   }
-  return { remind, hold };
+  return marks;
 }
 
 export async function forgetMarksOf(

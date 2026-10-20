@@ -115,6 +115,7 @@ export function fakeHost(): FakeHost {
         };
       }
       if (request.op === 'stop') return { stopped: true };
+      if (request.op === 'refresh') return { refreshed: true };
       if (request.op === 'open') return { opened: true };
       if (request.op === 'event') {
         if (host.detail) return host.detail;

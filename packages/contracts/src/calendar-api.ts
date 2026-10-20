@@ -177,7 +177,10 @@ export const calendarNowSchema = z.object({
 });
 export type CalendarNow = z.infer<typeof calendarNowSchema>;
 
-export const calendarMarkKindSchema = z.enum(['remind_5', 'hold']);
+export const calendarRefreshSchema = z.object({ refreshedAt: z.iso.datetime({ offset: true }) });
+export type CalendarRefresh = z.infer<typeof calendarRefreshSchema>;
+
+export const calendarMarkKindSchema = z.enum(['remind_5', 'hold', 'dismiss']);
 export type CalendarMarkKind = z.infer<typeof calendarMarkKindSchema>;
 
 export const calendarMarkRequestSchema = z

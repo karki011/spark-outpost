@@ -49,3 +49,47 @@ export function snoozeEnds(marks: NudgeMarks): number[] {
     mark.snoozedUntil === null ? [] : [mark.snoozedUntil],
   );
 }
+
+export function withServerDismissed(
+  marks: NudgeMarks,
+  events: readonly { key: string; end: string; dismissed: boolean }[],
+): NudgeMarks {
+  const dismissed = events.filter(
+    (event) => event.dismissed && marks.get(event.key)?.dismissed !== true,
+  );
+  if (dismissed.length === 0) return marks;
+  const next = new Map(marks);
+  for (const event of dismissed) {
+    next.set(event.key, { end: Date.parse(event.end), dismissed: true, snoozedUntil: null });
+  }
+  return next;
+}
+
+const SNOOZE_KEY = 'spark-outpost.calendar-snoozes';
+
+export function readSnoozes(at: number): NudgeMarks {
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(SNOOZE_KEY) ?? '[]');
+    if (!Array.isArray(saved)) return NO_NUDGE_MARKS;
+    const kept = saved.flatMap((entry): [string, NudgeMark][] => {
+      if (!Array.isArray(entry) || typeof entry[0] !== 'string') return [];
+      const [key, end, until] = entry as unknown[];
+      if (typeof end !== 'number' || typeof until !== 'number' || until <= at) return [];
+      return [[key as string, { end, dismissed: false, snoozedUntil: until }]];
+    });
+    return kept.length > 0 ? new Map(kept) : NO_NUDGE_MARKS;
+  } catch {
+    return NO_NUDGE_MARKS;
+  }
+}
+
+export function saveSnoozes(marks: NudgeMarks): void {
+  const snoozed = [...marks].flatMap(([key, mark]) =>
+    mark.snoozedUntil === null || mark.dismissed ? [] : [[key, mark.end, mark.snoozedUntil]],
+  );
+  try {
+    localStorage.setItem(SNOOZE_KEY, JSON.stringify(snoozed));
+  } catch {
+    return;
+  }
+}

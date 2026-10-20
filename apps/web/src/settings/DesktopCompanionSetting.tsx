@@ -28,7 +28,7 @@ function notifyHint(status: CompanionStatus): string {
 
 const SHORTCUTS: { action: IslandAction; label: string; hint: string }[] = [
   { action: 'quick', label: 'Quick chat shortcut', hint: 'Opens a new chat from anywhere.' },
-  { action: 'sessions', label: 'Sessions shortcut', hint: 'Finds a chat and asks for an update.' },
+  { action: 'sessions', label: 'Inbox shortcut', hint: 'Opens the island inbox.' },
 ];
 
 const DEFAULTS: Record<IslandAction, string> = { quick: 'Alt+Space', sessions: 'Alt+Shift+Space' };

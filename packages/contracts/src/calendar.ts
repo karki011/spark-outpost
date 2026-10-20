@@ -53,6 +53,7 @@ export const calendarEventSchema = z.object({
   focus: z.boolean(),
   remind: z.boolean(),
   hold: z.boolean(),
+  dismissed: z.boolean(),
 });
 export type CalendarEvent = z.infer<typeof calendarEventSchema>;
 
@@ -64,9 +65,14 @@ export interface CalendarSpan {
 export interface CalendarMarks {
   remind: ReadonlySet<string>;
   hold: ReadonlySet<string>;
+  dismissed: ReadonlySet<string>;
 }
 
-export const NO_CALENDAR_MARKS: CalendarMarks = { remind: new Set(), hold: new Set() };
+export const NO_CALENDAR_MARKS: CalendarMarks = {
+  remind: new Set(),
+  hold: new Set(),
+  dismissed: new Set(),
+};
 
 export function eventKey(event: { uid: string | null; id: string; start: string }): string {
   return `${event.uid ?? event.id}@${new Date(event.start).toISOString()}`;
@@ -140,6 +146,7 @@ export function mergeEvents(input: MergeInput): CalendarEvent[] {
       focus: isFocusTitle(event.title, input.focusNames),
       remind: input.marks.remind.has(key),
       hold: input.marks.hold.has(key),
+      dismissed: input.marks.dismissed.has(key),
     });
   }
   return result.toSorted((a, b) => Date.parse(a.start) - Date.parse(b.start));

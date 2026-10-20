@@ -1,30 +1,24 @@
-import type { CSSProperties, ReactNode } from 'react';
-import { CommentIcon, GearIcon, HomeIcon, PlusIcon, SoundIcon } from '../ui/icons.tsx';
+import { ChevronIcon, GearIcon, PlusIcon, SoundIcon } from '../ui/icons.tsx';
 import type { Panel } from './island-model.ts';
+import { Kbd } from './island-parts.tsx';
 import type { IslandSound } from './island-sound.ts';
 
-type Tab = 'home' | 'sessions' | 'new';
-
-const TABS: { id: Tab; label: string; panel: Panel; icon: ReactNode; keys: string }[] = [
-  { id: 'home', label: 'Home', panel: 'home', icon: <HomeIcon />, keys: '⌘1' },
-  { id: 'sessions', label: 'Chats', panel: 'sessions', icon: <CommentIcon />, keys: '⌘2' },
-  { id: 'new', label: 'New chat', panel: 'quick', icon: <PlusIcon />, keys: '⌘3' },
-];
-
-export const PANEL_ORDER: readonly Panel[] = ['home', 'sessions', 'quick', 'ask'];
-
-function tabOf(panel: Panel): Tab {
-  return panel === 'quick' || panel === 'ask' ? 'new' : panel;
-}
+export const PANEL_ORDER: readonly Panel[] = ['home', 'quick', 'ask'];
 
 export interface BarActions {
   sound: IslandSound | null;
   onSettings: (() => void) | null;
+  onOpenSpark: () => void;
+}
+
+export interface BarCounts {
+  waiting: number;
+  running: number;
 }
 
 interface IslandBarProps {
   panel: Panel;
-  waiting: number;
+  counts: BarCounts;
   actions: BarActions;
   onTab: (panel: Panel) => void;
 }
@@ -42,43 +36,47 @@ function NewModes({ panel, onTab }: { panel: Panel; onTab: (panel: Panel) => voi
   );
 }
 
-export function IslandBar({ panel, waiting, actions, onTab }: IslandBarProps) {
-  const current = tabOf(panel);
-  const index = TABS.findIndex((tab) => tab.id === current);
+function Pills({ counts }: { counts: BarCounts }) {
+  return (
+    <span className="isl-pills" role="status">
+      {counts.waiting > 0 && <span className="isl-pill wait">{counts.waiting} need you</span>}
+      {counts.running > 0 && <span className="isl-pill run">{counts.running} running</span>}
+    </span>
+  );
+}
+
+export function IslandBar({ panel, counts, actions, onTab }: IslandBarProps) {
+  const home = panel === 'home';
   return (
     <div className="isl-topbar">
-      <div
-        className="isl-tabs"
-        role="tablist"
-        aria-label="Spark Island"
-        style={{ '--tab-i': index } as CSSProperties}
-      >
-        {TABS.map((tab) => {
-          const label =
-            tab.id === 'sessions' && waiting > 0 ? `${tab.label}, ${waiting} need you` : tab.label;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              className="isl-tab"
-              aria-selected={tab.id === current}
-              aria-label={label}
-              title={`${tab.label} · ${tab.keys}`}
-              onClick={() => tab.id !== current && onTab(tab.panel)}
-            >
-              {tab.icon}
-              {tab.id === 'sessions' && waiting > 0 && (
-                <span className="isl-badge" aria-hidden="true">
-                  {waiting}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-      {current === 'new' && <NewModes panel={panel} onTab={onTab} />}
+      {home ? (
+        <Pills counts={counts} />
+      ) : (
+        <>
+          <button
+            type="button"
+            className="isl-ibtn isl-back"
+            aria-label="Back to the inbox"
+            title="Inbox · ⌘1"
+            onClick={() => onTab('home')}
+          >
+            <ChevronIcon />
+          </button>
+          <NewModes panel={panel} onTab={onTab} />
+        </>
+      )}
       <span className="isl-sp" />
+      {home && (
+        <button
+          type="button"
+          className="isl-ibtn"
+          aria-label="New chat"
+          title="New chat · ⌘2"
+          onClick={() => onTab('quick')}
+        >
+          <PlusIcon />
+        </button>
+      )}
       {actions.onSettings && (
         <button
           type="button"
@@ -102,6 +100,9 @@ export function IslandBar({ panel, waiting, actions, onTab }: IslandBarProps) {
           <SoundIcon on={actions.sound.on} />
         </button>
       )}
+      <button type="button" className="isl-open-spark" onClick={actions.onOpenSpark}>
+        Open Spark <Kbd>⌘O</Kbd>
+      </button>
     </div>
   );
 }

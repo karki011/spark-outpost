@@ -139,13 +139,10 @@ export async function openHome(page: Page) {
   await island(page)
     .getByRole('button', { name: /Open Spark Island/ })
     .click();
-  await expect(island(page).getByRole('tab', { name: 'Home' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
+  await expect(needsYou(page)).toBeVisible();
 }
 
-export const nowCard = (page: Page) => island(page).getByRole('region', { name: /^Now/ });
+export const needsYou = (page: Page) => island(page).getByRole('region', { name: /^Needs you/ });
 
 export async function shot(page: Page, name: string, settle = 900) {
   if (!SHOTS) return;

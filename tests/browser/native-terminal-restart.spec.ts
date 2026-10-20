@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
-import { fakeHomeDesktop, nowCard, openHome, openIsland } from './island-home-desktop.ts';
+import { fakeHomeDesktop, island, openHome, openIsland } from './island-home-desktop.ts';
 import { pointOf, startFixtureTerminal, typeLine } from './native-terminal-fixture.ts';
 import { setTerminalState } from './terminal-seed.ts';
 import { API_PORT, API_RESTART_FLAG, PACKAGED } from './stub-config.ts';
@@ -104,7 +104,7 @@ test('the sidebar, the palette, the island and the companion follow a re-adopted
   await fakeHomeDesktop(islandPage);
   await openIsland(islandPage);
   await openHome(islandPage);
-  const islandNote = nowCard(islandPage).locator('.isl-now-note');
+  const islandRunning = island(islandPage).getByRole('region', { name: /^Running/ });
   const homePage = await context.newPage();
   await homePage.addInitScript(() => localStorage.setItem('spark-outpost.view', 'home'));
   await homePage.goto('/');
@@ -114,7 +114,7 @@ test('the sidebar, the palette, the island and the companion follow a re-adopted
   await setTerminalState(await terminalChatId(), 'working');
   await expect(bar).toHaveText('Running');
   await expect(row).toHaveAttribute('title', /Terminal session · Running · /);
-  await expect(islandNote).toContainText('Running');
+  await expect(islandRunning.getByRole('listitem')).toHaveCount(1);
   await expect(running).toBeVisible();
 
   await restartApi(request);
@@ -123,7 +123,7 @@ test('the sidebar, the palette, the island and the companion follow a re-adopted
   await expect(bar).toHaveText('Open');
   const reconnected = { timeout: EVENTS_RECONNECT_MS };
   await expect(row).toHaveAttribute('title', /Terminal session · Open · /, reconnected);
-  await expect(islandNote).toHaveText('Terminal sessionOpen', reconnected);
+  await expect(islandRunning).toHaveCount(0, reconnected);
   await expect(running).toHaveCount(0, reconnected);
   const dismiss = notice.getByRole('button', { name: 'Dismiss' });
   const colours = await dismiss.evaluate((button) => {
@@ -149,5 +149,5 @@ test('the sidebar, the palette, the island and the companion follow a re-adopted
   await page.keyboard.press('Control+D');
   await expect(bar).toHaveText('Exited');
   await expect(row).toHaveAttribute('title', /Terminal session · Exited · /);
-  await expect(islandNote).toHaveText('Terminal sessionExited');
+  await expect(islandRunning).toHaveCount(0);
 });
