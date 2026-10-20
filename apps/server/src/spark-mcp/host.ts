@@ -105,9 +105,10 @@ export async function startSparkMcpHost(
   const serve = async (
     req: IncomingMessage,
     res: ServerResponse,
-    session: Session,
+    asked: Session,
     grant: string,
   ) => {
+    let session = asked;
     let body: unknown;
     try {
       body = await readJson(req);
@@ -120,15 +121,17 @@ export async function startSparkMcpHost(
     const call = toolCallId(body);
     if (call !== null) {
       try {
-        await session.scope.beforeToolCall?.();
+        await asked.scope.beforeToolCall?.();
       } catch {
         reply(res, 409, 'This terminal turn is unavailable. Check its session in Spark.');
         return;
       }
-      if (grants.get(grant) !== session) {
+      const current = grants.get(grant);
+      if (!current || (current !== asked && asked.scope.rebinds !== true)) {
         reply(res, 401, 'This Spark session has ended.');
         return;
       }
+      session = current;
       if (session.available.mac) auditInvalidMacCall({ deps, scope: session.scope }, body);
     }
     const key = call === null ? null : `${grant}:${call}`;

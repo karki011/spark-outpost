@@ -4,9 +4,11 @@ import type { SparkGrant, SparkMcpHost } from '../../spark-mcp/host.ts';
 import { SPARK_MCP_NAME } from '../../spark-mcp/server.ts';
 import { agentDefinitions, type AgentDefinition } from './agents.ts';
 import { objectFields } from './object-fields.ts';
+import type { SparkToolsHint } from './spark-instructions.ts';
 import { acpMcpServer, supportsTransport, type NamedMcpServer } from './repo-session.ts';
 
-export type SparkToolsAccess = Pick<SparkMcpHost, 'grant'> & Partial<Pick<SparkMcpHost, 'browser'>>;
+export type SparkToolsAccess = Pick<SparkMcpHost, 'grant'> &
+  Partial<Pick<SparkMcpHost, 'browser' | 'restore'>>;
 
 export interface SparkTools {
   name: string;
@@ -24,14 +26,23 @@ const FALLBACK_NAME = 'spark_outpost';
 const CODEX_TOOL_TIMEOUT_SEC = 3_600;
 const CLAUDE_TOOL_TIMEOUT_MS = CODEX_TOOL_TIMEOUT_SEC * 1_000;
 
-export async function openSparkTools(
+export function sparkToolsHint(
   access: SparkToolsAccess | undefined,
   scope: SparkScope | undefined,
   reserved: readonly string[],
-): Promise<SparkTools | null> {
+): SparkToolsHint | null {
   if (!access || !scope) return null;
   const name = reserved.includes(SPARK_MCP_NAME) ? FALLBACK_NAME : SPARK_MCP_NAME;
-  return { name, grant: await access.grant(scope), browser: access.browser === true };
+  return { name, browser: access.browser === true };
+}
+
+export async function openSparkTools(
+  access: SparkToolsAccess | undefined,
+  scope: SparkScope | undefined,
+  hint: SparkToolsHint | null,
+): Promise<SparkTools | null> {
+  if (!access || !scope || !hint) return null;
+  return { ...hint, grant: await access.grant(scope) };
 }
 
 export function sparkReserved(reserved: readonly string[]): string[] {

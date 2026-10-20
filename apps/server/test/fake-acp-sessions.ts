@@ -54,6 +54,11 @@ export function recordPrompt(sessionId: string, text: string): void {
   write(sessionId, { ...session, prompts: [...session.prompts, text] });
 }
 
+export function recordMethod(method: string): void {
+  const log = process.env.FAKE_ACP_METHOD_LOG;
+  if (log) appendFileSync(log, `${process.pid} ${method}\n`);
+}
+
 export function recordCancel(sessionId: string): void {
   const log = process.env.FAKE_ACP_CANCEL_LOG;
   if (log) appendFileSync(log, `${sessionId}\n`);

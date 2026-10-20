@@ -79,8 +79,14 @@ export interface SessionTarget {
   missed?: readonly MissedMessage[];
 }
 
+export interface LiveTurn {
+  conversationId: string;
+  continuation?: boolean;
+}
+
 export interface ProviderTurn {
   prompt: string;
+  live?: LiveTurn;
   attachments?: readonly TurnAttachment[];
   history: ConversationTurn[];
   settings: AgentSettings;
@@ -263,6 +269,7 @@ export type ProviderOutput =
       additionalDirectories: string[];
       continued: boolean;
       freshReason: string | null;
+      live?: boolean;
     }
   | { kind: 'link'; url: string; title: string; source: Exclude<TaskLinkSource, 'user'> }
   | { kind: 'commands'; commands: AgentCommand[] }
@@ -274,9 +281,19 @@ export type ProviderOutput =
   | { kind: 'command_finished'; id: string; failed: boolean; exitCode: number | null }
   | { kind: 'account'; account: ProviderAccount };
 
+export interface LiveSessions {
+  onCycle(listener: (conversationId: string) => void): () => void;
+  waiting(): string[];
+  conversations(): string[];
+  workdirs(): string[];
+  close(conversationId: string): Promise<void>;
+  closeAll(): Promise<void>;
+}
+
 export interface Provider {
   readonly name: string;
   run(turn: ProviderTurn): AsyncIterable<ProviderOutput>;
+  readonly sessions?: LiveSessions;
 }
 
 export class ProviderError extends Error {

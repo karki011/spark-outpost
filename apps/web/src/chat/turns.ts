@@ -27,7 +27,7 @@ export function buildTurns(detail: Pick<ConversationDetail, 'messages' | 'runs'>
     const [reply = null, ...later] = byRun.get(run.id) ?? [];
     return {
       run,
-      userMessage: byId.get(run.userMessageId) ?? null,
+      userMessage: run.userMessageId ? (byId.get(run.userMessageId) ?? null) : null,
       assistantMessage: reply,
       laterMessages: later.length > 0 ? later : NO_MESSAGES,
     };

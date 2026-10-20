@@ -47,7 +47,7 @@ export type MessageSource = z.infer<typeof messageSourceSchema>;
 export const runSchema = z.object({
   id: z.uuid(),
   conversationId: z.uuid(),
-  userMessageId: z.uuid(),
+  userMessageId: z.uuid().nullable(),
   provider: z.string(),
   status: runStatusSchema,
   error: z.string().nullable(),
@@ -75,6 +75,7 @@ export const runSchema = z.object({
   interruptionChoice: interruptionChoiceSchema.nullable().optional(),
   modelSwitch: modelSwitchSchema.nullable().optional(),
   errorDetails: z.string().nullable().optional(),
+  agentCycle: z.boolean().optional(),
   outpost: z
     .object({
       postId: z.uuid(),

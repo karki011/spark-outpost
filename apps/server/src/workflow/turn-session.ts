@@ -250,7 +250,7 @@ export async function prepareTurnSession(
       }
       if (!rowId) return;
       if (output.continued && costBaseline > 0) await recordReportedCost(db, rowId, costBaseline);
-      await record(sessionEvent(facts, output));
+      if (!output.live) await record(sessionEvent(facts, output));
     },
     async settings(output) {
       if (!rowId || !sessionId) return;
@@ -277,7 +277,7 @@ export async function prepareTurnSession(
         });
         return;
       }
-      if (result.outcome !== 'succeeded' || (chatTurn && !result.messageId)) {
+      if (result.outcome !== 'succeeded' || (chatTurn && !result.messageId && !input.agentCycle)) {
         await closeProviderSession(db, rowId, RESUME_REASONS.unfinished);
         return;
       }
@@ -355,9 +355,11 @@ export async function removeWorkdirs(paths: readonly string[]): Promise<void> {
 export async function sweepSessions(
   db: Db,
   limits: SweepLimits = DEFAULT_SWEEP_LIMITS,
+  inUse: readonly string[] = [],
 ): Promise<number> {
   const closed = await sweepProviderSessions(db, limits);
   for (const workdir of await idleWorkdirs(db, limits.idleMs)) {
+    if (inUse.includes(workdir)) continue;
     await removeWorkdirs([workdir]);
     await forgetWorkdir(db, workdir);
   }

@@ -66,6 +66,44 @@ async function reportLater(client: acp.AgentContext, rootId: string): Promise<vo
   await cycleEnd(client, rootId);
 }
 
+export const LATER_TRIGGER = '#later';
+
+async function wakeLater(client: acp.AgentContext, rootId: string, text: string): Promise<void> {
+  const send = sender(client);
+  await delay(LATER_MS);
+  let checked = 'checked';
+  if (text.includes('#laterask')) {
+    const toolCall = { toolCallId: 'later-1', title: 'Write later.txt', kind: 'edit' as const };
+    await send(rootId, { sessionUpdate: 'tool_call', ...toolCall, status: 'pending' });
+    const answer = await client.request(acp.methods.client.session.requestPermission, {
+      sessionId: rootId,
+      toolCall: { ...toolCall, status: 'pending' },
+      options: [
+        { optionId: 'yes', name: 'Yes', kind: 'allow_once' },
+        { optionId: 'no', name: 'No', kind: 'reject_once' },
+      ],
+    });
+    checked = answer.outcome.outcome === 'selected' ? answer.outcome.optionId : 'cancelled';
+  }
+  await send(rootId, {
+    sessionUpdate: 'agent_message_chunk',
+    messageId: 'm-wake',
+    content: { type: 'text', text: `Woke up on my own: ${checked}.` },
+  });
+  await cycleEnd(client, rootId);
+}
+
+export async function laterTurn(
+  client: acp.AgentContext,
+  rootId: string,
+  text: string,
+  say: Say,
+): Promise<acp.StopReason> {
+  await say("I'll check back on my own.");
+  void wakeLater(client, rootId, text);
+  return 'end_turn';
+}
+
 export async function backgroundTurn(
   client: acp.AgentContext,
   rootId: string,

@@ -36,7 +36,7 @@ export function createRequestLog(): RequestLog {
 
 export interface PromptLoop {
   session: Pick<acp.ActiveSession, 'prompt' | 'nextUpdate'>;
-  blocks: acp.ContentBlock[];
+  blocks: acp.ContentBlock[] | null;
   followUp: FollowUpOptions;
   turn: ProviderTurn;
   signal: AbortSignal;
@@ -84,7 +84,7 @@ export async function runPrompts(loop: PromptLoop): Promise<acp.StopReason> {
 async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopReason> {
   const { session, signal, mapper, push, background } = loop;
   const aborted = abortion(signal);
-  let failure: Promise<never> = untilFailure(session.prompt(loop.blocks));
+  let failure: Promise<never> = loop.blocks ? untilFailure(session.prompt(loop.blocks)) : never;
   let pending = readNext(session);
   let waiting = false;
   let delivered: Promise<Woken> = never;
@@ -112,6 +112,7 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
     report({ agents: 0, tasks: 0, names: [] });
   };
 
+  if (!loop.blocks) startWaiting();
   for (;;) {
     const woken = await Promise.race([
       pending.then((message): Woken => ({ kind: 'message', message })),

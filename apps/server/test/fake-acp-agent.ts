@@ -20,7 +20,12 @@ import {
   subagentsTurn,
 } from './fake-acp-subagents.ts';
 import { commandTurn, reportContext } from './fake-acp-context.ts';
-import { BACKGROUND_TRIGGER, backgroundTurn } from './fake-acp-background.ts';
+import {
+  BACKGROUND_TRIGGER,
+  LATER_TRIGGER,
+  backgroundTurn,
+  laterTurn,
+} from './fake-acp-background.ts';
 import { rateLimitTurn } from './fake-acp-rate-limit.ts';
 import { requestsTurn } from './fake-acp-requests.ts';
 import {
@@ -32,6 +37,7 @@ import {
   readFakeSession,
   recordCancel,
   recordClose,
+  recordMethod,
   recordPrompt,
   replayHistory,
 } from './fake-acp-sessions.ts';
@@ -239,6 +245,7 @@ async function turn(
   if (requested) return requested;
   if (text.includes('#orphan ')) return orphanedCommandTurn(client, sessionId, text, signal);
   if (text.includes(BACKGROUND_TRIGGER)) return backgroundTurn(client, sessionId, text, say);
+  if (text.includes(LATER_TRIGGER)) return laterTurn(client, sessionId, text, say);
   if (text.includes('#heldtitle')) return heldTitleTurn(say);
   if (text.includes('#subagentsask')) return subagentAsksTurn(client, sessionId, say);
   if (text.includes('#subagents')) {
@@ -374,6 +381,7 @@ async function turn(
 acp
   .agent({ name: 'fake-acp-agent' })
   .onRequest(acp.methods.agent.initialize, (ctx) => {
+    recordMethod('initialize');
     clientCapabilities = ctx.params.clientCapabilities ?? null;
     return {
       protocolVersion: Number(process.env.FAKE_ACP_PROTOCOL_VERSION ?? acp.PROTOCOL_VERSION),
@@ -388,6 +396,7 @@ acp
     };
   })
   .onRequest(acp.methods.agent.session.new, (ctx) => {
+    recordMethod('session/new');
     sessionRequest = { meta: ctx.params._meta ?? null, mcpServers: ctx.params.mcpServers };
     sessionCwd = ctx.params.cwd;
     sessionDirectories = ctx.params.additionalDirectories ?? null;
@@ -400,6 +409,7 @@ acp
   })
   .onRequest(acp.methods.agent.session.list, (ctx) => listFakeSessions(ctx.params.cwd ?? null))
   .onRequest(acp.methods.agent.session.resume, (ctx) => {
+    recordMethod('session/resume');
     restoreConfig(ctx.params.sessionId, config);
     sessionCwd = ctx.params.cwd;
     sessionDirectories = ctx.params.additionalDirectories ?? null;
@@ -415,6 +425,7 @@ acp
     return { configOptions: configOptions() };
   })
   .onRequest(acp.methods.agent.session.close, (ctx) => {
+    recordMethod('session/close');
     recordClose(ctx.params.sessionId);
     return {};
   })
@@ -436,6 +447,7 @@ acp
     pending.set(ctx.params.sessionId, controller);
     const text = ctx.params.prompt.map((block) => (block.type === 'text' ? block.text : ''));
     try {
+      recordMethod('session/prompt');
       recordPrompt(ctx.params.sessionId, text.join(''));
       const sessionId = ctx.params.sessionId;
       const refused = await rejectedTurn(text.join(''), config.model ?? '', (update) =>

@@ -3,10 +3,8 @@ import type { ParkedTurns } from './parked-turns.ts';
 import type { RunSnapshot } from '../persistence/run-snapshots.ts';
 import type { RunEvent } from '@spark-outpost/contracts';
 import { sparkPreferences } from '../persistence/setup.ts';
-import { teammateBrief } from '../persistence/teammate-chats.ts';
-import { subagentBrief } from '../persistence/spark-mentions.ts';
 import { auditSparkHandoff } from './spark-audit.ts';
-import { briefWithFile } from '../projects/instructions-file.ts';
+import { editsFiles, liveTurn, sessionBrief } from './turn-facts.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { recordSuggestedTitle } from '../persistence/auto-title.ts';
@@ -87,20 +85,6 @@ import { scannedObserver } from '../observations/output-scan.ts';
 import type { RunControl, StopReason } from './run-control.ts';
 
 export { startControl, type RunControl, type StopReason } from './run-control.ts';
-
-function editsFiles(input: RunInput): boolean {
-  if (input.mode !== 'do' || input.assistant || plansThisTurn(input)) return false;
-  return input.role === null;
-}
-
-async function sessionBrief(db: Db, input: RunInput) {
-  if (input.assistant) return null;
-  if (input.parentRunId && input.role !== 'spark') return null;
-  const brief = input.parentRunId
-    ? await subagentBrief(db, input.identity.runId)
-    : await teammateBrief(db, input.identity.threadId);
-  return brief ? briefWithFile(brief) : null;
-}
 
 const INBOX_POLL_MS = 1000;
 
@@ -382,6 +366,7 @@ export async function runAgentTurn(
       ...(preamble ? { preamble } : {}),
       ...(turnPreamble ? { turnPreamble } : {}),
       ...(session ? { session: session.target } : {}),
+      ...liveTurn(input, session),
       ...(repo.length > 0 ? { repo } : {}),
       ...(userMcp.length > 0 ? { userMcp } : {}),
       spark,

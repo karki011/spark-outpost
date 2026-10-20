@@ -50,6 +50,7 @@ function crewFake(fake: Provider, acp: Provider): Provider {
   return {
     name: acp.name,
     run: (turn) => (turn.prompt.includes(FAKE_ACP_TRIGGER) ? acp : fake).run(turn),
+    ...(acp.sessions ? { sessions: acp.sessions } : {}),
   };
 }
 
