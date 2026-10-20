@@ -9,7 +9,7 @@ import { shipBranchName } from '../ship/branch.ts';
 import { pickRemote, remotes } from '../ship/git.ts';
 import { parseRemoteUrl, type RemoteRepo } from '../ship/remote.ts';
 import { adoptedNote, adoptPlan, forkRemoteName, type AdoptPlan } from './adopt-plan.ts';
-import { branchCheckedOut, defaultBranch, listBranches } from './chat-worktrees.ts';
+import { branchCheckedOut, defaultBranch, isAncestor, listBranches } from './chat-worktrees.ts';
 import {
   listOpenPulls,
   protectedOnHost,
@@ -101,6 +101,19 @@ async function fetchRef(root: string, remote: string, ref: string): Promise<void
   await git(root, ['fetch', '--quiet', remote, ref]);
 }
 
+async function catchUpLocal(root: string, branch: string): Promise<void> {
+  const tip = (await git(root, ['rev-parse', '--verify', 'FETCH_HEAD^{commit}'])).trim();
+  const local = (await git(root, ['rev-parse', '--verify', `refs/heads/${branch}`])).trim();
+  if (local === tip) return;
+  if (!(await isAncestor(root, local, tip))) {
+    throw new AdoptError(
+      409,
+      `Your local branch ${branch} has commits that aren't on the pull request. Push or rename it, then try again.`,
+    );
+  }
+  await git(root, ['branch', '--force', branch, tip]);
+}
+
 async function headSource(
   found: Hosted,
   pull: FoundPull,
@@ -108,7 +121,10 @@ async function headSource(
 ) {
   const remote = plan.fork ? await forkRemote(found, pull.headRepo) : found.origin.name;
   await fetchRef(found.root, remote, plan.branch);
-  if (plan.local) return { kind: 'existing' as const, branch: plan.branch };
+  if (plan.local) {
+    await catchUpLocal(found.root, plan.branch);
+    return { kind: 'existing' as const, branch: plan.branch };
+  }
   return { kind: 'remote' as const, branch: plan.branch, ref: `${remote}/${plan.branch}` };
 }
 

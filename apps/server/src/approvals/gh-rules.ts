@@ -92,7 +92,6 @@ export function followsRule(program: Program, command: string, rules: GhRules): 
 }
 
 export function ghRuling(command: string, rules: GhRules): GhRuling {
-  if (publishesThroughGit(command)) return NONE;
   const once = onceFor(command, rules);
   const writes = hostingCommands(command).filter(
     (program) => ghStanding(program, rules, once) !== 'read',
@@ -101,7 +100,7 @@ export function ghRuling(command: string, rules: GhRules): GhRuling {
   const standings = writes.map((program) => ghStanding(program, rules, once));
   if (standings.includes('policy')) return NONE;
   const refused = writes.find((program) => ghStanding(program, rules, once) === 'refused');
-  if (!refused) return { kind: 'follows' };
+  if (!refused) return publishesThroughGit(command) ? NONE : { kind: 'follows' };
   const rule = refusalOf(refused);
   return { kind: 'refused', rule, reason: sparkRuleReason(rule) };
 }

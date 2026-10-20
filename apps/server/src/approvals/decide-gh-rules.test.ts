@@ -79,6 +79,16 @@ describe('Run a workflow', () => {
     expect(chat('full_access', command, WORKFLOWS_FOLLOW, FULL_AUTO).verdict).toBe('allow');
   });
 
+  it('names the rule when a refused workflow rides along a push', () => {
+    const command = `git push origin ${BRANCH} && gh workflow run cd.yml`;
+    for (const posture of [...AT_ONCE, ...CARDED]) {
+      expect(chat(posture, command, NO_GH_RULES, FULL_AUTO)).toMatchObject({
+        verdict: 'reject',
+        sparkRule: WORKFLOW,
+      });
+    }
+  });
+
   it('still refuses a merge chained after an allowed workflow', () => {
     const command = 'gh workflow run cd.yml && gh pr merge 12';
     expect(chat('full_access', command, WORKFLOWS_FOLLOW)).toEqual({

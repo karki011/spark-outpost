@@ -210,6 +210,29 @@ describe('adopting a pull request from the same repository', () => {
     expect((await taskBranch(t.db, record.path))?.branch).toBe(HEAD);
   });
 
+  it('brings a stale local copy of the head up to the pull request tip', async () => {
+    const tip = bareWithBranch(originBare, HEAD, 'dates.txt');
+    git(root, 'branch', HEAD, 'main');
+    const chat = await doRun(t, root);
+    await adoptPull(deps(ghPull()), chat.conversationId, { projectId: chat.projectId, number: 12 });
+    const record = (await liveChatWorktree(t.db, chat.conversationId, chat.projectId))!;
+    expect(git(record.path, 'rev-parse', 'HEAD')).toBe(tip);
+  });
+
+  it('refuses a local copy of the head with commits the pull request lacks', async () => {
+    bareWithBranch(originBare, HEAD, 'dates.txt');
+    git(root, 'checkout', '-q', '-b', HEAD);
+    await write(root, 'mine.txt', 'local only\n');
+    git(root, 'add', '.');
+    git(root, 'commit', '-qm', 'Local only');
+    git(root, 'checkout', '-q', 'main');
+    const chat = await doRun(t, root);
+    await expect(
+      adoptPull(deps(ghPull()), chat.conversationId, { projectId: chat.projectId, number: 12 }),
+    ).rejects.toThrow(/commits that aren't on the pull request/);
+    expect(await liveChatWorktree(t.db, chat.conversationId, chat.projectId)).toBeNull();
+  });
+
   it('lists open pull requests for the project', async () => {
     const chat = await doRun(t, root);
     const listed = await openPullsFor(deps(ghPull()), chat.projectId);
