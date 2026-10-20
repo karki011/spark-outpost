@@ -93,7 +93,7 @@ async function lockRunConversation(
   return run;
 }
 
-async function insertTask(
+export async function insertTask(
   db: Queryable,
   taskId: string,
   conversationId: string,

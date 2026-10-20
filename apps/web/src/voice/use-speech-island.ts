@@ -50,7 +50,7 @@ export interface SpeechIslandOptions {
   fast: FastState;
   panel: Panel | null;
   openPanel(panel: Panel): void;
-  selectChat(id: string): void;
+  replyTo(chat: ConversationSummary): void;
   openChat(id: string): void;
 }
 
@@ -227,7 +227,7 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
 
   const act = async (result: SpeechResult, index: number | null) => {
     const { command } = result;
-    const { openPanel, selectChat, openChat } = latest.current.options;
+    const { openPanel, replyTo, openChat } = latest.current.options;
     switch (command.intent) {
       case 'start_chat': {
         const project =
@@ -247,8 +247,9 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
         const chat = index === null ? command.chat.picked : command.chat.choices[index]?.value;
         if (!chat) return;
         hand({ kind: 'reply', id: result.id, chatId: chat.id, text: command.text });
-        selectChat(chat.id);
-        openPanel('sessions');
+        const summary = latest.current.options.chats.find((each) => each.id === chat.id);
+        if (summary) replyTo(summary);
+        else openChat(chat.id);
         return;
       }
       case 'open': {

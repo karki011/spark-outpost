@@ -48,5 +48,6 @@ export const queuedMessageSchema = z.object({
   continueRunId: z.uuid().nullable(),
   createdAt: z.string(),
   outpostPostId: z.uuid().nullable().optional(),
+  sparkRuleCardId: z.uuid().optional(),
 });
 export type QueuedMessage = z.infer<typeof queuedMessageSchema>;

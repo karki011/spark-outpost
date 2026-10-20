@@ -8,7 +8,7 @@ import { usePopover } from '../../ui/use-popover.ts';
 import { useTooltip } from '../../ui/Tooltip.tsx';
 import { useRemoteClient } from '../../phone/use-remote-client.ts';
 import { useCopyFeedback } from '../../ui/use-copy-feedback.ts';
-import { branchTip } from './place-picker-model.ts';
+import { adoptedLabel, branchTip } from './place-picker-model.ts';
 import { useBringChanges, useOpenWorktree } from './use-chat-workspace.ts';
 
 interface ChatBranchProps {
@@ -50,7 +50,11 @@ export function ChatBranch({ conversationId, branch, checkoutBranch }: ChatBranc
   const routeLabel = usePrRouteLabel(conversationId);
   const tipText = routeLabel ? `${branchTip(branch)} · ${routeLabel}` : branchTip(branch);
   const tip = useTooltip(tipText, { side: 'top' });
-  const kind = branch.worktree ? 'worktree' : 'my files';
+  const kind = branch.adopted
+    ? adoptedLabel(branch.adopted)
+    : branch.worktree
+      ? 'worktree'
+      : 'my files';
   const into = checkoutBranch ?? 'my files';
   const failure = openFolder.error ?? bring.error;
 
@@ -83,6 +87,17 @@ export function ChatBranch({ conversationId, branch, checkoutBranch }: ChatBranc
         <div className="branchpop-head">
           <b title={branch.branch}>{branch.branch}</b>
           <small title={branch.path}>{branch.path}</small>
+          {branch.adopted && (
+            <p>
+              <a href={branch.adopted.url} target="_blank" rel="noreferrer">
+                Pull request #{branch.adopted.number}
+              </a>{' '}
+              by @{branch.adopted.author}.{' '}
+              {branch.adopted.pushes
+                ? 'The agent pushes to it, never force.'
+                : `The agent works on its own branch based on ${branch.adopted.head}.`}
+            </p>
+          )}
           <p>{BRANCH_LOCK_HINT}</p>
         </div>
         {branch.worktree && !remote && (

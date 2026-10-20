@@ -23,7 +23,7 @@ You'll open a project's Map, find a file and check what depends on it. About 2 m
 | **Outline** | Every group, area and file in one list.                           |
 | **Sky**     | The whole map as stars. Brighter stars matter more.               |
 
-Spark builds the map in the background. See [Map status](statuses-and-limits.md#map-status).
+Spark builds it in the background; see [Map status](statuses-and-limits.md#map-status).
 
 ## Find and filter
 
@@ -35,7 +35,7 @@ Spark builds the map in the background. See [Map status](statuses-and-limits.md#
 ## See what breaks if a file changes
 
 1. Select **Focus** in **Show the map as** and pick a file.
-2. Read **What breaks if I change this?**. It counts dependent files and names their **Core** areas.
+2. **What breaks if I change this?** counts dependent files and names their **Core** areas.
 3. Switch from **1 hop** to **2 hops** to look further.
 
 ![Focus view showing what breaks if db.ts changes, with its imports and the files that import it](images/map-focus-light.png)

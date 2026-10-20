@@ -35,7 +35,16 @@ export async function taskBranch(db: Queryable, root: string | null): Promise<Ta
   );
   const pull = await openPullNumber(db, record.conversationId, record.branch).catch(() => null);
   const stack = await publishStackOf(db, stackGit, record);
-  return { branch: record.branch, protectedBranches: [...new Set(named)], pull, ...stack };
+  const adopted = record.adopted?.pushes
+    ? { author: record.adopted.author, pull: record.adopted.number }
+    : null;
+  return {
+    branch: record.branch,
+    protectedBranches: [...new Set(named)],
+    pull: pull ?? adopted?.pull ?? null,
+    ...(adopted ? { adopted } : {}),
+    ...stack,
+  };
 }
 
 async function openPullNumber(
@@ -84,7 +93,7 @@ export async function publishContext(
 
 type GrantFacts = Pick<
   RunInput,
-  'level' | 'userRequest' | 'followUpRound' | 'workspaceId' | 'outpostRequest'
+  'level' | 'userRequest' | 'followUpRound' | 'workspaceId' | 'outpostRequest' | 'sparkRuleRetry'
 > & {
   identity: Pick<RunInput['identity'], 'threadId'>;
 };

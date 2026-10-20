@@ -69,5 +69,6 @@ export function approvalPayload(request: ApprovalRequest, asking: Asking): Appro
     ...(asking.secretSend ? { secretSend: asking.secretSend } : {}),
     ...(request.agentReason ? { agentReason: request.agentReason } : {}),
     ...(request.subagent ? { subagent: request.subagent } : {}),
+    ...(asking.sparkRule ? { sparkRule: asking.sparkRule } : {}),
   };
 }

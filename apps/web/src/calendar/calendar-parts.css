@@ -322,3 +322,31 @@ button.cal-person:hover {
   color: var(--muted);
   font-size: 12px;
 }
+
+.cal-refresh {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 8px;
+}
+
+.cal-refresh .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-refresh .btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.cal-refresh-note {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.cal-refresh-note:empty {
+  display: none;
+}

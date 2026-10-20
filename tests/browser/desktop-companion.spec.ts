@@ -152,7 +152,7 @@ test('the desktop companion shows its shortcuts only while it is on', async ({ p
   await change.click();
   await page.keyboard.press('Control+Alt+J');
   await expect(spark.getByRole('button', { name: 'Reset Quick chat shortcut' })).toBeEnabled();
-  await spark.getByRole('button', { name: 'Change Sessions shortcut' }).click();
+  await spark.getByRole('button', { name: 'Change Inbox shortcut' }).click();
   await page.keyboard.press('Alt+K');
   await expect(spark).toContainText('Another app is using this shortcut.');
 

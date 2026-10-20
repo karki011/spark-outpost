@@ -15,6 +15,7 @@ import {
   SIGN_IN_WITH_GOOGLE,
 } from './GoogleSource.tsx';
 import { DeniedBody, ErrorLine, HelperBody, MAC_CALENDAR, MacSource } from './MacSource.tsx';
+import { RefreshCalendar } from './RefreshCalendar.tsx';
 import { connectorLine, hasCalendarSource, macState, nextMeeting } from './today-model.ts';
 import { useCalendarChoices } from './use-calendar-choices.ts';
 import { useCalendarActions, useCalendarNow, useCalendarStatus } from './use-calendar.ts';
@@ -134,6 +135,7 @@ function GoogleTile({ status, google }: { status: CalendarStatus; google: Google
           </button>
         </div>
       )}
+      <RefreshCalendar />
       <GoogleSignInStatus google={google} />
     </Tile>
   );

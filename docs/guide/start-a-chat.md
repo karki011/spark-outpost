@@ -53,8 +53,8 @@ For several chats in one thread, use an [outpost](outposts.md).
 ## Jump between sessions
 
 1. Press **⌘⇧K**, or select **Sessions** above the chat list.
-2. Read the list: sessions that need you come first, then working ones. A Terminal session shows its steps and cost.
+2. Sessions that need you come first, then working ones; a Terminal session shows its steps and cost.
 3. Type to filter by title, project, agent, state or message text.
-4. Press **↑** or **↓**, then **Enter**. A chat found by a message opens at that message. **Esc** closes.
+4. Press **↑** or **↓**, then **Enter**. A chat found by message text opens there. **Esc** closes.
 
 **Next:** [Pick the model, effort and mode](agent-mode.md)

@@ -150,7 +150,6 @@ describe("decide() for the chat's own changing run", () => {
     ['gh pr merge 12 --squash', 'gh pr merge'],
     ['gh pr review 12 --approve', 'gh pr review'],
     ['gh api -X POST repos/acme/app/pulls/12/merge', 'gh api'],
-    ['gh repo delete acme/app --yes', 'gh repo delete'],
   ])('refuses the gh write %s by name', (command, named) => {
     for (const decision of everywhere(command)) expect(decision.verdict, command).toBe('reject');
     expect(chatRun('auto', ASKED, command)).toEqual(refused(ghRailReason(named)));

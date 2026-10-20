@@ -6,13 +6,15 @@ import {
   type DiffRow,
   type ShownRows,
 } from '../chat/approvals/diff-model.ts';
-import { baseName } from './home-model.ts';
 
 export const PEEK_ROWS = 80;
 export const HUNK_ROWS = 10;
-export const PEEK_FILE_LINES = 400;
 const HUNK_LEAD = 2;
 const ALL_FOLDED: ReadonlySet<number> = new Set();
+
+export function baseName(path: string): string {
+  return path.split('/').filter(Boolean).at(-1) ?? path;
+}
 const SECRET_REASON = /secret/i;
 
 export function peekRows(model: DiffModel, cap = PEEK_ROWS): ShownRows {

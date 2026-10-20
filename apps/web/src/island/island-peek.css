@@ -104,16 +104,6 @@
   translate: 0 9px;
 }
 
-.isl-hhead {
-  margin: 0 0 2px;
-  padding: 0 8px;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
 .isl-peekblob:focus-visible,
 .isl-peekmore:focus-visible {
   outline: 2px solid var(--accent);

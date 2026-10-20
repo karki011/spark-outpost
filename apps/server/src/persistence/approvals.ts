@@ -14,6 +14,7 @@ import {
   type ApprovalScope,
   type ApprovalStatus,
   type SparkActionEdits,
+  type SparkRuleAnswer,
 } from '@spark-outpost/contracts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
@@ -37,6 +38,7 @@ export interface ApprovalRow {
   note?: string | null;
   auto_continue_at?: Date | null;
   edits?: SparkActionEdits | null;
+  rule_answer?: SparkRuleAnswer | null;
 }
 
 export class ApprovalNotFoundError extends Error {
@@ -68,6 +70,7 @@ export function toApproval(row: ApprovalRow): Approval {
     note: row.note ?? null,
     autoContinueAt: row.auto_continue_at?.toISOString() ?? null,
     ...(row.edits ? { edits: row.edits } : {}),
+    ...(row.payload.sparkRule ? { ruleAnswer: row.rule_answer ?? null } : {}),
   };
 }
 
@@ -415,6 +418,7 @@ export async function shownApprovalsForConversation(
      WHERE r.conversation_id = $1
        AND (a.status = 'pending' OR a.decided_by IN ('user', 'timeout')
          OR (a.kind = $2 AND a.payload ? 'sparkResult')
+         OR (a.decided_by = 'policy' AND a.payload ? 'sparkRule')
          OR (a.kind = 'accept' AND a.decided_by = 'level'
            AND NOT EXISTS (SELECT 1 FROM orchestrations o WHERE o.run_id = a.run_id)))
      ORDER BY a.created_at`,

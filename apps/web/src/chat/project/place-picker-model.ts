@@ -1,4 +1,9 @@
-import type { ChatBranch, ChatWorkspace, ProjectBranches } from '@spark-outpost/contracts';
+import type {
+  AdoptedPull,
+  ChatBranch,
+  ChatWorkspace,
+  ProjectBranches,
+} from '@spark-outpost/contracts';
 import { relativeTime } from '../../ui/relative-time.ts';
 
 export interface BranchRow {
@@ -44,6 +49,11 @@ export function branchRows(
   return [...current, ...rest]
     .filter((row) => !needle || row.name.toLowerCase().includes(needle))
     .slice(0, ROWS_SHOWN);
+}
+
+export function adoptedLabel(adopted: AdoptedPull): string {
+  const pull = `PR #${adopted.number} by @${adopted.author}`;
+  return adopted.pushes ? pull : `based on ${pull}`;
 }
 
 export function branchTip(branch: ChatBranch, now: number = Date.now()): string {

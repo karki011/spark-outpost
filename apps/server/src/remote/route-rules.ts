@@ -21,6 +21,7 @@ GET /api/runs/:id/changes
 POST /api/approvals/:id/decision
 POST /api/approvals/:id/hold
 POST /api/approvals/:id/retry
+GET /api/spark-rules
 POST /api/runs/:id/revert
 GET /api/tasks/:id/changes/revert-file
 POST /api/tasks/:id/changes/revert-file
@@ -160,6 +161,10 @@ POST /api/tickets/:source/:key/transition
 `;
 
 const NEVER = `
+PUT /api/spark-rules
+GET /api/projects/:id/pull-requests/open
+POST /api/conversations/:id/workspace/adopt
+POST /api/approvals/:id/spark-rule
 GET /api/calendar/status
 POST /api/calendar/connect
 POST /api/calendar/disconnect
@@ -169,6 +174,7 @@ PATCH /api/calendar/settings
 GET /api/calendar/day
 GET /api/calendar/range
 GET /api/calendar/now
+POST /api/calendar/refresh
 PUT /api/calendar/marks
 POST /api/calendar/open
 POST /api/calendar/event

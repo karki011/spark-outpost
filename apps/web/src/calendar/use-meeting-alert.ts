@@ -31,6 +31,7 @@ interface MeetingAlertOptions {
   setMarks: (update: (marks: NudgeMarks) => NudgeMarks) => void;
   names: ReadonlyMap<string, string>;
   note: (text: string) => void;
+  onDismissed: (events: readonly CalendarEvent[]) => void;
 }
 
 function alertTimes(live: CalendarNow | null, settings: CalendarSettings | null): number[] {
@@ -217,6 +218,7 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
             current,
           ),
         );
+        latest.current.onDismissed(inAlert);
       }
     });
   }, [setMarks]);

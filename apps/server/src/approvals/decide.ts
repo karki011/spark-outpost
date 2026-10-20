@@ -1,4 +1,10 @@
-import type { ApprovalKind, ApprovalOption, FileDiff, ModePosture } from '@spark-outpost/contracts';
+import type {
+  ApprovalKind,
+  ApprovalOption,
+  FileDiff,
+  ModePosture,
+  SparkRuleRefusal,
+} from '@spark-outpost/contracts';
 import { protectedPath, refusalFor, type GitDirs } from '../projects/path-policy.ts';
 import { commandTree, treeWords } from './command-tree.ts';
 import { allowlistCovers, normalizeCommand, resolveCommandPath } from './commands.ts';
@@ -6,7 +12,6 @@ import {
   forcePush,
   isGitPush,
   publishesBesidesPush,
-  publishesCode,
   skipsPushHooks,
   gitConfigUses,
   type ForcePush,
@@ -16,13 +21,19 @@ import { gitControlLabel } from './git-dirs.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
+import { NO_GH_RULES, type GhRules } from './gh-rules.ts';
+import { askedForRule, followsAtOnce, sparkRuleRefusal } from './gh-rule-decisions.ts';
+import { modeAllows } from './mode-allows.ts';
 import {
+  adoptedForceReason,
   onlyRepliesOnOwnPull,
+  publishesUnder,
   publishRefusal,
   publishVerdict,
   type PublishBasis,
   type PublishContext,
   type PublishVerdict,
+  type TaskBranch,
 } from './publish-policy.ts';
 import { stackedPushRefusal } from './stacked-push.ts';
 import type { OwnRepo } from './own-repo.ts';
@@ -66,7 +77,7 @@ export type RunRule =
 
 export type Decision =
   | { verdict: 'allow'; by: 'level' | 'run_rule' | 'allowlist'; why?: string; sent?: SentOut }
-  | { verdict: 'reject'; reason: string }
+  | { verdict: 'reject'; reason: string; sparkRule?: SparkRuleRefusal }
   | {
       verdict: 'ask';
       reason: string | null;
@@ -160,6 +171,7 @@ export interface DecideOptions {
   shell?: ShellScript | null;
   agentAsks?: boolean;
   publish?: PublishContext;
+  ghRules?: GhRules;
 }
 
 export function namedSecrets(
@@ -189,6 +201,13 @@ function noted(decision: Decision, sent: SentOut | null): Decision {
   if (!sent || decision.verdict === 'reject') return decision;
   if (decision.verdict === 'allow') return { ...decision, sent };
   return { ...decision, observed: sent.observed, sendsTo: sent.target };
+}
+
+function adoptedForce(forced: ForcePush | null, task: TaskBranch | null): ForcePush | null {
+  if (forced?.kind !== 'ask' || !task?.adopted || !forced.branches.includes(task.branch)) {
+    return forced;
+  }
+  return { kind: 'refuse', reason: adoptedForceReason(task.branch, task.adopted) };
 }
 
 function soloLeasePush(command: string, options: DecideOptions, forced: ForcePush | null) {
@@ -224,11 +243,12 @@ function ownAgentRefusal(
   published: PublishVerdict | null,
 ): string | null {
   const { command } = request;
-  if (!options.changesProject || !command || !publishesCode(command)) return null;
+  const rules = options.ghRules ?? NO_GH_RULES;
+  if (!options.changesProject || !command || !publishesUnder(command, rules)) return null;
   if (published) return published.kind === 'refuse' ? published.reason : null;
   if (onlyRepliesOnOwnPull(command, options.own ?? null)) return null;
   if (!soloLeasePush(command, options, forced)) return CHAT_PUBLISH_REASON;
-  return publishRefusal(command, options.publish?.task ?? null);
+  return publishRefusal(command, options.publish?.task ?? null, null, rules);
 }
 
 function refusal(
@@ -299,11 +319,6 @@ export interface RunRules {
 
 export const NO_RUN_RULES: RunRules = { allow: [], reject: [] };
 
-function modeAllows(posture: ModePosture, request: ApprovalRequest): boolean {
-  if (posture === 'full_access' || posture === 'auto') return true;
-  return posture === 'edits' && request.kind === 'edit';
-}
-
 export function decide(
   posture: ModePosture,
   asked: ApprovalRequest,
@@ -312,9 +327,14 @@ export function decide(
   options: DecideOptions = {},
 ): Decision {
   const request = withResolvedVariables(asked);
-  const forced = request.command ? forcePush(request.command, options.defaultBranch ?? null) : null;
+  const forced = adoptedForce(
+    request.command ? forcePush(request.command, options.defaultBranch ?? null) : null,
+    options.publish?.task ?? null,
+  );
   const guarded = guardedTargets(request);
   const view = shellView(request, options.shell ?? null);
+  const ruled = sparkRuleRefusal(request, options);
+  if (ruled) return ruled;
   const published = publishing(posture, request, options);
   const refused = refusal(request, options, forced, guarded, view, published);
   if (refused) return { verdict: 'reject', reason: refused };
@@ -364,7 +384,10 @@ function byMode(
   if (runRules.allow.some((rule) => matchesRule(asked, rule))) {
     return { verdict: 'allow', by: 'run_rule' };
   }
-  if (published?.kind === 'allow') return publishAllowed(published.basis);
+  if (published?.kind === 'allow' && !askedForRule(posture, request, options)) {
+    return publishAllowed(published.basis);
+  }
+  if (followsAtOnce(posture, request, options)) return { verdict: 'allow', by: 'level' };
   if (request.kind === 'other' && request.title === ENTER_PLAN_MODE_TITLE) {
     return { verdict: 'allow', by: 'level', why: ENTER_PLAN_MODE_WHY };
   }
@@ -430,7 +453,8 @@ function publishing(
   options: DecideOptions,
 ): PublishVerdict | null {
   if (!request.command || !options.publish) return null;
-  return publishVerdict(request.command, posture, options.publish, options.own ?? null);
+  const rules = options.ghRules ?? NO_GH_RULES;
+  return publishVerdict(request.command, posture, options.publish, options.own ?? null, rules);
 }
 
 export const PUBLISH_ASKED_WHY = 'you asked to push or open a PR';

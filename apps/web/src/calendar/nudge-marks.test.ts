@@ -7,6 +7,7 @@ import {
   purgeMarks,
   snoozeEnds,
   snoozeNudge,
+  withServerDismissed,
 } from './nudge-marks.ts';
 
 describe('nudge marks', () => {
@@ -24,6 +25,21 @@ describe('nudge marks', () => {
     const marks = dismissNudge(NO_NUDGE_MARKS, 'standup', 9_000_000);
     expect(purgeMarks(marks, 8_999_999)).toBe(marks);
     expect(purgeMarks(marks, 9_000_000).size).toBe(0);
+  });
+});
+
+describe('dismissals Spark saved', () => {
+  it('hide the meeting even in a fresh island, and leave other occurrences alone', () => {
+    const end = '2026-10-16T10:45:00.000Z';
+    const events = [
+      { key: 'daily@2026-10-16T10:30:00.000Z', end, dismissed: true },
+      { key: 'daily@2026-10-17T10:30:00.000Z', end, dismissed: false },
+    ];
+    const marks = withServerDismissed(NO_NUDGE_MARKS, events);
+    expect(nudgeHidden(marks, 'daily@2026-10-16T10:30:00.000Z', 0)).toBe(true);
+    expect(nudgeHidden(marks, 'daily@2026-10-17T10:30:00.000Z', 0)).toBe(false);
+    expect(withServerDismissed(marks, events)).toBe(marks);
+    expect(withServerDismissed(NO_NUDGE_MARKS, [events[1]!])).toBe(NO_NUDGE_MARKS);
   });
 });
 

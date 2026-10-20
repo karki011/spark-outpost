@@ -100,6 +100,7 @@ export interface GoogleSource {
     shownElsewhere?: readonly string[],
   ): Promise<{ found: boolean; revoked: boolean }>;
   refresh(): void;
+  refreshNow(): Promise<void>;
   syncNow(): Promise<void>;
   onChanged(listener: () => void): void;
 }
@@ -354,6 +355,12 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     refresh() {
       ranges?.clear();
       for (const accountId of accounts.keys()) schedule(accountId, 0);
+    },
+    async refreshNow() {
+      const due = [...accounts.values()].filter(
+        (account) => account.failures === 0 && account.state !== 'sign_in_again',
+      );
+      await Promise.all(due.map((account) => poll(account.row.id)));
     },
     async syncNow() {
       await Promise.all([...accounts.keys()].map((accountId) => poll(accountId)));

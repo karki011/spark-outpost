@@ -1,0 +1,90 @@
+.adopt {
+  display: grid;
+  gap: 6px;
+}
+
+.adopt-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  color: var(--text);
+  text-align: left;
+}
+
+.adopt-toggle:hover,
+.adopt-toggle:focus-visible {
+  background: var(--raise);
+}
+
+.adopt-toggle > span {
+  flex: 1;
+}
+
+.adopt-toggle svg {
+  width: 15px;
+  height: 15px;
+}
+
+.adopt-toggle > svg:last-child {
+  color: var(--faint);
+  transform: rotate(90deg);
+}
+
+.adopt-toggle[aria-expanded='true'] > svg:last-child {
+  transform: rotate(-90deg);
+}
+
+.adopt-list {
+  display: grid;
+  gap: 6px;
+  padding: 0 10px 8px;
+}
+
+.adopt-list ul {
+  display: grid;
+  gap: 2px;
+  max-height: 240px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.adopt-row {
+  display: grid;
+  width: 100%;
+  gap: 2px;
+  padding: 7px 8px;
+  border-radius: var(--r-sm);
+  text-align: left;
+}
+
+.adopt-row:hover:not(:disabled),
+.adopt-row:focus-visible {
+  background: var(--raise);
+}
+
+.adopt-row b {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adopt-row small,
+.adopt-hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.adopt-hint {
+  margin: 0;
+}
+
+.adopt-done {
+  margin: 0;
+  color: var(--text);
+  font-size: 12.5px;
+}

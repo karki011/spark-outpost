@@ -55,6 +55,7 @@ export async function releaseOnDisk(
   await removeWorktreeDir(record.repoRoot, worktreePath(record.repoRoot, record.id));
   const deletable =
     record.ownsBranch &&
+    !record.adopted?.pushes &&
     (await branchSafeToDelete(record.repoRoot, record.branch, record.baseCommit));
   if (deletable) await deleteBranch(record.repoRoot, record.branch);
   return { removed: true, branchKept: !deletable, saved: dirty };

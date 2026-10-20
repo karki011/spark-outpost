@@ -79,10 +79,11 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | Keys            | Action                                     |
 | --------------- | ------------------------------------------ |
 | **⌥Space**      | Quick chat, or the card that waits for you |
-| **⌥⇧Space**     | Chats                                      |
+| **⌥⇧Space**     | The inbox                                  |
 | **⌥⇧V**         | Voice: talk, or stop talking               |
-| **⌘1** – **⌘4** | Home, Chats, New chat, Ask Spark           |
-| **Y** / **N**   | Allow once / deny the focused card         |
+| **⌘1** – **⌘3** | Inbox, New chat, Ask Spark                 |
+| **⌘O**          | Open Spark                                 |
+| **Y** / **N**   | Allow once / deny the top or focused card  |
 | **Esc**         | Close the panel, or leave a change         |
 
 To change the two global shortcuts, see [Change a shortcut](companion-quick-chat.md#change-a-shortcut).

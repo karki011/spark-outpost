@@ -8,7 +8,7 @@ summary: Install an update from the blob above Settings, pick Stable or Beta, an
 
 You'll install an update when it suits you. About 1 minute.
 
-The Mac app checks for updates when it starts and every 4 hours. It never installs while agents are working.
+The Mac app checks at start and every 4 hours, and never installs while agents work.
 
 ## Install an update
 
@@ -17,7 +17,7 @@ The Mac app checks for updates when it starts and every 4 hours. It never instal
 
 ![The Update blob above Settings in the rail](images/updates-rail-blob-light.png)
 
-A ready update installs when you next quit. While a chat is running or waiting, the blob says **Waiting**. If the restart doesn't start, the blob returns to **Restart** and says why.
+A ready update installs when you next quit. While a chat runs or waits, the blob says **Waiting**; if the restart fails, it returns to **Restart** and says why.
 
 ## Stable or Beta
 
@@ -40,12 +40,12 @@ Before an update changes how data is stored, Spark backs up your database to `~/
 
 If the change fails, Spark restores your data, skips that version, and shows **Open previous version instructions**.
 
-> **Important:** If the message says your data could not be put back, don't delete anything. The instructions explain how to recover it.
+> **Important:** If the message says your data could not be put back, don't delete anything; the instructions explain recovery.
 
 ## Preview the update flow
 
 1. In the dev app, select **Preview the update flow** in **Settings → Updates**, or start it with `SPARK_UPDATE_PREVIEW=flow pnpm desktop:dev`.
 
-It fakes an update. Your version and data stay the same.
+It fakes an update; your version and data stay.
 
 **Next:** [Mac privacy settings](mac-privacy.md)

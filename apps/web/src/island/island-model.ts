@@ -8,7 +8,7 @@ import {
 } from '../terminal/turn-done.ts';
 import { isRunning, needsInput, rowState } from '../conversations/row-state.ts';
 
-export type Panel = 'home' | 'quick' | 'sessions' | 'ask';
+export type Panel = 'home' | 'quick' | 'ask';
 
 export type CardKind = 'approval' | 'force' | 'question' | 'open';
 
@@ -74,12 +74,8 @@ export function quickShortcutTarget(
   return { kind: 'quick' };
 }
 
-export type HoverOpen = { kind: 'home' } | { kind: 'card'; card: Card } | null;
-
-export function hoverOpens(view: IslandView, pending: Card | null = null): HoverOpen {
-  if (view.kind === 'peek') return pending ? { kind: 'card', card: pending } : { kind: 'home' };
-  if (view.kind === 'now') return view.card ? { kind: 'card', card: view.card } : { kind: 'home' };
-  return null;
+export function hoverOpensHome(view: IslandView): boolean {
+  return view.kind === 'peek' || view.kind === 'now';
 }
 
 const CARD_WIDTHS = {
@@ -91,9 +87,8 @@ const CARD_WIDTHS = {
 const NOTE_WIDTH = 420;
 const NOW_WIDTH = 400;
 const NOW_WING = 104;
-const HOME_WIDTH = { share: 0.5, min: 720, max: 920 } as const;
+const HOME_WIDTH = { share: 0.36, min: 560, max: 640 } as const;
 const PANEL_WIDTH = { share: 0.42, min: 640, max: 760 } as const;
-const CHAT_MIN_WIDTH = 690;
 
 function scaled(screenWidth: number, range: { share: number; min: number; max: number }): number {
   return Math.round(Math.min(range.max, Math.max(range.min, screenWidth * range.share)));
@@ -101,10 +96,6 @@ function scaled(screenWidth: number, range: { share: number; min: number; max: n
 
 export function panelWidth(panel: Panel, screenWidth: number): number {
   return scaled(screenWidth, panel === 'home' ? HOME_WIDTH : PANEL_WIDTH);
-}
-
-export function chatWidth(screenWidth: number): number {
-  return Math.max(CHAT_MIN_WIDTH, scaled(screenWidth, PANEL_WIDTH));
 }
 
 export function viewWidth(view: IslandView, notchWidth: number, screenWidth: number): number {
@@ -220,25 +211,6 @@ export function sessionState(chat: ConversationSummary): SessionState {
   return 'idle';
 }
 
-const SESSION_RANK: Record<SessionState, number> = {
-  waiting: 0,
-  working: 1,
-  failed: 2,
-  done: 3,
-  idle: 4,
-};
-
-export function rankedSessions(
-  chats: readonly ConversationSummary[],
-  hidden: ReadonlySet<string>,
-): ConversationSummary[] {
-  return chats
-    .filter((chat) => !chat.archivedAt && !hidden.has(chat.id))
-    .map((chat) => ({ chat, rank: SESSION_RANK[sessionState(chat)] }))
-    .toSorted((a, b) => a.rank - b.rank || b.chat.updatedAt.localeCompare(a.chat.updatedAt))
-    .map((item) => item.chat);
-}
-
 export const ACTIVE_MS = 20 * 60_000;
 export const PEEK_LIMIT = 5;
 
@@ -280,15 +252,4 @@ export function peekOffset(slot: number, clearance: number): number {
 export function waitingCount(chats: readonly ConversationSummary[], hidden: ReadonlySet<string>) {
   return chats.filter((chat) => !chat.archivedAt && !hidden.has(chat.id) && needsInput(chat))
     .length;
-}
-
-export function matchesQuery(
-  chat: ConversationSummary,
-  projectNames: ReadonlyMap<string, string>,
-  query: string,
-): boolean {
-  const wanted = query.trim().toLowerCase();
-  if (!wanted) return true;
-  const projects = chat.projectIds.map((id) => projectNames.get(id) ?? '').join(' ');
-  return `${chat.title} ${projects}`.toLowerCase().includes(wanted);
 }

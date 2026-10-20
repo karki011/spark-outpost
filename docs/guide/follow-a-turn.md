@@ -31,7 +31,7 @@ The agent stays running between messages, up to 30 idle minutes. A turn it start
 
 ## Queue messages
 
-1. While a turn runs, type a message. **Enter** queues it.
+1. While a turn runs, **Enter** queues a message.
 2. **⌘Enter** sends it now.
 3. While the agent waits on sub-agents, **Enter** sends now.
 4. Use **Edit**, **Move up**, **Move down**, **Remove** or **Send now** on a queued message.

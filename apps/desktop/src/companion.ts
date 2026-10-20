@@ -56,7 +56,7 @@ export interface Companion {
 
 const ACTION_NAMES: Record<ShortcutAction, string> = {
   quick: 'Quick chat',
-  sessions: 'Sessions',
+  sessions: 'Inbox',
 };
 
 export const SHORTCUT_TAKEN = 'Another app is using this shortcut. Pick a different one.';

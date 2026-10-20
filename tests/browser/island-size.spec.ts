@@ -147,7 +147,7 @@ test('pending requests stay as blobs with one line at every size, including save
       .toBeLessThanOrEqual(1);
   }
   await pointAtScout(page);
-  const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
+  const waiting = island(page).getByRole('region', { name: /^Needs you/ });
   await expect(waiting).toContainText('npm test');
   await page.mouse.move(5, 600);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');

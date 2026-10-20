@@ -4,6 +4,7 @@ import {
   calendarEventDetailSchema,
   calendarNowSchema,
   calendarRangeSchema,
+  calendarRefreshSchema,
   calendarSettingsSchema,
   calendarStatusSchema,
   googleSignInFlowSchema,
@@ -14,6 +15,7 @@ import {
   type CalendarNow,
   type CalendarOccurrence,
   type CalendarRange,
+  type CalendarRefresh,
   type CalendarSettings,
   type CalendarSettingsPatch,
   type CalendarStatus,
@@ -66,6 +68,7 @@ export const calendarApi = {
   range: (from: string, to: string): Promise<CalendarRange> =>
     request(calendarRangeSchema, `/calendar/range?${new URLSearchParams({ from, to }).toString()}`),
   now: (): Promise<CalendarNow> => request(calendarNowSchema, '/calendar/now'),
+  refresh: (): Promise<CalendarRefresh> => post(calendarRefreshSchema, '/calendar/refresh'),
   mark: (mark: CalendarMarkRequest): Promise<{ ok: true }> =>
     request(ok, '/calendar/marks', { method: 'PUT', body: JSON.stringify(mark) }),
   open: (occurrence: CalendarOccurrence): Promise<{ opened: boolean }> =>

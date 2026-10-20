@@ -36,7 +36,7 @@ Select a ticket for **Development**, including linked pull requests.
 
 ![Start work on a ticket, with Plan first selected](images/tickets-start-light.png)
 
-Both types receive the ticket brief and your context. Terminal uses the native agent with Spark tools; answer questions there.
+Both get the ticket brief and your context; in Terminal, the native agent has Spark tools and you answer there.
 
 Ticket text is data, never instructions. For a link or a folder, Spark sends only the address or path. Secret files are refused.
 

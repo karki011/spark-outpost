@@ -11,7 +11,7 @@ import './island-bubble.css';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { setMotionMode } from '../app/idle-motion.ts';
 import { leaveAsGhost } from './home-motion.ts';
-import { chatWidth, peekClearance, viewWidth, type IslandView } from './island-model.ts';
+import { peekClearance, viewWidth, type IslandView } from './island-model.ts';
 import { useViewportWidth } from './island-parts.tsx';
 import { wingsFor } from './island-wings.tsx';
 import { keyHint } from './key-hints.tsx';
@@ -94,10 +94,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   const viewport = useViewportWidth();
   const screenWidth = window.screen.width;
   const room = Math.max(PANEL_MIN_WIDTH, viewport - PANEL_SIDE_GAP);
-  const chatting = view.kind === 'panel' && view.panel === 'sessions' && props.selected !== null;
-  const width = bare
-    ? rest.blob
-    : Math.min(chatting ? chatWidth(screenWidth) : viewWidth(view, notchSpan, screenWidth), room);
+  const width = bare ? rest.blob : Math.min(viewWidth(view, notchSpan, screenWidth), room);
   const hint = keyHint(view);
   const scout = scoutSpot(view, width, top, rest, docked, out);
   const rowShift = view.kind === 'peek' ? scout.x + scout.size / 2 - width / 2 : 0;
@@ -258,7 +255,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
           clearance={peekClearance(flat, rest.blob)}
           sleepy={props.sleepy}
           onOpen={props.onPeekOpen}
-          onMore={() => props.onTab('sessions')}
+          onMore={() => props.onTab('home')}
         />
       </div>
     </div>

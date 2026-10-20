@@ -14,6 +14,7 @@ import {
   useUpdateWorkspace,
 } from './use-chat-workspace.ts';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
+import { AdoptPullList } from './AdoptPullList.tsx';
 
 interface WorkPlaceMenuProps {
   conversationId: string;
@@ -219,6 +220,7 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
             {update.error.message}
           </p>
         )}
+        <AdoptPullList conversationId={conversationId} projectId={projectId} />
         <div className="pp-foot">
           <button
             type="button"

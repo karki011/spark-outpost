@@ -60,6 +60,13 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 | **Open pull requests as**                        | **Ready for review** | [Ship a change](ship-and-pull-requests.md#ready-for-review-or-draft) |
 | **Follow up on pull requests**, and its switches | On                   | [PR feedback](pr-follow-up.md#turn-it-off)                           |
 
+**Spark rules**:
+
+| Row                  | Default                      | Read more                                     |
+| -------------------- | ---------------------------- | --------------------------------------------- |
+| **Run a workflow**   | **Follows the agent's mode** | [Spark rules](protected-paths.md#spark-rules) |
+| **Allowed commands** | None                         | [Spark rules](protected-paths.md#spark-rules) |
+
 ## Connections
 
 | Section         | Holds                                                           | Read more                             |
@@ -81,7 +88,7 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 | **Dock badge and notifications**                                                                                                                                                                                        | On                                                                                  | [Spark Island](desktop-companion.md#when-spark-island-is-off)  |
 | **Open requests by themselves**, **Island chimes**                                                                                                                                                                      | On, off                                                                             | [Spark Island](desktop-companion.md#answer-a-card)             |
 | **Hide in screen sharing**                                                                                                                                                                                              | On                                                                                  | [Spark Island](desktop-companion.md#turn-it-on-and-size-it)    |
-| **Quick chat shortcut**, **Sessions shortcut**                                                                                                                                                                          | ⌥Space, ⌥⇧Space                                                                     | [Change a shortcut](companion-quick-chat.md#change-a-shortcut) |
+| **Quick chat shortcut**, **Inbox shortcut**                                                                                                                                                                             | ⌥Space, ⌥⇧Space                                                                     | [Change a shortcut](companion-quick-chat.md#change-a-shortcut) |
 | Mac app: **Add today’s calendar to the brief**, **Meetings**, **Meeting alerts**, **Alert at**, **Join meetings automatically**, **Hold chimes during**, **Calendars that nudge**, **Meeting alerts on paired devices** | On, 10 min, **Center of the screen**, 1 min before, off, **Focus blocks**, all, off | [See your day](calendar.md)                                    |
 
 ## App

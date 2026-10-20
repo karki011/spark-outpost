@@ -9,7 +9,7 @@ summary: Hold the work Spark starts on its own, keep what is running, and resume
 You'll stop Spark starting work by itself while you step away. About 1 minute.
 
 1. Select **Pause** in the left bar, above **Remote**. On a phone, open **More**, then **Pause Spark**.
-2. A line at the top reads **Spark is paused**. Select **Resume** there, or **Resume** in the left bar, to go on.
+2. A line at the top reads **Spark is paused**. To go on, select **Resume** there or in the left bar.
 
 Pausing never stops a running turn, and Spark stays paused after a restart.
 
@@ -20,6 +20,6 @@ Pausing never stops a running turn, and Spark stays paused after a restart.
 | [PR follow-up](pr-follow-up.md) rounds; feedback is still read | Running turns, their cards and their publish step                                                                           |
 | The morning brief and [Map](map.md) builds                     | Terminal sessions                                                                                                           |
 
-Work started from inside Slack is skipped while paused; start it again after you resume.
+Work started from inside Slack is skipped while paused; start it again after.
 
 **Next:** [Answer an approval card](answer-approvals.md)
