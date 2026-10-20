@@ -84,17 +84,19 @@ export function renderIndex(releases: Release[], dates: Map<string, string | und
   ].join('\n');
 }
 
+function downloadButton(version: string, arch: Arch, label: string, color: string): string {
+  const badge = `https://img.shields.io/badge/Download_for_Mac-${label.replaceAll(' ', '_')}-${color}?style=for-the-badge&logo=apple&logoColor=white`;
+  return `<a href="${dmgUrl(version, arch)}"><img alt="Download for Mac, ${label}" src="${badge}"></a>`;
+}
+
 export function renderReadmeSection(latest: Release): string {
+  const { version } = latest;
   return [
     README_START,
     '',
-    '## Download',
+    `${downloadButton(version, 'arm64', 'Apple silicon', '2bb39a')} ${downloadButton(version, 'x64', 'Intel', '555555')}`,
     '',
-    `Latest: **${latest.version}** ([what's new](releases/${latest.version}.md)). ${REQUIREMENT}`,
-    '',
-    `- [Download for Apple silicon](${dmgUrl(latest.version, 'arm64')})`,
-    `- [Download for Intel](${dmgUrl(latest.version, 'x64')})`,
-    '- [All versions](releases/README.md)',
+    `Free beta · [${version}](releases/${version}.md) · macOS 12+ (Mac control needs 14) · [All versions](releases/README.md)`,
     '',
     README_END,
   ].join('\n');
