@@ -209,6 +209,7 @@ export async function startSparkMcpHost(
       const before = grants.get(key)?.scope;
       const grant = await register(scope, key, '');
       if (before?.runId && before.runId !== scope.runId) {
+        void endBrowserRun(deps, before);
         void endMacRun(deps.mac, before.conversationId, before.runId);
       }
       return grant;
