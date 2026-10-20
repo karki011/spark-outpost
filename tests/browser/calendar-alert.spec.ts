@@ -4,6 +4,7 @@ import { calendarNowSchema, type MeetingAlertPayload } from '../../packages/cont
 import { apiNow, matchApiClock } from './api-clock.ts';
 import { resetTestDatabase } from './database.ts';
 import { island, openNotchIsland } from './island-notch-desktop.ts';
+import { animationsSettled } from './settle.ts';
 import { FAKE_CALENDAR_STATE } from './stub-config.ts';
 
 test.skip(process.env.SPARK_FAKE_CALENDAR !== '1', 'needs SPARK_FAKE_CALENDAR=1');
@@ -165,14 +166,7 @@ test('the hanging card offers Join, Snooze and Dismiss, and Esc dismisses once c
   await expect
     .poll(() => alertWindow(page, (window) => window.alertRegions.at(-1)?.boxes.length ?? 0))
     .toBe(2);
-  await page.evaluate(() =>
-    Promise.all(
-      document
-        .getAnimations()
-        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
-        .map((animation) => animation.finished),
-    ).then(() => null),
-  );
+  await animationsSettled(page);
 
   await card.getByRole('button', { name: 'Snooze 1 min' }).click({ force: true });
   expect(await alertWindow(page, (window) => window.alertFocus)).toBe(0);

@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const DAY_OPENS_HOUR = 6;
-const DAY_CLOSES_HOUR = 16;
+const DAY_CLOSES_HOUR = 12;
 const PINNED_HOUR = 10;
 
 export function calendarClockFile(stateFile: string): string {
