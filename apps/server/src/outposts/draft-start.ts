@@ -5,6 +5,7 @@ import { newId } from '../persistence/ids.ts';
 import { getDraft } from '../persistence/outpost-drafts.ts';
 import { getOutpost, notifyOutpostChanged, OutpostError } from '../persistence/outposts.ts';
 import { draftStartRequest } from './draft-request.ts';
+import type { StoredDraft } from './ports.ts';
 import { DRAFT_NOT_FOUND, startOutpost, type StartDeps, type StartedBy } from './start-outpost.ts';
 
 export interface DraftStarted {
@@ -24,17 +25,23 @@ export function draftStartedMessage(result: DraftStarted): string {
   return [line, ...reasons].join(' ');
 }
 
-async function alreadyStarted(
-  deps: StartDeps,
-  draft: { id: string; runId: string | null; outpostId: string; chats: number },
-): Promise<DraftStarted> {
+async function joinedHandles(deps: StartDeps, draft: StoredDraft): Promise<Set<string>> {
+  if (draft.startedAt === null || draft.outpostId === null) return new Set();
   const outpost = await getOutpost(deps.db, deps.workspaceId, draft.outpostId);
+  const members = new Set(outpost?.members.map((member) => member.handle) ?? []);
+  const handles = draft.body.chats.map((chat) => chat.handle);
+  return new Set(handles.filter((handle) => members.has(handle)));
+}
+
+async function alreadyStarted(deps: StartDeps, draft: StoredDraft): Promise<DraftStarted> {
+  const outpostId = draft.outpostId ?? '';
+  const outpost = await getOutpost(deps.db, deps.workspaceId, outpostId);
   return {
     draftId: draft.id,
     runId: draft.runId,
-    outpostId: draft.outpostId,
+    outpostId,
     outpostName: outpost?.name ?? '',
-    started: draft.chats,
+    started: draft.body.chats.length,
     failed: [],
     already: true,
   };
@@ -47,14 +54,11 @@ export async function startDraft(
 ): Promise<DraftStarted> {
   const draft = await getDraft(deps.db, deps.workspaceId, draftId);
   if (!draft) throw new OutpostError(404, DRAFT_NOT_FOUND);
-  if (draft.startedAt !== null && draft.outpostId !== null) {
-    return alreadyStarted(deps, {
-      ...draft,
-      outpostId: draft.outpostId,
-      chats: draft.body.chats.length,
-    });
+  const joined = await joinedHandles(deps, draft);
+  if (draft.startedAt !== null && joined.size === draft.body.chats.length) {
+    return alreadyStarted(deps, draft);
   }
-  const request = await draftStartRequest({ ...deps, newId }, draft);
+  const request = await draftStartRequest({ ...deps, newId }, draft, joined);
   const { failed } = await startOutpost(deps, request, startedBy);
   await notifyOutpostChanged(deps.db, request.id, draft.conversationId);
   const refused = new Set(failed.map((member) => member.handle));

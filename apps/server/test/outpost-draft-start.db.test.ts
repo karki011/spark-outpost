@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import express, { type NextFunction, type Request, type Response } from 'express';
@@ -141,6 +141,33 @@ describe('POST /api/outposts/drafts/:id/start', () => {
     expect(startDraftResponseSchema.parse(again.body).outpostId).toBe(first.outpostId);
     expect(await count('SELECT count(*)::int AS n FROM conversations')).toBe(chats);
     expect(await auditRows()).toBe(1);
+  });
+
+  it('starts only the chats a first start missed when started again', async () => {
+    const other = await realpath(await mkdtemp(join(tmpdir(), 'spark-draft-start-other-')));
+    const otherProject = (await createProject(t.db, t.workspaceId, other)).project.id;
+    await rm(other, { recursive: true, force: true });
+    const id = await draftOf([proposed('api'), proposed('guide', { projectId: otherProject })]);
+    const first = startDraftResponseSchema.parse((await start(id)).body);
+    expect(first.failed.map((member) => member.handle)).toEqual(['guide']);
+    expect(first.message).toContain('with 1 chat.');
+    await mkdir(other, { recursive: true });
+    try {
+      const again = await start(id);
+      expect(again.status).toBe(201);
+      const body = startDraftResponseSchema.parse(again.body);
+      expect(body.outpostId).toBe(first.outpostId);
+      expect(body.failed).toEqual([]);
+      const { rows } = await t.db.query<{ handle: string }>(
+        'SELECT handle FROM outpost_members WHERE outpost_id = $1 ORDER BY handle',
+        [body.outpostId],
+      );
+      expect(rows.map((row) => row.handle)).toEqual(['api', 'guide', expect.any(String)]);
+      expect(await count('SELECT count(*)::int AS n FROM outpost_story_tasks')).toBe(2);
+      expect((await start(id)).status).toBe(200);
+    } finally {
+      await rm(other, { recursive: true, force: true });
+    }
   });
 
   it('lowers a mode above the lead’s to the highest one the lead allows', async () => {

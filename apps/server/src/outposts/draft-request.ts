@@ -119,6 +119,7 @@ async function leadHandleOf(db: Queryable, lead: Lead, draft: StoredDraft): Prom
 export async function draftStartRequest(
   deps: DraftRequestDeps,
   draft: StoredDraft,
+  joined: ReadonlySet<string> = new Set(),
 ): Promise<CreateOutpostRequest> {
   if (draft.conversationId === null) throw new OutpostError(409, LEAD_CHAT_GONE);
   const lead = await leadOf(deps, draft.conversationId);
@@ -130,7 +131,13 @@ export async function draftStartRequest(
   const members: StartMember[] = lead.outpost
     ? []
     : [{ conversationId: lead.conversationId, handle: placed.leadHandle }];
-  for (const chat of draft.body.chats) members.push(await newMember(deps, placed, chat));
+  for (const chat of draft.body.chats) {
+    if (joined.has(chat.handle)) continue;
+    const parentJoined = chat.dependsOn !== undefined && joined.has(chat.dependsOn);
+    members.push(
+      await newMember(deps, placed, parentJoined ? { ...chat, dependsOn: undefined } : chat),
+    );
+  }
   const name =
     lead.outpost?.name ?? (draft.body.name ?? draft.body.title).slice(0, OUTPOST_NAME_MAX);
   return {
