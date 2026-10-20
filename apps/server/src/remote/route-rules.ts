@@ -51,6 +51,8 @@ POST /api/conversations/:id/update
 POST /api/spark-assistant
 GET /api/spark-assistant/settings
 GET /api/spark-assistant/events
+GET /api/spark-assistant/history
+POST /api/spark-assistant/topic
 GET /api/conversations/:id/agent-commands
 GET /api/conversations/:id/agent-terminals
 PATCH /api/conversations/:id
@@ -182,6 +184,8 @@ GET /api/calendar/google/sign-in
 POST /api/calendar/google/sign-in
 DELETE /api/calendar/google/sign-in
 DELETE /api/calendar/google/accounts/:id
+GET /api/island/requests
+POST /api/island/requests/:id/claim
 GET /api/remote/access
 PUT /api/remote/access
 PATCH /api/remote/switches

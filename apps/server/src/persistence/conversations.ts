@@ -28,6 +28,7 @@ import { attachmentsForMessages, linkAttachments } from './attachments.ts';
 import { resolveChatSettings } from './chat-settings.ts';
 import { withChatBranches } from './chat-worktrees.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
+import { conversationTopics } from './assistant-topics.ts';
 import { listCompactions, listContinuations } from './compactions.ts';
 import { listBrowserShots } from './browser-screenshots.ts';
 import { listCommands } from './run-commands.ts';
@@ -155,6 +156,7 @@ export async function getConversationDetail(
     plans,
     compactions,
     continuedIn,
+    topics,
     queue,
     memberMessages,
     railFlags,
@@ -194,6 +196,7 @@ export async function getConversationDetail(
     conversationPlans(db, id),
     listCompactions(db, id),
     listContinuations(db, id),
+    conversationTopics(db, id),
     listQueue(db, id),
     listMemberMessages(db, id),
     listRailFlags(db, id),
@@ -227,6 +230,7 @@ export async function getConversationDetail(
     queue,
     memberMessages,
     railFlags,
+    ...(topics.length > 0 ? { topics } : {}),
     ...(browserShots.length > 0 ? { browserShots } : {}),
     ...(commands.length > 0 ? { commands } : {}),
     ...(interruption ? { interruption } : {}),
@@ -273,6 +277,8 @@ export type SendMessageInput = Omit<
     | 'slack'
     | 'outpost'
     | 'spark_rule'
+    | 'voice'
+    | 'assistant'
     | undefined;
   startAs?: StartAs;
   continuesRunId?: string;

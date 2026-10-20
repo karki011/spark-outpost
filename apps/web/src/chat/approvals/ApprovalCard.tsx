@@ -3,6 +3,7 @@ import { Fragment, useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   friendlyStep,
+  holdsToConfirm,
   humanizeToolName,
   isCheckApproval,
   parseMcpTool,
@@ -241,7 +242,7 @@ function PendingApproval({
   const forced = approval.payload.forcePush !== undefined;
   const gitControl = approval.payload.gitControl !== undefined;
   const instructions = approval.payload.instructionFiles !== undefined;
-  const held = forced || gitControl || approval.payload.secretSend !== undefined;
+  const held = holdsToConfirm(approval.payload);
   const holdOption = held ? approval.options.find((option) => option.kind === 'allow_once') : null;
   const options = shownOptions(approval).filter((option) => !held || !isAllow(option));
   const chatAllow = instructions

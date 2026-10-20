@@ -1,8 +1,10 @@
 import {
   assistantEventsSchema,
+  assistantHistorySchema,
   assistantSettingsViewSchema,
   usageSummarySchema,
   type AssistantEvent,
+  type AssistantHistory,
   type AssistantSettings,
   type AssistantSettingsView,
   type UsageSummary,
@@ -12,6 +14,7 @@ import { request } from './client.ts';
 export const assistantKeys = {
   settings: ['spark-assistant', 'settings'] as const,
   events: ['spark-assistant', 'events'] as const,
+  history: ['spark-assistant', 'history'] as const,
   usage: ['usage-summary', 'assistant'] as const,
 };
 
@@ -28,6 +31,13 @@ export const assistantApi = {
       method: 'POST',
       body: JSON.stringify({ facts }),
     }),
+  newTopic: (): Promise<AssistantSettingsView> =>
+    request(assistantSettingsViewSchema, '/spark-assistant/topic', { method: 'POST', body: '{}' }),
+  history: (before: string | null): Promise<AssistantHistory> =>
+    request(
+      assistantHistorySchema,
+      `/spark-assistant/history${before ? `?before=${encodeURIComponent(before)}` : ''}`,
+    ),
   removeFact: (id: string): Promise<AssistantSettingsView> =>
     request(assistantSettingsViewSchema, `/spark-assistant/facts/${id}`, { method: 'DELETE' }),
   events: (): Promise<AssistantEvent[]> =>

@@ -269,7 +269,9 @@ test('Ask answers instantly from Spark’s own state', async ({ page }) => {
   await ask.fill('Does anyone need anything?');
   await page.keyboard.press('Enter');
   await expect(island(page)).toContainText('1 chat needs you: “Deploy the site”.');
-  await expect(island(page).getByRole('button', { name: 'Open “Deploy the site”' })).toBeVisible();
+  await expect(
+    island(page).getByRole('button', { name: 'Review “Deploy the site”' }),
+  ).toBeVisible();
   await shot(page, 'ask');
   await expect
     .poll(async () => (await sql(`SELECT count(*)::int AS n FROM messages`)).rows[0]!.n)

@@ -18,7 +18,7 @@ Select **Settings** at the bottom of the rail. **Search settings** finds a secti
 
 ### Spark assistant
 
-**Spark assistant** sets [Ask Spark](companion-quick-chat.md#ask-spark)'s **Provider**, **Model** (**Fast (recommended)**: Sonnet 5.5), **Effort** and **Key facts**. **View conversation** opens its hidden chat.
+**Spark assistant** sets [Ask Spark](companion-quick-chat.md#ask-spark)'s **Provider**, **Model** (**Fast (recommended)**: Sonnet 5.5), **Effort**, **When Ask Spark acts** (**Manual** or **Act**) and **Key facts**. **View conversation** opens its hidden chat, with a line where each **New topic** began.
 
 ## Agents
 

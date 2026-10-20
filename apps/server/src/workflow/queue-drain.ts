@@ -52,9 +52,10 @@ async function lockConversation(db: Queryable, conversationId: string): Promise<
   return rowCount === 1;
 }
 
-function queuedSource(item: Pick<QueuedMessage, 'outpostPostId' | 'sparkRuleCardId'>) {
+function queuedSource(item: Pick<QueuedMessage, 'outpostPostId' | 'sparkRuleCardId' | 'origin'>) {
   if (item.outpostPostId) return 'outpost';
-  return item.sparkRuleCardId ? 'spark_rule' : 'queue';
+  if (item.sparkRuleCardId) return 'spark_rule';
+  return item.origin ?? 'queue';
 }
 
 async function sendQueued(
@@ -62,7 +63,7 @@ async function sendQueued(
   conversationId: string,
   item: Pick<
     QueuedMessage,
-    'id' | 'content' | 'continueRunId' | 'outpostPostId' | 'sparkRuleCardId'
+    'id' | 'content' | 'continueRunId' | 'outpostPostId' | 'sparkRuleCardId' | 'origin'
   >,
   target: RunTarget,
 ): Promise<void> {
@@ -179,6 +180,9 @@ export async function sendNow(
     const running = await activeTurn(client, conversationId);
     if (queued?.outpostPostId)
       await refuseOutpostSendNow(client, queued.outpostPostId, running !== null);
+    if (queued?.origin === 'assistant' && running) {
+      throw new QueueError(409, 'A message from Ask Spark starts when this chat is free.');
+    }
     if (!running) {
       await sendQueued(
         client,
@@ -189,6 +193,7 @@ export async function sendNow(
           continueRunId: queued?.continueRunId ?? null,
           outpostPostId: queued?.outpostPostId ?? null,
           ...(queued?.sparkRuleCardId ? { sparkRuleCardId: queued.sparkRuleCardId } : {}),
+          ...(queued?.origin ? { origin: queued.origin } : {}),
         },
         target,
       );

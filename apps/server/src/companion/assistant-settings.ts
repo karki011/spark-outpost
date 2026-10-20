@@ -35,6 +35,7 @@ interface PrefsRow {
   effort: string | null;
   applied: string | null;
   notice: string | null;
+  acts: AssistantSettings['acts'];
 }
 
 interface AssistantTarget {
@@ -49,7 +50,8 @@ async function prefsRow(db: Queryable, workspaceId: string): Promise<PrefsRow | 
   const { rows } = await db.query<PrefsRow>(
     `SELECT assistant_conversation_id AS conversation_id, assistant_provider AS provider,
        assistant_model_choice AS model_choice, assistant_model AS model,
-       assistant_effort AS effort, assistant_applied AS applied, assistant_notice AS notice
+       assistant_effort AS effort, assistant_applied AS applied, assistant_notice AS notice,
+       assistant_acts AS acts
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
   );
@@ -62,6 +64,7 @@ function settingsOf(row: PrefsRow): AssistantSettings {
     modelChoice: row.model_choice,
     model: row.model,
     effort: row.effort,
+    acts: row.acts,
   };
 }
 
@@ -230,7 +233,7 @@ export async function saveAssistantSettings(
   await assertSettings(db, workspaceId, settings);
   const { rows } = await db.query<{ conversation_id: string | null }>(
     `UPDATE profiles SET assistant_provider = $2, assistant_model_choice = $3,
-       assistant_model = $4, assistant_effort = $5, updated_at = now()
+       assistant_model = $4, assistant_effort = $5, assistant_acts = $6, updated_at = now()
      WHERE workspace_id = $1 RETURNING assistant_conversation_id AS conversation_id`,
     [
       workspaceId,
@@ -238,6 +241,7 @@ export async function saveAssistantSettings(
       settings.modelChoice,
       settings.modelChoice === 'pick' ? settings.model : null,
       settings.effort,
+      settings.acts,
     ],
   );
   const row = rows[0];
@@ -260,29 +264,36 @@ async function answering(db: Queryable, conversationId: string | null): Promise<
   return rows[0]?.busy === true;
 }
 
-export async function clearAssistantHistory(
+async function resetAssistantContext(
   db: Queryable,
   workspaceId: string,
-  options: { facts: boolean },
-): Promise<AssistantSettingsView> {
-  const prefs = await prefsRow(db, workspaceId);
-  if (!prefs) throw new AssistantSettingsError('Finish setting up Spark first.');
-  if (prefs.conversation_id) {
-    await db.query('SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE', [prefs.conversation_id]);
-    if (await answering(db, prefs.conversation_id))
-      throw new AssistantSettingsError(ASSISTANT_BUSY);
-    await closeConversationSessions(
-      db,
-      workspaceId,
-      prefs.conversation_id,
-      SESSION_CLOSE_REASONS.fresh,
-    );
+  conversationId: string | null,
+): Promise<void> {
+  if (conversationId) {
+    await db.query('SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE', [conversationId]);
+    if (await answering(db, conversationId)) throw new AssistantSettingsError(ASSISTANT_BUSY);
+    await closeConversationSessions(db, workspaceId, conversationId, SESSION_CLOSE_REASONS.fresh);
   }
   await db.query(
     `UPDATE profiles SET assistant_history_from = clock_timestamp(), assistant_notice = NULL
      WHERE workspace_id = $1`,
     [workspaceId],
   );
+}
+
+async function preferences(db: Queryable, workspaceId: string): Promise<PrefsRow> {
+  const prefs = await prefsRow(db, workspaceId);
+  if (!prefs) throw new AssistantSettingsError('Finish setting up Spark first.');
+  return prefs;
+}
+
+export async function clearAssistantHistory(
+  db: Queryable,
+  workspaceId: string,
+  options: { facts: boolean },
+): Promise<AssistantSettingsView> {
+  const prefs = await preferences(db, workspaceId);
+  await resetAssistantContext(db, workspaceId, prefs.conversation_id);
   if (options.facts) await clearFacts(db, workspaceId);
   await recordAssistantEvent(
     db,
@@ -290,5 +301,15 @@ export async function clearAssistantHistory(
     'history_cleared',
     options.facts ? 'key facts cleared too' : 'key facts kept',
   );
+  return assistantView(db, workspaceId);
+}
+
+export async function startAssistantTopic(
+  db: Queryable,
+  workspaceId: string,
+): Promise<AssistantSettingsView> {
+  const prefs = await preferences(db, workspaceId);
+  await resetAssistantContext(db, workspaceId, prefs.conversation_id);
+  await recordAssistantEvent(db, workspaceId, 'topic_started', null);
   return assistantView(db, workspaceId);
 }

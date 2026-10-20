@@ -1,20 +1,28 @@
 import { Router, type Response } from 'express';
-import { assistantSettingsSchema, clearAssistantRequestSchema } from '@spark-outpost/contracts';
+import {
+  assistantHistoryQuerySchema,
+  assistantSettingsSchema,
+  clearAssistantRequestSchema,
+  type IslandRequests,
+} from '@spark-outpost/contracts';
 import { AssistantUnavailableError, ensureAssistantChat } from '../companion/assistant.ts';
 import { listAssistantEvents } from '../companion/assistant-events.ts';
+import { listAssistantHistory } from '../companion/assistant-history.ts';
 import { removeFact } from '../companion/assistant-facts.ts';
 import {
   AssistantSettingsError,
   assistantView,
   clearAssistantHistory,
   saveAssistantSettings,
+  startAssistantTopic,
 } from '../companion/assistant-settings.ts';
 import { chatUpdate } from '../companion/chat-update.ts';
+import { claimIslandRequest, listIslandRequests } from '../companion/island-requests.ts';
 import { chatFileView } from '../companion/file-view.ts';
 import { withTransaction, type Db } from '../persistence/db.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import type { ApiEndpoints } from '../setup/verify.ts';
-import { paramId, parseBody } from './validation.ts';
+import { paramId, parseBody, parseQuery } from './validation.ts';
 
 export interface CompanionRouteDeps {
   db: Db;
@@ -87,9 +95,34 @@ export function companionRoutes(deps: CompanionRouteDeps): Router {
     );
   });
 
+  router.post('/spark-assistant/topic', async (_req, res) => {
+    await answer(res, () =>
+      withTransaction(deps.db, (client) => startAssistantTopic(client, deps.workspaceId)),
+    );
+  });
+
+  router.get('/spark-assistant/history', async (req, res) => {
+    const query = parseQuery(assistantHistoryQuerySchema, req);
+    res.json(await listAssistantHistory(deps.db, deps.workspaceId, query));
+  });
+
   router.delete('/spark-assistant/facts/:id', async (req, res) => {
     await removeFact(deps.db, deps.workspaceId, paramId(req));
     await answer(res, () => assistantView(deps.db, deps.workspaceId));
+  });
+
+  router.get('/island/requests', async (_req, res) => {
+    const requests = await listIslandRequests(deps.db, deps.workspaceId);
+    res.json({ requests } satisfies IslandRequests);
+  });
+
+  router.post('/island/requests/:id/claim', async (req, res) => {
+    const claimed = await claimIslandRequest(deps.db, deps.workspaceId, paramId(req));
+    if (!claimed) {
+      res.status(409).json({ error: 'That request was already handled.' });
+      return;
+    }
+    res.json(claimed);
   });
 
   router.get('/spark-assistant/events', async (_req, res) => {

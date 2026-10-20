@@ -1,11 +1,12 @@
 import './island-inbox.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ConversationDetail, ConversationSummary } from '@spark-outpost/contracts';
+import type { Approval, ConversationDetail, ConversationSummary } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
 import { homeApi, homeKeys } from '../home/home-api.ts';
 import { TickIcon } from '../ui/icons.tsx';
+import { AskCard } from './AskCard.tsx';
 import { InboxCard } from './InboxCard.tsx';
 import { InboxMeeting } from './InboxMeeting.tsx';
 import {
@@ -26,6 +27,7 @@ export interface InboxBundle {
   cards: readonly Card[];
   aside: readonly Card[];
   details: ReadonlyMap<string, ConversationDetail>;
+  ask: { conversationId: string | null; cards: readonly Approval[] };
   onLater: (card: Card) => void;
   onReview: (card: Card) => void;
   onDecided: (card: Card, decided: Decided) => void;
@@ -83,12 +85,21 @@ export function IslandInbox({ inbox, calendar, now, onOpenChat }: IslandInboxPro
   const finished = useMemo(() => finishedRows(inbox.chats, cleared), [inbox.chats, cleared]);
   const top = topAnswerable(cards);
   const line = calendarRow(calendar.line);
-  const waiting = cards.length + inbox.aside.length + (line ? 1 : 0);
+  const askId = inbox.ask.conversationId;
+  const askCards = askId ? inbox.ask.cards : [];
+  const waiting = cards.length + inbox.aside.length + askCards.length + (line ? 1 : 0);
   return (
     <div className="isl-inbox">
       <GitHubNote onConnectors={inbox.onConnectors} />
       <InboxMeeting calendar={calendar} />
       <Section id="isl-needs-h" label="Needs you" count={waiting}>
+        {askId &&
+          askCards.map((approval) => (
+            <li key={approval.id} className="isl-inbox-ask">
+              <span className="isl-inbox-ask-from">Ask Spark</span>
+              <AskCard approval={approval} conversationId={askId} />
+            </li>
+          ))}
         {cards.map((card) => (
           <InboxCard
             key={card.approval?.id ?? card.chat.id}

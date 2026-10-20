@@ -197,6 +197,53 @@ describe('the persistent Ask Spark session', { timeout: 240_000 }, () => {
     expect(next.reply).not.toContain('teal');
   });
 
+  it('starts a new topic: a fresh session without the earlier questions, keeping key facts and the divider', async () => {
+    await ask('remember the word pineapple');
+    await ask('my favourite colour is teal');
+    const topic = await api().send('post', '/api/spark-assistant/topic');
+    expect(topic.status).toBe(200);
+    const next = await ask('what do you know?');
+
+    expect(next.reply).toContain('the word pineapple');
+    expect(next.reply).not.toContain('teal');
+    expect(await auditedKinds(next.run.id)).toEqual(['topic_started', 'session_started']);
+    const detail = await getConversationDetail(t.db, assistant);
+    expect(detail?.topics?.map((entry) => entry.kind)).toEqual(['topic']);
+    expect(detail?.messages.some((message) => message.content.includes('teal'))).toBe(true);
+  });
+
+  it('keeps a new topic out of the handoff to another provider', async () => {
+    await ask('my favourite colour is teal');
+    await api().send('post', '/api/spark-assistant/topic');
+    await api().send('put', '/api/spark-assistant/settings', {
+      provider: 'codex',
+      modelChoice: 'fast',
+      model: null,
+      effort: null,
+    });
+    const next = await ask('what do you know?');
+
+    expect(next.run.provider).toBe('codex');
+    expect(next.reply).not.toContain('teal');
+  });
+
+  it('refuses a new topic while Ask Spark is answering', async () => {
+    const messageId = randomUUID();
+    await t.db.query(
+      `INSERT INTO messages (id, conversation_id, role, content) VALUES ($1, $2, 'user', 'busy')`,
+      [messageId, assistant],
+    );
+    await t.db.query(
+      `INSERT INTO runs (id, conversation_id, user_message_id, provider, status)
+       VALUES ($1, $2, $3, 'claude', 'running')`,
+      [randomUUID(), assistant, messageId],
+    );
+    const topic = await api().send('post', '/api/spark-assistant/topic');
+    expect(topic.status).toBe(409);
+    expect(topic.body.error).toBe('Wait for Ask Spark to finish answering first.');
+    expect(await eventKinds()).not.toContain('topic_started');
+  });
+
   it('shows only Ask Spark runs in the assistant usage', async () => {
     await ask('Who needs me?');
     const usage = usageSummarySchema.parse(

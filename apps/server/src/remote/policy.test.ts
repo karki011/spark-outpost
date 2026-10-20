@@ -68,6 +68,24 @@ describe('remote policy', () => {
     expect(cardSwitch({ ...payload, sparkAction: action })).toBeNull();
   });
 
+  it('needs High-risk cards on a paired device for an Ask Spark card that answers another card', () => {
+    const payload = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
+    const ask = {
+      action: 'ask_spark' as const,
+      summary: 'Allow once: Run pnpm deploy',
+      conversationId: null,
+      projectId: null,
+      approvalId: '11111111-1111-4111-8111-111111111111',
+      answer: 'allow_once' as const,
+      ticket: null,
+      text: null,
+    };
+    expect(cardSwitch({ ...payload, sparkAction: { ...ask, op: 'answer_card' } })).toBe(
+      'highRiskCards',
+    );
+    expect(cardSwitch({ ...payload, sparkAction: { ...ask, op: 'stop_turn' } })).toBeNull();
+  });
+
   it('lets a paired device pause and resume Spark whatever the switches say', () => {
     expect(remoteDecision('GET', '/api/spark-pause', ALL_OFF).kind).toBe('allow');
     expect(remoteDecision('PUT', '/api/spark-pause', ALL_OFF).kind).toBe('allow');

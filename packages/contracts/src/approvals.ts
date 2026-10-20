@@ -124,6 +124,14 @@ export const approvalPayloadSchema = z.object({
 });
 export type ApprovalPayload = z.infer<typeof approvalPayloadSchema>;
 
+export function holdsToConfirm(payload: ApprovalPayload): boolean {
+  return (
+    payload.forcePush !== undefined ||
+    payload.gitControl !== undefined ||
+    payload.secretSend !== undefined
+  );
+}
+
 export const approvalSchema = z.object({
   id: z.uuid(),
   runId: z.uuid(),

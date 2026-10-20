@@ -18,6 +18,7 @@ import { QuickChat, type Compose, type FollowUp, type QuickDraft } from './Quick
 import { SparkTiles, type SparkTileActions } from './SparkTiles.tsx';
 import type { Grab } from './use-island-drop.ts';
 import { chatAgent } from './use-island-data.ts';
+import type { AskSession } from './use-ask-session.ts';
 import { SpeechScreen } from '../voice/SpeechScreen.tsx';
 import type { SpeechScreenModel } from '../voice/use-speech-island.ts';
 
@@ -63,6 +64,7 @@ export interface IslandShellProps {
   draft: QuickDraft;
   followUp: FollowUp | null;
   fast: FastState;
+  askSession: AskSession;
   announcement: string;
   onDraft: (draft: QuickDraft) => void;
   onTab: (panel: Panel) => void;
@@ -70,6 +72,7 @@ export interface IslandShellProps {
   onDecided: (decided: Decided) => void;
   onLater: () => void;
   onReview: (card: Card) => void;
+  onReviewChat: (chatId: string) => void;
   onLine: (line: RestLine) => void;
   onScout: () => void;
   onPeekOpen: (id: string) => void;
@@ -110,7 +113,15 @@ function PanelPane({ panel, props }: { panel: Panel; props: IslandShellProps }) 
           fast={props.fast}
           voice={props.voice}
           focusDelay={focusDelay}
-          onOpenChat={props.onOpenChat}
+          session={props.askSession}
+          meetings={props.calendar.connected ? props.calendar.upcoming : null}
+          links={{
+            reviewable: new Set(
+              [...props.inbox.cards, ...props.inbox.aside].map((card) => card.chat.id),
+            ),
+            onReview: props.onReviewChat,
+            onOpenChat: props.onOpenChat,
+          }}
         />
       );
   }
