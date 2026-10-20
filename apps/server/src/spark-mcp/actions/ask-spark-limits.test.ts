@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Approval } from '@spark-outpost/contracts';
 import { EVERYTHING_AVAILABLE } from '../availability.ts';
 import { sparkToolsFor } from '../server.ts';
-import { ASK_SPARK_REFUSALS, cardRefusal } from './ask-spark-limits.ts';
+import { ASK_SPARK_REFUSALS, askedToAnswer, cardRefusal } from './ask-spark-limits.ts';
 
 const card = (overrides: Partial<Approval> = {}): Approval =>
   ({
@@ -81,5 +81,22 @@ describe('the tools Ask Spark is offered', () => {
       expect(names(scope)).not.toContain('spark_start_chat');
       expect(names(scope)).not.toContain('spark_answer_card');
     }
+  });
+});
+
+describe('askedToAnswer', () => {
+  it('takes only a plain request to answer, in the direction asked', () => {
+    expect(askedToAnswer('Allow the deploy card', 'allow_once')).toBe(true);
+    expect(askedToAnswer('Please approve it in Build the site.', 'allow_once')).toBe(true);
+    expect(askedToAnswer('Check the deploy chat, then deny its card', 'deny')).toBe(true);
+    expect(askedToAnswer('Allow the deploy card', 'deny')).toBe(false);
+  });
+
+  it('never takes a question, a negation or a passing mention as a request', () => {
+    expect(askedToAnswer('What does this confirm card do?', 'allow_once')).toBe(false);
+    expect(askedToAnswer('Should I approve the deploy card?', 'allow_once')).toBe(false);
+    expect(askedToAnswer('Do not approve the deploy card', 'allow_once')).toBe(false);
+    expect(askedToAnswer("Don't allow anything yet", 'allow_once')).toBe(false);
+    expect(askedToAnswer('Tell me who is allowed to deploy', 'allow_once')).toBe(false);
   });
 });

@@ -1,6 +1,7 @@
 import {
   holdsToConfirm,
   type Approval,
+  type AskSparkAnswer,
   type AssistantActs,
   type SparkAction,
 } from '@spark-outpost/contracts';
@@ -175,10 +176,24 @@ export async function assistantActs(db: Queryable, workspaceId: string): Promise
   return rows[0]?.acts ?? 'manual';
 }
 
-const ASKS_TO_ANSWER = /\b(allow|approve|accept|confirm|deny|reject|decline|answer)\b/i;
+const ANSWER_VERBS: Record<AskSparkAnswer, string> = {
+  allow_once: 'allow|approve|accept',
+  deny: 'deny|reject|decline|refuse',
+};
 
-export function askedToAnswer(question: string): boolean {
-  return ASKS_TO_ANSWER.test(question);
+const NEGATION = /\b(?:not|never|don['’]?t|do not|no)\b/i;
+
+export function askedToAnswer(question: string, answer: AskSparkAnswer): boolean {
+  const text = question.trim();
+  if (text.endsWith('?')) return false;
+  const command = new RegExp(
+    `(?:^|[.!;:,]\\s*|\\b(?:please|then|and|now|just)\\s+)(?:${ANSWER_VERBS[answer]})\\b`,
+    'i',
+  );
+  const match = command.exec(text);
+  if (!match) return false;
+  const before = text.slice(Math.max(0, match.index - 20), match.index + match[0].length);
+  return !NEGATION.test(before);
 }
 
 async function questionOf(db: Queryable, runId: string): Promise<string> {
@@ -197,6 +212,8 @@ export async function assistantPath(
 ): Promise<ActionPath> {
   if ((await assistantActs(db, workspaceId)) !== 'act') return 'confirm';
   const answering = action.action === 'ask_spark' && action.op === 'answer_card';
-  if (answering && !askedToAnswer(await questionOf(db, runId))) return 'confirm';
+  if (answering && !askedToAnswer(await questionOf(db, runId), action.answer ?? 'deny')) {
+    return 'confirm';
+  }
   return 'perform';
 }
