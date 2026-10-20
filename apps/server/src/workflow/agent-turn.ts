@@ -371,7 +371,7 @@ export async function runAgentTurn(
         workspaceId: input.workspaceId,
         conversationId: input.identity.threadId,
         runId: lease.runId,
-        ...(input.assistant ? { readOnly: true } : {}),
+        ...(input.assistant ? { readOnly: true, assistant: true } : {}),
         observations,
         publish: await publishScope(deps.db, input),
         commands: await sparkCommandScope(deps.db, lease.runId, input, { observations }),

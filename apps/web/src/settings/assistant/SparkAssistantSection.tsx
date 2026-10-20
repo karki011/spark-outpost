@@ -21,8 +21,19 @@ import './assistant.css';
 const PROVIDER = 'Provider';
 const MODEL = 'Model';
 const EFFORT = 'Effort';
+const ACTS = 'When Ask Spark acts';
 
-export const ASSISTANT_ROWS = [PROVIDER, MODEL, EFFORT, SESSION_LABEL, KEY_FACTS_LABEL];
+export const ASSISTANT_ROWS = [PROVIDER, MODEL, EFFORT, ACTS, SESSION_LABEL, KEY_FACTS_LABEL];
+
+const ACTS_CHOICES: PickerChoice[] = [
+  { id: 'manual', label: 'Manual (recommended)' },
+  { id: 'act', label: 'Act' },
+];
+
+const ACTS_HINTS: Record<AssistantSettings['acts'], string> = {
+  manual: 'Each action shows a card in the Ask panel with Do it and Don’t.',
+  act: 'Ask Spark does what you ask at once. Hold-to-confirm cards still stay with you.',
+};
 
 const EFFORT_HIDDEN = [EFFORT];
 
@@ -61,8 +72,8 @@ export function SparkAssistantSection({ setup, onOpenChat }: SparkAssistantSecti
   return (
     <>
       <p className="lede">
-        Ask Spark answers questions about your chats from the island. It keeps one hidden
-        conversation and a short list of key facts.
+        Ask Spark answers questions about your chats from the island and, when you ask, acts on
+        them. It keeps one hidden conversation and a short list of key facts.
       </p>
       <QueryWait query={view} what="the Spark assistant settings">
         <Skeleton label="Loading the Spark assistant settings" rows={3} />
@@ -83,6 +94,7 @@ function AssistantRows({ view, setup, onOpenChat }: AssistantRowsProps) {
   const providerHintId = useId();
   const modelHintId = useId();
   const effortHintId = useId();
+  const actsHintId = useId();
   const settings = save.isPending && save.variables ? save.variables : view.settings;
   const connected = connectedProviders(setup);
   const providerId = view.runsOn?.provider ?? settings.provider ?? connected[0]?.id ?? null;
@@ -167,6 +179,14 @@ function AssistantRows({ view, setup, onOpenChat }: AssistantRowsProps) {
           />
         </SettingRow>
       )}
+      <SettingRow label={ACTS} hint={ACTS_HINTS[settings.acts]} hintId={actsHintId}>
+        <ChoicePicker
+          label="When Ask Spark acts"
+          choices={ACTS_CHOICES}
+          value={settings.acts}
+          onChange={(id) => update({ acts: id as AssistantSettings['acts'] })}
+        />
+      </SettingRow>
       <AssistantSessionRow view={view} onOpenChat={onOpenChat} />
       <AssistantFacts facts={view.facts} />
     </>

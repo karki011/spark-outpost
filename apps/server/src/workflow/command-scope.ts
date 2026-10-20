@@ -19,6 +19,8 @@ type ScopeInput = Pick<
   | 'followUpRound'
   | 'workspaceId'
   | 'outpostRequest'
+  | 'sparkRuleRetry'
+  | 'assistantSent'
   | 'identity'
 >;
 

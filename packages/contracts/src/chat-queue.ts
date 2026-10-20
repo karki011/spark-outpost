@@ -6,6 +6,7 @@ export const QUEUE_LIMIT = 50;
 export const queueAddRequestSchema = z.object({
   id: z.uuid(),
   content: z.string().trim().min(1),
+  origin: z.literal('voice').optional(),
 });
 export type QueueAddRequest = z.infer<typeof queueAddRequestSchema>;
 

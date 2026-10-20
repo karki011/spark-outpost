@@ -52,9 +52,10 @@ async function lockConversation(db: Queryable, conversationId: string): Promise<
   return rowCount === 1;
 }
 
-function queuedSource(item: Pick<QueuedMessage, 'outpostPostId' | 'sparkRuleCardId'>) {
+function queuedSource(item: Pick<QueuedMessage, 'outpostPostId' | 'sparkRuleCardId' | 'origin'>) {
   if (item.outpostPostId) return 'outpost';
-  return item.sparkRuleCardId ? 'spark_rule' : 'queue';
+  if (item.sparkRuleCardId) return 'spark_rule';
+  return item.origin ?? 'queue';
 }
 
 async function sendQueued(
@@ -62,7 +63,7 @@ async function sendQueued(
   conversationId: string,
   item: Pick<
     QueuedMessage,
-    'id' | 'content' | 'continueRunId' | 'outpostPostId' | 'sparkRuleCardId'
+    'id' | 'content' | 'continueRunId' | 'outpostPostId' | 'sparkRuleCardId' | 'origin'
   >,
   target: RunTarget,
 ): Promise<void> {

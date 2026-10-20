@@ -277,6 +277,8 @@ export type SendMessageInput = Omit<
     | 'slack'
     | 'outpost'
     | 'spark_rule'
+    | 'voice'
+    | 'assistant'
     | undefined;
   startAs?: StartAs;
   continuesRunId?: string;

@@ -49,5 +49,6 @@ export const queuedMessageSchema = z.object({
   createdAt: z.string(),
   outpostPostId: z.uuid().nullable().optional(),
   sparkRuleCardId: z.uuid().optional(),
+  origin: z.enum(['voice', 'assistant']).optional(),
 });
 export type QueuedMessage = z.infer<typeof queuedMessageSchema>;

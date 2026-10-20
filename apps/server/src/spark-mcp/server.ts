@@ -1,3 +1,4 @@
+import { askSparkTools } from './tools/ask-spark-tools.ts';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { ZodError } from 'zod';
@@ -98,6 +99,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   jiraEditTool,
   confluenceTool,
   confluenceEditTool,
+  ...askSparkTools,
 ];
 
 const INSTRUCTIONS =
@@ -161,12 +163,24 @@ export async function callSparkTool(
   }
 }
 
+const ASSISTANT_ACTIONS: ReadonlySet<string> = new Set([
+  'spark_comment_ticket',
+  'spark_transition_ticket',
+]);
+
+function offeredTo(tool: SparkTool, scope: Pick<SparkScope, 'readOnly' | 'assistant'>): boolean {
+  if (tool.assistantOnly) return scope.assistant === true;
+  if (!tool.acts) return true;
+  if (scope.assistant) return ASSISTANT_ACTIONS.has(tool.name);
+  return !scope.readOnly;
+}
+
 export function sparkToolsFor(
-  scope: Pick<SparkScope, 'readOnly'>,
+  scope: Pick<SparkScope, 'readOnly' | 'assistant'>,
   available: SparkAvailability,
 ): readonly SparkTool[] {
   return SPARK_TOOLS.filter(
-    (tool) => !(scope.readOnly && tool.acts) && (!tool.needs || available[tool.needs]),
+    (tool) => offeredTo(tool, scope) && (!tool.needs || available[tool.needs]),
   );
 }
 

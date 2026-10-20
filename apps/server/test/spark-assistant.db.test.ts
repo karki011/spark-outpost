@@ -75,7 +75,7 @@ describe('Ask Spark', () => {
     expect((await resolveChatSettings(t.db, id)).provider).toBe('claude');
   });
 
-  it('runs the turn with only the Spark read tools, no repo and no user MCP servers', async () => {
+  it('runs the turn with the Spark read tools and only its own actions, no repo and no user MCP servers', async () => {
     const id = await assistantId();
     worker = startWorker({
       db: t.db,
@@ -94,7 +94,7 @@ describe('Ask Spark', () => {
     expect(sent.body.run.provider).toBe('codex');
 
     const turn = await eventually(async () => turns[0]);
-    expect(turn.sparkScope).toMatchObject({ conversationId: id, readOnly: true });
+    expect(turn.sparkScope).toMatchObject({ conversationId: id, readOnly: true, assistant: true });
     expect(turn.projectRoots ?? []).toEqual([]);
     expect(turn.repo).toBeUndefined();
     expect(turn.userMcp).toBeUndefined();
@@ -102,7 +102,17 @@ describe('Ask Spark', () => {
 
     const tools = sparkToolsFor(turn.sparkScope!, EVERYTHING_AVAILABLE);
     expect(tools.length).toBeGreaterThan(0);
-    expect(tools.some((tool) => tool.acts)).toBe(false);
+    expect(tools.filter((tool) => tool.acts).map((tool) => tool.name)).toEqual([
+      'spark_comment_ticket',
+      'spark_transition_ticket',
+      'spark_start_chat',
+      'spark_send_to_chat',
+      'spark_stop_chat',
+      'spark_archive_chat',
+      'spark_answer_card',
+      'spark_pause',
+      'spark_start_ticket',
+    ]);
     expect(sparkToolsFor({}, EVERYTHING_AVAILABLE).some((tool) => tool.acts)).toBe(true);
   });
 

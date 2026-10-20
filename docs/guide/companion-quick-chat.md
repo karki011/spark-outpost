@@ -32,9 +32,15 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 3. Scroll up for earlier questions. **New topic** starts fresh, so old answers stop steering new ones.
 4. **Open in Spark** shows the whole conversation.
 
-Who needs you, what's running, today's spend and your next meeting answer at once, marked **Live · answered instantly**, and last until the island reloads. Others use a [fast model](settings.md#spark-assistant).
+Who needs you, what's running, spend and your next meeting answer at once (**Live · answered instantly**) until the island reloads. Others use a [fast model](settings.md#spark-assistant).
 
-Answers link to the chats they name; **Review** opens a waiting card in place. Ask Spark only reads.
+Answers link to the chats they name; **Review** opens a waiting card in place.
+
+## Let Ask Spark act
+
+Ask it to start, message, stop or archive a chat, pause Spark, work on a ticket, or answer a card. Each shows **Do it** and **Don’t** first, unless [When Ask Spark acts](settings.md#spark-assistant) is **Act**.
+
+Hold-to-confirm, Mac and calendar cards stay with you, as do cards in spoken questions. Its messages never authorize a push.
 
 ## Change a shortcut
 

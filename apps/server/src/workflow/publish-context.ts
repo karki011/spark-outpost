@@ -93,7 +93,13 @@ export async function publishContext(
 
 type GrantFacts = Pick<
   RunInput,
-  'level' | 'userRequest' | 'followUpRound' | 'workspaceId' | 'outpostRequest' | 'sparkRuleRetry'
+  | 'level'
+  | 'userRequest'
+  | 'followUpRound'
+  | 'workspaceId'
+  | 'outpostRequest'
+  | 'sparkRuleRetry'
+  | 'assistantSent'
 > & {
   identity: Pick<RunInput['identity'], 'threadId'>;
 };

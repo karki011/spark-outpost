@@ -217,6 +217,7 @@ function Facts({ action }: { action: SparkAction }) {
       return <OutpostStartFacts action={action} />;
     case 'open_pr':
     case 'pr_follow_up':
+    case 'ask_spark':
       return null;
   }
 }

@@ -22,6 +22,7 @@ import {
   performJiraEdit,
 } from './atlassian-perform.ts';
 import type { Performed } from './performed.ts';
+import { performAskSpark } from './ask-spark-perform.ts';
 import { performStartOutpost } from './outpost-actions.ts';
 import type { StartedBy } from '../../outposts/start-outpost.ts';
 
@@ -114,5 +115,7 @@ export function performSparkAction(
       return performStartOutpost(context, action, startedBy);
     case 'pr_follow_up':
       return Promise.reject(new Error('PR feedback is pushed by the follow-up round.'));
+    case 'ask_spark':
+      return performAskSpark(context, action);
   }
 }

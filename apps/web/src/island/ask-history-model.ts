@@ -22,6 +22,7 @@ export interface PendingAsk {
 export interface ExchangeRow {
   kind: 'exchange';
   key: string;
+  runId: string | null;
   question: string;
   answer: string | null;
   status: AssistantExchange['status'];
@@ -52,6 +53,7 @@ function stored(exchange: AssistantExchange): Timed {
     row: {
       kind: 'exchange',
       key: exchange.id,
+      runId: exchange.runId,
       question: exchange.question,
       answer: exchange.answer,
       status: exchange.status,
@@ -68,6 +70,7 @@ function local(answer: LocalAnswer): Timed {
     row: {
       kind: 'exchange',
       key: answer.id,
+      runId: null,
       question: answer.question,
       answer: answer.answer,
       status: 'answered',
@@ -84,6 +87,7 @@ function pending(ask: PendingAsk): Timed {
     row: {
       kind: 'exchange',
       key: ask.id,
+      runId: null,
       question: ask.question,
       answer: null,
       status: 'waiting',

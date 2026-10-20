@@ -41,6 +41,7 @@ export interface SparkTool {
   title: string;
   description: string;
   acts?: boolean;
+  assistantOnly?: boolean;
   privateData?: boolean | PrivateData<unknown>;
   needs?: SparkToolNeed;
   input: z.ZodRawShape;

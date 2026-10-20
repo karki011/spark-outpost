@@ -6,6 +6,7 @@ export function sparkPausedForChat(conversation: string): string {
     SELECT 1 FROM conversations paused_chat
     JOIN profiles paused_profile ON paused_profile.workspace_id = paused_chat.workspace_id
     WHERE paused_chat.id = ${conversation} AND paused_profile.spark_paused_at IS NOT NULL
+      AND paused_profile.assistant_conversation_id IS DISTINCT FROM paused_chat.id
   )`;
 }
 
