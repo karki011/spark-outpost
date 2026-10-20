@@ -28,11 +28,12 @@ export const subagentRowSchema = subagentRecordSchema.extend({
 export type SubagentRow = z.infer<typeof subagentRowSchema>;
 
 export const BACKGROUND_NAMES_SHOWN = 6;
+export const BACKGROUND_NAME_MAX = 200;
 
 export const backgroundWaitSchema = z.object({
   agents: z.number().int().nonnegative(),
   tasks: z.number().int().nonnegative(),
-  names: z.array(z.string().max(200)).max(BACKGROUND_NAMES_SHOWN).default([]),
+  names: z.array(z.string().max(BACKGROUND_NAME_MAX)).max(BACKGROUND_NAMES_SHOWN).default([]),
 });
 export type BackgroundWait = z.infer<typeof backgroundWaitSchema>;
 

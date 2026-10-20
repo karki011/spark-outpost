@@ -1,4 +1,5 @@
 import {
+  BACKGROUND_NAME_MAX,
   BACKGROUND_NAMES_SHOWN,
   EventType,
   OWN_SUBAGENT_METADATA,
@@ -101,7 +102,9 @@ export function createSubagentProgress({
   const noteBackground = (output: ProviderOutput) => {
     if (output.kind !== 'background_work') return;
     const { agents, tasks } = output;
-    const names = output.names.slice(0, BACKGROUND_NAMES_SHOWN).map(storable);
+    const names = output.names
+      .slice(0, BACKGROUND_NAMES_SHOWN)
+      .map((name) => storable(name).slice(0, BACKGROUND_NAME_MAX));
     background = agents + tasks > 0 ? { agents, tasks, names } : null;
   };
 

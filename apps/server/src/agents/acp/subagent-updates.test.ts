@@ -320,6 +320,23 @@ describe('sub-agent updates', () => {
     expect(mapper.takeSubagentTokens()).toBe(0);
   });
 
+  it('counts only what a resumed generation added, since it reports the sub-agent’s running total', () => {
+    const { spawn, send, mapper } = harness();
+    const ended = (id: string, tokens: number) =>
+      send('root', {
+        sessionUpdate: 'subagent_state_update',
+        subagentSessionId: id,
+        state: 'completed',
+        _meta: { claudeCode: { usage: { total_tokens: tokens, tool_uses: 4, duration_ms: 900 } } },
+      });
+    spawn('root', 'a');
+    ended('a', 23_538);
+    expect(mapper.takeSubagentTokens()).toBe(23_538);
+    spawn('root', 'a:generation:2');
+    ended('a:generation:2', 23_969);
+    expect(mapper.takeSubagentTokens()).toBe(431);
+  });
+
   it('closes the open steps of a sub-agent when it ends', () => {
     const { spawn, tool, end } = harness();
     spawn('root', 'a');

@@ -1,4 +1,4 @@
-import { friendlyStep } from '@spark-outpost/contracts';
+import { firstGenerationId, friendlyStep } from '@spark-outpost/contracts';
 import type { ProviderOutput, SubagentReported } from '../../providers/provider.ts';
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { objectFields } from './object-fields.ts';
@@ -71,6 +71,7 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
   const names = new Map<string, string>();
   const waitCalls = new Set<string>();
   const tokens = new Map<string, number>();
+  const taken = new Map<string, number>();
   const delivered = new Set<string>();
 
   const reporting = (
@@ -78,7 +79,7 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
     reported: Reported | undefined,
     message: string | null,
   ): ProviderOutput[] => {
-    if (reported?.tokens !== undefined) tokens.set(id, reported.tokens);
+    if (reported?.tokens !== undefined) tokens.set(firstGenerationId(id), reported.tokens);
     if (message) delivered.add(id);
     const kept = delivered.has(id) && reported ? { ...reported, summary: undefined } : reported;
     const report = reportOf(kept, message);
@@ -153,8 +154,11 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
       return name === undefined ? null : { id: sessionId, name };
     },
     takeSubagentTokens() {
-      const total = [...tokens.values()].reduce((sum, count) => sum + count, 0);
-      tokens.clear();
+      let total = 0;
+      for (const [id, count] of tokens) {
+        total += Math.max(0, count - (taken.get(id) ?? 0));
+        taken.set(id, count);
+      }
       return total;
     },
     didWork: () => main.didWork() || seen.size > 0,

@@ -128,4 +128,16 @@ describe('sub-agent progress', () => {
     see({ kind: 'step_started', name: 'Thinking' }, { kind: 'step_finished', name: 'Thinking' });
     expect(all).toEqual([]);
   });
+
+  it('waits on background work with its names cut to what can be stored', () => {
+    const { see } = progress();
+    const long = `sleep 60; ${'x'.repeat(400)} sk-secret`;
+    const [event] = see({ kind: 'background_work', agents: 0, tasks: 1, names: [long] });
+    const content = (event as { content: { background: { names: string[] } } }).content;
+    expect(content.background.names[0]).toHaveLength(200);
+    expect(content).toMatchObject({ waitingOn: 1, background: { agents: 0, tasks: 1 } });
+    expect(see({ kind: 'background_work', agents: 0, tasks: 0, names: [] })).toEqual([
+      expect.objectContaining({ content: { waitingOn: 0 } }),
+    ]);
+  });
 });
