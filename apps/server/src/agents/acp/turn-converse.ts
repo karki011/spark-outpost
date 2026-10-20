@@ -122,7 +122,9 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
     }),
   );
   try {
-    const started = connection.opened() ? liveSession(connection) : await startSession(context, gates);
+    const started = connection.opened()
+      ? liveSession(connection)
+      : await startSession(context, gates);
     const { init, opened, request: newSession } = started;
     const { session, continued } = opened;
     const support = promptSupport(init);
@@ -177,9 +179,14 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
         sparkAcpServer(context.tools, definition, init) !== null ||
         (definition.repoStyle === 'codex' && workspace.spark !== null),
     };
-    const blocks = turn.live?.continuation ? null : firstBlocks(turn, continued, promptOptions, mapper, push, definition.name);
+    const blocks = turn.live?.continuation
+      ? null
+      : firstBlocks(turn, continued, promptOptions, mapper, push, definition.name);
     const stopReason = await runPrompts({
-      session: { prompt: (sent) => session.prompt(sent), nextUpdate: () => connection.updates.next() },
+      session: {
+        prompt: (sent) => session.prompt(sent),
+        nextUpdate: () => connection.updates.next(),
+      },
       blocks,
       followUp: { ...promptOptions, attachments: [] },
       turn,

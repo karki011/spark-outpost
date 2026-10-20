@@ -250,7 +250,7 @@ export async function prepareTurnSession(
       }
       if (!rowId) return;
       if (output.continued && costBaseline > 0) await recordReportedCost(db, rowId, costBaseline);
-      if (!output.live) await record(sessionEvent(facts, output));
+      await record(sessionEvent(facts, output));
     },
     async settings(output) {
       if (!rowId || !sessionId) return;

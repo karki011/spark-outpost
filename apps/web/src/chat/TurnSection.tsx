@@ -158,6 +158,7 @@ export const TurnSection = memo(function TurnSection({
           )}
         </div>
       )}
+      {run.agentCycle && <p className="on-its-own">Continued on its own</p>}
       {sparkLed && <SparkJobs run={run} detail={detail} orchestration={sparkLed} repo={repo} />}
       {sparkLed && !mainAgentRan(sparkLed) ? null : crew ? (
         <CrewTurn run={run} detail={detail} orchestration={crew} repo={repo} taskCard={taskCard} />

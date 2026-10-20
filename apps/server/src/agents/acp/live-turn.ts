@@ -16,11 +16,7 @@ export interface Reused {
 const BUSY =
   "This chat's agent session is still busy with another run. Try again when it finishes.";
 
-function reopenReason(
-  live: LiveConnection,
-  turn: ProviderTurn,
-  plan: LaunchPlan,
-): string[] | null {
+function reopenReason(live: LiveConnection, turn: ProviderTurn, plan: LaunchPlan): string[] | null {
   if (turn.live?.continuation) return null;
   const sessionId = live.opened()?.session.sessionId;
   if (turn.session?.resume?.sessionId !== sessionId) return ['session'];
@@ -54,7 +50,10 @@ export async function liveReuse(
     await pool.close(conversationId);
     return null;
   }
-  return { connection: live, tools: await regrant(options.sparkTools, live.tools, turn.sparkScope) };
+  return {
+    connection: live,
+    tools: await regrant(options.sparkTools, live.tools, turn.sparkScope),
+  };
 }
 
 const KEPT_STOPS = new Set<acp.StopReason>(['end_turn', 'max_tokens']);

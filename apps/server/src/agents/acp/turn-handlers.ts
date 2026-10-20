@@ -2,7 +2,12 @@ import * as acp from '@agentclientprotocol/sdk';
 import type { PathPolicy } from '../../projects/path-policy.ts';
 import type { ProtocolObserver, ProviderOutput, ProviderTurn } from '../../providers/provider.ts';
 import type { AgentDefinition } from './agents.ts';
-import { reviewPermission, runsCommand, writeWithApproval, type DoWorkspace } from './do-handlers.ts';
+import {
+  reviewPermission,
+  runsCommand,
+  writeWithApproval,
+  type DoWorkspace,
+} from './do-handlers.ts';
 import { readTextFile, refuseWrite } from './fs-handlers.ts';
 import type { TurnHandlers } from './live-binding.ts';
 import { declineInConversation, nativePlan } from './permissions.ts';

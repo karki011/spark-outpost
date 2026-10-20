@@ -117,7 +117,11 @@ describe('ACP provider with one live session per chat', { timeout: 30_000 }, () 
       continued: true,
       live: true,
     });
-    expect(third.outputs.some((output) => output.kind === 'step_started' && output.name === 'Continued session')).toBe(false);
+    expect(
+      third.outputs.some(
+        (output) => output.kind === 'step_started' && output.name === 'Continued session',
+      ),
+    ).toBe(false);
   });
 
   it('switches the mode on the live session between messages', async () => {
@@ -166,7 +170,7 @@ describe('ACP provider with one live session per chat', { timeout: 30_000 }, () 
     const log = methodLog(store);
     const target = chat(providerFor(claude, log.file));
     await send(target);
-    process.kill([...log.pids()][0]!, 'SIGKILL');
+    process.kill(Number([...log.pids()][0]), 'SIGKILL');
     await waitFor(() => target.provider.sessions?.conversations().length === 0);
 
     const after = await send(target, { prompt: 'after' });

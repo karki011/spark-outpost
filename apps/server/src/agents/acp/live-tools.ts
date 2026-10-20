@@ -30,10 +30,7 @@ export async function regrant(
   return { ...live.hint, grant: live.grant };
 }
 
-export function betweenTurns(
-  scope: SparkScope,
-  waitForRun: () => Promise<void>,
-): SparkScope {
+export function betweenTurns(scope: SparkScope, waitForRun: () => Promise<void>): SparkScope {
   return {
     workspaceId: scope.workspaceId,
     conversationId: scope.conversationId,

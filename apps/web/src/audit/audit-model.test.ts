@@ -56,7 +56,7 @@ function run(
 describe('audit turns', () => {
   it('groups runs by the user message that started them, in order', () => {
     const turns = auditTurns([run('a', 'm1', 0, 1), run('b', 'm2', 2, 3), run('c', 'm1', 4, 5)]);
-    expect(turns.map((turn) => [turn.userMessageId, turn.runs.map((r) => r.runId)])).toEqual([
+    expect(turns.map((turn) => [turn.key, turn.runs.map((r) => r.runId)])).toEqual([
       ['m1', ['a', 'c']],
       ['m2', ['b']],
     ]);
@@ -67,7 +67,7 @@ describe('waterfall', () => {
   it('places runs and approval waits on a shared, rounded time scale', () => {
     const chart = waterfall(
       {
-        userMessageId: 'm1',
+        key: 'm1',
         runs: [
           run('a', 'm1', 0, 20),
           run('b', 'm1', 10, 50, {
@@ -91,7 +91,7 @@ describe('waterfall', () => {
   it('runs a live bar and an open wait up to now', () => {
     const chart = waterfall(
       {
-        userMessageId: 'm1',
+        key: 'm1',
         runs: [
           run('a', 'm1', 0, null, {
             status: 'awaiting_approval',

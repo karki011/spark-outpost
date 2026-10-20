@@ -158,7 +158,16 @@ async function runSession(
     connection = connected.connection;
     agent = connection.agent;
     const stopReason = await Promise.race([
-      converse({ connection, definition, workspace: plan.workspace, turn, signal, mapper, push, tools: connected.tools }),
+      converse({
+        connection,
+        definition,
+        workspace: plan.workspace,
+        turn,
+        signal,
+        mapper,
+        push,
+        tools: connected.tools,
+      }),
       connection.agent.exited,
     ]);
     finishTurn(definition, turn, stopReason, mapper, push);
@@ -185,7 +194,8 @@ async function runSession(
   } finally {
     signal.removeEventListener('abort', onAbort);
     if (graceTimer) clearTimeout(graceTimer);
-    if (connection && !kept) await endConnection(connection, finished && !signal.aborted && turn.session !== undefined);
+    if (connection && !kept)
+      await endConnection(connection, finished && !signal.aborted && turn.session !== undefined);
   }
   if (retryWithoutProfiles) await runSession(options, pool, turn, signal, channel, true);
 }

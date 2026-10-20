@@ -23,8 +23,7 @@ export interface BindingSlot {
 
 export function createBindingSlot(unbound: () => void): BindingSlot {
   let bound: TurnHandlers | null = null;
-  let waiters: { resolve: (handlers: TurnHandlers) => void; reject: (error: Error) => void }[] =
-    [];
+  let waiters: { resolve: (handlers: TurnHandlers) => void; reject: (error: Error) => void }[] = [];
   let closed: Error | null = null;
   return {
     current: () => bound,
@@ -67,7 +66,6 @@ export interface MessageQueue<T> {
   push(item: T): void;
   next(): Promise<T>;
   release(): void;
-  drain(): T[];
   size(): number;
   fail(error: Error): void;
 }
@@ -100,9 +98,6 @@ export function createMessageQueue<T>(): MessageQueue<T> {
       waiter?.reject(new ReleasedRead());
       waiter = null;
     },
-    drain() {
-      return items.splice(0);
-    },
     size: () => items.length,
     fail(error) {
       failure = error;
@@ -133,8 +128,7 @@ export function reboundObserver(): ReboundObserver {
   };
   return {
     observer: {
-      message: (direction, message, marks) =>
-        send((to) => to.message(direction, message, marks)),
+      message: (direction, message, marks) => send((to) => to.message(direction, message, marks)),
       stderr: (chunk) => send((to) => to.stderr(chunk)),
     },
     bind(next) {

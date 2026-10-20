@@ -42,14 +42,22 @@ function claudeServers(request: acp.NewSessionRequest): Record<string, ClaudeHtt
 describe('Spark tools for agent sessions', () => {
   it('opens only with a host and a scope, and steps aside from a Codex server called spark', async () => {
     expect(await openSparkTools(undefined, scope, sparkToolsHint(undefined, scope, []))).toBeNull();
-    expect(await openSparkTools(access, undefined, sparkToolsHint(access, undefined, []))).toBeNull();
-    expect((await openSparkTools(access, scope, sparkToolsHint(access, scope, [])))?.name).toBe('spark');
-    expect((await openSparkTools(access, scope, sparkToolsHint(access, scope, ['spark'])))?.name).toBe('spark_outpost');
+    expect(
+      await openSparkTools(access, undefined, sparkToolsHint(access, undefined, [])),
+    ).toBeNull();
+    expect((await openSparkTools(access, scope, sparkToolsHint(access, scope, [])))?.name).toBe(
+      'spark',
+    );
+    expect(
+      (await openSparkTools(access, scope, sparkToolsHint(access, scope, ['spark'])))?.name,
+    ).toBe('spark_outpost');
     expect(sparkReserved(['notes'])).toEqual(['notes', 'spark', 'spark_outpost']);
   });
 
   it('knows whether the host has the Browser pane', async () => {
-    expect((await openSparkTools(access, scope, sparkToolsHint(access, scope, [])))?.browser).toBe(false);
+    expect((await openSparkTools(access, scope, sparkToolsHint(access, scope, [])))?.browser).toBe(
+      false,
+    );
     const browsing = { ...access, browser: true };
     const hint = sparkToolsHint(browsing, scope, []);
     expect((await openSparkTools(browsing, scope, hint))?.browser).toBe(true);
@@ -78,7 +86,10 @@ describe('Spark tools for agent sessions', () => {
       }),
     };
     const config = JSON.parse(
-      withCodexSparkServer(env, await openSparkTools(access, scope, sparkToolsHint(access, scope, []))).CODEX_CONFIG!,
+      withCodexSparkServer(
+        env,
+        await openSparkTools(access, scope, sparkToolsHint(access, scope, [])),
+      ).CODEX_CONFIG!,
     );
     expect(config).toEqual({
       web_search: 'disabled',

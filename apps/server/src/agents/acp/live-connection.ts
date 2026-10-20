@@ -84,8 +84,7 @@ export async function startLiveConnection(spec: ConnectionSpec): Promise<LiveCon
   const updates = createMessageQueue<SessionMessage>();
   const heldRequests: RequestUsage[] = [];
   const agent = startAgentProcess(spec.launch, spec.cwd, spec.env, tap.observer);
-  const handle = <T>(use: (handlers: TurnHandlers) => Promise<T> | T) =>
-    slot.handlers().then(use);
+  const handle = <T>(use: (handlers: TurnHandlers) => Promise<T> | T) => slot.handlers().then(use);
   const client = acp
     .client(CLIENT_INFO)
     .onRequest(acp.methods.client.session.requestPermission, (ctx) =>
@@ -121,9 +120,11 @@ export async function startLiveConnection(spec: ConnectionSpec): Promise<LiveCon
     await released;
   });
   let ended = false;
-  void done.catch(() => undefined).finally(() => {
-    ended = true;
-  });
+  void done
+    .catch(() => undefined)
+    .finally(() => {
+      ended = true;
+    });
   let opened: OpenedSession | null = null;
   let settings: SettingsSession | null = null;
   let cleaned: Promise<void> | null = null;
@@ -162,7 +163,11 @@ export async function startLiveConnection(spec: ConnectionSpec): Promise<LiveCon
         continue;
       }
       updates.push(message);
-      if (!slot.current() && message.kind === 'session_update' && startsAgentCycle(message.update)) {
+      if (
+        !slot.current() &&
+        message.kind === 'session_update' &&
+        startsAgentCycle(message.update)
+      ) {
         signalUnbound();
       }
     }
