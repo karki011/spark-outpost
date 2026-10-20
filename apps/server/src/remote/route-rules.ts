@@ -51,6 +51,8 @@ POST /api/conversations/:id/update
 POST /api/spark-assistant
 GET /api/spark-assistant/settings
 GET /api/spark-assistant/events
+GET /api/spark-assistant/history
+POST /api/spark-assistant/topic
 GET /api/conversations/:id/agent-commands
 GET /api/conversations/:id/agent-terminals
 PATCH /api/conversations/:id

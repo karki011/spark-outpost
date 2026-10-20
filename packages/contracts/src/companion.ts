@@ -63,6 +63,7 @@ export const assistantEventKindSchema = z.enum([
   'fact_added',
   'fact_removed',
   'history_cleared',
+  'topic_started',
 ]);
 export type AssistantEventKind = z.infer<typeof assistantEventKindSchema>;
 

@@ -260,29 +260,36 @@ async function answering(db: Queryable, conversationId: string | null): Promise<
   return rows[0]?.busy === true;
 }
 
-export async function clearAssistantHistory(
+async function resetAssistantContext(
   db: Queryable,
   workspaceId: string,
-  options: { facts: boolean },
-): Promise<AssistantSettingsView> {
-  const prefs = await prefsRow(db, workspaceId);
-  if (!prefs) throw new AssistantSettingsError('Finish setting up Spark first.');
-  if (prefs.conversation_id) {
-    await db.query('SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE', [prefs.conversation_id]);
-    if (await answering(db, prefs.conversation_id))
-      throw new AssistantSettingsError(ASSISTANT_BUSY);
-    await closeConversationSessions(
-      db,
-      workspaceId,
-      prefs.conversation_id,
-      SESSION_CLOSE_REASONS.fresh,
-    );
+  conversationId: string | null,
+): Promise<void> {
+  if (conversationId) {
+    await db.query('SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE', [conversationId]);
+    if (await answering(db, conversationId)) throw new AssistantSettingsError(ASSISTANT_BUSY);
+    await closeConversationSessions(db, workspaceId, conversationId, SESSION_CLOSE_REASONS.fresh);
   }
   await db.query(
     `UPDATE profiles SET assistant_history_from = clock_timestamp(), assistant_notice = NULL
      WHERE workspace_id = $1`,
     [workspaceId],
   );
+}
+
+async function preferences(db: Queryable, workspaceId: string): Promise<PrefsRow> {
+  const prefs = await prefsRow(db, workspaceId);
+  if (!prefs) throw new AssistantSettingsError('Finish setting up Spark first.');
+  return prefs;
+}
+
+export async function clearAssistantHistory(
+  db: Queryable,
+  workspaceId: string,
+  options: { facts: boolean },
+): Promise<AssistantSettingsView> {
+  const prefs = await preferences(db, workspaceId);
+  await resetAssistantContext(db, workspaceId, prefs.conversation_id);
   if (options.facts) await clearFacts(db, workspaceId);
   await recordAssistantEvent(
     db,
@@ -290,5 +297,15 @@ export async function clearAssistantHistory(
     'history_cleared',
     options.facts ? 'key facts cleared too' : 'key facts kept',
   );
+  return assistantView(db, workspaceId);
+}
+
+export async function startAssistantTopic(
+  db: Queryable,
+  workspaceId: string,
+): Promise<AssistantSettingsView> {
+  const prefs = await preferences(db, workspaceId);
+  await resetAssistantContext(db, workspaceId, prefs.conversation_id);
+  await recordAssistantEvent(db, workspaceId, 'topic_started', null);
   return assistantView(db, workspaceId);
 }

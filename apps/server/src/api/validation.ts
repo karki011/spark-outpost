@@ -28,6 +28,15 @@ export function parseBody<T>(schema: z.ZodType<T>, req: Request): T {
   return result.data;
 }
 
+export function parseQuery<T>(schema: z.ZodType<T>, req: Request): T {
+  const result = schema.safeParse(req.query);
+  if (!result.success) {
+    const fields = result.error.issues.map((issue) => issue.path.join('.')).join(', ');
+    throw new BadRequestError(`Invalid query: ${fields}.`);
+  }
+  return result.data;
+}
+
 const idParam = z.uuid();
 
 export function paramId(req: Request, name = 'id'): string {
