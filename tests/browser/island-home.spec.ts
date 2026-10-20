@@ -1,12 +1,11 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
-import { decorateLatestRun } from './home-seed.ts';
 import {
   fakeHomeDesktop,
   fakeState,
   island,
-  nowCard,
+  needsYou,
   openHome,
   openIsland,
   shot,
@@ -22,181 +21,168 @@ async function sql(text: string, values: unknown[] = []) {
   }
 }
 
-async function addStep(conversationId: string, name: string, finished = false) {
-  const { rows } = await sql(
-    'SELECT id FROM runs WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1',
-    [conversationId],
-  );
-  const runId = rows[0]!.id as string;
-  for (const type of finished ? ['STEP_STARTED', 'STEP_FINISHED'] : ['STEP_STARTED']) {
-    await sql(
-      `INSERT INTO run_events (run_id, seq, type, payload)
-       VALUES ($1, (SELECT COALESCE(max(seq), 0) + 1 FROM run_events WHERE run_id = $1), $2, $3)`,
-      [runId, type, JSON.stringify({ type, stepName: name })],
-    );
-  }
-}
+const section = (page: Page, name: RegExp | string) => island(page).getByRole('region', { name });
 
-const log = (page: Page) => nowCard(page).getByRole('list', { name: 'Latest steps' });
-
-test('Home leads with what needs you, streams the live steps and opens a chat in place', async ({
-  page,
-}) => {
-  await resetTestDatabase({ onboarded: true });
-  const [billing] = await seedChats([
-    { title: 'Fix billing totals', run: { status: 'running' }, minutesAgo: 1 },
-    { title: 'Tidy the README', run: { status: 'succeeded' }, minutesAgo: 0 },
-  ]);
-  await decorateLatestRun(billing!, {
-    provider: 'claude',
-    plan: ['completed', 'in_progress', 'pending', 'pending'],
-  });
-  await addStep(billing!, 'Read `/Users/ada/korus/src/billing.ts`', true);
-  await addStep(billing!, 'Edit `src/billing.ts`');
-  const [deploy] = await seedChats([
+async function seedInbox() {
+  return seedChats([
     {
       title: 'Deploy the site',
       run: { status: 'awaiting_approval' },
       approval: { kind: 'execute', title: 'pnpm deploy', command: 'pnpm deploy' },
       minutesAgo: 6,
     },
+    { title: 'Fix billing totals', run: { status: 'running' }, minutesAgo: 2 },
+    { title: 'Tidy the README', run: { status: 'succeeded' }, unread: true, minutesAgo: 1 },
+    {
+      title: 'Telemetry ingest',
+      run: { status: 'failed', error: 'terminal exited' },
+      unread: true,
+      minutesAgo: 3,
+    },
   ]);
-  await fakeHomeDesktop(page);
-  await openIsland(page);
-  await openHome(page);
-
-  await expect(nowCard(page)).toHaveAccessibleName('Now: Deploy the site');
-  const dots = nowCard(page).getByRole('group', { name: 'Live chats' }).getByRole('button');
-  await expect(dots).toHaveCount(2);
-  await shot(page, 'home-needs-you');
-  await dots.nth(1).click();
-  await expect(nowCard(page)).toHaveAccessibleName('Now: Fix billing totals');
-  await expect(nowCard(page)).toContainText('Claude');
-  await expect(nowCard(page)).toContainText('Step 2 of 4');
-  await expect(log(page).getByRole('listitem')).toHaveText([
-    'Done: Read · billing.ts',
-    'Now: Editing · billing.ts',
-  ]);
-  await expect(log(page)).not.toContainText('/Users/ada');
-
-  await addStep(billing!, '`STRIPE_KEY=sk_live_abcdefghijklmnop1234 pnpm test --filter billing`');
-  await expect(log(page).getByRole('listitem')).toHaveCount(3);
-  await expect(log(page).getByRole('listitem').last()).toHaveText('Now: Running · pnpm test');
-  await expect(log(page)).not.toContainText('sk_live');
-  await shot(page, 'home');
-
-  await nowCard(page).getByRole('button', { name: 'Open Fix billing totals' }).click();
-  await expect(island(page).getByRole('tab', { name: 'Chats' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
-  await expect(island(page).getByRole('button', { name: 'Back to chats' })).toBeVisible();
-  await expect(island(page).getByRole('log', { name: 'Recent messages' })).toContainText(
-    'Fix billing totals',
-  );
-
-  await page.keyboard.press('Meta+1');
-  await nowCard(page)
-    .getByRole('button', { name: 'Open Deploy the site' })
-    .click({
-      modifiers: ['Meta'],
-    });
-  await expect.poll(async () => (await fakeState(page)).openedChats).toEqual([deploy]);
-});
-
-async function openNewChatTab(page: Page) {
-  await openHome(page);
-  await island(page).getByRole('tab', { name: 'New chat' }).click();
 }
 
-test('Spark tiles in the New chat tab start a chat with that Spark right in the island', async ({
+test('the inbox puts what needs you first, then what runs, then what finished', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
+  await seedInbox();
   await fakeHomeDesktop(page);
   await openIsland(page);
-  for (const [name, color] of [
-    ['Stripe', 'sky'],
-    ['GitHub', 'rose'],
-    ['n8n', 'gold'],
-    ['Vercel', 'violet'],
-    ['Docs', 'moss'],
-  ]) {
-    const response = await page.request.post('/api/teammates', {
-      data: {
-        name,
-        role: name === 'Docs' ? 'Writes and tidies the guides nobody else reads' : 'Helper',
-        face: { shape: 'boxy', color },
-      },
-    });
-    expect(response.status()).toBe(201);
-  }
   await openHome(page);
-  await expect(island(page).getByRole('region', { name: 'Your Sparks' })).toHaveCount(0);
-  await island(page).getByRole('tab', { name: 'New chat' }).click();
-  const tiles = island(page).getByRole('region', { name: 'Your Sparks' }).getByRole('button');
-  await expect(tiles).toHaveCount(6);
-  await expect(tiles.first()).toHaveAccessibleName('Chat with Stripe, Helper');
-  await expect(tiles.first().locator('.isl-tile-role')).toHaveText('Helper');
-  await expect(tiles.last()).toHaveText('New Spark');
-  const long = tiles.filter({ hasText: 'Docs' });
-  await long.scrollIntoViewIfNeeded();
-  const fits = await long.evaluate((tile) => {
-    const role = tile.querySelector('.isl-tile-role')!;
-    const box = tile.getBoundingClientRect();
-    return role.scrollWidth > role.clientWidth && role.getBoundingClientRect().right <= box.right;
-  });
-  expect(fits).toBe(true);
-  const grid = island(page).locator('.isl-tilegrid');
-  expect(
-    await grid.evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(' ').length),
-  ).toBeGreaterThanOrEqual(2);
-  await shot(page, 'new-chat-sparks');
 
-  await tiles.last().click();
-  await expect.poll(async () => (await fakeState(page)).settings).toEqual(['spark-new']);
-  await openNewChatTab(page);
-  await tiles.filter({ hasText: 'Stripe' }).click({ button: 'right' });
-  await expect
-    .poll(async () => (await fakeState(page)).settings.at(-1))
-    .toMatch(/^spark-edit:[0-9a-f-]{36}$/);
-  await openNewChatTab(page);
-
-  await tiles.filter({ hasText: 'GitHub' }).click();
-  await expect(island(page).getByRole('button', { name: 'Back to chats' })).toBeVisible();
-  const reply = island(page).getByRole('textbox', { name: /^Reply to/ });
-  await expect(reply).toBeVisible();
-  const { rows } = await sql(
-    `SELECT t.name FROM conversations c JOIN teammates t ON t.id = c.teammate_id`,
+  await expect(island(page).getByRole('status').filter({ hasText: 'need you' })).toHaveText(
+    '1 need you1 running',
   );
-  expect(rows.map((row) => row.name)).toEqual(['GitHub']);
+  const card = needsYou(page).getByRole('listitem').first();
+  await expect(card).toContainText('Deploy the site');
+  await expect(card).toContainText('Run pnpm deploy');
+  await expect(card.getByRole('button', { name: /^Allow/ })).toBeVisible();
+  await expect(card.getByRole('button', { name: /^Deny/ })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Later' })).toBeVisible();
+  await expect(section(page, /^Running/)).toContainText('Fix billing totals');
+  await expect(section(page, 'Finished').getByRole('listitem')).toHaveText([
+    /Telemetry ingest · failed: terminal exited/,
+    /Tidy the README · done/,
+  ]);
+  await expect(island(page).getByRole('button', { name: 'Open Spark', exact: true })).toBeVisible();
+  await expect(island(page)).toContainText('Click a row to open it in Spark');
+  await shot(page, 'inbox');
+  expect((await fakeState(page)).openedChats).toEqual([]);
 });
 
-test('an empty Home says nothing needs you, and Ask, New Spark and settings stay reachable', async ({
+test('Allow, Later and ✕ act in place and keep the island open; a row opens Spark on that chat', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  const [deploy, billing, readme] = await seedInbox();
+  await seedChats([
+    {
+      title: 'Rotate the keys',
+      run: { status: 'awaiting_approval' },
+      approval: { kind: 'execute', title: 'pnpm rotate', command: 'pnpm rotate' },
+      minutesAgo: 5,
+    },
+  ]);
+  await fakeHomeDesktop(page);
+  await openIsland(page);
+  await openHome(page);
+
+  const deployCard = needsYou(page).getByRole('listitem').filter({ hasText: 'Deploy the site' });
+  await deployCard.getByRole('button', { name: /^Allow/ }).click();
+  await expect(deployCard).toHaveCount(0);
+  await expect
+    .poll(
+      async () =>
+        (await sql('SELECT status FROM approvals WHERE status = $1', ['allowed'])).rowCount,
+    )
+    .toBe(1);
+
+  const rotate = needsYou(page).getByRole('listitem').filter({ hasText: 'Rotate the keys' });
+  await rotate.getByRole('button', { name: 'Later' }).click();
+  await expect(needsYou(page).getByRole('listitem').filter({ hasText: 'set aside' })).toContainText(
+    'Rotate the keys',
+  );
+
+  await section(page, 'Finished').getByRole('button', { name: 'Clear Tidy the README' }).click();
+  await expect(section(page, 'Finished')).not.toContainText('Tidy the README');
+  await expect
+    .poll(
+      async () =>
+        (await sql('SELECT seen_at FROM conversations WHERE id = $1', [readme])).rows[0]?.seen_at,
+    )
+    .not.toBeNull();
+
+  await expect(island(page)).toHaveAttribute('data-view', 'panel');
+  expect((await fakeState(page)).openedChats).toEqual([]);
+
+  await section(page, /^Running/)
+    .getByRole('button', { name: /^Fix billing totals/ })
+    .click();
+  await expect.poll(async () => (await fakeState(page)).openedChats).toEqual([billing]);
+  await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
+  await expect(island(page)).not.toContainText('Opening Spark');
+  expect(deploy).toBeTruthy();
+});
+
+test('Y answers the top request once, and ⌘O opens Spark without a chat', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedInbox();
+  await fakeHomeDesktop(page);
+  await openIsland(page);
+  await openHome(page);
+  const allow = needsYou(page).getByRole('button', { name: /^Allow/ });
+  await expect(allow).toBeEnabled();
+  await expect(allow.locator('.isl-k')).toHaveText('Y');
+  await page.keyboard.press('y');
+  await expect(needsYou(page)).toContainText('Nothing needs you');
+  await expect
+    .poll(async () => (await sql("SELECT 1 FROM approvals WHERE status = 'allowed'")).rowCount)
+    .toBe(1);
+  await page.keyboard.press('Meta+o');
+  await expect.poll(async () => (await fakeState(page)).openedChats).toEqual([null]);
+  await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
+});
+
+test('a plan or question that needs typing offers Answer in Spark', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  const [plan] = await seedChats([
+    {
+      title: 'pipeline-poc',
+      run: { status: 'awaiting_approval' },
+      approval: {
+        kind: 'other',
+        title: 'Review the plan',
+        plan: 'Deploy #353 to alfa now, or wait for review?',
+      },
+    },
+  ]);
+  await fakeHomeDesktop(page);
+  await openIsland(page);
+  await openHome(page);
+  const card = needsYou(page).getByRole('listitem').filter({ hasText: 'pipeline-poc' });
+  await expect(card.getByRole('button', { name: /^Allow/ })).toHaveCount(0);
+  await card.getByRole('button', { name: 'Answer in Spark' }).click();
+  await expect.poll(async () => (await fakeState(page)).openedChats).toEqual([plan]);
+});
+
+test('an empty inbox says nothing needs you, and New chat, Ask, Sparks and settings stay reachable', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
   await fakeHomeDesktop(page);
   await openIsland(page);
   await openHome(page);
-  await expect(nowCard(page)).toHaveAccessibleName('Now');
-  await expect(island(page).getByRole('region', { name: 'Quick start' })).toHaveCount(0);
-  const needs = island(page).getByRole('region', { name: 'Needs you' });
-  await expect(needs).toHaveText('Needs youNothing needs you');
-  await expect(island(page).getByRole('region', { name: 'Next meetings' })).toHaveCount(0);
-  await shot(page, 'home-empty');
+  await expect(needsYou(page)).toContainText('Nothing needs you');
+  await expect(section(page, /^Running/)).toHaveCount(0);
+  await expect(section(page, 'Finished')).toHaveCount(0);
+  await shot(page, 'inbox-empty');
 
-  await nowCard(page).getByRole('button', { name: 'Ask Spark…' }).click();
-  await expect(island(page).getByRole('tab', { name: 'New chat' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
-  await expect(
-    island(page).getByRole('button', { name: 'Ask Spark', exact: true }),
-  ).toHaveAttribute('aria-pressed', 'true');
+  await island(page).getByRole('button', { name: 'New chat' }).click();
+  await expect(island(page).getByRole('textbox', { name: 'Message' })).toBeFocused();
+  await island(page).getByRole('button', { name: 'Ask Spark', exact: true }).click();
   await expect(island(page).getByRole('textbox', { name: 'Ask Spark' })).toBeFocused();
-
-  await page.keyboard.press('Meta+3');
+  await page.keyboard.press('Meta+2');
   await island(page).getByRole('region', { name: 'Your Sparks' }).getByText('New Spark').click();
   await expect.poll(async () => (await fakeState(page)).settings).toEqual(['spark-new']);
   await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
@@ -207,7 +193,7 @@ test('an empty Home says nothing needs you, and Ask, New Spark and settings stay
   await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
 });
 
-test('tabs switch with clicks and ⌘1–4, Escape always closes, and nothing auto-expands', async ({
+test('⌘1–3 switch panels, Back returns to the inbox, Escape closes, nothing auto-expands', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -215,20 +201,15 @@ test('tabs switch with clicks and ⌘1–4, Escape always closes, and nothing au
   await fakeHomeDesktop(page);
   await openIsland(page);
   await openHome(page);
-  const tab = (name: string) => island(page).getByRole('tab', { name });
-  await tab('Chats').click();
-  await expect(tab('Chats')).toHaveAttribute('aria-selected', 'true');
-  await expect(island(page).getByRole('combobox', { name: 'Search sessions' })).toBeFocused();
-  await shot(page, 'chats');
-  await tab('New chat').click();
-  await expect(island(page).getByRole('textbox', { name: 'Message' })).toBeFocused();
-  await shot(page, 'new');
-  await page.keyboard.press('Meta+4');
-  await expect(island(page).getByRole('textbox', { name: 'Ask Spark' })).toBeFocused();
   await page.keyboard.press('Meta+2');
-  await expect(tab('Chats')).toHaveAttribute('aria-selected', 'true');
+  await expect(island(page).getByRole('textbox', { name: 'Message' })).toBeFocused();
+  await page.keyboard.press('Meta+3');
+  await expect(island(page).getByRole('textbox', { name: 'Ask Spark' })).toBeFocused();
+  await island(page).getByRole('button', { name: 'Back to the inbox' }).click();
+  await expect(needsYou(page)).toBeVisible();
+  await page.keyboard.press('Meta+2');
   await page.keyboard.press('Meta+1');
-  await expect(tab('Home')).toHaveAttribute('aria-selected', 'true');
+  await expect(needsYou(page)).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
 
@@ -263,7 +244,7 @@ test('the chime toggle persists and chimes only when it is on', async ({ page })
       approval: { kind: 'execute', title: 'Deploy', command: 'pnpm deploy' },
     },
   ]);
-  await expect(island(page).getByRole('tab', { name: 'Chats, 1 need you' })).toBeVisible();
+  await expect(island(page).getByText('1 need you')).toBeVisible();
   expect((await fakeState(page)).chimes).toBe(0);
 
   await chimes.click();
@@ -282,18 +263,18 @@ test('the chime toggle persists and chimes only when it is on', async ({ page })
       approval: { kind: 'execute', title: 'Rotate', command: 'pnpm rotate' },
     },
   ]);
-  await expect(island(page).getByRole('tab', { name: 'Chats, 2 need you' })).toBeVisible();
+  await expect(island(page).getByText('2 need you')).toBeVisible();
   await expect.poll(async () => (await fakeState(page)).chimes).toBeGreaterThan(0);
 });
 
-test('reduced motion opens Home in place with no movement', async ({ page }) => {
+test('reduced motion opens the inbox in place with no movement', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await seedChats([{ title: 'Fix image uploads', run: { status: 'running' } }]);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await fakeHomeDesktop(page);
   await openIsland(page);
   await openHome(page);
-  await expect(nowCard(page)).toHaveAccessibleName('Now: Fix image uploads');
+  await expect(section(page, /^Running/)).toContainText('Fix image uploads');
   const moving = await island(page).evaluate((root) =>
     root
       .getAnimations({ subtree: true })
@@ -301,100 +282,53 @@ test('reduced motion opens Home in place with no movement', async ({ page }) => 
       .map((animation) => (animation as CSSAnimation).animationName ?? 'script'),
   );
   expect(moving).toEqual([]);
-  await expect(nowCard(page)).toHaveCSS('opacity', '1');
   await page.keyboard.press('Escape');
   await expect(island(page).locator('.isl-ghost')).toHaveCount(0);
 });
 
-async function frame(page: Page, step: number, at: number, name: string) {
-  await page.clock.runFor(Math.max(1, step));
-  await page.evaluate((time) => {
-    for (const animation of document.getAnimations()) {
-      animation.pause();
-      animation.currentTime = time;
-    }
-  }, at);
-  await shot(page, name, 0);
-}
-
-async function playAll(page: Page) {
-  await page.evaluate(() => document.getAnimations().forEach((animation) => animation.play()));
-}
-
-test('motion: Home grows out of the blob and folds back into it', async ({ page }) => {
+test('a Spark tile in New chat starts a follow-up with that Spark right in the island', async ({
+  page,
+}) => {
   await resetTestDatabase({ onboarded: true });
-  const [running] = await seedChats([{ title: 'Fix billing totals', run: { status: 'running' } }]);
-  await decorateLatestRun(running!, { provider: 'claude', step: 'Read `src/billing.ts`' });
   await fakeHomeDesktop(page);
   await openIsland(page);
-  await expect(page.getByRole('button', { name: /^Chat: Fix billing totals/ })).toBeVisible();
-  await page.mouse.move(640, 600);
-  await page.waitForTimeout(600);
-  await page.clock.install();
-  await page.clock.pauseAt(Date.now() + 2_000);
-  await island(page)
-    .getByRole('button', { name: /Open Spark Island/ })
-    .evaluate((button: HTMLElement) => button.click());
-  const blob = nowCard(page).locator('.isl-now-blob');
-  await expect(blob).toBeAttached();
-  expect(
-    await nowCard(page).evaluate((card) => card.getAnimations({ subtree: true }).length),
-  ).toBeGreaterThan(0);
-  let elapsed = 0;
-  for (const at of [0, 70, 140, 220, 320, 480, 760]) {
-    await frame(page, at - elapsed, at, `expand-${String(at).padStart(3, '0')}ms`);
-    elapsed = at;
+  for (const [name, color] of [
+    ['Stripe', 'sky'],
+    ['GitHub', 'rose'],
+  ]) {
+    const response = await page.request.post('/api/teammates', {
+      data: { name, role: 'Helper', face: { shape: 'boxy', color } },
+    });
+    expect(response.status()).toBe(201);
   }
-  await playAll(page);
-  await page.clock.runFor(1_000);
-  await page.keyboard.press('Escape');
-  await expect(island(page).locator('.isl-ghost')).toHaveCount(1);
-  elapsed = 0;
-  for (const at of [0, 80, 160, 240]) {
-    await frame(page, at - elapsed, at, `collapse-${String(at).padStart(3, '0')}ms`);
-    elapsed = at;
-  }
-  await playAll(page);
-  await page.clock.resume();
-  await expect(island(page).locator('.isl-ghost')).toHaveCount(0);
-  await expect(island(page)).toHaveAttribute('data-view', /peek|pill/);
+  await openHome(page);
+  await island(page).getByRole('button', { name: 'New chat' }).click();
+  const tiles = island(page).getByRole('region', { name: 'Your Sparks' }).getByRole('button');
+  await expect(tiles).toHaveCount(3);
+  await tiles.last().click();
+  await expect.poll(async () => (await fakeState(page)).settings).toEqual(['spark-new']);
+  await openHome(page);
+  await island(page).getByRole('button', { name: 'New chat' }).click();
+  await tiles.filter({ hasText: 'GitHub' }).click();
+  await expect(island(page)).toContainText('Following up in GitHub');
+  await expect(island(page).getByRole('textbox', { name: 'Message' })).toHaveAttribute(
+    'placeholder',
+    'Reply…',
+  );
+  expect((await fakeState(page)).openedChats).toEqual([]);
 });
 
 const NIGHT_SKINS = ['graphite', 'void', 'moss', 'plum', 'aurora'];
 
 for (const theme of ['apricot', 'graphite']) {
-  test(`in the ${theme} app theme the island is night glass with no accessibility problems`, async ({
+  test(`in the ${theme} app theme the inbox is night glass with no accessibility problems`, async ({
     page,
   }) => {
     test.setTimeout(90_000);
     await resetTestDatabase({ onboarded: true });
-    const [running] = await seedChats([
-      { title: 'Fix billing totals', run: { status: 'running' }, minutesAgo: 1 },
-      {
-        title: 'Deploy the site',
-        run: { status: 'awaiting_approval' },
-        approval: { kind: 'execute', title: 'pnpm deploy', command: 'pnpm deploy' },
-        minutesAgo: 4,
-      },
-    ]);
-    await decorateLatestRun(running!, {
-      provider: 'claude',
-      plan: ['completed', 'in_progress', 'pending'],
-    });
-    await addStep(running!, 'Read `src/billing.ts`', true);
-    await addStep(running!, 'Edit `src/invoice.ts`');
+    await seedInbox();
     await fakeHomeDesktop(page, theme);
     await openIsland(page);
-    for (const [name, color] of [
-      ['Stripe', 'sky'],
-      ['GitHub', 'rose'],
-      ['n8n', 'gold'],
-      ['Vercel', 'violet'],
-    ]) {
-      await page.request.post('/api/teammates', {
-        data: { name, role: 'Helper', face: { shape: 'boxy', color } },
-      });
-    }
     await openHome(page);
     expect(NIGHT_SKINS).toContain(await page.evaluate(() => document.documentElement.dataset.skin));
     const problems: string[] = [];
@@ -408,19 +342,12 @@ for (const theme of ['apricot', 'graphite']) {
         );
       }
     };
-    await nowCard(page).getByRole('button', { name: 'Show Fix billing totals' }).click();
-    await expect(nowCard(page)).toContainText('Editing · invoice.ts');
-    await check('home');
-    await shot(page, `home-${theme}`, 0);
+    await check('inbox');
+    await shot(page, `inbox-${theme}`, 0);
     await page.keyboard.press('Meta+2');
-    await check('chats');
-    await shot(page, `chats-${theme}`, 0);
-    await page.keyboard.press('Meta+3');
     await check('new');
-    await shot(page, `new-${theme}`, 0);
-    await page.keyboard.press('Meta+4');
+    await page.keyboard.press('Meta+3');
     await check('ask');
-    await shot(page, `ask-${theme}`, 0);
     expect(problems).toEqual([]);
   });
 }

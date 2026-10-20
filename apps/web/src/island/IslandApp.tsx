@@ -50,13 +50,14 @@ import { useChimes, useIslandSound } from './island-sound.ts';
 import { useAutoExpandSetting, useIslandSize } from './island-size.ts';
 import { opensByItself, useAutoExpand } from './auto-expand.ts';
 import { IslandShell } from './IslandShell.tsx';
-import type { QuickDraft } from './QuickChat.tsx';
+import type { FollowUp, QuickDraft } from './QuickChat.tsx';
 import { useAttachments } from '../chat/attachments/use-attachments.ts';
 import { useAddProject } from './use-add-project.ts';
 import { useIslandBridge, useSparkFocus } from './use-island-bridge.ts';
 import { useIslandDrop } from './use-island-drop.ts';
 import { coreRects, flatRowRects, lineRects, minuteOf, useHoverIntent } from './island-hover.ts';
 import { useIslandKeys } from './use-island-keys.ts';
+import { stillAsking, type Answered } from './inbox-model.ts';
 import { restLine, type RestLine } from './island-rest-line.ts';
 import { useSetAside } from './set-aside.ts';
 import { useFastState } from './use-fast-state.ts';
@@ -106,8 +107,9 @@ export function IslandApp() {
   const [focusSignal, setFocusSignal] = useState(0);
   const [draftId, setDraftId] = useState(newDraftId);
   const [draft, setDraft] = useState<QuickDraft>({ text: '', projectId: undefined, level: null });
-  const [followUp, setFollowUp] = useState<ConversationSummary | null>(null);
+  const [followUp, setFollowUp] = useState<FollowUp | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const [answered, setAnswered] = useState<Answered>(new Map());
   const [now, setNow] = useState(() => minuteOf(Date.now()));
   const { moment, text: momentText, dismiss } = useMoments(data.chats, data.loaded);
   const greeting = useGreeting(voice, setup.data !== undefined);
@@ -127,13 +129,13 @@ export function IslandApp() {
   });
 
   const allCards = useMemo(
-    () => pendingCards(data.chats, data.approvalsByChat, NO_SNOOZE),
-    [data.chats, data.approvalsByChat],
+    () => stillAsking(pendingCards(data.chats, data.approvalsByChat, NO_SNOOZE), answered),
+    [data.chats, data.approvalsByChat, answered],
   );
   const aside = useSetAside(allCards);
   const cards = useMemo(
-    () => pendingCards(data.chats, data.approvalsByChat, aside.keys),
-    [data.chats, data.approvalsByChat, aside.keys],
+    () => stillAsking(pendingCards(data.chats, data.approvalsByChat, aside.keys), answered),
+    [data.chats, data.approvalsByChat, aside.keys, answered],
   );
   const islandChatId = islandViewedChat({ review, selfOpened, focusSignal });
   const { viewed, fresh, unviewed } = useIslandViewing({
@@ -229,8 +231,8 @@ export function IslandApp() {
     openPanel('home');
   };
 
-  const replyTo = (chat: ConversationSummary) => {
-    setFollowUp(chat);
+  const replyTo = (chat: FollowUp) => {
+    setFollowUp({ id: chat.id, title: chat.title });
     openPanel('quick');
   };
 
@@ -321,15 +323,14 @@ export function IslandApp() {
     details: data.detailById,
     onLater: aside.setAside,
     onReview: (card: Card) => reviewCard(card.chat.id),
-    onDecided: (decided: Decided) => setAnnouncement(`${decided.title}. ${decided.sub}`),
+    onDecided: (card: Card, decided: Decided) => {
+      setAnswered((current) => new Map(current).set(card.chat.id, card.chat.updatedAt));
+      setAnnouncement(`${decided.title}. ${decided.sub}`);
+    },
     onConnectors: settingsReady ? () => openSettings('connectors') : null,
   };
   const sparks = {
-    onOpenHere: (id: string) => {
-      const chat = data.all.find((candidate) => candidate.id === id);
-      if (chat) replyTo(chat);
-      else openChat(id);
-    },
+    onOpenHere: replyTo,
     onMakeSpark: settingsReady ? () => openSettings('spark-new') : null,
     onEditSpark: settingsReady ? (id: string) => openSettings(`spark-edit:${id}`) : null,
   };

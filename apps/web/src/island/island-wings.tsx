@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import type { ConversationSummary } from '@spark-outpost/contracts';
 import type { IslandView, Panel } from './island-model.ts';
 import { Kbd } from './island-parts.tsx';
 
@@ -7,7 +6,7 @@ export interface WingProps {
   view: IslandView;
   waiting: number;
   greeting: string | null;
-  followUp: ConversationSummary | null;
+  followUp: { title: string } | null;
   hugsNotch: boolean;
   onTab: (panel: Panel) => void;
 }

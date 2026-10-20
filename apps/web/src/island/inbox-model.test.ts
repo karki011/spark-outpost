@@ -7,6 +7,7 @@ import {
   INBOX_FINISHED,
   runningRows,
   shortAgo,
+  stillAsking,
   topAnswerable,
 } from './inbox-model.ts';
 import {
@@ -32,6 +33,18 @@ describe('the top card that Y and N answer', () => {
     const ready = card('approval');
     expect(topAnswerable([open, question, force, loading, ready])).toBe(ready);
     expect(topAnswerable([open, force])).toBeNull();
+  });
+});
+
+describe('a request answered from the island', () => {
+  it('stays gone until its chat changes, so it never flickers back as an open card', () => {
+    const asked = card('approval');
+    const answered = new Map([[asked.chat.id, asked.chat.updatedAt]]);
+    expect(stillAsking([asked], answered)).toEqual([]);
+    const next = card('approval', {
+      chat: { ...asked.chat, updatedAt: '2026-10-20T10:07:00.000Z' },
+    });
+    expect(stillAsking([next], answered)).toEqual([next]);
   });
 });
 

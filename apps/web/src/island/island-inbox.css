@@ -243,10 +243,6 @@
   margin-bottom: 8px;
 }
 
-.isl-btn.danger {
-  color: var(--danger);
-}
-
 .isl-btn svg {
   width: 12px;
   height: 12px;
@@ -273,24 +269,15 @@
 }
 
 .isl-inbox-row-text {
-  display: flex;
   flex: 1;
-  align-items: baseline;
   min-width: 0;
   overflow: hidden;
-  white-space: nowrap;
-}
-
-.isl-inbox-row-title {
-  flex: none;
-  max-width: 60%;
-  overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .isl-inbox-cal .isl-inbox-row-text {
   font-size: 13px;
-  text-overflow: ellipsis;
 }
 
 .isl-inbox-progress {
@@ -329,6 +316,7 @@
 .isl-inbox-x svg {
   width: 13px;
   height: 13px;
+  color: inherit;
 }
 
 .isl-inbox-x:hover,

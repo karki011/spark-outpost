@@ -18,6 +18,12 @@ export function shortAgo(iso: string, now: number): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+export type Answered = ReadonlyMap<string, string>;
+
+export function stillAsking(cards: readonly Card[], answered: Answered): Card[] {
+  return cards.filter((card) => answered.get(card.chat.id) !== card.chat.updatedAt);
+}
+
 export function answerable(card: Card): boolean {
   return !card.loading && card.approval !== null && card.kind === 'approval';
 }
@@ -99,7 +105,11 @@ export function finishedRows(
     const at = chat.latestRun?.finishedAt ?? chat.updatedAt;
     return [{ kind, chat, detail: finishedDetail(kind, chat), at }];
   });
-  return rows.toSorted((a, b) => b.at.localeCompare(a.at)).slice(0, INBOX_FINISHED);
+  const newest = rows.toSorted((a, b) => b.at.localeCompare(a.at));
+  return [
+    ...newest.filter((row) => row.kind === 'failed'),
+    ...newest.filter((row) => row.kind === 'done'),
+  ].slice(0, INBOX_FINISHED);
 }
 
 export interface CardLine {

@@ -130,7 +130,7 @@ export function InboxCard(props: InboxCardProps) {
             </button>
             <button
               type="button"
-              className="isl-btn danger"
+              className="isl-btn"
               data-arming={!armed || undefined}
               disabled={!ready || !deny}
               onClick={() => send(deny)}
@@ -143,7 +143,7 @@ export function InboxCard(props: InboxCardProps) {
           <>
             <button
               type="button"
-              className="isl-btn danger"
+              className="isl-btn"
               data-arming={!armed || undefined}
               disabled={!ready || !deny}
               onClick={() => send(deny)}

@@ -28,7 +28,7 @@ export interface InboxBundle {
   details: ReadonlyMap<string, ConversationDetail>;
   onLater: (card: Card) => void;
   onReview: (card: Card) => void;
-  onDecided: (decided: Decided) => void;
+  onDecided: (card: Card, decided: Decided) => void;
   onConnectors: (() => void) | null;
 }
 
@@ -75,27 +75,28 @@ function GitHubNote({ onConnectors }: { onConnectors: (() => void) | null }) {
 
 export function IslandInbox({ inbox, calendar, now, onOpenChat }: IslandInboxProps) {
   const { cleared, clear } = useClearFinished();
+  const cards = inbox.cards;
   const running = useMemo(
     () => runningRows(inbox.chats, inbox.details),
     [inbox.chats, inbox.details],
   );
   const finished = useMemo(() => finishedRows(inbox.chats, cleared), [inbox.chats, cleared]);
-  const top = topAnswerable(inbox.cards);
+  const top = topAnswerable(cards);
   const line = calendarRow(calendar.line);
-  const waiting = inbox.cards.length + inbox.aside.length + (line ? 1 : 0);
+  const waiting = cards.length + inbox.aside.length + (line ? 1 : 0);
   return (
     <div className="isl-inbox">
       <GitHubNote onConnectors={inbox.onConnectors} />
       <InboxMeeting calendar={calendar} />
       <Section id="isl-needs-h" label="Needs you" count={waiting}>
-        {inbox.cards.map((card) => (
+        {cards.map((card) => (
           <InboxCard
             key={card.approval?.id ?? card.chat.id}
             card={card}
             agent={chatAgent(card.chat, inbox.details.get(card.chat.id)).name}
             now={now}
             top={card === top}
-            onDecided={inbox.onDecided}
+            onDecided={(decided) => inbox.onDecided(card, decided)}
             onLater={inbox.onLater}
             onReview={inbox.onReview}
             onOpenChat={onOpenChat}

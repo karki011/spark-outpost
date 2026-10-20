@@ -14,7 +14,7 @@ import type { RestLine } from './island-rest-line.ts';
 import { IslandInbox, type InboxBundle } from './IslandInbox.tsx';
 import { NowBar } from './NowBar.tsx';
 import { IslandBar, PANEL_ORDER, type BarActions, type BarCounts } from './PanelTabs.tsx';
-import { QuickChat, type Compose, type QuickDraft } from './QuickChat.tsx';
+import { QuickChat, type Compose, type FollowUp, type QuickDraft } from './QuickChat.tsx';
 import { SparkTiles, type SparkTileActions } from './SparkTiles.tsx';
 import type { Grab } from './use-island-drop.ts';
 import { chatAgent } from './use-island-data.ts';
@@ -61,7 +61,7 @@ export interface IslandShellProps {
   projects: readonly Project[];
   draftId: string;
   draft: QuickDraft;
-  followUp: ConversationSummary | null;
+  followUp: FollowUp | null;
   fast: FastState;
   announcement: string;
   onDraft: (draft: QuickDraft) => void;

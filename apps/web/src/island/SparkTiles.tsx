@@ -9,7 +9,7 @@ import { useTeammates } from '../teammates/use-teammates.ts';
 import { PlusIcon } from '../ui/icons.tsx';
 
 export interface SparkTileActions {
-  onOpenHere: (id: string) => void;
+  onOpenHere: (chat: { id: string; title: string }) => void;
   onMakeSpark: (() => void) | null;
   onEditSpark: ((id: string) => void) | null;
 }
@@ -111,9 +111,10 @@ export function SparkTiles(props: SparkTileActions) {
   const queryClient = useQueryClient();
   const open = useMutation({
     mutationFn: teammatesApi.openHome,
-    onSuccess: (chat) => {
+    onSuccess: (chat, teammateId) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
-      props.onOpenHere(chat.conversationId);
+      const name = teammates.find((teammate) => teammate.id === teammateId)?.name ?? 'Spark';
+      props.onOpenHere({ id: chat.conversationId, title: name });
     },
   });
   if (loading) return <TileSkeleton />;
