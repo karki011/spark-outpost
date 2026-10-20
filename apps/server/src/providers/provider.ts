@@ -233,6 +233,7 @@ export type ProviderOutput =
   | { kind: 'subagent_started'; id: string; parentId: string | null; name: string; task: string }
   | { kind: 'subagent_finished'; id: string; state: 'done' | 'failed' | 'cancelled' }
   | { kind: 'subagent_report'; id: string; report: SubagentReported }
+  | { kind: 'background_work'; agents: number; tasks: number; names: string[] }
   | { kind: 'tool_input'; id: string; input: unknown; secret: boolean }
   | { kind: 'tool_result'; id: string; output: unknown; secret: boolean }
   | { kind: 'capabilities'; report: ProviderCapabilityReport }

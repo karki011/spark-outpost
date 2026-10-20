@@ -78,8 +78,14 @@ export function tvCast(detail: ConversationDetail | undefined): TvCast | null {
       }))
     : [];
   const latest = detail.conversation.latestRun;
-  const waitingOn = latest?.id === run.id ? (latest.waitingOn ?? 0) : 0;
-  const lead = chatAgent(run, detail.activity[run.id] ?? [], asking, waitingOn);
+  const current = latest?.id === run.id ? latest : null;
+  const lead = chatAgent(
+    run,
+    detail.activity[run.id] ?? [],
+    asking,
+    current?.waitingOn ?? 0,
+    current?.background ?? null,
+  );
   return { run, lead, sparks, subagents: detail.subagents?.[run.id] ?? [] };
 }
 

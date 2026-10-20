@@ -18,11 +18,11 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 
 ## Chat list
 
-A dot shows what happened since you last opened the chat, on paired devices too. Point at it for detail.
+A dot shows what happened since you last opened the chat, also on paired devices; point at it.
 
 | Dot                         | Means                                                                      |
 | --------------------------- | -------------------------------------------------------------------------- |
-| **Working**: a pulsing ring | A turn or Terminal session is running.                                     |
+| **Working**: a pulsing ring | A turn, background agents or a Terminal session are running.               |
 | **Waiting for you**: amber  | A card, a question, or a Terminal session waiting for input or permission. |
 | **Done**: green             | A turn finished.                                                           |
 | **Couldn't finish**: red    | A turn failed or was interrupted.                                          |

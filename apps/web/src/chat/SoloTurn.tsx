@@ -47,6 +47,7 @@ import {
 import { ErrorLine, ModelSwitchNote } from './ModelSwitchNote.tsx';
 import { providerName } from './provider-name.ts';
 import { useLiveReport } from './status/status-context.ts';
+import { BackgroundWork } from './BackgroundWork.tsx';
 import { SubagentList } from './subagents/SubagentList.tsx';
 import { shownSubagents } from './subagents/subagent-view.ts';
 import { runSeconds } from './turns.ts';
@@ -154,7 +155,8 @@ export function SoloTurn({
   const { state } = status;
   const subagents = shownSubagents(stream.subagents.rows, detail.subagents?.[run.id], leads);
   const waitingOn = working && !waiting ? stream.subagents.waitingOn : 0;
-  const waitingText = waitingOn > 0 ? waitingOnLabel(waitingOn).toLowerCase() : null;
+  const waitingText =
+    waitingOn > 0 ? waitingOnLabel(waitingOn, stream.subagents.background).toLowerCase() : null;
   const label = waitingText ?? status.label;
 
   const persistedSteps = detail.activity[run.id]?.length
@@ -271,6 +273,10 @@ export function SoloTurn({
           <Markdown text={part} streaming={last && leads && active && !publishing} />
         )}
       </TurnReply>
+      <BackgroundWork
+        runId={run.id}
+        background={working && !waiting ? stream.subagents.background : null}
+      />
       <PublishResult
         text={replies.publishText}
         commands={commands.publish}

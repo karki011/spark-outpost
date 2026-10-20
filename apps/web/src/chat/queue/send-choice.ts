@@ -1,5 +1,6 @@
 import {
-  subagentCount,
+  waitedOn,
+  type BackgroundWait,
   type BusyEnterAction,
   type MemberMessage,
   type Run,
@@ -43,9 +44,14 @@ export function enterWhileBusy(preferred: BusyEnterAction, waitingOn: number): B
   return waitingOn > 0 ? 'now' : preferred;
 }
 
-export function busyHint(preferred: BusyEnterAction, mac: boolean, waitingOn = 0): string {
+export function busyHint(
+  preferred: BusyEnterAction,
+  mac: boolean,
+  waitingOn = 0,
+  background: BackgroundWait | null = null,
+): string {
   if (waitingOn > 0) {
-    const waits = `while it waits on ${subagentCount(waitingOn)}`;
+    const waits = `while it waits on ${waitedOn(waitingOn, background)}`;
     return `Enter to send to the agent now, ${waits} · ${modifiedEnter(mac)} to queue`;
   }
   const other = otherAction(preferred);

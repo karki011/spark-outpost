@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type SyntheticEvent } 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DEFAULT_BUSY_ENTER,
+  type BackgroundWait,
   type BusyEnterAction,
   type ChatUpdate,
   type ConversationDetail,
@@ -48,9 +49,10 @@ function replyHint(
   count: number,
   preferred: BusyEnterAction,
   waitingOn: number,
+  background: BackgroundWait | null,
 ): string {
   if (count > 0) return `${queuedCount(count)} · sends when this turn ends`;
-  return busy ? busyHint(preferred, MAC, waitingOn) : '';
+  return busy ? busyHint(preferred, MAC, waitingOn, background) : '';
 }
 
 interface ReplySend {
@@ -213,7 +215,15 @@ function Reply({ chat, detail }: { chat: ConversationSummary; detail?: Conversat
       />
       <div className="isl-qc-bar">
         <span className="isl-qc-hint">
-          {send.isPending ? 'Sending…' : replyHint(busy, queue.items.length, preferred, waitingOn)}
+          {send.isPending
+            ? 'Sending…'
+            : replyHint(
+                busy,
+                queue.items.length,
+                preferred,
+                waitingOn,
+                chat.latestRun?.background ?? null,
+              )}
         </span>
         <span className="isl-sp" />
         <MicButton

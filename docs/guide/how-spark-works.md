@@ -33,6 +33,6 @@ The agent decides. Spark never splits a turn into roles.
 
 ## What Spark leaves to the agent
 
-Spark runs no tests, picks no model and reviews no diff. The agent runs your project's checks; your repository's hooks and CI run on a push. For a second opinion, ask another chat.
+Spark runs no tests, picks no model and reviews no diff. The agent runs your project's checks; hooks and CI run on a push. For a second opinion, ask another chat.
 
-The reply and Agent TV list sub-agents, like **3 sub-agents · 2 working, 1 done**; select one for its steps, files and usage.
+The reply and Agent TV list sub-agents; select one for its steps, files and usage.

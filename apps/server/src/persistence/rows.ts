@@ -7,6 +7,7 @@ import {
   faceFromName,
   teammateFaceSchema,
   titleSourceSchema,
+  subagentWaitSchema,
   waitingOnLabel,
   type AgentRole,
   type Attachment,
@@ -95,7 +96,7 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   latest_run_status: RunStatus | null;
   latest_run_error: string | null;
   latest_run_step: string | null;
-  latest_run_waiting_on?: number | null;
+  latest_run_wait?: unknown;
   latest_run_provider: string | null;
   latest_run_interruption_choice?: InterruptionChoice | null;
   latest_run_asking_reply?: string | null;
@@ -225,8 +226,14 @@ function toRunUsage(row: RunRow): RunUsage | null {
   };
 }
 
+function latestWait(row: ConversationSummaryRow) {
+  const parsed = subagentWaitSchema.safeParse(row.latest_run_wait);
+  return parsed.success && parsed.data.waitingOn > 0 ? parsed.data : null;
+}
+
 function latestStep(row: ConversationSummaryRow): string | null {
-  if (row.latest_run_waiting_on) return waitingOnLabel(row.latest_run_waiting_on);
+  const wait = latestWait(row);
+  if (wait) return waitingOnLabel(wait.waitingOn, wait.background);
   return row.latest_run_step === null ? null : friendlyStep(row.latest_run_step);
 }
 
@@ -250,7 +257,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
                 : null,
             interruptionChoice: row.latest_run_interruption_choice ?? null,
             needsYou: needsYouLines(row.latest_run_asking_reply ?? '')[0] ?? null,
-            ...(row.latest_run_waiting_on ? { waitingOn: row.latest_run_waiting_on } : {}),
+            ...latestWait(row),
             finishedAt: iso(row.latest_run_finished_at ?? null),
           }
         : null,

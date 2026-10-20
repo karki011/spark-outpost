@@ -27,15 +27,41 @@ export const subagentRowSchema = subagentRecordSchema.extend({
 });
 export type SubagentRow = z.infer<typeof subagentRowSchema>;
 
-export const subagentWaitSchema = z.object({ waitingOn: z.number().int().nonnegative() });
+export const BACKGROUND_NAMES_SHOWN = 6;
+export const BACKGROUND_NAME_MAX = 200;
+
+export const backgroundWaitSchema = z.object({
+  agents: z.number().int().nonnegative(),
+  tasks: z.number().int().nonnegative(),
+  names: z.array(z.string().max(BACKGROUND_NAME_MAX)).max(BACKGROUND_NAMES_SHOWN).default([]),
+});
+export type BackgroundWait = z.infer<typeof backgroundWaitSchema>;
+
+export const subagentWaitSchema = z.object({
+  waitingOn: z.number().int().nonnegative(),
+  background: backgroundWaitSchema.optional(),
+});
 
 export interface SubagentRoster {
   rows: readonly SubagentRow[];
   waitingOn: number;
+  background: BackgroundWait | null;
   openSteps: Readonly<Record<string, readonly string[]>>;
 }
 
-export const emptySubagentRoster: SubagentRoster = { rows: [], waitingOn: 0, openSteps: {} };
+export const emptySubagentRoster: SubagentRoster = {
+  rows: [],
+  waitingOn: 0,
+  background: null,
+  openSteps: {},
+};
+
+const GENERATION_MARK = ':generation:';
+
+export function firstGenerationId(id: string): string {
+  const at = id.indexOf(GENERATION_MARK);
+  return at < 0 ? id : id.slice(0, at);
+}
 
 const ownMarkSchema = z.object({ ownSubagent: z.literal(true) });
 
@@ -105,10 +131,42 @@ function errorState(code: string | undefined): SubagentState {
   return code !== undefined && SUBAGENT_CANCELLED_CODES.includes(code) ? 'cancelled' : 'failed';
 }
 
-export function applySubagentEvent(roster: SubagentRoster, event: RunEvent): SubagentRoster {
+function rowIdFor(roster: SubagentRoster, id: string): string {
+  const first = firstGenerationId(id);
+  return roster.rows.some((row) => row.id === first) ? first : id;
+}
+
+function resumed(roster: SubagentRoster, id: string): SubagentRoster {
+  return changeRow(roster, id, (row) =>
+    row.state === 'working' ? row : { ...row, state: 'working', step: null, endedAt: null },
+  );
+}
+
+function withRowIds(roster: SubagentRoster, event: RunEvent): RunEvent {
+  switch (event.type) {
+    case EventType.SUBAGENT_FINISHED:
+    case EventType.SUBAGENT_ERROR:
+      return { ...event, subagentRunId: rowIdFor(roster, event.subagentRunId) };
+    case EventType.STEP_STARTED:
+    case EventType.STEP_FINISHED:
+      return event.subagentRunId
+        ? { ...event, subagentRunId: rowIdFor(roster, event.subagentRunId) }
+        : event;
+    default:
+      return event;
+  }
+}
+
+export function applySubagentEvent(roster: SubagentRoster, raw: RunEvent): SubagentRoster {
+  const event = withRowIds(roster, raw);
   switch (event.type) {
     case EventType.SUBAGENT_STARTED: {
-      if (!isOwn(event) || roster.rows.some((row) => row.id === event.subagentRunId)) return roster;
+      if (!isOwn(event)) return roster;
+      const first = firstGenerationId(event.subagentRunId);
+      if (first !== event.subagentRunId && roster.rows.some((row) => row.id === first)) {
+        return resumed(roster, first);
+      }
+      if (roster.rows.some((row) => row.id === event.subagentRunId)) return roster;
       const row: SubagentRow = {
         ...emptySubagentRecord,
         id: event.subagentRunId,
@@ -133,18 +191,26 @@ export function applySubagentEvent(roster: SubagentRoster, event: RunEvent): Sub
     case EventType.CUSTOM: {
       const report =
         event.name === SUBAGENT_REPORT ? subagentReportSchema.safeParse(event.value) : null;
-      if (!report?.success || !roster.rows.some((row) => row.id === report.data.id)) return roster;
-      return changeRow(roster, report.data.id, (row) => withSubagentReport(row, report.data));
+      if (!report?.success) return roster;
+      const id = rowIdFor(roster, report.data.id);
+      if (!roster.rows.some((row) => row.id === id)) return roster;
+      return changeRow(roster, id, (row) => withSubagentReport(row, { ...report.data, id }));
     }
     case EventType.ACTIVITY_SNAPSHOT: {
       if (event.activityType !== SUBAGENTS_ACTIVITY) return roster;
       const wait = subagentWaitSchema.safeParse(event.content);
-      if (!wait.success || wait.data.waitingOn === roster.waitingOn) return roster;
-      return { ...roster, waitingOn: wait.data.waitingOn };
+      if (!wait.success) return roster;
+      const background = wait.data.background ?? null;
+      const same =
+        wait.data.waitingOn === roster.waitingOn &&
+        JSON.stringify(background) === JSON.stringify(roster.background);
+      return same ? roster : { ...roster, waitingOn: wait.data.waitingOn, background };
     }
     case EventType.RUN_FINISHED:
     case EventType.RUN_ERROR:
-      return roster.waitingOn === 0 ? roster : { ...roster, waitingOn: 0 };
+      return roster.waitingOn === 0 && roster.background === null
+        ? roster
+        : { ...roster, waitingOn: 0, background: null };
     default:
       return roster;
   }
@@ -154,8 +220,19 @@ export function subagentCount(count: number): string {
   return count === 1 ? '1 sub-agent' : `${count} sub-agents`;
 }
 
-export function waitingOnLabel(count: number): string {
-  return `Waiting on ${subagentCount(count)}`;
+function counted(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
+export function waitedOn(count: number, background?: BackgroundWait | null): string {
+  if (!background) return subagentCount(count);
+  const agents = background.agents > 0 ? counted(background.agents, 'background agent') : null;
+  const tasks = background.tasks > 0 ? counted(background.tasks, 'background task') : null;
+  return [agents, tasks].filter((part) => part !== null).join(' and ');
+}
+
+export function waitingOnLabel(count: number, background?: BackgroundWait | null): string {
+  return `Waiting on ${waitedOn(count, background)}`;
 }
 
 const SUMMARY_ORDER: readonly SubagentState[] = ['working', 'done', 'failed', 'cancelled'];

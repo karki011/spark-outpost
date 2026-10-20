@@ -106,13 +106,16 @@ describe('ACP provider against a fake agent over stdio', { timeout: 20_000 }, ()
     expect(notes).toContain("Using Fake's default effort; max isn't offered by the agent");
   });
 
-  it('declares notice and failure support when it initializes', async () => {
+  it('declares notice, failure, sub-agent and background task support when it initializes', async () => {
     const { text } = await collect('#caps');
     expect(JSON.parse(text.split('\n')[0]!)).toMatchObject({
       session: { notices: {} },
       _meta: {
         jetbrains: {
-          air: { version: 1, capabilities: ['sessionFailure', 'nativeSubagentSessions'] },
+          air: {
+            version: 1,
+            capabilities: ['sessionFailure', 'nativeSubagentSessions', 'asyncTasks'],
+          },
         },
       },
     });

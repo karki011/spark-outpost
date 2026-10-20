@@ -15,6 +15,7 @@ import {
   type AgentCommand,
   type AnnotationInput,
   type Attachment,
+  type BackgroundWait,
   type BusyEnterAction,
   type ChatSettings,
   type ConversationUsage,
@@ -96,6 +97,7 @@ interface ComposerProps {
   onSendNow?: (content: string) => Promise<void>;
   busyEnter?: BusyEnterAction;
   waitingOn?: number;
+  waitingBackground?: BackgroundWait | null;
   notice?: string | null;
   above?: ReactNode;
   onAudit?: () => void;
@@ -128,6 +130,7 @@ export function Composer({
   onSendNow,
   busyEnter = DEFAULT_BUSY_ENTER,
   waitingOn = 0,
+  waitingBackground = null,
   notice = null,
   above = null,
   onAudit,
@@ -286,7 +289,7 @@ export function Composer({
     textareaRef.current?.focus();
   };
 
-  const hint = composerHint(attachments, queueing, busyEnter, waitingOn);
+  const hint = composerHint(attachments, queueing, busyEnter, waitingOn, waitingBackground);
   const typedNote = typedCommandNote(parseSlash(draft), slash.all, agentName);
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {

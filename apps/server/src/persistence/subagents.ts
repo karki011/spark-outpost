@@ -3,6 +3,7 @@ import {
   applySubagentEvent,
   emptySubagentRoster,
   parseRunEvent,
+  subagentWaitSchema,
   type SubagentRoster,
   type SubagentRow,
 } from '@spark-outpost/contracts';
@@ -61,4 +62,16 @@ export async function runWaitingOn(db: Queryable, runId: string): Promise<number
     [runId],
   );
   return rows[0]?.waiting_on ?? 0;
+}
+
+export async function runWaitedInBackground(db: Queryable, runId: string): Promise<boolean> {
+  const { rows } = await db.query<{ content: unknown }>(
+    `SELECT e.payload->'content' AS content FROM run_events e
+     WHERE e.run_id = $1 AND e.type = 'ACTIVITY_SNAPSHOT'
+       AND e.payload->>'activityType' = 'subagents'
+     ORDER BY e.seq DESC LIMIT 1`,
+    [runId],
+  );
+  const wait = subagentWaitSchema.safeParse(rows[0]?.content);
+  return wait.success && wait.data.background !== undefined;
 }

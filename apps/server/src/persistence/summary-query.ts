@@ -33,11 +33,11 @@ export const summaryQuery = `
       ORDER BY e.seq DESC LIMIT 1
     ) END AS latest_run_step,
     CASE WHEN r.status = 'running' THEN (
-      SELECT (e.payload->'content'->>'waitingOn')::int FROM run_events e
+      SELECT e.payload->'content' FROM run_events e
       WHERE e.run_id = r.id AND e.type = 'ACTIVITY_SNAPSHOT'
         AND e.payload->>'activityType' = 'subagents'
       ORDER BY e.seq DESC LIMIT 1
-    ) END AS latest_run_waiting_on,
+    ) END AS latest_run_wait,
     CASE WHEN r.status = 'succeeded' THEN (
       SELECT CASE WHEN strpos(work.text, '${NEEDS_YOU_PREFIX}') > 0 THEN work.text END
       FROM (${workReply('r.id', 'm.content')}) work
