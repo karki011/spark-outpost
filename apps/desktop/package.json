@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
-    "build": "esbuild src/main.ts src/server-entry.ts src/runtime-host.ts --bundle --platform=node --format=esm --target=node24 --outdir=dist --loader:.md=text --external:electron --external:embedded-postgres --external:pg --external:tsx --external:electron-updater && esbuild src/preload.ts src/boot-preload.ts src/media-guard-preload.ts --bundle --platform=node --format=cjs --target=node24 --outdir=dist --out-extension:.js=.cjs --external:electron",
+    "build": "esbuild src/main.ts src/server-entry.ts src/runtime-host.ts --bundle --platform=node --format=esm --target=node24 --outdir=dist --loader:.md=text --external:electron --external:embedded-postgres --external:pg --external:tsx --external:electron-updater && esbuild src/preload.ts src/boot-preload.ts src/media-guard-preload.ts src/copy-guard-preload.ts --bundle --platform=node --format=cjs --target=node24 --outdir=dist --out-extension:.js=.cjs --external:electron",
     "dev": "pnpm build && electron .",
     "typecheck": "tsc -p tsconfig.json",
     "package": "node --import tsx scripts/package.ts",

@@ -6,7 +6,7 @@ order: 510
 summary: What Spark adds around Claude, Codex and Z.ai, and the path a message takes from the message box to a pull request.
 ---
 
-One chat is one agent session: Claude Code, Codex or Z.ai. Your message goes to the agent as you typed it, and Spark moderates around it: approvals, a worktree, the audit and publishing.
+One chat is one agent session: Claude Code, Codex or Z.ai. Your message goes to the agent as typed; Spark moderates around it: approvals, a worktree, the audit and publishing.
 
 ## What happens to a message
 

@@ -12,6 +12,8 @@ export async function withDesktopBrowser(page: Page) {
     const snapshotListeners = new Set<(snapshot: unknown) => void>();
     const pickListeners = new Set<(pick: unknown) => void>();
     const textListeners = new Set<(selected: unknown) => void>();
+    const shortcutListeners = new Set<(event: unknown) => void>();
+    const foundListeners = new Set<(found: unknown) => void>();
     const noop = () => () => undefined;
     const tab = (id: string, change: Record<string, unknown>) => ({
       id,
@@ -43,6 +45,8 @@ export async function withDesktopBrowser(page: Page) {
       browserPick: (pick: unknown) => pickListeners.forEach((listener) => listener(pick)),
       browserSelectedText: (selected: unknown) =>
         textListeners.forEach((listener) => listener(selected)),
+      browserShortcut: (event: unknown) => shortcutListeners.forEach((listener) => listener(event)),
+      browserFound: (found: unknown) => foundListeners.forEach((listener) => listener(found)),
       sparkDesktop: {
         platform: 'darwin',
         companion: { get: async () => null, onChange: noop },
@@ -78,6 +82,14 @@ export async function withDesktopBrowser(page: Page) {
           onSelectedText: (listener: (selected: unknown) => void) => {
             textListeners.add(listener);
             return () => textListeners.delete(listener);
+          },
+          onShortcut: (listener: (event: unknown) => void) => {
+            shortcutListeners.add(listener);
+            return () => shortcutListeners.delete(listener);
+          },
+          onFound: (listener: (found: unknown) => void) => {
+            foundListeners.add(listener);
+            return () => foundListeners.delete(listener);
           },
         },
       },

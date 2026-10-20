@@ -17,7 +17,7 @@ import {
   type DesktopHelpInfo,
   type DiagnosticsExport,
 } from '@spark-outpost/contracts';
-import { appMenuTemplate } from './help-menu.ts';
+import { appMenuTemplate, type HelpActions } from './help-menu.ts';
 import { IPC } from './ipc-channels.ts';
 
 const EXPORT_TIMEOUT_MS = 60_000;
@@ -30,6 +30,7 @@ export interface HelpOptions {
   trusted: (event: IpcMainInvokeEvent) => boolean;
   showSpark: () => void;
   mainWindow: () => BrowserWindow | null;
+  paneShortcut: HelpActions['paneShortcut'];
   log: (line: string) => void;
 }
 
@@ -118,6 +119,7 @@ export function startHelp(options: HelpOptions): Help {
         sendFeedback,
         exportDiagnostics: () => void exportFromMenu(options),
         showLogs: () => void showLogs(options.logsFolder),
+        paneShortcut: options.paneShortcut,
       }),
     ),
   );

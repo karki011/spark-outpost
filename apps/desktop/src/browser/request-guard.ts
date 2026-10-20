@@ -2,10 +2,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   API_TOKEN_HEADER,
-  browserPlaceOf,
   classifyBrowserUrl,
   parseBrowserUrl,
-  type BrowserTabOwner,
   type ParsedUrl,
 } from '@spark-outpost/contracts';
 
@@ -96,21 +94,6 @@ export function partitionFor(choice: PartitionChoice): string {
   if (choice.projectId && choice.keepSignIns) return projectPartition(choice.projectId);
   if (!SAFE_ID.test(choice.chatId)) throw new Error('A browser partition needs a chat id.');
   return `${PARTITION_PREFIX}chat-${choice.chatId}`;
-}
-
-export function agentPartition(chatId: string): string {
-  if (!SAFE_ID.test(chatId)) throw new Error('A browser partition needs a chat id.');
-  return `${PARTITION_PREFIX}agent-${chatId}`;
-}
-
-export interface TabPlace {
-  owner: BrowserTabOwner;
-  url: string;
-}
-
-export function tabPartition(choice: PartitionChoice, tab: TabPlace): string {
-  const agentOnSite = tab.owner === 'agent' && browserPlaceOf(tab.url) === 'external';
-  return agentOnSite ? agentPartition(choice.chatId) : partitionFor(choice);
 }
 
 export function isBrowserPartition(name: string): boolean {

@@ -20,9 +20,9 @@ While the agent plans, a chat set to **Auto** or **Bypass permissions** runs com
 
 ## The plan line
 
-Spark has no plan card of its own and saves no plan of its own. Without `/plan` or **Plan** mode the agent builds at once, and the steps it lists show under **Tasks**.
+Spark has no plan card and saves no plan of its own. Without `/plan` or **Plan** mode the agent builds at once, and the steps it lists show under **Tasks**.
 
-The plan you approve becomes the chat's agreed plan. The thread shows one line, **Plan saved**. Select it to open the plan in the **Work** panel. A revised plan you approve is saved as a new version.
+The plan you approve becomes the chat's agreed plan. The thread shows **Plan saved**; select it to open the plan in **Work**. A revised plan you approve is saved as a new version.
 
 Codex's plan setting stops no edit, so `/plan` runs a Codex turn in **Read-only**: it replies with a plan, changes nothing and shows no line; the **Work** panel lists it as **Proposed plan**. Send your next message to build.
 

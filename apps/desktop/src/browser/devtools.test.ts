@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Cdp } from './cdp.ts';
-import { EVAL_TOO_SLOW, evaluateInPage, maskValues } from './devtools-eval.ts';
+import { EVAL_TOO_SLOW, evaluateInPage, maskValues, SECRETS_UNREADABLE } from './devtools-eval.ts';
 import { summarisePerformance } from './devtools-page.ts';
 import { isDevtoolsShortcut } from './selection-menu.ts';
 import { devtoolsRequestAllowed } from './sessions.ts';
 
 const PASSWORD = 'hunter2-Pass';
 const FILLED = 'vault-user@example.test';
+const PAGE = 'https://shop.example.com/cart';
 
 function page(answers: Record<string, (params: Record<string, unknown>) => unknown>): Cdp & {
   sent: string[];
@@ -63,7 +64,7 @@ describe('running an expression in the page', () => {
       },
       { 5: PASSWORD, 6: FILLED },
     );
-    const outcome = await evaluateInPage(cdp, 'window.state', new Set([6]));
+    const outcome = await evaluateInPage(cdp, 'window.state', new Set([6]), PAGE);
     expect(outcome.type).toBe('object');
     expect(outcome.value).not.toContain(PASSWORD);
     expect(outcome.value).not.toContain(FILLED);
@@ -95,7 +96,7 @@ describe('running an expression in the page', () => {
         result: { value: !cleared && params.objectId === 'node-5' ? PASSWORD : '' },
       }),
     });
-    const outcome = await evaluateInPage(cdp, 'takeAndClear()', new Set());
+    const outcome = await evaluateInPage(cdp, 'takeAndClear()', new Set(), PAGE);
     expect(outcome.value).not.toContain(PASSWORD);
     expect(outcome.masked).toBe(1);
   });
@@ -110,7 +111,7 @@ describe('running an expression in the page', () => {
       },
       { 5: PASSWORD },
     );
-    const outcome = await evaluateInPage(cdp, 'boom()', new Set());
+    const outcome = await evaluateInPage(cdp, 'boom()', new Set(), PAGE);
     expect(outcome).toMatchObject({ type: 'exception', value: 'undefined' });
     expect(outcome.exception).toBe('Error: bad token [masked]\n    at <anonymous>:1:7');
   });
@@ -120,6 +121,7 @@ describe('running an expression in the page', () => {
       pageReturning({ result: { type: 'string', value: 'x'.repeat(20_000) } }),
       'big',
       new Set(),
+      PAGE,
     );
     expect(big.truncated).toBe(true);
     expect(big.value.length).toBe(8000);
@@ -127,12 +129,14 @@ describe('running an expression in the page', () => {
       pageReturning({ result: { type: 'undefined' } }),
       'x',
       new Set(),
+      PAGE,
     );
     expect(nothing.value).toBe('undefined');
     const infinite = await evaluateInPage(
       pageReturning({ result: { type: 'number', unserializableValue: 'Infinity' } }),
       '1/0',
       new Set(),
+      PAGE,
     );
     expect(infinite.value).toBe('Infinity');
   });
@@ -142,9 +146,60 @@ describe('running an expression in the page', () => {
       'Runtime.evaluate': () => new Promise(() => undefined),
       'DOM.getDocument': () => ({ root: { backendNodeId: 1, nodeName: '#document' } }),
     });
-    await expect(evaluateInPage(cdp, 'new Promise(() => {})', new Set(), 30)).rejects.toThrow(
+    await expect(evaluateInPage(cdp, 'new Promise(() => {})', new Set(), PAGE, 30)).rejects.toThrow(
       EVAL_TOO_SLOW,
     );
+  });
+
+  it('masks cookie values and auth-looking storage the shared sign-ins hold', async () => {
+    const session = 'user-session-8f2k1m9q';
+    const token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtZSJ9.c2lnbmF0dXJl';
+    const cdp = page({
+      'Runtime.evaluate': (params) =>
+        params.contextId
+          ? { result: {} }
+          : {
+              result: {
+                type: 'string',
+                value: `sid=${session}; lang=en; uid=4821 | ${JSON.stringify({ accessToken: token })} | dark`,
+              },
+            },
+      'DOM.getDocument': () => ({ root: { backendNodeId: 1, nodeName: '#document' } }),
+      'Network.getAllCookies': () => ({
+        cookies: [
+          { name: 'sid', value: session },
+          { name: 'lang', value: 'en' },
+          { name: 'uid', value: '4821' },
+        ],
+      }),
+      'DOMStorage.getDOMStorageItems': (params) =>
+        (params.storageId as { isLocalStorage: boolean }).isLocalStorage
+          ? {
+              entries: [
+                ['sb-ref-auth-token', JSON.stringify({ accessToken: token })],
+                ['theme', 'dark'],
+              ],
+            }
+          : { entries: [] },
+    });
+    const outcome = await evaluateInPage(cdp, 'document.cookie', new Set(), PAGE);
+    expect(outcome.value).not.toContain(session);
+    expect(outcome.value).not.toContain(token);
+    expect(outcome.value).not.toContain('4821');
+    expect(outcome.value).toContain('lang=en');
+    expect(outcome.value).toContain('dark');
+  });
+
+  it('returns nothing when it cannot read the cookies it must mask', async () => {
+    const cdp = page({
+      'Runtime.evaluate': () => ({ result: { type: 'string', value: 'sid=abcdef' } }),
+      'DOM.getDocument': () => ({ root: { backendNodeId: 1, nodeName: '#document' } }),
+      'Network.getAllCookies': () => Promise.reject(new Error('no cookies')),
+    });
+    await expect(evaluateInPage(cdp, 'document.cookie', new Set(), PAGE)).rejects.toThrow(
+      SECRETS_UNREADABLE,
+    );
+    expect(cdp.sent).not.toContain('Runtime.evaluate');
   });
 
   it('never masks short values that would hide ordinary text', () => {

@@ -373,11 +373,10 @@ async function launch(): Promise<void> {
     trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
     showSpark,
     mainWindow: () => spark?.window ?? null,
+    paneShortcut: (shortcut) => browserHost.menuShortcut(shortcut),
     log: log('help'),
   });
-  privacy = startPrivacy({
-    trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
-  });
+  privacy = startPrivacy({ trusted });
   updater = await startUpdater({
     enabled: config.autoUpdate,
     version: app.getVersion(),

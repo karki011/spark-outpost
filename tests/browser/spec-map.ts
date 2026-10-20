@@ -89,6 +89,7 @@ export const SPEC_GROUPS = {
     'browser-agent',
     'browser-pane',
     'browser-pane-input',
+    'browser-pane-keys',
     'browser-tab-life',
     'chat-links',
     'chat-terminal',

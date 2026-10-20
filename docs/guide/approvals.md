@@ -6,7 +6,7 @@ order: 512
 summary: The agent's mode and Spark autonomy, why an approval card appears, what never goes on without you, and what happens when nobody answers.
 ---
 
-The **agent's mode** decides what the agent may do without asking. **Spark autonomy** decides what Spark does with the result. Spark follows the mode, adding only a few hard rails.
+The **agent's mode** decides what the agent may do without asking; **Spark autonomy**, what Spark does with the result. Spark adds only a few hard rails.
 
 | Layer              | Decides                                | Details                                                                                  |
 | ------------------ | -------------------------------------- | ---------------------------------------------------------------------------------------- |

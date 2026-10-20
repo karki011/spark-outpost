@@ -29,11 +29,22 @@ import {
   useChatBrowser,
 } from './browser-store.ts';
 import { BrowserTabs } from './BrowserTabs.tsx';
+import { FindBar } from './FindBar.tsx';
 import { HandoffBanner } from './HandoffBanner.tsx';
 import { defaultBrowserUrl, openInDefaultBrowser } from './chat-links.ts';
+import {
+  PANE_KEYS,
+  chromeShortcut,
+  runPaneShortcut,
+  usePageShortcuts,
+  type PaneKeys,
+} from './pane-shortcuts.ts';
 import { PreviewBadge, PreviewStart } from './PreviewControls.tsx';
 import { tabLabel } from './tab-label.ts';
 import { hiddenPlacement, useViewPlacement, type BrowserHome } from './use-view-placement.ts';
+
+const COPIED_MS = 1600;
+const REFOCUS_MS = 1500;
 
 interface BrowserPaneProps {
   home: BrowserHome;
@@ -44,14 +55,22 @@ interface BrowserPaneProps {
 
 interface ToolButtonProps {
   label: string;
+  keys?: PaneKeys;
   disabled?: boolean;
   pressed?: boolean;
   onClick(): void;
   children: ReactNode;
 }
 
-function ToolButton({ label, disabled = false, pressed, onClick, children }: ToolButtonProps) {
-  const tip = useTooltip(label, { side: 'top' });
+function ToolButton({
+  label,
+  keys,
+  disabled = false,
+  pressed,
+  onClick,
+  children,
+}: ToolButtonProps) {
+  const tip = useTooltip(label, keys ? { side: 'top', keys: keys.shown } : { side: 'top' });
   return (
     <>
       <button
@@ -59,6 +78,7 @@ function ToolButton({ label, disabled = false, pressed, onClick, children }: Too
         className="icon-btn bp-tool"
         aria-label={label}
         aria-pressed={pressed}
+        aria-keyshortcuts={keys?.aria}
         disabled={disabled}
         {...tip.triggerProps}
         onClick={onClick}
@@ -188,9 +208,41 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
   const { chatId } = home;
   const browser = useChatBrowser(chatId);
   const view = useRef<HTMLDivElement>(null);
+  const section = useRef<HTMLElement>(null);
   const tab = activeTab(browser);
   const started = useRef(false);
+  const [finding, setFinding] = useState<{ tabId: string; request: number } | null>(null);
+  const [copied, setCopied] = useState(0);
   useViewPlacement(view, home, shown);
+
+  useEffect(() => {
+    if (copied === 0) return;
+    const timer = setTimeout(() => setCopied(0), COPIED_MS);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  const shortcutUi = {
+    focusAddress: () => {
+      const address = section.current?.querySelector<HTMLInputElement>('input.bp-url');
+      address?.focus();
+      address?.select();
+    },
+    openFind: () => {
+      if (tab) setFinding((open) => ({ tabId: tab.id, request: (open?.request ?? 0) + 1 }));
+    },
+    copiedUrl: () => setCopied((count) => count + 1),
+  };
+  const runShortcut = (shortcut: Parameters<typeof runPaneShortcut>[2]) =>
+    runPaneShortcut(chatId, browser.tabs, shortcut, shortcutUi);
+  usePageShortcuts(chatId, runShortcut, shown);
+  const shortcutAt = useRef(0);
+  const tabKey = `${tab?.id ?? ''}:${tab?.url ?? ''}`;
+
+  useEffect(() => {
+    const recent = Date.now() - shortcutAt.current < REFOCUS_MS;
+    if (!recent || document.activeElement !== document.body) return;
+    section.current?.querySelector<HTMLInputElement>('input.bp-url')?.focus();
+  }, [tabKey]);
 
   useEffect(() => {
     if (!shown || started.current) return;
@@ -216,9 +268,18 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
 
   return (
     <section
+      ref={section}
       className="bp"
       aria-label="Browser"
       onKeyDown={(event) => {
+        const shortcut = chromeShortcut(event);
+        if (shortcut) {
+          event.preventDefault();
+          event.stopPropagation();
+          shortcutAt.current = Date.now();
+          runShortcut(shortcut);
+          return;
+        }
         if (!tab || blank || !isDevtoolsKey(event)) return;
         event.preventDefault();
         sendBrowserCommand(chatId, { command: 'devtools', tabId: tab.id });
@@ -233,10 +294,20 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
         {trail}
       </div>
       <div className="bp-bar">
-        <ToolButton label="Back" disabled={!tab?.canGoBack} onClick={() => act('back')}>
+        <ToolButton
+          label="Back"
+          keys={PANE_KEYS.back}
+          disabled={!tab?.canGoBack}
+          onClick={() => act('back')}
+        >
           <NavBackIcon />
         </ToolButton>
-        <ToolButton label="Forward" disabled={!tab?.canGoForward} onClick={() => act('forward')}>
+        <ToolButton
+          label="Forward"
+          keys={PANE_KEYS.forward}
+          disabled={!tab?.canGoForward}
+          onClick={() => act('forward')}
+        >
           <NavForwardIcon />
         </ToolButton>
         {tab?.loading ? (
@@ -244,7 +315,12 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
             <StopIcon />
           </ToolButton>
         ) : (
-          <ToolButton label="Reload" disabled={blank} onClick={() => act('reload')}>
+          <ToolButton
+            label="Reload"
+            keys={PANE_KEYS.reload}
+            disabled={blank}
+            onClick={() => act('reload')}
+          >
             <ReloadIcon />
           </ToolButton>
         )}
@@ -253,7 +329,7 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
             Click or drag a box. Esc cancels.
           </p>
         ) : (
-          <AddressBar key={`${tab?.id ?? ''}:${tab?.url ?? ''}`} chatId={chatId} tab={tab} />
+          <AddressBar key={tabKey} chatId={chatId} tab={tab} />
         )}
         <ToolButton
           label={tab?.picking ? 'Stop selecting' : `Select an element for ${destination}`}
@@ -285,7 +361,23 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
           <ExternalLinkIcon />
         </ToolButton>
       </div>
+      {finding && tab && finding.tabId === tab.id && !blank && (
+        <FindBar
+          chatId={chatId}
+          tabId={tab.id}
+          request={finding.request}
+          onClose={() => {
+            setFinding(null);
+            sendBrowserCommand(chatId, { command: 'focus', tabId: tab.id });
+          }}
+        />
+      )}
       <div className="bp-status" aria-live="polite">
+        {copied > 0 && (
+          <span className="bp-copied" role="status">
+            Copied URL
+          </span>
+        )}
         {browser.notice && (
           <span className="bp-notice" role="alert">
             <span>{browser.notice}</span>
