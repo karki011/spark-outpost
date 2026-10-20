@@ -2,6 +2,16 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.25
+
+- Spark Island is an inbox: Needs you, Running and Finished, with Allow, Deny and Later right on the card. Acting in the island no longer switches to Spark; only opening a row, Answer in Spark or ⌘O does. The island's chat list and chat view are gone.
+- Meetings: Snooze now brings the alert back once, and Dismiss keeps it from showing again, even after a restart. Today and the Calendar card have Refresh now.
+- Browser pane: tabs share one set of sign-ins, so an agent's tab is signed in where you are. Agents still can't read cookie values or anything that looks like a token.
+- Browser pane: copy buttons on pages work when you click them, and pages can't read your clipboard. New keys: ⌘⇧C copies the address, ⌘T, ⌘W, ⌘⇧T, ⌘L, ⌘R, ⌘[ and ⌘], ⌘1–9, ⌃Tab and ⌘F to find in the page.
+- Spark rules in Settings shows what Spark lets an agent do. Running a GitHub workflow now follows the chat's mode, you can allow more gh commands, and a refused command shows a card with Allow and retry.
+- Work on a pull request: pick another developer's open pull request and the chat works on its branch, pushing follow-ups without force.
+- Phones: the bar above the message box no longer overlaps; extra items sit behind ⋯. The autonomy chip is gone from that bar; set the level in the Work panel.
+
 ## 0.1.0-beta.24
 
 - Chats keep one agent session running between messages, so replies start sooner. Background agents keep working after the reply: the turn shows Waiting on… until they finish, work the agent starts on its own appears as Continued on its own, and an idle chat's session closes after 30 minutes.
