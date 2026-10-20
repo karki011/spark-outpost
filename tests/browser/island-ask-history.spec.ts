@@ -173,3 +173,22 @@ test('the full Ask Spark conversation shows the New topic divider', async ({ pag
     'After the topic',
   ]);
 });
+
+test('the full conversation shows a New topic divider before any question', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true, connected: ['claude'], catalog: true });
+  await assistantId(page);
+  expect((await page.request.post('/api/spark-assistant/topic', { data: {} })).ok()).toBe(true);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: /Spark assistant/ })
+    .click();
+  await page
+    .getByRole('dialog', { name: 'Spark assistant' })
+    .getByRole('button', { name: 'View conversation' })
+    .click();
+  await expect(
+    page.locator('.thread').getByRole('separator', { name: 'New topic · today' }),
+  ).toBeVisible();
+});
