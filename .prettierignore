@@ -7,3 +7,4 @@ docs/benchmarks/
 apps/desktop/release/
 apps/desktop/mac-control/.build/
 apps/desktop/mac-control/.swiftpm/
+releases/

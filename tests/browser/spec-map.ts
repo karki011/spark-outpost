@@ -170,6 +170,7 @@ export const SPEC_GROUPS = {
     'calendar-busy',
     'calendar-clash',
     'calendar-connector',
+    'calendar-day',
     'calendar-google',
     'calendar-month',
     'calendar-nudges',

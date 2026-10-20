@@ -62,6 +62,8 @@ describe('releasePlan', () => {
       'Spark-Outpost-0.1.0-beta.1-arm64.zip.blockmap',
       'Spark-Outpost-0.1.0-beta.1-arm64.dmg',
       'release-notes.html',
+      'Spark-Outpost-latest-x64.dmg',
+      'Spark-Outpost-latest-arm64.dmg',
       'beta-mac.yml',
     ]);
     expect(beta.uploads.at(-1)!.cacheControl).toBe(CHANNEL_CACHE);
@@ -73,7 +75,34 @@ describe('releasePlan', () => {
     expect(stable.problems).toEqual([]);
     const order = names(stable.uploads);
     expect(order.slice(-2)).toEqual(['beta-mac.yml', 'latest-mac.yml']);
-    expect(order.findIndex((name) => name.endsWith('.yml'))).toBe(7);
+    expect(order.findIndex((name) => name.endsWith('.yml'))).toBe(9);
+  });
+
+  it('copies each versioned dmg to a latest name, uncached, after the versioned files', () => {
+    const beta = plan('0.1.0-beta.1', 'publish', { 'beta-mac.yml': channel('0.1.0-beta.1') });
+    const latest = beta.uploads.filter((step) => step.name.includes('-latest-'));
+    expect(latest).toEqual([
+      {
+        name: 'Spark-Outpost-latest-x64.dmg',
+        source: 'Spark-Outpost-0.1.0-beta.1-x64.dmg',
+        size: 540 * MB,
+        cacheControl: CHANNEL_CACHE,
+      },
+      {
+        name: 'Spark-Outpost-latest-arm64.dmg',
+        source: 'Spark-Outpost-0.1.0-beta.1-arm64.dmg',
+        size: 540 * MB,
+        cacheControl: CHANNEL_CACHE,
+      },
+    ]);
+    const order = names(beta.uploads);
+    expect(order.indexOf('Spark-Outpost-latest-x64.dmg')).toBeGreaterThan(
+      order.indexOf('release-notes.html'),
+    );
+    expect(names(plan('0.1.0', 'promote').uploads)).toEqual(['latest-mac.yml']);
+    expect(describePlan(beta, 'r2')).toContain(
+      'Spark-Outpost-latest-arm64.dmg (copy of Spark-Outpost-0.1.0-beta.1-arm64.dmg)',
+    );
   });
 
   it('can hold a stable build on Beta, then promote the same build to Stable', () => {
@@ -125,7 +154,7 @@ describe('releasePlan', () => {
     const text = describePlan(plan('0.1.0-beta.1', 'publish'), 'r2:spark-releases');
     expect(text).toMatch(/^Release 0\.1\.0-beta\.1 \(publish\) to r2:spark-releases/);
     expect(text).toContain('530.0 MB  Spark-Outpost-0.1.0-beta.1-arm64.zip');
-    expect(text).toMatch(/ 8\. +0\.0 MB {2}beta-mac\.yml/);
+    expect(text).toMatch(/10\. +0\.0 MB {2}beta-mac\.yml/);
     expect(text).toContain('channel files go last');
   });
 });

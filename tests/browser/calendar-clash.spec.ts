@@ -129,7 +129,7 @@ test('Today tags clashing meetings on the timeline and in the event panel', asyn
   await today.getByRole('radio', { name: 'Day' }).click();
   const customer = today.getByRole('button', { name: /^Customer call, / });
   await expect(customer).toHaveAccessibleName(/clashes with Vendor sync/);
-  await expect(customer.locator('.tl-tags')).toBeVisible();
+  await expect(customer.locator('.tl-clash')).toHaveAttribute('title', 'Clashes with Vendor sync');
   const standup = today.getByRole('button', { name: /^Standup, / });
   await expect(standup).toHaveAccessibleName(/clashes with 2 meetings/);
   await expect(standup.locator('.tl-tags')).toBeHidden();

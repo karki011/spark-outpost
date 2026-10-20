@@ -7,6 +7,7 @@ import {
   type HelperEvent,
 } from '@spark-outpost/contracts';
 import type { Invitee } from '../people.ts';
+import { decodeEntities, htmlNotesText } from '../notes-html.ts';
 import { linkFreeSnippet } from '../snippet.ts';
 import type { GoogleCalendarEntry, GoogleEvent } from './api.ts';
 
@@ -78,40 +79,14 @@ const RESPONSE: Record<string, CalendarMyStatus> = {
   needsAction: 'pending',
 };
 
-function decodeEntities(value: string): string {
-  return value
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&amp;/g, '&');
-}
-
-const ANCHOR = /<a\s[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi;
-
-function htmlText(description: string, anchor: (href: string, label: string) => string): string {
-  const text = description
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|li)>/gi, '\n')
-    .replace(ANCHOR, (_, href: string, label: string) => anchor(href, label))
-    .replace(/<[^>]*>/g, '');
-  return decodeEntities(text);
-}
-
 export function notesText(description: string | undefined): string {
   if (!description) return '';
-  return htmlText(description, (href, label) =>
-    label.trim() && label.trim() !== href ? `${label} (${href})` : href,
-  )
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-    .slice(0, NOTES_MAX);
+  return htmlNotesText(description).slice(0, NOTES_MAX);
 }
 
 export function notesSnippet(description: string | undefined): string {
   if (!description) return '';
-  return linkFreeSnippet(htmlText(description, () => ''));
+  return linkFreeSnippet(htmlNotesText(description));
 }
 
 export function noteLinks(description: string | undefined): string[] {

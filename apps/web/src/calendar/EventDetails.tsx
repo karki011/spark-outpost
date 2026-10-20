@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { Children, useState, type ReactNode } from 'react';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import {
   JOIN_LEAD_MS,
   joinOpen,
@@ -9,8 +10,10 @@ import {
 } from '@spark-outpost/contracts';
 import { clock } from './calendar-format.ts';
 import { useCopyText } from './copy-toast.tsx';
+import { agendaMarkdown } from './agenda-markdown.ts';
 import {
   descriptionParts,
+  linkPart,
   looksLikeAddress,
   mapsUrl,
   type DescriptionPart,
@@ -84,6 +87,38 @@ function LinkedText({ text, event, now }: WithEvent & { text: string }) {
   ));
 }
 
+const AGENDA_ELEMENTS = ['p', 'ul', 'ol', 'li', 'a', 'br'];
+
+function agendaComponents({ event, now }: WithEvent): Components {
+  const linked = (children: ReactNode) =>
+    Children.map(children, (child) =>
+      typeof child === 'string' ? <LinkedText text={child} event={event} now={now} /> : child,
+    );
+  return {
+    p: ({ children }) => <p>{linked(children)}</p>,
+    li: ({ children }) => <li>{linked(children)}</li>,
+    a: ({ href, children }) => {
+      const part = href ? linkPart(href) : null;
+      return part ? <Part part={part} event={event} now={now} /> : <span>{children}</span>;
+    },
+  };
+}
+
+function Agenda({ text, event, now }: WithEvent & { text: string }) {
+  return (
+    <div className="cal-agenda">
+      <ReactMarkdown
+        skipHtml
+        allowedElements={AGENDA_ELEMENTS}
+        unwrapDisallowed
+        components={agendaComponents({ event, now })}
+      >
+        {agendaMarkdown(text)}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 export function EventDescription({
   detail,
   event,
@@ -92,11 +127,7 @@ export function EventDescription({
   if (!detail.agenda && !detail.conference) return null;
   return (
     <div className="cal-desc">
-      {detail.agenda && (
-        <p className="cal-agenda">
-          <LinkedText text={detail.agenda} event={event} now={now} />
-        </p>
-      )}
+      {detail.agenda && <Agenda text={detail.agenda} event={event} now={now} />}
       {detail.conference && (
         <details className="cal-conf">
           <summary>Dial-in and meeting details</summary>

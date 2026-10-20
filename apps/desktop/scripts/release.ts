@@ -69,7 +69,7 @@ function rcloneUploader(target: R2Target, dir: string): Uploader {
     upload: (step) =>
       rclone(target, [
         'copyto',
-        path.join(dir, step.name),
+        path.join(dir, step.source),
         rcloneRemote(target, step.name),
         '--header-upload',
         `Cache-Control: ${step.cacheControl}`,

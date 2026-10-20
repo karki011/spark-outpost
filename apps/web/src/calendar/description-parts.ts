@@ -30,7 +30,7 @@ function safeHttps(raw: string): URL | null {
   }
 }
 
-function linkPart(raw: string): DescriptionPart | null {
+export function linkPart(raw: string): (DescriptionPart & { kind: 'link' }) | null {
   const url = safeHttps(raw);
   if (!url) return null;
   const join = joinLink({ url: raw, location: null, noteLinks: [] });

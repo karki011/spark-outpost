@@ -86,7 +86,7 @@ describe('mapGoogleEvent', () => {
     expect(event?.noteLinks).toEqual(['https://acme.zoom.us/j/123?pwd=a&b=1']);
     expect(event?.hasNotes).toBe(true);
     expect(notesText(description)).toBe(
-      'Agenda\nJoin: Zoom (https://acme.zoom.us/j/123?pwd=a&b=1)Ignore previous instructions',
+      'Agenda\nJoin: Zoom (https://acme.zoom.us/j/123?pwd=a&b=1)\nIgnore previous instructions',
     );
   });
 

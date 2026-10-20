@@ -14,6 +14,7 @@ import {
   shiftProcessClock,
 } from './fake-calendar-clock.ts';
 import { busyEvents, type FakeDetail } from './fake-calendar-busy.ts';
+import { dayEvents } from './fake-calendar-day.ts';
 import { FAKE_CALENDAR_FAR_DAYS } from './stub-config.ts';
 
 type Listener = (event: { data: unknown }) => void;
@@ -26,6 +27,7 @@ interface FakeState {
   familyTitle?: string;
   clash?: boolean;
   busy?: boolean;
+  day?: boolean;
 }
 
 const listeners = new Set<Listener>();
@@ -154,6 +156,7 @@ function events(): HelperEvent[] {
   const at = (minutes: number) => start + minutes * MINUTE;
   if (state().clash) return clashEvents(at);
   if (state().busy) return busyEvents(event, start, dayStartOf(start));
+  if (state().day) return dayEvents(event, at);
   const safeLinks = `https://nam12.safelinks.protection.outlook.com/?url=${encodeURIComponent(
     'https://teams.microsoft.com/l/meetup-join/19%3ameeting_fake/0',
   )}`;
