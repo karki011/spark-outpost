@@ -48,7 +48,8 @@ import { ErrorLine, ModelSwitchNote } from './ModelSwitchNote.tsx';
 import { providerName } from './provider-name.ts';
 import { useLiveReport } from './status/status-context.ts';
 import { BackgroundWork } from './BackgroundWork.tsx';
-import { SubagentList } from './subagents/SubagentList.tsx';
+import { SubagentsLine } from './subagents/SubagentsLine.tsx';
+import { useShowAgents } from './subagents/agent-board.ts';
 import { shownSubagents } from './subagents/subagent-view.ts';
 import { runSeconds } from './turns.ts';
 import { useRunStream } from './use-run-stream.ts';
@@ -154,6 +155,7 @@ export function SoloTurn({
   const status = turnStatus(run, stream, waiting);
   const { state } = status;
   const subagents = shownSubagents(stream.subagents.rows, detail.subagents?.[run.id], leads);
+  useShowAgents(run.id, run.createdAt, subagents, working);
   const waitingOn = working && !waiting ? stream.subagents.waitingOn : 0;
   const waitingText =
     waitingOn > 0 ? waitingOnLabel(waitingOn, stream.subagents.background).toLowerCase() : null;
@@ -258,7 +260,7 @@ export function SoloTurn({
           <StepList log={log} />
         </div>
       )}
-      <SubagentList rows={subagents} live={working} />
+      <SubagentsLine rows={subagents} live={working} />
       <PlanSavedLine detail={detail} runId={run.id} />
       <RailFlags detail={detail} runId={run.id} />
       {cards.decided.map(approvalCard)}

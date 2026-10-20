@@ -1,0 +1,92 @@
+import { describe, expect, it } from 'vitest';
+import { emptySubagentRecord, type SubagentRow } from '@spark-outpost/contracts';
+import {
+  agentCounts,
+  agentLatestCommand,
+  agentMeta,
+  agentPurpose,
+  agentsLine,
+  agentsWorking,
+} from './agent-cards.ts';
+
+function row(change: Partial<SubagentRow>): SubagentRow {
+  return {
+    ...emptySubagentRecord,
+    id: 'a',
+    name: 'Server architecture',
+    task: '',
+    parentId: null,
+    state: 'working',
+    step: null,
+    startedAt: 1_000,
+    endedAt: null,
+    ...change,
+  };
+}
+
+describe('the sub-agents line', () => {
+  it('waits on the working agents and counts the finished ones', () => {
+    const counts = agentCounts([
+      row({ id: 'a', state: 'done' }),
+      row({ id: 'b' }),
+      row({ id: 'c' }),
+    ]);
+    expect(agentsLine(counts)).toBe('Waiting on 2 agents · 1 done · writing up when all finish');
+    expect(agentsWorking(counts)).toBe('2 of 3 agents working');
+  });
+
+  it('sums up once every agent has ended', () => {
+    const counts = agentCounts([
+      row({ id: 'a', state: 'done' }),
+      row({ id: 'b', state: 'failed' }),
+      row({ id: 'c', state: 'cancelled' }),
+    ]);
+    expect(agentsLine(counts)).toBe('3 agents · 1 done · 1 failed · 1 stopped');
+  });
+
+  it('says one agent in the singular', () => {
+    expect(agentsLine(agentCounts([row({})]))).toBe(
+      'Waiting on 1 agent · writing up when all finish',
+    );
+  });
+});
+
+describe('an agent card', () => {
+  it('takes the first sentence of the task as its purpose', () => {
+    expect(
+      agentPurpose(
+        'Map the Express server: routes, workers and persistence. Then list the tests.',
+        'x',
+      ),
+    ).toBe('Map the Express server: routes, workers and persistence.');
+    expect(agentPurpose('List the test setup\nand how to run it', 'x')).toBe('List the test setup');
+    expect(agentPurpose('Explore', 'Explore')).toBeNull();
+    expect(agentPurpose('  ', 'Explore')).toBeNull();
+  });
+
+  it('keeps file names with dots inside the first sentence', () => {
+    expect(agentPurpose('Read playwright.config.ts and say which ports it uses.', 'x')).toBe(
+      'Read playwright.config.ts and say which ports it uses.',
+    );
+  });
+
+  it('shows the latest command only while the agent works', () => {
+    const commands = ['ls', 'grep -rn "useQuery" apps/web/src/chat'];
+    expect(agentLatestCommand(row({ commands }))).toBe(commands[1]);
+    expect(agentLatestCommand(row({ commands, state: 'done' }))).toBeNull();
+  });
+
+  it('shows the step count while working and the time and tokens when done', () => {
+    const steps = [
+      { name: 'Read', done: true },
+      { name: 'Grep', done: false },
+    ];
+    expect(agentMeta(row({ steps }))).toBe('2 steps');
+    expect(
+      agentMeta(
+        row({ steps, state: 'done', usage: { durationMs: 48_000, tokens: 61_234 }, endedAt: 9 }),
+      ),
+    ).toBe('48s · 61K tok');
+    expect(agentMeta(row({ state: 'done', startedAt: 1_000, endedAt: 76_000 }))).toBe('1m 15s');
+  });
+});

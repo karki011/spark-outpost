@@ -29,8 +29,6 @@ import { TerminalDock } from '../terminal/dock/TerminalDock.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { PanelOpenContext } from '../tasks/panel-open.ts';
 import { useTaskPanel } from '../tasks/work-panel-state.ts';
-import { ViewChangesContext } from '../tasks/view-changes.ts';
-import { OpenPlanContext } from './plans/PlanSavedLine.tsx';
 import type { WorkTab } from '../tasks/TaskDetails.tsx';
 import { WorkPanel } from '../tasks/WorkPanel.tsx';
 import { WorkPanelToggle } from '../tasks/WorkPanelToggle.tsx';
@@ -40,7 +38,8 @@ import { useFileDrop } from './attachments/use-file-drop.ts';
 import { ChatHeadTools } from './ChatHeadTools.tsx';
 import { Composer } from './Composer.tsx';
 import { ComposerStatus } from './status/ComposerStatus.tsx';
-import { StatusContext } from './status/status-context.ts';
+import { ChatContexts } from './ChatContexts.tsx';
+import { useChatAgents } from './subagents/use-chat-agents.ts';
 import { createStatusStore } from './status/status-store.ts';
 import { providerName } from './provider-name.ts';
 import { repoSummary } from './project/repo-list.ts';
@@ -150,9 +149,10 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const mainRef = useRef<HTMLElement>(null);
   const roomy = useRoomy(mainRef);
   const wideLayout = setup.data?.profile.wideWindow ?? DEFAULT_WIDE_WINDOW;
+  const agents = useChatAgents();
   const panel = useTaskPanel(
     detail.data?.tasks ?? NO_TASKS,
-    autonomyLevel !== null || detail.data?.conversation.sessionType === 'terminal',
+    autonomyLevel !== null || detail.data?.conversation.sessionType === 'terminal' || agents.has,
     panelOpensByDefault(roomy, wideLayout),
     browserPane,
   );
@@ -196,6 +196,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   });
   const openPlan = useStableCallback(() => openPanelTab('plan'));
   const openLinks = useStableCallback(() => openPanelTab('links'));
+  const openAgents = useStableCallback(() => agents.open(panel));
   usePullRequestRefresh(conversationId, running !== null);
   const openAutonomyPanel = useStableCallback(openAutonomy);
   const reviewChanges = useStableCallback(toggleDiff);
@@ -247,251 +248,243 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   };
 
   return (
-    <ViewChangesContext value={viewChanges}>
-      <OpenPlanContext value={task ? openPlan : null}>
-        <StatusContext value={status}>
-          <FileSheetProvider>
-            <main
-              ref={mainRef}
-              className={rail === 'hidden' ? 'main' : `main crail-${rail}`}
-              data-chat-links=""
-              {...(terminalSession || terminalDraft ? {} : drop.handlers)}
+    <ChatContexts
+      viewChanges={viewChanges}
+      openPlan={task ? openPlan : null}
+      status={status}
+      board={agents.board}
+      openAgents={panel.available ? openAgents : null}
+    >
+      <FileSheetProvider>
+        <main
+          ref={mainRef}
+          className={rail === 'hidden' ? 'main' : `main crail-${rail}`}
+          data-chat-links=""
+          {...(terminalSession || terminalDraft ? {} : drop.handlers)}
+        >
+          <header className="head chat-head">
+            <SidebarToggle />
+            {repos.length > 0 && (
+              <span className="crumb" title={repos.map((repo) => repo.rootPath).join('\n')}>
+                {repoSummary(repos.map((repo) => repo.name))} /
+              </span>
+            )}
+            {detail.data && <ChatTeammate chat={detail.data.conversation} />}
+            <h1
+              className="chat-title"
+              title={
+                detail.data?.conversation.titleSource === 'auto' ? 'Renamed by Spark' : undefined
+              }
             >
-              <header className="head chat-head">
-                <SidebarToggle />
-                {repos.length > 0 && (
-                  <span className="crumb" title={repos.map((repo) => repo.rootPath).join('\n')}>
-                    {repoSummary(repos.map((repo) => repo.name))} /
-                  </span>
-                )}
-                {detail.data && <ChatTeammate chat={detail.data.conversation} />}
-                <h1
-                  className="chat-title"
-                  title={
-                    detail.data?.conversation.titleSource === 'auto'
-                      ? 'Renamed by Spark'
-                      : undefined
-                  }
-                >
-                  {title}
-                </h1>
-                <ChatTicketChips chat={tickets} />
-                <div className="head-r">
-                  <DiffChip
-                    taskId={task?.id ?? null}
-                    open={diff.request !== null}
-                    onToggle={toggleDiff}
-                  />
-                  <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
-                  <ChatHeadTools
-                    conversationId={conversationId}
-                    agents={tvCrew(detail.data)}
-                    browser={hasBrowser ? { open: browsing, onToggle: toggleBrowser } : null}
-                    onAudit={openAudit}
-                    onStartFresh={() => startFresh.mutate()}
-                    canStartFresh={!terminalSession}
-                    terminalDock={!terminalSession && !terminalDraft}
-                  />
-                </div>
-              </header>
-              <ChatTicketBar chat={tickets} />
-              {detail.isError && !isConnectionLoss(detail.error) && (
-                <p className="error-line" role="alert">
-                  {detail.error.message}
-                </p>
-              )}
-              {terminalSession && detail.data ? (
-                <NativeTerminalWorkspace
-                  chat={detail.data.conversation}
-                  detail={detail.data}
-                  panel={panel}
-                  browserHome={hasBrowser ? browserHome : null}
-                />
-              ) : terminalDraft ? (
-                <TerminalComposer
-                  conversationId={conversationId}
-                  choice={sessionChoice}
-                  onChoice={chooseSession}
-                  sessionPicker={sessionPicker}
-                  settings={settings}
-                  connected={connected.some(
-                    (provider) => provider.id === sessionChoice.terminalProvider,
-                  )}
-                  projectIds={detail.data?.conversation.projectIds ?? []}
-                  onStarting={() => setTerminalLaunching(true)}
-                  onLaunched={() => setTerminalLaunching(false)}
-                  onFailed={(created) => {
-                    setTerminalLaunching(false);
-                    if (created) void refresh();
-                  }}
-                />
-              ) : detail.data ? (
-                <PanelOpenContext value={panel.open}>
-                  <RailContext
-                    value={
-                      rail === 'hidden' ? null : (
-                        <ChatRail
-                          detail={detail.data}
-                          repos={repos}
-                          taskId={taskId}
-                          task={railTask}
-                          autonomy={autonomyLevel}
-                          running={running !== null}
-                          collapsed={rail === 'collapsed'}
-                          onCollapse={collapseRail}
-                          onTab={openPanelTab}
-                          onAutonomy={openAutonomyPanel}
-                          onChanges={reviewChanges}
-                        />
-                      )
-                    }
-                  >
-                    <RailTaskContext value={rail === 'open' ? (railTask?.id ?? null) : null}>
-                      <FollowContext value={followRequests}>
-                        <Thread
-                          detail={detail.data}
-                          repos={repos}
-                          sends={sends}
-                          taskId={taskId}
-                          onOpenTask={openTask}
-                          onOpenChat={openChat}
-                          quotes={quotes}
-                        />
-                      </FollowContext>
-                    </RailTaskContext>
-                  </RailContext>
-                </PanelOpenContext>
-              ) : (
-                <div className="thread-wrap" aria-busy={detail.isPending}>
-                  {detail.isPending && (
-                    <LoadingBlob size="lg" className="thread-loading" line="Opening this chat…" />
-                  )}
-                </div>
-              )}
-              {assistantChat && <AssistantReadOnly />}
-              {!terminalSession && !terminalDraft && !assistantChat && (
-                <>
-                  <ComposerStatus
-                    store={status}
-                    runs={detail.data?.runs ?? NO_RUNS}
-                    activeRunId={running?.id ?? null}
-                    provider={detail.data?.settings.provider ?? ''}
-                    queued={queue.items.length}
-                  />
-                  <QueueStrip
-                    queue={queue}
-                    mode={queueMode(running !== null, detail.data?.runs ?? NO_RUNS, sparkPaused)}
-                  />
-                  <Composer
-                    conversationId={conversationId}
-                    repos={repos}
-                    settings={settings}
-                    providers={connected}
-                    runs={detail.data?.runs ?? []}
-                    usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
-                    busy={running !== null}
-                    sending={sends.sending}
-                    error={stop.error ?? (queue.items.length === 0 ? queue.error : null)}
-                    notice={sendNowStatus({
-                      memberMessages: detail.data?.memberMessages,
-                      runs: detail.data?.runs ?? NO_RUNS,
-                    })}
-                    stopping={stop.stopping}
-                    attachments={attachments}
-                    quotes={quotes}
-                    onSend={async (content, files, annotations) => {
-                      sends.send({ content, attachments: files, annotations });
-                    }}
-                    onStop={stop.stop}
-                    onQueue={(content) => {
-                      followRequests.request();
-                      return queue.add(content);
-                    }}
-                    onSendNow={(content) => {
-                      followRequests.request();
-                      return queue.sendFirst(content);
-                    }}
-                    busyEnter={enterWhileBusy(
-                      setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER,
-                      waitingOn,
-                    )}
-                    waitingOn={waitingOn}
-                    waitingBackground={
-                      running ? (detail.data?.conversation.latestRun?.background ?? null) : null
-                    }
-                    above={
-                      <PrCard
-                        conversationId={conversationId}
-                        onOpenLinks={task ? openLinks : null}
-                      />
-                    }
-                    {...(openAudit ? { onAudit: openAudit } : {})}
-                    onStartFresh={() => startFresh.mutate()}
-                    autonomy={autonomyLevel ? { level: autonomyLevel, onOpen: openAutonomy } : null}
-                    agentCommands={commands.data?.commands ?? NO_COMMANDS}
-                    agentName={providerName(
-                      commands.data?.provider ?? detail.data?.settings.provider ?? '',
-                    )}
-                    contextLead={sessionPicker}
-                  />
-                </>
-              )}
-              {!remote && !terminalSession && !terminalDraft && (
-                <TerminalDock chatId={conversationId} />
-              )}
-              <DropOverlay visible={drop.dragging} />
-            </main>
-            {panel.available && (
-              <WorkPanel
+              {title}
+            </h1>
+            <ChatTicketChips chat={tickets} />
+            <div className="head-r">
+              <DiffChip
+                taskId={task?.id ?? null}
+                open={diff.request !== null}
+                onToggle={toggleDiff}
+              />
+              <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
+              <ChatHeadTools
                 conversationId={conversationId}
-                task={task}
-                autonomy={
-                  autonomyLevel ? { level: autonomyLevel, focusRequest: autonomyRequest } : null
+                agents={tvCrew(detail.data)}
+                browser={hasBrowser ? { open: browsing, onToggle: toggleBrowser } : null}
+                onAudit={openAudit}
+                onStartFresh={() => startFresh.mutate()}
+                canStartFresh={!terminalSession}
+                terminalDock={!terminalSession && !terminalDraft}
+              />
+            </div>
+          </header>
+          <ChatTicketBar chat={tickets} />
+          {detail.isError && !isConnectionLoss(detail.error) && (
+            <p className="error-line" role="alert">
+              {detail.error.message}
+            </p>
+          )}
+          {terminalSession && detail.data ? (
+            <NativeTerminalWorkspace
+              chat={detail.data.conversation}
+              detail={detail.data}
+              panel={panel}
+              browserHome={hasBrowser ? browserHome : null}
+            />
+          ) : terminalDraft ? (
+            <TerminalComposer
+              conversationId={conversationId}
+              choice={sessionChoice}
+              onChoice={chooseSession}
+              sessionPicker={sessionPicker}
+              settings={settings}
+              connected={connected.some(
+                (provider) => provider.id === sessionChoice.terminalProvider,
+              )}
+              projectIds={detail.data?.conversation.projectIds ?? []}
+              onStarting={() => setTerminalLaunching(true)}
+              onLaunched={() => setTerminalLaunching(false)}
+              onFailed={(created) => {
+                setTerminalLaunching(false);
+                if (created) void refresh();
+              }}
+            />
+          ) : detail.data ? (
+            <PanelOpenContext value={panel.open}>
+              <RailContext
+                value={
+                  rail === 'hidden' ? null : (
+                    <ChatRail
+                      detail={detail.data}
+                      repos={repos}
+                      taskId={taskId}
+                      task={railTask}
+                      autonomy={autonomyLevel}
+                      running={running !== null}
+                      collapsed={rail === 'collapsed'}
+                      onCollapse={collapseRail}
+                      onTab={openPanelTab}
+                      onAutonomy={openAutonomyPanel}
+                      onChanges={reviewChanges}
+                    />
+                  )
                 }
-                open={panel.open}
-                wide={panel.wide}
-                tab={panelTab}
-                onTab={setPanelTab}
-                onClose={() => panel.setOpen(false)}
-                orchestration={taskCrew}
-                agents={taskCrew ? crew : []}
-                roots={panelRoots}
+              >
+                <RailTaskContext value={rail === 'open' ? (railTask?.id ?? null) : null}>
+                  <FollowContext value={followRequests}>
+                    <Thread
+                      detail={detail.data}
+                      repos={repos}
+                      sends={sends}
+                      taskId={taskId}
+                      onOpenTask={openTask}
+                      onOpenChat={openChat}
+                      quotes={quotes}
+                    />
+                  </FollowContext>
+                </RailTaskContext>
+              </RailContext>
+            </PanelOpenContext>
+          ) : (
+            <div className="thread-wrap" aria-busy={detail.isPending}>
+              {detail.isPending && (
+                <LoadingBlob size="lg" className="thread-loading" line="Opening this chat…" />
+              )}
+            </div>
+          )}
+          {assistantChat && <AssistantReadOnly />}
+          {!terminalSession && !terminalDraft && !assistantChat && (
+            <>
+              <ComposerStatus
+                store={status}
+                runs={detail.data?.runs ?? NO_RUNS}
+                activeRunId={running?.id ?? null}
+                provider={detail.data?.settings.provider ?? ''}
+                queued={queue.items.length}
+              />
+              <QueueStrip
+                queue={queue}
+                mode={queueMode(running !== null, detail.data?.runs ?? NO_RUNS, sparkPaused)}
+              />
+              <Composer
+                conversationId={conversationId}
+                repos={repos}
+                settings={settings}
+                providers={connected}
                 runs={detail.data?.runs ?? []}
-                terminal={terminalSession}
-                width={panel.width}
-                onWidth={panel.setWidth}
-                limits={panel.limits}
-                view={panel.view}
-                onView={panel.setView}
-                browser={
-                  hasBrowser
-                    ? ({ views, close }) => (
-                        <BrowserPane
-                          home={browserHome}
-                          shown={browsing}
-                          lead={views}
-                          trail={close}
-                        />
-                      )
-                    : null
+                usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
+                busy={running !== null}
+                sending={sends.sending}
+                error={stop.error ?? (queue.items.length === 0 ? queue.error : null)}
+                notice={sendNowStatus({
+                  memberMessages: detail.data?.memberMessages,
+                  runs: detail.data?.runs ?? NO_RUNS,
+                })}
+                stopping={stop.stopping}
+                attachments={attachments}
+                quotes={quotes}
+                onSend={async (content, files, annotations) => {
+                  sends.send({ content, attachments: files, annotations });
+                }}
+                onStop={stop.stop}
+                onQueue={(content) => {
+                  followRequests.request();
+                  return queue.add(content);
+                }}
+                onSendNow={(content) => {
+                  followRequests.request();
+                  return queue.sendFirst(content);
+                }}
+                busyEnter={enterWhileBusy(
+                  setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER,
+                  waitingOn,
+                )}
+                waitingOn={waitingOn}
+                waitingBackground={
+                  running ? (detail.data?.conversation.latestRun?.background ?? null) : null
+                }
+                above={
+                  <PrCard conversationId={conversationId} onOpenLinks={task ? openLinks : null} />
                 }
                 {...(openAudit ? { onAudit: openAudit } : {})}
+                onStartFresh={() => startFresh.mutate()}
+                autonomy={autonomyLevel ? { level: autonomyLevel, onOpen: openAutonomy } : null}
+                agentCommands={commands.data?.commands ?? NO_COMMANDS}
+                agentName={providerName(
+                  commands.data?.provider ?? detail.data?.settings.provider ?? '',
+                )}
+                contextLead={sessionPicker}
               />
-            )}
-            {hasBrowser && <ChatLinks home={browserHome} />}
-            <DiffDrawerHost state={diff} taskId={taskId} />
-            <AnimatePresence>
-              {auditOpen && (
-                <AuditDialog
-                  conversationId={conversationId}
-                  title={title}
-                  onClose={() => setAuditOpen(false)}
-                />
-              )}
-            </AnimatePresence>
-          </FileSheetProvider>
-        </StatusContext>
-      </OpenPlanContext>
-    </ViewChangesContext>
+            </>
+          )}
+          {!remote && !terminalSession && !terminalDraft && (
+            <TerminalDock chatId={conversationId} />
+          )}
+          <DropOverlay visible={drop.dragging} />
+        </main>
+        {panel.available && (
+          <WorkPanel
+            conversationId={conversationId}
+            task={task}
+            autonomy={
+              autonomyLevel ? { level: autonomyLevel, focusRequest: autonomyRequest } : null
+            }
+            open={panel.open}
+            wide={panel.wide}
+            tab={panelTab}
+            onTab={setPanelTab}
+            onClose={() => panel.setOpen(false)}
+            orchestration={taskCrew}
+            agents={taskCrew ? crew : []}
+            roots={panelRoots}
+            runs={detail.data?.runs ?? []}
+            terminal={terminalSession}
+            width={panel.width}
+            onWidth={panel.setWidth}
+            limits={panel.limits}
+            view={panel.view}
+            onView={panel.setView}
+            browser={
+              hasBrowser
+                ? ({ views, close }) => (
+                    <BrowserPane home={browserHome} shown={browsing} lead={views} trail={close} />
+                  )
+                : null
+            }
+            {...(openAudit ? { onAudit: openAudit } : {})}
+          />
+        )}
+        {hasBrowser && <ChatLinks home={browserHome} />}
+        <DiffDrawerHost state={diff} taskId={taskId} />
+        <AnimatePresence>
+          {auditOpen && (
+            <AuditDialog
+              conversationId={conversationId}
+              title={title}
+              onClose={() => setAuditOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+      </FileSheetProvider>
+    </ChatContexts>
   );
 }

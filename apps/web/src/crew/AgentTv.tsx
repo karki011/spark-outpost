@@ -33,7 +33,7 @@ import {
   type TvView,
 } from './agent-tv-store.ts';
 import { AgentTvStage } from './AgentTvStage.tsx';
-import { SubagentList } from '../chat/subagents/SubagentList.tsx';
+import { AgentCards } from '../chat/subagents/AgentCards.tsx';
 import { isBusy, type CrewAgent } from './crew-model.ts';
 import { ChatterIcon, ListIcon, StageIcon, WatchIcon } from './tv-icons.tsx';
 import { TvList } from './TvList.tsx';
@@ -310,7 +310,7 @@ export function AgentTv({
         )}
         {subagents.length > 0 && (
           <div className="tv-subagents" role="group" aria-label="Sub-agents" tabIndex={0}>
-            <SubagentList rows={subagents} live={members.some((member) => isBusy(member.state))} />
+            <AgentCards rows={subagents} live={members.some((member) => isBusy(member.state))} />
           </div>
         )}
         {view === 'stage' && (

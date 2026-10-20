@@ -8,6 +8,7 @@ import { GlobeIcon } from '../browser/BrowserIcons.tsx';
 import { ShieldIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { AutonomySection } from './AutonomySection.tsx';
+import { AgentsSection } from '../chat/subagents/AgentsSection.tsx';
 import { TerminalWork } from '../terminal/usage/TerminalWork.tsx';
 import { TaskDetails, type WorkTab } from './TaskDetails.tsx';
 import { CloseIcon, PanelIcon } from './TaskIcons.tsx';
@@ -185,6 +186,7 @@ export function WorkPanel({
             </div>
           )}
           <div className={browsing ? 'wp-body browser' : 'wp-body'}>
+            {!browsing && <AgentsSection />}
             {browsing ? (
               browser({ views, close })
             ) : task ? (

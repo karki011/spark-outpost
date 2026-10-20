@@ -1,0 +1,109 @@
+.ac-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ac-card {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  min-width: 0;
+}
+
+.ac-card[data-state='working'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ac-card[data-nested] {
+  margin-left: 16px;
+}
+
+.ac-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ac-top > svg,
+.ac-top > .spin,
+.ac-top > .step-open {
+  flex-shrink: 0;
+}
+
+.ac-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text);
+  border-radius: var(--r-sm);
+}
+
+button.ac-name:hover {
+  text-decoration: underline;
+}
+
+.ac-meta {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-text);
+}
+
+.ac-card p {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.ac-purpose {
+  color: var(--text);
+}
+
+.ac-now {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ac-cmd code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.ac-cmd {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ac-card .sa-detail {
+  margin-top: 6px;
+}
+
+.ac-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ac-head {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-radius: var(--r-sm);
+}

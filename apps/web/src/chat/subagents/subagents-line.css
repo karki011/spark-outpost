@@ -1,0 +1,84 @@
+.sl {
+  margin: 0 0 10px;
+}
+
+.sl-line {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  max-width: 100%;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.sl-scouts {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.sl-scout {
+  display: inline-flex;
+  opacity: 0.55;
+}
+
+.sl-scout[data-working] {
+  opacity: 1;
+  animation: sl-bob 1.2s ease-in-out infinite;
+}
+
+.sl-scout[data-working]:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.sl-scout[data-working]:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.sl-scout[data-working]:nth-child(4) {
+  animation-delay: 0.6s;
+}
+
+.sl-scout[data-working]:nth-child(5) {
+  animation-delay: 0.8s;
+}
+
+@keyframes sl-bob {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.sl-more {
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.sl-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sl-view {
+  color: var(--accent-text);
+  font-weight: 500;
+  border-radius: var(--r-sm);
+}
+
+.sl-view:hover {
+  text-decoration: underline;
+}
+
+.sl-cards {
+  margin-top: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-scout[data-working] {
+    animation: none;
+  }
+}
