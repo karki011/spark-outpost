@@ -18,13 +18,12 @@ import { attachCdp, type Cdp } from './cdp.ts';
 import type { InputMarks } from './clipboard-permission.ts';
 import { capturePageLogs, type PageLogs } from './page-capture.ts';
 import { RefMap, tabRefNumbers } from './ref-map.ts';
-import { agentPartition, navigationAllowed } from './request-guard.ts';
+import { navigationAllowed } from './request-guard.ts';
 import { isAddShortcut, isDevtoolsShortcut } from './selection-menu.ts';
 import type { TabFacts } from './tab-rules.ts';
 
 export interface TabHooks {
-  partition(owner: BrowserTabOwner, url: string): string;
-  session(partition: string): Session;
+  session(): Session;
   allowed(url: string): boolean;
   changed(): void;
   popup(url: string, opener: PaneTab): void;
@@ -103,7 +102,6 @@ export class PaneTab {
   private title = '';
   private loading = false;
   private live: LiveTab | null = null;
-  private partition: string | null = null;
   private opening: Promise<LiveTab> | null = null;
   private waking: Promise<LiveTab> | null = null;
   private readonly hooks: TabHooks;
@@ -171,10 +169,6 @@ export class PaneTab {
     };
   }
 
-  inAgentStorage(): boolean {
-    return this.partition !== null && this.partition === agentPartition(this.chatId);
-  }
-
   forgetLogs(): void {
     this.live?.logs.reset();
   }
@@ -231,31 +225,17 @@ export class PaneTab {
     return this.opening;
   }
 
-  private crosses(url: string): boolean {
-    return this.partition !== null && this.partition !== this.hooks.partition(this.owner, url);
-  }
-
   private steer(event: { preventDefault(): void }, url: string, redirect: boolean): void {
     const web = navigationAllowed(url);
-    if (!web || !this.hooks.allowed(url)) {
-      event.preventDefault();
-      if (redirect || web) this.note({ loading: false, error: BLOCKED });
-      return;
-    }
-    if (!this.crosses(url)) return;
+    if (web && this.hooks.allowed(url)) return;
     event.preventDefault();
-    this.moveTo(url);
-  }
-
-  private moveTo(url: string): void {
-    setImmediate(() => void this.load(url));
+    if (redirect || web) this.note({ loading: false, error: BLOCKED });
   }
 
   private async open(): Promise<LiveTab> {
-    const partition = this.hooks.partition(this.owner, this.url);
     const view = new WebContentsView({
       webPreferences: {
-        session: this.hooks.session(partition),
+        session: this.hooks.session(),
         sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
@@ -283,10 +263,6 @@ export class PaneTab {
       if (details.isMainFrame && !details.isSameDocument) this.live?.logs.reset();
     });
     contents.on('did-navigate', (_event, url, code) => {
-      if (this.crosses(url)) {
-        this.moveTo(url);
-        return;
-      }
       this.refs.clear();
       this.filled.clear();
       this.status = code > 0 ? code : null;
@@ -334,7 +310,6 @@ export class PaneTab {
     const logs = await capturePageLogs(cdp);
     await cdp.send('Page.enable');
     this.live = { view, cdp, logs };
-    this.partition = partition;
     this.hooks.viewCreated(view);
     return this.live;
   }
@@ -359,17 +334,9 @@ export class PaneTab {
     this.hooks.changed();
   }
 
-  private async viewFor(url: string): Promise<LiveTab> {
-    this.url = url;
-    const live = await this.ensure();
-    if (!this.crosses(url)) return live;
-    this.sleep();
-    this.url = url;
-    return this.ensure();
-  }
-
   async load(url: string, signal?: AbortSignal): Promise<void> {
-    const { view } = await this.viewFor(url);
+    const { view } = await this.ensure();
+    this.url = url;
     this.title = '';
     this.error = null;
     this.status = null;
@@ -434,7 +401,6 @@ export class PaneTab {
     this.closeDevtools();
     this.live = null;
     this.shown = false;
-    this.partition = null;
     this.loading = false;
     this.picking = false;
     this.lastAction = null;

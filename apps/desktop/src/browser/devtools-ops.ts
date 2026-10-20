@@ -12,12 +12,13 @@ const MOVED = 'The tab moved to another site since it was checked. Read the page
 
 async function evaluate(panes: BrowserPanes, request: Request<'evaluate'>) {
   const tab = targetTab(panes, request.chatId, request.tab);
-  if ((browserOrigin(tab.currentUrl()) ?? 'about:blank') !== request.origin) {
+  const url = tab.currentUrl();
+  if ((browserOrigin(url) ?? 'about:blank') !== request.origin) {
     throw new BrowserOpError('page_changed', MOVED);
   }
   return panes.whileDriving(tab, async () => {
     const { cdp } = await tab.wake();
-    const outcome = await evaluateInPage(cdp, request.expression, tab.filled);
+    const outcome = await evaluateInPage(cdp, request.expression, tab.filled, url);
     tab.lastAction = 'Ran a script in the page';
     panes.noteChange(tab.chatId);
     return { ...tabFacts(tab), ...outcome };
@@ -45,11 +46,9 @@ async function storage(panes: BrowserPanes, request: Request<'storage'>) {
   if (origin === null || origin === 'file://') {
     throw new BrowserOpError('failed', 'This tab has no web storage to show.');
   }
-  const partition = tab.inAgentStorage() ? 'agent' : 'user';
-  const values = request.values && partition === 'agent';
+  const values = request.values && tab.owner === 'agent';
   return {
     ...tabFacts(tab),
-    partition,
     valuesShown: values,
     ...(await pageStorage(cdp, url, origin, values)),
   };

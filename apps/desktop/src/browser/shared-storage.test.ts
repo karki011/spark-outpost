@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runBrowserOp } from './agent-ops.ts';
 import { net, type FakeContents } from './electron.fixture.ts';
 import { BrowserPanes } from './panes.ts';
-import { agentPartition, projectPartition } from './request-guard.ts';
+import { partitionFor, projectPartition } from './request-guard.ts';
 import { loginDom } from './sign-in-dom.fixture.ts';
 
 vi.mock('electron', async () => (await import('./electron.fixture.ts')).fakeElectron);
@@ -14,7 +14,6 @@ const CHAT = '11111111-2222-4333-8444-555555555555';
 const PROJECT = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const API_PORT = 32682;
 const USER = projectPartition(PROJECT);
-const AGENT = agentPartition(CHAT);
 const SITE = 'https://docs.example.com';
 const LOCAL = 'http://localhost:5173/';
 const home = { projectId: PROJECT, keepSignIns: true, roots: ['/Users/me/app'] };
@@ -68,13 +67,17 @@ function signedInAsUser(host: string) {
 }
 
 describe('where an agent tab keeps its cookies', () => {
-  it('opens a site in the agent’s own storage, signed out where the user is signed in', async () => {
+  it('opens a site in the user’s storage, signed in where the user is signed in', async () => {
     const mine = await userOpens(`${SITE}/account`);
     signedInAsUser('docs.example.com');
     const opened = await agentOpens(`${SITE}/guide`);
     expect(partitionOf(mine.id)).toBe(USER);
-    expect(partitionOf(opened.tabId)).toBe(AGENT);
-    expect(net.requests.at(-1)).toEqual({ partition: AGENT, url: `${SITE}/guide`, cookie: null });
+    expect(partitionOf(opened.tabId)).toBe(USER);
+    expect(net.requests.at(-1)).toEqual({
+      partition: USER,
+      url: `${SITE}/guide`,
+      cookie: 'user-session',
+    });
   });
 
   it('opens a local page in the user’s storage, as before', async () => {
@@ -85,52 +88,44 @@ describe('where an agent tab keeps its cookies', () => {
     expect(net.requests.at(-1)!.cookie).toBe('user-session');
   });
 
-  it('moves to its own storage when a local page links or redirects to a site', async () => {
-    await userOpens(`${SITE}/account`);
-    signedInAsUser('docs.example.com');
+  it('keeps one view and one storage when a local page links or redirects to a site', async () => {
     const opened = await agentOpens(LOCAL);
+    signedInAsUser('docs.example.com');
+    const view = panes.tab(CHAT, opened.tabId)!.view();
     contentsOf(opened.tabId).followLink(`${SITE}/guide`);
     await settled();
-    expect(partitionOf(opened.tabId)).toBe(AGENT);
+    expect(panes.tab(CHAT, opened.tabId)!.view()).toBe(view);
+    expect(partitionOf(opened.tabId)).toBe(USER);
     expect(panes.tab(CHAT, opened.tabId)!.currentUrl()).toBe(`${SITE}/guide`);
 
     net.redirects.set(`${LOCAL}out`, `${SITE}/landing`);
     const second = await agentOpens(`${LOCAL}out`);
     await settled();
-    expect(partitionOf(second.tabId)).toBe(AGENT);
+    expect(partitionOf(second.tabId)).toBe(USER);
     const toSite = net.requests.filter((request) => request.url.startsWith(SITE));
-    expect(toSite.filter((request) => request.partition === USER).map((r) => r.url)).toEqual([
-      `${SITE}/account`,
-    ]);
-    expect(toSite.every((r) => r.partition === USER || r.cookie === null)).toBe(true);
+    expect(toSite.every((r) => r.partition === USER && r.cookie === 'user-session')).toBe(true);
   });
 
-  it('moves back to the user’s storage when a site leads to a local page', async () => {
-    const opened = await agentOpens(`${SITE}/guide`);
-    contentsOf(opened.tabId).followLink(LOCAL);
-    await settled();
-    expect(partitionOf(opened.tabId)).toBe(USER);
-  });
-
-  it('keeps a tab the agent opens from a link in the agent’s storage, as an agent tab', async () => {
+  it('opens a tab from an agent tab’s link as an agent tab in the user’s storage', async () => {
     const opened = await agentOpens(`${SITE}/guide`);
     expect(contentsOf(opened.tabId).windowOpen('https://other.example.org/page')).toBe('deny');
     await settled();
     const popup = panes.tabsOf(CHAT).find((tab) => tab.id !== opened.tabId)!;
     expect(popup.owner).toBe('agent');
-    expect(partitionOf(popup.id)).toBe(AGENT);
+    expect(partitionOf(popup.id)).toBe(USER);
   });
 
-  it('gives the tab the user’s storage once the user navigates it', async () => {
+  it('keeps the same view when the user takes an agent tab over', async () => {
     const opened = await agentOpens(`${SITE}/guide`);
     const tab = panes.tab(CHAT, opened.tabId)!;
+    const before = tab.view();
     tab.owner = 'user';
     await tab.load(`${SITE}/account`);
+    expect(tab.view()).toBe(before);
     expect(partitionOf(tab.id)).toBe(USER);
-    expect(net.liveViews()).toHaveLength(1);
   });
 
-  it('leaves a tab the user owns in the user’s storage when the agent acts on it', async () => {
+  it('leaves a tab the user owns theirs when the agent acts on it', async () => {
     const mine = await userOpens(`${SITE}/account`);
     net.answer = (method) =>
       method === 'Page.getLayoutMetrics'
@@ -145,15 +140,29 @@ describe('where an agent tab keeps its cookies', () => {
     expect(mine.owner).toBe('user');
   });
 
-  it('keeps one chat’s agent storage from another chat', () => {
-    const other = '99999999-2222-4333-8444-555555555555';
-    expect(agentPartition(other)).not.toBe(AGENT);
-    expect(AGENT.startsWith('persist:')).toBe(false);
+  it('uses the chat’s own in-memory storage for a chat without a project', async () => {
+    const opened = (await runBrowserOp(
+      panes,
+      {
+        op: 'open',
+        chatId: CHAT,
+        runId: null,
+        url: `${SITE}/guide`,
+        tab: undefined,
+        projectId: null,
+        keepSignIns: true,
+        roots: [],
+      },
+      signal,
+    )) as { tabId: string };
+    const chatOnly = partitionFor({ chatId: CHAT, projectId: null, keepSignIns: true });
+    expect(partitionOf(opened.tabId)).toBe(chatOnly);
+    expect([...net.sessions.keys()]).toEqual([chatOnly]);
   });
 });
 
 describe('a saved sign-in typed into an agent tab', () => {
-  it('signs the agent’s storage in and leaves the user’s storage alone', async () => {
+  it('signs the user’s storage in, so the sign-in stays for the user', async () => {
     const opened = await agentOpens(`${SITE}/login`);
     const login = loginDom();
     const typed: { partition: string; text: string }[] = [];
@@ -195,21 +204,22 @@ describe('a saved sign-in typed into an agent tab', () => {
     )) as { steps: number };
     expect(done.steps).toBe(1);
     expect(typed).toEqual([
-      { partition: AGENT, text: 'vault-user@example.test' },
-      { partition: AGENT, text: 'vault-Passw0rd!-unit' },
+      { partition: USER, text: 'vault-user@example.test' },
+      { partition: USER, text: 'vault-Passw0rd!-unit' },
     ]);
     expect(panes.tab(CHAT, opened.tabId)!.filled.size).toBe(2);
-    expect(net.sessions.get(USER)).toBeUndefined();
+    expect([...net.sessions.keys()]).toEqual([USER]);
   }, 15_000);
 });
 
-describe('the guards on the agent’s storage', () => {
+describe('the guards on the storage agent tabs share', () => {
   it('blocks Spark’s ports, denies permissions, cancels downloads and strips the token', async () => {
     await agentOpens(`${SITE}/guide`);
-    const session = net.sessions.get(AGENT)!;
+    const session = net.sessions.get(USER)!;
     expect(session.requestCancelled(`http://127.0.0.1:${API_PORT}/api/health`)).toBe(true);
     expect(session.requestCancelled(`ws://rebind.example.com:${API_PORT}/`)).toBe(true);
-    expect(session.requestCancelled('file:///Users/me/app/index.html')).toBe(true);
+    expect(session.requestCancelled('file:///etc/passwd')).toBe(true);
+    expect(session.requestCancelled('file:///Users/me/app/index.html')).toBe(false);
     expect(session.requestCancelled(`${SITE}/app.js`)).toBe(false);
     for (const permission of ['media', 'geolocation', 'notifications', 'clipboard-read']) {
       expect(session.permissionGranted(permission), permission).toBe(false);

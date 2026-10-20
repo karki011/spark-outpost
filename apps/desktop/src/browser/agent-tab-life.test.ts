@@ -226,21 +226,30 @@ describe('a tab handed to the user to sign in', () => {
 });
 
 describe('storage in developer tools', () => {
+  const JWT = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.c2lnbmF0dXJl';
   const storage = (tab: string) =>
     runBrowserOp(
       panes,
       { op: 'storage', chatId: CHAT, runId: RUN, tab, values: true },
       signal,
     ) as Promise<{
-      partition: string;
       valuesShown: boolean;
-      local: { key: string; value?: string }[];
+      local: { key: string; value?: string; masked?: true }[];
       cookies: { name: string; value?: string }[];
     }>;
 
   beforeEach(() => {
     net.answer = (method) => {
-      if (method === 'DOMStorage.getDOMStorageItems') return { entries: [['theme', 'dark']] };
+      if (method === 'DOMStorage.getDOMStorageItems') {
+        return {
+          entries: [
+            ['theme', 'dark'],
+            ['sb-abcd-auth-token', '{"user":"me"}'],
+            ['persist:root', JSON.stringify({ user: JSON.stringify({ accessToken: 'x' }) })],
+            ['last', JWT],
+          ],
+        };
+      }
       if (method === 'Network.getCookies') {
         return {
           cookies: [
@@ -271,21 +280,26 @@ describe('storage in developer tools', () => {
     };
   });
 
-  it('shows values only in the agent’s own storage on a website, and never an httpOnly cookie’s', async () => {
+  it('shows plain values in an agent tab, masks auth-looking ones and never a cookie value', async () => {
     const agentTab = await agentOpens('https://docs.example.com/');
-    const own = await storage(agentTab);
-    expect(own).toMatchObject({
-      partition: 'agent',
-      valuesShown: true,
-      local: [{ key: 'theme', value: 'dark' }],
-      cookies: [{ name: 'lang', value: 'en' }, { name: 'sid' }],
-    });
-    expect(own.cookies[1]).not.toHaveProperty('value');
+    const shown = await storage(agentTab);
+    expect(shown.valuesShown).toBe(true);
+    expect(shown.local.map(({ key, value, masked }) => ({ key, value, masked }))).toEqual([
+      { key: 'theme', value: 'dark', masked: undefined },
+      { key: 'sb-abcd-auth-token', value: undefined, masked: true },
+      { key: 'persist:root', value: undefined, masked: true },
+      { key: 'last', value: undefined, masked: true },
+    ]);
+    expect(shown.cookies.map((cookie) => cookie.name)).toEqual(['lang', 'sid']);
+    for (const cookie of shown.cookies) expect(cookie).not.toHaveProperty('value');
+  });
 
-    const local = await agentOpens('http://localhost:5173/');
-    const shared = await storage(local);
-    expect(shared).toMatchObject({ partition: 'user', valuesShown: false });
-    expect(shared.local[0]).not.toHaveProperty('value');
-    expect(shared.cookies[0]).not.toHaveProperty('value');
+  it('shows no values at all in a tab the user owns', async () => {
+    const mine = panes.createTab(CHAT, { owner: 'user', runId: null, url: 'about:blank' }, home)!;
+    await mine.load('https://docs.example.com/');
+    const shown = await storage(mine.id);
+    expect(shown.valuesShown).toBe(false);
+    expect(shown.local.length).toBeGreaterThan(0);
+    for (const item of shown.local) expect(item).not.toHaveProperty('value');
   });
 });
