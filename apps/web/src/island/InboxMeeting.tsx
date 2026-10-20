@@ -12,7 +12,11 @@ function NextMeeting({ event, calendar }: { event: CalendarEvent; calendar: Isla
   const link = event.link;
   const joinable = link !== null && joinOpen({ start, end }, calendar.at);
   return (
-    <div className="isl-inbox-meet" data-joinable={joinable || undefined}>
+    <section
+      className="isl-inbox-meet"
+      aria-label="Next meeting"
+      data-joinable={joinable || undefined}
+    >
       <button
         type="button"
         className="isl-inbox-meet-open"
@@ -50,7 +54,7 @@ function NextMeeting({ event, calendar }: { event: CalendarEvent; calendar: Isla
       >
         <XIcon />
       </button>
-    </div>
+    </section>
   );
 }
 

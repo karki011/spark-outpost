@@ -80,13 +80,12 @@ test('Choose lists each meeting with its own Join or Open, and Esc closes it', a
   await expect(choose(page)).toHaveCount(0);
 });
 
-test('the island list tags meetings that clash', async ({ page }) => {
+test('the inbox tags a next meeting that clashes', async ({ page }) => {
   await fakeHomeDesktop(page);
   await openIsland(page);
   await openHome(page);
-  const list = island(page).getByRole('region', { name: 'Next meetings' });
-  await expect(list.getByRole('listitem').first()).toContainText('clashes with 2 meetings');
-  await expect(list.getByRole('listitem').nth(1)).toContainText('clashes with 2 meetings');
+  const row = island(page).getByRole('region', { name: 'Next meeting' });
+  await expect(row).toContainText('clashes with 2 meetings');
 });
 
 test('⌘J opens Choose when several meetings are open to join, and joins nothing', async ({

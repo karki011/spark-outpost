@@ -78,6 +78,7 @@ beforeEach(() => {
 
 afterEach(() => {
   marked.mockReset();
+  localStorage.clear();
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -151,5 +152,20 @@ describe('useIslandCalendar meeting alert', () => {
     expect(hook.result.current.line).toBeNull();
     expect(hook.result.current.upcoming).toEqual([]);
     expect(marked).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a snooze when the island reloads mid-snooze, and shows the card once it ends', async () => {
+    const bridge = fakeBridge();
+    const first = mount();
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    act(() => bridge.act({ kind: 'snooze', key: standup.key, eventKey: null }));
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    first.unmount();
+    const again = fakeBridge();
+    mount();
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    expect(again.shown.filter(Boolean)).toEqual([]);
+    await act(async () => vi.advanceTimersByTimeAsync(61_000));
+    expect(again.shown.at(-1)?.key).toBe(standup.key);
   });
 });

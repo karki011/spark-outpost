@@ -46,9 +46,7 @@ test('hovering waits a moment before opening and a moment before closing', async
   await leaveIsland(page);
   await hoverIsland(page);
 
-  await island(page)
-    .getByRole('tab', { name: /^Chats/ })
-    .click();
+  await island(page).getByRole('button', { name: 'Island chimes' }).click();
   await page.mouse.move(5, 600);
   await page.waitForTimeout(800);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');

@@ -12,6 +12,7 @@ Newest first.
 
 | What changed                                                                                                                      | What to do                                                        |
 | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Spark Island is an inbox: answer, set aside and clear in place. Meeting **Dismiss** sticks; **Refresh now** on Today.             | See [Spark Island](desktop-companion.md#open-it).                 |
 | Sub-agents: one line, cards in the work panel.                                                                                    | See [Follow a turn](follow-a-turn.md#see-whats-happening).        |
 | Agents can start sub-chats themselves; phones can **Start** a draft.                                                              | See [Start it](outpost-stories.md#start-it-from-a-chat).          |
 | Model picker changed: no **Auto**; chats show their model.                                                                        | See [Pick a model](agent-mode.md#pick-a-model).                   |

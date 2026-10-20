@@ -22,12 +22,12 @@ Drag Scout to place it. At top centre it docks, half hidden when quiet.
 
 ## Open it
 
-1. Point at Scout itself: **Home** opens until the pointer leaves.
+1. Point at Scout itself: the inbox opens until the pointer leaves.
 2. Click inside to keep it open; **Esc** closes it.
 
-![Spark Island Home with the Now card and Needs you listing a waiting approval and a finished chat](images/companion-island-home-light.png)
+![The Spark Island inbox: a request with Allow, Deny and Later, a running chat and finished chats](images/companion-island-home-light.png)
 
-**Next meetings** opens a meeting in **Today**; **Needs you** opens what waits for you. In the **+** tab, select a Spark to chat, right-click to edit, or select **New Spark**.
+**Allow**, **Deny**, **Later**, **Join** and **✕** act in place; a row, **Answer in Spark** or **⌘O** opens Spark. **+** starts a chat, with your Sparks.
 
 Steps never show secrets. See [Spark Island states](statuses-and-limits.md#spark-island-states).
 
@@ -40,7 +40,7 @@ A chat you're viewing gets no line, chime or notification; opening one clears th
 With **Open requests by themselves** on, a card opens once until you answer.
 
 1. Press **⌥Space** to focus it.
-2. Press **Y** to allow once or **N** to deny.
+2. Press **Y** to allow once or **N** to deny, also for the inbox's top request.
 
 Edit cards show the first changed lines, never secret files.
 

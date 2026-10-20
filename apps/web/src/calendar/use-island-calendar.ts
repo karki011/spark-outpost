@@ -21,9 +21,10 @@ import {
 import { eventEnds, stillOn, useEventClock } from './event-clock.ts';
 import {
   dismissNudge,
-  NO_NUDGE_MARKS,
   nudgeHidden,
   purgeMarks,
+  readSnoozes,
+  saveSnoozes,
   snoozeEnds,
   snoozeNudge,
   withServerDismissed,
@@ -135,7 +136,8 @@ function useChoosing(home: IslandHomePanel) {
 }
 
 function useNudgeClock(live: ReturnType<typeof useCalendarNow>['data'] | null, updatedAt: number) {
-  const [marks, setMarks] = useState<NudgeMarks>(NO_NUDGE_MARKS);
+  const [marks, setMarks] = useState<NudgeMarks>(() => readSnoozes(Date.now()));
+  useEffect(() => saveSnoozes(marks), [marks]);
   const nudged = live?.nudge && live.nudge.kind !== 'wrap_up' ? live.nudge.group : null;
   const times = useMemo(
     () => [...eventEnds([...(live?.upcoming ?? []), ...(nudged ?? [])]), ...snoozeEnds(marks)],

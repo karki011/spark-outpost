@@ -20,8 +20,9 @@ Connect your calendars. About 2 minutes.
 
 - **Today**, or the clock below **Settings**, opens on **Month** and **Scheduled**; Enter opens **Day**.
 - Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before** or **Hold alerts during this**. Links open, numbers and emails copy.
+- **Refresh now** re-reads your calendars.
 
-A minute before a meeting, Scout lowers a card mid-screen: **Join**, **Snooze 1 min** or **Dismiss**; Esc and **⌘J** too. **Meeting alerts** switches to **Bubble from Scout**, with **Open** and **Choose** for clashes. Focus blocks hold chimes.
+A minute before a meeting, Scout lowers a card mid-screen: **Join**, **Snooze 1 min** or **Dismiss** (for good, that meeting only); Esc and **⌘J** too. **Meeting alerts**: **Bubble from Scout** adds **Open** and **Choose** for clashes. Focus blocks hold chimes.
 
 **Join meetings automatically** (off) joins at the start after a 10-second countdown you can cancel, never during a clash, a hold or while you're away. Times follow your Mac's 24-hour setting.
 

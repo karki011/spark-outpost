@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
-import { fakeHomeDesktop, island, nowCard, openHome, openIsland } from './island-home-desktop.ts';
+import { fakeHomeDesktop, island, openHome, openIsland } from './island-home-desktop.ts';
 import { openNotchIsland } from './island-notch-desktop.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { seedTerminal, setTerminalState } from './terminal-seed.ts';
@@ -30,7 +30,7 @@ test.beforeEach(async () => {
 });
 
 for (const [mode, theme] of Object.entries(THEMES)) {
-  test(`a working Terminal session shows its step line and model, then Finished when the turn ends (${mode})`, async ({
+  test(`a working Terminal session is a Running row in the inbox, with no commands or paths (${mode})`, async ({
     page,
   }) => {
     const [chat] = await seedChats([{ title: 'Port the parser', minutesAgo: 1 }]);
@@ -38,50 +38,14 @@ for (const [mode, theme] of Object.entries(THEMES)) {
     await fakeHomeDesktop(page, theme);
     await openIsland(page);
     await openHome(page);
-
-    const note = nowCard(page).locator('.isl-now-note');
-    await expect(nowCard(page).locator('.isl-now-agent')).toHaveText('Claude');
-    await expect(note).toHaveText('Running · 3 steps · 1 sub-agent · Sonnet 4.5');
-    for (const part of ['.isl-now-title', '.isl-now-agent', '.isl-now-note']) {
-      const cut = await nowCard(page)
-        .locator(part)
-        .evaluate((el) => el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight);
-      expect(cut, part).toBe(false);
-    }
-    await expect(nowCard(page).getByRole('list', { name: 'Latest steps' })).toContainText(
-      'Now: Running',
-    );
-    await expect(nowCard(page).locator('.isl-now-dot')).toHaveAttribute('data-state', 'working');
-    await expect(nowCard(page)).not.toContainText('$');
-    await expect(nowCard(page).getByRole('button', { name: /^Reply/ })).toHaveCount(0);
+    const running = island(page).getByRole('region', { name: /^Running/ });
+    await expect(running.getByRole('listitem')).toHaveCount(1);
+    await expect(running).toContainText('Port the parser');
+    await expect(running).not.toContainText('$');
+    await expect(running).not.toContainText('/Users/ada');
     await snap(page, `working-${mode}`);
-
     await setTerminalState(chat!, 'ready');
-    await expect(note).toHaveText('Terminal sessionFinished · 3 steps · 1 sub-agent · Sonnet 4.5');
-    await expect(nowCard(page).locator('.isl-now-fact')).toHaveText(/^Claude · (\S.* · )?parser$/);
-    await expect(nowCard(page).locator('.isl-now-dot')).toHaveAttribute('data-state', 'done');
-    const lineHeights = await note.evaluate((el) => {
-      const range = document.createRange();
-      range.selectNodeContents(el.lastChild!);
-      return [...range.getClientRects()].map((rect) => Math.round(rect.top));
-    });
-    expect(new Set(lineHeights).size).toBe(2);
-    expect(await note.evaluate((el) => el.lastChild!.textContent)).toBe(
-      'Finished\u00a0· 3\u00a0steps\u00a0· 1\u00a0sub-agent\u00a0· Sonnet\u00a04.5',
-    );
-    await snap(page, `done-${mode}`);
-
-    await island(page).getByRole('tab', { name: 'Chats' }).click();
-    const row = island(page).getByRole('option', { name: /Port the parser/ });
-    await expect(row.locator('.isl-schip')).toHaveText(/^Terminal session · Done · /);
-    await expect(row.locator('.isl-sp2')).toHaveText('parser · Claude');
-    await snap(page, `done-list-${mode}`);
-    await row.click();
-    await expect(island(page).locator('.isl-sstatus')).toHaveText(
-      'Finished · 3 steps · 1 sub-agent · Sonnet 4.5',
-    );
-    await expect(island(page).getByRole('button', { name: 'Ask for update' })).toBeDisabled();
-    await expect(island(page).getByRole('textbox')).toHaveCount(0);
+    await expect(running).toHaveCount(0);
   });
 }
 

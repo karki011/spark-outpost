@@ -140,21 +140,6 @@ test('Desktop companion screenshots', async ({ page }) => {
   await message.fill('');
   await page.keyboard.press('Escape');
 
-  await page.keyboard.press('Alt+Shift+Space');
-  const search = island(page).getByRole('combobox', { name: 'Search sessions' });
-  await expect(search).toBeFocused();
-  await search.fill('CSV');
-  await page.keyboard.press('Enter');
-  await island(page).getByRole('button', { name: 'Ask for update' }).click();
-  await expect(island(page).getByRole('status').filter({ hasText: 'Next:' })).toBeVisible({
-    timeout: 20_000,
-  });
-  await shootClip(page, 'companion-island-sessions', ISLAND_CLIP);
-  await page.keyboard.press('Escape');
-  await page.keyboard.press('Escape');
-  await page.mouse.move(640, 600);
-  await expect(island(page)).not.toHaveAttribute('data-view', 'panel', { timeout: 10_000 });
-
   await seedChats([
     {
       title: 'Run the invoice tests',
@@ -171,10 +156,10 @@ test('Desktop companion screenshots', async ({ page }) => {
   await shootClip(page, 'companion-island-card', { ...ISLAND_CLIP, height: 260 });
 
   await page.mouse.move(640, 600);
+  await page.keyboard.press('Escape');
   await page.keyboard.press('Alt+Shift+Space');
-  await page.keyboard.press('Meta+1');
-  await expect(island(page).getByRole('region', { name: /^Now/ })).toBeVisible();
-  await shootClip(page, 'companion-island-home', { x: 290, y: 0, width: 700, height: 240 });
+  await expect(island(page).getByRole('region', { name: /^Needs you/ })).toBeVisible();
+  await shootClip(page, 'companion-island-home', { x: 300, y: 0, width: 680, height: 420 });
 });
 
 test('Companion settings and updates screenshots', async ({ page }) => {
