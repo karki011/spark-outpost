@@ -4,6 +4,7 @@ import {
   agentCounts,
   agentLatestCommand,
   agentMeta,
+  agentNow,
   agentPurpose,
   agentsLine,
 } from './agent-cards.ts';
@@ -60,6 +61,19 @@ describe('an agent card', () => {
     expect(agentPurpose('List the test setup\nand how to run it', 'x')).toBe('List the test setup');
     expect(agentPurpose('Explore', 'Explore')).toBeNull();
     expect(agentPurpose('  ', 'Explore')).toBeNull();
+  });
+
+  it('adds the next sentence when the first one is too short to say much', () => {
+    expect(agentPurpose('Read-only. List every Express route in server/. Then stop.', 'x')).toBe(
+      'Read-only. List every Express route in server/.',
+    );
+  });
+
+  it('says what a working agent does now, falling back to its latest step', () => {
+    const steps = [{ name: 'Read `a.ts`', done: true }];
+    expect(agentNow(row({ step: 'Grep', steps }))).toBe('Grep');
+    expect(agentNow(row({ steps }))).toBe('Read `a.ts`');
+    expect(agentNow(row({ steps, state: 'done' }))).toBeNull();
   });
 
   it('keeps file names with dots inside the first sentence', () => {

@@ -36,11 +36,24 @@ export function agentsLine(counts: AgentCounts): string {
   );
 }
 
+const PURPOSE_MIN_CHARS = 24;
+
 export function agentPurpose(task: string, name: string): string | null {
   const text = task.trim();
   if (text === '' || text === name) return null;
-  const sentence = /^[\s\S]*?[.!?](?=\s|$)/.exec(text)?.[0] ?? text;
-  return sentence.split('\n')[0]!.trim();
+  const line = text.split('\n')[0]!.trim();
+  const sentences = line.match(/.*?[.!?](?=\s|$)|.+$/g) ?? [line];
+  let purpose = '';
+  for (const sentence of sentences) {
+    purpose = `${purpose} ${sentence.trim()}`.trim();
+    if (purpose.length >= PURPOSE_MIN_CHARS) break;
+  }
+  return purpose;
+}
+
+export function agentNow(row: SubagentRow): string | null {
+  if (row.state !== 'working') return null;
+  return row.step ?? row.steps.at(-1)?.name ?? null;
 }
 
 export function agentLatestCommand(row: SubagentRow): string | null {
