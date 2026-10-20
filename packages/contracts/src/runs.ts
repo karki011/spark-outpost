@@ -40,6 +40,7 @@ export const interruptionChoiceSchema = z.enum(['continue', 'fresh']);
 export type InterruptionChoice = z.infer<typeof interruptionChoiceSchema>;
 
 export const CONTINUE_MESSAGE = 'Continue from here';
+export const STOPPED_BY_QUIT = 'Stopped by Quit.';
 
 export const messageSourceSchema = z.enum(['ui', 'e2e', 'bench']);
 export type MessageSource = z.infer<typeof messageSourceSchema>;

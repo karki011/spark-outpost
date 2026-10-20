@@ -27,7 +27,7 @@ Failed command output stays open in the reply. **Open in terminal** shows it in 
 
 While Claude's background agents run, the chat shows **Waiting on 1 background agent**, then **Writing up results**. **Enter** reaches it; **Stop background tasks** ends them.
 
-The agent stays running between messages, up to 30 idle minutes. A turn it starts itself shows **Continued on its own**.
+The agent stays running between messages, up to 30 idle minutes. A turn it starts itself shows **Continued on its own**. Quit shows **Stopped by Quit**; your next message picks up.
 
 ## Queue messages
 
