@@ -43,6 +43,7 @@ export const SPEC_GROUPS = {
     'chat-ticks',
     'compaction',
     'composer-status',
+    'context-ring',
     'delete-busy-chat',
     'feedback',
     'feedback-note',

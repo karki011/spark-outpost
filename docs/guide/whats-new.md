@@ -13,7 +13,7 @@ Newest first.
 | What changed                                                                                                 | What to do                                                        |
 | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
 | Claude chats show **Waiting on…** for background agents, not Done.                                           | See [Background work](follow-a-turn.md#background-work).          |
-| Archiving the open chat opens a new chat; display fixes.                                                     | —                                                                 |
+| Archiving the open chat opens a new chat; display and context ring fixes.                                    | —                                                                 |
 | Today: readable notes, tidy short meetings, early **Join**.                                                  | See [Use it](calendar.md#use-it).                                 |
 | No line, chime or notification for a chat you're viewing. Spark Island takes the first click.                | See [Spark Island](desktop-companion.md#answer-a-card).           |
 | Browser: developer tools, network log, multi-site sign-ins, SSO handoff.                                     | See [Use the browser](use-the-browser.md).                        |

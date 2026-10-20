@@ -161,6 +161,7 @@ describe('Z.ai provider against the fake agent', { timeout: 20_000 }, () => {
         contextSize: 1_000_000,
         costUsd: null,
         readings: 'start_and_end',
+        model: 'claude-opus-5-5',
       },
     ]);
   });
