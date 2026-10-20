@@ -18,10 +18,26 @@ export function shortAgo(iso: string, now: number): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-export type Answered = ReadonlyMap<string, string>;
+export interface Answered {
+  approvals: ReadonlySet<string>;
+  chats: ReadonlyMap<string, string>;
+}
+
+export const NONE_ANSWERED: Answered = { approvals: new Set(), chats: new Map() };
+
+export function answer(answered: Answered, card: Card): Answered {
+  const approvals = new Set(answered.approvals);
+  if (card.approval) approvals.add(card.approval.id);
+  return { approvals, chats: new Map(answered.chats).set(card.chat.id, card.chat.updatedAt) };
+}
+
+function answeredCard(card: Card, answered: Answered): boolean {
+  if (card.approval) return answered.approvals.has(card.approval.id);
+  return answered.chats.get(card.chat.id) === card.chat.updatedAt;
+}
 
 export function stillAsking(cards: readonly Card[], answered: Answered): Card[] {
-  return cards.filter((card) => answered.get(card.chat.id) !== card.chat.updatedAt);
+  return cards.filter((card) => !answeredCard(card, answered));
 }
 
 export function answerable(card: Card): boolean {

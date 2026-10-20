@@ -57,7 +57,7 @@ import { useIslandBridge, useSparkFocus } from './use-island-bridge.ts';
 import { useIslandDrop } from './use-island-drop.ts';
 import { coreRects, flatRowRects, lineRects, minuteOf, useHoverIntent } from './island-hover.ts';
 import { useIslandKeys } from './use-island-keys.ts';
-import { stillAsking, type Answered } from './inbox-model.ts';
+import { answer, NONE_ANSWERED, stillAsking, type Answered } from './inbox-model.ts';
 import { restLine, type RestLine } from './island-rest-line.ts';
 import { useSetAside } from './set-aside.ts';
 import { useFastState } from './use-fast-state.ts';
@@ -109,7 +109,7 @@ export function IslandApp() {
   const [draft, setDraft] = useState<QuickDraft>({ text: '', projectId: undefined, level: null });
   const [followUp, setFollowUp] = useState<FollowUp | null>(null);
   const [announcement, setAnnouncement] = useState('');
-  const [answered, setAnswered] = useState<Answered>(new Map());
+  const [answered, setAnswered] = useState<Answered>(NONE_ANSWERED);
   const [now, setNow] = useState(() => minuteOf(Date.now()));
   const { moment, text: momentText, dismiss } = useMoments(data.chats, data.loaded);
   const greeting = useGreeting(voice, setup.data !== undefined);
@@ -324,7 +324,7 @@ export function IslandApp() {
     onLater: aside.setAside,
     onReview: (card: Card) => reviewCard(card.chat.id),
     onDecided: (card: Card, decided: Decided) => {
-      setAnswered((current) => new Map(current).set(card.chat.id, card.chat.updatedAt));
+      setAnswered((current) => answer(current, card));
       setAnnouncement(`${decided.title}. ${decided.sub}`);
     },
     onConnectors: settingsReady ? () => openSettings('connectors') : null,

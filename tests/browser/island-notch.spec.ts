@@ -99,7 +99,7 @@ for (const size of SIZES) {
     await shot(page, `${size}-needs-you`);
 
     await hover(page);
-    const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
+    const waiting = island(page).getByRole('region', { name: /^Needs you/ });
     await expect(waiting).toContainText(LONG_COMMAND);
     expect(await underNotch(page)).toEqual([]);
     await page.mouse.move(5, 600);
@@ -331,10 +331,7 @@ test('saved Full size shows blobs on a display without a notch and opens Home on
   expect(box.height).toBeLessThanOrEqual(90);
   await shot(page, 'full-flat');
   await hover(page);
-  await expect(island(page).getByRole('tab', { name: 'Home' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
+  await expect(island(page).getByRole('region', { name: /^Needs you/ })).toBeVisible();
   await page.mouse.move(5, 600);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
 });
