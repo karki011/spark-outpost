@@ -159,7 +159,7 @@ test('Desktop companion screenshots', async ({ page }) => {
   await page.keyboard.press('Escape');
   await page.keyboard.press('Alt+Shift+Space');
   await expect(island(page).getByRole('region', { name: /^Needs you/ })).toBeVisible();
-  await shootClip(page, 'companion-island-home', { x: 300, y: 0, width: 680, height: 420 });
+  await shootClip(page, 'companion-island-home', { x: 300, y: 0, width: 680, height: 320 });
 });
 
 test('Companion settings and updates screenshots', async ({ page }) => {
