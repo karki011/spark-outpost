@@ -50,6 +50,7 @@ export const SPEC_GROUPS = {
     'feedback-note',
     'interrupted-turn',
     'message-actions',
+    'phone-context-bar',
     'prompt-cache',
     'queue-strip',
     'quote-to-chat',

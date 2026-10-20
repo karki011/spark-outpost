@@ -116,11 +116,8 @@ test('the context bar chips never overlap at narrow, typical and wide windows', 
     await chatOnItsBranch(page, repo);
     const bar = page.locator('.ctxbar');
     const branch = bar.locator('.chat-branch');
-    const autonomy = bar.locator('.ctx-autonomy');
     await expect(branch).toContainText('· worktree');
-    await expect(autonomy).toBeVisible();
-    await autonomy.click();
-    await expect(page.locator('#work-panel')).toBeVisible();
+    await expect(bar.getByRole('button', { name: /^Spark autonomy/ })).toHaveCount(0);
 
     for (const width of WIDTHS) {
       if (width === 'tight') await page.addStyleTag({ content: TIGHT_COLUMN });
@@ -132,10 +129,13 @@ test('the context bar chips never overlap at narrow, typical and wide windows', 
       }
       expect(await overflowOf(bar)).toBeLessThanOrEqual(0);
       expect(await overflowOf(branch)).toBeLessThanOrEqual(0);
-      const kind = await branch.locator('.chat-branch-kind').boundingBox();
-      const chip = await autonomy.boundingBox();
-      expect(kind!.x + kind!.width).toBeLessThanOrEqual(chip!.x);
-      await expect(autonomy.locator('.ctx-autonomy-name')).toHaveText(/Full auto → PR|Automatic/);
+      const kind = (await branch.locator('.chat-branch-kind').boundingBox())!;
+      const setup = (await bar.locator('.ctx-setup').boundingBox())!;
+      const apart =
+        kind.x + kind.width <= setup.x ||
+        kind.y + kind.height <= setup.y ||
+        setup.y + setup.height <= kind.y;
+      expect(apart).toBe(true);
       for (const theme of ['light', 'graphite']) {
         await useTheme(page, theme);
         expect(await contrastViolations(page, '.ctxbar')).toEqual([]);

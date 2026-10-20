@@ -185,6 +185,7 @@ for (const [mode, theme] of Object.entries(THEMES)) {
     await useTheme(page, theme);
     await page.setViewportSize({ width: 390, height: 780 });
     await page.goto('/');
+    await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
     await page.keyboard.press('ControlOrMeta+Shift+K');
     await expect(field(page)).toBeFocused();
     await expect

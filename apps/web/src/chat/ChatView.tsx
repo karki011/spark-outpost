@@ -427,7 +427,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 }
                 {...(openAudit ? { onAudit: openAudit } : {})}
                 onStartFresh={() => startFresh.mutate()}
-                autonomy={autonomyLevel ? { level: autonomyLevel, onOpen: openAutonomy } : null}
                 agentCommands={commands.data?.commands ?? NO_COMMANDS}
                 agentName={providerName(
                   commands.data?.provider ?? detail.data?.settings.provider ?? '',

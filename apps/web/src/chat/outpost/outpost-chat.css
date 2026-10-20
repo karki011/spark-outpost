@@ -23,7 +23,10 @@ button.ctx-outpost:hover {
   color: var(--accent-text);
 }
 .ctx-handle {
-  flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--accent-text);
   font-weight: 500;
 }

@@ -192,6 +192,7 @@ test('fits a narrow window and a dark theme', async ({ page }) => {
   await chatWithRepo(page);
   await page.setViewportSize({ width: 390, height: 780 });
   await page.emulateMedia({ colorScheme: 'dark' });
+  await page.getByRole('button', { name: /^Chat details/ }).click();
   await openSetup(page);
   const box = await setup(page).boundingBox();
   expect(box).not.toBeNull();

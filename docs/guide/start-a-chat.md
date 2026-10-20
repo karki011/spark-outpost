@@ -27,7 +27,7 @@ Choose **Terminal** for native Claude Code or Codex: [Open a terminal](terminals
 
 To clone, select **Projects → + → Clone a repository**.
 
-![The context bar with a linked project, its branch and the Spark autonomy chip](images/chats-and-modes-project-light.png)
+![The context bar with a linked project, its branch and agent setup](images/chats-and-modes-project-light.png)
 
 To unlink, select **No project folder** in the menu.
 

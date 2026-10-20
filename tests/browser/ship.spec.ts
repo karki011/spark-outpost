@@ -4,7 +4,7 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { git, repoWithRemote } from '../../apps/server/test/ship-support.ts';
 import { connectorCard, connectorHead, connectorStatus } from './connector-cards.ts';
-import { pickPermission } from './permissions-kit.ts';
+import { autonomyLevels, openWorkPanel, pickPermission, workPanel } from './permissions-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { FAKE_GH_STATE, STUB_PORT } from './stub-config.ts';
@@ -180,7 +180,11 @@ test('Full auto runs to a PR: the reply and the result line show the PR link', a
   await expect(page.getByRole('button', { name: /^Permissions: / })).toHaveAccessibleName(
     'Permissions: Bypass permissions',
   );
-  await expect(page.getByRole('button', { name: /^Spark autonomy/ })).toHaveText('Full auto → PR');
+  const panelWasOpen = await openWorkPanel(page);
+  await expect(
+    autonomyLevels(page).getByRole('radio', { name: 'Full auto → PR', exact: true }),
+  ).toHaveAttribute('aria-checked', 'true');
+  if (!panelWasOpen) await workPanel(page).getByRole('button', { name: 'Hide work panel' }).click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Add a line to the notes #edit #plan');
   await input.press('Enter');

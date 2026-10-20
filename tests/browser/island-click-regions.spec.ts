@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { hitsIsland } from '../../packages/contracts/src/island-hit.ts';
 import { resetTestDatabase } from './database.ts';
 import {
@@ -19,6 +19,27 @@ const install = {
 };
 
 const line = (page: Page) => island(page).locator('.isl-restline');
+
+async function settledBox(page: Page) {
+  let last: Awaited<ReturnType<Locator['boundingBox']>> = null;
+  await expect
+    .poll(
+      async () => {
+        const now = await line(page).boundingBox();
+        const still =
+          last !== null &&
+          now !== null &&
+          Math.abs(now.x - last.x) < 0.5 &&
+          Math.abs(now.y - last.y) < 0.5 &&
+          Math.abs(now.height - last.height) < 0.5;
+        last = now;
+        return still;
+      },
+      { intervals: [100] },
+    )
+    .toBe(true);
+  return last!;
+}
 
 async function takesPointerAt(page: Page, x: number, y: number): Promise<boolean> {
   const regions = await latestRegions(page);
@@ -44,8 +65,13 @@ test('a request line takes the pointer as soon as it appears, with no hover firs
   expect(Date.now() - shownAt).toBeLessThan(REST_DELAY_MS);
   expect((await restSize(page))!.height).toBeGreaterThanOrEqual(box.y + box.height);
 
-  expect(await takesPointerAt(page, box.x + box.width + 6, right.y)).toBe(false);
-  expect(await takesPointerAt(page, right.x, box.y + box.height + 6)).toBe(false);
+  const still = await settledBox(page);
+  const middle = still.y + still.height / 2;
+  await expect.poll(() => takesPointerAt(page, still.x + still.width - 4, middle)).toBe(true);
+  expect(await takesPointerAt(page, still.x + still.width + 6, middle)).toBe(false);
+  expect(await takesPointerAt(page, still.x + still.width - 4, still.y + still.height + 6)).toBe(
+    false,
+  );
 
   await line(page).click();
   await expect(island(page)).toHaveAttribute('data-view', 'card');
