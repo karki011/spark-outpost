@@ -62,7 +62,6 @@ import {
 } from './composer/composer-hint.ts';
 import { SparkSuggestion } from '../teammates/SparkSuggestion.tsx';
 import { useMentionSparks } from '../teammates/use-mention-sparks.ts';
-import type { AutonomyControl } from './project/AutonomyChip.tsx';
 import { ContextBar } from './project/ContextBar.tsx';
 import { MentionPicker } from './project/MentionPicker.tsx';
 import { RepoFilePicker } from './project/RepoFilePicker.tsx';
@@ -102,7 +101,6 @@ interface ComposerProps {
   above?: ReactNode;
   onAudit?: () => void;
   onStartFresh?: () => void;
-  autonomy?: AutonomyControl | null;
   agentCommands?: readonly AgentCommand[];
   agentName?: string;
   autoFocus?: boolean;
@@ -135,7 +133,6 @@ export function Composer({
   above = null,
   onAudit,
   onStartFresh,
-  autonomy = null,
   agentCommands = NO_COMMANDS,
   agentName = 'Agent',
   autoFocus = true,
@@ -318,7 +315,6 @@ export function Composer({
           conversationId={conversationId}
           repos={repos}
           popover={repoPopover}
-          autonomy={autonomy}
           lead={contextLead}
           suggestion={
             <SparkSuggestion

@@ -12,6 +12,17 @@
     background 0.15s,
     color 0.15s;
 }
+.ctx-setup.labelled {
+  display: inline-flex;
+  gap: 6px;
+  width: auto;
+  padding: 0 8px;
+  font-size: 12.5px;
+}
+.ctx-setup.labelled .ctx-dot {
+  top: 2px;
+  right: 2px;
+}
 .ctx-setup:hover,
 .ctx-setup[aria-expanded='true'] {
   background: color-mix(in srgb, var(--panel) 70%, transparent);

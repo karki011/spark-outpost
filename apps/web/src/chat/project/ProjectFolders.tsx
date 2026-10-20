@@ -13,11 +13,19 @@ import { useChatRepos, useProjects, type RepoRequest } from './use-chat-repos.ts
 
 type RepoPopover = ReturnType<typeof usePopover<HTMLButtonElement, HTMLDivElement>>;
 
+interface ContextDetails {
+  id: string;
+  open: boolean;
+  folder: boolean;
+  items: ReactNode;
+}
+
 interface ProjectFoldersProps {
   conversationId: string;
   repos: Project[];
   popover: RepoPopover;
   lead?: ReactNode;
+  details?: ContextDetails | undefined;
   children?: ReactNode;
 }
 
@@ -28,6 +36,7 @@ export function ProjectFolders({
   repos,
   popover,
   lead = null,
+  details,
   children,
 }: ProjectFoldersProps) {
   const { open, toggle, setOpen, anchorRef, panelRef } = popover;
@@ -76,31 +85,58 @@ export function ProjectFolders({
 
   const error = change.isError && !browsing ? change.error.message : null;
 
+  const folderChip = (
+    <>
+      <button
+        ref={anchorRef}
+        type="button"
+        className={primary ? 'ctx-repo' : 'ctx-repo unset'}
+        aria-label={primary ? `Project folders: ${names.join(', ')}` : 'Choose project'}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={menuId}
+        {...projectTip.triggerProps}
+        onClick={() => {
+          change.reset();
+          toggle();
+        }}
+      >
+        <FolderIcon />
+        <span className="ctx-name">{primary ? repoSummary(names) : 'Choose project'}</span>
+        <ChevronIcon />
+      </button>
+      {projectTip.tooltip}
+    </>
+  );
+  const folderInDetails = details?.folder ?? false;
+
   return (
     <div className="ctxbar-wrap">
-      <div className="ctxbar">
-        {lead}
-        <button
-          ref={anchorRef}
-          type="button"
-          className={primary ? 'ctx-repo' : 'ctx-repo unset'}
-          aria-label={primary ? `Project folders: ${names.join(', ')}` : 'Choose project'}
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          aria-controls={menuId}
-          {...projectTip.triggerProps}
-          onClick={() => {
-            change.reset();
-            toggle();
-          }}
-        >
-          <FolderIcon />
-          <span className="ctx-name">{primary ? repoSummary(names) : 'Choose project'}</span>
-          <ChevronIcon />
-        </button>
-        {projectTip.tooltip}
-        {children}
-      </div>
+      {details ? (
+        <div className="ctxbar compact">
+          <div className="ctx-row">
+            {lead}
+            {!folderInDetails && folderChip}
+            {children}
+          </div>
+          <div
+            id={details.id}
+            className="ctx-more"
+            role="group"
+            aria-label="Chat details"
+            hidden={!details.open}
+          >
+            {folderInDetails && folderChip}
+            {details.items}
+          </div>
+        </div>
+      ) : (
+        <div className="ctxbar">
+          {lead}
+          {folderChip}
+          {children}
+        </div>
+      )}
       <RepoMenu
         id={menuId}
         open={open}

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { pickerPanel, workPanel } from './permissions-kit.ts';
+import { openWorkPanel, pickerPanel } from './permissions-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import {
   assertDemoDatabase,
@@ -121,8 +121,7 @@ test('Chats and modes screenshots', async ({ page }) => {
   await shoot(page, IMAGES, 'chats-and-modes-permissions');
   await page.keyboard.press('Escape');
 
-  await page.getByRole('button', { name: /^Spark autonomy: / }).click();
-  await expect(workPanel(page).getByRole('radiogroup', { name: 'Spark autonomy' })).toBeVisible();
+  await openWorkPanel(page);
   await shoot(page, IMAGES, 'chats-and-modes-autonomy');
 });
 

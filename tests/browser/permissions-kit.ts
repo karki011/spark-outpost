@@ -38,26 +38,29 @@ export async function pickMode(page: Page, mode: string): Promise<void> {
 
 export const permissionChip = (page: Page) => page.getByRole('button', { name: /^Permissions: / });
 
-export const autonomyChip = (page: Page) => page.getByRole('button', { name: /^Spark autonomy: / });
-
 export const workPanel = (page: Page) => page.locator('#work-panel');
+
+export const autonomyLevels = (page: Page) =>
+  workPanel(page).getByRole('radiogroup', { name: 'Spark autonomy' });
+
+export async function openWorkPanel(page: Page): Promise<boolean> {
+  const panel = workPanel(page);
+  const wasOpen = await panel.evaluate((element) => element.classList.contains('on'));
+  if (!wasOpen) await page.getByRole('button', { name: 'Show work panel' }).click();
+  await expect(autonomyLevels(page)).toBeVisible();
+  return wasOpen;
+}
 
 export async function pickAutonomy(page: Page, autonomy: string): Promise<void> {
   if (await pickerPanel(page).isVisible()) await page.keyboard.press('Escape');
   await expect(pickerPanel(page)).toBeHidden();
-  const current = await autonomyChip(page).getAttribute('aria-label');
-  if (current === `Spark autonomy: ${autonomy}`) return;
-  const panel = workPanel(page);
-  const wasOpen = await panel.evaluate((element) => element.classList.contains('on'));
-  await autonomyChip(page).click();
-  const levels = panel.getByRole('radiogroup', { name: 'Spark autonomy' });
-  const choice = levels.getByRole('radio', { name: autonomy, exact: true });
-  await choice.click();
+  const wasOpen = await openWorkPanel(page);
+  const choice = autonomyLevels(page).getByRole('radio', { name: autonomy, exact: true });
+  if ((await choice.getAttribute('aria-checked')) !== 'true') await choice.click();
   await expect(choice).toHaveAttribute('aria-checked', 'true');
-  await expect(autonomyChip(page)).toHaveAccessibleName(`Spark autonomy: ${autonomy}`);
   if (!wasOpen) {
-    await panel.getByRole('button', { name: 'Hide work panel' }).click();
-    await expect(panel).not.toHaveClass(/\bon\b/);
+    await workPanel(page).getByRole('button', { name: 'Hide work panel' }).click();
+    await expect(workPanel(page)).not.toHaveClass(/\bon\b/);
   }
 }
 
