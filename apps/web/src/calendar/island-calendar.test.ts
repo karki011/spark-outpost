@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { CalendarEvent, CalendarNow, CalendarNudge } from '@spark-outpost/contracts';
 import { at, event, link } from './test-fixtures.ts';
+import { chat } from '../outposts/test-fixtures.ts';
 import {
   calendarLine,
   catchUpText,
+  chatStates,
   hopKeys,
   NO_HELD,
   nudgeText,
@@ -51,6 +53,7 @@ const input = (calendar: CalendarNow | null, extra = {}) => ({
   catchUp: null,
   dismissed: new Set<string>(),
   marks: NO_NUDGE_MARKS,
+  chats: new Map(),
   ...extra,
 });
 
@@ -81,6 +84,33 @@ describe('nudgeText', () => {
       'Meeting in 15 min · the dashboards chat needs you',
     );
     expect(nudgeText(base, at(9, 50), 0)).toBe('Meeting in 15 min');
+  });
+});
+
+describe('a wrap-up about a chat', () => {
+  const wrapUp = (): CalendarNudge => ({
+    ...(nudge('wrap_up', 'Design review', at(10, 5)) as Extract<
+      CalendarNudge,
+      { kind: 'wrap_up' }
+    >),
+    chats: [{ id: CHAT, title: 'dashboards', reason: 'running' }],
+  });
+
+  it('follows the chat as it is now, not as it was when the nudge was made', () => {
+    const running = chatStates([chat(CHAT, { latestRun: { status: 'running' } as never })]);
+    expect(calendarLine(input(now({ nudge: wrapUp() }), { chats: running }))?.text).toBe(
+      'Meeting in 15 min · the dashboards chat is still running',
+    );
+    const asking = chatStates([chat(CHAT, { needsInput: true })]);
+    expect(calendarLine(input(now({ nudge: wrapUp() }), { chats: asking }))?.text).toBe(
+      'Meeting in 15 min · the dashboards chat needs you',
+    );
+  });
+
+  it('goes away once the chat has finished', () => {
+    const finished = chatStates([chat(CHAT, { latestRun: { status: 'succeeded' } as never })]);
+    expect(calendarLine(input(now({ nudge: wrapUp() }), { chats: finished }))).toBeNull();
+    expect(calendarLine(input(now({ nudge: wrapUp() })))).toBeNull();
   });
 });
 
@@ -125,7 +155,9 @@ describe('calendarLine', () => {
     const all = now({ hold, capture, nudge: nudge('before', 'Standup', at(10)) });
     expect(calendarLine(input(all, { catchUp }))?.text).toBe('Standup in 10 min');
     const quiet = { ...all, nudge: null };
-    expect(calendarLine(input(quiet, { catchUp }))?.text).toBe('Focus · alerts held until 11:30');
+    expect(calendarLine(input(quiet, { catchUp }))?.text).toBe(
+      'Focus · alerts held until 11:30 AM',
+    );
     expect(calendarLine(input({ ...quiet, hold: null }, { catchUp }))?.dismiss).toBe('catch_up');
     expect(calendarLine(input({ ...quiet, hold: null }))?.text).toBe(
       'Design review ended · anything to capture?',
@@ -138,7 +170,7 @@ describe('calendarLine', () => {
   it('names a meeting hold by its title', () => {
     expect(
       calendarLine(input(now({ hold: { ...hold, focus: false, title: 'Standup' } })))?.text,
-    ).toBe('Standup · alerts held until 11:30');
+    ).toBe('Standup · alerts held until 11:30 AM');
   });
 
   it('keeps the catch-up line after the calendar is disconnected', () => {
@@ -182,7 +214,7 @@ describe('calendarLine', () => {
     };
     const calendar = now({ upcoming: [standup, design, room], nudge: grouped });
     const line = calendarLine(input(calendar));
-    expect(line?.text).toBe('Standup + 2 more at 10:00');
+    expect(line?.text).toBe('Standup + 2 more at 10:00 AM');
     expect(line?.join).toBeNull();
     expect(line?.choose?.map((item) => item.title)).toEqual([
       'Standup',

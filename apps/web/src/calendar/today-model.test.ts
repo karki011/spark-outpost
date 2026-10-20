@@ -275,7 +275,7 @@ describe('Join', () => {
   });
 
   it('says when Join opens', () => {
-    expect(joinHint(standup, at(9))).toBe('from 9:20');
+    expect(joinHint(standup, at(9))).toBe('from 9:20 AM');
     expect(joinHint(standup, at(9, 21))).toBeNull();
   });
 });

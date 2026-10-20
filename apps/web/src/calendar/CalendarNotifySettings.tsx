@@ -18,8 +18,14 @@ const CAPTURE_LABEL = 'Anything to capture?';
 const HOLD_LABEL = 'Hold chimes during';
 const FOCUS_NAMES_LABEL = 'Focus blocks are events named';
 const PHONE_LABEL = 'Meeting alerts on paired devices';
+const ALERT_STYLE_LABEL = 'Meeting alerts';
+const ALERT_LEAD_LABEL = 'Alert at';
+const AUTO_JOIN_LABEL = 'Join meetings automatically';
 
 export const CALENDAR_NOTIFY_ROWS = [
+  ALERT_STYLE_LABEL,
+  ALERT_LEAD_LABEL,
+  AUTO_JOIN_LABEL,
   BEFORE_LABEL,
   NUDGE_CALENDARS_LABEL,
   WRAP_UP_LABEL,
@@ -38,6 +44,15 @@ const WRAP_UP = [
   { id: '0', label: 'Off' },
   { id: '15', label: '15 min' },
   { id: '30', label: '30 min' },
+];
+const ALERT_STYLE = [
+  { id: 'center', label: 'Center of the screen' },
+  { id: 'bubble', label: 'Bubble from Scout' },
+];
+const ALERT_LEAD = [
+  { id: '5', label: '5 min before' },
+  { id: '1', label: '1 min before' },
+  { id: '0', label: 'At start' },
 ];
 const HOLD = [
   { id: 'never', label: 'Never' },
@@ -167,6 +182,28 @@ export function CalendarMeetingSettings() {
     <>
       <section className="spark-group" aria-labelledby="notify-meetings">
         <h4 id="notify-meetings">Meetings</h4>
+        <ChoiceRow
+          label={ALERT_STYLE_LABEL}
+          hint="Center of the screen brings Scout down with the meeting over any app; the bubble stays at the island. Holds always use the bubble."
+          options={ALERT_STYLE}
+          value={settings.alertStyle}
+          onChange={(id) => save({ alertStyle: id as CalendarSettings['alertStyle'] })}
+        />
+        {settings.alertStyle === 'center' && (
+          <ChoiceRow
+            label={ALERT_LEAD_LABEL}
+            hint="When the meeting comes down to the middle of the screen."
+            options={ALERT_LEAD}
+            value={String(settings.alertLead)}
+            onChange={(id) => save({ alertLead: Number(id) as CalendarSettings['alertLead'] })}
+          />
+        )}
+        <SwitchRow
+          label={AUTO_JOIN_LABEL}
+          hint="At the start, Spark counts down 10 s and opens the meeting link, unless you cancel, are away, declined it, dismissed it or another meeting clashes."
+          checked={settings.autoJoin}
+          onChange={(on) => save({ autoJoin: on })}
+        />
         <ChoiceRow
           label={BEFORE_LABEL}
           hint="Spark Island hops, plays a short sound unless chimes are held or off, and shows Join."

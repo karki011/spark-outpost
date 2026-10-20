@@ -53,6 +53,7 @@ function line(kind: CalendarLine['kind'], text: string): CalendarLine {
     choose: null,
     capture: null,
     dismiss: null,
+    meeting: null,
   };
 }
 

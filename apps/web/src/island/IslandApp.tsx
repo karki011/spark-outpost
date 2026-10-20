@@ -51,7 +51,6 @@ import { homeSessions, quickStartProject } from './home-model.ts';
 import { useChimes, useIslandSound } from './island-sound.ts';
 import { useAutoExpandSetting, useIslandSize } from './island-size.ts';
 import { opensByItself, useAutoExpand } from './auto-expand.ts';
-import { restsQuietly } from './island-fit.ts';
 import { IslandShell } from './IslandShell.tsx';
 import type { QuickDraft } from './QuickChat.tsx';
 import { useAttachments } from '../chat/attachments/use-attachments.ts';
@@ -63,6 +62,8 @@ import { restLine, type RestLine } from './island-rest-line.ts';
 import { useSetAside } from './set-aside.ts';
 import { useFastState } from './use-fast-state.ts';
 import { useIslandData } from './use-island-data.ts';
+import { islandViewedChat, useIslandViewing } from './use-island-viewing.ts';
+import { PANEL_ANNOUNCEMENTS } from './panel-announcements.ts';
 import { useGreeting, useMoments } from './use-island-moments.ts';
 import { useThemeSync } from './use-theme-sync.ts';
 import { SpeechSeedContext } from '../voice/speech-seed.tsx';
@@ -75,13 +76,6 @@ const NO_IDS: string[] = [];
 const NO_SNOOZE: ReadonlySet<string> = new Set();
 const NO_HIDDEN: ReadonlySet<string> = new Set();
 const PANEL_KEYS = ['home', 'sessions', 'quick', 'ask'] as const;
-const PANEL_ANNOUNCEMENTS: Record<Panel, string> = {
-  home: 'Spark Island open. Home shows what is happening now.',
-  quick: 'New chat composer open. Enter to send, Escape to close; your draft is kept.',
-  sessions: 'Chats open. Type to search, arrows to move, Enter to open.',
-  ask: 'Ask Spark open.',
-};
-
 type Opener = 'hover' | 'user';
 
 export function IslandApp() {
@@ -105,6 +99,7 @@ export function IslandApp() {
   const [selected, setSelected] = useState<string | null>(null);
   const [note, setNote] = useState<Decided | null>(null);
   const [review, setReview] = useState<string | null>(null);
+  const [selfOpened, setSelfOpened] = useState<string | null>(null);
   const [wave, setWave] = useState(false);
   const [focusSignal, setFocusSignal] = useState(0);
   const [draftId, setDraftId] = useState(newDraftId);
@@ -147,6 +142,15 @@ export function IslandApp() {
     () => pendingCards(data.chats, data.approvalsByChat, aside.keys),
     [data.chats, data.approvalsByChat, aside.keys],
   );
+  const islandChatId = islandViewedChat({ review, selfOpened, focusSignal, panel, selected });
+  const { viewed, fresh, unviewed } = useIslandViewing({
+    openChatId: islandChatId,
+    chats: data.chats,
+    pending: allCards,
+    cards,
+    moment,
+    dismissMoment: dismiss,
+  });
   const row = useMemo(() => peekRow(data.chats, NO_HIDDEN, now), [data.chats, now]);
   const size = useIslandSize();
   const view = islandView({
@@ -156,7 +160,7 @@ export function IslandApp() {
     panel,
     cards: allCards,
     review,
-    nudge: !sparkFocused && cards.length > 0,
+    nudge: !sparkFocused && fresh.length > 0,
   });
   const waiting = useMemo(() => waitingCount(data.chats, NO_HIDDEN), [data.chats]);
   const feed = useMemo(() => companionFeed(data.chats), [data.chats]);
@@ -176,7 +180,8 @@ export function IslandApp() {
 
   const resting = view.kind === 'peek' || view.kind === 'now';
   const cardChat = 'card' in view ? (view.card?.chat ?? null) : null;
-  const line = view.kind === 'peek' ? restLine({ sparkFocused, cards, moment, momentText }) : null;
+  const line =
+    view.kind === 'peek' ? restLine({ sparkFocused, cards: fresh, moment, momentText }) : null;
   const viewAnnouncement = cardChat ? `Spark needs you: ${cardChat.title}.` : (momentText ?? '');
 
   const openPanel = (next: Panel, by: Opener = 'user') => {
@@ -196,12 +201,17 @@ export function IslandApp() {
   const calendar = useIslandCalendar(
     now,
     waiting,
+    data.chats,
     (text) => {
       setFollowUp(null);
       setDraft((current) => ({ ...current, text }));
       openPanel('quick');
     },
-    { open: panel === 'home', show: () => openPanel('home') },
+    {
+      open: panel === 'home',
+      show: () => openPanel('home'),
+      note: (title) => setNote({ title, sub: '' }),
+    },
   );
   const calendarLine = view.kind === 'peek' && !sparkFocused && !line ? calendar.line : null;
 
@@ -269,7 +279,6 @@ export function IslandApp() {
     blobRects: () => [...flatRowRects(rowRef.current), ...lineRects(islandRef.current)],
     peek: resting,
     hovered: hover,
-    restKey: `${row.sessions.length}:${row.more}:${size}:${waiting}:${restsQuietly(mood)}:${line?.key}:${line?.more}:${calendarLine?.key}`,
     onHover,
     onCommand: command,
     onBlur: () => {
@@ -303,6 +312,7 @@ export function IslandApp() {
   }, []);
 
   const pin = (event: SyntheticEvent) => {
+    setSelfOpened(null);
     if (panel && opener === 'hover' && event.target !== event.currentTarget) setOpener('user');
   };
 
@@ -317,13 +327,7 @@ export function IslandApp() {
   };
 
   const sessions = useMemo(() => rankedSessions(data.chats, NO_HIDDEN), [data.chats]);
-  useChimes(
-    sound?.on ?? false,
-    data.loaded ? data.chats : null,
-    moment,
-    sparkFocused,
-    calendar.hold,
-  );
+  useChimes(sound?.on ?? false, data.loaded ? data.chats : null, moment, viewed, calendar.hold);
   const desktop = sparkDesktop();
   const openSettings = (target: IslandSettingsTarget) => {
     closePanel();
@@ -338,7 +342,7 @@ export function IslandApp() {
   const home = {
     sessions: homeChats,
     chats: data.chats,
-    cards: allCards,
+    cards: unviewed,
     quickStart: quickStart ? { id: quickStart.id, name: quickStart.name } : null,
     onOpenHere: (id: string) => {
       setSelected(id);
@@ -394,9 +398,10 @@ export function IslandApp() {
   useAutoExpand({
     enabled: useAutoExpandSetting(),
     idle: opensByItself(view, { sparkFocused, dragging: grab.phase !== 'idle' }),
-    cards,
+    cards: fresh,
     pending: allCards,
     onExpand: (card) => {
+      setSelfOpened(card.chat.id);
       setFocusSignal(0);
       setReview(card.chat.id);
     },
@@ -406,7 +411,7 @@ export function IslandApp() {
     settleHover.current = (inside: boolean) => {
       if (inside) {
         if (grab.phase !== 'idle') return;
-        const target = hoverOpens(view, !sparkFocused ? (cards[0] ?? null) : null);
+        const target = hoverOpens(view, !sparkFocused ? (fresh[0] ?? null) : null);
         if (target?.kind === 'home') openPanel('home', 'hover');
         else if (target?.kind === 'card') openCard(target.card, 'hover');
         return;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { onScoutBody, shownBox } from './island-fit.ts';
+import { onScoutBody, type ScoutHit } from '@spark-outpost/contracts';
+import { shownBox } from './island-fit.ts';
 import { noteSeen } from './use-island-moments.ts';
 
 const MINUTE_MS = 60_000;
@@ -54,11 +55,18 @@ export function scoutRects(island: HTMLElement | null): DOMRect[] {
   return [DOMRect.fromRect(shownBox(scout.getBoundingClientRect(), scoutEdge(scout)))];
 }
 
-export function onScout(island: HTMLElement | null, x: number, y: number): boolean {
+export function scoutHit(island: HTMLElement | null): ScoutHit | null {
   const scout = island?.matches('.peek, [data-view="now"]')
     ? island.querySelector<HTMLElement>('.isl-scout-wrap')
     : null;
-  return scout ? onScoutBody(scout.getBoundingClientRect(), scoutEdge(scout), x, y) : false;
+  if (!scout) return null;
+  const { x, y, width, height } = scout.getBoundingClientRect();
+  return { box: { x, y, width, height }, edge: scoutEdge(scout) };
+}
+
+export function onScout(island: HTMLElement | null, x: number, y: number): boolean {
+  const hit = scoutHit(island);
+  return hit ? onScoutBody(hit.box, hit.edge, x, y) : false;
 }
 
 export function flatRowRects(row: HTMLElement | null): DOMRect[] {

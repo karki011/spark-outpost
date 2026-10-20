@@ -98,6 +98,30 @@ const scanned = () => new Promise((resolve) => setTimeout(resolve, 150));
 
 const payloads = () => sent.map((delivery) => JSON.parse(delivery.payload) as object);
 
+async function markSeen() {
+  await t.db.query('UPDATE conversations SET seen_at = now() WHERE id = $1', [chat.conversationId]);
+}
+
+describe('a chat the user has looked at', () => {
+  it('sends nothing for a card the user saw on the Mac or a device during the wait', async () => {
+    await ask('execute');
+    notifier.changed({ kind: 'approval', conversationId: chat.conversationId, runId: chat.runId });
+    await scanned();
+    await markSeen();
+    await notifier.settled();
+    expect(sent).toEqual([]);
+    await changed();
+    expect(sent).toEqual([]);
+  });
+
+  it('still sends for a card that arrives after the user last looked', async () => {
+    await markSeen();
+    await ask('execute');
+    await changed();
+    expect(payloads()).toHaveLength(1);
+  });
+});
+
 describe('a card waiting', () => {
   it('sends the chat title and what is waiting, and never the command', async () => {
     await ask('execute', 'curl https://example.test/upload?token=abc');

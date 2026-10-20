@@ -4,7 +4,6 @@ import { needsInput } from '../conversations/row-state.ts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { useCompanionStatus } from '../desktop/use-companion-status.ts';
 import type { Moment } from './island-model.ts';
-import { useOnScreenChat } from './on-screen-chat.ts';
 
 export type Chime = 'needs' | 'done' | 'failed';
 
@@ -65,14 +64,14 @@ export function waitingChats(chats: readonly ConversationSummary[]): string[] {
 export function needsChime(
   before: ReadonlySet<string>,
   waiting: readonly string[],
-  watchedChat: string | null,
+  viewed: ReadonlySet<string>,
 ): boolean {
-  return waiting.some((id) => !before.has(id) && id !== watchedChat);
+  return waiting.some((id) => !before.has(id) && !viewed.has(id));
 }
 
-export function momentChime(moment: Moment, watchedChat: string | null): Chime | null {
-  if (moment.kind === 'done') return 'done';
-  return moment.chatId === watchedChat ? null : 'failed';
+export function momentChime(moment: Moment, viewed: ReadonlySet<string>): Chime | null {
+  if (viewed.has(moment.chatId)) return null;
+  return moment.kind;
 }
 
 export interface ChimeHold {
@@ -97,31 +96,29 @@ export function useChimes(
   on: boolean,
   chats: readonly ConversationSummary[] | null,
   moment: Moment | null,
-  sparkFocused: boolean,
+  viewed: ReadonlySet<string>,
   hold: ChimeHold = NOT_HELD,
 ): void {
-  const onScreenChat = useOnScreenChat();
-  const watchedChat = sparkFocused ? onScreenChat : null;
-  const facts = useRef({ on, watchedChat, hold });
+  const facts = useRef({ on, viewed, hold });
   const seen = useRef<ReadonlySet<string> | null>(null);
   const chimedRun = useRef<string | null>(null);
   const waiting = useMemo(() => (chats ? waitingChats(chats) : null), [chats]);
 
   useEffect(() => {
-    facts.current = { on, watchedChat, hold };
-  }, [on, watchedChat, hold]);
+    facts.current = { on, viewed, hold };
+  }, [on, viewed, hold]);
 
   useEffect(() => {
     const before = seen.current;
     seen.current = waiting ? new Set(waiting) : null;
     if (!before || !waiting) return;
-    if (needsChime(before, waiting, facts.current.watchedChat)) sound('needs', facts.current);
+    if (needsChime(before, waiting, facts.current.viewed)) sound('needs', facts.current);
   }, [waiting]);
 
   useEffect(() => {
     if (!moment || chimedRun.current === moment.runId) return;
     chimedRun.current = moment.runId;
-    const chime = momentChime(moment, facts.current.watchedChat);
+    const chime = momentChime(moment, facts.current.viewed);
     if (chime) sound(chime, facts.current);
   }, [moment]);
 }

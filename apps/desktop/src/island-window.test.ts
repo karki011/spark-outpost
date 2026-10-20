@@ -54,6 +54,7 @@ vi.mock('electron', () => ({
   app: { isPackaged: true },
   BrowserWindow: native.BrowserWindow,
   globalShortcut: { register: vi.fn(), unregister: vi.fn() },
+  systemPreferences: { getUserDefault: () => false },
   screen: {
     getAllDisplays: () => native.displays,
     getPrimaryDisplay: () => native.displays[0],
@@ -190,6 +191,50 @@ describe('native island window', () => {
     handle.destroy();
   });
 
+  it('takes the pointer the moment it is over something the page shows, with no page round trip', async () => {
+    native.displays = [external];
+    const { handle } = open();
+    await Promise.resolve();
+    const ignoring = () => native.window.setIgnoreMouseEvents.mock.lastCall?.[0];
+    const { x, y, width } = native.window.bounds;
+    handle.setRegions({
+      width,
+      boxes: [{ x: 600, y: 30, width: 60, height: 20 }],
+      scout: null,
+    });
+    native.cursor = { x: x + 630, y: y + 40 };
+    handle.pointerMoved();
+    expect(ignoring()).toBe(false);
+    native.cursor = { x: x + 700, y: y + 40 };
+    vi.advanceTimersByTime(130);
+    expect(ignoring()).toBe(true);
+    native.cursor = { x: x + 630, y: y + 40 };
+    vi.advanceTimersByTime(20);
+    expect(ignoring()).toBe(false);
+    handle.destroy();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('keeps hitting the same spot right after the window shrinks to its resting strip', async () => {
+    native.displays = [external];
+    const { handle } = open();
+    await Promise.resolve();
+    const ignoring = () => native.window.setIgnoreMouseEvents.mock.lastCall?.[0];
+    const full = native.window.bounds;
+    handle.setRegions({
+      width: full.width,
+      boxes: [{ x: 600, y: 30, width: 60, height: 20 }],
+      scout: null,
+    });
+    handle.setRestSize({ width: 300, height: 80 });
+    const strip = native.window.bounds;
+    expect(strip.width).toBeLessThan(full.width);
+    native.cursor = { x: full.x + 630, y: full.y + 40 };
+    handle.pointerMoved();
+    expect(ignoring()).toBe(false);
+    handle.destroy();
+  });
+
   it('passes the pointer over a resting window to the page while it lets the pointer through', async () => {
     native.displays = [external];
     const { handle } = open();
@@ -199,7 +244,8 @@ describe('native island window', () => {
       native.window.webContents.send.mock.calls
         .filter(([channel]) => channel === IPC.islandPointer)
         .map(([, point]) => point);
-    const { x, y } = native.window.bounds;
+    const { x, y, width } = native.window.bounds;
+    handle.setRegions({ width, boxes: [{ x: 90, y: 0, width: 8, height: 8 }], scout: null });
     native.cursor = { x: x + 50, y: y + 12 };
     vi.advanceTimersByTime(120);
     expect(pointers()).toEqual([{ x: 50, y: 12 }]);

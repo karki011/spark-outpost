@@ -163,6 +163,7 @@ export const SPEC_GROUPS = {
   home: [
     'calendar',
     'calendar-agents',
+    'calendar-alert',
     'calendar-bubble',
     'calendar-busy',
     'calendar-clash',
@@ -195,6 +196,7 @@ export const SPEC_GROUPS = {
     'island',
     'island-ask',
     'island-chat',
+    'island-click-regions',
     'island-code',
     'island-drop',
     'island-home',

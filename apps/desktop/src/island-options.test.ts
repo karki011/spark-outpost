@@ -3,7 +3,7 @@ import { islandWindowOptions, trayTemplate } from './island-options.ts';
 
 describe('island window options', () => {
   it('is a transparent, frameless, non-focusable panel that never resizes', () => {
-    const options = islandWindowOptions('/app/preload.cjs', { x: 396, y: 0 });
+    const options = islandWindowOptions('/app/preload.cjs', { x: 396, y: 0 }, []);
     expect(options).toMatchObject({
       x: 396,
       y: 0,

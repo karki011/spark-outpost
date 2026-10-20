@@ -8,6 +8,7 @@ interface JoinButtonProps {
   label?: string;
   className?: string;
   plain?: boolean;
+  onJoined?: (event: CalendarEvent) => void;
 }
 
 export function JoinButton({
@@ -16,6 +17,7 @@ export function JoinButton({
   label = 'Join',
   className = '',
   plain = false,
+  onJoined,
 }: JoinButtonProps) {
   const link = event.link;
   if (!link) return null;
@@ -38,7 +40,10 @@ export function JoinButton({
       data-open={open || undefined}
       aria-label={name}
       title={open ? undefined : name}
-      onClick={() => openJoin(link.url)}
+      onClick={() => {
+        openJoin(link.url);
+        onJoined?.(event);
+      }}
     >
       {shown}
     </button>

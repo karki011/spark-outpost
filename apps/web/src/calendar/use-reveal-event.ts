@@ -8,7 +8,8 @@ export function useRevealEvent(eventKey: string | null, flash: number, ready: bo
     const block = document.querySelector<HTMLElement>(`[data-event-key="${CSS.escape(eventKey)}"]`);
     if (!block) return;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    block.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
+    const instant = reduced || !document.hasFocus();
+    block.scrollIntoView({ block: 'center', behavior: instant ? 'auto' : 'smooth' });
     block.dataset.pulse = 'true';
     const timer = window.setTimeout(() => delete block.dataset.pulse, PULSE_MS);
     return () => {

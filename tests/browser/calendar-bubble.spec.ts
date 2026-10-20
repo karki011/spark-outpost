@@ -84,21 +84,24 @@ test.afterAll(() => {
   rmSync(FAKE_CALENDAR_STATE, { force: true });
 });
 
-test('the nudge speaks from Scout, opens up on hover and snoozes', async ({ page }) => {
+test('the meeting card hangs from Scout with its details, opens Today and snoozes', async ({
+  page,
+}) => {
   await openNotchIsland(page, { size: 'large', autoExpand: false });
   await recordDesktop(page);
   await page.reload();
-  await expect(bubble(page)).toContainText(/^In [1-5] min\s*· Standup/);
-  await expect(bubble(page)).toContainText(/\d+:\d{2}–\d+:\d{2} · Zoom/);
-  await expect(bubble(page).getByRole('button', { name: 'Join Standup' })).toBeEnabled();
-
-  await bubble(page).hover();
-  await expect(bubble(page)).toContainText('Spark Work');
-  await expect(bubble(page)).toContainText('Daily sync: what changed since yesterday.');
+  await expect(bubble(page)).toContainText(/^In [1-5] min\s*Standup/);
+  await expect(bubble(page)).toContainText(/\d+:\d{2}( [AP]M)?–\d+:\d{2} [AP]M · 15 min/);
+  await expect(bubble(page)).toContainText('Zoom · Spark Work');
   await expect(bubble(page)).toContainText('Alex Wong, Ivan Marsh');
+  await expect(bubble(page)).toContainText('Daily sync: what changed since yesterday.');
+  await expect(bubble(page).getByRole('button', { name: 'Join Zoom: Standup' })).toBeEnabled();
+
   await bubble(page).getByRole('button', { name: 'Open' }).click();
   const standup = await eventKeyOf(page, 'Standup', apiNow(), apiNow() + DAY);
-  expect(await opened(page)).toEqual([`settings:today:${standup}`]);
+  await expect.poll(() => opened(page)).toEqual([`settings:today:${standup}`]);
+  await expect(bubble(page)).toBeHidden();
+  await page.reload();
 
   await bubble(page).getByRole('button', { name: 'Snooze 2 min' }).click();
   await expect(bubble(page)).toBeHidden();

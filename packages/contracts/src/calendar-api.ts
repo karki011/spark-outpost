@@ -19,6 +19,12 @@ export type CalendarHoldRule = z.infer<typeof calendarHoldRuleSchema>;
 
 const focusName = z.string().trim().min(1).max(60);
 
+export const MEETING_ALERT_STYLES = ['center', 'bubble'] as const;
+export const meetingAlertStyleSchema = z.enum(MEETING_ALERT_STYLES);
+export type MeetingAlertStyle = z.infer<typeof meetingAlertStyleSchema>;
+export const meetingAlertLeadSchema = z.union([z.literal(0), z.literal(1), z.literal(5)]);
+export type MeetingAlertLead = z.infer<typeof meetingAlertLeadSchema>;
+
 export const calendarSettingsSchema = z.object({
   beforeMinutes: z.union([z.literal(5), z.literal(10), z.literal(15)]),
   wrapUpMinutes: z.union([z.literal(0), z.literal(15), z.literal(30)]),
@@ -28,6 +34,9 @@ export const calendarSettingsSchema = z.object({
   phoneAlerts: z.boolean(),
   briefBlock: z.boolean(),
   agentsRead: z.boolean(),
+  alertStyle: meetingAlertStyleSchema,
+  alertLead: meetingAlertLeadSchema,
+  autoJoin: z.boolean(),
 });
 export type CalendarSettings = z.infer<typeof calendarSettingsSchema>;
 
@@ -43,6 +52,9 @@ export const CALENDAR_DEFAULT_SETTINGS: CalendarSettings = {
   phoneAlerts: false,
   briefBlock: true,
   agentsRead: false,
+  alertStyle: 'center',
+  alertLead: 1,
+  autoJoin: false,
 };
 
 export const calendarAccountSchema = z.object({

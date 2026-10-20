@@ -373,3 +373,13 @@ export function LaptopIcon() {
 export function CloudIcon() {
   return <StrokeIcon path="M7 18a4 4 0 0 1-.6-8 5.5 5.5 0 0 1 10.6-1.5A4.5 4.5 0 0 1 17 18z" />;
 }
+
+export function ClockIcon() {
+  return <StrokeIcon path="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2" />;
+}
+
+export function PeopleIcon() {
+  return (
+    <StrokeIcon path="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14a6 6 0 0 1 3.5 6" />
+  );
+}

@@ -3,12 +3,14 @@ import type {
   CalendarEvent,
   CalendarNow,
   CalendarNudge,
+  ConversationSummary,
 } from '@spark-outpost/contracts';
 import type { Chime } from '../island/island-sound.ts';
 import { countLabel } from '../ui/count-label.ts';
 import { clock, minutesUntil } from './calendar-format.ts';
 import { stillOn } from './event-clock.ts';
 import { nudgeHidden, type NudgeMarks } from './nudge-marks.ts';
+import { meetingParts, type MeetingParts } from './meeting-line.ts';
 import { joinTarget } from './today-model.ts';
 
 export interface HeldTally {
@@ -36,6 +38,7 @@ export interface CalendarLine {
   choose: CalendarEvent[] | null;
   capture: CalendarCapture | null;
   dismiss: 'catch_up' | 'capture' | null;
+  meeting: MeetingParts | null;
 }
 
 export interface CalendarLineInput {
@@ -45,6 +48,30 @@ export interface CalendarLineInput {
   catchUp: CatchUp | null;
   dismissed: ReadonlySet<string>;
   marks: NudgeMarks;
+  chats: ChatStates;
+}
+
+export type ChatStates = ReadonlyMap<string, 'running' | 'needs_you'>;
+
+export function chatStates(chats: readonly ConversationSummary[]): ChatStates {
+  const states = new Map<string, 'running' | 'needs_you'>();
+  for (const chat of chats) {
+    if (chat.archivedAt) continue;
+    if (chat.needsInput) states.set(chat.id, 'needs_you');
+    else if (chat.latestRun?.status === 'running' || chat.latestRun?.status === 'queued') {
+      states.set(chat.id, 'running');
+    }
+  }
+  return states;
+}
+
+export function liveWrapUp(nudge: CalendarNudge, states: ChatStates): CalendarNudge | null {
+  if (nudge.kind !== 'wrap_up') return nudge;
+  const chats = nudge.chats.flatMap((chat) => {
+    const reason = states.get(chat.id);
+    return reason ? [{ ...chat, reason }] : [];
+  });
+  return chats.length > 0 ? { ...nudge, chats } : null;
 }
 
 export function tallyHeld(tally: HeldTally, chime: Chime): HeldTally {
@@ -110,6 +137,7 @@ function holdLine(now: CalendarNow, join: CalendarEvent | null): CalendarLine | 
     choose: null,
     capture: null,
     dismiss: null,
+    meeting: null,
   };
 }
 
@@ -126,6 +154,7 @@ function captureLine(now: CalendarNow, dismissed: ReadonlySet<string>): Calendar
     choose: null,
     capture,
     dismiss: 'capture',
+    meeting: null,
   };
 }
 
@@ -142,6 +171,15 @@ function joinLine(now: CalendarNow, input: CalendarLineInput): CalendarLine | nu
     choose: null,
     capture: null,
     dismiss: null,
+    meeting: meetingParts({
+      title: target.title,
+      startsAt: target.start,
+      event: target,
+      count: 1,
+      chat: null,
+      waiting: 0,
+      at: input.at,
+    }),
   };
 }
 
@@ -167,6 +205,7 @@ function catchUpLine(text: string): CalendarLine {
     choose: null,
     capture: null,
     dismiss: 'catch_up',
+    meeting: null,
   };
 }
 
@@ -182,10 +221,21 @@ function liveNudge(now: CalendarNow, nudge: CalendarNudge, at: number): Calendar
 }
 
 function nudgeLine(now: CalendarNow, shown: CalendarNudge, input: CalendarLineInput) {
-  const nudge = liveNudge(now, shown, input.at);
+  const current = liveWrapUp(shown, input.chats);
+  const nudge = current ? liveNudge(now, current, input.at) : null;
   if (!nudge) return null;
   const group = nudgeGroupOf(nudge);
   const text = nudgeText(nudge, input.at, input.waiting);
+  const nudged = meetingOf(now, nudge.eventKey);
+  const meeting = meetingParts({
+    title: nudge.title,
+    startsAt: nudge.startsAt,
+    event: nudged ?? group[0] ?? null,
+    count: Math.max(1, group.length),
+    chat: nudge.kind === 'wrap_up' ? (nudge.chats[0] ?? null) : null,
+    waiting: nudge.kind === 'before' ? input.waiting : 0,
+    at: input.at,
+  });
   if (group.length > 1) {
     return {
       kind: 'nudge' as const,
@@ -197,10 +247,10 @@ function nudgeLine(now: CalendarNow, shown: CalendarNudge, input: CalendarLineIn
       choose: group,
       capture: null,
       dismiss: null,
+      meeting,
     };
   }
   if (nudgeHidden(input.marks, nudge.eventKey, input.at)) return null;
-  const nudged = meetingOf(now, nudge.eventKey);
   return {
     kind: 'nudge' as const,
     key: `${nudge.kind}:${nudge.eventKey}`,
@@ -211,6 +261,7 @@ function nudgeLine(now: CalendarNow, shown: CalendarNudge, input: CalendarLineIn
     choose: null,
     capture: null,
     dismiss: null,
+    meeting,
   };
 }
 

@@ -1,14 +1,19 @@
 import type { DayShape } from '@spark-outpost/contracts';
+import { hourCycle } from '../desktop/hour-cycle.ts';
+import { formatClock, formatHour, formatSpan } from './clock-format.ts';
 
 const MINUTE_MS = 60_000;
 
 export function clock(at: number): string {
-  const time = new Date(at);
-  return `${time.getHours()}:${String(time.getMinutes()).padStart(2, '0')}`;
+  return formatClock(at, hourCycle());
 }
 
 export function span(start: number, end: number): string {
-  return `${clock(start)}–${clock(end)}`;
+  return formatSpan(start, end, hourCycle());
+}
+
+export function hourMark(at: number): string {
+  return formatHour(at, hourCycle());
 }
 
 export function duration(minutes: number): string {

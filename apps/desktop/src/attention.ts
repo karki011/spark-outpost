@@ -49,6 +49,7 @@ export interface AttentionContext {
   enabled: boolean;
   islandShowing: boolean;
   sparkFocused: boolean;
+  viewed: ReadonlySet<string>;
 }
 
 export interface AttentionNotice {
@@ -57,6 +58,7 @@ export interface AttentionNotice {
   title: string;
   body: string;
   requests: string[];
+  chats: string[];
 }
 
 function summaryBody(fresh: readonly AttentionRequest[]): string {
@@ -74,6 +76,7 @@ export function noticesFor(fresh: readonly AttentionRequest[]): AttentionNotice[
       title: request.title,
       body: request.body,
       requests: [request.key],
+      chats: [request.chatId],
     }));
   }
   return [
@@ -83,12 +86,17 @@ export function noticesFor(fresh: readonly AttentionRequest[]): AttentionNotice[
       title: `${fresh.length} chats need you`,
       body: summaryBody(fresh),
       requests: fresh.map((request) => request.key),
+      chats: [...new Set(fresh.map((request) => request.chatId))],
     },
   ];
 }
 
 export function withdrawn(notice: AttentionNotice, waiting: ReadonlySet<string>): boolean {
   return !notice.requests.some((key) => waiting.has(key));
+}
+
+export function seenInSpark(notice: AttentionNotice, viewed: ReadonlySet<string>): boolean {
+  return notice.chats.every((chatId) => viewed.has(chatId));
 }
 
 export interface AttentionDecision {
@@ -102,7 +110,7 @@ export function decideAttention(context: AttentionContext): AttentionDecision {
   for (const request of context.report.requests) {
     if (seen.has(request.key)) continue;
     seen.add(request.key);
-    if (!context.seen.has(request.key)) fresh.push(request);
+    if (!context.seen.has(request.key) && !context.viewed.has(request.chatId)) fresh.push(request);
   }
   const quiet = !context.enabled || context.islandShowing || context.sparkFocused;
   return { seen, notify: quiet ? [] : noticesFor(fresh) };

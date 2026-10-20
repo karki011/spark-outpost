@@ -5,6 +5,7 @@ import {
   dockBadge,
   NO_ATTENTION,
   parseAttentionReport,
+  seenInSpark,
   withdrawn,
   type AttentionNotice,
 } from './attention.ts';
@@ -28,6 +29,7 @@ interface AttentionHostOptions {
 
 export interface AttentionHost {
   refresh(): void;
+  viewing(viewed: readonly string[]): void;
   dispose(): void;
 }
 
@@ -39,6 +41,7 @@ interface Shown {
 export function startAttentionHost(options: AttentionHostOptions): AttentionHost {
   let report: AttentionReport = NO_ATTENTION;
   let seen: ReadonlySet<string> = new Set();
+  let viewed: ReadonlySet<string> = new Set();
   let feed: AttentionFeed | null = null;
   const pages = attentionSources<WebContents>();
   const pageGone = new Map<WebContents, () => void>();
@@ -86,10 +89,11 @@ export function startAttentionHost(options: AttentionHostOptions): AttentionHost
       enabled: options.enabled(),
       islandShowing: options.islandShowing(),
       sparkFocused: options.sparkFocused(),
+      viewed,
     });
     seen = decision.seen;
     for (const [key, { notice }] of [...shown]) {
-      if (withdrawn(notice, seen)) forget(key);
+      if (withdrawn(notice, seen) || seenInSpark(notice, viewed)) forget(key);
     }
     const badge = showBadge();
     decision.notify.forEach(notify);
@@ -130,8 +134,16 @@ export function startAttentionHost(options: AttentionHostOptions): AttentionHost
   };
   ipcMain.on(IPC.attentionReport, onReport);
 
+  const viewing = (chats: readonly string[]) => {
+    viewed = new Set(chats);
+    for (const [key, { notice }] of [...shown]) {
+      if (seenInSpark(notice, viewed)) forget(key);
+    }
+  };
+
   return {
     refresh: showBadge,
+    viewing,
     dispose: () => {
       ipcMain.off(IPC.attentionReport, onReport);
       feed?.stop();

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { isPushEndpoint, pushMessage, quietDevice, SentKeys, TerminalWaits } from './push-plan.ts';
+import {
+  isPushEndpoint,
+  pushMessage,
+  quietDevice,
+  SentKeys,
+  TerminalWaits,
+  unseenPushes,
+} from './push-plan.ts';
 
 const CHAT = '0190a3b5-0000-7000-8000-000000000001';
 
@@ -70,6 +77,27 @@ describe('pushMessage', () => {
       title: 'Untitled chat',
       body: 'Has a plan for you to review',
     });
+  });
+});
+
+describe('unseenPushes', () => {
+  const at = Date.parse('2026-10-19T10:00:00Z');
+  const item = {
+    key: 'approval:a',
+    source: 'approval:a',
+    kind: 'approval' as const,
+    detail: null,
+    at,
+  };
+
+  it('keeps a card the user has not looked at since it appeared', () => {
+    expect(unseenPushes([item], null)).toEqual([item]);
+    expect(unseenPushes([item], new Date(at - 1000))).toEqual([item]);
+  });
+
+  it('drops a card the user looked at after it appeared', () => {
+    expect(unseenPushes([item], new Date(at))).toEqual([]);
+    expect(unseenPushes([item], new Date(at + 5000))).toEqual([]);
   });
 });
 

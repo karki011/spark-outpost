@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTooltip } from '../ui/Tooltip.tsx';
+import { hourCycle } from '../desktop/hour-cycle.ts';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { clockLabel, clockParts, clockTitle, type ClockPart } from './rail-clock-format.ts';
 import './rail-clock.css';
@@ -72,8 +73,9 @@ function ClockFace({ parts, decorative }: { parts: ClockPart[]; decorative: bool
 
 export function RailClock({ onOpen, onIntent }: RailClockProps) {
   const now = new Date(useMinuteClock());
-  const { triggerProps, tooltip } = useTooltip(clockTitle(now), { side: 'top' });
-  const parts = clockParts(now);
+  const cycle = hourCycle();
+  const { triggerProps, tooltip } = useTooltip(clockTitle(now, undefined, cycle), { side: 'top' });
+  const parts = clockParts(now, undefined, cycle);
   if (!onOpen) {
     return (
       <time className="rail-clock" dateTime={now.toISOString()}>
@@ -86,7 +88,7 @@ export function RailClock({ onOpen, onIntent }: RailClockProps) {
       <button
         type="button"
         className="rail-clock"
-        aria-label={`${clockLabel(now)}. Open Today`}
+        aria-label={`${clockLabel(now, undefined, cycle)}. Open Today`}
         {...triggerProps}
         onPointerEnter={(event) => {
           triggerProps.onPointerEnter(event);

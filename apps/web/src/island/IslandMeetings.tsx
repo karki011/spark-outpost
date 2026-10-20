@@ -30,7 +30,10 @@ function MeetingRow({ event, calendar }: { event: CalendarEvent; calendar: Islan
           className="isl-meet-join"
           aria-label={`Join ${event.title}`}
           title={`Join ${event.title}`}
-          onClick={() => openJoin(link.url)}
+          onClick={() => {
+            openJoin(link.url);
+            calendar.onJoined(event.key);
+          }}
         >
           <VideoIcon />
         </button>
@@ -54,6 +57,7 @@ function ChooseMeeting({
         now={calendar.at}
         calendarName={calendar.calendarName}
         onOpen={(event) => calendar.onOpenEvent(event.key)}
+        onJoined={(event) => calendar.onJoined(event.key)}
         buttonClass={{ join: 'isl-choose-act primary', open: 'isl-choose-act' }}
         focusFirst
       />

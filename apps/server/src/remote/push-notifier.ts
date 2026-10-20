@@ -11,7 +11,8 @@ import {
   quietDevice,
   SentKeys,
   TerminalWaits,
-  type PushCandidate,
+  unseenPushes,
+  type QueuedPush,
 } from './push-plan.ts';
 import { pushSubject } from './push-contact.ts';
 import type { PushSend } from './push-send.ts';
@@ -53,6 +54,7 @@ interface WaitingRow {
   id: string;
   detail: string;
   generation: number;
+  since: Date;
 }
 
 export function startPushNotifier(
@@ -64,7 +66,7 @@ export function startPushNotifier(
   const sent = new SentKeys();
   const terminals = new TerminalWaits();
   const scanning = new Set<string>();
-  const heldChats = new Map<string, PushCandidate[]>();
+  const heldChats = new Map<string, QueuedPush[]>();
   let stopped = false;
   let work: Promise<void> = Promise.resolve();
 
@@ -74,24 +76,35 @@ export function startPushNotifier(
     });
   };
 
-  async function waiting(conversationId: string): Promise<PushCandidate[]> {
+  async function waiting(conversationId: string): Promise<QueuedPush[]> {
     const { rows } = await db.query<WaitingRow>(
-      `SELECT 'approval' AS kind, a.id::text AS id, a.kind AS detail, 0 AS generation
+      `SELECT 'approval' AS kind, a.id::text AS id, a.kind AS detail, 0 AS generation,
+         a.created_at AS since
        FROM approvals a JOIN runs r ON r.id = a.run_id
        WHERE r.conversation_id = $1 AND a.status = 'pending' AND a.created_at >= $2
        UNION ALL
-       SELECT 'terminal', t.id::text, t.state, t.generation FROM native_terminal_sessions t
+       SELECT 'terminal', t.id::text, t.state, t.generation, t.updated_at
+       FROM native_terminal_sessions t
        WHERE t.conversation_id = $1 AND t.updated_at >= $2`,
       [conversationId, since],
     );
-    return rows.flatMap((row): PushCandidate[] => {
+    return rows.flatMap((row): QueuedPush[] => {
+      const at = row.since.getTime();
       if (row.kind === 'approval') {
         const source = `approval:${row.id}`;
-        return [{ key: source, source, kind: 'approval', detail: row.detail }];
+        return [{ key: source, source, kind: 'approval', detail: row.detail, at }];
       }
       const key = terminals.key(row.id, row.generation, row.detail);
-      return key ? [{ key, source: key, kind: 'terminal', detail: row.detail }] : [];
+      return key ? [{ key, source: key, kind: 'terminal', detail: row.detail, at }] : [];
     });
+  }
+
+  async function seenAt(conversationId: string): Promise<Date | null> {
+    const { rows } = await db.query<{ seen_at: Date | null }>(
+      'SELECT seen_at FROM conversations WHERE id = $1 AND workspace_id = $2',
+      [conversationId, workspaceId],
+    );
+    return rows[0]?.seen_at ?? null;
   }
 
   async function sendTo(target: PushTarget, payload: string, sender: Sender): Promise<void> {
@@ -139,13 +152,14 @@ export function startPushNotifier(
     await Promise.all(ready.targets.map((target) => sendTo(target, payload, ready.sender)));
   }
 
-  async function deliver(conversationId: string, items: PushCandidate[]): Promise<void> {
+  async function deliver(conversationId: string, items: QueuedPush[]): Promise<void> {
     if (deps.held?.()) {
       heldChats.set(conversationId, [...(heldChats.get(conversationId) ?? []), ...items]);
       return;
     }
     const still = new Set((await waiting(conversationId)).map((item) => item.source));
-    const live = items.filter((item) => still.has(item.source));
+    const unseen = unseenPushes(items, await seenAt(conversationId));
+    const live = unseen.filter((item) => still.has(item.source));
     if (live.length === 0) return;
     const ready = await sender();
     if (!ready) return;
@@ -155,7 +169,7 @@ export function startPushNotifier(
     await Promise.all(ready.targets.map((target) => sendTo(target, payload, ready.sender)));
   }
 
-  const batcher = new NotifyBatcher<PushCandidate>(
+  const batcher = new NotifyBatcher<QueuedPush>(
     options.batchMs ?? PUSH_BATCH_MS,
     (conversationId, items) => enqueue(() => deliver(conversationId, items)),
   );

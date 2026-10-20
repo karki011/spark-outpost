@@ -11,6 +11,7 @@ import {
   type IpcMainEvent,
   type IpcMainInvokeEvent,
 } from 'electron';
+import { parseIslandRegions } from '@spark-outpost/contracts';
 import { createCompanion, type Companion, type CompanionStatus } from './companion.ts';
 import {
   isIslandSize,
@@ -27,6 +28,9 @@ import { isSize } from './island-geometry.ts';
 import { trayTemplate } from './island-options.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
 import { appLayout } from './layout.ts';
+import { startMeetingAlertHost } from './meeting-alert-host.ts';
+import { startViewingHost } from './viewing-host.ts';
+import { watchHourCycle } from './hour-cycle.ts';
 import { startVoiceHost, type VoiceHost } from './voice/host.ts';
 
 interface CompanionHostOptions {
@@ -167,6 +171,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     });
   app.on('browser-window-focus', reportFocus);
   app.on('browser-window-blur', reportFocus);
+  app.on('did-become-active', reportFocus);
   ipcMain.handle(IPC.islandSparkFocused, (event) => fromIsland(event) && sparkFocused());
   ipcMain.handle(IPC.islandPickFolder, async (event) => {
     if (!fromIsland(event)) return null;
@@ -209,6 +214,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     if (!fromSpark(event) || typeof on !== 'boolean') return companion.status();
     const status = companion.setHideInShare(on);
     island?.setHideInShare(on);
+    meetingAlert.setHideInShare(on);
     return status;
   });
   ipcMain.handle(IPC.companionSetNotify, (event, on: unknown) =>
@@ -229,6 +235,14 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   });
   ipcMain.on(IPC.islandInteractive, (event, on: unknown) => {
     if (fromIsland(event) && typeof on === 'boolean') island!.setInteractive(on);
+  });
+  ipcMain.on(IPC.islandRegions, (event, value: unknown) => {
+    if (!fromIsland(event)) return;
+    const regions = parseIslandRegions(value);
+    if (regions) island!.setRegions(regions);
+  });
+  ipcMain.on(IPC.islandPointerMoved, (event) => {
+    if (fromIsland(event)) island!.pointerMoved();
   });
   ipcMain.on(IPC.islandFocusable, (event, on: unknown) => {
     if (fromIsland(event) && typeof on === 'boolean') island!.setFocusable(on);
@@ -270,6 +284,24 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     log: options.log,
   });
 
+  const stopHourCycle = watchHourCycle();
+  const viewing = startViewingHost({
+    trusted: fromSpark,
+    fromIsland,
+    onChange: (viewed) => attention?.viewing(viewed),
+  });
+
+  const meetingAlert = startMeetingAlertHost({
+    origin: options.origin,
+    preload: options.preload,
+    trusted: fromSpark,
+    fromIsland,
+    islandCenter: () => island?.center() ?? null,
+    sendToIsland: (channel, payload) => island?.post(channel, payload),
+    hideInShare: () => companion.status().hideInShare,
+    log: options.log,
+  });
+
   const layout = appLayout({
     isPackaged: app.isPackaged,
     appPath: app.getAppPath(),
@@ -306,6 +338,9 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     openChat,
     dispose: () => {
       attention?.dispose();
+      viewing.dispose();
+      stopHourCycle();
+      meetingAlert.dispose();
       voice?.dispose();
       companion.shutdown();
       globalShortcut.unregisterAll();
@@ -328,6 +363,8 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       }
       for (const channel of [
         IPC.islandInteractive,
+        IPC.islandRegions,
+        IPC.islandPointerMoved,
         IPC.islandFocusable,
         IPC.islandDrag,
         IPC.islandRestSize,
@@ -339,6 +376,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       }
       app.off('browser-window-focus', reportFocus);
       app.off('browser-window-blur', reportFocus);
+      app.off('did-become-active', reportFocus);
       tray.destroy();
     },
   };

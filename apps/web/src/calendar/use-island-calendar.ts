@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CalendarEvent } from '@spark-outpost/contracts';
+import type {
+  CalendarEvent,
+  ConversationSummary,
+  MeetingCountdown,
+} from '@spark-outpost/contracts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import type { Chime, ChimeHold } from '../island/island-sound.ts';
 import { calendarApi } from './calendar-api.ts';
 import {
   calendarLine,
+  chatStates,
   hopKeys,
   NO_HELD,
   tallyHeld,
@@ -22,6 +27,8 @@ import {
   type NudgeMarks,
 } from './nudge-marks.ts';
 import { todayState } from './today-model.ts';
+import { lineUnderAlert } from './meeting-alert.ts';
+import { useMeetingAlert } from './use-meeting-alert.ts';
 import { openTodayEvent } from './today-request.ts';
 import { useCalendarNow, useCalendarStatus } from './use-calendar.ts';
 
@@ -70,6 +77,10 @@ export interface IslandCalendar {
   onDismiss: (line: CalendarLine) => void;
   onSnooze: (event: CalendarEvent) => void;
   onDismissNudge: (event: CalendarEvent) => void;
+  countdown: MeetingCountdown | null;
+  onCancelJoin: () => void;
+  onJoinNow: () => void;
+  onJoined: (eventKey: string) => void;
 }
 
 function useHeldChimes(holdLabel: string | null) {
@@ -102,6 +113,7 @@ function useHeldChimes(holdLabel: string | null) {
 export interface IslandHomePanel {
   open: boolean;
   show: () => void;
+  note: (text: string) => void;
 }
 
 function useChoosing(home: IslandHomePanel) {
@@ -134,6 +146,7 @@ function useNudgeClock(live: ReturnType<typeof useCalendarNow>['data'] | null, u
 export function useIslandCalendar(
   minute: number,
   waiting: number,
+  chats: readonly ConversationSummary[],
   onQuickChat: (text: string) => void,
   home: IslandHomePanel,
 ): IslandCalendar {
@@ -152,6 +165,7 @@ export function useIslandCalendar(
       saveDismissed(next);
       return next;
     });
+  const liveChats = useMemo(() => chatStates(chats), [chats]);
   const line = calendarLine({
     now: live,
     at,
@@ -159,20 +173,31 @@ export function useIslandCalendar(
     catchUp: held.catchUp,
     dismissed,
     marks: nudges.marks,
+    chats: liveChats,
   });
   const { choosing, choose } = useChoosing(home);
+  const names = useMemo(
+    () => new Map((live?.calendars ?? []).map((choice) => [choice.key, choice.title])),
+    [live],
+  );
+  const autoJoin = useMeetingAlert({
+    live,
+    settings: ready ? (status.data?.settings ?? null) : null,
+    at,
+    held: holdLabel !== null,
+    marks: nudges.marks,
+    setMarks: nudges.setMarks,
+    names,
+    note: home.note,
+  });
   const clashes = useMemo(
     () =>
       live ? new Map(live.clashes.map((clash) => [clash.eventKey, clash.titles])) : NO_CLASHES,
     [live],
   );
-  const names = useMemo(
-    () => new Map((live?.calendars ?? []).map((choice) => [choice.key, choice.title])),
-    [live],
-  );
   return {
     connected: ready,
-    line,
+    line: line && lineUnderAlert(line, autoJoin.alert) ? null : line,
     hold: held.hold,
     at,
     upcoming: live ? stillOn(live.upcoming, at) : NO_MEETINGS,
@@ -180,6 +205,10 @@ export function useIslandCalendar(
     choosing,
     calendarName: (event) => names.get(event.calendarKey) ?? 'Calendar',
     hopKeys: hopKeys(live),
+    countdown: autoJoin.countdown,
+    onCancelJoin: autoJoin.cancelJoin,
+    onJoinNow: autoJoin.joinNow,
+    onJoined: autoJoin.markJoined,
     onOpenEvent: (eventKey) => openToday(eventKey),
     onChoose: choose,
     onSnooze: (event) =>

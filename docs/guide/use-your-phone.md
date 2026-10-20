@@ -12,7 +12,7 @@ You'll use Spark on another device; work stays on the Mac. About 5 minutes. Need
 2. Select **Pair a device**, then scan the code, or open the address and type it.
 3. Check the codes match, then **Confirm**.
 
-**Passkey.** On the device, select **Save a passkey for this device**. In another browser, choose **Sign in with a passkey**; no trip to the Mac. It never pairs a new device. **Devices** has **Allow passkey sign-in** and **Remove passkeys**.
+**Passkey.** On the device, select **Save a passkey for this device**, then use **Sign in with a passkey** in another browser. It never pairs a new device. **Devices** has **Allow passkey sign-in** and **Remove passkeys**.
 
 **Devices** renames or revokes a device, passkeys included; **Remove old entry** clears a duplicate. **What paired devices can do** holds the switches. On a phone, **More** holds **Pause Spark**, Remote control and Settings; Map and Mac-only tools are hidden.
 
@@ -22,11 +22,11 @@ A paired device can answer an agent's browser cards; the Browser pane stays on t
 
 **Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages and steps, with a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both start off.
 
-**Send now** stops the turn first; in Claude an earlier queued message goes first. **Deny** takes an optional reason the agent reads. Claude's terminal shows **Spark · phone connected**.
+**Send now** stops the turn first. **Deny** takes an optional reason. Claude's terminal shows **Spark · phone connected**.
 
 Messages shown aren't stored.
 
-**Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device**. It names the chat, never a command; [meeting alerts](calendar.md) say only "Meeting in 10 min". Push services see the **Sender contact**.
+**Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device**. It names the chat, never a command; [meeting alerts](calendar.md) say "Meeting in 10 min". Seen chats aren't pushed. Push services see the **Sender contact**.
 
 A device you're using gets none. iPhone needs iOS 16.4 or later and Spark on the Home Screen: save a passkey first, then sign in with it there.
 

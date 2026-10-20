@@ -108,6 +108,7 @@ export const PASSED_ENV = [
   'SPARK_CALENDAR_SEED',
   'SPARK_CALENDAR_SEED_STATE',
   'SPARK_CALENDAR_SEED_ONE',
+  'SPARK_FAKE_OPEN_EXTERNAL',
 ] as const;
 
 function envArgs(options: OpenOptions): string[] {

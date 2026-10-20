@@ -60,7 +60,9 @@ test('Choose lists each meeting with its own Join or Open, and Esc closes it', a
   await fakeHomeDesktop(page, 'graphite', false);
   await openIsland(page);
   const line = island(page).locator('.isl-calline');
-  await expect(line).toContainText(/^Standup \+ 2 more at \d+:\d+/);
+  await expect(line).toContainText(
+    /^Meetings in \d+ min · Standup \+ 2 more\d+:\d+( [AP]M)?–\d+:\d+ [AP]M · Choose one/,
+  );
   await expect(line.getByRole('button', { name: /^Join/ })).toHaveCount(0);
   await line.getByRole('button', { name: 'Choose one of 3 meetings' }).click();
   const list = choose(page);

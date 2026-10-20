@@ -9,7 +9,7 @@ import {
 } from '@spark-outpost/contracts';
 import { WarnIcon } from '../ui/icons.tsx';
 import { hasEnded } from './event-clock.ts';
-import { clock, span as spanText } from './calendar-format.ts';
+import { clock, hourMark, span as spanText } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
 import { block, HOUR_PX, hourMarks, offset, placeEvents } from './timeline-model.ts';
 import type { NoGap, TimelineSpan } from './today-model.ts';
@@ -176,7 +176,7 @@ function TimedEvents(props: DayTimelineProps) {
     <div className="tl" style={{ height }}>
       {hourMarks(span).map((at) => (
         <div key={at} className="tl-hour" style={{ top: offset(at, span) }} aria-hidden="true">
-          <span>{clock(at)}</span>
+          <span>{hourMark(at)}</span>
         </div>
       ))}
       {now !== null && now > span.start && (

@@ -118,9 +118,9 @@ test('Join waits until ten minutes before and shows the start time until then', 
   await expect(meetings(page).getByRole('button', { name: 'Join Standup' })).toHaveCount(0);
   await page.goto('/');
   const card = page.getByRole('region', { name: 'Upcoming' });
-  const join = card.getByRole('button', { name: /^Standup at \d+:\d+, Join opens at / });
+  const join = card.getByRole('button', { name: /^Standup at \d+:\d+ [AP]M, Join opens at / });
   await expect(join).toBeDisabled();
-  await expect(join).toHaveText(/^\d+:\d+$/);
+  await expect(join).toHaveText(/^\d+:\d+ [AP]M$/);
 });
 
 for (const size of ['small', 'large'] as const) {

@@ -20,7 +20,17 @@ export function snoozeNudge(
   end: number,
   at: number,
 ): NudgeMarks {
-  return new Map(marks).set(eventKey, { end, dismissed: false, snoozedUntil: at + SNOOZE_MS });
+  return snoozeNudgeFor(marks, eventKey, end, at, SNOOZE_MS);
+}
+
+export function snoozeNudgeFor(
+  marks: NudgeMarks,
+  eventKey: string,
+  end: number,
+  at: number,
+  ms: number,
+): NudgeMarks {
+  return new Map(marks).set(eventKey, { end, dismissed: false, snoozedUntil: at + ms });
 }
 
 export function nudgeHidden(marks: NudgeMarks, eventKey: string, at: number): boolean {

@@ -7,7 +7,7 @@ import { API_CHAT, FE_CHAT, DOCS_CHAT, chat } from '../outposts/test-fixtures.ts
 import type { Moment } from './island-model.ts';
 import { momentChime, needsChime, useChimes, waitingChats } from './island-sound.ts';
 
-const ON_SCREEN_KEY = 'spark-outpost.on-screen-chat';
+const NONE: ReadonlySet<string> = new Set();
 const OWN_NOTE = { needs: 880, done: 523.25, failed: 392 };
 const RUN_A = '0e000000-0000-4000-8000-000000000001';
 const RUN_B = '0e000000-0000-4000-8000-000000000002';
@@ -45,19 +45,19 @@ interface Props {
   on: boolean;
   chats: readonly ConversationSummary[] | null;
   moment: Moment | null;
-  focused: boolean;
+  viewed: ReadonlySet<string>;
 }
 
 const QUIET: Props = {
   on: true,
   chats: [chat(FE_CHAT), chat(API_CHAT)],
   moment: null,
-  focused: false,
+  viewed: NONE,
 };
 
 function chimes(first: Partial<Props> = {}, strict = false) {
   return renderHook(
-    (props: Props) => useChimes(props.on, props.chats, props.moment, props.focused),
+    (props: Props) => useChimes(props.on, props.chats, props.moment, props.viewed),
     { initialProps: { ...QUIET, ...first }, wrapper: strict ? StrictMode : undefined },
   );
 }
@@ -73,7 +73,6 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
-  localStorage.clear();
   tones.length = 0;
 });
 
@@ -85,19 +84,20 @@ describe('chime decisions', () => {
     ]);
   });
 
-  it('chimes for a chat that starts waiting unless it is the one being watched', () => {
-    expect(needsChime(new Set(), [FE_CHAT], null)).toBe(true);
-    expect(needsChime(new Set(), [FE_CHAT], FE_CHAT)).toBe(false);
-    expect(needsChime(new Set(), [FE_CHAT, API_CHAT], FE_CHAT)).toBe(true);
-    expect(needsChime(new Set([FE_CHAT]), [FE_CHAT], null)).toBe(false);
+  it('chimes for a chat that starts waiting unless the user is viewing it', () => {
+    expect(needsChime(new Set(), [FE_CHAT], NONE)).toBe(true);
+    expect(needsChime(new Set(), [FE_CHAT], new Set([FE_CHAT]))).toBe(false);
+    expect(needsChime(new Set(), [FE_CHAT, API_CHAT], new Set([FE_CHAT]))).toBe(true);
+    expect(needsChime(new Set([FE_CHAT]), [FE_CHAT], NONE)).toBe(false);
   });
 
-  it('keeps a failure in the watched chat silent and always plays done', () => {
+  it('keeps a finished or failed run in a viewed chat silent', () => {
     const failed: Moment = { kind: 'failed', chatId: FE_CHAT, runId: RUN_A };
-    expect(momentChime(failed, null)).toBe('failed');
-    expect(momentChime(failed, API_CHAT)).toBe('failed');
-    expect(momentChime(failed, FE_CHAT)).toBeNull();
-    expect(momentChime({ ...failed, kind: 'done' }, FE_CHAT)).toBe('done');
+    expect(momentChime(failed, NONE)).toBe('failed');
+    expect(momentChime(failed, new Set([API_CHAT]))).toBe('failed');
+    expect(momentChime(failed, new Set([FE_CHAT]))).toBeNull();
+    expect(momentChime({ ...failed, kind: 'done' }, NONE)).toBe('done');
+    expect(momentChime({ ...failed, kind: 'done' }, new Set([FE_CHAT]))).toBeNull();
   });
 });
 
@@ -127,23 +127,24 @@ describe('useChimes', () => {
     expect(played()).toEqual(['needs']);
   });
 
-  it('stays silent when Spark is focused on the chat that needs the user', () => {
-    localStorage.setItem(ON_SCREEN_KEY, FE_CHAT);
-    const hook = chimes({ chats: asking(), focused: true });
-    hook.rerender({ ...QUIET, focused: true, chats: asking(FE_CHAT) });
+  it('stays silent when the user is viewing the chat that needs them', () => {
+    const viewed = new Set([FE_CHAT]);
+    const hook = chimes({ chats: asking(), viewed });
+    hook.rerender({ ...QUIET, viewed, chats: asking(FE_CHAT) });
     expect(played()).toEqual([]);
   });
 
-  it('plays when Spark is focused on a different chat', () => {
-    localStorage.setItem(ON_SCREEN_KEY, FE_CHAT);
-    const hook = chimes({ chats: asking(), focused: true });
-    hook.rerender({ ...QUIET, focused: true, chats: asking(API_CHAT) });
+  it('plays when the user is viewing a different chat', () => {
+    const viewed = new Set([FE_CHAT]);
+    const hook = chimes({ chats: asking(), viewed });
+    hook.rerender({ ...QUIET, viewed, chats: asking(API_CHAT) });
     expect(played()).toEqual(['needs']);
   });
 
-  it('plays when the chat is on screen but Spark is not focused', () => {
-    localStorage.setItem(ON_SCREEN_KEY, FE_CHAT);
+  it('does not chime again for a request the user has since looked at', () => {
     const hook = chimes({ chats: asking() });
+    hook.rerender({ ...QUIET, chats: asking(FE_CHAT) });
+    hook.rerender({ ...QUIET, chats: asking(FE_CHAT), viewed: new Set([FE_CHAT]) });
     hook.rerender({ ...QUIET, chats: asking(FE_CHAT) });
     expect(played()).toEqual(['needs']);
   });
@@ -155,14 +156,11 @@ describe('useChimes', () => {
     expect(tones).toHaveLength(2);
   });
 
-  it('keeps the failure chime quiet when Spark is focused on that chat', () => {
-    localStorage.setItem(ON_SCREEN_KEY, FE_CHAT);
-    const hook = chimes({ focused: true });
-    hook.rerender({
-      ...QUIET,
-      focused: true,
-      moment: { kind: 'failed', chatId: FE_CHAT, runId: RUN_A },
-    });
+  it('keeps the done and failure chimes quiet when the user is viewing that chat', () => {
+    const viewed = new Set([FE_CHAT]);
+    const hook = chimes({ viewed });
+    hook.rerender({ ...QUIET, viewed, moment: { kind: 'failed', chatId: FE_CHAT, runId: RUN_A } });
+    hook.rerender({ ...QUIET, viewed, moment: { kind: 'done', chatId: FE_CHAT, runId: RUN_B } });
     expect(played()).toEqual([]);
   });
 
@@ -191,7 +189,7 @@ describe('useChimes', () => {
     const hold = { held: true, onHeld: (chime: string) => held.push(chime) };
     const hook = renderHook(
       (props: Props & { held: boolean }) =>
-        useChimes(props.on, props.chats, props.moment, props.focused, {
+        useChimes(props.on, props.chats, props.moment, props.viewed, {
           ...hold,
           held: props.held,
         }),
