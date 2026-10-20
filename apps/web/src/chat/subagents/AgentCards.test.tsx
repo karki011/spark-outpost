@@ -67,7 +67,7 @@ describe('AgentCards', () => {
 });
 
 describe('AgentsSection', () => {
-  it('shows the latest turn’s agents and takes focus when asked', () => {
+  it('shows the latest turn’s agents, or the turn whose View was chosen until a newer turn starts', () => {
     const board = createAgentBoard();
     render(
       <AgentBoardContext value={board}>
@@ -87,7 +87,16 @@ describe('AgentsSection', () => {
     });
     expect(screen.getByRole('heading', { name: 'Agents · 2' })).toBeTruthy();
 
-    act(() => board.forget('new'));
+    act(() => board.open('old'));
+    expect(screen.getByRole('heading', { name: 'Agents · 1' })).toBeTruthy();
+
+    act(() => board.show({ runId: 'next', order: '2026-10-20T03:00:00Z', rows, live: true }));
+    expect(screen.getByRole('heading', { name: 'Agents · 2' })).toBeTruthy();
+
+    act(() => {
+      board.forget('next');
+      board.forget('new');
+    });
     expect(screen.getByRole('heading', { name: 'Agents · 1' })).toBeTruthy();
   });
 });

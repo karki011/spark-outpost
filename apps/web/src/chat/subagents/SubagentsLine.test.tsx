@@ -24,12 +24,12 @@ const rows = [row('a', 'done'), row('b', 'working'), row('c', 'working')];
 
 describe('SubagentsLine', () => {
   it('renders nothing without sub-agents', () => {
-    const { container } = render(<SubagentsLine rows={[]} live />);
+    const { container } = render(<SubagentsLine runId="run-1" rows={[]} live />);
     expect(container.firstChild).toBeNull();
   });
 
   it('says what it waits on in one status line, with a Scout per agent', () => {
-    const { container } = render(<SubagentsLine rows={rows} live />);
+    const { container } = render(<SubagentsLine runId="run-1" rows={rows} live />);
     expect(screen.getByRole('status').textContent).toBe(
       'Waiting on 2 agents · 1 done · writing up when all finish',
     );
@@ -44,7 +44,7 @@ describe('SubagentsLine', () => {
   });
 
   it('settles every Scout once the turn has ended', () => {
-    const { container } = render(<SubagentsLine rows={rows} live={false} />);
+    const { container } = render(<SubagentsLine runId="run-1" rows={rows} live={false} />);
     expect(container.querySelectorAll('.sl-scout[data-working]')).toHaveLength(0);
     expect(screen.getByRole('status').textContent).toBe('3 agents · 1 done');
   });
@@ -53,15 +53,15 @@ describe('SubagentsLine', () => {
     const open = vi.fn();
     render(
       <OpenAgentsContext value={open}>
-        <SubagentsLine rows={rows} live />
+        <SubagentsLine runId="run-1" rows={rows} live />
       </OpenAgentsContext>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'View agents' }));
-    expect(open).toHaveBeenCalledOnce();
+    expect(open).toHaveBeenCalledExactlyOnceWith('run-1');
   });
 
   it('shows the cards in place where there is no side panel', () => {
-    render(<SubagentsLine rows={rows} live />);
+    render(<SubagentsLine runId="run-1" rows={rows} live />);
     const view = screen.getByRole('button', { name: 'View agents' });
     fireEvent.click(view);
     expect(view.getAttribute('aria-expanded')).toBe('true');

@@ -8,7 +8,7 @@ interface OpensWork {
 export interface ChatAgents {
   board: AgentBoard;
   has: boolean;
-  open(panel: OpensWork): void;
+  open(panel: OpensWork, runId: string): void;
 }
 
 export function useChatAgents(): ChatAgents {
@@ -17,9 +17,9 @@ export function useChatAgents(): ChatAgents {
   return {
     board,
     has: (shown?.rows.length ?? 0) > 0,
-    open(panel) {
+    open(panel, runId) {
       panel.setView('work');
-      board.requestFocus();
+      board.open(runId);
     },
   };
 }

@@ -14,13 +14,14 @@ export interface AgentBoard {
   show(entry: BoardEntry): void;
   forget(runId: string): void;
   focusRequest(): number;
-  requestFocus(): void;
+  open(runId: string): void;
 }
 
 export function createAgentBoard(): AgentBoard {
   const entries = new Map<string, BoardEntry>();
   const listeners = new Set<() => void>();
   let latest: BoardEntry | null = null;
+  let picked: string | null = null;
   let focusRequest = 0;
   const notify = () => {
     for (const listener of listeners) listener();
@@ -39,7 +40,7 @@ export function createAgentBoard(): AgentBoard {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    shown: () => latest,
+    shown: () => (picked === null ? null : entries.get(picked)) ?? latest,
     show(entry) {
       const known = entries.get(entry.runId);
       const same =
@@ -48,6 +49,7 @@ export function createAgentBoard(): AgentBoard {
         known.live === entry.live &&
         known.rows === entry.rows;
       if (same) return;
+      if (!known && latest && entry.order.localeCompare(latest.order) > 0) picked = null;
       entries.set(entry.runId, entry);
       changed();
     },
@@ -55,7 +57,8 @@ export function createAgentBoard(): AgentBoard {
       if (entries.delete(runId)) changed();
     },
     focusRequest: () => focusRequest,
-    requestFocus() {
+    open(runId) {
+      picked = runId;
       focusRequest += 1;
       notify();
     },

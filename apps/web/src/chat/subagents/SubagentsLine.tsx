@@ -5,7 +5,7 @@ import { BlobScout } from '../../brand/BlobScout.tsx';
 import { AgentCards } from './AgentCards.tsx';
 import { agentCounts, agentsLine } from './agent-cards.ts';
 
-export const OpenAgentsContext = createContext<(() => void) | null>(null);
+export const OpenAgentsContext = createContext<((runId: string) => void) | null>(null);
 
 const SCOUTS_SHOWN = 5;
 
@@ -28,11 +28,12 @@ function Scouts({ rows, live }: { rows: readonly SubagentRow[]; live: boolean })
 }
 
 interface SubagentsLineProps {
+  runId: string;
   rows: readonly SubagentRow[];
   live: boolean;
 }
 
-export function SubagentsLine({ rows, live }: SubagentsLineProps) {
+export function SubagentsLine({ runId, rows, live }: SubagentsLineProps) {
   const openAgents = use(OpenAgentsContext);
   const [open, setOpen] = useState(false);
   const listId = useId();
@@ -47,7 +48,12 @@ export function SubagentsLine({ rows, live }: SubagentsLineProps) {
           {text}
         </span>
         {openAgents ? (
-          <button type="button" className="sl-view" aria-label="View agents" onClick={openAgents}>
+          <button
+            type="button"
+            className="sl-view"
+            aria-label="View agents"
+            onClick={() => openAgents(runId)}
+          >
             View <span aria-hidden="true">→</span>
           </button>
         ) : (

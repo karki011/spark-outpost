@@ -265,7 +265,7 @@ export function SoloTurn({
           <StepList log={log} />
         </div>
       )}
-      <SubagentsLine rows={subagents} live={working} />
+      <SubagentsLine runId={run.id} rows={subagents} live={working} />
       <PlanSavedLine detail={detail} runId={run.id} />
       <RailFlags detail={detail} runId={run.id} />
       {cards.decided.map(approvalCard)}
