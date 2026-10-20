@@ -40,7 +40,8 @@ function Row({ icon, tone, children }: { icon: ReactNode; tone?: 'warn'; childre
   );
 }
 
-function JoinAction({ event, at }: { event: CalendarEvent; at: number }) {
+function JoinAction({ event, calendar }: { event: CalendarEvent; calendar: IslandCalendar }) {
+  const at = calendar.at;
   const link = event.link;
   if (!link) return null;
   const { start, end } = spanOf(event);
@@ -50,7 +51,10 @@ function JoinAction({ event, at }: { event: CalendarEvent; at: number }) {
         type="button"
         className="isl-calline-act primary"
         aria-label={`${joinLabel(event)}: ${event.title}`}
-        onClick={() => openJoin(link.url)}
+        onClick={() => {
+          openJoin(link.url);
+          calendar.onJoined(event.key);
+        }}
       >
         {joinLabel(event)}
       </button>
@@ -139,7 +143,7 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
       {!compact && agenda && <p className="isl-meet-agenda">{agenda}</p>}
       <AutoJoin event={event} calendar={calendar} />
       <div className="isl-meet-acts">
-        <JoinAction event={event} at={calendar.at} />
+        <JoinAction event={event} calendar={calendar} />
         <button
           type="button"
           className="isl-calline-act"

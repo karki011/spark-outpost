@@ -13,6 +13,7 @@ import {
   AUTO_JOIN_COUNTDOWN_MS,
   autoJoinPlan,
   meetingAlert,
+  type AutoJoinPlan,
   type Presence,
 } from './meeting-alert.ts';
 import { dismissNudge, snoozeNudgeFor, type NudgeMarks } from './nudge-marks.ts';
@@ -56,6 +57,7 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
   const times = useMemo(() => alertTimes(live, settings), [live, settings]);
   const at = Math.max(options.at, useEventClock(times));
   const [joined, setJoined] = useState<ReadonlySet<string>>(new Set());
+  const [cancelled, setCancelled] = useState<ReadonlySet<string>>(new Set());
   const [countdown, setCountdown] = useState<MeetingCountdown | null>(null);
   const latest = useRef(options);
   useEffect(() => {
@@ -83,47 +85,67 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
   });
 
   const events = live?.upcoming;
+  const plan = useRef({ events, held, marks, joined, cancelled });
+  useEffect(() => {
+    plan.current = { events, held, marks, joined, cancelled };
+  });
+  const planNow = async (at: number): Promise<AutoJoinPlan> => {
+    const presence = await (sparkDesktop()?.meetingAlert?.presence() ?? Promise.resolve(HERE));
+    const current = plan.current;
+    return autoJoinPlan({
+      events: current.events ?? [],
+      autoJoin: true,
+      at,
+      held: current.held,
+      marks: current.marks,
+      presence: parsePresence(presence),
+      joined: new Set([...current.joined, ...current.cancelled]),
+    });
+  };
+  const planNowRef = useRef(planNow);
+  useEffect(() => {
+    planNowRef.current = planNow;
+  });
+
   useEffect(() => {
     if (!settings?.autoJoin || !events || countdown) return;
     let active = true;
-    const presence = sparkDesktop()?.meetingAlert?.presence() ?? Promise.resolve(HERE);
-    void presence.then((value) => {
-      if (!active) return;
-      const plan = autoJoinPlan({
-        events,
-        autoJoin: true,
-        at,
-        held,
-        marks,
-        presence: parsePresence(value),
-        joined,
-      });
-      if ('join' in plan) {
-        setCountdown({ eventKey: plan.join.key, deadline: Date.now() + AUTO_JOIN_COUNTDOWN_MS });
-      }
+    void planNowRef.current(at).then((next) => {
+      if (!active || !('join' in next)) return;
+      setCountdown({ eventKey: next.join.key, deadline: Date.now() + AUTO_JOIN_COUNTDOWN_MS });
     });
     return () => {
       active = false;
     };
-  }, [settings?.autoJoin, events, at, held, marks, joined, countdown]);
+  }, [settings?.autoJoin, events, at, held, marks, joined, cancelled, countdown]);
 
   useEffect(() => {
     if (!countdown) return;
+    let active = true;
     const timer = setTimeout(
       () => {
-        const target = events?.find((event) => event.key === countdown.eventKey);
-        if (target) joinRef.current(target, true);
-        else setCountdown(null);
+        void planNowRef.current(Date.now()).then((next) => {
+          if (!active) return;
+          if ('join' in next && next.join.key === countdown.eventKey) {
+            joinRef.current(next.join, true);
+          } else {
+            setCountdown(null);
+          }
+        });
       },
       Math.max(0, countdown.deadline - Date.now()),
     );
-    return () => clearTimeout(timer);
-  }, [countdown, events]);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [countdown]);
 
   const cancelJoin = () => {
-    if (countdown) setJoined((current) => new Set(current).add(countdown.eventKey));
+    if (countdown) setCancelled((current) => new Set(current).add(countdown.eventKey));
     setCountdown(null);
   };
+  const markJoined = (eventKey: string) => setJoined((current) => new Set(current).add(eventKey));
   const joinNow = () => {
     const target = events?.find((event) => event.key === countdown?.eventKey);
     if (target) join(target, true);
@@ -132,6 +154,11 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
   const handlers = useRef({ cancelJoin, joinNow });
   useEffect(() => {
     handlers.current = { cancelJoin, joinNow };
+  });
+
+  const alertRef = useRef(alert);
+  useEffect(() => {
+    alertRef.current = alert;
   });
 
   const payload = alert
@@ -167,8 +194,8 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
       const parsed = meetingAlertActionSchema.safeParse(value);
       if (!parsed.success) return;
       const action = parsed.data;
-      const shownEvents = latest.current.live?.upcoming ?? [];
-      const inAlert = shownEvents.filter((event) => action.key.split('|').includes(event.key));
+      const shown = alertRef.current;
+      const inAlert = shown && shown.key === action.key ? shown.events : [];
       if (action.kind === 'cancel-join') handlers.current.cancelJoin();
       if (action.kind === 'join-now') handlers.current.joinNow();
       if (action.kind === 'joined' && action.eventKey) {
@@ -194,7 +221,7 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
     });
   }, [setMarks]);
 
-  return { alert, countdown, cancelJoin, joinNow };
+  return { alert, countdown, cancelJoin, joinNow, markJoined };
 }
 
 function marksWithout(marks: NudgeMarks, joined: ReadonlySet<string>): NudgeMarks {

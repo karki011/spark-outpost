@@ -49,7 +49,13 @@ function CalendarRestLine({ line, top, calendar }: CalendarRestLineProps) {
         <span className="isl-restline-text">{line.text}</span>
       )}
       {line.join && (
-        <JoinButton event={line.join} now={calendar.at} className="isl-calline-act primary" plain />
+        <JoinButton
+          event={line.join}
+          now={calendar.at}
+          className="isl-calline-act primary"
+          plain
+          onJoined={(event) => calendar.onJoined(event.key)}
+        />
       )}
       {line.choose && (
         <button

@@ -122,6 +122,16 @@ describe('autoJoinPlan', () => {
     expect(plan({ joined: new Set([standup.key]) })).toEqual({ skip: 'joined' });
   });
 
+  it('still joins when a meeting without a link, or one already joined, is running', () => {
+    const workshop = event('Workshop', at(9), at(12));
+    expect(plan({ events: [workshop, standup] })).toEqual({ join: standup });
+    const call = event('Customer call', at(9), at(11), { link: link('zoom') });
+    expect(plan({ events: [call, standup], joined: new Set([call.key]) })).toEqual({
+      join: standup,
+    });
+    expect(plan({ events: [call, standup] })).toEqual({ skip: 'clash' });
+  });
+
   it('skips during a hold', () => {
     expect(plan({ held: true })).toEqual({ skip: 'held' });
   });

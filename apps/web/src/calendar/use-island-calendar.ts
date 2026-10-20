@@ -80,6 +80,7 @@ export interface IslandCalendar {
   countdown: MeetingCountdown | null;
   onCancelJoin: () => void;
   onJoinNow: () => void;
+  onJoined: (eventKey: string) => void;
 }
 
 function useHeldChimes(holdLabel: string | null) {
@@ -207,6 +208,7 @@ export function useIslandCalendar(
     countdown: autoJoin.countdown,
     onCancelJoin: autoJoin.cancelJoin,
     onJoinNow: autoJoin.joinNow,
+    onJoined: autoJoin.markJoined,
     onOpenEvent: (eventKey) => openToday(eventKey),
     onChoose: choose,
     onSnooze: (event) =>

@@ -9,7 +9,7 @@ interface MeetingChoicesProps {
   now: number;
   calendarName: (event: CalendarEvent) => string;
   onOpen: (event: CalendarEvent) => void;
-  onJoined?: (() => void) | undefined;
+  onJoined?: ((event: CalendarEvent) => void) | undefined;
   buttonClass: { join: string; open: string };
   focusFirst?: boolean;
 }
@@ -18,7 +18,7 @@ function ChoiceAction(props: {
   event: CalendarEvent;
   now: number;
   onOpen: (event: CalendarEvent) => void;
-  onJoined?: (() => void) | undefined;
+  onJoined?: ((event: CalendarEvent) => void) | undefined;
   buttonClass: { join: string; open: string };
 }) {
   const { event } = props;
@@ -31,7 +31,7 @@ function ChoiceAction(props: {
         aria-label={`Join ${event.title}`}
         onClick={() => {
           openJoin(link.url);
-          props.onJoined?.();
+          props.onJoined?.(event);
         }}
       >
         Join

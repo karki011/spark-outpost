@@ -116,9 +116,14 @@ export function autoJoinPlan(input: AutoJoinInput): AutoJoinPlan {
   }
   const started = input.events.filter((event) => startedNow(event, input.at));
   if (started.length === 0) return { skip: 'none' };
-  if (joinableMeetings(input.events, input.at).length > 1) return { skip: 'clash' };
-  const [event] = started;
-  if (started.length > 1 || !event) return { skip: 'clash' };
-  const skip = skipFor(event, input);
-  return skip ? { skip } : { join: event };
+  const open = joinableMeetings(input.events, input.at).filter(
+    (event) => !input.joined.has(event.key) && !input.marks.get(event.key)?.dismissed,
+  );
+  if (open.length > 1) return { skip: 'clash' };
+  const verdicts = started.map((event) => ({ event, skip: skipFor(event, input) }));
+  const ready = verdicts.filter((verdict) => verdict.skip === null);
+  if (ready.length > 1) return { skip: 'clash' };
+  const chosen = ready[0] ?? verdicts.at(-1);
+  if (!chosen) return { skip: 'none' };
+  return chosen.skip ? { skip: chosen.skip } : { join: chosen.event };
 }

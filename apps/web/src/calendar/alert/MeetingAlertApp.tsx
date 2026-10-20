@@ -168,7 +168,7 @@ export function MeetingAlertApp() {
       key.preventDefault();
       act('dismiss');
     }
-    if (key.key.toLowerCase() === 'j' && key.metaKey && first?.link) {
+    if (key.key.toLowerCase() === 'j' && key.metaKey) {
       key.preventDefault();
       const joinable = payload.events.find((event) => joinState(event, at) === 'open');
       if (joinable?.link) {
