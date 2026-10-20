@@ -1,12 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import {
-  queryOptions,
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
-import type { Approval, CalendarEvent, ConversationDetail } from '@spark-outpost/contracts';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { CalendarEvent } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { assistantApi, assistantKeys } from '../api/assistant.ts';
 import type { Voice } from '../spark/voice.ts';
@@ -18,7 +12,7 @@ import { fastAnswer, type FastState } from './ask-fast-path.ts';
 import { askRows, lastExchange, type PendingAsk } from './ask-history-model.ts';
 import { meetingAnswer, NEXT_MEETING_QUESTION } from './ask-meeting.ts';
 import { AskLog, type AskLinks } from './AskLog.tsx';
-import { islandApi, islandKeys } from './island-api.ts';
+import { assistantCards, assistantQuery, useAssistant } from './ask-assistant.ts';
 import { queueApi } from '../chat/queue/queue-api.ts';
 import { plainLine } from './plain-line.ts';
 import type { AskSession } from './use-ask-session.ts';
@@ -38,22 +32,6 @@ interface AskSparkProps {
 const CHEER_MS = 1_400;
 const ASKED_CHIPS = ['Who needs me?', 'What’s running?'];
 
-const assistantQuery = queryOptions({
-  queryKey: islandKeys.assistant,
-  queryFn: islandApi.assistant,
-  staleTime: Infinity,
-});
-
-function useAssistant() {
-  const id = useQuery(assistantQuery);
-  const detail = useQuery({
-    queryKey: queryKeys.conversation(id.data ?? 'none'),
-    queryFn: () => api.getConversation(id.data!),
-    enabled: id.data !== undefined,
-  });
-  return { id: id.data ?? null, error: id.error, detail: detail.data };
-}
-
 function useHistory() {
   return useInfiniteQuery({
     queryKey: assistantKeys.history,
@@ -67,15 +45,6 @@ interface PendingQuestion {
   id: string;
   question: string;
   spoken: boolean;
-}
-
-function assistantCards(detail: ConversationDetail | undefined) {
-  const byRun = new Map<string, Approval[]>();
-  for (const approval of detail?.approvals ?? []) {
-    if (!approval.payload.sparkAction) continue;
-    byRun.set(approval.runId, [...(byRun.get(approval.runId) ?? []), approval]);
-  }
-  return byRun;
 }
 
 function useCheer(thinking: boolean, latest: string | null): string | null {

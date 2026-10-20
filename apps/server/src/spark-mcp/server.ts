@@ -1,3 +1,4 @@
+import { askSparkIslandTools } from './tools/ask-spark-island-tools.ts';
 import { askSparkTools } from './tools/ask-spark-tools.ts';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -100,6 +101,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   confluenceTool,
   confluenceEditTool,
   ...askSparkTools,
+  ...askSparkIslandTools,
 ];
 
 const INSTRUCTIONS =

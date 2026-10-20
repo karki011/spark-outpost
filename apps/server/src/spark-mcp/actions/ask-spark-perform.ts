@@ -12,7 +12,9 @@ import { changeSparkPause } from '../../workflow/spark-pause-change.ts';
 import { stopRun } from '../../workflow/stop-run.ts';
 import { ticketDepsFor } from '../deps.ts';
 import { SparkToolError, type SparkToolContext } from '../tool.ts';
+import { performInbox } from './ask-spark-inbox.ts';
 import { ASK_SPARK_REFUSALS, cardRefusalFor } from './ask-spark-limits.ts';
+import { performMeeting } from './ask-spark-meetings.ts';
 import type { Performed } from './performed.ts';
 
 export const ANSWERED_BY_ASK_SPARK = 'Answered by Ask Spark';
@@ -225,5 +227,13 @@ export function performAskSpark(
       return pause(context, false);
     case 'start_ticket':
       return startTicketWork(context, action);
+    case 'post_outpost':
+    case 'clear_finished':
+    case 'set_aside':
+      return performInbox(context, action);
+    case 'snooze_meeting':
+    case 'dismiss_meeting':
+    case 'join_meeting':
+      return performMeeting(context, action.op, action);
   }
 }

@@ -21,6 +21,7 @@ import {
 } from '../../terminal/terminal-api.ts';
 import { ticketKeys } from '../../tickets/tickets-api.ts';
 import { calendarKeys } from '../../calendar/calendar-api.ts';
+import { islandRequestsKey } from '../../island/island-requests.ts';
 import { sparkPauseKey } from '../pause/spark-pause-api.ts';
 
 interface Invalidation {
@@ -44,6 +45,7 @@ export const LIVE_ROOTS: readonly string[] = [
   outpostKeys.all[0],
   agentTerminalKeys.all[0],
   calendarKeys.all[0],
+  islandRequestsKey[0],
 ];
 
 export function isLiveQueryKey(key: QueryKey): boolean {
@@ -162,6 +164,8 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
       return [{ queryKey: sparkPauseKey, exact: true }];
     case 'calendar':
       return [{ queryKey: calendarKeys.all }];
+    case 'island_request':
+      return [{ queryKey: islandRequestsKey, exact: true }];
   }
 }
 

@@ -14,6 +14,7 @@ import type { Observation } from '../persistence/observations.ts';
 
 export type RequestAuthor =
   | { kind: 'user' }
+  | { kind: 'assistant'; runId: string }
   | {
       kind: 'chat';
       conversationId: string;

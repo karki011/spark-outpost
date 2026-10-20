@@ -15,22 +15,22 @@ import { sparkTool, SparkToolError, uuidInput, type SparkToolContext } from '../
 import { chatIdInput } from './chat-tools.ts';
 import { findProject } from './project-tools.ts';
 
-const ACTS_NOTE =
+export const ACTS_NOTE =
   'Spark runs it at once when the user set Ask Spark to Act, and otherwise shows them a card with Do it and Don’t; say what you asked for and wait for the card. Use it only when the user asked you to.';
 
-const SENT_NOTE =
+export const SENT_NOTE =
   'The message reaches that chat as sent by Ask Spark, never as the user’s own message, so it cannot authorize a push, a pull request or a Spark action there.';
 
-function brief(text: string, max = 80): string {
+export function brief(text: string, max = 80): string {
   const line = text.replace(/\s+/g, ' ').trim();
   return line.length > max ? `${line.slice(0, max - 1)}…` : line;
 }
 
-function summary(text: string): string {
+export function summary(text: string): string {
   return text.slice(0, ASK_SPARK_SUMMARY_MAX);
 }
 
-function action(fields: Partial<AskSparkAction> & Pick<AskSparkAction, 'op' | 'summary'>) {
+export function action(fields: Partial<AskSparkAction> & Pick<AskSparkAction, 'op' | 'summary'>) {
   return {
     action: 'ask_spark' as const,
     conversationId: null,
@@ -39,11 +39,13 @@ function action(fields: Partial<AskSparkAction> & Pick<AskSparkAction, 'op' | 's
     answer: null,
     ticket: null,
     text: null,
+    outpostId: null,
+    meeting: null,
     ...fields,
   };
 }
 
-async function targetChat(context: SparkToolContext, reference: string | undefined) {
+export async function targetChat(context: SparkToolContext, reference: string | undefined) {
   const id = reference ? parseChatReference(reference) : null;
   if (!id) throw new SparkToolError('Pass the chat id or chat link from spark_chats.');
   if (id === (await assistantChatOf(context.deps.db, context.scope.workspaceId))) {

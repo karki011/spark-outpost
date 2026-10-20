@@ -13,6 +13,12 @@ export const askSparkOpSchema = z.enum([
   'pause_spark',
   'resume_spark',
   'start_ticket',
+  'post_outpost',
+  'clear_finished',
+  'set_aside',
+  'snooze_meeting',
+  'dismiss_meeting',
+  'join_meeting',
 ]);
 export type AskSparkOp = z.infer<typeof askSparkOpSchema>;
 
@@ -29,6 +35,11 @@ export const askSparkActionSchema = z.object({
   answer: askSparkAnswerSchema.nullable(),
   ticket: z.object({ source: ticketSourceIdSchema, key: z.string().max(100) }).nullable(),
   text: z.string().max(ASK_SPARK_TEXT_MAX).nullable(),
+  outpostId: z.uuid().nullable().default(null),
+  meeting: z
+    .object({ eventKey: z.string().max(600), end: z.iso.datetime({ offset: true }) })
+    .nullable()
+    .default(null),
 });
 export type AskSparkAction = z.infer<typeof askSparkActionSchema>;
 
@@ -42,3 +53,17 @@ export const askSparkLabels = {
 
 export const assistantActsSchema = z.enum(['manual', 'act']);
 export type AssistantActs = z.infer<typeof assistantActsSchema>;
+
+export const ISLAND_REQUEST_KINDS = ['snooze_meeting', 'join_meeting', 'set_aside'] as const;
+export const islandRequestKindSchema = z.enum(ISLAND_REQUEST_KINDS);
+export type IslandRequestKind = z.infer<typeof islandRequestKindSchema>;
+
+export const islandRequestSchema = z.object({
+  id: z.uuid(),
+  kind: islandRequestKindSchema,
+  target: z.string().max(600),
+});
+export type IslandRequest = z.infer<typeof islandRequestSchema>;
+
+export const islandRequestsSchema = z.object({ requests: z.array(islandRequestSchema).max(50) });
+export type IslandRequests = z.infer<typeof islandRequestsSchema>;

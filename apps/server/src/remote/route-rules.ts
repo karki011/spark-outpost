@@ -184,6 +184,8 @@ GET /api/calendar/google/sign-in
 POST /api/calendar/google/sign-in
 DELETE /api/calendar/google/sign-in
 DELETE /api/calendar/google/accounts/:id
+GET /api/island/requests
+POST /api/island/requests/:id/claim
 GET /api/remote/access
 PUT /api/remote/access
 PATCH /api/remote/switches

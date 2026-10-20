@@ -33,6 +33,7 @@ export type SparkToolNeed =
   | 'outpost_start'
   | 'calendar_read'
   | 'calendar_edit'
+  | 'meetings'
   | 'jira'
   | 'confluence';
 

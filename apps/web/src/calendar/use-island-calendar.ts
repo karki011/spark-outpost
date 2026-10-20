@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type {
-  CalendarEvent,
-  ConversationSummary,
-  MeetingCountdown,
+import {
+  joinOpen,
+  spanOf,
+  type CalendarEvent,
+  type ConversationSummary,
+  type MeetingCountdown,
 } from '@spark-outpost/contracts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import type { Chime, ChimeHold } from '../island/island-sound.ts';
@@ -27,14 +29,16 @@ import {
   saveSnoozes,
   snoozeEnds,
   snoozeNudge,
+  snoozeNudgeFor,
   withServerDismissed,
   type NudgeMarks,
 } from './nudge-marks.ts';
 import { todayState } from './today-model.ts';
 import { lineUnderAlert } from './meeting-alert.ts';
-import { useMeetingAlert } from './use-meeting-alert.ts';
+import { ALERT_SNOOZE_MS, useMeetingAlert } from './use-meeting-alert.ts';
 import { openTodayEvent } from './today-request.ts';
 import { useCalendarNow, useCalendarStatus } from './use-calendar.ts';
+import { useIslandRequests } from '../island/island-requests.ts';
 
 const NO_MEETINGS: readonly CalendarEvent[] = [];
 const NO_CLASHES: ReadonlyMap<string, readonly string[]> = new Map();
@@ -153,6 +157,8 @@ function useNudgeClock(live: ReturnType<typeof useCalendarNow>['data'] | null, u
   return { marks: saved, clock, setMarks };
 }
 
+const MEETING_REQUESTS = ['snooze_meeting', 'join_meeting'] as const;
+
 export const DISMISS_RETRY_MS = 30_000;
 
 function useDismissForGood() {
@@ -223,6 +229,18 @@ export function useIslandCalendar(
     names,
     note: home.note,
     onDismissed: dismissForGood,
+  });
+  useIslandRequests(MEETING_REQUESTS, (pending) => {
+    const event = live?.upcoming.find((candidate) => candidate.key === pending.target);
+    if (!event) return null;
+    if (pending.kind === 'join_meeting') {
+      if (!event.link || !joinOpen(spanOf(event), Date.now())) return null;
+      return () => autoJoin.joinEvent(event);
+    }
+    return () =>
+      nudges.setMarks((current) =>
+        snoozeNudgeFor(current, event.key, Date.parse(event.end), Date.now(), ALERT_SNOOZE_MS),
+      );
   });
   const clashes = useMemo(
     () =>

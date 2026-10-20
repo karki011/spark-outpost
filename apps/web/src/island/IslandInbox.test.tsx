@@ -52,6 +52,7 @@ function inbox(overrides: Partial<InboxBundle> = {}): InboxBundle {
     cards: [asking],
     aside: [],
     details: new Map<string, ConversationDetail>(),
+    ask: { conversationId: null, cards: [] },
     onLater: vi.fn(),
     onReview: vi.fn(),
     onDecided: vi.fn(),
