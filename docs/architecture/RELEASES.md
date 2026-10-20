@@ -83,7 +83,7 @@ R2 answers a request for several byte ranges at once with `400 Bad Request` (che
 ## Cutting a release
 
 1. **Version.** Bump `version` in `apps/desktop/package.json` (semver). Beta: `0.1.0-beta.1`, `0.1.0-beta.2`, … Stable: `0.1.0`. A version with a `-beta.n` suffix writes only `beta-mac.yml`, shows **Beta** in About and Settings, and starts new installs on the Beta channel; other prerelease tags are refused by the publish script.
-2. **Changelog.** Add a section to `apps/desktop/CHANGELOG.md`.
+2. **Changelog and download links.** Add a section to `apps/desktop/CHANGELOG.md`, then run `pnpm release:downloads` and commit its output in the same release-notes pull request. It rewrites the Download section of the root `README.md` (between the `release-downloads` markers), `releases/README.md` (every version with a disk image, newest first) and `releases/<version>.md` (date, both dmg links, requirement and that version's changelog), linking the dmgs at their feed names. A new page gets today's date; existing pages keep theirs. `pnpm check` runs `pnpm release:downloads --check`, which fails when these files are out of date with the changelog. The new links return 404 until step 6 uploads the dmgs.
 3. **Checks.** `pnpm check`, `pnpm test:db`, `pnpm test:browser`. If the release adds migrations, read them for anything that cannot run inside a transaction and confirm the backup path with `pnpm desktop:e2e-update`.
 4. **Build, sign, notarize.** With the certificate installed and the Apple variables set:
    ```sh

@@ -1,0 +1,30 @@
+# Spark Outpost downloads
+
+Every Spark Outpost version with a download, newest first. Each needs macOS 14 or later. Once installed, the app updates itself.
+
+Versions before 0.1.0-beta.2 have no disk image on the update feed and are not listed. The full history is in the [changelog](../apps/desktop/CHANGELOG.md).
+
+| Version | Released | Apple silicon | Intel |
+| --- | --- | --- | --- |
+| [0.1.0-beta.23](0.1.0-beta.23.md) | 2026-10-19 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.23-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.23-x64.dmg) |
+| [0.1.0-beta.22](0.1.0-beta.22.md) | 2026-10-19 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.22-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.22-x64.dmg) |
+| [0.1.0-beta.21](0.1.0-beta.21.md) | 2026-10-19 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.21-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.21-x64.dmg) |
+| [0.1.0-beta.20](0.1.0-beta.20.md) | 2026-10-17 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.20-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.20-x64.dmg) |
+| [0.1.0-beta.19](0.1.0-beta.19.md) | 2026-10-16 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.19-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.19-x64.dmg) |
+| [0.1.0-beta.18](0.1.0-beta.18.md) | 2026-10-15 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.18-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.18-x64.dmg) |
+| [0.1.0-beta.17](0.1.0-beta.17.md) | 2026-10-15 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.17-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.17-x64.dmg) |
+| [0.1.0-beta.16](0.1.0-beta.16.md) | 2026-10-14 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.16-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.16-x64.dmg) |
+| [0.1.0-beta.15](0.1.0-beta.15.md) | 2026-10-13 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.15-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.15-x64.dmg) |
+| [0.1.0-beta.14](0.1.0-beta.14.md) | 2026-10-13 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.14-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.14-x64.dmg) |
+| [0.1.0-beta.13](0.1.0-beta.13.md) | 2026-10-12 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.13-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.13-x64.dmg) |
+| [0.1.0-beta.12](0.1.0-beta.12.md) | 2026-10-11 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.12-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.12-x64.dmg) |
+| [0.1.0-beta.11](0.1.0-beta.11.md) | 2026-10-09 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.11-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.11-x64.dmg) |
+| [0.1.0-beta.10](0.1.0-beta.10.md) | 2026-10-09 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.10-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.10-x64.dmg) |
+| [0.1.0-beta.9](0.1.0-beta.9.md) | 2026-10-09 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.9-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.9-x64.dmg) |
+| [0.1.0-beta.8](0.1.0-beta.8.md) | 2026-10-08 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.8-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.8-x64.dmg) |
+| [0.1.0-beta.7](0.1.0-beta.7.md) | 2026-10-07 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.7-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.7-x64.dmg) |
+| [0.1.0-beta.6](0.1.0-beta.6.md) | 2026-10-06 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.6-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.6-x64.dmg) |
+| [0.1.0-beta.5](0.1.0-beta.5.md) | 2026-10-05 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.5-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.5-x64.dmg) |
+| [0.1.0-beta.4](0.1.0-beta.4.md) | 2026-10-05 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.4-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.4-x64.dmg) |
+| [0.1.0-beta.3](0.1.0-beta.3.md) | 2026-10-04 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.3-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.3-x64.dmg) |
+| [0.1.0-beta.2](0.1.0-beta.2.md) | 2026-10-03 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.2-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.2-x64.dmg) |

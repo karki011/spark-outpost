@@ -32,6 +32,18 @@ Spark plans the work, builds it in safe worktrees, checks it with its own test r
 
 </div>
 
+<!-- release-downloads:start -->
+
+## Download
+
+Latest: **0.1.0-beta.23** ([what's new](releases/0.1.0-beta.23.md)). Requires macOS 14 or later.
+
+- [Download for Apple silicon](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.23-arm64.dmg)
+- [Download for Intel](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.23-x64.dmg)
+- [All versions](releases/README.md)
+
+<!-- release-downloads:end -->
+
 ## Why Spark
 
 **A crew, not a chatbot.** Each request gets the smallest crew that fits. A Reader answers questions. Builders make changes. A Critic reviews the bigger or riskier ones, on a second provider when you have one connected.
