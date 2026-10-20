@@ -12,6 +12,7 @@ Newest first.
 
 | What changed                                                                                                 | What to do                                                        |
 | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Sub-agents: one chat line, a card each in the work panel.                                                    | See [Follow a turn](follow-a-turn.md#see-whats-happening).        |
 | Agents stay running between messages; **Continued on its own** turns; **Waiting on…** for background agents. | See [Background work](follow-a-turn.md#background-work).          |
 | Archiving the open chat opens a new chat; display fixes.                                                     | —                                                                 |
 | Today: readable notes, tidy short meetings, early **Join**.                                                  | See [Use it](calendar.md#use-it).                                 |
