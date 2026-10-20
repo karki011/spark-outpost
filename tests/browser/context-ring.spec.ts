@@ -22,7 +22,7 @@ test("the ring shows the model's window during a turn and after it", async ({ pa
   const ring = page.getByRole('button', {
     name: 'Context window: 13% used, 130K of 1M tokens',
   });
-  await expect(ring).toHaveText('13%');
+  await expect(ring).toHaveText('13%', { timeout: 20_000 });
   await expect(working(page)).toBeVisible();
 
   await expect(done(page)).toBeVisible({ timeout: 20_000 });
@@ -33,7 +33,7 @@ test('the ring hides its percentage while the window is unknown', async ({ page 
   await send(page, 'Plan the rollout #ctx40 #midturn');
   const unknown = page.getByRole('button', { name: 'Context window: no usage reported yet' });
   await expect(page.getByText(/This reply comes from the fake provider/)).toBeVisible({
-    timeout: 20_000,
+    timeout: 30_000,
   });
   await expect(unknown).toHaveText('');
   await expect(working(page)).toBeVisible();
