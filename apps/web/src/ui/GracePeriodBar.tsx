@@ -84,7 +84,7 @@ export function GracePeriodBar({
         Undo
       </button>
       <i
-        className="tbar"
+        className="toast-timer"
         aria-hidden="true"
         style={
           { '--grace-ms': `${seconds * 1000}ms`, '--grace-left': left / seconds } as CSSProperties

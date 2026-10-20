@@ -6,12 +6,13 @@ order: 720
 summary: Recent changes you can see in the app, newest first, and what to do about each.
 ---
 
-What changed recently in Spark, newest first.
+Newest first.
 
 ## October 2026
 
 | What changed                                                                                                 | What to do                                                        |
 | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Archiving the open chat opens a new chat; display fixes.                                                     | —                                                                 |
 | Today: readable notes, tidy short meetings, early **Join**.                                                  | See [Use it](calendar.md#use-it).                                 |
 | No line, chime or notification for a chat you're viewing. Spark Island takes the first click.                | See [Spark Island](desktop-companion.md#answer-a-card).           |
 | Browser: developer tools, network log, multi-site sign-ins, SSO handoff.                                     | See [Use the browser](use-the-browser.md).                        |

@@ -12,14 +12,14 @@
   border-radius: 4px;
 }
 
-.toast.grace .tbar {
+.toast.grace .toast-timer {
   height: 3px;
   border-radius: 0 0 var(--r-sm) var(--r-sm);
   animation-duration: var(--grace-ms);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .toast.grace .tbar {
+  .toast.grace .toast-timer {
     animation: none;
     transform: scaleX(var(--grace-left));
   }

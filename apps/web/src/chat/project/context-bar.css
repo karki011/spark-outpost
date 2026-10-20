@@ -220,6 +220,7 @@
 }
 
 .ctx-place {
+  overflow: hidden;
   border-radius: var(--r-sm);
   transition:
     background 0.15s,
