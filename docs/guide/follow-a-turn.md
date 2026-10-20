@@ -24,7 +24,9 @@ Failed command output stays open in the reply. **Open in terminal** shows it in 
 
 ## Background work
 
-When a Claude agent replies while background agents still run, the chat shows **Waiting on 1 background agent**, then continues. **Enter** reaches it; **Stop background tasks** ends them.
+If background agents still run after a Claude reply, the chat shows **Waiting on 1 background agent**, then continues. **Enter** reaches it; **Stop background tasks** ends them.
+
+The agent stays running between messages and closes after 30 idle minutes. A turn it starts itself shows **Continued on its own**.
 
 ## Queue messages
 
@@ -44,14 +46,14 @@ Only text can be queued.
 
 ## Delete a running chat
 
-1. In the chat's **…** menu, select **Delete**, then **Confirm delete**; running work stops.
+1. In the chat's **…** menu, select **Delete**, then **Confirm delete**.
 2. **Undo** restores it.
 
 ## After a turn
 
 | Under a reply                                  | Use it to                                                   |
 | ---------------------------------------------- | ----------------------------------------------------------- |
-| **Good result** / **Bad result**               | Rate the reply. Ratings stay on this computer.              |
+| **Good result** / **Bad result**               | Rate the reply; ratings stay local.                         |
 | Selected text                                  | **Add to chat**, **Ask about this**, **Comment**, **Copy**. |
 | `/fresh`, or **Start fresh** in the **…** menu | Restart the agent without the old context.                  |
 | Ticks left of the thread                       | Jump to a message.                                          |

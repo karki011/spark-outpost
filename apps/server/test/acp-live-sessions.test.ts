@@ -121,7 +121,7 @@ describe('ACP provider with one live session per chat', { timeout: 30_000 }, () 
       third.outputs.some(
         (output) => output.kind === 'step_started' && output.name === 'Continued session',
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('switches the mode on the live session between messages', async () => {
