@@ -31,6 +31,8 @@ beforeEach(() => {
     localOriginSeen: () => undefined,
     contextMenu: () => undefined,
     addShortcut: () => undefined,
+    paneShortcut: () => undefined,
+    found: () => undefined,
     log: () => undefined,
   });
 });

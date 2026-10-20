@@ -6,7 +6,7 @@ order: 227
 summary: Open a page in the chat's Browser pane, let the agent look, browse and click, and point at what you mean.
 ---
 
-Open pages beside a chat for you and the agent. About 2 minutes. Mac app only.
+Pages beside a chat for you and agents. About 2 minutes. Mac app only.
 
 ## Open a page
 
@@ -14,7 +14,9 @@ Open pages beside a chat for you and the agent. About 2 minutes. Mac app only.
 2. Type an address, like `localhost:5173`; press **Enter**.
 3. **+** adds a tab.
 
-Chat links open here; **⌘**-click opens yours.
+Chat links open here; **⌘**-click opens yours. Copy buttons work for you, not agents.
+
+Keys: **⌘T** **⌘W** **⌘⇧T** tabs, **⌘1**–**⌘9** switch, **⌘F** find, **⌘⇧C** copy URL; [more](keyboard-shortcuts.md#browser-pane-mac-app).
 
 ## Let the agent look and browse
 

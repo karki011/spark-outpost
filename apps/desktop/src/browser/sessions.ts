@@ -1,6 +1,12 @@
-import { session, type Session } from 'electron';
+import { session, type Session, type WebContents } from 'electron';
 import type { SignedInSite } from '@spark-outpost/contracts';
 import { MEDIA_GUARD_ID, mediaGuardPreload } from '../media-guard.ts';
+import {
+  COPY_GUARD_ID,
+  copyGuardPreload,
+  pagePermissionAllowed,
+  type InputMarks,
+} from './clipboard-permission.ts';
 import {
   isBrowserPartition,
   projectPartition,
@@ -12,6 +18,7 @@ export interface SessionGuards {
   blockedPorts(): ReadonlySet<number>;
   roots(partition: string): readonly string[];
   log(line: string): void;
+  inputMarks(contents: WebContents | null): InputMarks | null;
 }
 
 const configured = new WeakSet<Session>();
@@ -24,13 +31,18 @@ export function browserSession(partition: string, guards: SessionGuards): Sessio
   }
   if (configured.has(target)) return target;
   configured.add(target);
-  target.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-  target.setPermissionCheckHandler(() => false);
+  target.setPermissionRequestHandler((contents, permission, callback) =>
+    callback(pagePermissionAllowed(permission, guards.inputMarks(contents), Date.now())),
+  );
+  target.setPermissionCheckHandler((contents, permission) =>
+    pagePermissionAllowed(permission, guards.inputMarks(contents), Date.now()),
+  );
   target.registerPreloadScript({
     type: 'frame',
     filePath: mediaGuardPreload(),
     id: MEDIA_GUARD_ID,
   });
+  target.registerPreloadScript({ type: 'frame', filePath: copyGuardPreload(), id: COPY_GUARD_ID });
   target.setDevicePermissionHandler(() => false);
   target.webRequest.onBeforeRequest((details, callback) => {
     const allowed = requestAllowed(details.url, {

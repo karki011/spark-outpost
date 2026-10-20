@@ -1,17 +1,71 @@
-import type { MenuItemConstructorOptions } from 'electron';
+import type { BaseWindow, MenuItemConstructorOptions } from 'electron';
+
+export type MenuPaneShortcut = 'close_tab' | 'reload' | 'hard_reload';
 
 export interface HelpActions {
   sendFeedback: () => void;
   exportDiagnostics: () => void;
   showLogs: () => void;
+  paneShortcut: (shortcut: MenuPaneShortcut) => boolean;
+}
+
+type WindowAction = (window: BaseWindow) => void;
+
+function windowContents(window: BaseWindow) {
+  return 'webContents' in window
+    ? (window.webContents as { reload(): void; reloadIgnoringCache(): void })
+    : null;
+}
+
+function paneFirst(
+  actions: HelpActions,
+  shortcut: MenuPaneShortcut,
+  fallback: WindowAction,
+): NonNullable<MenuItemConstructorOptions['click']> {
+  return (_item, window) => {
+    if (actions.paneShortcut(shortcut) || !window) return;
+    fallback(window);
+  };
 }
 
 export function appMenuTemplate(actions: HelpActions): MenuItemConstructorOptions[] {
   return [
     { role: 'appMenu' },
-    { role: 'fileMenu' },
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Close Window',
+          accelerator: 'CommandOrControl+W',
+          click: paneFirst(actions, 'close_tab', (window) => window.close()),
+        },
+      ],
+    },
     { role: 'editMenu' },
-    { role: 'viewMenu' },
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Reload',
+          accelerator: 'CommandOrControl+R',
+          click: paneFirst(actions, 'reload', (window) => windowContents(window)?.reload()),
+        },
+        {
+          label: 'Force Reload',
+          accelerator: 'Shift+CommandOrControl+R',
+          click: paneFirst(actions, 'hard_reload', (window) =>
+            windowContents(window)?.reloadIgnoringCache(),
+          ),
+        },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+      ],
+    },
     { role: 'windowMenu' },
     {
       role: 'help',
