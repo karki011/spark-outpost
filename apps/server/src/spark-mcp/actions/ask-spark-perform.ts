@@ -15,6 +15,8 @@ import { SparkToolError, type SparkToolContext } from '../tool.ts';
 import { cardRefusalFor } from './ask-spark-limits.ts';
 import type { Performed } from './performed.ts';
 
+export const ANSWERED_BY_ASK_SPARK = 'Answered by Ask Spark';
+
 interface ChatFacts {
   title: string;
   terminal: boolean;
@@ -126,6 +128,7 @@ async function answerCard(context: SparkToolContext, action: AskSparkAction): Pr
     optionId: option.optionId,
     scope: 'once',
     payloadHash: approval.payloadHash,
+    note: ANSWERED_BY_ASK_SPARK,
   });
   const verb = kind === 'allow_once' ? 'Allowed once' : 'Denied';
   return { message: `${verb}: ${approval.title}.`, url: null, output: { approvalId } };

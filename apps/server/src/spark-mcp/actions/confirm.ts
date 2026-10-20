@@ -256,7 +256,7 @@ export async function proposeAction(
   const path = options.alwaysAsk
     ? 'confirm'
     : assistant
-      ? await assistantPath(context.deps.db, run.scope.workspaceId)
+      ? await assistantPath(context.deps.db, run.scope.workspaceId, run.runId, action)
       : actionPath(facts);
   const failedBefore = await lastFailedAttempt(
     context.deps.db,

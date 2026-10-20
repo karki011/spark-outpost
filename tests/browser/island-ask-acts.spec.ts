@@ -65,6 +65,21 @@ test('in Manual, Ask Spark shows a confirm card and acts only on Do it', async (
   });
   expect(await stopRequested('Build the site')).toBe(true);
   await shot(page, 'done');
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: /Spark assistant/ })
+    .click();
+  await page
+    .getByRole('dialog', { name: 'Spark assistant' })
+    .getByRole('button', { name: 'View conversation' })
+    .click();
+  const thread = page.locator('.thread');
+  await expect(thread).toContainText('Stop “Build the site”');
+  await expect(thread).toContainText('Stopped “Build the site”.');
+  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'island-ask-acts-thread.png') });
 });
 
 test('Don’t leaves the chat running, and Act does it at once', async ({ page }) => {

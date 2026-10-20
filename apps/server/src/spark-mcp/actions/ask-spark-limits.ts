@@ -175,6 +175,28 @@ export async function assistantActs(db: Queryable, workspaceId: string): Promise
   return rows[0]?.acts ?? 'manual';
 }
 
-export async function assistantPath(db: Queryable, workspaceId: string): Promise<ActionPath> {
-  return (await assistantActs(db, workspaceId)) === 'act' ? 'perform' : 'confirm';
+const ASKS_TO_ANSWER = /\b(allow|approve|accept|confirm|deny|reject|decline|answer)\b/i;
+
+export function askedToAnswer(question: string): boolean {
+  return ASKS_TO_ANSWER.test(question);
+}
+
+async function questionOf(db: Queryable, runId: string): Promise<string> {
+  const { rows } = await db.query<{ content: string }>(
+    'SELECT m.content FROM runs r JOIN messages m ON m.id = r.user_message_id WHERE r.id = $1',
+    [runId],
+  );
+  return rows[0]?.content ?? '';
+}
+
+export async function assistantPath(
+  db: Queryable,
+  workspaceId: string,
+  runId: string,
+  action: SparkAction,
+): Promise<ActionPath> {
+  if ((await assistantActs(db, workspaceId)) !== 'act') return 'confirm';
+  const answering = action.action === 'ask_spark' && action.op === 'answer_card';
+  if (answering && !askedToAnswer(await questionOf(db, runId))) return 'confirm';
+  return 'perform';
 }

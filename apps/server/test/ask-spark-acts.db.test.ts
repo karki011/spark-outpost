@@ -194,11 +194,11 @@ describe('Ask Spark acts', () => {
     );
   });
 
-  it('answers a plain card in another chat with Allow once', async () => {
+  it('in Act answers a plain card in another chat when the question asks, noting Ask Spark', async () => {
     await setActs('act');
     const { runId } = await startChat(t, 'Deploy');
     const waiting = await card(runId);
-    const harness = await open();
+    const harness = await open(await assistantRun('Allow the deploy card'));
     const answered = await harness.call('spark_answer_card', {
       card: waiting.id,
       answer: 'allow_once',
@@ -207,7 +207,21 @@ describe('Ask Spark acts', () => {
       outcome: 'done',
       message: 'Allowed once: Run pnpm deploy.',
     });
-    expect((await getApproval(t.db, waiting.id))?.status).toBe('allowed');
+    const decided = await getApproval(t.db, waiting.id);
+    expect(decided).toMatchObject({ status: 'allowed', note: 'Answered by Ask Spark' });
+  });
+
+  it('in Act still shows a card for an answer the question did not ask for', async () => {
+    await setActs('act');
+    const { runId } = await startChat(t, 'Deploy');
+    const waiting = await card(runId);
+    const harness = await open(await assistantRun('What is running?'));
+    const result = await harness.call('spark_answer_card', {
+      card: waiting.id,
+      answer: 'allow_once',
+    });
+    expect(result.json()).toMatchObject({ outcome: 'waiting_for_user' });
+    expect((await getApproval(t.db, waiting.id))?.status).toBe('pending');
   });
 
   it('in Manual leaves the other card alone until Do it', async () => {
