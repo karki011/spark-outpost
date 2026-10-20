@@ -19,8 +19,8 @@ describe('introLine', () => {
   });
 
   it('leaves out what is not known', () => {
-    expect(introLine({ handle: 'fe', project: null, agent: 'Claude Auto', mode: null })).toBe(
-      '@fe joined · Claude Auto',
+    expect(introLine({ handle: 'fe', project: null, agent: 'Claude Opus 5.5', mode: null })).toBe(
+      '@fe joined · Claude Opus 5.5',
     );
     expect(introLine({ handle: 'fe', project: null, agent: null, mode: null })).toBe('@fe joined');
   });
