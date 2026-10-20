@@ -164,9 +164,10 @@ describe('a Claude chat whose turn ends with background work running', { timeout
   });
 
   it('says it lost track of the background work when Spark stopped during the wait', async () => {
-    begin(1);
+    begin(3);
     const { conversationId, runId } = await send('#backgroundforever');
     await eventually(async () => (await latestRun(conversationId))?.step === WAITING, 20_000);
+    await expireLeases(t, runId);
     await worker?.stop();
     worker = null;
     await expireLeases(t, runId);
