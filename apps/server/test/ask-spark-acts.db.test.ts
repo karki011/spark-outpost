@@ -6,6 +6,8 @@ import { ASK_SPARK_REFUSALS } from '../src/spark-mcp/actions/ask-spark-limits.ts
 import { getApproval, insertApproval } from '../src/persistence/approvals.ts';
 import { addToQueue } from '../src/persistence/chat-queue.ts';
 import { createProject } from '../src/projects/projects.ts';
+import { memorySecretStore } from '../src/setup/secrets.ts';
+import { saveConnection as saveTicketConnection } from '../src/tickets/connections.ts';
 import { publishReason } from '../src/workflow/publish-step-reason.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
 import {
@@ -19,6 +21,8 @@ import {
 } from './spark-mcp-support.ts';
 import { createTestApp, localClient } from './app-support.ts';
 import { connectCliProvider, createTestDb, eventually, startChat, type TestDb } from './support.ts';
+import { LINEAR_KEY } from './fake-linear.ts';
+import { startTicketStubs } from './ticket-support.ts';
 
 let t: TestDb;
 let recorded: RecordedHooks;
@@ -197,9 +201,9 @@ describe('Ask Spark acts', () => {
 
   it('in Act answers a plain card in another chat when the question asks, noting Ask Spark', async () => {
     await setActs('act');
-    const { runId } = await startChat(t, 'Deploy');
+    const { runId } = await startChat(t, 'Deploy the site');
     const waiting = await card(runId);
-    const harness = await open(await assistantRun('Allow the deploy card'));
+    const harness = await open(await assistantRun('Allow the card in Deploy the site'));
     const answered = await harness.call('spark_answer_card', {
       card: waiting.id,
       answer: 'allow_once',
@@ -223,6 +227,65 @@ describe('Ask Spark acts', () => {
     });
     expect(result.json()).toMatchObject({ outcome: 'waiting_for_user' });
     expect((await getApproval(t.db, waiting.id))?.status).toBe('pending');
+  });
+
+  it('in Act still shows a card when the question does not name the card’s chat', async () => {
+    await setActs('act');
+    const { runId } = await startChat(t, 'Deploy the site');
+    const waiting = await card(runId);
+    const harness = await open(await assistantRun('Approve the pending card'));
+    const result = await harness.call('spark_answer_card', {
+      card: waiting.id,
+      answer: 'allow_once',
+    });
+    expect(result.json()).toMatchObject({ outcome: 'waiting_for_user' });
+    expect((await getApproval(t.db, waiting.id))?.status).toBe('pending');
+  });
+
+  it('never answers a card from a Terminal session', async () => {
+    await setActs('act');
+    const { conversationId, runId } = await startChat(t, 'Terminal deploy');
+    await t.db.query(`UPDATE conversations SET session_type = 'terminal' WHERE id = $1`, [
+      conversationId,
+    ]);
+    const waiting = await card(runId);
+    const harness = await open(await assistantRun('Allow the card in Terminal deploy'));
+    const answered = await harness.call('spark_answer_card', {
+      card: waiting.id,
+      answer: 'allow_once',
+    });
+    expect(answered.text).toBe(ASK_SPARK_REFUSALS.terminal);
+    expect((await getApproval(t.db, waiting.id))?.status).toBe('pending');
+  });
+
+  it('leaves no chat behind when starting work on a ticket fails', async () => {
+    await setActs('act');
+    const secrets = memorySecretStore();
+    const stubs = await startTicketStubs();
+    try {
+      await saveTicketConnection(
+        { db: t.db, workspaceId: t.workspaceId, secrets, fetch, linearApiUrl: stubs.linearUrl },
+        { source: 'linear', apiKey: LINEAR_KEY },
+      );
+      await t.db.query('DELETE FROM provider_connections WHERE workspace_id = $1', [t.workspaceId]);
+      tools = await startSparkTools(
+        t,
+        {
+          conversationId: assistant,
+          runId: askRun,
+          readOnly: true,
+          assistant: true,
+          actions: recorded.hooks,
+        },
+        { secrets, linearApiUrl: stubs.linearUrl },
+      );
+      const result = await tools.call('spark_start_ticket', { source: 'linear', key: 'ENG-12' });
+      expect(result.isError).toBe(true);
+      const chats = await t.db.query('SELECT 1 FROM conversations WHERE id <> $1', [assistant]);
+      expect(chats.rowCount).toBe(0);
+    } finally {
+      await stubs.close();
+    }
   });
 
   it('in Manual leaves the other card alone until Do it', async () => {

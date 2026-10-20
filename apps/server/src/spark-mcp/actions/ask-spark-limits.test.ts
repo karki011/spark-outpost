@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { Approval } from '@spark-outpost/contracts';
 import { EVERYTHING_AVAILABLE } from '../availability.ts';
 import { sparkToolsFor } from '../server.ts';
-import { ASK_SPARK_REFUSALS, askedToAnswer, cardRefusal } from './ask-spark-limits.ts';
+import { ASK_SPARK_REFUSALS, askedToAnswer, cardRefusal, namesChat } from './ask-spark-limits.ts';
+
+const chat = (id: string) => ({ id, title: `Chat ${id}`, terminal: false });
 
 const card = (overrides: Partial<Approval> = {}): Approval =>
   ({
@@ -21,29 +23,38 @@ const card = (overrides: Partial<Approval> = {}): Approval =>
 
 describe('cardRefusal', () => {
   it('lets Ask Spark answer a plain waiting card in another chat', () => {
-    expect(cardRefusal(card(), 'other', 'assistant')).toBeNull();
+    expect(cardRefusal(card(), chat('other'), 'assistant')).toBeNull();
   });
 
   it('keeps hold-to-confirm, instruction, Mac and sign-in cards with the user', () => {
     const payload = card().payload;
-    expect(cardRefusal(card({ payload: { ...payload, forcePush: ['main'] } }), 'c', 'a')).toBe(
-      ASK_SPARK_REFUSALS.held,
-    );
     expect(
-      cardRefusal(card({ payload: { ...payload, instructionFiles: ['CLAUDE.md'] } }), 'c', 'a'),
+      cardRefusal(card({ payload: { ...payload, forcePush: ['main'] } }), chat('c'), 'a'),
+    ).toBe(ASK_SPARK_REFUSALS.held);
+    expect(
+      cardRefusal(
+        card({ payload: { ...payload, instructionFiles: ['CLAUDE.md'] } }),
+        chat('c'),
+        'a',
+      ),
     ).toBe(ASK_SPARK_REFUSALS.instructions);
     const mac = { action: 'calendar_read', what: 'today' };
     expect(
-      cardRefusal(card({ payload: { ...payload, sparkAction: mac } as never }), 'c', 'a'),
+      cardRefusal(card({ payload: { ...payload, sparkAction: mac } as never }), chat('c'), 'a'),
     ).toBe(ASK_SPARK_REFUSALS.macOnly);
   });
 
   it('refuses its own cards, answered cards and cards without Allow once and Deny', () => {
-    expect(cardRefusal(card(), 'assistant', 'assistant')).toBe(ASK_SPARK_REFUSALS.ownCard);
-    expect(cardRefusal(card({ status: 'allowed' }), 'c', 'a')).toBe(ASK_SPARK_REFUSALS.notWaiting);
+    expect(cardRefusal(card(), chat('assistant'), 'assistant')).toBe(ASK_SPARK_REFUSALS.ownCard);
+    expect(cardRefusal(card({ status: 'allowed' }), chat('c'), 'a')).toBe(
+      ASK_SPARK_REFUSALS.notWaiting,
+    );
     expect(cardRefusal(null, null, 'a')).toBe(ASK_SPARK_REFUSALS.notWaiting);
+    expect(cardRefusal(card(), { ...chat('c'), terminal: true }, 'a')).toBe(
+      ASK_SPARK_REFUSALS.terminal,
+    );
     const onlyAllow = card({ options: [{ optionId: 'a', name: 'Allow', kind: 'allow_once' }] });
-    expect(cardRefusal(onlyAllow, 'c', 'a')).toBe(ASK_SPARK_REFUSALS.noOption);
+    expect(cardRefusal(onlyAllow, chat('c'), 'a')).toBe(ASK_SPARK_REFUSALS.noOption);
   });
 });
 
@@ -81,6 +92,14 @@ describe('the tools Ask Spark is offered', () => {
       expect(names(scope)).not.toContain('spark_start_chat');
       expect(names(scope)).not.toContain('spark_answer_card');
     }
+  });
+});
+
+describe('namesChat', () => {
+  it('needs the chat of the card named in the question', () => {
+    expect(namesChat('Approve the deploy card in Build the site', 'Build the site')).toBe(true);
+    expect(namesChat('Please approve the design proposal', 'Build the site')).toBe(false);
+    expect(namesChat('Approve Fix', 'Fix')).toBe(false);
   });
 });
 

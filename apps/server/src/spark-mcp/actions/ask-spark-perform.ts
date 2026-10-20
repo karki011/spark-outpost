@@ -61,6 +61,14 @@ async function activeRun(db: Db, conversationId: string): Promise<string | null>
   return rows[0]?.id ?? null;
 }
 
+async function dropEmptyChat(db: Db, conversationId: string): Promise<void> {
+  await db.query(
+    `DELETE FROM conversations c WHERE c.id = $1
+       AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)`,
+    [conversationId],
+  );
+}
+
 async function projectName(db: Db, projectId: string): Promise<string | null> {
   const { rows } = await db.query<{ name: string }>('SELECT name FROM projects WHERE id = $1', [
     projectId,
@@ -80,10 +88,7 @@ async function startChat(context: SparkToolContext, action: AskSparkAction): Pro
     projectIds: action.projectId ? [action.projectId] : [],
   });
   await sendAsAssistant(deps.db, id, required(action.text, 'task')).catch(async (error) => {
-    await deps.db.query(
-      'DELETE FROM conversations c WHERE c.id = $1 AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)',
-      [id],
-    );
+    await dropEmptyChat(deps.db, id);
     throw error;
   });
   const project = action.projectId ? await projectName(deps.db, action.projectId) : null;
@@ -160,7 +165,7 @@ async function startTicketWork(
   const ticket = required(action.ticket, 'ticket');
   const conversationId = newId();
   const target = chatTarget(deps.db);
-  await startTicket(
+  const started = startTicket(
     {
       ...ticketDepsFor(deps, scope),
       runTarget: target,
@@ -181,6 +186,10 @@ async function startTicketWork(
       folders: [],
     },
   );
+  await started.catch(async (error: unknown) => {
+    await dropEmptyChat(deps.db, conversationId);
+    throw error;
+  });
   return {
     message: `Started work on ${ticket.key} in a new chat.`,
     url: null,

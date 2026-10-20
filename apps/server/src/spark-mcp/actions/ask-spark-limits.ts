@@ -17,6 +17,7 @@ import {
 import { CARD_ROUTE } from '../../remote/route-rules.ts';
 import { runFromDevice } from '../../remote/run-mark.ts';
 import { remoteAccess } from '../../remote/store.ts';
+import { LINKED_TITLE_MIN } from '../../companion/assistant-links.ts';
 import type { ActionPath } from './action-policy.ts';
 
 export const ASK_SPARK_REFUSALS = {
@@ -69,13 +70,20 @@ function routeOf(action: SparkAction): Route | null {
   }
 }
 
+export interface CardChat {
+  id: string;
+  title: string;
+  terminal: boolean;
+}
+
 export function cardRefusal(
   approval: Approval | null,
-  cardChat: string | null,
+  cardChat: CardChat | null,
   assistantChat: string | null,
 ): string | null {
-  if (!approval || approval.status !== 'pending') return ASK_SPARK_REFUSALS.notWaiting;
-  if (cardChat !== null && cardChat === assistantChat) return ASK_SPARK_REFUSALS.ownCard;
+  if (!approval || !cardChat || approval.status !== 'pending') return ASK_SPARK_REFUSALS.notWaiting;
+  if (cardChat.id === assistantChat) return ASK_SPARK_REFUSALS.ownCard;
+  if (cardChat.terminal) return ASK_SPARK_REFUSALS.terminal;
   if (holdsToConfirm(approval.payload)) return ASK_SPARK_REFUSALS.held;
   if (approval.payload.instructionFiles !== undefined) return ASK_SPARK_REFUSALS.instructions;
   if (macOnlyCard(approval.payload)) return ASK_SPARK_REFUSALS.macOnly;
@@ -85,12 +93,18 @@ export function cardRefusal(
   return null;
 }
 
-async function chatOfRun(db: Queryable, runId: string): Promise<string | null> {
-  const { rows } = await db.query<{ conversation_id: string }>(
-    'SELECT conversation_id FROM runs WHERE id = $1',
-    [runId],
+async function chatOfRun(
+  db: Queryable,
+  workspaceId: string,
+  runId: string,
+): Promise<CardChat | null> {
+  const { rows } = await db.query<{ id: string; title: string; session_type: string | null }>(
+    `SELECT c.id, c.title, c.session_type FROM runs r JOIN conversations c ON c.id = r.conversation_id
+     WHERE r.id = $1 AND c.workspace_id = $2`,
+    [runId, workspaceId],
   );
-  return rows[0]?.conversation_id ?? null;
+  const row = rows[0];
+  return row ? { id: row.id, title: row.title, terminal: row.session_type === 'terminal' } : null;
 }
 
 export async function assistantChatOf(db: Queryable, workspaceId: string): Promise<string | null> {
@@ -105,20 +119,11 @@ export async function cardRefusalFor(
   db: Queryable,
   workspaceId: string,
   approvalId: string,
-): Promise<{ approval: Approval | null; refusal: string | null }> {
+): Promise<{ approval: Approval | null; chat: CardChat | null; refusal: string | null }> {
   const approval = await getApproval(db, approvalId);
-  const cardChat = approval ? await chatOfRun(db, approval.runId) : null;
+  const chat = approval ? await chatOfRun(db, workspaceId, approval.runId) : null;
   const assistant = await assistantChatOf(db, workspaceId);
-  const owned = cardChat !== null && (await chatInWorkspace(db, workspaceId, cardChat));
-  return { approval, refusal: cardRefusal(owned ? approval : null, cardChat, assistant) };
-}
-
-async function chatInWorkspace(db: Queryable, workspaceId: string, chatId: string) {
-  const { rowCount } = await db.query(
-    'SELECT 1 FROM conversations WHERE id = $1 AND workspace_id = $2',
-    [chatId, workspaceId],
-  );
-  return rowCount === 1;
+  return { approval, chat, refusal: cardRefusal(approval, chat, assistant) };
 }
 
 export async function spokenRun(db: Queryable, runId: string): Promise<boolean> {
@@ -192,6 +197,11 @@ function sentenceAround(text: string, at: number): string {
   return text.slice(start + 1, ends.length > 0 ? Math.min(...ends) : text.length);
 }
 
+export function namesChat(question: string, title: string): boolean {
+  const name = title.trim().toLowerCase();
+  return name.length >= LINKED_TITLE_MIN && question.toLowerCase().includes(name);
+}
+
 export function askedToAnswer(question: string, answer: AskSparkAnswer): boolean {
   const text = question.trim();
   if (text.includes('?')) return false;
@@ -220,9 +230,9 @@ export async function assistantPath(
   action: SparkAction,
 ): Promise<ActionPath> {
   if ((await assistantActs(db, workspaceId)) !== 'act') return 'confirm';
-  const answering = action.action === 'ask_spark' && action.op === 'answer_card';
-  if (answering && !askedToAnswer(await questionOf(db, runId), action.answer ?? 'deny')) {
-    return 'confirm';
-  }
-  return 'perform';
+  if (action.action !== 'ask_spark' || action.op !== 'answer_card') return 'perform';
+  const question = await questionOf(db, runId);
+  const { chat } = await cardRefusalFor(db, workspaceId, action.approvalId ?? PLACEHOLDER);
+  const asked = askedToAnswer(question, action.answer ?? 'deny');
+  return asked && chat && namesChat(question, chat.title) ? 'perform' : 'confirm';
 }
