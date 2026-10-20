@@ -93,7 +93,7 @@ describe('OutpostCreate', () => {
     nameIt('Usage by user');
     addNewChat();
     expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Handle' }).value).toBe('api');
-    expect(button('Agent: Codex Auto')).toBeTruthy();
+    expect(button('Agent: Codex GPT-5')).toBeTruthy();
 
     fireEvent.click(button('Permissions: Approve for me'));
     fireEvent.click(screen.getByRole('radio', { name: 'Read-only' }));
@@ -105,7 +105,7 @@ describe('OutpostCreate', () => {
     });
     fireEvent.click(button(/^Continue/));
     const review = screen.getByRole('region', { name: 'Review' });
-    expect(within(review).getByText('api · Codex Auto · Read-only')).toBeTruthy();
+    expect(within(review).getByText('api · Codex GPT-5 · Read-only')).toBeTruthy();
     fireEvent.click(button(/^Start outpost/));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1));
@@ -132,7 +132,7 @@ describe('OutpostCreate', () => {
     open();
     nameIt('Usage by user');
     addNewChat();
-    fireEvent.click(button('Agent: Codex Auto'));
+    fireEvent.click(button('Agent: Codex GPT-5'));
     fireEvent.click(screen.getByRole('radio', { name: /^GPT-5/ }));
     expect(button('Agent: Codex GPT-5')).toBeTruthy();
   });

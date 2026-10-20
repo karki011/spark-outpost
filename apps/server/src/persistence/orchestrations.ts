@@ -4,7 +4,6 @@ import type {
   CheckpointKind,
   Depth,
   JevStatus,
-  ModelRouting,
   Orchestration,
   OrchestrationPhase,
   Risk,
@@ -30,15 +29,14 @@ export interface NewOrchestration {
   depth: Depth;
   depthSource: 'jev' | 'rules' | 'user';
   risk: Risk;
-  routing: ModelRouting;
 }
 
 export async function insertOrchestration(db: Queryable, row: NewOrchestration): Promise<void> {
   await db.query(
-    `INSERT INTO orchestrations (run_id, phase, depth, depth_source, risk, routing)
-     VALUES ($1, 'intake', $2, $3, $4, $5)
+    `INSERT INTO orchestrations (run_id, phase, depth, depth_source, risk)
+     VALUES ($1, 'intake', $2, $3, $4)
      ON CONFLICT (run_id) DO NOTHING`,
-    [row.runId, row.depth, row.depthSource, row.risk, row.routing],
+    [row.runId, row.depth, row.depthSource, row.risk],
   );
 }
 
@@ -47,7 +45,6 @@ export interface OrchestrationPatch {
   depth?: Depth;
   depthSource?: 'jev' | 'rules' | 'user';
   risk?: Risk;
-  routing?: ModelRouting;
   retries?: number;
   activeMs?: number;
   toolCalls?: number;
@@ -59,7 +56,6 @@ const PATCH_COLUMNS: Record<keyof OrchestrationPatch, string> = {
   depth: 'depth',
   depthSource: 'depth_source',
   risk: 'risk',
-  routing: 'routing',
   retries: 'retries',
   activeMs: 'active_ms',
   toolCalls: 'tool_calls',

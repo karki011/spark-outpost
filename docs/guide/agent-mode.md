@@ -3,7 +3,7 @@ title: Pick the model, effort and mode
 section: Chats
 type: how-to
 order: 212
-summary: Pin a model or let Auto pick, set how hard the agent thinks, and choose what it may do without asking in one chat.
+summary: Pick a model, set how hard the agent thinks, and choose what it may do without asking in one chat.
 ---
 
 You'll choose the model, effort and permissions for one chat. About 1 minute.
@@ -12,7 +12,7 @@ You'll choose the model, effort and permissions for one chat. About 1 minute.
 
 1. Select the model button in the message box. The picker opens on **Model**.
 2. With several providers connected, switch **AI provider** at the top.
-3. Pick a model to pin it, or **Auto** for the provider's default.
+3. Pick a model; until you do, the chat runs your [default model](providers-and-models.md#change-defaults-or-the-default-provider).
 
 ![The model picker open on the Model tab](images/chats-and-modes-picker-light.png)
 
@@ -20,7 +20,7 @@ Models your sign-in can't use are left out; a pinned one shows **Unavailable** a
 
 A pinned name such as `sonnet` runs the agent's current model of that name; the button shows the model that ran.
 
-A new chat starts on **Auto**; earlier chats keep theirs. The agent picks models for its sub-agents.
+The agent picks models for its sub-agents.
 
 ## Set the effort
 

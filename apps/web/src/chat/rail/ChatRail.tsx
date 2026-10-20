@@ -2,12 +2,13 @@ import './chat-rail.css';
 import { memo, useCallback, useRef } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
-import type {
-  ConversationDetail,
-  InvolvementLevel,
-  Project,
-  ProviderId,
-  TaskOverview,
+import {
+  shownModelName,
+  type ConversationDetail,
+  type InvolvementLevel,
+  type Project,
+  type ProviderId,
+  type TaskOverview,
 } from '@spark-outpost/contracts';
 import { capabilitiesQuery } from '../../api/client.ts';
 import { storedCrew } from '../../crew/conversation-crew.ts';
@@ -15,7 +16,7 @@ import { diffApi, diffKeys } from '../../diff/diff-api.ts';
 import type { WorkTab } from '../../tasks/TaskDetails.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
 import { contextPercent, latestContext } from '../../usage/format.ts';
-import { currentModel, shortLabel } from '../composer/model-options.ts';
+import { currentModel } from '../composer/model-options.ts';
 import { unlistedPinName } from '../composer/shown-model.ts';
 import { permissionState } from '../composer/mode-summary.ts';
 import { requestProjectMenu } from '../project/project-menu-request.ts';
@@ -104,14 +105,14 @@ function OpenRail({
   const branch = workspace.data?.current ?? null;
   const reading = latestContext(detail.runs, settings.provider);
   const picked = currentModel(settings, capabilities.data);
-  const listed = picked ? shortLabel(picked.label) : null;
+  const listed = picked ? shownModelName(picked) : null;
   const unlisted = unlistedPinName(settings, capabilities.data, detail.runs);
   const mode = permissionState(settings, capabilities.data).label;
   const rows = railRows({
     repoNames: repos.map((repo) => repo.name),
     branch: branch ? { name: branch.branch, worktree: branch.worktree } : null,
     provider: providerName(provider),
-    model: settings.routing === 'auto' ? 'Auto' : (unlisted ?? listed),
+    model: unlisted ?? listed,
     mode,
     autonomy,
     changes: changes.data ?? null,

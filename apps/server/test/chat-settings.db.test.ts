@@ -73,7 +73,6 @@ describe('chat settings', () => {
       agentMode: 'auto',
       level: 'full-auto',
       options: {},
-      routing: 'auto',
     });
 
     const switched = await send('patch', `/api/conversations/${id}/settings`, {
@@ -88,7 +87,6 @@ describe('chat settings', () => {
       agentMode: 'agent',
       level: 'full-auto',
       options: {},
-      routing: 'pinned',
     });
 
     const effort = await send('patch', `/api/conversations/${id}/settings`, {
@@ -166,7 +164,6 @@ describe('chat settings', () => {
       agentMode: 'agent',
       level: 'hands-off',
       options: {},
-      routing: 'pinned',
     });
     const codexAsk = await send('patch', path, { agentMode: 'read-only' }).expect(200);
     expect(codexAsk.body).toMatchObject({
@@ -183,7 +180,6 @@ describe('chat settings', () => {
       agentMode: 'acceptEdits',
       level: 'full-auto',
       options: {},
-      routing: 'pinned',
     });
     const again = await send('patch', path, { provider: 'codex' }).expect(200);
     expect(again.body).toMatchObject({ model: 'gpt-6-sol', effort: 'high' });

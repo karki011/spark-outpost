@@ -42,7 +42,6 @@ function carriedSettings(detail: ConversationDetail | undefined): UpdateChatSett
   if (settings.effort) carried.effort = settings.effort;
   if (settings.agentMode) carried.agentMode = settings.agentMode;
   if (settings.level) carried.level = settings.level;
-  if (settings.routing) carried.routing = settings.routing;
   if (Object.keys(settings.options).length > 0) carried.options = settings.options;
   return carried;
 }

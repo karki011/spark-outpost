@@ -1,11 +1,5 @@
 import { z } from 'zod';
-import {
-  depthSchema,
-  gateSchema,
-  jevStatusSchema,
-  modelRoutingSchema,
-  riskSchema,
-} from './advice.ts';
+import { depthSchema, gateSchema, jevStatusSchema, riskSchema } from './advice.ts';
 import { approvalSchema, runModeSchema } from './approvals.ts';
 import { involvementLevelSchema } from './involvement-levels.ts';
 import { modelSwitchSchema } from './model-access.ts';
@@ -161,7 +155,6 @@ export const orchestrationSchema = z.object({
   depthSource: z.enum(['jev', 'rules', 'user']),
   risk: riskSchema,
   level: involvementLevelSchema,
-  routing: modelRoutingSchema,
   provider: z.string(),
   planVersion: z.number().int().nullable(),
   retries: z.number().int().nonnegative(),
