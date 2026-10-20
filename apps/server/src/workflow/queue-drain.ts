@@ -180,6 +180,9 @@ export async function sendNow(
     const running = await activeTurn(client, conversationId);
     if (queued?.outpostPostId)
       await refuseOutpostSendNow(client, queued.outpostPostId, running !== null);
+    if (queued?.origin === 'assistant' && running) {
+      throw new QueueError(409, 'A message from Ask Spark starts when this chat is free.');
+    }
     if (!running) {
       await sendQueued(
         client,
@@ -190,6 +193,7 @@ export async function sendNow(
           continueRunId: queued?.continueRunId ?? null,
           outpostPostId: queued?.outpostPostId ?? null,
           ...(queued?.sparkRuleCardId ? { sparkRuleCardId: queued.sparkRuleCardId } : {}),
+          ...(queued?.origin ? { origin: queued.origin } : {}),
         },
         target,
       );

@@ -4,6 +4,7 @@ import type { ApprovalPayload } from '@spark-outpost/contracts';
 import { ensureAssistantChat } from '../src/companion/assistant.ts';
 import { ASK_SPARK_REFUSALS } from '../src/spark-mcp/actions/ask-spark-limits.ts';
 import { getApproval, insertApproval } from '../src/persistence/approvals.ts';
+import { addToQueue } from '../src/persistence/chat-queue.ts';
 import { createProject } from '../src/projects/projects.ts';
 import { publishReason } from '../src/workflow/publish-step-reason.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
@@ -301,6 +302,31 @@ describe('Ask Spark acts', () => {
     expect(answered.isError).toBe(true);
     expect(answered.text).toContain('Turned off for remote control on your Mac');
     expect((await getApproval(t.db, waiting.id))?.status).toBe('pending');
+  });
+
+  it('keeps a queued Ask Spark message its own through Send now, and never steers with it', async () => {
+    const { conversationId, runId } = await startChat(t, 'Busy');
+    await t.db.query(`UPDATE runs SET status = 'running' WHERE id = $1`, [runId]);
+    const item = randomUUID();
+    await addToQueue(t.db, conversationId, { id: item, content: 'Open a PR', origin: 'assistant' });
+    const api = localClient(createTestApp(t, { fixedRunProvider: null }));
+    const steer = await api.send(
+      'post',
+      `/api/conversations/${conversationId}/queue/${item}/send-now`,
+    );
+    expect(steer.status).toBe(409);
+
+    await t.db.query(`UPDATE runs SET status = 'succeeded' WHERE id = $1`, [runId]);
+    const sent = await api.send(
+      'post',
+      `/api/conversations/${conversationId}/queue/${item}/send-now`,
+    );
+    expect(sent.status).toBe(202);
+    const { rows } = await t.db.query<{ source: string }>(
+      'SELECT source FROM runs WHERE user_message_id = $1',
+      [item],
+    );
+    expect(rows[0]?.source).toBe('assistant');
   });
 
   it('marks a spoken question so its turn can tell it came from voice', async () => {

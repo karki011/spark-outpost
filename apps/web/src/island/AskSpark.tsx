@@ -171,7 +171,9 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
     const question = text.trim();
     if (!question || secrets.blocks(text)) return;
     setText('');
-    send(question, heard.current === question);
+    const spoken = heard.current === question;
+    heard.current = null;
+    send(question, spoken);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
