@@ -224,7 +224,9 @@ test('a chat proposes sub-chats, the user starts them, held ones follow, and the
   const header = page.locator('.bubble.from', { hasText: 'has ended' });
   await expect(header.locator('.from-head b')).toHaveText('From Spark');
   await expect(header.locator('.from-note')).toHaveText('not from you');
-  const started = page.locator('section[data-turn] .op-line', { hasText: 'Started 3 chats' });
+  const started = page.locator('section[data-turn] .op-line', {
+    hasText: `Started outpost ${NAME} with 3 chats`,
+  });
   await expect(started).toHaveCount(1);
   await expect(started).toContainText(NAME);
   await inBothThemes(page, '7-lead-chat', '.thread');
