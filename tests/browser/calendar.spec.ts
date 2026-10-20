@@ -213,9 +213,9 @@ test('merges both calendars, filters one out and shows another day', async ({ pa
   await expect(event(page, 'Demo day')).toBeVisible();
   await expect(today(page).getByText('Join and the now line appear on the day')).toBeVisible();
   await event(page, 'Demo day').click();
-  await expect(
-    today(page).getByRole('button', { name: /^Demo day at \d+:\d+ [AP]M, Join opens at / }),
-  ).toBeDisabled();
+  const join = today(page).getByRole('button', { name: /^Join Google Meet Demo day$/ });
+  await expect(join).toHaveAttribute('aria-disabled', 'true');
+  await expect(join).toHaveAccessibleDescription(/^Opens at \d+:\d+ [AP]M$/);
 });
 
 test('joins only an open meeting, from the panel and with ⌘J', async ({ page }) => {
@@ -232,10 +232,9 @@ test('joins only an open meeting, from the panel and with ⌘J', async ({ page }
   await page.keyboard.press('Enter');
   await expect(event(page, 'Customer call')).toHaveAttribute('aria-expanded', 'true');
   const panel = today(page).getByRole('region', { name: 'Customer call' });
-  const teams = panel.getByRole('button', {
-    name: /^Customer call at \d+:\d+ [AP]M, Join opens at /,
-  });
-  await expect(teams).toBeDisabled();
+  const teams = panel.getByRole('button', { name: 'Join Microsoft Teams Customer call' });
+  await expect(teams).toHaveAttribute('aria-disabled', 'true');
+  await expect(teams).toHaveAccessibleDescription(/^Opens at \d+:\d+ [AP]M$/);
   await expect(panel).toContainText('teams.microsoft.com, unwrapped from Outlook SafeLinks');
 
   await event(page, 'Standup').click();

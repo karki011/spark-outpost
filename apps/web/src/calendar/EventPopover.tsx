@@ -89,12 +89,7 @@ export function EventPopover(props: EventPopoverProps) {
         </p>
       )}
       <EventInfo event={event} now={props.now} />
-      <EventActions
-        event={event}
-        isToday={date === props.today}
-        now={props.now}
-        onStartChat={props.onStartChat}
-      />
+      <EventActions event={event} now={props.now} onStartChat={props.onStartChat} />
     </div>
   );
 }

@@ -66,7 +66,6 @@ function upcomingFree(blocks: readonly CalendarSpan[], now: number): CalendarSpa
 export function ScheduledRail(props: ScheduledRailProps) {
   const { date, today, now, events, calendars, clashes } = props;
   const headingId = useId();
-  const isToday = date === today;
   const items = useMemo(() => {
     const free =
       date >= today ? upcomingFree(freeBlocks([...events], dateOf(date).getTime()), now) : [];
@@ -112,7 +111,6 @@ export function ScheduledRail(props: ScheduledRailProps) {
                 calendar={calendars.get(item.event.calendarKey)}
                 clashes={clashes.get(item.event.key)}
                 now={now}
-                isToday={isToday}
                 selected={item.event.key === props.selected}
                 onOpen={props.onOpenEvent}
               />

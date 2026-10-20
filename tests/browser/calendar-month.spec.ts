@@ -67,9 +67,11 @@ test('opens on the month with today selected and its events in the Scheduled rai
   await expect(people.getByRole('listitem')).toHaveText(['AWAlex Wong', 'IMIvan Marsh']);
   await expect(standup).not.toContainText('Spark Tester');
   await expect(standup.getByRole('button', { name: 'Join Zoom Standup' })).toBeEnabled();
-  await expect(scheduled(page).locator('.rl-card', { hasText: 'Customer call' })).toContainText(
-    /Microsoft Teams\s*Join opens from/,
-  );
+  const customer = scheduled(page).locator('.rl-card', { hasText: 'Customer call' });
+  await expect(
+    customer.getByRole('button', { name: 'Join Microsoft Teams Customer call' }),
+  ).toHaveAttribute('aria-disabled', 'true');
+  await expect(customer).toContainText(/Opens at \d+:\d+ [AP]M/);
 });
 
 test('moves across days with the arrows, crosses months and opens a day with Enter', async ({

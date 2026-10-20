@@ -1,7 +1,6 @@
 import type { CSSProperties, MouseEvent } from 'react';
 import {
   CALENDAR_SERVICE_NAMES,
-  joinOpen,
   spanOf,
   type CalendarChoice,
   type CalendarEvent,
@@ -13,34 +12,31 @@ import { ClashTag } from './ClashTag.tsx';
 import { JoinButton } from './JoinButton.tsx';
 import { Attendees, EventLocation } from './EventDetails.tsx';
 import { durationMinutes } from './month-model.ts';
-import { joinHint } from './today-model.ts';
 import { useEventDetail } from './use-calendar.ts';
 
 const PEOPLE_SHOWN = 2;
 
-function VideoChip({
-  event,
-  now,
-  isToday,
-}: {
-  event: CalendarEvent;
-  now: number;
-  isToday: boolean;
-}) {
+function VideoChip({ event, now }: { event: CalendarEvent; now: number }) {
   const link = event.link;
   if (!link) return null;
   const service = CALENDAR_SERVICE_NAMES[link.service];
-  if (joinOpen(spanOf(event), now)) {
-    return <JoinButton event={event} now={now} label={`Join ${service}`} className="rl-join" />;
+  if (spanOf(event).end > now) {
+    return (
+      <JoinButton
+        event={event}
+        now={now}
+        label={`Join ${service}`}
+        className="rl-join"
+        early="subtle"
+      />
+    );
   }
-  const hint = isToday ? joinHint(event, now) : null;
   return (
     <p className="rl-video">
       <span className="rl-chip">
         <VideoIcon />
         {service}
       </span>
-      {hint && <small>Join opens {hint}</small>}
     </p>
   );
 }
@@ -50,13 +46,12 @@ interface EventCardProps {
   calendar: CalendarChoice | undefined;
   clashes: readonly string[] | undefined;
   now: number;
-  isToday: boolean;
   selected: boolean;
   onOpen: (event: CalendarEvent, anchor: HTMLElement) => void;
 }
 
 export function EventCard(props: EventCardProps) {
-  const { event, calendar, clashes, now, isToday, onOpen } = props;
+  const { event, calendar, clashes, now, onOpen } = props;
   const detail = useEventDetail(event);
   const { start, end } = spanOf(event);
   const notes = detail.data?.snippet ?? '';
@@ -101,7 +96,7 @@ export function EventCard(props: EventCardProps) {
           shown={PEOPLE_SHOWN}
         />
       </div>
-      <VideoChip event={event} now={now} isToday={isToday} />
+      <VideoChip event={event} now={now} />
     </li>
   );
 }

@@ -28,6 +28,7 @@ import type { CalendarHost } from './host-client.ts';
 import { googleSourceId } from './google/map.ts';
 import type { GoogleSource } from './google/source.ts';
 import { planNudges, type PlannerChat } from './planner.ts';
+import { htmlNotesText } from './notes-html.ts';
 import { splitNotes } from './notes-text.ts';
 import { locationOf, peopleOf } from './people.ts';
 import { linkFreeSnippet } from './snippet.ts';
@@ -373,11 +374,12 @@ export async function eventDetail(
     isMe: attendee.isMe,
     room: attendee.room ?? false,
   }));
+  const notes = htmlNotesText(detail.notes);
   return {
     title: detail.event.title,
-    notes: detail.notes,
-    ...splitNotes(detail.notes),
-    snippet: linkFreeSnippet(detail.notes),
+    notes,
+    ...splitNotes(notes),
+    snippet: linkFreeSnippet(notes),
     link: null,
     location: locationOf(detail.event.location, invitees),
     attendees: peopleOf(invitees),
