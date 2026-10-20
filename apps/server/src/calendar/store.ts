@@ -302,7 +302,11 @@ export async function calendarMarks(
     'SELECT uid, occurrence_start, kind FROM calendar_marks WHERE workspace_id = $1',
     [workspaceId],
   );
-  const marks = { remind: new Set<string>(), hold: new Set<string>(), dismissed: new Set<string>() };
+  const marks = {
+    remind: new Set<string>(),
+    hold: new Set<string>(),
+    dismissed: new Set<string>(),
+  };
   const byKind: Record<CalendarMarkKind, Set<string>> = {
     remind_5: marks.remind,
     hold: marks.hold,

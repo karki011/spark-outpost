@@ -124,7 +124,10 @@ describe('Google sync', () => {
     await h.client.send('post', '/api/calendar/refresh');
     expect(h.fake.requests.length).toBeGreaterThan(before);
     expect(await titles()).toEqual(['kept', 'added']);
-    h.fake.failNext('/calendar/v3/users/me/calendarList', { status: 429, reason: 'rateLimitExceeded' });
+    h.fake.failNext('/calendar/v3/users/me/calendarList', {
+      status: 429,
+      reason: 'rateLimitExceeded',
+    });
     await h.google.syncNow();
     const backingOff = h.fake.requests.length;
     expect((await h.client.send('post', '/api/calendar/refresh')).status).toBe(200);

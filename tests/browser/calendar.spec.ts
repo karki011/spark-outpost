@@ -369,3 +369,17 @@ test('has no serious accessibility problems on Today', async ({ page }) => {
     results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
   ).toEqual([]);
 });
+
+test('Refresh now re-reads the calendars and says it is up to date', async ({ page }) => {
+  await connect(page);
+  await openToday(page);
+  const refreshes: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().endsWith('/api/calendar/refresh')) refreshes.push(request.method());
+  });
+  await today(page).getByRole('button', { name: 'Refresh now' }).click();
+  await expect(
+    today(page).getByRole('status').filter({ hasText: 'Updated just now' }),
+  ).toBeVisible();
+  expect(refreshes).toEqual(['POST']);
+});

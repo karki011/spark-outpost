@@ -62,7 +62,12 @@ function base(event: CalendarEvent) {
 
 function dueRemind(event: CalendarEvent, now: number): boolean {
   const { start } = spanOf(event);
-  return event.remind && !event.dismissed && now >= start - CALENDAR_REMIND_MINUTES * MINUTE && now < start;
+  return (
+    event.remind &&
+    !event.dismissed &&
+    now >= start - CALENDAR_REMIND_MINUTES * MINUTE &&
+    now < start
+  );
 }
 
 function dueBefore(event: CalendarEvent, settings: CalendarSettings, now: number): boolean {
