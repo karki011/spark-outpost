@@ -10,7 +10,7 @@ A Mac app that runs Claude, Codex and Z.ai agents on your own machine.<br>
 Spark plans the work, builds it in safe worktrees, checks it with its own test runs and opens the pull request.
 
 <p>
-<a href="apps/desktop/CHANGELOG.md"><img alt="Version 0.1.0-beta.1" src="https://img.shields.io/badge/version-0.1.0--beta.1-2bb39a"></a>
+<a href="apps/desktop/CHANGELOG.md"><img alt="Version 0.1.0-beta.23" src="https://img.shields.io/badge/version-0.1.0--beta.23-2bb39a"></a>
 <img alt="macOS 12 or later" src="https://img.shields.io/badge/macOS-12%2B-111111?logo=apple&logoColor=white">
 <img alt="Apple silicon and Intel" src="https://img.shields.io/badge/arch-arm64%20%7C%20x64-555555">
 <img alt="Agents: Claude, Codex, Z.ai" src="https://img.shields.io/badge/agents-Claude%20%C2%B7%20Codex%20%C2%B7%20Z.ai-f0b44c">
@@ -36,7 +36,7 @@ Spark plans the work, builds it in safe worktrees, checks it with its own test r
 
 ## Download
 
-Latest: **0.1.0-beta.23** ([what's new](releases/0.1.0-beta.23.md)). Requires macOS 14 or later.
+Latest: **0.1.0-beta.23** ([what's new](releases/0.1.0-beta.23.md)). Requires macOS 12 or later (Mac control needs macOS 14).
 
 - [Download for Apple silicon](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.23-arm64.dmg)
 - [Download for Intel](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.23-x64.dmg)

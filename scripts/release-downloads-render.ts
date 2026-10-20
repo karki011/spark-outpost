@@ -3,6 +3,9 @@ export const README_START = '<!-- release-downloads:start -->';
 export const README_END = '<!-- release-downloads:end -->';
 
 const VERSIONS_WITHOUT_DMG = new Set(['0.1.0-beta.1']);
+const REQUIREMENT = 'Requires macOS 12 or later (Mac control needs macOS 14).';
+const VERSION_BADGE =
+  /<img alt="Version [^"]*" src="https:\/\/img\.shields\.io\/badge\/version-[^"]*-2bb39a">/;
 const DATE_LINE = /^Released (\d{4}-\d{2}-\d{2})\.$/m;
 
 export type Release = { version: string; body: string };
@@ -47,7 +50,7 @@ export function renderVersionPage(release: Release, date: string | undefined): s
     `- [Download for Apple silicon](${dmgUrl(release.version, 'arm64')})`,
     `- [Download for Intel](${dmgUrl(release.version, 'x64')})`,
     '',
-    'Requires macOS 14 or later.',
+    REQUIREMENT,
     '',
     '## Changes',
     '',
@@ -68,7 +71,9 @@ export function renderIndex(releases: Release[], dates: Map<string, string | und
   return [
     '# Spark Outpost downloads',
     '',
-    'Every Spark Outpost version with a download, newest first. Each needs macOS 14 or later. Once installed, the app updates itself.',
+    'Every Spark Outpost version with a download, newest first. Once installed, the app updates itself.',
+    '',
+    REQUIREMENT,
     '',
     `Versions before ${releases.at(-1)?.version ?? 'these'} have no disk image on the update feed and are not listed. The full history is in the [changelog](../apps/desktop/CHANGELOG.md).`,
     '',
@@ -85,7 +90,7 @@ export function renderReadmeSection(latest: Release): string {
     '',
     '## Download',
     '',
-    `Latest: **${latest.version}** ([what's new](releases/${latest.version}.md)). Requires macOS 14 or later.`,
+    `Latest: **${latest.version}** ([what's new](releases/${latest.version}.md)). ${REQUIREMENT}`,
     '',
     `- [Download for Apple silicon](${dmgUrl(latest.version, 'arm64')})`,
     `- [Download for Intel](${dmgUrl(latest.version, 'x64')})`,
@@ -102,4 +107,14 @@ export function replaceReadmeSection(readme: string, section: string): string {
     throw new Error(`README.md needs ${README_START} and ${README_END} markers`);
   }
   return readme.slice(0, start) + section + readme.slice(end + README_END.length);
+}
+
+export function versionBadge(version: string): string {
+  const label = version.replaceAll('-', '--');
+  return `<img alt="Version ${version}" src="https://img.shields.io/badge/version-${label}-2bb39a">`;
+}
+
+export function syncVersionBadge(readme: string, version: string): string {
+  if (!VERSION_BADGE.test(readme)) throw new Error('README.md has no version badge');
+  return readme.replace(VERSION_BADGE, versionBadge(version));
 }

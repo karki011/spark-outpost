@@ -8,6 +8,7 @@ import {
   renderReadmeSection,
   renderVersionPage,
   replaceReadmeSection,
+  syncVersionBadge,
 } from './release-downloads-render.ts';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -42,7 +43,10 @@ function expectedFiles(): Map<string, string> {
   files.set(path.join(releasesDir, 'README.md'), renderIndex(releases, dates));
   files.set(
     readmePath,
-    replaceReadmeSection(readFileSync(readmePath, 'utf8'), renderReadmeSection(latest)),
+    syncVersionBadge(
+      replaceReadmeSection(readFileSync(readmePath, 'utf8'), renderReadmeSection(latest)),
+      latest.version,
+    ),
   );
   return files;
 }

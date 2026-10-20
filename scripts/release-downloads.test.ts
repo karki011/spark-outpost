@@ -9,6 +9,7 @@ import {
   renderReadmeSection,
   renderVersionPage,
   replaceReadmeSection,
+  syncVersionBadge,
 } from './release-downloads-render.ts';
 
 const changelog = [
@@ -57,7 +58,7 @@ describe('release downloads', () => {
     expect(page).toContain('Released 2026-10-19.');
     expect(page).toContain(`(${feed}/Spark-Outpost-0.1.0-beta.3-arm64.dmg)`);
     expect(page).toContain(`(${feed}/Spark-Outpost-0.1.0-beta.3-x64.dmg)`);
-    expect(page).toContain('Requires macOS 14 or later.');
+    expect(page).toContain('Requires macOS 12 or later (Mac control needs macOS 14).');
     expect(page).toContain('- Fixes: Refresh no longer reverts.');
     expect(releaseDate(page)).toBe('2026-10-19');
     expect(renderVersionPage(release, undefined)).not.toContain('Released');
@@ -85,5 +86,14 @@ describe('release downloads', () => {
     expect(updated).toContain('[All versions](releases/README.md)');
     expect(replaceReadmeSection(updated, renderReadmeSection(latest))).toBe(updated);
     expect(() => replaceReadmeSection('# Title\n', 'x')).toThrow(/markers/);
+  });
+
+  it('sets the README version badge to the latest version', () => {
+    const readme =
+      '<a href="x"><img alt="Version 0.1.0-beta.1" src="https://img.shields.io/badge/version-0.1.0--beta.1-2bb39a"></a>\n';
+    expect(syncVersionBadge(readme, '0.1.0-beta.23')).toBe(
+      '<a href="x"><img alt="Version 0.1.0-beta.23" src="https://img.shields.io/badge/version-0.1.0--beta.23-2bb39a"></a>\n',
+    );
+    expect(() => syncVersionBadge('# Title\n', '0.1.0')).toThrow(/badge/);
   });
 });

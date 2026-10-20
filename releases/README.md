@@ -1,6 +1,8 @@
 # Spark Outpost downloads
 
-Every Spark Outpost version with a download, newest first. Each needs macOS 14 or later. Once installed, the app updates itself.
+Every Spark Outpost version with a download, newest first. Once installed, the app updates itself.
+
+Requires macOS 12 or later (Mac control needs macOS 14).
 
 Versions before 0.1.0-beta.2 have no disk image on the update feed and are not listed. The full history is in the [changelog](../apps/desktop/CHANGELOG.md).
 
