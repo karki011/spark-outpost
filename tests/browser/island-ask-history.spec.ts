@@ -134,19 +134,18 @@ test('Ask Spark loads older questions as you scroll up and keeps your place', as
   await expect(asked.last()).toBeInViewport();
   await expect(log(page).getByRole('button', { name: 'Earlier questions' })).toBeAttached();
 
-  const anchor = log(page).getByText('Question 6', { exact: true });
-  await anchor.scrollIntoViewIfNeeded();
-  const before = (await anchor.boundingBox())!.y;
-  await log(page).evaluate((element) => {
+  const fromBottom = await log(page).evaluate((element) => {
     element.scrollTop = 0;
     element.dispatchEvent(new Event('scroll'));
+    return element.scrollHeight;
   });
   await expect(asked).toHaveCount(25);
   await expect(asked.first()).toHaveText('Question 1');
   await expect(log(page).getByRole('button', { name: 'Earlier questions' })).toHaveCount(0);
   await expect(log(page).locator('.isl-ask-day').first()).toBeAttached();
-  const after = (await anchor.boundingBox())!.y;
-  expect(Math.abs(after - before)).toBeLessThan(60);
+  const kept = await log(page).evaluate((element) => element.scrollHeight - element.scrollTop);
+  expect(Math.abs(kept - fromBottom)).toBeLessThan(60);
+  await expect(log(page).getByText('Question 6', { exact: true })).toBeInViewport();
 });
 
 test('the full Ask Spark conversation shows the New topic divider', async ({ page }) => {
