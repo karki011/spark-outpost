@@ -85,6 +85,7 @@ export * from './outpost-start-action.ts';
 export * from './map.ts';
 export * from './companion.ts';
 export * from './assistant-history.ts';
+export * from './ask-spark-action.ts';
 export * from './desktop-updates.ts';
 export * from './desktop-help.ts';
 export * from './boot-teasers.ts';

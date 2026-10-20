@@ -3,6 +3,7 @@ import {
   assistantHistoryQuerySchema,
   assistantSettingsSchema,
   clearAssistantRequestSchema,
+  type IslandRequests,
 } from '@spark-outpost/contracts';
 import { AssistantUnavailableError, ensureAssistantChat } from '../companion/assistant.ts';
 import { listAssistantEvents } from '../companion/assistant-events.ts';
@@ -16,6 +17,7 @@ import {
   startAssistantTopic,
 } from '../companion/assistant-settings.ts';
 import { chatUpdate } from '../companion/chat-update.ts';
+import { claimIslandRequest, listIslandRequests } from '../companion/island-requests.ts';
 import { chatFileView } from '../companion/file-view.ts';
 import { withTransaction, type Db } from '../persistence/db.ts';
 import type { SecretStore } from '../setup/secrets.ts';
@@ -107,6 +109,20 @@ export function companionRoutes(deps: CompanionRouteDeps): Router {
   router.delete('/spark-assistant/facts/:id', async (req, res) => {
     await removeFact(deps.db, deps.workspaceId, paramId(req));
     await answer(res, () => assistantView(deps.db, deps.workspaceId));
+  });
+
+  router.get('/island/requests', async (_req, res) => {
+    const requests = await listIslandRequests(deps.db, deps.workspaceId);
+    res.json({ requests } satisfies IslandRequests);
+  });
+
+  router.post('/island/requests/:id/claim', async (req, res) => {
+    const claimed = await claimIslandRequest(deps.db, deps.workspaceId, paramId(req));
+    if (!claimed) {
+      res.status(409).json({ error: 'That request was already handled.' });
+      return;
+    }
+    res.json(claimed);
   });
 
   router.get('/spark-assistant/events', async (_req, res) => {

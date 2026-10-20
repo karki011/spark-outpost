@@ -1,5 +1,5 @@
 import { conversationProjectIds } from '../agent-config/store.ts';
-import { calendarOffer } from './tools/calendar/offered.ts';
+import { calendarOffer, meetingsOffer } from './tools/calendar/offered.ts';
 import { macRunRefusal } from '../mac-control/offered.ts';
 import { outpostNeeds } from '../outposts/outpost-availability.ts';
 import { gitHubStatus } from '../ship/github/access.ts';
@@ -31,6 +31,7 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   outpost_start: true,
   calendar_read: true,
   calendar_edit: true,
+  meetings: true,
   jira: true,
   confluence: true,
 };
@@ -52,7 +53,7 @@ export async function sparkAvailability(
   scope: SparkScope,
 ): Promise<SparkAvailability> {
   const tickets = ticketDepsFor(deps, scope);
-  const [sources, slack, project, outposts, macRefused, calendar, jira, confluence] =
+  const [sources, slack, project, outposts, macRefused, calendar, jira, confluence, meetings] =
     await Promise.all([
       connectedSources(tickets),
       openSlack(slackDepsFor(deps, scope)),
@@ -62,6 +63,7 @@ export async function sparkAvailability(
       calendarOffer(deps, scope),
       productLive(tickets, 'jira'),
       productLive(tickets, 'confluence'),
+      meetingsOffer(deps, scope),
     ]);
   const gitHub = project ? await gitHubReach(deps, scope) : { connected: false, ownLogin: false };
   return {
@@ -75,6 +77,7 @@ export async function sparkAvailability(
     mac: macRefused === null,
     calendar_read: calendar.read,
     calendar_edit: calendar.edit,
+    meetings,
     jira,
     confluence,
     ...outposts,
@@ -93,6 +96,7 @@ const HOW_TO_GET: Record<
     | 'outpost_start'
     | 'calendar_read'
     | 'calendar_edit'
+    | 'meetings'
     | 'jira'
   >,
   string

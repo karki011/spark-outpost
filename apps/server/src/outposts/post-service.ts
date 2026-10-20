@@ -135,7 +135,7 @@ async function chatRequestFacts(
   input: PostInput,
   post: PlannedPost,
 ): Promise<Partial<NewPost>> {
-  if (input.author.kind !== 'chat' || post.kind !== 'request') return {};
+  if (input.author.kind === 'user' || post.kind !== 'request') return {};
   return {
     requestHash: requestHash(post.body),
     waits: input.waits ?? false,

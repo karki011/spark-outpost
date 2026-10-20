@@ -53,6 +53,7 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   ),
   browser_sign_in: null,
   browser_handoff: null,
+  ask_spark: null,
   mac_use_app: null,
   mac_act: asked(
     'press|click|use|operate|control|calculate|choose|select|scroll|open',
@@ -106,6 +107,7 @@ interface RunFacts {
   outpost_run: boolean | null;
   from_user: boolean | null;
   spark_rule_retry?: boolean | null;
+  assistant_sent?: boolean | null;
 }
 
 async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
@@ -119,6 +121,8 @@ async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
               = 'outpost' AS outpost_run,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'spark_rule' AS spark_rule_retry,
+            COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
+              = 'assistant' AS assistant_sent,
             (SELECT post.from_user FROM outpost_posts post
              WHERE post.id = r.user_message_id) AS from_user
      FROM runs r JOIN conversations c ON c.id = r.conversation_id
@@ -136,6 +140,7 @@ function runText(run: RunFacts): UserTextInput {
     userRequest: run.request ?? '',
     outpostRequest: run.outpost_run === true ? { fromUser: run.from_user === true } : null,
     sparkRuleRetry: run.spark_rule_retry === true,
+    assistantSent: run.assistant_sent === true,
   };
 }
 

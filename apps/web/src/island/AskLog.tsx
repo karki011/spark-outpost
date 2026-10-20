@@ -1,10 +1,11 @@
 import { useLayoutEffect, useRef } from 'react';
-import type { AssistantChatLink } from '@spark-outpost/contracts';
+import type { Approval, AssistantChatLink } from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { TopicDivider } from '../chat/compaction/DividerLine.tsx';
 import { Markdown } from '../chat/markdown/Markdown.tsx';
 import type { Voice } from '../spark/voice.ts';
 import type { AskRow, ExchangeRow } from './ask-history-model.ts';
+import { AskCard } from './AskCard.tsx';
 import { AskThinking } from './AskThinking.tsx';
 
 const NEAR_TOP_PX = 24;
@@ -24,6 +25,7 @@ interface AskLogProps {
   step: string | null;
   cheer: string | null;
   links: AskLinks;
+  cards: { conversationId: string | null; byRun: ReadonlyMap<string, readonly Approval[]> };
 }
 
 function ChatLinks({ chats, links }: { chats: readonly AssistantChatLink[]; links: AskLinks }) {
@@ -90,6 +92,7 @@ function Answer({ row, cheer, links }: { row: ExchangeRow; cheer: boolean; links
 }
 
 function Exchange({ row, last, props }: { row: ExchangeRow; last: boolean; props: AskLogProps }) {
+  const chatId = props.cards.conversationId;
   return (
     <div className="isl-ask-pair">
       <p className="isl-ask-q">{row.question}</p>
@@ -102,6 +105,10 @@ function Exchange({ row, last, props }: { row: ExchangeRow; last: boolean; props
           <AskThinking voice={props.voice} step={props.step} />
         ) : (
           <p className="isl-ask-note">Waiting to be answered…</p>
+        ))}
+      {chatId &&
+        (props.cards.byRun.get(row.runId ?? '') ?? []).map((approval) => (
+          <AskCard key={approval.id} approval={approval} conversationId={chatId} />
         ))}
     </div>
   );

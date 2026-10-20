@@ -76,6 +76,7 @@ const sparkDeps: SparkToolDeps = {
     client: googleClientConfig(config),
   }),
   outposts: { wakes: outpostWakes, parked: parkedTurns, stackGit },
+  agentRuntime: config.AGENT_RUNTIME,
 };
 const sparkTools = await startSparkMcpHost(sparkDeps);
 desktopBrowser?.blockPorts([sparkTools.port]);

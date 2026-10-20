@@ -1,3 +1,4 @@
+import type { AgentRuntime } from '../agents/acp/spark-tools.ts';
 import type { BrowserHost } from '../browser/host-client.ts';
 import type { AgentCalendarHosts } from '../calendar/agent/access.ts';
 import type { MacHost } from '../mac-control/host-client.ts';
@@ -43,6 +44,7 @@ export interface SparkToolDeps {
   calendar?: AgentCalendarHosts | undefined;
   shotDir?: string;
   outposts?: OutpostToolDeps | undefined;
+  agentRuntime?: AgentRuntime | undefined;
 }
 
 export interface ReplySoFar {
@@ -66,6 +68,7 @@ export interface SparkScope {
   conversationId: string | null;
   runId: string | null;
   readOnly?: boolean;
+  assistant?: boolean;
   actions?: SparkActionHooks;
   observations?: RunObservations | undefined;
   publish?: PublishScope | null | undefined;

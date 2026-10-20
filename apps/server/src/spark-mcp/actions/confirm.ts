@@ -22,6 +22,9 @@ import { runEvents } from '../../workflow/run-events.ts';
 import type { SparkActionHooks, SparkScope } from '../deps.ts';
 import { SparkToolError, type SparkToolContext } from '../tool.ts';
 import { actionFacts, actionPath, type ActionPath } from './action-policy.ts';
+import { assistantPath, assistantRefusal } from './ask-spark-limits.ts';
+
+export const ASK_SPARK_ACTOR = 'Ask Spark';
 
 export const RESULT_WAIT_MS = 40_000;
 
@@ -68,6 +71,7 @@ async function quietly(work: Promise<unknown>): Promise<void> {
 }
 
 function cardTitle(action: SparkAction): string {
+  if (action.action === 'ask_spark') return action.summary;
   const question = sparkActionQuestion(action);
   if (
     action.action === 'browser_sign_in' ||
@@ -186,7 +190,11 @@ export function auditAction(
 ): void {
   run.hooks.audit?.message('harness', {
     method: `spark/${action.action}`,
-    params: redactValue({ action: auditedAction(action), ...outcome }),
+    params: redactValue({
+      action: auditedAction(action),
+      ...(run.scope.assistant ? { by: ASK_SPARK_ACTOR } : {}),
+      ...outcome,
+    }),
   });
 }
 
@@ -230,9 +238,26 @@ export async function proposeAction(
   options: ProposeOptions = {},
 ) {
   const run = actionRun(context.scope);
+  const assistant = run.scope.assistant === true;
+  if (assistant) {
+    const refusal = await assistantRefusal(
+      context.deps.db,
+      run.scope.workspaceId,
+      run.runId,
+      action,
+    );
+    if (refusal) {
+      auditAction(run, action, { outcome: 'refused', reason: refusal });
+      throw new SparkToolError(refusal);
+    }
+  }
   const observed = (await run.scope.observations?.labels()) ?? [];
   const facts = await actionFacts(context.deps.db, run.runId, action.action);
-  const path = options.alwaysAsk ? 'confirm' : actionPath(facts);
+  const path = options.alwaysAsk
+    ? 'confirm'
+    : assistant
+      ? await assistantPath(context.deps.db, run.scope.workspaceId, run.runId, action)
+      : actionPath(facts);
   const failedBefore = await lastFailedAttempt(
     context.deps.db,
     run.scope.conversationId,

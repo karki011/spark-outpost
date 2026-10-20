@@ -35,6 +35,7 @@ interface PrefsRow {
   effort: string | null;
   applied: string | null;
   notice: string | null;
+  acts: AssistantSettings['acts'];
 }
 
 interface AssistantTarget {
@@ -49,7 +50,8 @@ async function prefsRow(db: Queryable, workspaceId: string): Promise<PrefsRow | 
   const { rows } = await db.query<PrefsRow>(
     `SELECT assistant_conversation_id AS conversation_id, assistant_provider AS provider,
        assistant_model_choice AS model_choice, assistant_model AS model,
-       assistant_effort AS effort, assistant_applied AS applied, assistant_notice AS notice
+       assistant_effort AS effort, assistant_applied AS applied, assistant_notice AS notice,
+       assistant_acts AS acts
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
   );
@@ -62,6 +64,7 @@ function settingsOf(row: PrefsRow): AssistantSettings {
     modelChoice: row.model_choice,
     model: row.model,
     effort: row.effort,
+    acts: row.acts,
   };
 }
 
@@ -230,7 +233,7 @@ export async function saveAssistantSettings(
   await assertSettings(db, workspaceId, settings);
   const { rows } = await db.query<{ conversation_id: string | null }>(
     `UPDATE profiles SET assistant_provider = $2, assistant_model_choice = $3,
-       assistant_model = $4, assistant_effort = $5, updated_at = now()
+       assistant_model = $4, assistant_effort = $5, assistant_acts = $6, updated_at = now()
      WHERE workspace_id = $1 RETURNING assistant_conversation_id AS conversation_id`,
     [
       workspaceId,
@@ -238,6 +241,7 @@ export async function saveAssistantSettings(
       settings.modelChoice,
       settings.modelChoice === 'pick' ? settings.model : null,
       settings.effort,
+      settings.acts,
     ],
   );
   const row = rows[0];

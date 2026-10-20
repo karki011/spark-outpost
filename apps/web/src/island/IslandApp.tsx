@@ -67,6 +67,8 @@ import { islandViewedChat, useIslandViewing } from './use-island-viewing.ts';
 import { PANEL_ANNOUNCEMENTS } from './panel-announcements.ts';
 import { useGreeting, useMoments } from './use-island-moments.ts';
 import { useThemeSync } from './use-theme-sync.ts';
+import { useAssistantInbox } from './ask-assistant.ts';
+import { useIslandRequests } from './island-requests.ts';
 import { SpeechSeedContext } from '../voice/speech-seed.tsx';
 import { useSpeechIsland } from '../voice/use-speech-island.ts';
 
@@ -75,6 +77,7 @@ const MINUTE_MS = 60_000;
 const WAVE_MS = 1_400;
 const NO_IDS: string[] = [];
 const NO_SNOOZE: ReadonlySet<string> = new Set();
+const SET_ASIDE_REQUESTS = ['set_aside'] as const;
 const NO_HIDDEN: ReadonlySet<string> = new Set();
 const IN_PLACE = '[data-in-place]';
 type Opener = 'hover' | 'user';
@@ -134,6 +137,11 @@ export function IslandApp() {
     [data.chats, data.approvalsByChat, answered],
   );
   const aside = useSetAside(allCards);
+  useIslandRequests(SET_ASIDE_REQUESTS, (pending) => {
+    const card = allCards.find((candidate) => cardKey(candidate) === pending.target);
+    return card ? () => aside.setAside(card) : null;
+  });
+  const askInbox = useAssistantInbox();
   const cards = useMemo(
     () => stillAsking(pendingCards(data.chats, data.approvalsByChat, aside.keys), answered),
     [data.chats, data.approvalsByChat, aside.keys, answered],
@@ -323,6 +331,7 @@ export function IslandApp() {
     cards: unviewed.filter((card) => !asideKeys.has(cardKey(card))),
     aside: unviewed.filter((card) => asideKeys.has(cardKey(card))),
     details: data.detailById,
+    ask: askInbox,
     onLater: aside.setAside,
     onReview: (card: Card) => reviewCard(card.chat.id),
     onDecided: (card: Card, decided: Decided) => {
@@ -436,7 +445,10 @@ export function IslandApp() {
             onSettings: settingsReady ? () => openSettings('island') : null,
             onOpenSpark: () => openChat(null),
           }}
-          counts={{ waiting: inbox.cards.length + inbox.aside.length, running: running.length }}
+          counts={{
+            waiting: inbox.cards.length + inbox.aside.length + askInbox.cards.length,
+            running: running.length,
+          }}
           peek={row}
           sleepy={sleepy}
           projects={data.projects}

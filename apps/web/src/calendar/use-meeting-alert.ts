@@ -19,7 +19,7 @@ import {
 import { dismissNudge, snoozeNudgeFor, type NudgeMarks } from './nudge-marks.ts';
 import { openJoin } from './today-model.ts';
 
-const ALERT_SNOOZE_MS = 60_000;
+export const ALERT_SNOOZE_MS = 60_000;
 const HERE: Presence = { idleSeconds: 0, locked: false, asleep: false };
 
 interface MeetingAlertOptions {
@@ -223,7 +223,8 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
     });
   }, [setMarks]);
 
-  return { alert, countdown, cancelJoin, joinNow, markJoined };
+  const joinEvent = (event: CalendarEvent) => join(event, false);
+  return { alert, countdown, cancelJoin, joinNow, markJoined, joinEvent };
 }
 
 function marksWithout(marks: NudgeMarks, joined: ReadonlySet<string>): NudgeMarks {

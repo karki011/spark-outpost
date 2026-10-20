@@ -2,7 +2,14 @@ import { needsYouLines } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import { workReply } from '../persistence/work-reply.ts';
 
-const USER_SENT_SOURCES: readonly (string | null)[] = [null, 'ui', 'e2e', 'bench', 'queue'];
+const USER_SENT_SOURCES: readonly (string | null)[] = [
+  null,
+  'ui',
+  'e2e',
+  'bench',
+  'queue',
+  'voice',
+];
 
 export interface ContinuationFacts {
   source: string | null;

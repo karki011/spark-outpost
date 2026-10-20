@@ -4,10 +4,15 @@ import { request } from '../../api/client.ts';
 const path = (conversationId: string, rest = '') => `/conversations/${conversationId}/queue${rest}`;
 
 export const queueApi = {
-  add: (conversationId: string, id: string, content: string): Promise<QueueResponse> =>
+  add: (
+    conversationId: string,
+    id: string,
+    content: string,
+    origin?: 'voice',
+  ): Promise<QueueResponse> =>
     request(queueResponseSchema, path(conversationId), {
       method: 'POST',
-      body: JSON.stringify({ id, content }),
+      body: JSON.stringify({ id, content, ...(origin ? { origin } : {}) }),
     }),
   edit: (conversationId: string, id: string, content: string): Promise<QueueResponse> =>
     request(queueResponseSchema, path(conversationId, `/${id}`), {

@@ -12,6 +12,8 @@ export type ReasonFacts = Pick<
   | 'outpostRequest'
   | 'parentRunId'
   | 'assistant'
+  | 'sparkRuleRetry'
+  | 'assistantSent'
 >;
 
 export function publishReason(input: ReasonFacts): PublishReason | null {

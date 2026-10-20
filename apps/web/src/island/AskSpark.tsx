@@ -1,11 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import {
-  queryOptions,
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CalendarEvent } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { assistantApi, assistantKeys } from '../api/assistant.ts';
@@ -18,7 +12,7 @@ import { fastAnswer, type FastState } from './ask-fast-path.ts';
 import { askRows, lastExchange, type PendingAsk } from './ask-history-model.ts';
 import { meetingAnswer, NEXT_MEETING_QUESTION } from './ask-meeting.ts';
 import { AskLog, type AskLinks } from './AskLog.tsx';
-import { islandApi, islandKeys } from './island-api.ts';
+import { assistantCards, assistantQuery, useAssistant } from './ask-assistant.ts';
 import { queueApi } from '../chat/queue/queue-api.ts';
 import { plainLine } from './plain-line.ts';
 import type { AskSession } from './use-ask-session.ts';
@@ -38,22 +32,6 @@ interface AskSparkProps {
 const CHEER_MS = 1_400;
 const ASKED_CHIPS = ['Who needs me?', 'What’s running?'];
 
-const assistantQuery = queryOptions({
-  queryKey: islandKeys.assistant,
-  queryFn: islandApi.assistant,
-  staleTime: Infinity,
-});
-
-function useAssistant() {
-  const id = useQuery(assistantQuery);
-  const detail = useQuery({
-    queryKey: queryKeys.conversation(id.data ?? 'none'),
-    queryFn: () => api.getConversation(id.data!),
-    enabled: id.data !== undefined,
-  });
-  return { id: id.data ?? null, error: id.error, detail: detail.data };
-}
-
 function useHistory() {
   return useInfiniteQuery({
     queryKey: assistantKeys.history,
@@ -61,6 +39,12 @@ function useHistory() {
     initialPageParam: null as string | null,
     getNextPageParam: (page) => page.older,
   });
+}
+
+interface PendingQuestion {
+  id: string;
+  question: string;
+  spoken: boolean;
 }
 
 function useCheer(thinking: boolean, latest: string | null): string | null {
@@ -86,6 +70,7 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
   const history = useHistory();
   const now = useMinuteClock();
   const [text, setText] = useState('');
+  const [dictated, setDictated] = useState(false);
   const [asks, setAsks] = useState<PendingAsk[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const secrets = useSecretGuard(text);
@@ -110,15 +95,16 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
   }, [answered, queryClient]);
 
   const ask = useMutation({
-    mutationFn: async ({ id, question }: { id: string; question: string }) => {
+    mutationFn: async ({ id, question, spoken }: PendingQuestion) => {
       setAsks((list) => [...list, { id, question, at: Date.now() }]);
       const assistantId = await queryClient.ensureQueryData(assistantQuery);
-      await queueApi.add(assistantId, id, question);
+      await queueApi.add(assistantId, id, question, spoken ? 'voice' : undefined);
       return assistantId;
     },
     onError: (_error, { id }) => setAsks((list) => list.filter((entry) => entry.id !== id)),
     onSuccess: (assistantId) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(assistantId) });
+      void queryClient.invalidateQueries({ queryKey: assistantKeys.settings, exact: true });
     },
   });
 
@@ -147,16 +133,19 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
     return meeting !== null;
   };
 
-  const send = (question: string) => {
+  const send = (question: string, spoken = false) => {
     if (instantly(question)) return;
-    ask.mutate({ id: crypto.randomUUID(), question });
+    ask.mutate({ id: crypto.randomUUID(), question, spoken });
   };
 
   const submit = () => {
     const question = text.trim();
     if (!question || secrets.blocks(text)) return;
     setText('');
-    send(question);
+    const spoken = heard.current === question || dictated;
+    heard.current = null;
+    setDictated(false);
+    send(question, spoken);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -167,6 +156,7 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
 
   const { speak } = useSpeechSeeds();
   const spokenQuestion = useRef<string | null>(null);
+  const heard = useRef<string | null>(null);
   const seed = useSeed(
     'ask',
     (next) => {
@@ -174,6 +164,7 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
         session.add(next.question, next.answer.text, next.answer.chats);
         return;
       }
+      heard.current = next.question.trim();
       setText(next.question);
       inputRef.current?.focus({ preventScroll: true });
     },
@@ -198,6 +189,7 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
   }, [latest, speak]);
   const cheer = useCheer(thinking, latest?.answer ? latest.key : null);
   const step = run?.step ? plainLine(run.step) : null;
+  const cards = assistantCards(detail);
   const busy = thinking || ask.isPending || latest?.status === 'waiting';
   const chips = meetings ? [...ASKED_CHIPS, NEXT_MEETING_QUESTION] : ASKED_CHIPS;
   const error = ask.error ?? newTopic.error ?? assistant.error ?? history.error;
@@ -235,6 +227,7 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
         step={step}
         cheer={cheer}
         links={links}
+        cards={{ conversationId: assistant.id, byRun: cards }}
       />
       <div className="isl-ask-chips" role="group" aria-label="Suggested questions">
         {chips.map((chip) => (
@@ -266,7 +259,10 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
           <span className="isl-sp" />
           <MicButton
             className="isl-chip"
-            onText={(heard) => setText((now) => joinDictation(now, heard))}
+            onText={(spoken) => {
+              setDictated(true);
+              setText((now) => joinDictation(now, spoken));
+            }}
           />
           <button
             type="button"

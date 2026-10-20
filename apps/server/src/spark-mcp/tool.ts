@@ -33,6 +33,7 @@ export type SparkToolNeed =
   | 'outpost_start'
   | 'calendar_read'
   | 'calendar_edit'
+  | 'meetings'
   | 'jira'
   | 'confluence';
 
@@ -41,6 +42,7 @@ export interface SparkTool {
   title: string;
   description: string;
   acts?: boolean;
+  assistantOnly?: boolean;
   privateData?: boolean | PrivateData<unknown>;
   needs?: SparkToolNeed;
   input: z.ZodRawShape;

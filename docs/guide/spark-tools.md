@@ -6,9 +6,7 @@ order: 618
 summary: What agents can look up about Spark, the confirm card they show before acting for you, and what they never see.
 ---
 
-Agents get the `spark_*` tools their chat can use.
-
-Ticket, Slack and pull request tools need their connector; pull request and map tools need a linked project.
+Agents get the `spark_*` tools their chat can use; some need a connector or a linked project.
 
 ## Tools that read
 
@@ -30,7 +28,7 @@ Ticket, Slack and pull request tools need their connector; pull request and map 
 | A Slack thread by link, or a search of what you allowed    | `spark_slack`                                                                                                         |
 | Your Sparks, and the jobs and replies from an `@` mention  | `spark_sparks`, `spark_chat`                                                                                          |
 | The audit log, including actions that ran without review   | `spark_audit`                                                                                                         |
-| How Spark works, and this guide                            | `spark_guide`, `spark_docs`                                                                                           |
+| How Spark works, this guide                                | `spark_guide`, `spark_docs`                                                                                           |
 | Your [calendar](calendar.md#let-agents-use-it)             | `spark_calendar`                                                                                                      |
 | Jira or Confluence                                         | `spark_jira`, `spark_confluence`                                                                                      |
 
@@ -52,7 +50,7 @@ Ticket, Slack and pull request tools need their connector; pull request and map 
 | Change or delete Jira issues                | `spark_jira_edit`                                                                                       |
 | Change Confluence pages                     | `spark_confluence_edit`                                                                                 |
 
-An MCP server card shows the exact command. Agents pass only variable and header names; you fill values in **Settings → MCP servers**.
+An MCP server card shows the command; fill values in **Settings → MCP servers**.
 
 ## Outpost tools
 
@@ -66,7 +64,17 @@ A chat in an [outpost](outposts.md) gets these.
 | Propose sub-task chats that you review and start | `spark_outpost_draft` |
 | Start sub-task chats now                         | `spark_outpost_start` |
 
-Sub-chats and Sparks' jobs get no `spark_outpost_start`; it [may ask first](#when-actions-ask-first). What another chat wrote is never your message.
+Sub-chats and Sparks' jobs get no `spark_outpost_start`. Another chat's text is never your message.
+
+## Ask Spark tools
+
+Only for [Ask Spark](companion-quick-chat.md#let-ask-spark-act).
+
+| It can                                        | Tool                                                                                                                   |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Act on chats, Spark and tickets               | `spark_start_chat`, `spark_send_to_chat`, `spark_stop_chat`, `spark_archive_chat`, `spark_pause`, `spark_start_ticket` |
+| Answer a card with **Allow once** or **Deny** | `spark_answer_card`                                                                                                    |
+| Post in outposts, tidy the Inbox, meetings    | `spark_post_outpost`, `spark_clear_finished`, `spark_set_aside`, `spark_meeting`                                       |
 
 ## When actions ask first
 
@@ -78,7 +86,7 @@ Sub-chats and Sparks' jobs get no `spark_outpost_start`; it [may ask first](#whe
 
 ![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
 
-Edit, then confirm or select **Don't**. The card shows the result, or why it failed with **Try again**. Every action is audited.
+Edit, then confirm or select **Don't**. The card shows the result, or the failure with **Try again**.
 
 ## Commands after the turn
 
@@ -86,7 +94,7 @@ Edit, then confirm or select **Don't**. The card shows the result, or why it fai
 
 [Protected paths](protected-paths.md) and push rules hold in every mode. Read-only turns and turns with no project are refused.
 
-The agent can read and stop it; so do stopping the turn and quitting Spark.
+Stopping the turn or quitting Spark stops it too.
 
 ## What the tools never return
 
@@ -96,6 +104,5 @@ The agent can read and stop it; so do stopping the turn and quitting Spark.
 | Your terminals' output       | A terminal's name, folder and running program.        |
 | Password and card fields     | `[masked]`, and painted over in screenshots.          |
 | Secrets, API keys and tokens | Redacted before the agent sees them.                  |
-| Feedback comments            | Analytics give counts only.                           |
 
 After private reads, Spark notes [sends elsewhere](approvals.md#sending-data-out-after-reading-secrets).

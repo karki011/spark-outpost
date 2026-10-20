@@ -60,3 +60,10 @@ export async function calendarOffer(
     edit: !scope.readOnly && choices.some((choice) => choice.agentsEdit && choice.writable),
   };
 }
+
+export async function meetingsOffer(deps: SparkToolDeps, scope: SparkScope): Promise<boolean> {
+  if (!deps.calendar || !scope.assistant || !scope.runId) return false;
+  if (await runFromDevice(deps.db, scope.runId)) return false;
+  if (await childRun(deps.db, scope.runId)) return false;
+  return (await connected(deps.db, scope.workspaceId, deps.calendar.host !== null)).any;
+}
