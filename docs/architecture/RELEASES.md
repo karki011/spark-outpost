@@ -74,7 +74,10 @@ Spark-Outpost-<v>-x64.zip, Spark-Outpost-<v>-arm64.zip        what the updater d
 Spark-Outpost-<v>-x64.zip.blockmap, ...-arm64.zip.blockmap    for differential downloads
 Spark-Outpost-<v>-x64.dmg, Spark-Outpost-<v>-arm64.dmg        first installs and manual reinstalls
 release-notes.html        rendered from apps/desktop/CHANGELOG.md; linked from Settings › Updates
+Spark-Outpost-latest-x64.dmg, Spark-Outpost-latest-arm64.dmg  copies of the newest Beta dmgs; the website's download links
 ```
+
+The two `latest` dmgs are not written by electron-builder: `pnpm desktop:release` uploads a copy of each versioned dmg under those names on every publish to Beta (`publish` and `--beta-only`, not `--promote`), so the website's download links always fetch the newest Beta build. They follow the Beta channel for now; when Stable has its own downloads, give it its own names.
 
 `generateUpdatesFilesForAllChannels` makes a stable release also update `beta-mac.yml`, so Beta users get stable releases too. Keep old zips' blockmaps on the feed: electron-updater compares the old and new blockmap to download only changed blocks. The first update after a fresh install always downloads in full (there is no cached `update.zip` yet).
 
@@ -102,7 +105,7 @@ R2 answers a request for several byte ranges at once with `400 Bad Request` (che
    pnpm desktop:release            # dry run: prints every file, its size and the order; uploads nothing
    pnpm desktop:release --yes      # uploads
    ```
-   The script reads `apps/desktop/release/<version>/` (`--version` picks another), checks that the channel files are for this version and list both arch zips, and uploads zips, blockmaps, dmgs and `release-notes.html` first and the `*-mac.yml` files last, so no client sees a channel file that points at a missing zip. Artifacts are uploaded with a one-year immutable `Cache-Control`; channel files and the release notes with `no-cache`. If an upload fails, it stops before the channel files.
+   The script reads `apps/desktop/release/<version>/` (`--version` picks another), checks that the channel files are for this version and list both arch zips, and uploads zips, blockmaps, dmgs and `release-notes.html` first, then the `Spark-Outpost-latest-<arch>.dmg` copies, and the `*-mac.yml` files last, so no client sees a channel file that points at a missing zip. Artifacts are uploaded with a one-year immutable `Cache-Control`; channel files, the release notes and the `latest` dmgs with `no-cache`. If an upload fails, it stops before the channel files.
 
 ### Beta → Stable
 

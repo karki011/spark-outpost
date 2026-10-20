@@ -9,6 +9,7 @@ export interface LocalFile {
 
 export interface UploadStep {
   name: string;
+  source: string;
   size: number;
   cacheControl: string;
 }
@@ -44,6 +45,13 @@ function artifactNames(version: string): string[] {
     const base = `Spark-Outpost-${version}-${arch}`;
     return [`${base}.zip`, `${base}.zip.blockmap`, `${base}.dmg`];
   });
+}
+
+function latestDmgs(version: string): { source: string; name: string }[] {
+  return RELEASE_ARCHS.map((arch) => ({
+    source: `Spark-Outpost-${version}-${arch}.dmg`,
+    name: `Spark-Outpost-latest-${arch}.dmg`,
+  }));
 }
 
 export function updateZips(version: string): string[] {
@@ -110,18 +118,32 @@ export function releasePlan(input: PlanInput): ReleasePlan {
     for (const name of artifactNames(version)) {
       const size = sizes.get(name);
       if (size === undefined) problems.push(`${name} is missing from the release folder.`);
-      else uploads.push({ name, size, cacheControl: ARTIFACT_CACHE });
+      else uploads.push({ name, source: name, size, cacheControl: ARTIFACT_CACHE });
     }
     const notes = sizes.get(RELEASE_NOTES);
     if (notes !== undefined) {
-      uploads.push({ name: RELEASE_NOTES, size: notes, cacheControl: CHANNEL_CACHE });
+      uploads.push({
+        name: RELEASE_NOTES,
+        source: RELEASE_NOTES,
+        size: notes,
+        cacheControl: CHANNEL_CACHE,
+      });
+    }
+    for (const alias of latestDmgs(version)) {
+      const size = sizes.get(alias.source);
+      if (size !== undefined) uploads.push({ ...alias, size, cacheControl: CHANNEL_CACHE });
     }
   }
   for (const name of channelFiles(version, mode)) {
     const text = input.channelText(name);
     problems.push(...channelProblems(name, text, version));
     if (text !== null) {
-      uploads.push({ name, size: Buffer.byteLength(text), cacheControl: CHANNEL_CACHE });
+      uploads.push({
+        name,
+        source: name,
+        size: Buffer.byteLength(text),
+        cacheControl: CHANNEL_CACHE,
+      });
     }
   }
   return { version, mode, uploads, requiredOnFeed, problems };
@@ -137,7 +159,8 @@ export function describePlan(plan: ReleasePlan, target: string): string {
     `Release ${plan.version} (${plan.mode}) to ${target}`,
     ...plan.requiredOnFeed.map((name) => `  must already be on the feed: ${name}`),
     ...plan.uploads.map(
-      (step, index) => `  ${String(index + 1).padStart(2)}. ${megabytes(step.size)}  ${step.name}`,
+      (step, index) =>
+        `  ${String(index + 1).padStart(2)}. ${megabytes(step.size)}  ${step.name}${step.source === step.name ? '' : ` (copy of ${step.source})`}`,
     ),
     `  total ${megabytes(total).trim()}; channel files go last.`,
   ];
