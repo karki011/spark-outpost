@@ -28,14 +28,25 @@ Claude can't edit secret files or force push even in **Bypass permissions**. Rea
 
 ## What is always refused
 
-- Pushing any branch but the chat's own `spark/` branch, including the base branch.
+- Pushing any branch but the chat's `spark/` branch or [adopted pull request branch](where-spark-works.md#work-on-a-pull-request), including the base branch.
 - Plain `--force`, `+refspec`, mirror and default-branch force pushes.
 - Changing remotes.
 - Merging a pull request.
 - Your ChatGPT or Claude account's own apps and connectors, in a chat; a [Terminal session](terminals.md) keeps them. Add the MCP server in Spark instead.
-- Changing things with hosting tools, except `gh pr create` and `gh pr edit` on the chat's own pull request. Reading with `gh` follows the agent's mode.
+- Merging, approving or dismissing reviews, `--admin`, `gh api` writes and `gh auth`, even if added in [Spark rules](#spark-rules).
 
 A blocked step says "Spark's policy blocked", unlike your own **Deny**. A push Spark never saw, in a mode that doesn't ask, is [flagged](approvals.md#actions-that-ran-without-review) instead.
+
+## Spark rules
+
+**Settings → Spark rules** sets which `gh` commands a chat's agent may run beyond reads and the [publish rules](#when-an-agent-may-publish).
+
+| Rule                                                                   | Default                      |
+| ---------------------------------------------------------------------- | ---------------------------- |
+| **Run a workflow**: `gh workflow run`, `gh run rerun`, `gh run cancel` | **Follows the agent's mode** |
+| **Other commands**, unless you add one such as `gh release create`     | **Refused**                  |
+
+Following the mode: at once in **Auto**, **Bypass permissions**, **Approve for me** and **Full access**; a card otherwise. It's a send. A refusal shows a [card](cards.md#around-the-result).
 
 ## Secret files
 
@@ -49,7 +60,7 @@ Ship leaves these out of commits.
 
 ## When an agent may publish
 
-An agent may push the chat's own `spark/` branch and open its pull request only when:
+An agent may push the chat's own branch and open its pull request only when:
 
 - your message asks for it, such as "open a PR" or "push it"; "push it, but don't open a PR" allows only the push;
 - the chat is at **Full auto → PR**;

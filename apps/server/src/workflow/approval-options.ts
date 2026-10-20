@@ -1,4 +1,4 @@
-import type { Approval, ApprovalOption } from '@spark-outpost/contracts';
+import type { Approval, ApprovalOption, SparkRuleRefusal } from '@spark-outpost/contracts';
 import { normalizeCommand } from '../approvals/commands.ts';
 import type { Decision, RunRule } from '../approvals/decide.ts';
 
@@ -12,7 +12,7 @@ export type Asking = Pick<
   | 'sendsTo'
   | 'secretSend'
   | 'secretFiles'
->;
+> & { sparkRule?: SparkRuleRefusal };
 
 function onceOnly(asking: Asking): boolean {
   return Boolean(

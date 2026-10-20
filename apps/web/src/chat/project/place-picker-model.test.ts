@@ -37,6 +37,7 @@ describe('branchTip', () => {
     baseBranch: 'main',
     baseRef: null,
     createdAt: null,
+    adopted: null,
   };
 
   it('names the base the chat branched from and when', () => {

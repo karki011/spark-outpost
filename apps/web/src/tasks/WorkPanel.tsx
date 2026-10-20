@@ -7,6 +7,7 @@ import type { CrewAgent } from '../crew/crew-model.ts';
 import { GlobeIcon } from '../browser/BrowserIcons.tsx';
 import { ShieldIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
+import { AdoptPullSection } from './AdoptPullSection.tsx';
 import { AutonomySection } from './AutonomySection.tsx';
 import { AgentsSection } from '../chat/subagents/AgentsSection.tsx';
 import { TerminalWork } from '../terminal/usage/TerminalWork.tsx';
@@ -187,6 +188,7 @@ export function WorkPanel({
           )}
           <div className={browsing ? 'wp-body browser' : 'wp-body'}>
             {!browsing && <AgentsSection />}
+            {!browsing && !terminal && <AdoptPullSection conversationId={conversationId} />}
             {browsing ? (
               browser({ views, close })
             ) : task ? (

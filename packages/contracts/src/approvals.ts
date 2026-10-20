@@ -9,6 +9,7 @@ import {
   sparkActionSchema,
   sparkResultSchema,
 } from './spark-actions.ts';
+import { sparkRuleAnswerSchema, sparkRuleRefusalSchema } from './spark-rules.ts';
 
 export const runModeSchema = z.enum(['chat', 'ask', 'do']);
 export type RunMode = z.infer<typeof runModeSchema>;
@@ -119,6 +120,7 @@ export const approvalPayloadSchema = z.object({
   sparkRequested: z.boolean().optional(),
   agentReason: z.string().optional(),
   subagent: z.string().optional(),
+  sparkRule: sparkRuleRefusalSchema.optional(),
 });
 export type ApprovalPayload = z.infer<typeof approvalPayloadSchema>;
 
@@ -141,6 +143,7 @@ export const approvalSchema = z.object({
   note: z.string().nullable().optional(),
   autoContinueAt: z.string().nullable().optional(),
   edits: sparkActionEditsSchema.nullable().optional(),
+  ruleAnswer: sparkRuleAnswerSchema.nullable().optional(),
 });
 export type Approval = z.infer<typeof approvalSchema>;
 

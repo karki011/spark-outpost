@@ -40,8 +40,6 @@ In replies, audit logs, tool results, errors, Jev and [recorded Terminal session
 - Through [Spark's own tools](spark-tools.md#what-the-tools-never-return): file contents, terminal output, secrets, keys.
 - [Browser pane](use-the-browser.md): password and card fields, saved sign-ins. Cookies stay on this Mac.
 
-After private reads, Spark notes [sends elsewhere](approvals.md#sending-data-out-after-reading-secrets).
-
 ## When you reset
 
 **Settings → Reset** removes connector and MCP tokens and saved sign-ins. **Keep my API keys** keeps provider and Jev keys. See [Start over](trouble-setup-and-reset.md#start-over).

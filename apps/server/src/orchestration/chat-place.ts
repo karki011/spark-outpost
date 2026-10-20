@@ -43,7 +43,7 @@ const WORKTREE_FAILED =
 const GIT_MISSING_NOTE =
   'Git isn’t installed, so this chat works directly in your folder instead of its own worktree. Install Apple’s command line tools with xcode-select --install, then start a new chat to give it its own copy.';
 
-interface ChatPlaceDeps {
+export interface ChatPlaceDeps {
   db: Queryable;
   branchPrefix: string;
   gitInstalled?: () => Promise<boolean>;
@@ -61,7 +61,7 @@ interface PlacedChat {
   deps?: { prep: DepsPrep; copy: string };
 }
 
-interface Target {
+export interface Target {
   conversationId: string;
   projectId: string;
   root: string;
@@ -125,7 +125,7 @@ async function startPoint(
   return fallback ? { from: fallback, baseRef: fallback } : null;
 }
 
-interface Planned {
+export interface Planned {
   source: WorktreeSource;
   owned: boolean;
   baseBranch: string | null;
@@ -172,7 +172,7 @@ async function baseCommitOf(root: string, source: WorktreeSource): Promise<strin
   return (await git(root, ['rev-parse', '--verify', '-q', `${source.ref}^{commit}`])).trim();
 }
 
-async function createCopy(
+export async function createCopy(
   deps: ChatPlaceDeps,
   target: Target,
   planned: Planned,

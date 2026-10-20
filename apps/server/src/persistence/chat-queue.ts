@@ -18,6 +18,7 @@ interface QueueRow {
   continue_run_id: string | null;
   created_at: Date;
   outpost_post_id: string | null;
+  spark_rule_card_id?: string | null;
 }
 
 export const PAUSED_OUTPOST_ITEM = `EXISTS (
@@ -48,6 +49,7 @@ function toQueued(row: QueueRow): QueuedMessage {
     continueRunId: row.continue_run_id,
     createdAt: row.created_at.toISOString(),
     ...(row.outpost_post_id ? { outpostPostId: row.outpost_post_id } : {}),
+    ...(row.spark_rule_card_id ? { sparkRuleCardId: row.spark_rule_card_id } : {}),
   };
 }
 
@@ -55,6 +57,7 @@ export interface NewQueued {
   id: string;
   content: string;
   continueRunId?: string | null;
+  sparkRuleCardId?: string | null;
 }
 
 export async function listQueue(db: Queryable, conversationId: string): Promise<QueuedMessage[]> {
@@ -90,11 +93,18 @@ export async function addToQueue(
     throw new QueueError(409, `The queue holds ${QUEUE_LIMIT} messages. Send or remove one first.`);
   }
   await db.query(
-    `INSERT INTO chat_queue (id, conversation_id, position, content, continue_run_id)
-     SELECT $1, $2, COALESCE(MAX(position), 0) + 1, $3, $4
+    `INSERT INTO chat_queue (id, conversation_id, position, content, continue_run_id,
+       spark_rule_card_id)
+     SELECT $1, $2, COALESCE(MAX(position), 0) + 1, $3, $4, $5
      FROM chat_queue WHERE conversation_id = $2
      ON CONFLICT (id) DO NOTHING`,
-    [item.id, conversationId, item.content, item.continueRunId ?? null],
+    [
+      item.id,
+      conversationId,
+      item.content,
+      item.continueRunId ?? null,
+      item.sparkRuleCardId ?? null,
+    ],
   );
   await rememberRemoteMessage(db, item.id);
 }

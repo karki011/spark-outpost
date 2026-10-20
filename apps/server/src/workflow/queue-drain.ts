@@ -12,6 +12,7 @@ import {
 import { chatSparkPaused, sparkPausedForChat } from '../persistence/spark-pause.ts';
 import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
 import { postAttachmentIds } from '../persistence/outpost-posts.ts';
+import { markRuleRetry } from '../persistence/spark-rules.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 import {
   getMemberMessage,
@@ -51,10 +52,18 @@ async function lockConversation(db: Queryable, conversationId: string): Promise<
   return rowCount === 1;
 }
 
+function queuedSource(item: Pick<QueuedMessage, 'outpostPostId' | 'sparkRuleCardId'>) {
+  if (item.outpostPostId) return 'outpost';
+  return item.sparkRuleCardId ? 'spark_rule' : 'queue';
+}
+
 async function sendQueued(
   db: Queryable,
   conversationId: string,
-  item: Pick<QueuedMessage, 'id' | 'content' | 'continueRunId' | 'outpostPostId'>,
+  item: Pick<
+    QueuedMessage,
+    'id' | 'content' | 'continueRunId' | 'outpostPostId' | 'sparkRuleCardId'
+  >,
   target: RunTarget,
 ): Promise<void> {
   const continuing = item.continueRunId !== null && target.permission === PERMISSION_DO;
@@ -66,7 +75,7 @@ async function sendQueued(
       id: item.id,
       content: item.content,
       attachmentIds,
-      source: item.outpostPostId ? 'outpost' : 'queue',
+      source: queuedSource(item),
       ...(continuing ? { startAs: 'continue' as const } : {}),
     },
     target,
@@ -77,6 +86,7 @@ async function sendQueued(
       sent.run.id,
     ]);
   }
+  if (item.sparkRuleCardId) await markRuleRetry(db, item.sparkRuleCardId, sent.run.id);
   if (!item.continueRunId) return;
   await insertMemberMessage(db, {
     id: item.id,
@@ -178,6 +188,7 @@ export async function sendNow(
           content,
           continueRunId: queued?.continueRunId ?? null,
           outpostPostId: queued?.outpostPostId ?? null,
+          ...(queued?.sparkRuleCardId ? { sparkRuleCardId: queued.sparkRuleCardId } : {}),
         },
         target,
       );

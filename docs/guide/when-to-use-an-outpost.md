@@ -26,7 +26,7 @@ You are adding a usage page, with a frontend chat, an API chat and a docs chat i
 | `@docs describe the page`                     | The docs chat writes the page in the docs repo.                |
 | `The response is paged.`                      | A note. It starts no work and stays in the thread for reading. |
 
-Each answer lands under its request with its branch, files and pull request, so you read all three without switching chats.
+Each answer lands under its request, with its branch and pull request.
 
 ## What it can't do yet
 

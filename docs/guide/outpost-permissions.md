@@ -31,5 +31,3 @@ An agent mode that publishes without asking, such as **Auto**, works like the th
 | A proposed chat's mode is capped.                 | At the proposing chat's; only you raise it. |
 | A [stacked](stacked-pull-requests.md) push waits. | Until the branch under it is pushed.        |
 | [Protected paths](protected-paths.md) still ask.  | Whoever wrote the request.                  |
-
-See [modes and levels](modes-and-levels.md) and [When to use an outpost](when-to-use-an-outpost.md).

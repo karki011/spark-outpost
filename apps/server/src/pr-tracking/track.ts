@@ -52,6 +52,7 @@ const AUDIT_METHOD: Record<PrOpenedVia, string> = {
   agent: 'ship/agent_pr',
   terminal: 'ship/pr_tracked',
   discovery: 'ship/pr_tracked',
+  adopted: 'ship/pr_adopted',
 };
 
 const AUDIT_VIA: Record<PrOpenedVia, string> = {
@@ -59,6 +60,7 @@ const AUDIT_VIA: Record<PrOpenedVia, string> = {
   agent: 'agent_command',
   terminal: 'terminal',
   discovery: 'discovery',
+  adopted: 'adopted',
 };
 
 async function audit(db: Db, runId: string, sighting: PullSighting, tracked: Tracked) {

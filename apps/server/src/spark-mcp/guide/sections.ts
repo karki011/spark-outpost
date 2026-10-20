@@ -94,7 +94,7 @@ The safety floor holds at every level.`,
       'budget',
       'spend cap',
     ],
-    text: `The backend's approval gate follows the agent's own mode: a card only when the mode asks or the agent asks itself (shown with its reason, e.g. a sandbox block). A floor no mode loosens: changing a secret file (.env, keys) asks or is refused, reading one follows the mode, audited by path (.sparkignore ones ask); agents push only the chat's own spark/ branch and its gh PR, and only when asked, at Full auto → PR or in Auto/Bypass (else Ship pushes); no writes or deletes outside the linked folders (temp folders fine); everything goes to a hash-chained audit log.
+    text: `The backend's approval gate follows the agent's own mode: a card only when the mode asks or the agent asks itself (shown with its reason, e.g. a sandbox block). A floor no mode loosens: changing a secret file (.env, keys) asks or is refused, reading one follows the mode, audited by path (.sparkignore ones ask); agents push only the chat's own spark/ branch (or an adopted PR branch) and its gh PR, and only when asked, at Full auto → PR or in Auto/Bypass (else Ship pushes); no writes or deletes outside the linked folders (temp folders fine); everything goes to a hash-chained audit log.
 
 Force pushes: git push --force-with-lease to a named, non-default branch always asks with a "Force push?" card you press and hold to confirm, with no Always allow. Plain --force, +refspec, mirror, unnamed and default-branch force pushes are refused.
 
@@ -124,7 +124,7 @@ In my files, new chats edit the folder directly. Such a chat has no branch of it
     id: 'ship',
     title: 'Ship: commit, push, open a PR',
     keywords: ['ship', 'commit', 'push', 'draft pr', 'pull request', 'merge', 'ready for review'],
-    text: `Ship turns a chat's changes into git history: commit only, push, or open a pull request. Settings → Spark → Open pull requests as picks Ready for review (default) or Draft; a pull request is a draft only when that setting says so or you ask for one. Nothing merges. It never pushes a branch carrying Spark's internal snapshot commits, only its own spark/<slug>-<id> branches.
+    text: `Ship turns a chat's changes into git history: commit only, push, or open a pull request. Settings → Spark → Open pull requests as picks Ready for review (default) or Draft; a pull request is a draft only when that setting says so or you ask for one. Nothing merges. It never pushes a branch carrying Spark's internal snapshot commits, only its own spark/<slug>-<id> branches or an adopted PR branch.
 
 A turn that changed files ends in a "Changes kept" record (files, lines, branch, PR) that needs no answer; expanded, it offers "Bring changes into <your branch>". Ship is in the Work panel's Changes tab. At Full auto → PR when the turn changed files, or when you ask for a PR, Spark sends the agent one publish prompt after its reply: spark_push (with your shell logins, so hooks pass), then gh pr create or spark_pull_request. Spark runs no checks first; hooks and CI do. Spark checks GitHub and gives the link, or says no PR was opened. A push with no reason is refused, not asked about.`,
   },

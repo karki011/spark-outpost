@@ -265,7 +265,15 @@ export type SendMessageInput = Omit<
 > & {
   attachmentIds?: readonly string[];
   annotations?: SendMessageRequest['annotations'];
-  source?: MessageSource | 'ticket' | 'pr_follow_up' | 'queue' | 'slack' | 'outpost' | undefined;
+  source?:
+    | MessageSource
+    | 'ticket'
+    | 'pr_follow_up'
+    | 'queue'
+    | 'slack'
+    | 'outpost'
+    | 'spark_rule'
+    | undefined;
   startAs?: StartAs;
   continuesRunId?: string;
 };

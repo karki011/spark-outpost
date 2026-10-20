@@ -162,6 +162,8 @@ export const SPEC_GROUPS = {
     'settings-groups',
     'settings-lists',
     'spark-assistant-settings',
+    'spark-rule-card',
+    'spark-rules-settings',
     'terminal-record-setting',
     'zai',
   ],
