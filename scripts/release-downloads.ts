@@ -13,6 +13,7 @@ import {
 
 const root = path.resolve(import.meta.dirname, '..');
 const releasesDir = path.join(root, 'releases');
+const VERSION_PAGE = /^\d+\.\d+\.\d+(-[\w.]+)?\.md$/;
 const readmePath = path.join(root, 'README.md');
 
 function readIfExists(file: string): string | undefined {
@@ -51,9 +52,10 @@ function expectedFiles(): Map<string, string> {
   return files;
 }
 
-function unexpectedPages(expected: Map<string, string>): string[] {
+function staleVersionPages(expected: Map<string, string>): string[] {
   if (!existsSync(releasesDir)) return [];
   return readdirSync(releasesDir)
+    .filter((name) => VERSION_PAGE.test(name))
     .map((name) => path.join(releasesDir, name))
     .filter((file) => !expected.has(file));
 }
@@ -64,7 +66,7 @@ function main(): void {
   const stale = [...expected]
     .filter(([file, content]) => readIfExists(file) !== content)
     .map(([file]) => file);
-  const extra = unexpectedPages(expected);
+  const extra = staleVersionPages(expected);
   if (check) {
     const problems = [...stale, ...extra].map((file) => path.relative(root, file));
     if (problems.length > 0) {
