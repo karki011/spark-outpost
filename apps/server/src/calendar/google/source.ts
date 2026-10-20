@@ -43,7 +43,6 @@ import {
   storedEvent,
   type StoredEvent,
 } from './sync.ts';
-import { htmlNotesText } from '../notes-html.ts';
 import { splitNotes } from '../notes-text.ts';
 import { locationOf, peopleOf } from '../people.ts';
 import { forgetMarksOf } from '../store.ts';
@@ -307,11 +306,10 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       if (!stored && account.state === 'sign_in_again') throw new GoogleSignInNeeded();
       const found = stored ?? (await fetchEvent(account, occurrence));
       if (!found) return null;
-      const notes = htmlNotesText(found.notes);
       return {
         title: found.event.title,
-        notes,
-        ...splitNotes(notes),
+        notes: found.notes,
+        ...splitNotes(found.notes),
         snippet: found.snippet,
         link: found.link,
         location: locationOf(found.event.location, found.invitees),

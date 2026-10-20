@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { htmlNotesText, looksLikeHtml } from './notes-html.ts';
+import { notesText } from './google/map.ts';
 import { splitNotes } from './notes-text.ts';
 
 const STANDUP =
@@ -100,5 +101,15 @@ describe('htmlNotesText', () => {
     const split = splitNotes(htmlNotesText(mixed));
     expect(split.agenda).toBe('Agenda');
     expect(split.conference).toContain('Meeting ID: 812 3456 7890');
+  });
+
+  it('drops a doctype and processing instructions', () => {
+    expect(
+      htmlNotesText('<!DOCTYPE html><?xml version="1.0"?><html><body><p>Hello</p></body></html>'),
+    ).toBe('Hello');
+  });
+
+  it('keeps tag-shaped text the author typed', () => {
+    expect(notesText('<p>Wrap it in &lt;div&gt; tags</p>')).toBe('Wrap it in <div> tags');
   });
 });

@@ -2,6 +2,7 @@ const HTML_TAG =
   /<\/?(br|p|div|span|ul|ol|li|a|b|i|u|em|strong|font|html|body|table|tr|td|h[1-6])\b[^>]*>/i;
 const ENCODED_TAG = /&lt;\/?(br|p|div|ul|ol|li|a|b|u|span)\b/i;
 const TAG = /<(\/?)([a-zA-Z][a-zA-Z0-9:-]*)((?:\s[^>]*)?)\/?>/y;
+const DECLARATION = /^<[!?]/;
 const HIDDEN = new Set(['script', 'style', 'head', 'title', 'template', 'xml', 'noscript']);
 const BLOCK = new Set(['p', 'div', 'tr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote']);
 const HREF = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i;
@@ -175,6 +176,11 @@ function walk(html: string): string {
     if (html.startsWith('<!--', at)) {
       const end = html.indexOf('-->', at + 4);
       at = end === -1 ? html.length : end + 3;
+      continue;
+    }
+    if (DECLARATION.test(html.slice(at, at + 2))) {
+      const end = html.indexOf('>', at);
+      at = end === -1 ? html.length : end + 1;
       continue;
     }
     TAG.lastIndex = at;
