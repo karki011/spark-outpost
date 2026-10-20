@@ -2,6 +2,17 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.23
+
+- Browser pane: the network log shows each request's full address with secret values hidden, plus its start, end and duration, so overlapping requests are visible; OPTIONS requests are hidden by default and you can filter by method, address and status. Agents can read just a page's main content.
+- Browser pane: a saved sign-in can list several sites, such as an app and its Auth0 or Okta pages, and Spark types only on a site you listed. Sign in for me lets the agent wait while you finish SSO or MFA in its tab.
+- Browser pane: agents get developer tools: console errors with stack traces, running JavaScript in the page (following your mode, and asking on your own tabs), inspecting elements, page performance and the agent tab's own storage. A DevTools button and ⌥⌘I open Chrome's DevTools for you.
+- Meetings: Scout lowers each meeting alert to the centre of the screen on a thread, with Join, Snooze and Dismiss; a quieter Bubble from Scout hangs the card from the island instead, and holds use it. Alert at sets 5 min, 1 min or the start.
+- Meetings: Join meetings automatically, off by default, counts down 10 seconds at the start with Cancel and Join now, and skips during a clash, a hold, or when you're away.
+- Meetings: Open shows the meeting selected in Day view, island meeting lines show the time on a second line, and times follow your Mac's 12- or 24-hour setting.
+- Spark Island: buttons respond to the first click, and a chat you're already looking at sends no island line, chime, notification or phone push; opening a chat clears them.
+- Browser pane: agent tabs say they close when the turn ends, with Pin to keep, and a tab you used or one waiting for sign-in stays open.
+
 ## 0.1.0-beta.22
 
 - Atlassian: one connection for Jira and Confluence replaces the Jira card, with a switch for each; your Jira connection carries over. Agents can search, read, create, update, comment on and delete Jira issues and Confluence pages, following the chat's mode. A Confluence update is refused when someone changed the page first, and deleted pages go to the trash.
