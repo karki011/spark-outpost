@@ -15,7 +15,6 @@ export interface WingProps {
 const PANEL_LABELS: Record<Panel, string> = {
   home: 'Spark',
   quick: 'New chat',
-  sessions: 'Chats',
   ask: 'Ask Spark',
 };
 
@@ -48,15 +47,7 @@ export function wingsFor(props: WingProps): { left: ReactNode; right: ReactNode 
           view.panel === 'home' && greeting
             ? greeting
             : panelLabel(view.panel, props.followUp !== null),
-        right:
-          view.panel === 'sessions' && waiting > 0 ? (
-            <>
-              <span className="isl-badge">{waiting}</span>
-              <span>need you</span>
-            </>
-          ) : (
-            <Kbd>⌥ Space</Kbd>
-          ),
+        right: <Kbd>⌥ Space</Kbd>,
       };
     case 'now':
       return {

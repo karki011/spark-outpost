@@ -8,7 +8,7 @@ import { teammatesApi } from '../teammates/teammates-api.ts';
 import { useTeammates } from '../teammates/use-teammates.ts';
 import { PlusIcon } from '../ui/icons.tsx';
 
-interface SparkTilesProps {
+export interface SparkTileActions {
   onOpenHere: (id: string) => void;
   onMakeSpark: (() => void) | null;
   onEditSpark: ((id: string) => void) | null;
@@ -106,7 +106,7 @@ function NewSparkTile({ index, onMake }: { index: number; onMake: () => void }) 
   );
 }
 
-export function SparkTiles(props: SparkTilesProps) {
+export function SparkTiles(props: SparkTileActions) {
   const { loading, teammates } = useTeammates();
   const queryClient = useQueryClient();
   const open = useMutation({

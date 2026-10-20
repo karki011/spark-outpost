@@ -42,11 +42,11 @@ describe('unacknowledged', () => {
 });
 
 describe('islandViewedChat', () => {
-  const quiet = { review: null, selfOpened: null, focusSignal: 0, panel: null, selected: null };
+  const quiet = { review: null, selfOpened: null, focusSignal: 0 };
 
-  it('counts a card the user opened and a chat open in the island', () => {
+  it('counts a card the user opened', () => {
     expect(islandViewedChat({ ...quiet, review: FE_CHAT })).toBe(FE_CHAT);
-    expect(islandViewedChat({ ...quiet, panel: 'sessions', selected: API_CHAT })).toBe(API_CHAT);
+    expect(islandViewedChat(quiet)).toBeNull();
   });
 
   it('does not count a card the island opened by itself until the user takes it', () => {
@@ -54,9 +54,5 @@ describe('islandViewedChat', () => {
     expect(islandViewedChat(selfOpened)).toBeNull();
     expect(islandViewedChat({ ...selfOpened, focusSignal: 1 })).toBe(FE_CHAT);
     expect(islandViewedChat({ ...selfOpened, selfOpened: null })).toBe(FE_CHAT);
-  });
-
-  it('ignores a selection when the chats panel is closed', () => {
-    expect(islandViewedChat({ ...quiet, panel: 'home', selected: API_CHAT })).toBeNull();
   });
 });

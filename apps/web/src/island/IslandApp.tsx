@@ -1,7 +1,6 @@
 import './island.css';
 import './island-views.css';
 import './island-panels.css';
-import './island-work.css';
 import './island-peek.css';
 import './island-peek-state.css';
 import './island-ask.css';
@@ -32,22 +31,21 @@ import { useIslandCalendar } from '../calendar/use-island-calendar.ts';
 import { useMeetingHop } from '../calendar/use-meeting-hop.ts';
 import { useVoice } from '../spark/use-voice.ts';
 import { useReducedMotion } from '../ui/motion.ts';
-import type { Decided } from './CardView.tsx';
+import type { Decided } from './use-decide.ts';
 import { islandKeys, islandApi } from './island-api.ts';
 import {
-  hoverOpens,
+  cardKey,
+  hoverOpensHome,
   islandView,
   sessionState,
   pendingCards,
   peekRow,
   quickShortcutTarget,
-  rankedSessions,
   waitingCount,
   type Card,
   type Panel,
 } from './island-model.ts';
 import { isSleepyTime, scoutMoodFor } from './island-mood.ts';
-import { homeSessions, quickStartProject } from './home-model.ts';
 import { useChimes, useIslandSound } from './island-sound.ts';
 import { useAutoExpandSetting, useIslandSize } from './island-size.ts';
 import { opensByItself, useAutoExpand } from './auto-expand.ts';
@@ -58,6 +56,7 @@ import { useAddProject } from './use-add-project.ts';
 import { useIslandBridge, useSparkFocus } from './use-island-bridge.ts';
 import { useIslandDrop } from './use-island-drop.ts';
 import { coreRects, flatRowRects, lineRects, minuteOf, useHoverIntent } from './island-hover.ts';
+import { useIslandKeys } from './use-island-keys.ts';
 import { restLine, type RestLine } from './island-rest-line.ts';
 import { useSetAside } from './set-aside.ts';
 import { useFastState } from './use-fast-state.ts';
@@ -75,8 +74,12 @@ const WAVE_MS = 1_400;
 const NO_IDS: string[] = [];
 const NO_SNOOZE: ReadonlySet<string> = new Set();
 const NO_HIDDEN: ReadonlySet<string> = new Set();
-const PANEL_KEYS = ['home', 'sessions', 'quick', 'ask'] as const;
+const IN_PLACE = '[data-in-place]';
 type Opener = 'hover' | 'user';
+
+function isRunningChat(chat: ConversationSummary): boolean {
+  return !chat.archivedAt && sessionState(chat) === 'working';
+}
 
 export function IslandApp() {
   useThemeSync();
@@ -96,7 +99,6 @@ export function IslandApp() {
   const sparkFocused = useSparkFocus();
   const [panel, setPanel] = useState<Panel | null>(null);
   const [opener, setOpener] = useState<Opener>('user');
-  const [selected, setSelected] = useState<string | null>(null);
   const [note, setNote] = useState<Decided | null>(null);
   const [review, setReview] = useState<string | null>(null);
   const [selfOpened, setSelfOpened] = useState<string | null>(null);
@@ -109,16 +111,7 @@ export function IslandApp() {
   const [now, setNow] = useState(() => minuteOf(Date.now()));
   const { moment, text: momentText, dismiss } = useMoments(data.chats, data.loaded);
   const greeting = useGreeting(voice, setup.data !== undefined);
-  const running = useMemo(
-    () =>
-      data.chats.filter(
-        (chat) =>
-          !chat.archivedAt &&
-          !chat.needsInput &&
-          (chat.latestRun?.status === 'running' || chat.latestRun?.status === 'queued'),
-      ),
-    [data.chats],
-  );
+  const running = useMemo(() => data.chats.filter(isRunningChat), [data.chats]);
   const settleHover = useRef<(inside: boolean) => void>(() => undefined);
   const [hover, onHover, cancelHoverOpen] = useHoverIntent(settleHover);
   const islandRef = useRef<HTMLDivElement>(null);
@@ -142,7 +135,7 @@ export function IslandApp() {
     () => pendingCards(data.chats, data.approvalsByChat, aside.keys),
     [data.chats, data.approvalsByChat, aside.keys],
   );
-  const islandChatId = islandViewedChat({ review, selfOpened, focusSignal, panel, selected });
+  const islandChatId = islandViewedChat({ review, selfOpened, focusSignal });
   const { viewed, fresh, unviewed } = useIslandViewing({
     openChatId: islandChatId,
     chats: data.chats,
@@ -194,7 +187,6 @@ export function IslandApp() {
     cancelHoverOpen();
     setPanel(null);
     setReview(null);
-    setSelected(null);
     setFollowUp(null);
   };
 
@@ -215,46 +207,42 @@ export function IslandApp() {
   );
   const calendarLine = view.kind === 'peek' && !sparkFocused && !line ? calendar.line : null;
 
-  const openChat = (id: string, runId?: string) => {
+  const openChat = (id: string | null, runId?: string) => {
     closePanel();
-    if (moment?.chatId === id) dismiss();
-    setNote({ title: 'Opening Spark…', sub: 'The chat opens in the main window.' });
+    if (id && moment?.chatId === id) dismiss();
     const desktop = sparkDesktop();
     if (desktop) desktop.island.openChat(id, runId);
     else window.open('/', '_blank', 'noopener');
   };
 
-  const openCard = (card: Card, by: Opener = 'user') => {
-    setReview(null);
-    setSelected(card.chat.id);
-    openPanel('sessions', by);
+  const reviewCard = (chatId: string) => {
+    setReview(chatId);
+    setFocusSignal((value) => value + 1);
   };
 
   const openLine = (shown: RestLine) => {
     if (shown.card) {
-      setReview(shown.chatId);
-      setFocusSignal((value) => value + 1);
+      reviewCard(shown.chatId);
       return;
     }
     dismiss();
-    setSelected(shown.chatId);
-    openPanel('sessions');
+    openPanel('home');
+  };
+
+  const replyTo = (chat: ConversationSummary) => {
+    setFollowUp(chat);
+    openPanel('quick');
   };
 
   const command = (action: IslandAction) => {
     if (action === 'sessions') {
-      if (panel === 'sessions') closePanel();
-      else {
-        setSelected(null);
-        openPanel('sessions');
-      }
+      if (panel === 'home') closePanel();
+      else openPanel('home');
       return;
     }
     const target = quickShortcutTarget(panel, view, cards[0] ?? null);
-    if (target.kind === 'review') {
-      setReview(target.chatId);
-      setFocusSignal((value) => value + 1);
-    } else if (target.kind === 'close') closePanel();
+    if (target.kind === 'review') reviewCard(target.chatId);
+    else if (target.kind === 'close') closePanel();
     else openPanel('quick');
   };
 
@@ -288,31 +276,23 @@ export function IslandApp() {
     },
   });
 
-  const keys = useRef<(event: KeyboardEvent) => void>(() => undefined);
-  useEffect(() => {
-    keys.current = (event: KeyboardEvent) => {
-      const slot = PANEL_KEYS[Number(event.key) - 1];
-      if ((event.metaKey || event.ctrlKey) && panel && slot) {
-        event.preventDefault();
-        openPanel(slot);
-        return;
-      }
-      if (event.key !== 'Escape' || event.defaultPrevented) return;
+  useIslandKeys({
+    panel,
+    openPanel,
+    openSpark: () => openChat(null),
+    escape: () => {
       if (panel) closePanel();
       else if (review) setReview(null);
       else if (view.kind === 'note') setNote(null);
-      else return;
-      event.preventDefault();
-    };
+      else return false;
+      return true;
+    },
   });
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => keys.current(event);
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
 
   const pin = (event: SyntheticEvent) => {
     setSelfOpened(null);
+    const target = event.target as Element;
+    if (target.closest?.(IN_PLACE)) return;
     if (panel && opener === 'hover' && event.target !== event.currentTarget) setOpener('user');
   };
 
@@ -326,7 +306,6 @@ export function IslandApp() {
     }
   };
 
-  const sessions = useMemo(() => rankedSessions(data.chats, NO_HIDDEN), [data.chats]);
   useChimes(sound?.on ?? false, data.loaded ? data.chats : null, moment, viewed, calendar.hold);
   const desktop = sparkDesktop();
   const openSettings = (target: IslandSettingsTarget) => {
@@ -334,27 +313,24 @@ export function IslandApp() {
     desktop?.island.openSettings?.(target);
   };
   const settingsReady = typeof desktop?.island.openSettings === 'function';
-  const quickStart = useMemo(
-    () => quickStartProject(data.chats, data.projects),
-    [data.chats, data.projects],
-  );
-  const homeChats = useMemo(() => homeSessions(data.chats), [data.chats]);
-  const home = {
-    sessions: homeChats,
+  const asideKeys = aside.keys;
+  const inbox = {
     chats: data.chats,
-    cards: unviewed,
-    quickStart: quickStart ? { id: quickStart.id, name: quickStart.name } : null,
+    cards: unviewed.filter((card) => !asideKeys.has(cardKey(card))),
+    aside: unviewed.filter((card) => asideKeys.has(cardKey(card))),
+    details: data.detailById,
+    onLater: aside.setAside,
+    onReview: (card: Card) => reviewCard(card.chat.id),
+    onDecided: (decided: Decided) => setAnnouncement(`${decided.title}. ${decided.sub}`),
+    onConnectors: settingsReady ? () => openSettings('connectors') : null,
+  };
+  const sparks = {
     onOpenHere: (id: string) => {
-      setSelected(id);
-      openPanel('sessions');
-    },
-    onNewIn: (projectId: string | null) => {
-      setFollowUp(null);
-      setDraft((current) => ({ ...current, projectId }));
-      openPanel('quick');
+      const chat = data.all.find((candidate) => candidate.id === id);
+      if (chat) replyTo(chat);
+      else openChat(id);
     },
     onMakeSpark: settingsReady ? () => openSettings('spark-new') : null,
-    onConnectors: settingsReady ? () => openSettings('connectors') : null,
     onEditSpark: settingsReady ? (id: string) => openSettings(`spark-edit:${id}`) : null,
   };
   const fast = useFastState(feed, panel === 'ask');
@@ -364,12 +340,10 @@ export function IslandApp() {
     fast,
     panel,
     openPanel,
-    selectChat: setSelected,
+    replyTo,
     openChat,
   });
 
-  const openChatHere =
-    panel === 'sessions' ? (data.chats.find((chat) => chat.id === selected) ?? null) : null;
   const backFromDrop = () => {
     if (beforeDrop.current) openPanel(beforeDrop.current);
     else closePanel();
@@ -380,7 +354,7 @@ export function IslandApp() {
     onStart: () => {
       beforeDrop.current = panel;
       setDropNote(null);
-      setFollowUp(openChatHere);
+      setFollowUp(panel === 'quick' ? followUp : null);
       openPanel('quick');
     },
     onAbort: backFromDrop,
@@ -410,10 +384,7 @@ export function IslandApp() {
   useEffect(() => {
     settleHover.current = (inside: boolean) => {
       if (inside) {
-        if (grab.phase !== 'idle') return;
-        const target = hoverOpens(view, !sparkFocused ? (fresh[0] ?? null) : null);
-        if (target?.kind === 'home') openPanel('home', 'hover');
-        else if (target?.kind === 'card') openCard(target.card, 'hover');
+        if (grab.phase === 'idle' && hoverOpensHome(view)) openPanel('home', 'hover');
         return;
       }
       if (panel && opener === 'hover') closePanel();
@@ -453,14 +424,18 @@ export function IslandApp() {
           note={note}
           detailFor={(chatId) => data.detailById.get(chatId)}
           focusSignal={focusSignal}
-          sessions={sessions}
-          home={home}
-          bar={{ sound, onSettings: settingsReady ? () => openSettings('island') : null }}
+          inbox={inbox}
+          sparks={sparks}
+          nowChat={running[0] ?? null}
+          bar={{
+            sound,
+            onSettings: settingsReady ? () => openSettings('island') : null,
+            onOpenSpark: () => openChat(null),
+          }}
+          counts={{ waiting: inbox.cards.length + inbox.aside.length, running: running.length }}
           peek={row}
           sleepy={sleepy}
-          projectNames={data.projectNames}
           projects={data.projects}
-          selected={selected}
           draftId={draftId}
           draft={draft}
           followUp={followUp}
@@ -468,21 +443,16 @@ export function IslandApp() {
           announcement={viewAnnouncement || announcement || spoken}
           onDraft={setDraft}
           onTab={openPanel}
-          onSelect={setSelected}
           onOpenChat={openChat}
           onDecided={setNote}
           onLater={snooze}
-          onReview={openCard}
+          onReview={(card) => reviewCard(card.chat.id)}
           onLine={openLine}
           onScout={() => {
             if (panel) closePanel();
-            else if (view.kind === 'now' && view.card) openCard(view.card);
             else openPanel('home');
           }}
-          onPeekOpen={(id) => {
-            setSelected(id);
-            openPanel('sessions');
-          }}
+          onPeekOpen={(id) => openChat(id)}
           onSent={(_id, title) => {
             setAnnouncement(`Started ${followUp ? 'a follow-up' : 'a new chat'}: ${title}.`);
             setDraftId(newDraftId());

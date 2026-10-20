@@ -32,14 +32,11 @@ interface IslandChatState {
   review: string | null;
   selfOpened: string | null;
   focusSignal: number;
-  panel: string | null;
-  selected: string | null;
 }
 
 export function islandViewedChat(state: IslandChatState): string | null {
   const openedByUser = state.review !== state.selfOpened || state.focusSignal > 0;
-  if (state.review && openedByUser) return state.review;
-  return state.panel === 'sessions' ? state.selected : null;
+  return state.review && openedByUser ? state.review : null;
 }
 
 interface IslandViewingOptions {

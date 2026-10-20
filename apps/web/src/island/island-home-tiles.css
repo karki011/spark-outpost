@@ -126,33 +126,3 @@
 .isl-tilegrid[data-quick] {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-
-.isl-tile-needs {
-  border-color: color-mix(in srgb, var(--warn) 55%, var(--card-line));
-  background: color-mix(in srgb, var(--warn) 9%, var(--card));
-}
-
-.isl-tile-needs .isl-badge {
-  flex: none;
-}
-
-.isl-tile-quiet {
-  height: 44px;
-  min-width: 0;
-  margin: 0;
-  padding: 0 8px 0 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 12px;
-  white-space: nowrap;
-  animation: isl-tile-in 0.52s var(--spring-pop) calc(150ms + var(--i, 0) * 55ms) both;
-}
-
-.isl-tile-quiet svg {
-  flex: none;
-  width: 13px;
-  height: 13px;
-  color: var(--success);
-}

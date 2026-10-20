@@ -1,28 +1,21 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { useMutation } from '@tanstack/react-query';
 import {
   clarifyOptionId,
   type Approval,
   type ApprovalOption,
   type ApprovalScope,
 } from '@spark-outpost/contracts';
-import { approvalsApi } from '../api/approvals.ts';
-import { projectAllowOption, shownOptions } from '../chat/approvals/approval-outcome.ts';
+import { projectAllowOption } from '../chat/approvals/approval-outcome.ts';
 import { isCheckpoint, type CheckpointApproval } from '../chat/checkpoints/checkpoint-model.ts';
 import { useAutoContinue } from '../chat/checkpoints/use-auto-continue.ts';
 import { attentionLine } from '../conversations/row-state.ts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
-import { baseName } from './home-model.ts';
-import { approvalHunk } from './island-diff.ts';
+import { approvalHunk, baseName } from './island-diff.ts';
 import { IslandDiff } from './IslandDiff.tsx';
 import type { Card } from './island-model.ts';
 import { Kbd, useArmed, Who } from './island-parts.tsx';
 import type { ChatAgent } from './use-island-data.ts';
-
-export interface Decided {
-  title: string;
-  sub: string;
-}
+import { findOption, useDecide, type Decided } from './use-decide.ts';
 
 interface CardViewProps {
   card: Card;
@@ -40,10 +33,6 @@ const GRACE_SECONDS = 10;
 function shortCwd(cwd: string | null): string | null {
   if (!cwd) return null;
   return cwd.replace(/^\/Users\/[^/]+/, '~');
-}
-
-function findOption(approval: Approval, kind: ApprovalOption['kind']) {
-  return shownOptions(approval).find((option) => option.kind === kind && !option.unavailableReason);
 }
 
 function heading(card: Card, who: string): string {
@@ -82,36 +71,6 @@ function Target({ approval }: { approval: Approval }) {
     );
   }
   return <div className="isl-code">{approval.title}</div>;
-}
-
-function useDecide(approval: Approval | null, onDecided: (decided: Decided) => void, who: string) {
-  return useMutation({
-    mutationFn: ({
-      option,
-      scope,
-    }: {
-      option: ApprovalOption;
-      scope: ApprovalScope;
-      said?: Decided;
-    }) =>
-      approvalsApi.decide(approval!.id, {
-        optionId: option.optionId,
-        scope,
-        payloadHash: approval!.payloadHash,
-      }),
-    onSuccess: (_result, { option, scope, said }) => {
-      const allowed = option.kind.startsWith('allow');
-      if (said) {
-        onDecided(said);
-      } else if (scope === 'project') {
-        onDecided({ title: 'Allowed in this project', sub: 'It won’t ask again here.' });
-      } else if (allowed) {
-        onDecided({ title: 'Allowed once', sub: `${who} carries on.` });
-      } else {
-        onDecided({ title: 'Denied', sub: `${who} will try another way.` });
-      }
-    },
-  });
 }
 
 function ForceActions({
@@ -194,7 +153,7 @@ function ForceActions({
   );
 }
 
-function QuestionChoices({
+export function QuestionChoices({
   approval,
   armed,
   busy,

@@ -7,15 +7,15 @@ import type { IslandGeometry, IslandSize } from '../desktop/desktop-bridge.ts';
 import type { Voice } from '../spark/voice.ts';
 import type { FastState } from './ask-fast-path.ts';
 import { AskSpark } from './AskSpark.tsx';
-import { CardView, type Decided } from './CardView.tsx';
+import { CardView } from './CardView.tsx';
+import type { Decided } from './use-decide.ts';
 import type { Card, IslandView, Panel, PeekRow as PeekRowData } from './island-model.ts';
 import type { RestLine } from './island-rest-line.ts';
-import { IslandHome, type HomeBundle } from './IslandHome.tsx';
+import { IslandInbox, type InboxBundle } from './IslandInbox.tsx';
 import { NowBar } from './NowBar.tsx';
-import { IslandBar, PANEL_ORDER, type BarActions } from './PanelTabs.tsx';
+import { IslandBar, PANEL_ORDER, type BarActions, type BarCounts } from './PanelTabs.tsx';
 import { QuickChat, type Compose, type QuickDraft } from './QuickChat.tsx';
-import { SparkTiles } from './SparkTiles.tsx';
-import { Sessions } from './Sessions.tsx';
+import { SparkTiles, type SparkTileActions } from './SparkTiles.tsx';
 import type { Grab } from './use-island-drop.ts';
 import { chatAgent } from './use-island-data.ts';
 import { SpeechScreen } from '../voice/SpeechScreen.tsx';
@@ -51,14 +51,14 @@ export interface IslandShellProps {
   note: Decided | null;
   detailFor: (chatId: string) => ConversationDetail | undefined;
   focusSignal: number;
-  sessions: ConversationSummary[];
-  home: HomeBundle;
+  inbox: InboxBundle;
+  sparks: SparkTileActions;
+  nowChat: ConversationSummary | null;
   bar: BarActions;
+  counts: BarCounts;
   peek: PeekRowData;
   sleepy: boolean;
-  projectNames: ReadonlyMap<string, string>;
   projects: readonly Project[];
-  selected: string | null;
   draftId: string;
   draft: QuickDraft;
   followUp: ConversationSummary | null;
@@ -66,7 +66,6 @@ export interface IslandShellProps {
   announcement: string;
   onDraft: (draft: QuickDraft) => void;
   onTab: (panel: Panel) => void;
-  onSelect: (id: string | null) => void;
   onOpenChat: (id: string, runId?: string) => void;
   onDecided: (decided: Decided) => void;
   onLater: () => void;
@@ -84,12 +83,10 @@ function PanelPane({ panel, props }: { panel: Panel; props: IslandShellProps }) 
   switch (panel) {
     case 'home':
       return (
-        <IslandHome
-          home={props.home}
+        <IslandInbox
+          inbox={props.inbox}
           calendar={props.calendar}
-          sleepy={props.sleepy}
-          reduced={props.reduced}
-          onTab={props.onTab}
+          now={props.now}
           onOpenChat={props.onOpenChat}
         />
       );
@@ -104,25 +101,7 @@ function PanelPane({ panel, props }: { panel: Panel; props: IslandShellProps }) 
           focusDelay={focusDelay}
           onDraft={props.onDraft}
           onSent={props.onSent}
-          footer={
-            <SparkTiles
-              onOpenHere={props.home.onOpenHere}
-              onMakeSpark={props.home.onMakeSpark}
-              onEditSpark={props.home.onEditSpark}
-            />
-          }
-        />
-      );
-    case 'sessions':
-      return (
-        <Sessions
-          chats={props.sessions}
-          projectNames={props.projectNames}
-          selected={props.selected}
-          now={props.now}
-          focusDelay={focusDelay}
-          onSelect={props.onSelect}
-          onOpenChat={props.onOpenChat}
+          footer={<SparkTiles {...props.sparks} />}
         />
       );
     case 'ask':
@@ -148,7 +127,7 @@ function PanelBody({ panel, props }: { panel: Panel; props: IslandShellProps }) 
   }
   return (
     <div className="isl-body">
-      <IslandBar panel={panel} waiting={props.waiting} actions={props.bar} onTab={props.onTab} />
+      <IslandBar panel={panel} counts={props.counts} actions={props.bar} onTab={props.onTab} />
       <div key={panel} className="isl-pane" data-dir={shown.direction}>
         {props.speech && !props.speech.keepsPanel ? (
           <div className="isl-panel">
@@ -197,11 +176,7 @@ export function ViewBody({ props }: { props: IslandShellProps }) {
     case 'now':
       return (
         <div className="isl-body">
-          <NowBar
-            chat={props.home.sessions[0] ?? null}
-            card={view.card}
-            onReview={props.onReview}
-          />
+          <NowBar chat={props.nowChat} card={view.card} onReview={props.onReview} />
         </div>
       );
     default:

@@ -157,6 +157,16 @@ export function QuickChat(props: QuickChatProps) {
     submit,
   );
 
+  useSeed(
+    'reply',
+    (seed) => {
+      if (followUp?.id !== seed.chatId) return;
+      onDraft({ ...draft, text: seed.text });
+      textRef.current?.focus({ preventScroll: true });
+    },
+    submit,
+  );
+
   const pick = (id: string | null) => {
     onDraft({ ...draft, projectId: id });
     setMenu(false);
