@@ -47,7 +47,9 @@ function answered(event: CalendarEvent): boolean {
 }
 
 function nudgeable(event: CalendarEvent, now: number): boolean {
-  return event.nudges && isMeeting(event) && answered(event) && isToday(event, now);
+  return (
+    event.nudges && !event.dismissed && isMeeting(event) && answered(event) && isToday(event, now)
+  );
 }
 
 function minutesUntil(start: number, now: number): number {
@@ -60,7 +62,7 @@ function base(event: CalendarEvent) {
 
 function dueRemind(event: CalendarEvent, now: number): boolean {
   const { start } = spanOf(event);
-  return event.remind && now >= start - CALENDAR_REMIND_MINUTES * MINUTE && now < start;
+  return event.remind && !event.dismissed && now >= start - CALENDAR_REMIND_MINUTES * MINUTE && now < start;
 }
 
 function dueBefore(event: CalendarEvent, settings: CalendarSettings, now: number): boolean {

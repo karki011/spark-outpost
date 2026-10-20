@@ -169,6 +169,7 @@ PATCH /api/calendar/settings
 GET /api/calendar/day
 GET /api/calendar/range
 GET /api/calendar/now
+POST /api/calendar/refresh
 PUT /api/calendar/marks
 POST /api/calendar/open
 POST /api/calendar/event

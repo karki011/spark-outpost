@@ -116,6 +116,21 @@ describe('Google sync', () => {
     expect(GOOGLE_POLL_MS).toBe(180_000);
   });
 
+  it('Refresh now syncs at once but waits out a backoff', async () => {
+    h.fake.putEvent(SUBJECT, EMAIL, meeting('kept', 0));
+    await signIn(h);
+    h.fake.putEvent(SUBJECT, EMAIL, meeting('added', 60));
+    const before = h.fake.requests.length;
+    await h.client.send('post', '/api/calendar/refresh');
+    expect(h.fake.requests.length).toBeGreaterThan(before);
+    expect(await titles()).toEqual(['kept', 'added']);
+    h.fake.failNext('/calendar/v3/users/me/calendarList', { status: 429, reason: 'rateLimitExceeded' });
+    await h.google.syncNow();
+    const backingOff = h.fake.requests.length;
+    expect((await h.client.send('post', '/api/calendar/refresh')).status).toBe(200);
+    expect(h.fake.requests.length).toBe(backingOff);
+  });
+
   it('fetches no events for a calendar the user leaves out', async () => {
     h.fake.addCalendar(SUBJECT, { id: 'team', summary: 'Team', accessRole: 'reader' });
     h.fake.putEvent(SUBJECT, 'team', meeting('team-sync', 0));

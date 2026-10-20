@@ -32,6 +32,7 @@ import {
   syncCalendars,
 } from './service.ts';
 import {
+  calendarConnection,
   forgetMarks,
   savedChoices,
   setConnected,
@@ -80,6 +81,14 @@ async function guarded(res: Response, work: () => Promise<unknown>): Promise<voi
   } catch (error) {
     if (!(error instanceof CalendarHostError)) throw error;
     res.status(HOST_STATUS[error.code]).json({ error: error.message });
+  }
+}
+
+async function rereadMac(host: CalendarHost): Promise<void> {
+  try {
+    await host.request({ op: 'refresh' });
+  } catch (error) {
+    if (!(error instanceof CalendarHostError) || error.code !== 'missing') throw error;
   }
 }
 
@@ -174,6 +183,16 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
     guarded(res, async () => {
       const state = await calendarState(service);
       return calendarNow(state, await plannerChats(deps.db, deps.workspaceId), now());
+    }),
+  );
+
+  router.post('/calendar/refresh', (_req, res) =>
+    guarded(res, async () => {
+      const { connected } = await calendarConnection(deps.db, deps.workspaceId);
+      if (host && connected) await rereadMac(host);
+      await google?.refreshNow();
+      await announceCalendar(deps.db);
+      return { refreshedAt: new Date(now()).toISOString() };
     }),
   );
 

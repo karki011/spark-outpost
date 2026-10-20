@@ -245,6 +245,7 @@ function answer(request: CalendarHostRequest): unknown {
     };
   }
   if (request.op === 'window') return window();
+  if (request.op === 'refresh') return { refreshed: true };
   if (request.op === 'range') {
     const inside = eventsInSpan(events(), Date.parse(request.from), Date.parse(request.to));
     return { events: inside, truncated: false };

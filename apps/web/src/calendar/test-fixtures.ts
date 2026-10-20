@@ -49,6 +49,7 @@ export function event(
     focus: false,
     remind: false,
     hold: false,
+    dismissed: false,
     ...overrides,
   };
 }

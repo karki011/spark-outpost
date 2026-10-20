@@ -63,6 +63,10 @@ export function startCalendarHost(options: CalendarHostOptions): CalendarHost {
       case 'window':
         ready();
         return window.read();
+      case 'refresh':
+        ready();
+        window.invalidate();
+        return { refreshed: true };
       case 'range':
         ready();
         return window.range(request.from, request.to);
