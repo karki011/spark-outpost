@@ -2,14 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   AGENT_OPEN_REFUSALS,
   agentOpenProblem,
-  agentPartition,
   insideRoots,
   isBrowserPartition,
   navigationAllowed,
   partitionFor,
   projectPartition,
   requestAllowed,
-  tabPartition,
   withoutSparkToken,
 } from './request-guard.ts';
 
@@ -160,35 +158,5 @@ describe('browser partitions', () => {
   it('refuses ids that are not ids', () => {
     expect(() => partitionFor({ chatId: '', projectId: null, keepSignIns: true })).toThrow();
     expect(() => projectPartition('../default')).toThrow();
-  });
-
-  it.each([
-    ['user', 'https://example.com/', 'user'],
-    ['user', 'http://localhost:5173/', 'user'],
-    ['user', 'file:///Users/me/app/index.html', 'user'],
-    ['user', 'about:blank', 'user'],
-    ['agent', 'http://localhost:5173/', 'user'],
-    ['agent', 'http://app.test:4000/', 'user'],
-    ['agent', 'file:///Users/me/app/index.html', 'user'],
-    ['agent', 'about:blank', 'user'],
-    ['agent', 'https://example.com/', 'agent'],
-    ['agent', 'http://192.168.1.20:3000/', 'agent'],
-    ['agent', 'http://localhost.evil.example/', 'agent'],
-    ['agent', 'javascript:alert(1)', 'agent'],
-    ['agent', 'not a url', 'agent'],
-  ] as const)('puts a tab the %s owns on %s in the %s’s storage', (owner, url, whose) => {
-    const kept = { chatId: CHAT, projectId: PROJECT, keepSignIns: true };
-    const expected = whose === 'agent' ? agentPartition(CHAT) : projectPartition(PROJECT);
-    expect(tabPartition(kept, { owner, url })).toBe(expected);
-  });
-
-  it('keeps the agent’s storage per chat, in memory, apart from the chat’s own', () => {
-    const chatOnly = { chatId: CHAT, projectId: null, keepSignIns: true };
-    const mine = tabPartition(chatOnly, { owner: 'user', url: 'https://example.com/' });
-    const agents = tabPartition(chatOnly, { owner: 'agent', url: 'https://example.com/' });
-    expect(agents).toBe(`spark-browser-agent-${CHAT}`);
-    expect(agents).not.toBe(mine);
-    expect(isBrowserPartition(agents)).toBe(true);
-    expect(() => agentPartition('../default')).toThrow();
   });
 });

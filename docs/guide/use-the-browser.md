@@ -25,7 +25,7 @@ Chat links open here; **⌘**-click opens yours.
 | Click, type, press keys, scroll, go back | Navigate a tab you opened         |
 | Run scripts, inspect, check speed        | Click a covered element           |
 
-**Agent** tabs close with the turn unless pinned or you used them. Logs show errors, stacks and timed requests. **Open developer tools** (**⌥⌘I**) is yours.
+**Agent** tabs share your sign-ins and close with the turn unless pinned or you used them. **Open developer tools** (**⌥⌘I**) is yours.
 
 Websites follow the [agent mode](agent-mode.md); your own tab always asks. Page text is untrusted.
 

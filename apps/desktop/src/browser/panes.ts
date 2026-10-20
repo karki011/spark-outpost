@@ -9,13 +9,7 @@ import {
   type BrowserPlacement,
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
-import {
-  partitionFor,
-  requestAllowed,
-  tabPartition,
-  type GuardFacts,
-  type PartitionChoice,
-} from './request-guard.ts';
+import { partitionFor, requestAllowed, type GuardFacts } from './request-guard.ts';
 import type { SendsTo } from './selection-menu.ts';
 import { browserSession, devtoolsSession } from './sessions.ts';
 import { PaneTab } from './tab.ts';
@@ -84,16 +78,12 @@ export class BrowserPanes {
     return pane;
   }
 
-  private choiceOf(pane: ChatPane): PartitionChoice {
-    return {
+  private partitionOf(pane: ChatPane): string {
+    return partitionFor({
       chatId: pane.chatId,
       projectId: pane.home.projectId,
       keepSignIns: pane.home.keepSignIns,
-    };
-  }
-
-  private partitionOf(pane: ChatPane): string {
-    return partitionFor(this.choiceOf(pane));
+    });
   }
 
   private allowRoots(pane: ChatPane): void {
@@ -168,10 +158,9 @@ export class BrowserPanes {
     const tab: PaneTab = new PaneTab(
       { id: randomUUID().slice(0, 8), chatId, ...init },
       {
-        partition: (owner, url) => tabPartition(this.choiceOf(pane), { owner, url }),
         allowed: (url) => requestAllowed(url, this.guardFacts(pane.chatId)),
-        session: (partition) =>
-          browserSession(partition, {
+        session: () =>
+          browserSession(this.partitionOf(pane), {
             blockedPorts: this.options.blockedPorts,
             roots: (name) => [...(this.rootsByPartition.get(name) ?? [])],
             log: this.options.log,
