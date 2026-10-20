@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { BrowserWindow, ContextMenuParams, WebContentsView } from 'electron';
+import type { BrowserWindow, ContextMenuParams, WebContents, WebContentsView } from 'electron';
 import {
   BROWSER_TABS_MAX,
   browserOrigin,
@@ -7,8 +7,10 @@ import {
   type BrowserBounds,
   type BrowserPaneState,
   type BrowserPlacement,
+  type BrowserShortcut,
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
+import type { InputMarks } from './clipboard-permission.ts';
 import {
   partitionFor,
   requestAllowed,
@@ -28,6 +30,8 @@ export interface PanesOptions {
   localOriginSeen(projectId: string, origin: string): void;
   contextMenu(tab: PaneTab, params: ContextMenuParams): void;
   addShortcut(tab: PaneTab): void;
+  paneShortcut(tab: PaneTab, shortcut: BrowserShortcut): void;
+  found(tab: PaneTab, active: number, matches: number): void;
   log(line: string): void;
   idleMs?: number;
 }
@@ -45,6 +49,7 @@ interface ChatPane {
   sendsTo: SendsTo;
   idle: NodeJS.Timeout | null;
   notify: boolean;
+  closed: string[];
 }
 
 const BLANK = 'about:blank';
@@ -52,11 +57,13 @@ const IDLE_MS = 10 * 60_000;
 const DRIVING_HOLD_MS = 1200;
 const HIDDEN_BOUNDS = { x: 0, y: 0, width: 1280, height: 800 };
 const SNAPSHOT_QUALITY = 70;
+const CLOSED_KEPT = 20;
 
 export class BrowserPanes {
   private readonly chats = new Map<string, ChatPane>();
   private readonly rootsByPartition = new Map<string, Set<string>>();
   private readonly driving = new Map<string, NodeJS.Timeout>();
+  private readonly byContents = new Map<number, PaneTab>();
   private placement: BrowserPlacement | null = null;
   private readonly options: PanesOptions;
 
@@ -74,6 +81,7 @@ export class BrowserPanes {
         sendsTo: 'chat',
         idle: null,
         notify: false,
+        closed: [],
       };
       this.chats.set(chatId, pane);
     }
@@ -175,14 +183,17 @@ export class BrowserPanes {
             blockedPorts: this.options.blockedPorts,
             roots: (name) => [...(this.rootsByPartition.get(name) ?? [])],
             log: this.options.log,
+            inputMarks: (contents) => this.inputMarks(contents),
           }),
         changed: () => this.changed(pane),
         popup: (url, opener) => this.openPopup(pane, url, opener),
-        viewCreated: (view) => this.attach(view),
+        viewCreated: (view) => this.attach(view, tab),
         viewClosed: (view) => this.detach(view),
         visited: (url) => this.visited(pane, projectId, url),
         contextMenu: (owner, params) => this.options.contextMenu(owner, params),
         addShortcut: (owner) => this.options.addShortcut(owner),
+        paneShortcut: (owner, shortcut) => this.options.paneShortcut(owner, shortcut),
+        found: (owner, active, matches) => this.options.found(owner, active, matches),
         devtoolsSession: () =>
           devtoolsSession({ blockedPorts: this.options.blockedPorts, log: this.options.log }),
       },
@@ -212,13 +223,20 @@ export class BrowserPanes {
     void tab.load(url).then(() => this.layout());
   }
 
-  private attach(view: WebContentsView): void {
+  inputMarks(contents: WebContents | null): InputMarks | null {
+    if (!contents) return null;
+    return this.byContents.get(contents.id)?.inputMarks() ?? null;
+  }
+
+  private attach(view: WebContentsView, tab: PaneTab): void {
+    this.byContents.set(view.webContents.id, tab);
     view.setBounds(HIDDEN_BOUNDS);
     this.options.window()?.contentView.addChildView(view);
     this.layout();
   }
 
   private detach(view: WebContentsView): void {
+    this.byContents.delete(view.webContents.id);
     const window = this.options.window();
     if (!window || window.isDestroyed()) return;
     window.contentView.removeChildView(view);
@@ -242,6 +260,17 @@ export class BrowserPanes {
     if (tab.active && pane.tabs.length > 0) pane.tabs.at(-1)!.active = true;
     this.changed(pane);
     this.layout();
+  }
+
+  closeByUser(chatId: string, tabId: string): void {
+    const pane = this.chats.get(chatId);
+    const url = this.tab(chatId, tabId)?.currentUrl();
+    if (pane && url && url !== BLANK) pane.closed = [...pane.closed, url].slice(-CLOSED_KEPT);
+    this.close(chatId, tabId);
+  }
+
+  takeClosed(chatId: string): string | null {
+    return this.chats.get(chatId)?.closed.pop() ?? null;
   }
 
   closeRunTabs(chatId: string, runId: string): number {
@@ -269,6 +298,7 @@ export class BrowserPanes {
       return await work();
     } finally {
       tab.agentBusy -= 1;
+      tab.agentDoneAt = Date.now();
       const timer = setTimeout(() => {
         this.driving.delete(tab.id);
         tab.driving = false;

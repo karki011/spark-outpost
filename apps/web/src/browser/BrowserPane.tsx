@@ -29,11 +29,15 @@ import {
   useChatBrowser,
 } from './browser-store.ts';
 import { BrowserTabs } from './BrowserTabs.tsx';
+import { FindBar } from './FindBar.tsx';
 import { HandoffBanner } from './HandoffBanner.tsx';
 import { defaultBrowserUrl, openInDefaultBrowser } from './chat-links.ts';
+import { chromeShortcut, runPaneShortcut, usePageShortcuts } from './pane-shortcuts.ts';
 import { PreviewBadge, PreviewStart } from './PreviewControls.tsx';
 import { tabLabel } from './tab-label.ts';
 import { hiddenPlacement, useViewPlacement, type BrowserHome } from './use-view-placement.ts';
+
+const COPIED_MS = 1600;
 
 interface BrowserPaneProps {
   home: BrowserHome;
@@ -188,9 +192,33 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
   const { chatId } = home;
   const browser = useChatBrowser(chatId);
   const view = useRef<HTMLDivElement>(null);
+  const section = useRef<HTMLElement>(null);
   const tab = activeTab(browser);
   const started = useRef(false);
+  const [finding, setFinding] = useState<{ tabId: string; request: number } | null>(null);
+  const [copied, setCopied] = useState(0);
   useViewPlacement(view, home, shown);
+
+  useEffect(() => {
+    if (copied === 0) return;
+    const timer = setTimeout(() => setCopied(0), COPIED_MS);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  const shortcutUi = {
+    focusAddress: () => {
+      const address = section.current?.querySelector<HTMLInputElement>('input.bp-url');
+      address?.focus();
+      address?.select();
+    },
+    openFind: () => {
+      if (tab) setFinding((open) => ({ tabId: tab.id, request: (open?.request ?? 0) + 1 }));
+    },
+    copiedUrl: () => setCopied((count) => count + 1),
+  };
+  const runShortcut = (shortcut: Parameters<typeof runPaneShortcut>[2]) =>
+    runPaneShortcut(chatId, browser.tabs, shortcut, shortcutUi);
+  usePageShortcuts(chatId, runShortcut, shown);
 
   useEffect(() => {
     if (!shown || started.current) return;
@@ -216,9 +244,17 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
 
   return (
     <section
+      ref={section}
       className="bp"
       aria-label="Browser"
       onKeyDown={(event) => {
+        const shortcut = chromeShortcut(event);
+        if (shortcut) {
+          event.preventDefault();
+          event.stopPropagation();
+          runShortcut(shortcut);
+          return;
+        }
         if (!tab || blank || !isDevtoolsKey(event)) return;
         event.preventDefault();
         sendBrowserCommand(chatId, { command: 'devtools', tabId: tab.id });
@@ -285,7 +321,23 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
           <ExternalLinkIcon />
         </ToolButton>
       </div>
+      {finding && tab && finding.tabId === tab.id && !blank && (
+        <FindBar
+          chatId={chatId}
+          tabId={tab.id}
+          request={finding.request}
+          onClose={() => {
+            setFinding(null);
+            sendBrowserCommand(chatId, { command: 'focus', tabId: tab.id });
+          }}
+        />
+      )}
       <div className="bp-status" aria-live="polite">
+        {copied > 0 && (
+          <span className="bp-copied" role="status">
+            Copied URL
+          </span>
+        )}
         {browser.notice && (
           <span className="bp-notice" role="alert">
             <span>{browser.notice}</span>

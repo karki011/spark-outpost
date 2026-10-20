@@ -14,6 +14,8 @@ type PermissionHandler = (
   callback: (granted: boolean) => void,
 ) => void;
 
+type PermissionCheck = (contents: unknown, permission: string) => boolean;
+
 export interface Request {
   partition: string;
   url: string;
@@ -47,7 +49,7 @@ export class FakeSession extends EventEmitter {
   private beforeRequest: RequestHandler | null = null;
   private beforeHeaders: HeaderHandler | null = null;
   private permission: PermissionHandler | null = null;
-  private check: (() => boolean) | null = null;
+  private check: PermissionCheck | null = null;
   private device: (() => boolean) | null = null;
 
   readonly webRequest = {
@@ -67,7 +69,7 @@ export class FakeSession extends EventEmitter {
     this.permission = handler;
   }
 
-  setPermissionCheckHandler(handler: () => boolean): void {
+  setPermissionCheckHandler(handler: PermissionCheck): void {
     this.check = handler;
   }
 
@@ -98,12 +100,20 @@ export class FakeSession extends EventEmitter {
     return sent;
   }
 
-  permissionGranted(permission: string): boolean {
+  permissionGranted(permission: string, contents: unknown = null): boolean {
     let granted = true;
-    this.permission?.(null, permission, (answer) => {
+    this.permission?.(contents, permission, (answer) => {
       granted = answer;
     });
-    return granted || this.check?.() !== false || this.device?.() !== false;
+    return granted || this.check?.(contents, permission) !== false || this.device?.() !== false;
+  }
+
+  permissionAnswers(permission: string, contents: unknown): { request: boolean; check: boolean } {
+    let request = true;
+    this.permission?.(contents, permission, (answer) => {
+      request = answer;
+    });
+    return { request, check: this.check?.(contents, permission) !== false };
   }
 
   downloadCancelled(): boolean {
@@ -122,7 +132,10 @@ function hostOf(url: string): string {
   return new URL(url).host;
 }
 
+let contentsIds = 0;
+
 export class FakeContents extends EventEmitter {
+  readonly id = ++contentsIds;
   url = '';
   destroyed = false;
   private opener: ((details: { url: string }) => { action: string }) | null = null;

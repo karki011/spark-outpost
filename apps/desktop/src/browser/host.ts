@@ -1,5 +1,6 @@
 import {
   Menu,
+  clipboard,
   ipcMain,
   type BrowserWindow,
   type ContextMenuParams,
@@ -7,6 +8,7 @@ import {
   type MenuItemConstructorOptions,
 } from 'electron';
 import {
+  BROWSER_FOCUS_SHORTCUTS,
   addressToUrl,
   browserCommandSchema,
   browserIdSchema,
@@ -14,7 +16,9 @@ import {
   browserPlacementSchema,
   type BrowserCommand,
   type BrowserPick,
+  type BrowserFound,
   type BrowserSelectedText,
+  type BrowserShortcutEvent,
 } from '@spark-outpost/contracts';
 import { IPC } from '../ipc-channels.ts';
 import { runBrowserOp } from './agent-ops.ts';
@@ -83,6 +87,15 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     localOriginSeen: (projectId, origin) => origins.note(projectId, origin),
     contextMenu: (tab, params) => showSelectionMenu(tab, params),
     addShortcut: (tab) => void addSelection(tab),
+    paneShortcut: (tab, shortcut) => {
+      if (BROWSER_FOCUS_SHORTCUTS.has(shortcut)) options.window()?.webContents.focus();
+      const event: BrowserShortcutEvent = { chatId: tab.chatId, shortcut };
+      send(IPC.browserShortcut, event);
+    },
+    found: (tab, active, matches) => {
+      const result: BrowserFound = { chatId: tab.chatId, tabId: tab.id, active, matches };
+      send(IPC.browserFound, result);
+    },
     log: options.log,
   });
 
@@ -185,13 +198,28 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
       if (url) await navigate(chatId, tab, url);
       return;
     }
+    if (action.command === 'reopen') {
+      const url = panes.takeClosed(chatId);
+      if (url) await command(chatId, { command: 'new_tab', url });
+      return;
+    }
     const tab = panes.tab(chatId, action.tabId);
     if (!tab) return;
     if (action.command === 'navigate') await navigate(chatId, tab, action.url);
     else if (action.command === 'select') panes.select(chatId, tab.id);
     else if (action.command === 'close') {
       await stopPick(tab);
-      panes.close(chatId, tab.id);
+      panes.closeByUser(chatId, tab.id);
+    } else if (action.command === 'copy_url') {
+      const url = tab.currentUrl();
+      if (url !== 'about:blank') clipboard.writeText(url);
+    } else if (action.command === 'find') {
+      await tab.wake();
+      tab.find(action.text, action.forward, action.next);
+    } else if (action.command === 'stop_find') {
+      tab.stopFind();
+    } else if (action.command === 'focus') {
+      tab.view()?.webContents.focus();
     } else if (action.command === 'pin') {
       tab.pinned = action.pinned;
       panes.noteChange(chatId);

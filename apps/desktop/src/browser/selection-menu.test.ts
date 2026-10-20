@@ -137,6 +137,8 @@ describe('a pane tab', () => {
       localOriginSeen: () => undefined,
       contextMenu: (tab) => menus.push(tab),
       addShortcut: (tab) => shortcuts.push(tab),
+      paneShortcut: () => undefined,
+      found: () => undefined,
       log: () => undefined,
     });
   });
@@ -164,7 +166,7 @@ describe('a pane tab', () => {
   it('lets other keys reach the page', async () => {
     const { contents } = await opened();
     const event = { prevented: false, preventDefault: () => (event.prevented = true) };
-    contents.emit('before-input-event', event, key({ code: 'KeyC' }));
+    contents.emit('before-input-event', event, key({ code: 'KeyE' }));
     expect(event.prevented).toBe(false);
     expect(shortcuts).toEqual([]);
   });
