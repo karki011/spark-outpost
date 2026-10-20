@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 import type { ApprovalOption } from '@spark-outpost/contracts';
 import { isCheckpoint } from '../chat/checkpoints/checkpoint-model.ts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
@@ -19,14 +19,21 @@ interface InboxCardProps {
   onOpenChat: (chatId: string) => void;
 }
 
-function typing(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLElement &&
-    (target.isContentEditable || target.closest('input, textarea, select') !== null)
-  );
+const CONTROLS = 'button, a, [role="button"], [tabindex]';
+
+function elsewhere(target: EventTarget | null, own: HTMLElement | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable || target.closest('input, textarea, select') !== null) return true;
+  const inInbox = target.closest('.isl-inbox') !== null;
+  return inInbox && target.closest(CONTROLS) !== null && !own?.contains(target);
 }
 
-function useAnswerKeys(on: boolean, allow: () => void, deny: () => void) {
+function useAnswerKeys(
+  on: boolean,
+  own: RefObject<HTMLElement | null>,
+  allow: () => void,
+  deny: () => void,
+) {
   const handlers = useRef({ allow, deny });
   useEffect(() => {
     handlers.current = { allow, deny };
@@ -34,7 +41,7 @@ function useAnswerKeys(on: boolean, allow: () => void, deny: () => void) {
   useEffect(() => {
     if (!on) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.repeat || typing(event.target)) return;
+      if (event.defaultPrevented || event.repeat || elsewhere(event.target, own.current)) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       const key = event.key.toLowerCase();
       if (key === 'y') handlers.current.allow();
@@ -44,7 +51,7 @@ function useAnswerKeys(on: boolean, allow: () => void, deny: () => void) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [on]);
+  }, [on, own]);
 }
 
 function AnswerInSpark({ card, onOpenChat }: Pick<InboxCardProps, 'card' | 'onOpenChat'>) {
@@ -70,8 +77,10 @@ export function InboxCard(props: InboxCardProps) {
     if (option && ready) decide.mutate({ option, scope: 'once' });
   };
   const keys = top && answerable(card);
+  const own = useRef<HTMLLIElement>(null);
   useAnswerKeys(
     keys,
+    own,
     () => send(allow),
     () => send(deny),
   );
@@ -79,7 +88,7 @@ export function InboxCard(props: InboxCardProps) {
   const at = approval?.createdAt ?? card.chat.waitingSince ?? card.chat.updatedAt;
   const question = card.kind === 'question' && approval && isCheckpoint(approval) ? approval : null;
   return (
-    <li className="isl-inbox-card" data-kind={card.kind}>
+    <li ref={own} className="isl-inbox-card" data-kind={card.kind}>
       <button
         type="button"
         className="isl-inbox-head"

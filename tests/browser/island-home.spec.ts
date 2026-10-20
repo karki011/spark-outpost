@@ -318,6 +318,31 @@ test('a Spark tile in New chat starts a follow-up with that Spark right in the i
   expect((await fakeState(page)).openedChats).toEqual([]);
 });
 
+test('Review on a force-push card leaves the inbox for the full card', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedChats([
+    {
+      title: 'Rewrite the release branch',
+      run: { status: 'awaiting_approval' },
+      approval: {
+        kind: 'execute',
+        title: 'git push --force',
+        command: 'git push --force origin spark/release',
+        payload: { forcePush: ['spark/release'] },
+      },
+    },
+  ]);
+  await fakeHomeDesktop(page);
+  await openIsland(page);
+  await openHome(page);
+
+  const card = needsYou(page).getByRole('listitem').first();
+  await expect(card).toContainText('Force-push');
+  await card.getByRole('button', { name: 'Review' }).click();
+  await expect(island(page)).toHaveAttribute('data-view', 'card');
+  await expect(island(page)).toContainText('Rewrites history on spark/release');
+});
+
 const NIGHT_SKINS = ['graphite', 'void', 'moss', 'plum', 'aurora'];
 
 for (const theme of ['apricot', 'graphite']) {

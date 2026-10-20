@@ -153,16 +153,23 @@ function useNudgeClock(live: ReturnType<typeof useCalendarNow>['data'] | null, u
   return { marks: saved, clock, setMarks };
 }
 
+export const DISMISS_RETRY_MS = 30_000;
+
 function useDismissForGood() {
   const queryClient = useQueryClient();
   return useCallback(
-    (events: readonly CalendarEvent[]) => {
+    function save(events: readonly CalendarEvent[]) {
       const saves = events.map((event) =>
         calendarApi.mark({ eventKey: event.key, end: event.end, kind: 'dismiss', on: true }),
       );
-      void Promise.allSettled(saves).then(() =>
-        queryClient.invalidateQueries({ queryKey: calendarKeys.all }),
-      );
+      void Promise.allSettled(saves).then((results) => {
+        void queryClient.invalidateQueries({ queryKey: calendarKeys.all });
+        const failed = events.filter(
+          (event, index) =>
+            results[index]?.status === 'rejected' && Date.parse(event.end) > Date.now(),
+        );
+        if (failed.length > 0) setTimeout(() => save(failed), DISMISS_RETRY_MS);
+      });
     },
     [queryClient],
   );

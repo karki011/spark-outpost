@@ -218,6 +218,7 @@ export function IslandApp() {
   };
 
   const reviewCard = (chatId: string) => {
+    closePanel();
     setReview(chatId);
     setFocusSignal((value) => value + 1);
   };

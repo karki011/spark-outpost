@@ -14,7 +14,7 @@ vi.mock('./use-calendar.ts', () => ({
   useCalendarNow: () => ({ data: calendarState.now, dataUpdatedAt: calendarState.updatedAt }),
 }));
 
-const { useIslandCalendar } = await import('./use-island-calendar.ts');
+const { DISMISS_RETRY_MS, useIslandCalendar } = await import('./use-island-calendar.ts');
 
 type Listener = (action: unknown) => void;
 
@@ -130,6 +130,20 @@ describe('useIslandCalendar meeting alert', () => {
     expect(hook.result.current.line).toBeNull();
     await act(async () => vi.advanceTimersByTimeAsync(5 * 60_000));
     expect(bridge.shown.at(-1)).toBeNull();
+  });
+
+  it('saves Dismiss again when the first save fails', async () => {
+    marked.mockRejectedValueOnce(new Error('offline'));
+    const bridge = fakeBridge();
+    mount();
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    act(() => bridge.act({ kind: 'dismiss', key: standup.key, eventKey: null }));
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    expect(marked).toHaveBeenCalledTimes(1);
+    await act(async () => vi.advanceTimersByTimeAsync(DISMISS_RETRY_MS));
+    expect(marked).toHaveBeenCalledTimes(2);
+    await act(async () => vi.advanceTimersByTimeAsync(DISMISS_RETRY_MS));
+    expect(marked).toHaveBeenCalledTimes(2);
   });
 
   it('shows no card, line or meeting row for a meeting Spark has saved as dismissed', async () => {

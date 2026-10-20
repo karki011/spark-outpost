@@ -132,7 +132,7 @@ describe('the island inbox', () => {
     expect(cal.onOpenEvent).not.toHaveBeenCalled();
   });
 
-  it('answers the top card with Y and N, but not while typing or on a held key', async () => {
+  it('answers the top card with Y and N, but not while typing, on a held key or from another control', async () => {
     const bundle = inbox();
     show(bundle, calendar());
     await armed();
@@ -142,9 +142,11 @@ describe('the island inbox', () => {
     const input = document.createElement('input');
     document.body.append(input);
     fireEvent.keyDown(input, { key: 'n' });
+    const [clear] = screen.getAllByRole('button', { name: /^Clear / });
+    fireEvent.keyDown(clear!, { key: 'y' });
     await flush();
     expect(decide).not.toHaveBeenCalled();
-    fireEvent.keyDown(window, { key: 'n' });
+    fireEvent.keyDown(screen.getByRole('button', { name: /^Deny/ }), { key: 'n' });
     await flush();
     expect(decide).toHaveBeenCalledWith(
       expect.any(String),
