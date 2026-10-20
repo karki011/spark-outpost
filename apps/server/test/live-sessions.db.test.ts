@@ -35,11 +35,19 @@ const BRANCH = 'spark/later-1a2b3c4d';
 const repo = (cwd: string, ...args: string[]) =>
   execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' });
 
+const CLAUDE_MODES = [
+  ['default', 'Manual', null, null],
+  ['acceptEdits', 'Accept edits', null, null],
+  ['plan', 'Plan', null, null],
+  ['auto', 'Auto', null, null],
+  ['bypassPermissions', 'Bypass permissions', null, null],
+];
+
 let t: TestDb;
 let worker: Worker | null = null;
 let log: MethodLog;
 
-function begin() {
+function begin(extraEnv: Record<string, string> = {}) {
   const provider = createAcpProvider({
     definition: { ...agentDefinitions.claude, name: 'Fake', ...FAKE_AGENT_MODES },
     launch: FAKE_ACP_LAUNCH,
@@ -50,6 +58,7 @@ function begin() {
       FAKE_ACP_SESSION_CAPABILITIES: JSON.stringify({ resume: {}, close: {} }),
       FAKE_ACP_METHOD_LOG: log.file,
       FAKE_ACP_BACKGROUND_MS: '1500',
+      ...extraEnv,
     },
   });
   worker = startWorker({
@@ -229,6 +238,27 @@ describe('one live agent session per chat', { timeout: 60_000 }, () => {
     } finally {
       await removeRepo(root);
     }
+  });
+
+  it('allows a sub-agent’s requests in Auto at once, as it does the main agent’s', async () => {
+    begin({ FAKE_ACP_MODES: JSON.stringify(CLAUDE_MODES) });
+    const root = await realpath(mkdtempSync(join(store, 'project-')));
+    const { conversationId } = await linkedConversation(t, root);
+
+    const run = await say(conversationId, '#subagentsask', 'auto');
+
+    expect(run.status).toBe('succeeded');
+    const { rows } = await t.db.query<{ status: string }>(
+      'SELECT status FROM approvals WHERE run_id = $1',
+      [run.id],
+    );
+    expect(rows.filter((row) => row.status === 'pending')).toEqual([]);
+    const steps = await t.db.query<{ name: string }>(
+      `SELECT payload->>'stepName' AS name FROM run_events
+       WHERE run_id = $1 AND type = 'STEP_STARTED'`,
+      [run.id],
+    );
+    expect(steps.rows.map((row) => row.name)).toContainEqual(expect.stringMatching(/^Allowed /));
   });
 
   it('closes the live session when the chat is archived', async () => {

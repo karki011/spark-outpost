@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import type { AgentSettings, ProviderOutput, SteerRequests } from '../src/providers/provider.ts';
+import { WRITE_UP_STEP } from '../src/agents/acp/turn-loop.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
@@ -14,6 +15,12 @@ const codexLike = createAcpProvider({
   definition: { ...agentDefinitions.codex, name: 'Fake', ...FAKE_AGENT_MODES },
   launch,
   cancelGraceMs: 2_000,
+});
+const writingUp = createAcpProvider({
+  definition: { ...agentDefinitions.claude, name: 'Fake', ...FAKE_AGENT_MODES },
+  launch,
+  cancelGraceMs: 2_000,
+  writeUpMs: 1_500,
 });
 const settings: AgentSettings = { method: 'cli', model: null, modelLabel: null, effort: null };
 
@@ -66,6 +73,27 @@ describe(
       expect(outputs.some((output) => output.kind === 'usage' && output.costUsd === 0.5)).toBe(
         true,
       );
+    });
+
+    it('keeps the turn writing up when sub-agents handed back, and records the write-up there', async () => {
+      const outputs = await collect('#handback', { provider: writingUp });
+
+      expect(replyText(outputs)).toBe('Waiting for the report. \n\nAll reports are in.');
+      expect(outputs).toContainEqual({ kind: 'step_started', name: WRITE_UP_STEP });
+      expect(outputs).toContainEqual({ kind: 'step_finished', name: WRITE_UP_STEP });
+    });
+
+    it('ends the write-up wait when no cycle follows', async () => {
+      const started = Date.now();
+      const outputs = await collect('#handbackquiet', { provider: writingUp });
+
+      expect(replyText(outputs)).toBe('Waiting for the report. ');
+      expect(Date.now() - started).toBeGreaterThanOrEqual(1_400);
+      expect(
+        outputs.filter(
+          (output) => output.kind === 'step_finished' && output.name === WRITE_UP_STEP,
+        ),
+      ).toHaveLength(1);
     });
 
     it('ends at the reply as before for an agent that is not Claude', async () => {

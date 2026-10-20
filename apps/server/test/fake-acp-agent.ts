@@ -22,8 +22,10 @@ import {
 import { commandTurn, reportContext } from './fake-acp-context.ts';
 import {
   BACKGROUND_TRIGGER,
+  HANDBACK_TRIGGER,
   LATER_TRIGGER,
   backgroundTurn,
+  handbackTurn,
   laterTurn,
 } from './fake-acp-background.ts';
 import { rateLimitTurn } from './fake-acp-rate-limit.ts';
@@ -245,6 +247,7 @@ async function turn(
   if (requested) return requested;
   if (text.includes('#orphan ')) return orphanedCommandTurn(client, sessionId, text, signal);
   if (text.includes(BACKGROUND_TRIGGER)) return backgroundTurn(client, sessionId, text, say);
+  if (text.includes(HANDBACK_TRIGGER)) return handbackTurn(client, sessionId, text, say);
   if (text.includes(LATER_TRIGGER)) return laterTurn(client, sessionId, text, say, sessionCwd);
   if (text.includes('#heldtitle')) return heldTitleTurn(say);
   if (text.includes('#subagentsask')) return subagentAsksTurn(client, sessionId, say);

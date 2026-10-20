@@ -67,6 +67,48 @@ async function reportLater(client: acp.AgentContext, rootId: string): Promise<vo
 }
 
 export const LATER_TRIGGER = '#later';
+export const HANDBACK_TRIGGER = '#handback';
+
+async function writeUpLater(client: acp.AgentContext, rootId: string): Promise<void> {
+  const send = sender(client);
+  await delay(LATER_MS);
+  await send(rootId, {
+    sessionUpdate: 'usage_update',
+    used: 1_500,
+    size: 1_000_000,
+    _meta: { '_claude/origin': { kind: 'task-notification' } },
+  });
+  await send(rootId, {
+    sessionUpdate: 'agent_message_chunk',
+    messageId: 'm-write-up',
+    content: { type: 'text', text: 'All reports are in.' },
+  });
+  await cycleEnd(client, rootId);
+}
+
+export async function handbackTurn(
+  client: acp.AgentContext,
+  rootId: string,
+  text: string,
+  say: Say,
+): Promise<acp.StopReason> {
+  const send = sender(client);
+  await send(rootId, {
+    sessionUpdate: 'subagent_spawned',
+    subagentSessionId: 'hb-1',
+    name: 'Report',
+    task: 'Write the report',
+    capabilities: {},
+  });
+  await send(rootId, {
+    sessionUpdate: 'subagent_state_update',
+    subagentSessionId: 'hb-1',
+    state: 'completed',
+  });
+  await say('Waiting for the report. ');
+  if (!text.includes('#handbackquiet')) void writeUpLater(client, rootId);
+  return 'end_turn';
+}
 
 async function wakeLater(
   client: acp.AgentContext,

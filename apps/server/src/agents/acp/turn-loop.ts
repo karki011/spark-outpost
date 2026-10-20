@@ -5,8 +5,10 @@ import type {
   RequestUsage,
   SteerRequests,
 } from '../../providers/provider.ts';
+import { setTimeout as delay } from 'node:timers/promises';
 import { endsAgentCycle, type BackgroundCount, type BackgroundWork } from './background-work.ts';
 import { startsAgentCycle } from './agent-cycle.ts';
+import { subagentMark } from './subagent-stream.ts';
 import { followUpBlocks } from './conversation-prompt.ts';
 import { createIdleInbox, deliveringWhenIdle, type IdleInbox } from './idle-inbox.ts';
 import { nextMessage, untilFailure } from './steering.ts';
@@ -49,10 +51,17 @@ export interface PromptLoop {
   background: BackgroundWork | null;
   steers: boolean;
   steer: (steering: SteerRequests | undefined) => () => void;
+  writeUpMs?: number;
 }
 
+export const WRITE_UP_STEP = 'Writing up results';
+const WRITE_UP_MS = 15_000;
+
 type Woken =
-  { kind: 'message'; message: SessionMessage } | { kind: 'delivered' } | { kind: 'aborted' };
+  | { kind: 'message'; message: SessionMessage }
+  | { kind: 'delivered' }
+  | { kind: 'aborted' }
+  | { kind: 'quiet' };
 
 function abortion(signal: AbortSignal): Promise<Woken> {
   return new Promise((resolve) => {
@@ -89,7 +98,10 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
   let pending = readNext(session);
   let waiting = false;
   let worked = false;
+  let handedBack = false;
   let delivered: Promise<Woken> = never;
+  let quiet: Promise<Woken> = never;
+  let writeUpTimer: AbortController | null = null;
   let shown = '';
 
   const report = (count: BackgroundCount) => {
@@ -108,6 +120,22 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
     delivered = inbox.arrived().then(() => ({ kind: 'delivered' }));
     if (background) report(background.count());
   };
+  const startWriteUp = () => {
+    const timer = new AbortController();
+    writeUpTimer = timer;
+    push([{ kind: 'step_started', name: WRITE_UP_STEP }]);
+    quiet = delay(loop.writeUpMs ?? WRITE_UP_MS, undefined, { signal: timer.signal }).then(
+      (): Woken => ({ kind: 'quiet' }),
+      () => never,
+    );
+  };
+  const endWriteUp = () => {
+    if (!writeUpTimer) return;
+    writeUpTimer.abort();
+    writeUpTimer = null;
+    quiet = never;
+    push([{ kind: 'step_finished', name: WRITE_UP_STEP }]);
+  };
   const stopWaiting = () => {
     waiting = false;
     inbox.close();
@@ -121,11 +149,21 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
       pending.then((message): Woken => ({ kind: 'message', message })),
       failure,
       delivered,
+      quiet,
       waiting ? aborted : never,
     ]);
-    if (woken.kind === 'aborted') return 'cancelled';
+    if (woken.kind === 'aborted') {
+      endWriteUp();
+      return 'cancelled';
+    }
+    if (woken.kind === 'quiet') {
+      endWriteUp();
+      stopWaiting();
+      return 'end_turn';
+    }
     if (woken.kind === 'delivered') {
       const text = inbox.take();
+      endWriteUp();
       stopWaiting();
       if (text) sendPrompt(text);
       continue;
@@ -141,15 +179,21 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
         sendPrompt(next);
         continue;
       }
-      const goesOn = message.stopReason === 'end_turn' && !signal.aborted && background?.busy();
-      if (!goesOn) return message.stopReason;
+      const ends = message.stopReason === 'end_turn' && !signal.aborted;
+      const busy = background?.busy() === true;
+      const writesUp = ends && !busy && background !== null && handedBack;
+      handedBack = false;
+      if (!ends || !(busy || writesUp)) return message.stopReason;
       startWaiting();
+      if (writesUp) startWriteUp();
       continue;
     }
     await loop.see(message.update);
     background?.see(message.update);
+    if (subagentMark(message.update)?.event === 'ended') handedBack = true;
     if (!waiting) continue;
     worked ||= startsAgentCycle(message.update);
+    if (worked) endWriteUp();
     const count = background?.count();
     if (count && count.agents + count.tasks > 0) report(count);
     if (!worked || !endsAgentCycle(message.update)) continue;

@@ -44,6 +44,7 @@ export interface TurnContext {
   mapper: TurnMapper;
   push: (outputs: ProviderOutput[]) => void;
   tools: SparkTools | null;
+  writeUpMs?: number;
 }
 
 interface SessionStart {
@@ -208,6 +209,7 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
       background: connection.background,
       steers: steeringSupported(init),
       steer: (steering) => attachSteering(connection.ctx, init, session.sessionId, steering),
+      ...(context.writeUpMs ? { writeUpMs: context.writeUpMs } : {}),
     });
     stopRequests?.();
     signal.removeEventListener('abort', cancel);

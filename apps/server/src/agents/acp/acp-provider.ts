@@ -34,6 +34,7 @@ export interface AcpProviderOptions {
   sparkTools?: SparkToolsAccess;
   signedIn?: SignInCheck;
   liveIdleMs?: number;
+  writeUpMs?: number;
 }
 
 const DEFAULT_CANCEL_GRACE_MS = 5_000;
@@ -167,6 +168,7 @@ async function runSession(
         mapper,
         push,
         tools: connected.tools,
+        ...(options.writeUpMs ? { writeUpMs: options.writeUpMs } : {}),
       }),
       connection.agent.exited,
     ]);
