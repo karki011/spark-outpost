@@ -1,15 +1,17 @@
-UPDATE conversations SET overrides = (
-  SELECT COALESCE(
-    jsonb_object_agg(
-      provider,
-      CASE WHEN jsonb_typeof(choices) = 'object' THEN choices - 'model' ELSE choices END
-    ),
-    '{}'::jsonb
-  )
-  FROM jsonb_each(overrides) AS entry(provider, choices)
-)
-WHERE model_routing = 'auto' AND overrides <> '{}'::jsonb;
+UPDATE conversations SET
+  overrides = (
+    SELECT COALESCE(
+      jsonb_object_agg(
+        provider,
+        CASE WHEN jsonb_typeof(choices) = 'object' THEN choices - 'model' ELSE choices END
+      ),
+      '{}'::jsonb
+    )
+    FROM jsonb_each(overrides) AS entry(provider, choices)
+  ),
+  model_routing = 'pinned'
+WHERE model_routing = 'auto';
 
-ALTER TABLE conversations DROP COLUMN model_routing;
+ALTER TABLE conversations ALTER COLUMN model_routing SET DEFAULT 'pinned';
 
-ALTER TABLE orchestrations DROP COLUMN routing;
+ALTER TABLE orchestrations ALTER COLUMN routing SET DEFAULT 'pinned';

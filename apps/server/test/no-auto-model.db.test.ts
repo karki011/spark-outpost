@@ -38,15 +38,20 @@ async function oldChat(
   return id;
 }
 
-async function columns(db: Db, schema: string): Promise<string[]> {
-  const { rows } = await db.query<{ name: string }>(
-    `SELECT table_name || '.' || column_name AS name FROM information_schema.columns
+async function storedRouting(db: Db, schema: string) {
+  const chats = await db.query<{ model_routing: string }>(
+    'SELECT DISTINCT model_routing FROM conversations',
+  );
+  const defaults = await db.query<{ name: string; value: string }>(
+    `SELECT table_name || '.' || column_name AS name, column_default AS value
+     FROM information_schema.columns
      WHERE table_schema = $1
        AND ((table_name = 'conversations' AND column_name = 'model_routing')
-         OR (table_name = 'orchestrations' AND column_name = 'routing'))`,
+         OR (table_name = 'orchestrations' AND column_name = 'routing'))
+     ORDER BY 1`,
     [schema],
   );
-  return rows.map((row) => row.name);
+  return { chats: chats.rows.map((row) => row.model_routing), defaults: defaults.rows };
 }
 
 describe('upgrading chats off Auto', () => {
@@ -81,7 +86,13 @@ describe('upgrading chats off Auto', () => {
     expect(await resolveChatSettings(db, auto)).toMatchObject({ model: 'sonnet', effort: 'high' });
     expect((await resolveChatSettings(db, pinned)).model).toBe('haiku');
     expect((await resolveChatSettings(db, untouched)).model).toBe('sonnet');
-    expect(await columns(db, state.schema)).toEqual([]);
+    expect(await storedRouting(db, state.schema)).toEqual({
+      chats: ['pinned'],
+      defaults: [
+        { name: 'conversations.model_routing', value: "'pinned'::text" },
+        { name: 'orchestrations.routing', value: "'pinned'::text" },
+      ],
+    });
   });
 });
 
