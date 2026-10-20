@@ -76,7 +76,7 @@ export async function startLiveConnection(spec: ConnectionSpec): Promise<LiveCon
   let isGone = false;
   let wanted = false;
   const signalUnbound = () => {
-    if (wanted) return;
+    if (wanted || !spec.tracksBackground) return;
     wanted = true;
     for (const listener of unboundListeners) listener();
   };

@@ -68,10 +68,23 @@ async function reportLater(client: acp.AgentContext, rootId: string): Promise<vo
 
 export const LATER_TRIGGER = '#later';
 
-async function wakeLater(client: acp.AgentContext, rootId: string, text: string): Promise<void> {
+async function wakeLater(
+  client: acp.AgentContext,
+  rootId: string,
+  text: string,
+  cwd: string,
+): Promise<void> {
   const send = sender(client);
   await delay(LATER_MS);
   let checked = 'checked';
+  if (text.includes('#laterwrite')) {
+    await client.request(acp.methods.client.fs.writeTextFile, {
+      sessionId: rootId,
+      path: `${cwd}/later.txt`,
+      content: 'written later\n',
+    });
+    checked = 'wrote later.txt';
+  }
   if (text.includes('#laterask')) {
     const toolCall = { toolCallId: 'later-1', title: 'Write later.txt', kind: 'edit' as const };
     await send(rootId, { sessionUpdate: 'tool_call', ...toolCall, status: 'pending' });
@@ -98,9 +111,10 @@ export async function laterTurn(
   rootId: string,
   text: string,
   say: Say,
+  cwd: string,
 ): Promise<acp.StopReason> {
   await say("I'll check back on my own.");
-  void wakeLater(client, rootId, text);
+  void wakeLater(client, rootId, text, cwd);
   return 'end_turn';
 }
 

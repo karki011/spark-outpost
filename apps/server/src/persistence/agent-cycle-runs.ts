@@ -1,3 +1,5 @@
+import { PERMISSION_DO } from '@spark-outpost/contracts';
+import { runMode, type RunTarget } from './conversations.ts';
 import { withTransaction, type Db } from './db.ts';
 import { newId } from './ids.ts';
 
@@ -8,7 +10,7 @@ const ACTIVE = `('queued', 'running', 'awaiting_approval')`;
 export async function startAgentCycleRun(
   db: Db,
   conversationId: string,
-  provider: string,
+  target: RunTarget,
 ): Promise<string | null> {
   return withTransaction(db, async (client) => {
     const chat = await client.query(
@@ -24,16 +26,27 @@ export async function startAgentCycleRun(
     );
     if (active.rowCount) return null;
     const runId = newId();
+    const mode = await runMode(client, conversationId, target.permission ?? null);
     const { rowCount } = await client.query(
       `INSERT INTO runs (id, conversation_id, user_message_id, provider, model, effort, status,
          task_id, plan_version, mode, level, agent_mode, config_values, picked_mode, source)
-       SELECT $1, last.conversation_id, NULL, last.provider, last.model, last.effort, 'queued',
-         last.task_id, last.plan_version, last.mode, last.level, last.agent_mode,
-         last.config_values, last.mode, $4
+       SELECT $1, last.conversation_id, NULL, $3, $4, $5, 'queued', last.task_id,
+         last.plan_version, $6, $7, $8, $9, $6, $10
        FROM runs last
        WHERE last.conversation_id = $2 AND last.parent_run_id IS NULL AND last.provider = $3
        ORDER BY last.created_at DESC, last.id DESC LIMIT 1`,
-      [runId, conversationId, provider, AGENT_CYCLE_SOURCE],
+      [
+        runId,
+        conversationId,
+        target.provider,
+        target.model ?? null,
+        target.effort ?? null,
+        mode,
+        mode === PERMISSION_DO ? (target.level ?? null) : null,
+        target.agentMode ?? null,
+        JSON.stringify(target.options ?? {}),
+        AGENT_CYCLE_SOURCE,
+      ],
     );
     if (!rowCount) return null;
     await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [

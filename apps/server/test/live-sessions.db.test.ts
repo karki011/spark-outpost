@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { realpath } from 'node:fs/promises';
@@ -7,6 +8,8 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import { decideApproval } from '../src/persistence/approvals.ts';
+import { updateChatSettings } from '../src/persistence/chat-settings.ts';
+import { insertChatWorktree } from '../src/persistence/chat-worktrees.ts';
 import { updateConversation, deleteConversation } from '../src/persistence/conversation-actions.ts';
 import {
   createConversation,
@@ -22,9 +25,15 @@ import { FAKE_ACP_LAUNCH } from './fake-acp-support.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 import { methodLog, type MethodLog } from './live-session-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
+import { gitRepo, removeRepo } from './turn-support.ts';
+import { connectAgents } from './turn-worker.ts';
 
 const store = mkdtempSync(join(tmpdir(), 'live-sessions-db-'));
 afterAll(() => rmSync(store, { recursive: true, force: true }));
+
+const BRANCH = 'spark/later-1a2b3c4d';
+const repo = (cwd: string, ...args: string[]) =>
+  execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' });
 
 let t: TestDb;
 let worker: Worker | null = null;
@@ -40,7 +49,7 @@ function begin() {
       FAKE_ACP_SESSION_STORE: store,
       FAKE_ACP_SESSION_CAPABILITIES: JSON.stringify({ resume: {}, close: {} }),
       FAKE_ACP_METHOD_LOG: log.file,
-      FAKE_ACP_BACKGROUND_MS: '300',
+      FAKE_ACP_BACKGROUND_MS: '1500',
     },
   });
   worker = startWorker({
@@ -57,6 +66,7 @@ function begin() {
 
 beforeEach(async () => {
   t = await createTestDb();
+  await connectAgents(t);
   log = methodLog(store);
 });
 
@@ -74,6 +84,7 @@ async function settled(runId: string) {
 }
 
 async function say(conversationId: string, content: string, agentMode: string | null = null) {
+  if (agentMode) await updateChatSettings(t.db, conversationId, { agentMode, level: 'hands-off' });
   const sent = await sendUserMessage(
     t.db,
     conversationId,
@@ -153,6 +164,71 @@ describe('one live agent session per chat', { timeout: 60_000 }, () => {
     const detail = await getConversationDetail(t.db, conversationId);
     const reply = detail?.messages.find((message) => message.runId === continued.id);
     expect(reply?.content).toBe('Woke up on my own: yes.');
+  });
+
+  it('judges a request between turns under the mode the chat has now', async () => {
+    begin();
+    const root = await realpath(mkdtempSync(join(store, 'project-')));
+    const { conversationId } = await linkedConversation(t, root);
+    expect((await say(conversationId, '#laterask', 'acceptEdits')).status).toBe('succeeded');
+    await updateChatSettings(t.db, conversationId, { agentMode: 'default' });
+
+    const continued = await agentRun(conversationId);
+    const approval = await eventually(async () => {
+      const { rows } = await t.db.query<{ id: string }>(
+        `SELECT id FROM approvals WHERE run_id = $1 AND status = 'pending'`,
+        [continued.id],
+      );
+      return rows[0] ?? null;
+    }, 20_000);
+    await decideApproval(t.db, t.workspaceId, approval.id, { optionId: 'no', scope: 'once' });
+
+    expect((await settled(continued.id)).status).toBe('succeeded');
+  });
+
+  it('finishes the agent’s own turn and its publish prompt after it changed files', async () => {
+    begin();
+    const root = await gitRepo();
+    const remote = await realpath(mkdtempSync(join(store, 'remote-')));
+    try {
+      repo(remote, 'init', '-q', '--bare');
+      repo(root, 'remote', 'add', 'origin', remote);
+      repo(root, 'checkout', '-qb', BRANCH);
+      const { conversationId, projectId } = await linkedConversation(t, root);
+      await insertChatWorktree(t.db, {
+        id: randomUUID(),
+        conversationId,
+        projectId,
+        repoRoot: root,
+        path: root,
+        branch: BRANCH,
+        baseBranch: 'main',
+        baseCommit: 'a'.repeat(40),
+        landedCommit: null,
+        inPlace: false,
+        ownsBranch: true,
+      });
+      await updateChatSettings(t.db, conversationId, { level: 'full-auto' });
+      const sent = await sendUserMessage(
+        t.db,
+        conversationId,
+        { id: randomUUID(), content: '#laterwrite' },
+        {
+          provider: 'claude',
+          permission: 'do',
+          agentMode: 'bypassPermissions',
+          level: 'full-auto',
+        },
+      );
+      expect((await settled(sent.run.id)).status).toBe('succeeded');
+
+      const continued = await agentRun(conversationId);
+
+      expect((await settled(continued.id)).status).toBe('succeeded');
+      expect(log.count('session/prompt')).toBe(2);
+    } finally {
+      await removeRepo(root);
+    }
   });
 
   it('closes the live session when the chat is archived', async () => {

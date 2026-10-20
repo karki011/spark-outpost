@@ -245,7 +245,7 @@ async function turn(
   if (requested) return requested;
   if (text.includes('#orphan ')) return orphanedCommandTurn(client, sessionId, text, signal);
   if (text.includes(BACKGROUND_TRIGGER)) return backgroundTurn(client, sessionId, text, say);
-  if (text.includes(LATER_TRIGGER)) return laterTurn(client, sessionId, text, say);
+  if (text.includes(LATER_TRIGGER)) return laterTurn(client, sessionId, text, say, sessionCwd);
   if (text.includes('#heldtitle')) return heldTitleTurn(say);
   if (text.includes('#subagentsask')) return subagentAsksTurn(client, sessionId, say);
   if (text.includes('#subagents')) {

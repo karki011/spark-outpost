@@ -94,7 +94,7 @@ export function startWorker(given: WorkerOptions): Worker {
   };
 
   options.parked?.onChange(wake);
-  const live = watchLiveSessions(options.db, options.providers, wake);
+  const live = watchLiveSessions(options.db, options.providers, queueTarget(options), wake);
 
   const loop = (async () => {
     while (!stopped) {
