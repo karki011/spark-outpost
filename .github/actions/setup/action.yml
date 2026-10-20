@@ -16,3 +16,12 @@ runs:
       run: |
         git config --global user.name "Spark CI"
         git config --global user.email "ci@example.invalid"
+    - name: Match the Mac shell and sandbox on Linux
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        echo "CPUs: $(nproc)"
+        sudo apt-get update --quiet
+        sudo apt-get install --yes --no-install-recommends zsh
+        sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+        echo "SHELL=/bin/zsh" >> "$GITHUB_ENV"

@@ -99,6 +99,7 @@ describe('what a Spark tools session can use', () => {
       mac: false,
       outpost: false,
       outpost_draft: false,
+      outpost_start: false,
       calendar_read: false,
       calendar_edit: false,
       jira: false,
