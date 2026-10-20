@@ -17,4 +17,10 @@ describe('meetingAnswer', () => {
     expect(meetingAnswer('What did the meeting decide?', meetings, now)).toBeNull();
     expect(meetingAnswer(NEXT_MEETING_QUESTION, null, now)).toBeNull();
   });
+
+  it('leaves a request to act on a meeting to the model', () => {
+    expect(meetingAnswer('Snooze my next meeting', meetings, now)).toBeNull();
+    expect(meetingAnswer('join my next call', meetings, now)).toBeNull();
+    expect(meetingAnswer('Dismiss the upcoming meeting', meetings, now)).toBeNull();
+  });
 });
