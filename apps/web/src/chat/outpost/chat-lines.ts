@@ -31,8 +31,15 @@ export function firstLine(body: string): string {
   );
 }
 
-export function draftLabel(draft: Pick<ChatDraft, 'chats' | 'stacked' | 'startedAt'>): string {
-  const verb = draft.startedAt ? 'Started' : 'Proposed';
-  const chats = `${verb} ${countLabel(draft.chats, 'chat')}`;
+export function draftLabel(
+  draft: Pick<ChatDraft, 'chats' | 'stacked' | 'startedAt'>,
+  outpostName?: string | null,
+): string {
+  const count = countLabel(draft.chats, 'chat');
+  const chats = !draft.startedAt
+    ? `Proposed ${count}`
+    : outpostName
+      ? `Started outpost ${outpostName} with ${count}`
+      : `Started ${count}`;
   return draft.stacked > 0 ? `${chats} · ${draft.stacked} stacked` : chats;
 }

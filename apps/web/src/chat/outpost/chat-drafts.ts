@@ -7,8 +7,11 @@ export function isChatDraftsKey(queryKey: readonly unknown[]): boolean {
   return queryKey[0] === queryKeys.conversations[0] && queryKey.at(-1) === CHAT_DRAFTS;
 }
 
+export const chatDraftsKey = (conversationId: string) =>
+  [...queryKeys.conversation(conversationId), CHAT_DRAFTS] as const;
+
 export const chatDraftsQuery = (conversationId: string) => ({
-  queryKey: [...queryKeys.conversation(conversationId), CHAT_DRAFTS] as const,
+  queryKey: chatDraftsKey(conversationId),
   queryFn: (): Promise<ChatDrafts> =>
     request(chatDraftsSchema, `/conversations/${conversationId}/outpost-drafts`),
 });

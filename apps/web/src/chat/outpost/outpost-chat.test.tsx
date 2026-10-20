@@ -23,6 +23,7 @@ function request(from: Partial<RunOutpost>): RunOutpost {
     fromUser: false,
     fromSpark: false,
     userStarted: false,
+    agentStarted: false,
     ...from,
   };
 }
@@ -94,6 +95,7 @@ describe('RequestHeader', () => {
     expect(requestSender(task)).toBe('Task from @lead');
     expect(requestSender({ ...task, fromHandle: null })).toBe('Task from another chat');
     expect(requestNote(task)).toBe('started by you, not written by you');
+    expect(requestNote({ ...task, agentStarted: true })).toBe('started by its agent, not by you');
     expect(requestSender({ fromUser: true, fromHandle: null, userStarted: true })).toBe('From you');
   });
 

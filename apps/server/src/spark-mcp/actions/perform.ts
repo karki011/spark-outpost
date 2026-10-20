@@ -22,6 +22,8 @@ import {
   performJiraEdit,
 } from './atlassian-perform.ts';
 import type { Performed } from './performed.ts';
+import { performStartOutpost } from './outpost-actions.ts';
+import type { StartedBy } from '../../outposts/start-outpost.ts';
 
 export const OPEN_PR_RETIRED =
   'Spark no longer opens pull requests from a card. Ask the agent to push the branch and open it.';
@@ -29,6 +31,7 @@ export const OPEN_PR_RETIRED =
 export function performSparkAction(
   context: SparkToolContext,
   action: SparkAction,
+  startedBy: StartedBy = 'user',
 ): Promise<Performed> {
   switch (action.action) {
     case 'open_pr':
@@ -107,6 +110,8 @@ export function performSparkAction(
       return performJiraEdit(context, action);
     case 'confluence_edit':
       return performConfluenceEdit(context, action);
+    case 'start_outpost':
+      return performStartOutpost(context, action, startedBy);
     case 'pr_follow_up':
       return Promise.reject(new Error('PR feedback is pushed by the follow-up round.'));
   }

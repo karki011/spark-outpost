@@ -37,6 +37,37 @@ describe('remote policy', () => {
     }
   });
 
+  it('lets a paired device start a proposed draft as proposed, but not create or edit outposts', () => {
+    expect(remoteDecision('POST', `/api/outposts/drafts/${ID}/start`, ALL_OFF).kind).toBe('allow');
+    expect(remoteDecision('GET', `/api/outposts/drafts/${ID}`, ALL_ON).kind).toBe('refuse');
+    expect(remoteDecision('POST', '/api/outposts', ALL_ON).kind).toBe('refuse');
+    expect(remoteDecision('DELETE', `/api/outposts/${ID}`, ALL_ON).kind).toBe('refuse');
+    expect(remoteDecision('PUT', `/api/outposts/${ID}/members/${ID}`, ALL_ON).kind).toBe('refuse');
+  });
+
+  it('lets a paired device answer a start-sub-chats card like other Spark action cards', () => {
+    const action = {
+      action: 'start_outpost',
+      draftId: ID,
+      outpostName: 'Docs split',
+      joining: false,
+      title: 'Read the docs',
+      chats: [
+        {
+          handle: 'api',
+          title: 'Read api docs',
+          project: 'shop',
+          agentMode: null,
+          dependsOn: null,
+          stacked: false,
+          task: 'Read.',
+        },
+      ],
+    };
+    const payload = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
+    expect(cardSwitch({ ...payload, sparkAction: action })).toBeNull();
+  });
+
   it('lets a paired device pause and resume Spark whatever the switches say', () => {
     expect(remoteDecision('GET', '/api/spark-pause', ALL_OFF).kind).toBe('allow');
     expect(remoteDecision('PUT', '/api/spark-pause', ALL_OFF).kind).toBe('allow');

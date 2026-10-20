@@ -128,12 +128,12 @@ describe('TurnOutpostLines', () => {
     expect(onOpenDraft).toHaveBeenCalledWith(DRAFT_ID);
   });
 
-  it('offers no review where chats cannot be created', () => {
+  it('offers Start as proposed, and no review, where chats cannot be edited', () => {
     seedDrafts([draft()]);
     client.setQueryData(outpostKeys.detail(OUTPOST_ID), detail([]));
     renderLines(seam({ onOpenDraft: vi.fn(), canManage: false }));
-    expect(screen.getByText('Review and start on your Mac')).toBeTruthy();
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Start' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Review and start' })).toBeNull();
   });
 
   it('shows Started with the outpost name and opens that outpost', () => {
@@ -141,7 +141,7 @@ describe('TurnOutpostLines', () => {
     client.setQueryData(outpostKeys.detail(OUTPOST_ID), detail([]));
     const value = seam({ onOpenDraft: vi.fn() });
     const { container } = renderLines(value);
-    expect(container.textContent).toBe('Started 3 chatsUsage by userOpen outpost');
+    expect(container.textContent).toBe('Started outpost Usage by user with 3 chatsOpen');
     fireEvent.click(screen.getByRole('button', { name: 'Open outpost Usage by user' }));
     expect(value.onOpenOutpost).toHaveBeenCalledWith(OUTPOST_ID);
   });

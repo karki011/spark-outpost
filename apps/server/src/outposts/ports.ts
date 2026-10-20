@@ -50,6 +50,7 @@ export interface StoredPost {
   opening: boolean;
   afterPostId: string | null;
   userStarted: boolean;
+  agentStarted: boolean;
 }
 
 export type NewPost = Pick<StoredPost, 'id' | 'outpostId' | 'kind' | 'body' | 'fromUser'> &
@@ -70,6 +71,7 @@ export type NewPost = Pick<StoredPost, 'id' | 'outpostId' | 'kind' | 'body' | 'f
       | 'opening'
       | 'afterPostId'
       | 'userStarted'
+      | 'agentStarted'
     >
   >;
 

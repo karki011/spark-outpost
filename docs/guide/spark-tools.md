@@ -56,7 +56,7 @@ An MCP server card shows the exact command. Agents pass only variable and header
 
 ## Outpost tools
 
-A chat in an [outpost](outposts.md) gets these. None shows a card.
+A chat in an [outpost](outposts.md) gets these.
 
 | The agent wants to                               | Tool                  |
 | ------------------------------------------------ | --------------------- |
@@ -64,8 +64,9 @@ A chat in an [outpost](outposts.md) gets these. None shows a card.
 | Ask another chat, and wait for its answer or not | `spark_outpost_ask`   |
 | Leave a note for the other chats                 | `spark_outpost_note`  |
 | Propose sub-task chats that you review and start | `spark_outpost_draft` |
+| Start sub-task chats now                         | `spark_outpost_start` |
 
-Project chats get `spark_outpost_draft`; a Spark's job gets none. What another chat wrote is never your message.
+Sub-chats and Sparks' jobs get no `spark_outpost_start`; it [may ask first](#when-actions-ask-first). What another chat wrote is never your message.
 
 ## When actions ask first
 

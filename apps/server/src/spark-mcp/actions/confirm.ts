@@ -86,6 +86,7 @@ function cardTitle(action: SparkAction): string {
     return `${question} ${action.after?.title ?? action.before?.title ?? ''}`.trim();
   }
   if (action.action === 'create_ticket') return `${question} ${action.title}`;
+  if (action.action === 'start_outpost') return `${question} ${action.outpostName}`;
   if (action.action === 'open_pr') return `${question} ${action.title}`;
   if (action.action === 'post_slack') return `${question} #${action.channel.name}`;
   if ('name' in action) return `${question} ${action.name}`;
@@ -220,6 +221,7 @@ export interface ProposeOptions {
   sendsTo?: string | null;
   sendSubject?: string;
   confirmName?: string;
+  declineName?: string;
 }
 
 export async function proposeAction(
@@ -241,6 +243,7 @@ export async function proposeAction(
     requested: facts.requested,
     observed,
     ...(options.confirmName ? { confirmName: options.confirmName } : {}),
+    ...(options.declineName ? { declineName: options.declineName } : {}),
   });
   if (path === 'confirm') {
     auditAction(run, action, { outcome: 'waiting_for_user', approvalId: card.id });

@@ -68,7 +68,8 @@ export type StoryRequest = Required<
     | 'attachmentIds'
     | 'afterPostId'
   >
->;
+> &
+  Pick<NewPost, 'agentStarted'>;
 
 export interface JoinInput extends MemberRequest {
   outpostId: string;
@@ -218,6 +219,7 @@ export async function postStoryRequest(
         attachmentIds,
         opening: true,
         userStarted: true,
+        agentStarted: request.agentStarted ?? false,
       },
     ]);
     if (!post) throw new Error(`Outpost post ${request.id} was not stored.`);

@@ -31,6 +31,7 @@ const stored: StoredPost = {
   opening: false,
   afterPostId: null,
   userStarted: false,
+  agentStarted: false,
 };
 
 const facts: RequestFacts = {

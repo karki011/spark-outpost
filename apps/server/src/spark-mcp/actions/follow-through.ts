@@ -63,7 +63,8 @@ async function perform(deps: SparkToolDeps, claimed: ClaimedSparkAction): Promis
     },
   };
   try {
-    const performed = await performSparkAction(context, action);
+    const startedBy = approval.decidedBy === 'level' ? 'agent' : 'user';
+    const performed = await performSparkAction(context, action, startedBy);
     return {
       state: 'done',
       message: performed.message,

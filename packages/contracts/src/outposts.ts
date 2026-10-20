@@ -4,11 +4,19 @@ import { involvementLevelSchema } from './involvement-levels.ts';
 import { providerIdSchema } from './provider-ids.ts';
 import { runStatusSchema } from './runs.ts';
 import { SPARK_TEXT_MAX } from './spark-actions.ts';
+import {
+  OUTPOST_HANDLE_PATTERN,
+  OUTPOST_MEMBERS_MAX,
+  OUTPOST_NAME_MAX,
+  OUTPOST_STORY_TITLE_MAX,
+} from './outpost-limits.ts';
 
-export const OUTPOST_NAME_MAX = 60;
-export const OUTPOST_HANDLE_PATTERN = /^[a-z][a-z0-9-]{1,31}$/;
-export const OUTPOST_MEMBERS_MAX = 50;
-export const OUTPOST_STORY_TITLE_MAX = 100;
+export {
+  OUTPOST_HANDLE_PATTERN,
+  OUTPOST_MEMBERS_MAX,
+  OUTPOST_NAME_MAX,
+  OUTPOST_STORY_TITLE_MAX,
+} from './outpost-limits.ts';
 
 export const outpostNameSchema = z.string().trim().min(1).max(OUTPOST_NAME_MAX);
 export const outpostHandleSchema = z.string().regex(OUTPOST_HANDLE_PATTERN);
@@ -114,6 +122,7 @@ export const outpostPostSchema = z.object({
   fromRunId: z.uuid().nullable().default(null),
   fromHandle: z.string().nullable(),
   userStarted: z.boolean().default(false),
+  agentStarted: z.boolean().default(false),
   toConversationId: z.uuid().nullable(),
   toHandle: z.string().nullable(),
   guest: z.boolean(),
@@ -249,6 +258,13 @@ export const failedMemberSchema = z.object({
   message: z.string(),
 });
 export type FailedMember = z.infer<typeof failedMemberSchema>;
+
+export const startDraftResponseSchema = z.object({
+  outpostId: z.uuid(),
+  message: z.string(),
+  failed: z.array(failedMemberSchema).default([]),
+});
+export type StartDraftResponse = z.infer<typeof startDraftResponseSchema>;
 
 export const createOutpostResponseSchema = outpostDetailSchema.extend({
   failed: z.array(failedMemberSchema).default([]),

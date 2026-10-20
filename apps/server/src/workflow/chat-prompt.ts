@@ -14,6 +14,7 @@ export interface ChatPromptProject {
 export interface ChatPromptFacts {
   project: ChatPromptProject | null;
   outpostDraftTool: boolean;
+  outpostStartTool?: boolean;
   level: InvolvementLevel;
   followUpRound?: boolean;
   customInstructions: string | null;
@@ -34,12 +35,17 @@ function whereLines(project: ChatPromptProject): string[] {
   return lines;
 }
 
-function splitSection(outpostDraftTool: boolean): string {
+function subChatLines(facts: ChatPromptFacts): string[] {
+  if (facts.outpostStartTool) return [text.SPLIT_SUB_CHATS_START];
+  return facts.outpostDraftTool ? [text.SPLIT_SUB_CHATS] : [];
+}
+
+function splitSection(facts: ChatPromptFacts): string {
   return [
     text.SPLIT_HEADING,
     text.SPLIT_ALONE,
     text.SPLIT_SUB_AGENTS,
-    ...(outpostDraftTool ? [text.SPLIT_SUB_CHATS] : []),
+    ...subChatLines(facts),
     text.SPLIT_UNCLEAR,
   ].join('\n');
 }
@@ -61,7 +67,7 @@ export function chatPrompt(facts: ChatPromptFacts): string {
   const where = facts.project ? whereLines(facts.project) : [];
   const sections = [
     [text.INTRO, ...where].join('\n'),
-    splitSection(facts.outpostDraftTool),
+    splitSection(facts),
     text.ENGINEERING,
     text.REPORTING,
   ];

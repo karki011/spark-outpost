@@ -45,6 +45,7 @@ export function toOutpostPost(
     fromRunId: post.fromRunId,
     fromHandle: post.fromHandle,
     userStarted: post.userStarted,
+    agentStarted: post.agentStarted,
     toConversationId: post.toConversationId,
     toHandle: post.toHandle,
     guest: post.guest,

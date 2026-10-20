@@ -13,6 +13,7 @@ const NOTHING: SparkAvailability = {
   mac: false,
   outpost: false,
   outpost_draft: false,
+  outpost_start: false,
   calendar_read: false,
   calendar_edit: false,
   jira: false,
@@ -55,6 +56,7 @@ const GROUPS: [keyof SparkAvailability, string[]][] = [
   ],
   ['outpost', ['spark_outpost', 'spark_outpost_ask', 'spark_outpost_note']],
   ['outpost_draft', ['spark_outpost_draft']],
+  ['outpost_start', ['spark_outpost_start']],
   ['jira', ['spark_jira', 'spark_jira_edit']],
   ['confluence', ['spark_confluence', 'spark_confluence_edit']],
 ];

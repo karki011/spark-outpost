@@ -3,11 +3,11 @@ import { OUTPOST_DRAFT_ACTIVITY } from '@spark-outpost/contracts';
 import { proposedAboveOwnMode } from '../src/outposts/mode-cap.ts';
 import { saveCapabilities, updateChatSettings } from '../src/persistence/chat-settings.ts';
 import { getDraft } from '../src/persistence/outpost-drafts.ts';
+import { outpostDraftTool } from '../src/spark-mcp/tools/outpost-draft-tool.ts';
 import {
   DRAFT_FROM_REQUEST,
   DRAFT_NEEDS_PROJECT,
-  outpostDraftTool,
-} from '../src/spark-mcp/tools/outpost-draft-tool.ts';
+} from '../src/spark-mcp/tools/outpost-proposal.ts';
 import { FAKE_CLAUDE_MODES } from '../src/providers/fake.ts';
 import { NOT_THE_CHATS_TURN } from '../src/spark-mcp/tools/outpost-turn.ts';
 import { addMemberChat, createOutpostRow } from './outpost-fixtures.ts';
