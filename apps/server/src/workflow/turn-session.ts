@@ -22,6 +22,7 @@ import { recordSessionCommands, sessionCommands } from '../persistence/session-c
 import type { ProviderOutput, SessionTarget } from '../providers/provider.ts';
 import type { StopReason } from './agent-turn.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
+import type { KnownWindow } from '../usage/context-window.ts';
 import type { RunInput } from './run-input.ts';
 import { insertSessionEvent, recordAppliedSettings } from '../persistence/session-events.ts';
 import { modelChange, sessionEvent, type SessionFacts } from './session-events.ts';
@@ -53,6 +54,7 @@ type SettingsOutput = Extract<ProviderOutput, { kind: 'session_settings' }>;
 
 export interface TurnSession {
   target: SessionTarget;
+  knownWindow: KnownWindow | null;
   started(output: SessionOutput): Promise<void>;
   commands(commands: readonly AgentCommand[]): Promise<void>;
   settings(output: SettingsOutput): Promise<void>;
@@ -228,6 +230,7 @@ export async function prepareTurnSession(
       ...(handoff ? { handoff } : {}),
       ...(missed.length > 0 ? { missed } : {}),
     },
+    knownWindow: previous ? { model: stored?.model ?? null, size: previous.size } : null,
     noteSession,
     async started(output) {
       noteSession(output);

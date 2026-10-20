@@ -19,6 +19,7 @@ import { ZAI_EFFORTS, ZAI_MODELS } from '../agents/acp/zai.ts';
 import {
   fakeCompactOutputs,
   fakeCompactTurn,
+  fakeMidTurnUsage,
   fakeSessionOutputs,
   withFakeContext,
 } from './fake-context.ts';
@@ -28,6 +29,7 @@ const FAKE_FAILURE_TRIGGER = '#fail';
 export const FAKE_REJECTED_MODEL = 'gpt-6.1-sol';
 export const FAKE_REJECTION_BODY = `{"type":"error","status":400,"error":{"type":"invalid_request_error","message":"The '${FAKE_REJECTED_MODEL}' model is not supported when using Codex with a ChatGPT account."}}`;
 const FAKE_PLAN_TRIGGER = '#plan';
+const FAKE_MID_TURN_MS = 3_000;
 const FAKE_TITLE_TRIGGER = '#title';
 export const FAKE_TITLE = 'Tidy the fake reply';
 export const FAKE_PR_URL = 'https://github.com/spark-outpost/demo/pull/42';
@@ -336,6 +338,10 @@ async function* fakeTurn(
     return;
   }
   if (turn.repo) yield { kind: 'instructions', files: followedFiles(turn.repo) };
+  for (const usage of fakeMidTurnUsage(turn)) {
+    yield usage;
+    await delay(FAKE_MID_TURN_MS, undefined, { signal: turn.signal });
+  }
   const titled = turn.askTitle && turn.prompt.includes(FAKE_TITLE_TRIGGER);
   const outputs = (
     turn.prompt.includes(FAKE_DIGEST_TRIGGER)

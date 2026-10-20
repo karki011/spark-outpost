@@ -22,6 +22,7 @@ import {
 import { commandTurn, reportContext } from './fake-acp-context.ts';
 import { BACKGROUND_TRIGGER, backgroundTurn } from './fake-acp-background.ts';
 import { rateLimitTurn } from './fake-acp-rate-limit.ts';
+import { windowTurn } from './fake-acp-window.ts';
 import { requestsTurn } from './fake-acp-requests.ts';
 import {
   createFakeSession,
@@ -235,6 +236,8 @@ async function turn(
   if (text.includes('#silent')) return 'end_turn';
   const limited = await rateLimitTurn(text, update, say);
   if (limited) return limited;
+  const windowed = await windowTurn(text, update, say, signal);
+  if (windowed) return windowed;
   const requested = await requestsTurn(text, client, sessionRequest?.meta, say);
   if (requested) return requested;
   if (text.includes('#orphan ')) return orphanedCommandTurn(client, sessionId, text, signal);
