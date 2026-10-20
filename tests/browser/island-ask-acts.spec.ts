@@ -82,6 +82,31 @@ test('in Manual, Ask Spark shows a confirm card and acts only on Do it', async (
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'island-ask-acts-thread.png') });
 });
 
+test('a waiting Ask Spark card shows in the Inbox’s Needs you, and Do it there acts', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await resetTestDatabase({ onboarded: true, connected: ['claude'], catalog: true });
+  const [build] = await seedChats([{ title: 'Build the site', run: { status: 'running' } }]);
+  const ask = await openAsk(page);
+  await ask.fill(`Stop it #build #spark spark_stop_chat {"chat":"${build}"}`);
+  await page.keyboard.press('Enter');
+  await expect(log(page).getByRole('group', { name: 'Stop “Build the site”' })).toBeVisible({
+    timeout: 20_000,
+  });
+
+  await page.goto('/island');
+  await expect(island(page)).toBeVisible();
+  await page.keyboard.press('Alt+Shift+Space');
+  const needs = island(page).getByRole('region', { name: /Needs you/ });
+  const card = needs.getByRole('group', { name: 'Stop “Build the site”' });
+  await expect(card).toBeVisible({ timeout: 15_000 });
+  await expect(needs.getByText('Ask Spark', { exact: true })).toBeVisible();
+  await shot(page, 'needs-you');
+  await card.getByRole('button', { name: 'Do it' }).click();
+  await expect.poll(() => stopRequested('Build the site'), { timeout: 15_000 }).toBe(true);
+});
+
 test('Don’t leaves the chat running, and Act does it at once', async ({ page }) => {
   test.setTimeout(60_000);
   await resetTestDatabase({ onboarded: true, connected: ['claude'], catalog: true });
