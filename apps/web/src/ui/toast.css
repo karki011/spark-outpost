@@ -18,14 +18,24 @@
   line-height: 1.4;
 }
 
+.toast-text {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .toast button {
+  flex-shrink: 0;
+  white-space: nowrap;
   font-weight: 600;
   color: var(--panel);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.toast .tbar {
+.toast .toast-timer {
   position: absolute;
   left: 0;
   bottom: 0;
@@ -36,8 +46,14 @@
   animation: sb-shrink 5s linear forwards;
 }
 
-.toast .tbar.paused {
+.toast .toast-timer.paused {
   animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast .toast-timer {
+    animation: none;
+  }
 }
 
 @keyframes sb-shrink {

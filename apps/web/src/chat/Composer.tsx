@@ -48,6 +48,7 @@ import { ChatMcpPanel } from './composer/ChatMcpPanel.tsx';
 import { usePickerCommand } from './composer/use-picker-command.ts';
 import { useSlash } from './composer/use-slash.ts';
 import { useDraftRequests } from './composer/use-draft-requests.ts';
+import { useUnsentText } from './composer/unsent-text.ts';
 import { PlusMenu } from './composer/PlusMenu.tsx';
 import { SendButton } from './composer/SendButton.tsx';
 import { ComposerShell, composerRows } from './composer/ComposerShell.tsx';
@@ -227,6 +228,7 @@ export function Composer({
 
   const queueing = busy && onQueue !== undefined;
   const hasText = draft.trim().length > 0;
+  useUnsentText(conversationId, hasText);
   const quoteItems = quotes?.items ?? [];
   const sendName = hasText ? 'Send' : sendLabel(quoteItems.map((quote) => quote.kind));
   const canQueue = queueing && hasText && attachments.items.length === 0;

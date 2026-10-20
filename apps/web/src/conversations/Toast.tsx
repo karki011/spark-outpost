@@ -43,7 +43,9 @@ function ToastCard({ toast, onDismiss, onUndo, onRetry }: ToastCardProps) {
       onFocus={pause}
       onBlur={resume}
     >
-      <span>{toast.text}</span>
+      <span className="toast-text" title={toast.text}>
+        {toast.text}
+      </span>
       {toast.undo && (
         <button type="button" onClick={onUndo}>
           Undo
@@ -54,7 +56,7 @@ function ToastCard({ toast, onDismiss, onUndo, onRetry }: ToastCardProps) {
           Retry
         </button>
       )}
-      <i className={`tbar${paused ? ' paused' : ''}`} aria-hidden="true" />
+      <i className={`toast-timer${paused ? ' paused' : ''}`} aria-hidden="true" />
     </motion.div>
   );
 }

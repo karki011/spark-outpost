@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                 | What to do                                                        |
 | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Archiving the open chat opens a new chat; **Undo** returns. Toast and context bar fixes.                     | Nothing.                                                          |
 | No line, chime or notification for a chat you're viewing. Spark Island takes the first click.                | See [Spark Island](desktop-companion.md#answer-a-card).           |
 | Browser: developer tools, network log, multi-site sign-ins, SSO handoff.                                     | See [Use the browser](use-the-browser.md).                        |
 | **Atlassian** replaces Jira. Agent deletes in Jira, Confluence and Calendar follow your mode.                | See [Connect](tickets-and-github.md#connect-atlassian-or-linear). |

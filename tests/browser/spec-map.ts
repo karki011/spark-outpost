@@ -111,6 +111,8 @@ export const SPEC_GROUPS = {
     'sign-ins',
   ],
   'sidebar-projects': [
+    'archive-current',
+    'compact-chrome',
     'project-clone',
     'project-work-place',
     'projects',
