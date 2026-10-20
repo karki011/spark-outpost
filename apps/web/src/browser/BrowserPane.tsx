@@ -44,6 +44,7 @@ import { tabLabel } from './tab-label.ts';
 import { hiddenPlacement, useViewPlacement, type BrowserHome } from './use-view-placement.ts';
 
 const COPIED_MS = 1600;
+const REFOCUS_MS = 1500;
 
 interface BrowserPaneProps {
   home: BrowserHome;
@@ -234,6 +235,14 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
   const runShortcut = (shortcut: Parameters<typeof runPaneShortcut>[2]) =>
     runPaneShortcut(chatId, browser.tabs, shortcut, shortcutUi);
   usePageShortcuts(chatId, runShortcut, shown);
+  const shortcutAt = useRef(0);
+  const tabKey = `${tab?.id ?? ''}:${tab?.url ?? ''}`;
+
+  useEffect(() => {
+    const recent = Date.now() - shortcutAt.current < REFOCUS_MS;
+    if (!recent || document.activeElement !== document.body) return;
+    section.current?.querySelector<HTMLInputElement>('input.bp-url')?.focus();
+  }, [tabKey]);
 
   useEffect(() => {
     if (!shown || started.current) return;
@@ -267,6 +276,7 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
         if (shortcut) {
           event.preventDefault();
           event.stopPropagation();
+          shortcutAt.current = Date.now();
           runShortcut(shortcut);
           return;
         }
@@ -319,7 +329,7 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
             Click or drag a box. Esc cancels.
           </p>
         ) : (
-          <AddressBar key={`${tab?.id ?? ''}:${tab?.url ?? ''}`} chatId={chatId} tab={tab} />
+          <AddressBar key={tabKey} chatId={chatId} tab={tab} />
         )}
         <ToolButton
           label={tab?.picking ? 'Stop selecting' : `Select an element for ${destination}`}

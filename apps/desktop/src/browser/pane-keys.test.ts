@@ -69,14 +69,25 @@ describe('pane tab keys and clipboard writes', () => {
 
   it('hands pane shortcuts pressed in the page to the host and keeps them from the page', async () => {
     const { tab, contents } = await opened();
-    expect(pressed(contents, key('KeyW'))).toBe(true);
+    expect(pressed(contents, key('KeyT'))).toBe(true);
     expect(pressed(contents, key('KeyC', { shift: true }))).toBe(true);
     expect(pressed(contents, key('Tab', { meta: false, control: true }))).toBe(true);
     expect(shortcuts).toEqual([
-      [tab, 'close_tab'],
+      [tab, 'new_tab'],
       [tab, 'copy_url'],
       [tab, 'next_tab'],
     ]);
+  });
+
+  it('leaves close and reload to the app menu, which finds the focused tab', async () => {
+    const { tab, contents } = await opened();
+    expect(pressed(contents, key('KeyW'))).toBe(false);
+    expect(pressed(contents, key('KeyR'))).toBe(false);
+    expect(pressed(contents, key('KeyR', { shift: true }))).toBe(false);
+    expect(shortcuts).toEqual([]);
+    expect(panes.tabOfContents(contents as never)).toBe(tab);
+    expect(panes.tabOfContents({ id: -1 } as never)).toBeNull();
+    expect(panes.tabOfContents(null)).toBeNull();
   });
 
   it('leaves editing keys, composing keys and key ups to the page', async () => {

@@ -56,8 +56,14 @@ const BLANK = 'about:blank';
 const BLOCKED = 'Spark does not let a page in the Browser pane go to that address.';
 const VIEW_RADIUS = 10;
 
+const MENU_SHORTCUTS: ReadonlySet<BrowserShortcut> = new Set([
+  'close_tab',
+  'reload',
+  'hard_reload',
+]);
+
 function paneShortcutOf(input: Input): BrowserShortcut | null {
-  return browserShortcut(
+  const shortcut = browserShortcut(
     {
       code: input.code,
       meta: input.meta,
@@ -68,6 +74,7 @@ function paneShortcutOf(input: Input): BrowserShortcut | null {
     },
     process.platform === 'darwin',
   );
+  return shortcut && !MENU_SHORTCUTS.has(shortcut) ? shortcut : null;
 }
 
 export class PaneTab {
@@ -396,7 +403,7 @@ export class PaneTab {
   find(text: string, forward: boolean, next: boolean): void {
     const contents = this.live?.view.webContents;
     if (!contents || contents.isDestroyed()) return;
-    contents.findInPage(text, { forward, findNext: next, matchCase: false });
+    contents.findInPage(text, { forward, findNext: !next, matchCase: false });
   }
 
   stopFind(): void {

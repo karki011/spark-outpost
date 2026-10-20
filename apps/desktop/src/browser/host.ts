@@ -2,6 +2,7 @@ import {
   Menu,
   clipboard,
   ipcMain,
+  webContents,
   type BrowserWindow,
   type ContextMenuParams,
   type IpcMainInvokeEvent,
@@ -18,6 +19,7 @@ import {
   type BrowserPick,
   type BrowserFound,
   type BrowserSelectedText,
+  type BrowserShortcut,
   type BrowserShortcutEvent,
 } from '@spark-outpost/contracts';
 import { IPC } from '../ipc-channels.ts';
@@ -47,6 +49,7 @@ export interface BrowserHostOptions {
 export interface DesktopBrowserHost {
   connectWorker(port: BridgePort): WorkerBridge;
   windowClosed(): void;
+  menuShortcut(shortcut: BrowserShortcut): boolean;
   dispose(): void;
 }
 
@@ -79,6 +82,11 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     const window = options.window();
     if (window && !window.isDestroyed()) window.webContents.send(channel, payload);
   };
+  const paneShortcut = (tab: PaneTab, shortcut: BrowserShortcut) => {
+    if (BROWSER_FOCUS_SHORTCUTS.has(shortcut)) options.window()?.webContents.focus();
+    const event: BrowserShortcutEvent = { chatId: tab.chatId, shortcut };
+    send(IPC.browserShortcut, event);
+  };
   const panes = new BrowserPanes({
     window: options.window,
     blockedPorts: () => blocked,
@@ -87,11 +95,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     localOriginSeen: (projectId, origin) => origins.note(projectId, origin),
     contextMenu: (tab, params) => showSelectionMenu(tab, params),
     addShortcut: (tab) => void addSelection(tab),
-    paneShortcut: (tab, shortcut) => {
-      if (BROWSER_FOCUS_SHORTCUTS.has(shortcut)) options.window()?.webContents.focus();
-      const event: BrowserShortcutEvent = { chatId: tab.chatId, shortcut };
-      send(IPC.browserShortcut, event);
-    },
+    paneShortcut,
     found: (tab, active, matches) => {
       const result: BrowserFound = { chatId: tab.chatId, tabId: tab.id, active, matches };
       send(IPC.browserFound, result);
@@ -185,6 +189,16 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     panes.layout();
   };
 
+  const keepPageFocus = (chatId: string, change: () => void) => {
+    const focused = panes.tabsOf(chatId).some((tab) => tab.view()?.webContents.isFocused());
+    change();
+    if (!focused) return;
+    const active = panes.tabsOf(chatId).find((tab) => tab.active);
+    const contents = active?.view()?.webContents;
+    if (contents && !contents.isDestroyed()) contents.focus();
+    else options.window()?.webContents.focus();
+  };
+
   const command = async (chatId: string, action: BrowserCommand) => {
     if (action.command === 'new_tab') {
       const url = action.url ? addressToUrl(action.url) : null;
@@ -206,10 +220,10 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     const tab = panes.tab(chatId, action.tabId);
     if (!tab) return;
     if (action.command === 'navigate') await navigate(chatId, tab, action.url);
-    else if (action.command === 'select') panes.select(chatId, tab.id);
+    else if (action.command === 'select') keepPageFocus(chatId, () => panes.select(chatId, tab.id));
     else if (action.command === 'close') {
       await stopPick(tab);
-      panes.closeByUser(chatId, tab.id);
+      keepPageFocus(chatId, () => panes.closeByUser(chatId, tab.id));
     } else if (action.command === 'copy_url') {
       const url = tab.currentUrl();
       if (url !== 'about:blank') clipboard.writeText(url);
@@ -301,6 +315,12 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
       });
     },
     windowClosed: () => panes.sleepAll(),
+    menuShortcut(shortcut) {
+      const tab = panes.tabOfContents(webContents.getFocusedWebContents());
+      if (!tab) return false;
+      paneShortcut(tab, shortcut);
+      return true;
+    },
     dispose() {
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);
       ipcMain.removeAllListeners(IPC.browserPageCopyAllowed);

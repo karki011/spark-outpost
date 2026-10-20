@@ -1,4 +1,5 @@
 import type { BridgePort, WorkerBridge } from './browser/bridge.ts';
+import type { MenuPaneShortcut } from './help-menu.ts';
 import { startBrowserHost, type BrowserHostOptions } from './browser/host.ts';
 import { startCalendarHost, type CalendarHostOptions } from './calendar/host.ts';
 import { joinBridges } from './mac-control/bridge.ts';
@@ -7,6 +8,7 @@ import { startMacControlHost, type MacControlHostOptions } from './mac-control/h
 export interface AgentHosts {
   connectWorker(port: BridgePort): WorkerBridge;
   windowClosed(): void;
+  menuShortcut(shortcut: MenuPaneShortcut): boolean;
   dispose(): void;
 }
 
@@ -26,6 +28,7 @@ export async function startAgentHosts(
         calendar.connectWorker(port),
       ]),
     windowClosed: () => browser.windowClosed(),
+    menuShortcut: (shortcut) => browser.menuShortcut(shortcut),
     dispose() {
       browser.dispose();
       mac.dispose();

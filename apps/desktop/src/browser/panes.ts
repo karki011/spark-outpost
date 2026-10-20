@@ -223,9 +223,12 @@ export class BrowserPanes {
     void tab.load(url).then(() => this.layout());
   }
 
+  tabOfContents(contents: WebContents | null): PaneTab | null {
+    return contents ? (this.byContents.get(contents.id) ?? null) : null;
+  }
+
   inputMarks(contents: WebContents | null): InputMarks | null {
-    if (!contents) return null;
-    return this.byContents.get(contents.id)?.inputMarks() ?? null;
+    return this.tabOfContents(contents)?.inputMarks() ?? null;
   }
 
   pageCopyAllowed(contents: WebContents): boolean {
