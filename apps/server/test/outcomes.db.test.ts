@@ -98,6 +98,27 @@ describe('outcome lifecycle', () => {
     expect(outcomeResponseSchema.parse(fetched.body).outcome?.feedback?.rating).toBe('down');
   });
 
+  it('skips a turn the agent started on its own when it looks for your follow-up', async () => {
+    const conversationId = await seedConversation(t.db, t.workspaceId);
+    const runId = await seedTurn(t.db, conversationId, { createdAt: minutesAgo(10) });
+    await t.db.query(
+      `INSERT INTO runs (id, conversation_id, user_message_id, provider, status, created_at,
+         finished_at, mode, source)
+       VALUES ($1, $2, NULL, 'claude', 'succeeded', $3, $3, 'do', 'agent_cycle')`,
+      [randomUUID(), conversationId, minutesAgo(8)],
+    );
+    const followUp = await seedTurn(t.db, conversationId, {
+      request: "that's wrong, the header moved",
+      createdAt: minutesAgo(5),
+      intake: true,
+    });
+
+    const outcome = await refresh(runId);
+
+    const correction = outcome!.signals.find((signal) => signal.kind === 'correction');
+    expect(correction?.detail).toMatchObject({ followUpRunId: followUp });
+  });
+
   it('hides the prompt when the signals agree, unless the turn is sampled', async () => {
     const conversationId = await seedConversation(t.db, t.workspaceId);
     await twoEarlierTurns(conversationId);

@@ -17,6 +17,7 @@ import {
   sendUserMessage,
 } from '../src/persistence/conversations.ts';
 import { getRun } from '../src/persistence/runs.ts';
+import { taskOverviews } from '../src/persistence/task-views.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { expectConformantRun } from './agui-conformance.ts';
@@ -153,7 +154,7 @@ describe('one live agent session per chat', { timeout: 60_000 }, () => {
     expect(log.count('session/prompt')).toBe(1);
   });
 
-  it('asks on a card in the agent’s own turn for a request that came between turns', async () => {
+  it('asks on a card in the agent’s own turn for a request that came between turns, and counts that turn in the task', async () => {
     begin();
     const root = await realpath(mkdtempSync(join(store, 'project-')));
     const { conversationId } = await linkedConversation(t, root);
@@ -173,6 +174,8 @@ describe('one live agent session per chat', { timeout: 60_000 }, () => {
     const detail = await getConversationDetail(t.db, conversationId);
     const reply = detail?.messages.find((message) => message.runId === continued.id);
     expect(reply?.content).toBe('Woke up on my own: yes.');
+    const [task] = await taskOverviews(t.db, conversationId);
+    expect(task?.runIds).toContain(continued.id);
   });
 
   it('judges a request between turns under the mode the chat has now', async () => {
