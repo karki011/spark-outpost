@@ -9,6 +9,16 @@ export interface BranchRow {
 
 const ROWS_SHOWN = 50;
 
+export function showsPlaceMenu(
+  workspace: ChatWorkspace | undefined,
+  checkoutBranch: string | null,
+): workspace is ChatWorkspace {
+  if (!workspace || workspace.current) return false;
+  return (
+    Boolean(checkoutBranch) || workspace.place !== 'worktree' || Boolean(workspace.requestedBranch)
+  );
+}
+
 export function placeLabel(workspace: ChatWorkspace, checkoutBranch: string | null): string {
   if (workspace.requestedBranch) return workspace.requestedBranch;
   if (workspace.place === 'checkout') return `${checkoutBranch ?? 'Your branch'} · my files`;

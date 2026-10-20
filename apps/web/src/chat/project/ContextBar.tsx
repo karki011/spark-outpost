@@ -13,6 +13,7 @@ import { AgentSetup, useSetupAttention } from './AgentSetup.tsx';
 import { ChatBranch } from './ChatBranch.tsx';
 import { ChatCache } from './ChatCache.tsx';
 import { ProjectFolders } from './ProjectFolders.tsx';
+import { showsPlaceMenu } from './place-picker-model.ts';
 import { WorkPlaceMenu } from './WorkPlaceMenu.tsx';
 import { useProjectBranch } from './use-chat-repos.ts';
 import { useChatWorkspace } from './use-chat-workspace.ts';
@@ -78,7 +79,8 @@ export function ContextBar({
 }) {
   const primary = repos[0] ?? null;
   const branch = useProjectBranch(primary?.id ?? null);
-  const current = useChatWorkspace(conversationId, primary !== null).data?.current ?? null;
+  const workspace = useChatWorkspace(conversationId, primary !== null).data;
+  const current = workspace?.current ?? null;
   const phone = usePhone();
   const { allows } = useRemoteClient();
   const setup = primary !== null && allows('settings');
@@ -88,7 +90,7 @@ export function ContextBar({
   const branchChip = primary && current && (
     <ChatBranch conversationId={conversationId} branch={current} checkoutBranch={branch} />
   );
-  const placeMenu = primary && !current && (
+  const placeMenu = primary && showsPlaceMenu(workspace, branch) && (
     <WorkPlaceMenu conversationId={conversationId} projectId={primary.id} checkoutBranch={branch} />
   );
   const setupChip = setup && <AgentSetup key={primary.id} repos={repos} labelled={phone} />;
