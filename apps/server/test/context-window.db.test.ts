@@ -59,8 +59,9 @@ async function newChat(): Promise<string> {
   return id;
 }
 
-async function send(conversationId: string, content: string): Promise<string> {
-  const sent = await sendUserMessage(t.db, conversationId, { id: randomUUID(), content }, TARGET);
+async function send(conversationId: string, content: string, model: string = TARGET.model) {
+  const target = { ...TARGET, model };
+  const sent = await sendUserMessage(t.db, conversationId, { id: randomUUID(), content }, target);
   worker.wake();
   return sent.run.id;
 }
@@ -118,6 +119,16 @@ describe('the context window a Claude turn records', { timeout: 60_000 }, () => 
 
     const runId = await send(chat, `#window:midturn ${WINDOW_HOLD_TRIGGER}`);
     expect(await midTurn(runId)).toEqual({ used: 140_000, size: 200_000 });
+    await stopRun(t.db, runId);
+    await finished(runId);
+  });
+
+  it('drops the earlier window when the chat switches model', async () => {
+    const chat = await newChat();
+    await finished(await send(chat, '#window:short'));
+
+    const runId = await send(chat, `#window:midturn ${WINDOW_HOLD_TRIGGER}`, 'sonnet');
+    expect(await midTurn(runId)).toEqual({ used: 140_000, size: 1_000_000 });
     await stopRun(t.db, runId);
     await finished(runId);
   });

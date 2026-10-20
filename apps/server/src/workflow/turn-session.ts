@@ -14,6 +14,7 @@ import {
   startProviderSession,
   sweepProviderSessions,
   type ContextReading,
+  type ProviderSessionRecord,
   type SweepLimits,
 } from '../persistence/provider-sessions.ts';
 import { insertCompaction, settleTokensAfter } from '../persistence/compactions.ts';
@@ -22,7 +23,7 @@ import { recordSessionCommands, sessionCommands } from '../persistence/session-c
 import type { ProviderOutput, SessionTarget } from '../providers/provider.ts';
 import type { StopReason } from './agent-turn.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
-import type { KnownWindow } from '../usage/context-window.ts';
+import { sameModel, type KnownWindow } from '../usage/context-window.ts';
 import type { RunInput } from './run-input.ts';
 import { insertSessionEvent, recordAppliedSettings } from '../persistence/session-events.ts';
 import { modelChange, sessionEvent, type SessionFacts } from './session-events.ts';
@@ -230,7 +231,10 @@ export async function prepareTurnSession(
       ...(handoff ? { handoff } : {}),
       ...(missed.length > 0 ? { missed } : {}),
     },
-    knownWindow: previous ? { model: stored?.model ?? null, size: previous.size } : null,
+    knownWindow:
+      previous && !switchedModel(stored, input)
+        ? { model: stored?.model ?? null, size: previous.size }
+        : null,
     noteSession,
     async started(output) {
       noteSession(output);
@@ -292,6 +296,12 @@ export async function prepareTurnSession(
       });
     },
   };
+}
+
+function switchedModel(stored: ProviderSessionRecord | null, input: RunInput): boolean {
+  const chosen = input.settings.model;
+  if (chosen === null || !stored?.model) return false;
+  return !sameModel(input.provider, stored.model, chosen);
 }
 
 export interface TurnSessionDeps {

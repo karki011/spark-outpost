@@ -46,6 +46,9 @@ describe('contextWindows', () => {
     const stored = { model: 'opus[1m]', size: 200_000 };
     expect(contextWindows('claude', stored).settle(request(150_000)).contextSize).toBe(200_000);
 
+    const unnamed = { model: 'default', size: 200_000 };
+    expect(contextWindows('claude', unnamed).settle(request(150_000)).contextSize).toBe(200_000);
+
     const windows = contextWindows('claude', null);
     windows.settle(result(150_000, 200_000));
     expect(windows.settle(request(160_000)).contextSize).toBe(200_000);

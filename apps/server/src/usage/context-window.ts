@@ -1,4 +1,5 @@
 import { aliasFamily, cardFor } from '../model-cards/cards.ts';
+import type { ModelCard } from '@spark-outpost/contracts';
 import type { ProviderOutput } from '../providers/provider.ts';
 
 type UsageOutput = Extract<ProviderOutput, { kind: 'usage' }>;
@@ -12,14 +13,17 @@ export interface ContextWindows {
   settle(output: UsageOutput): UsageOutput;
 }
 
-function sameModel(provider: string, known: string | null, reported: string): boolean {
-  if (known === null) return false;
-  if (known === reported) return true;
-  const reportedCard = cardFor({ id: reported }, provider);
-  if (!reportedCard) return false;
-  const knownCard = cardFor({ id: known }, provider);
-  if (knownCard) return knownCard.id === reportedCard.id;
-  return aliasFamily(known, provider).includes(reportedCard);
+function cardsOf(provider: string, model: string): ModelCard[] {
+  const card = cardFor({ id: model }, provider);
+  return card ? [card] : aliasFamily(model, provider);
+}
+
+export function sameModel(provider: string, known: string | null, other: string): boolean {
+  if (known === null || known === other) return true;
+  const knownCards = cardsOf(provider, known);
+  const otherCards = cardsOf(provider, other);
+  if (knownCards.length === 0 || otherCards.length === 0) return true;
+  return knownCards.some((card) => otherCards.includes(card));
 }
 
 export function windowFor(
