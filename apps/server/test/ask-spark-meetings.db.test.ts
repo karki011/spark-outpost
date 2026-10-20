@@ -103,6 +103,29 @@ describe('Ask Spark meeting actions', () => {
     expect(audit).not.toContain('Review');
   });
 
+  it.each([
+    ['snooze', 'act'],
+    ['dismiss', 'manual'],
+    ['join', 'manual'],
+  ] as const)('does %s in %s with the meeting whose alert is showing', async (verb, acts) => {
+    await setActs(t, acts);
+    const call = helperEvent('Call', 'work-1', 0.5, { ...ZOOM, uid: 'evt-3' });
+    await calendarWith([call]);
+    const harness = await open(`${verb} my next meeting`);
+    const result = await harness.call('spark_meeting', { action: verb });
+    const stored = async () => [...(await requests()), ...(await dismissMarks())];
+    if (acts === 'manual') {
+      expect(result.json()).toMatchObject({ outcome: 'waiting_for_user' });
+      expect(await stored()).toEqual([]);
+      expect((await confirmCard(t)).payload.sparkResult?.state).toBe('done');
+    } else {
+      expect(result.json()).toMatchObject({ outcome: 'done' });
+    }
+    const expected =
+      verb === 'dismiss' ? ['evt-3'] : [{ kind: `${verb}_meeting`, target: keyOf(call) }];
+    expect(await stored()).toEqual(expected);
+  });
+
   it('asks which meeting when two overlap, and takes the one the user named', async () => {
     await setActs(t, 'act');
     const design = helperEvent('Design review', 'work-1', 2, ZOOM);

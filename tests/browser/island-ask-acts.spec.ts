@@ -95,9 +95,7 @@ test('a waiting Ask Spark card shows in the Inbox’s Needs you, and Do it there
     timeout: 20_000,
   });
 
-  await page.goto('/island');
-  await expect(island(page)).toBeVisible();
-  await page.keyboard.press('Alt+Shift+Space');
+  await page.keyboard.press('Meta+1');
   const needs = island(page).getByRole('region', { name: /Needs you/ });
   const card = needs.getByRole('group', { name: 'Stop “Build the site”' });
   await expect(card).toBeVisible({ timeout: 15_000 });

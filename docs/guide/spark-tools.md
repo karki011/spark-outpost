@@ -28,7 +28,7 @@ Agents get the `spark_*` tools their chat can use; some need a connector or a li
 | A Slack thread by link, or a search of what you allowed    | `spark_slack`                                                                                                         |
 | Your Sparks, and the jobs and replies from an `@` mention  | `spark_sparks`, `spark_chat`                                                                                          |
 | The audit log, including actions that ran without review   | `spark_audit`                                                                                                         |
-| How Spark works, and this guide                            | `spark_guide`, `spark_docs`                                                                                           |
+| How Spark works, this guide                                | `spark_guide`, `spark_docs`                                                                                           |
 | Your [calendar](calendar.md#let-agents-use-it)             | `spark_calendar`                                                                                                      |
 | Jira or Confluence                                         | `spark_jira`, `spark_confluence`                                                                                      |
 
@@ -64,7 +64,7 @@ A chat in an [outpost](outposts.md) gets these.
 | Propose sub-task chats that you review and start | `spark_outpost_draft` |
 | Start sub-task chats now                         | `spark_outpost_start` |
 
-Sub-chats and Sparks' jobs get no `spark_outpost_start`. Another chat's words are never yours.
+Sub-chats and Sparks' jobs get no `spark_outpost_start`. Another chat's text is never your message.
 
 ## Ask Spark tools
 

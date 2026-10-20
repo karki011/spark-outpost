@@ -114,6 +114,9 @@ describe('Ask Spark in outposts and the Inbox', () => {
     expect(
       userText({ userRequest: post!.body, outpostRequest: { fromUser: post!.from_user } }),
     ).toBe('');
+    const view = await localClient(createTestApp(t)).get(`/api/outposts/${outpostId}`);
+    expect(view.status).toBe(200);
+    expect(JSON.stringify(view.body)).toContain('"fromHandle":"ask-spark"');
   });
 
   it('in Act leaves a note at once, and never addresses every chat', async () => {
@@ -147,6 +150,11 @@ describe('Ask Spark in outposts and the Inbox', () => {
     expect(await seenAt(conversationId)).not.toBeNull();
 
     await setActs(t, 'act');
+    const other = await startChat(t, 'Other work');
+    await t.db.query(`UPDATE runs SET status = 'failed' WHERE id = $1`, [other.runId]);
+    const cleared = await harness.call('spark_clear_finished', { chat: other.conversationId });
+    expect(cleared.json()).toMatchObject({ outcome: 'done' });
+    expect(await seenAt(other.conversationId)).not.toBeNull();
     const running = await startChat(t, 'Still going');
     await t.db.query(`UPDATE runs SET status = 'running' WHERE id = $1`, [running.runId]);
     const refused = await harness.call('spark_clear_finished', { chat: running.conversationId });

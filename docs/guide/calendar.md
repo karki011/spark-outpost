@@ -33,4 +33,6 @@ A minute before a meeting, Scout lowers a card mid-screen: **Join**, **Snooze 1 
 
 Agents follow their [mode](spark-tools.md#when-actions-ask-first). In **Accept edits**, a vague request still shows a card. Events with guests and shared calendars always ask.
 
+[Ask Spark](companion-quick-chat.md#let-ask-spark-act) can snooze, dismiss or join a meeting without this switch; it never sees the meeting's details.
+
 **Next:** [Talk to Spark](voice.md)

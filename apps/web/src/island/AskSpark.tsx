@@ -104,6 +104,7 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
     onError: (_error, { id }) => setAsks((list) => list.filter((entry) => entry.id !== id)),
     onSuccess: (assistantId) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(assistantId) });
+      void queryClient.invalidateQueries({ queryKey: assistantKeys.settings, exact: true });
     },
   });
 
