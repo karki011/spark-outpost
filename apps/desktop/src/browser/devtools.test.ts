@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Cdp } from './cdp.ts';
-import { EVAL_TOO_SLOW, evaluateInPage, maskValues } from './devtools-eval.ts';
+import { EVAL_TOO_SLOW, evaluateInPage, maskValues, SECRETS_UNREADABLE } from './devtools-eval.ts';
 import { summarisePerformance } from './devtools-page.ts';
 import { isDevtoolsShortcut } from './selection-menu.ts';
 import { devtoolsRequestAllowed } from './sessions.ts';
@@ -161,14 +161,15 @@ describe('running an expression in the page', () => {
           : {
               result: {
                 type: 'string',
-                value: `sid=${session}; lang=en | ${JSON.stringify({ accessToken: token })} | dark`,
+                value: `sid=${session}; lang=en; uid=4821 | ${JSON.stringify({ accessToken: token })} | dark`,
               },
             },
       'DOM.getDocument': () => ({ root: { backendNodeId: 1, nodeName: '#document' } }),
-      'Network.getCookies': () => ({
+      'Network.getAllCookies': () => ({
         cookies: [
           { name: 'sid', value: session },
           { name: 'lang', value: 'en' },
+          { name: 'uid', value: '4821' },
         ],
       }),
       'DOMStorage.getDOMStorageItems': (params) =>
@@ -184,8 +185,21 @@ describe('running an expression in the page', () => {
     const outcome = await evaluateInPage(cdp, 'document.cookie', new Set(), PAGE);
     expect(outcome.value).not.toContain(session);
     expect(outcome.value).not.toContain(token);
+    expect(outcome.value).not.toContain('4821');
     expect(outcome.value).toContain('lang=en');
     expect(outcome.value).toContain('dark');
+  });
+
+  it('returns nothing when it cannot read the cookies it must mask', async () => {
+    const cdp = page({
+      'Runtime.evaluate': () => ({ result: { type: 'string', value: 'sid=abcdef' } }),
+      'DOM.getDocument': () => ({ root: { backendNodeId: 1, nodeName: '#document' } }),
+      'Network.getAllCookies': () => Promise.reject(new Error('no cookies')),
+    });
+    await expect(evaluateInPage(cdp, 'document.cookie', new Set(), PAGE)).rejects.toThrow(
+      SECRETS_UNREADABLE,
+    );
+    expect(cdp.sent).not.toContain('Runtime.evaluate');
   });
 
   it('never masks short values that would hide ordinary text', () => {

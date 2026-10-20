@@ -4,7 +4,6 @@ import {
   redactQuery,
   secretStorageItem,
   storageSecretParts,
-  STORAGE_SECRET_MIN,
   type BrowserCookieFacts,
   type BrowserPerformanceResult,
   type BrowserStorageItem,
@@ -107,11 +106,9 @@ async function domEntries(
   origin: string,
   isLocalStorage: boolean,
 ): Promise<[string, string][]> {
-  const found = await cdp
-    .send<{ entries: [string, string][] }>('DOMStorage.getDOMStorageItems', {
-      storageId: { securityOrigin: origin, isLocalStorage },
-    })
-    .catch(() => ({ entries: [] as [string, string][] }));
+  const found = await cdp.send<{ entries?: [string, string][] }>('DOMStorage.getDOMStorageItems', {
+    storageId: { securityOrigin: origin, isLocalStorage },
+  });
   return found.entries ?? [];
 }
 
@@ -121,7 +118,9 @@ async function domStorage(
   isLocalStorage: boolean,
   values: boolean,
 ): Promise<BrowserStorageItem[]> {
-  const entries = await domEntries(cdp, origin, isLocalStorage);
+  const entries = await domEntries(cdp, origin, isLocalStorage).catch(
+    () => [] as [string, string][],
+  );
   return entries
     .slice(0, BROWSER_STORAGE_ITEMS_MAX)
     .map(([key, value]) => shownItem(key, value, values));
@@ -139,15 +138,11 @@ interface CdpCookie {
   expires: number;
 }
 
-async function pageCookies(cdp: Cdp, url: string): Promise<CdpCookie[]> {
-  const found = await cdp
-    .send<{ cookies: CdpCookie[] }>('Network.getCookies', { urls: [url] })
-    .catch(() => ({ cookies: [] as CdpCookie[] }));
-  return found.cookies ?? [];
-}
-
 async function cookies(cdp: Cdp, url: string): Promise<BrowserCookieFacts[]> {
-  const found = await pageCookies(cdp, url);
+  const answer = await cdp
+    .send<{ cookies?: CdpCookie[] }>('Network.getCookies', { urls: [url] })
+    .catch(() => ({ cookies: [] as CdpCookie[] }));
+  const found = answer.cookies ?? [];
   return found.slice(0, BROWSER_STORAGE_ITEMS_MAX).map((cookie) => ({
     name: cookie.name.slice(0, 300),
     domain: cookie.domain.slice(0, 300),
@@ -169,11 +164,11 @@ export async function pageStorage(cdp: Cdp, url: string, origin: string, values:
   };
 }
 
-export async function storageSecrets(cdp: Cdp, url: string, origin: string): Promise<string[]> {
-  await cdp.send('DOMStorage.enable').catch(() => undefined);
-  const cookieValues = (await pageCookies(cdp, url))
-    .map((cookie) => cookie.value)
-    .filter((value) => value.length >= STORAGE_SECRET_MIN);
+export async function storageSecrets(cdp: Cdp, origin: string | null): Promise<string[]> {
+  const jar = await cdp.send<{ cookies?: { value: string }[] }>('Network.getAllCookies');
+  const cookieValues = (jar.cookies ?? []).map((cookie) => cookie.value);
+  if (origin === null) return cookieValues;
+  await cdp.send('DOMStorage.enable');
   const entries = [
     ...(await domEntries(cdp, origin, true)),
     ...(await domEntries(cdp, origin, false)),

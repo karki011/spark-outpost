@@ -87,6 +87,9 @@ export async function protectedValues(cdp: Cdp, filled: ReadonlySet<number>): Pr
   return values;
 }
 
+export const SECRETS_UNREADABLE =
+  'Spark could not read the page’s cookies and storage to mask them, so it returns no result.';
+
 async function hiddenValues(
   cdp: Cdp,
   filled: ReadonlySet<number>,
@@ -94,8 +97,11 @@ async function hiddenValues(
 ): Promise<string[]> {
   const fields = await protectedValues(cdp, filled);
   const origin = browserOrigin(pageUrl);
-  if (origin === null || origin === 'file://') return fields;
-  return [...fields, ...(await storageSecrets(cdp, pageUrl, origin))];
+  const webOrigin = origin === null || origin === 'file://' ? null : origin;
+  const stored = await storageSecrets(cdp, webOrigin).catch(() => {
+    throw new PageToolError('failed', SECRETS_UNREADABLE);
+  });
+  return [...fields, ...stored];
 }
 
 function withinTime<T>(work: Promise<T>, ms: number): Promise<T> {
