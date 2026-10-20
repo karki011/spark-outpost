@@ -8,24 +8,29 @@ export interface IdleInbox {
   take(): string | null;
 }
 
-export function createIdleInbox(): IdleInbox {
+export function createIdleInbox(listening?: SteerRequests): IdleInbox {
   const waiting: string[] = [];
   let accepting = false;
   let wake: (() => void) | null = null;
+  let stopListening: () => void = () => undefined;
+  const offer = (text: string) => {
+    if (!accepting) return false;
+    waiting.push(text);
+    wake?.();
+    wake = null;
+    return true;
+  };
   return {
     open() {
       accepting = true;
+      stopListening = listening?.attach(async (text) => offer(text)) ?? stopListening;
     },
     close() {
       accepting = false;
+      stopListening();
+      stopListening = () => undefined;
     },
-    offer(text) {
-      if (!accepting) return false;
-      waiting.push(text);
-      wake?.();
-      wake = null;
-      return true;
-    },
+    offer,
     arrived() {
       if (waiting.length > 0) return Promise.resolve();
       return new Promise<void>((resolve) => {

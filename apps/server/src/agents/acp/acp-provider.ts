@@ -55,7 +55,7 @@ import {
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
 import { newSessionRequest } from './session-request.ts';
 import { extraRoots, openProject, sessionMeta } from './session-start.ts';
-import { attachSteering } from './steering.ts';
+import { attachSteering, steeringSupported } from './steering.ts';
 import { createBackgroundWork } from './background-work.ts';
 import { createRequestLog, runPrompts } from './turn-loop.ts';
 import { updateSink } from './update-sink.ts';
@@ -477,8 +477,8 @@ async function converse(
           push,
         }),
         background: definition.cli === 'claude' ? createBackgroundWork() : null,
-        steer: (steering, whenIdle) =>
-          attachSteering(ctx, init, session.sessionId, steering, whenIdle),
+        steers: steeringSupported(init),
+        steer: (steering) => attachSteering(ctx, init, session.sessionId, steering),
       });
       stopRequests?.();
       if (turn.session) await closeQuietly(ctx, init, session.sessionId);

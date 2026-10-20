@@ -46,7 +46,8 @@ export interface PromptLoop {
   push: (outputs: ProviderOutput[]) => void;
   see: (update: acp.SessionUpdate) => Promise<void>;
   background: BackgroundWork | null;
-  steer: (steering: SteerRequests | undefined, deliversWhenIdle: boolean) => () => void;
+  steers: boolean;
+  steer: (steering: SteerRequests | undefined) => () => void;
 }
 
 type Woken =
@@ -68,13 +69,14 @@ function readNext(session: PromptLoop['session']): Promise<SessionMessage> {
 }
 
 export async function runPrompts(loop: PromptLoop): Promise<acp.StopReason> {
-  const inbox = createIdleInbox();
-  const { turn, background } = loop;
+  const { turn, background, steers } = loop;
+  const inbox = createIdleInbox(background && !steers ? turn.steering : undefined);
   const steering = background ? deliveringWhenIdle(turn.steering, inbox) : turn.steering;
-  const detach = loop.steer(steering, background !== null);
+  const detach = loop.steer(steering);
   try {
     return await converse(loop, inbox);
   } finally {
+    inbox.close();
     detach();
   }
 }
