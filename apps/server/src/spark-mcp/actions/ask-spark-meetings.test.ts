@@ -46,6 +46,8 @@ describe('pickMeeting', () => {
     expect(pickMeeting('join_meeting', [design, sales], times, null)).toBe(MEETING_REFUSALS.clash);
     expect(pickMeeting('join_meeting', [design, sales], times, 'sales')).toBe(sales);
     expect(pickMeeting('join_meeting', [design, sales], times, 'review')).toBe(design);
+    const qa = meeting('QA sync', 3);
+    expect(pickMeeting('join_meeting', [design, qa], times, 'qa')).toBe(qa);
   });
 
   it('skips dismissed meetings and matches names on word boundaries', () => {

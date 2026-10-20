@@ -42,7 +42,7 @@ export async function waitingCard(
   const approval = await getApproval(db, approvalId);
   const { rows } = await db.query<{ id: string; title: string }>(
     `SELECT c.id, c.title FROM runs r JOIN conversations c ON c.id = r.conversation_id
-     WHERE r.id = $1 AND c.workspace_id = $2`,
+     WHERE r.id = $1 AND c.workspace_id = $2 AND c.archived_at IS NULL`,
     [approval?.runId ?? null, workspaceId],
   );
   const chat = rows[0];
@@ -79,7 +79,7 @@ async function setAside(context: SparkToolContext, action: AskSparkAction) {
     target: card.id,
     expiresAt: new Date(Date.now() + SET_ASIDE_REQUEST_MS),
   });
-  return `Set aside “${card.title}” in “${card.chatTitle}” for later.`;
+  return `Spark Island sets “${card.title}” in “${card.chatTitle}” aside for later.`;
 }
 
 async function postOutpost(context: SparkToolContext, action: AskSparkAction) {

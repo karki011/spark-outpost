@@ -212,10 +212,14 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export function namesChat(text: string, title: string): boolean {
-  const name = title.trim();
-  if (name.length < LINKED_TITLE_MIN) return false;
+export function mentions(text: string, words: string, shortest: number): boolean {
+  const name = words.trim();
+  if (name.length < shortest) return false;
   return new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(name)}(?![\\p{L}\\p{N}])`, 'iu').test(text);
+}
+
+export function namesChat(text: string, title: string): boolean {
+  return mentions(text, title, LINKED_TITLE_MIN);
 }
 
 export function askedToAnswer(question: string, answer: AskSparkAnswer, title: string): boolean {

@@ -83,7 +83,9 @@ describe('Ask Spark meeting actions', () => {
     expect(JSON.stringify(card.payload)).not.toContain('Standup');
     expect(await requests()).toEqual([]);
     const done = await confirmCard(t);
-    expect(done.payload.sparkResult?.message).toBe('Snoozed the meeting alert for 1 minute.');
+    expect(done.payload.sparkResult?.message).toBe(
+      'Spark Island snoozes the meeting alert for 1 minute.',
+    );
     expect(await requests()).toEqual([{ kind: 'snooze_meeting', target: keyOf(standup) }]);
   });
 

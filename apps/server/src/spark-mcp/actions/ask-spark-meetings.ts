@@ -12,7 +12,7 @@ import { setMark } from '../../calendar/store.ts';
 import { addIslandRequest } from '../../companion/island-requests.ts';
 import { nowOf } from '../deps.ts';
 import { SparkToolError, type SparkToolContext } from '../tool.ts';
-import { namesChat } from './ask-spark-limits.ts';
+import { mentions } from './ask-spark-limits.ts';
 import type { Performed } from './performed.ts';
 
 export type MeetingOp = Extract<
@@ -21,6 +21,7 @@ export type MeetingOp = Extract<
 >;
 
 const SNOOZE_REQUEST_MS = 2 * 60_000;
+const MEETING_WORD_MIN = 2;
 
 export const MEETING_REFUSALS = {
   off: 'Meeting actions need a connected calendar in the Mac app.',
@@ -34,9 +35,9 @@ export const MEETING_REFUSALS = {
 } as const;
 
 const MEETING_DONE: Record<MeetingOp, string> = {
-  snooze_meeting: 'Snoozed the meeting alert for 1 minute.',
+  snooze_meeting: 'Spark Island snoozes the meeting alert for 1 minute.',
   dismiss_meeting: 'Dismissed the meeting’s alerts.',
-  join_meeting: 'Joining the meeting: the island opens its link in your browser.',
+  join_meeting: 'Spark Island opens the meeting’s link in your browser.',
 };
 
 export interface MeetingTimes {
@@ -67,7 +68,9 @@ export function pickMeeting(
   named: string | null,
 ): CalendarEvent | string {
   const fitting = upcoming.filter((event) => fits(op, event, times));
-  const chosen = named ? fitting.filter((event) => namesChat(event.title, named)) : fitting;
+  const chosen = named
+    ? fitting.filter((event) => mentions(event.title, named, MEETING_WORD_MIN))
+    : fitting;
   const [first] = chosen.toSorted((a, b) => spanOf(a).start - spanOf(b).start);
   if (!first) return MEETING_REFUSALS[op];
   const rivals = fitting.filter((event) => event.key !== first.key && overlaps(event, first));

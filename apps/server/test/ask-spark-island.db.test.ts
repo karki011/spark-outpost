@@ -171,6 +171,13 @@ describe('Ask Spark in outposts and the Inbox', () => {
     expect(await islandRequests()).toEqual([{ kind: 'set_aside', target: card.id }]);
 
     await t.db.query('DELETE FROM island_requests');
+    const archived = await startChat(t, 'Archived work');
+    const hidden = await waitingCard(archived.runId);
+    await t.db.query('UPDATE conversations SET archived_at = now() WHERE id = $1', [
+      archived.conversationId,
+    ]);
+    const refused = await harness.call('spark_set_aside', { card: hidden.id });
+    expect(refused.text).toBe(INBOX_REFUSALS.notWaiting);
     await setActs(t, 'act');
     const again = await harness.call('spark_set_aside', { card: card.id });
     expect(again.json()).toMatchObject({ outcome: 'done' });
