@@ -9,14 +9,14 @@ export function copyGuardPreload(dir: string = import.meta.dirname): string {
 }
 
 export interface InputMarks {
-  active: boolean;
+  shown: boolean;
   agentBusy: number;
   userInputAt: number | null;
   agentDoneAt: number | null;
 }
 
 export function userGestureCurrent(marks: InputMarks, now: number): boolean {
-  if (!marks.active || marks.agentBusy > 0 || marks.userInputAt === null) return false;
+  if (!marks.shown || marks.agentBusy > 0 || marks.userInputAt === null) return false;
   if (now - marks.userInputAt > USER_GESTURE_MS || marks.userInputAt > now) return false;
   return marks.agentDoneAt === null || marks.userInputAt > marks.agentDoneAt;
 }

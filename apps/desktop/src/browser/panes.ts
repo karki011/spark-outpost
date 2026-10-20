@@ -381,6 +381,7 @@ export class BrowserPanes {
           tab.currentUrl() !== BLANK;
         if (visible) view.setBounds(this.zoomed(placement.bounds!));
         view.setVisible(visible);
+        tab.shown = visible;
       }
     }
   }

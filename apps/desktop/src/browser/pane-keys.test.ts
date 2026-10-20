@@ -60,9 +60,20 @@ describe('pane tab keys and clipboard writes', () => {
   async function opened(owner: 'user' | 'agent' = 'user') {
     const tab = panes.createTab(CHAT, { owner, runId: null, url: 'about:blank' }, home)!;
     await tab.load('https://example.com/');
+    await show();
     const contents = tab.view()!.webContents as unknown as FakeContents;
     return { tab, contents, session: contents.session };
   }
+
+  const show = (change: { bounds?: null; covered?: boolean } = {}) =>
+    panes.place({
+      chatId: CHAT,
+      ...home,
+      bounds: { x: 0, y: 0, width: 800, height: 600 },
+      covered: false,
+      sendsTo: 'chat',
+      ...change,
+    });
 
   const click = (contents: FakeContents) =>
     contents.emit('before-mouse-event', {}, { type: 'mouseDown' });
@@ -182,6 +193,17 @@ describe('pane tab keys and clipboard writes', () => {
     const { contents, session } = await opened();
     click(contents);
     vi.advanceTimersByTime(5001);
+    expect(session.permissionAnswers(WRITE, contents)).toEqual({ request: false, check: false });
+  });
+
+  it('denies a write once the pane is covered or closed, even right after a click', async () => {
+    const { contents, session } = await opened();
+    click(contents);
+    await show({ covered: true });
+    expect(session.permissionAnswers(WRITE, contents)).toEqual({ request: false, check: false });
+    await show();
+    expect(session.permissionAnswers(WRITE, contents)).toEqual({ request: true, check: true });
+    await show({ bounds: null });
     expect(session.permissionAnswers(WRITE, contents)).toEqual({ request: false, check: false });
   });
 

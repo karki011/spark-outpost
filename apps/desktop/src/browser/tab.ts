@@ -92,6 +92,7 @@ export class PaneTab {
   agentDoneAt: number | null = null;
   private userInputAt: number | null = null;
   active = false;
+  shown = false;
   picking = false;
   driving = false;
   lastAction: string | null = null;
@@ -163,7 +164,7 @@ export class PaneTab {
 
   inputMarks(): InputMarks {
     return {
-      active: this.active,
+      shown: this.shown,
       agentBusy: this.agentBusy,
       userInputAt: this.userInputAt,
       agentDoneAt: this.agentDoneAt,
@@ -432,6 +433,7 @@ export class PaneTab {
     this.url = this.currentUrl();
     this.closeDevtools();
     this.live = null;
+    this.shown = false;
     this.partition = null;
     this.loading = false;
     this.picking = false;

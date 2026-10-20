@@ -10,6 +10,7 @@ import {
 } from 'electron';
 import {
   BROWSER_FOCUS_SHORTCUTS,
+  BROWSER_TABS_MAX,
   addressToUrl,
   browserCommandSchema,
   browserIdSchema,
@@ -213,6 +214,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
       return;
     }
     if (action.command === 'reopen') {
+      if (panes.tabsOf(chatId).length >= BROWSER_TABS_MAX) return;
       const url = panes.takeClosed(chatId);
       if (url) await command(chatId, { command: 'new_tab', url });
       return;
