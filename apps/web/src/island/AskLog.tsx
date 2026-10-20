@@ -114,7 +114,9 @@ export function AskLog(props: AskLogProps) {
   const following = useRef(true);
   const lastTail = useRef<string | undefined>(undefined);
   const tail = rows.at(-1);
-  const tailKey = tail ? `${tail.key}:${tail.kind === 'exchange' ? tail.status : ''}` : '';
+  const shape = rows
+    .map((row) => (row.kind === 'exchange' ? `${row.key}:${row.status}` : row.key))
+    .join('|');
   const lastExchangeKey = rows.findLast((row) => row.kind === 'exchange')?.key;
 
   useLayoutEffect(() => {
@@ -129,7 +131,7 @@ export function AskLog(props: AskLogProps) {
     const newRow = tail?.key !== lastTail.current;
     lastTail.current = tail?.key;
     if (log && (newRow || following.current)) log.scrollTop = log.scrollHeight;
-  }, [tailKey, tail?.key]);
+  }, [shape, tail?.key]);
 
   const loadOlder = () => {
     const log = ref.current;
