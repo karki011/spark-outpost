@@ -131,8 +131,9 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
       queryClient.setQueryData(setupKey, state);
       if (update.model !== undefined) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.capabilities(provider.id) });
+        void queryClient.invalidateQueries({ queryKey: ['chat-defaults'] });
       }
-      if (update.effort !== undefined) {
+      if (update.model !== undefined || update.effort !== undefined) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
       }
     },

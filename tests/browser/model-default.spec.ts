@@ -49,7 +49,10 @@ async function shoot(page: Page, name: string): Promise<void> {
 }
 
 async function pickSettingsDefault(page: Page, model: string): Promise<void> {
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: 'Settings' })
+    .click();
   await page
     .getByRole('dialog', { name: 'Profile & personality' })
     .getByRole('tab', { name: /AI providers/ })
@@ -65,7 +68,10 @@ async function pickSettingsDefault(page: Page, model: string): Promise<void> {
   );
   await page.getByRole('menuitemradio', { name: new RegExp(`^${model}`) }).click();
   await saved;
-  await page.keyboard.press('Escape');
+  await expect(async () => {
+    await page.keyboard.press('Escape');
+    await expect(providers).toBeHidden({ timeout: 500 });
+  }).toPass();
 }
 
 test('a new chat shows the model it will run, checked, with no Auto', async ({ page }) => {
@@ -81,8 +87,10 @@ test('a new chat shows the model it will run, checked, with no Auto', async ({ p
 });
 
 test('the Settings default is the model new chats start on', async ({ page }) => {
-  await openChats(page);
+  await newChat(page);
+  await expect(pickerButton(page)).toHaveAccessibleName('Model and effort: Opus 5.5');
   await pickSettingsDefault(page, 'Haiku 4.5');
+  await expect(pickerButton(page)).toHaveAccessibleName('Model and effort: Haiku 4.5');
   await newChat(page);
   await expectPicked(page, 'Haiku 4.5');
   await page.keyboard.press('Escape');
@@ -90,6 +98,21 @@ test('the Settings default is the model new chats start on', async ({ page }) =>
   await pickSettingsDefault(page, 'Sonnet 5');
   await newChat(page);
   await expectPicked(page, 'Sonnet 5');
+});
+
+test('the next Home draft after a send keeps following the Settings default', async ({ page }) => {
+  await page.goto('/');
+  await pickSettingsDefault(page, 'Opus 5.5');
+  const composer = page.getByRole('region', { name: 'Start a new chat' });
+  const picker = composer.getByRole('button', { name: /^Model and effort/ });
+  await expect(picker).toHaveAccessibleName('Model and effort: Opus 5.5');
+  const input = composer.getByRole('textbox', { name: 'Message' });
+  await input.fill('Say hello');
+  await input.press('Enter');
+  await expect(composer.getByRole('status')).toContainText('Started ‘Say hello’');
+
+  await pickSettingsDefault(page, 'Sonnet 5');
+  await expect(picker).toHaveAccessibleName('Model and effort: Sonnet 5');
 });
 
 test('a paired device shows the same model and no Auto', async ({ page }) => {
