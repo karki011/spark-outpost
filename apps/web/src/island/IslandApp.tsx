@@ -61,6 +61,7 @@ import { answer, NONE_ANSWERED, stillAsking, type Answered } from './inbox-model
 import { restLine, type RestLine } from './island-rest-line.ts';
 import { useSetAside } from './set-aside.ts';
 import { useFastState } from './use-fast-state.ts';
+import { useAskSession } from './use-ask-session.ts';
 import { useIslandData } from './use-island-data.ts';
 import { islandViewedChat, useIslandViewing } from './use-island-viewing.ts';
 import { PANEL_ANNOUNCEMENTS } from './panel-announcements.ts';
@@ -336,6 +337,7 @@ export function IslandApp() {
     onEditSpark: settingsReady ? (id: string) => openSettings(`spark-edit:${id}`) : null,
   };
   const fast = useFastState(feed, panel === 'ask');
+  const askSession = useAskSession();
   const speechIsland = useSpeechIsland({
     chats: data.chats,
     projects: data.projects,
@@ -442,6 +444,7 @@ export function IslandApp() {
           draft={draft}
           followUp={followUp}
           fast={fast}
+          askSession={askSession}
           announcement={viewAnnouncement || announcement || spoken}
           onDraft={setDraft}
           onTab={openPanel}
@@ -449,6 +452,7 @@ export function IslandApp() {
           onDecided={setNote}
           onLater={snooze}
           onReview={(card) => reviewCard(card.chat.id)}
+          onReviewChat={reviewCard}
           onLine={openLine}
           onScout={() => {
             if (panel) closePanel();

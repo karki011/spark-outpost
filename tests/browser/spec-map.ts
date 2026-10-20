@@ -204,6 +204,7 @@ export const SPEC_GROUPS = {
     'desktop-updates',
     'island',
     'island-ask',
+    'island-ask-history',
     'island-click-regions',
     'island-code',
     'island-drop',

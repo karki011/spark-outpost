@@ -1,6 +1,6 @@
 import './thread.css';
 import './turn-indent.css';
-import { memo, use, useEffect } from 'react';
+import { Fragment, memo, use, useEffect } from 'react';
 import { PERMISSION_DO, type ConversationDetail, type Project } from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { useVoice } from '../spark/use-voice.ts';
@@ -10,6 +10,8 @@ import { repoSummary } from './project/repo-list.ts';
 import { RepoKit } from './project/RepoKit.tsx';
 import { buildTurns } from './turns.ts';
 import { TurnSection } from './TurnSection.tsx';
+import { AssistantTopicDivider } from './compaction/DividerLine.tsx';
+import { placeTopics } from './compaction/topic-model.ts';
 import { TodaySoFar } from './today/TodaySoFar.tsx';
 import { useStickToBottom } from './use-stick-to-bottom.ts';
 import { useMessageJump } from './message-jump.ts';
@@ -56,6 +58,13 @@ export const Thread = memo(function Thread({
   const { scrollerRef, scroller, away, follow, release, jumpToLatest } = useStickToBottom();
   useMessageJump(detail.conversation.id, scroller, release, detail.messages.length);
   const turns = buildTurns(detail);
+  const topics = placeTopics(
+    detail.topics ?? [],
+    turns.map(({ run, userMessage }) => ({
+      runId: run.id,
+      at: userMessage?.createdAt ?? run.createdAt,
+    })),
+  );
   const parentOf = new Map(detail.runs.map((run) => [run.id, run.parentRunId ?? run.id]));
   const taskAfterRun = new Map(
     detail.tasks.map((task) => {
@@ -116,18 +125,25 @@ export const Thread = memo(function Thread({
           <OutlineTicks detail={detail} taskId={taskId} scroller={scroller} />
           <CommandDockContext value={remote ? null : detail.conversation.id}>
             {turns.map(({ run, userMessage, assistantMessage, laterMessages }) => (
-              <TurnSection
-                key={run.id}
-                run={run}
-                userMessage={userMessage}
-                assistantMessage={assistantMessage}
-                laterMessages={laterMessages}
-                detail={detail}
-                repo={repos[0] ?? null}
-                task={taskAfterRun.get(run.id) ?? null}
-                onOpenTask={onOpenTask}
-                onOpenChat={onOpenChat}
-              />
+              <Fragment key={run.id}>
+                {topics.before.get(run.id)?.map((topic) => (
+                  <AssistantTopicDivider key={topic.id} topic={topic} />
+                ))}
+                <TurnSection
+                  run={run}
+                  userMessage={userMessage}
+                  assistantMessage={assistantMessage}
+                  laterMessages={laterMessages}
+                  detail={detail}
+                  repo={repos[0] ?? null}
+                  task={taskAfterRun.get(run.id) ?? null}
+                  onOpenTask={onOpenTask}
+                  onOpenChat={onOpenChat}
+                />
+              </Fragment>
+            ))}
+            {topics.after.map((topic) => (
+              <AssistantTopicDivider key={topic.id} topic={topic} />
             ))}
           </CommandDockContext>
           <PendingSends sends={sends} />

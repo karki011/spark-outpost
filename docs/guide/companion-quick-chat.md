@@ -28,9 +28,13 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 ## Ask Spark
 
 1. In the panel, select **+**, then **Ask Spark**, or press **⌘3**.
-2. Type a question, such as "Who needs me?", and press **Enter**.
+2. Type a question, or pick a suggestion such as **Who needs me?**, and press **Enter**.
+3. Scroll up for earlier questions. **New topic** starts fresh, so old answers stop steering new ones.
+4. **Open in Spark** shows the whole conversation.
 
-Who needs you, what's running and today's spend answer at once; others use a [fast model](settings.md#spark-assistant).
+Who needs you, what's running, today's spend and your next meeting answer at once, marked **Live · answered instantly**, and last until the island reloads. Others use a [fast model](settings.md#spark-assistant).
+
+Answers link to the chats they name; **Review** opens a waiting card in place. Ask Spark only reads.
 
 ## Change a shortcut
 

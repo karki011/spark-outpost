@@ -5,6 +5,7 @@ import { commandRunSchema } from './command-runs.ts';
 import { adviceSummarySchema } from './advice.ts';
 import { ANNOTATIONS_PER_MESSAGE, annotationInputSchema } from './annotations.ts';
 import { approvalSchema } from './approvals.ts';
+import { assistantTopicSchema } from './assistant-history.ts';
 import { ATTACHMENTS_PER_MESSAGE, attachmentSchema } from './attachments.ts';
 import { categorySchema, titleSourceSchema } from './categories.ts';
 import { chatSettingsSchema } from './chat-settings.ts';
@@ -166,6 +167,7 @@ export const conversationDetailSchema = z.object({
   plans: conversationPlansSchema.optional(),
   compactions: z.array(compactionSchema).optional(),
   continuedIn: z.array(continuationSchema).optional(),
+  topics: z.array(assistantTopicSchema).optional(),
   queue: z.array(queuedMessageSchema).optional(),
   memberMessages: z.array(memberMessageSchema).optional(),
   railFlags: z.array(railFlagSchema).optional(),

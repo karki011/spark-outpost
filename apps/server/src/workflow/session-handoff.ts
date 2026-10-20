@@ -14,6 +14,8 @@ async function latestTask(db: Queryable, conversationId: string) {
     `SELECT t.id,
        (SELECT m.content FROM runs r JOIN messages m ON m.id = r.user_message_id
          WHERE r.task_id = t.id AND r.parent_run_id IS NULL
+           AND m.created_at > COALESCE((SELECT pf.assistant_history_from FROM profiles pf
+             WHERE pf.assistant_conversation_id = $1), '-infinity'::timestamptz)
          ORDER BY r.created_at LIMIT 1) AS goal
      FROM tasks t WHERE t.conversation_id = $1 ORDER BY t.created_at DESC LIMIT 1`,
     [conversationId],

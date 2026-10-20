@@ -2,7 +2,7 @@
   display: grid;
   gap: 10px;
   margin: 0 0 8px;
-  max-height: 210px;
+  max-height: 240px;
   overflow: auto;
   overscroll-behavior: contain;
 }
@@ -130,4 +130,93 @@
 
 .isl-ask-md .md a {
   color: var(--accent-text);
+}
+
+.isl-ask-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+}
+
+.isl-ask-head .isl-btn {
+  height: 26px;
+  font-size: 12px;
+}
+
+.isl-ask-head .isl-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.isl-ask-day {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.isl-ask-log .topic-divider {
+  margin: 4px 0;
+}
+
+.isl-ask-older {
+  justify-self: center;
+  height: 24px;
+  font-size: 11.5px;
+}
+
+.isl-ask-src {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.isl-ask-srclink {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 2px;
+}
+
+.isl-ask-srclink:hover {
+  color: var(--text);
+}
+
+.isl-ask-srclink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.isl-ask-note {
+  margin: 0 0 0 26px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.isl-ask-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.isl-ask-chips .isl-chip {
+  border-radius: 999px;
+  padding: 0 10px;
+}
+
+.isl-ask-chips .isl-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
