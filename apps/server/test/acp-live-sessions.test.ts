@@ -229,6 +229,19 @@ describe('ACP provider with one live session per chat', { timeout: 30_000 }, () 
     expect(log.count('initialize')).toBe(1);
   });
 
+  it('records a cycle that opens with a usage update as one run, up to its real end', async () => {
+    const log = methodLog(store);
+    const target = chat(providerFor(claude, log.file));
+    const cycles: string[] = [];
+    target.provider.sessions?.onCycle((id) => cycles.push(id));
+
+    await send(target, { prompt: '#laterlead' });
+    await waitFor(() => cycles.length > 0);
+    const continued = await send(target, { continuation: true });
+
+    expect(continued.text).toBe('Woke up on my own: checked.');
+  });
+
   it('holds a permission request that arrives between turns for the next run’s gate', async () => {
     const log = methodLog(store);
     const target = chat(providerFor(claude, log.file));

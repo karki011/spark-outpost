@@ -76,6 +76,7 @@ async function wakeLater(
 ): Promise<void> {
   const send = sender(client);
   await delay(LATER_MS);
+  if (text.includes('#laterlead')) await cycleEnd(client, rootId);
   let checked = 'checked';
   if (text.includes('#laterwrite')) {
     await client.request(acp.methods.client.fs.writeTextFile, {

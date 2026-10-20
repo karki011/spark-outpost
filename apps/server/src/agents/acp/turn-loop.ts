@@ -6,6 +6,7 @@ import type {
   SteerRequests,
 } from '../../providers/provider.ts';
 import { endsAgentCycle, type BackgroundCount, type BackgroundWork } from './background-work.ts';
+import { startsAgentCycle } from './agent-cycle.ts';
 import { followUpBlocks } from './conversation-prompt.ts';
 import { createIdleInbox, deliveringWhenIdle, type IdleInbox } from './idle-inbox.ts';
 import { nextMessage, untilFailure } from './steering.ts';
@@ -87,6 +88,7 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
   let failure: Promise<never> = loop.blocks ? untilFailure(session.prompt(loop.blocks)) : never;
   let pending = readNext(session);
   let waiting = false;
+  let worked = false;
   let delivered: Promise<Woken> = never;
   let shown = '';
 
@@ -101,6 +103,7 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
   };
   const startWaiting = () => {
     waiting = true;
+    worked = false;
     inbox.open();
     delivered = inbox.arrived().then(() => ({ kind: 'delivered' }));
     if (background) report(background.count());
@@ -146,9 +149,10 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
     await loop.see(message.update);
     background?.see(message.update);
     if (!waiting) continue;
+    worked ||= startsAgentCycle(message.update);
     const count = background?.count();
     if (count && count.agents + count.tasks > 0) report(count);
-    if (!endsAgentCycle(message.update)) continue;
+    if (!worked || !endsAgentCycle(message.update)) continue;
     push(loop.tokens.addCycle(loop.requests.take(), mapper.takeSubagentTokens()));
     if (!background?.busy()) {
       stopWaiting();
