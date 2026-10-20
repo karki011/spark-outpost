@@ -183,7 +183,12 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
     },
   );
 
-  const rows = askRows(history.data?.pages ?? [], session.answers, asks, now);
+  const pages = history.data?.pages;
+  const stored = new Set(pages?.flatMap((page) => page.exchanges.map((entry) => entry.id)));
+  if (asks.some((entry) => stored.has(entry.id))) {
+    setAsks(asks.filter((entry) => !stored.has(entry.id)));
+  }
+  const rows = askRows(pages ?? [], session.answers, asks, now);
   const latest = lastExchange(rows);
   useEffect(() => {
     if (!latest?.answer || latest.live || !spokenQuestion.current) return;
@@ -220,7 +225,7 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
       </div>
       <AskLog
         rows={rows}
-        pages={history.data?.pages.length ?? 0}
+        pages={pages?.length ?? 0}
         older={{
           more: history.hasNextPage,
           loading: history.isFetchingNextPage,

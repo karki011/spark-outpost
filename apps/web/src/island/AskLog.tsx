@@ -8,6 +8,7 @@ import type { AskRow, ExchangeRow } from './ask-history-model.ts';
 import { AskThinking } from './AskThinking.tsx';
 
 const NEAR_TOP_PX = 24;
+const NEAR_BOTTOM_PX = 48;
 
 export interface AskLinks {
   reviewable: ReadonlySet<string>;
@@ -110,6 +111,8 @@ export function AskLog(props: AskLogProps) {
   const { rows, pages, older } = props;
   const ref = useRef<HTMLDivElement>(null);
   const fromBottom = useRef<number | null>(null);
+  const following = useRef(true);
+  const lastTail = useRef<string | undefined>(undefined);
   const tail = rows.at(-1);
   const tailKey = tail ? `${tail.key}:${tail.kind === 'exchange' ? tail.status : ''}` : '';
   const lastExchangeKey = rows.findLast((row) => row.kind === 'exchange')?.key;
@@ -123,8 +126,10 @@ export function AskLog(props: AskLogProps) {
 
   useLayoutEffect(() => {
     const log = ref.current;
-    if (log) log.scrollTop = log.scrollHeight;
-  }, [tailKey]);
+    const newRow = tail?.key !== lastTail.current;
+    lastTail.current = tail?.key;
+    if (log && (newRow || following.current)) log.scrollTop = log.scrollHeight;
+  }, [tailKey, tail?.key]);
 
   const loadOlder = () => {
     const log = ref.current;
@@ -139,7 +144,9 @@ export function AskLog(props: AskLogProps) {
       className="isl-ask-log"
       aria-live="polite"
       onScroll={(event) => {
-        if (event.currentTarget.scrollTop < NEAR_TOP_PX) loadOlder();
+        const log = event.currentTarget;
+        following.current = log.scrollHeight - log.scrollTop - log.clientHeight < NEAR_BOTTOM_PX;
+        if (log.scrollTop < NEAR_TOP_PX) loadOlder();
       }}
     >
       {older.more && (
