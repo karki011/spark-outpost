@@ -1,7 +1,7 @@
 import type { Usage } from '@agentclientprotocol/sdk';
 import type { TokenUsage } from '@spark-outpost/contracts';
 import { z } from 'zod';
-import type { ProviderOutput } from '../../providers/provider.ts';
+import type { ProviderOutput, RequestUsage } from '../../providers/provider.ts';
 import { objectFields } from './object-fields.ts';
 import { promptTokens } from './prompt-usage.ts';
 
@@ -22,6 +22,7 @@ interface PromptResponse {
 
 export interface TurnTokens {
   add(response: PromptResponse, subagentTokens: number): ProviderOutput[];
+  addCycle(requests: readonly RequestUsage[], subagentTokens: number): ProviderOutput[];
 }
 
 function perModelTally(meta: unknown): TokenUsage | null {
@@ -69,9 +70,33 @@ function withSubagents(own: TokenUsage, tally: TokenUsage | null, reported: numb
   return { ...own, total, ...apart(reported) };
 }
 
+function requestTokens(requests: readonly RequestUsage[]): TokenUsage {
+  const sum = (pick: (request: RequestUsage) => number) =>
+    requests.reduce((total, request) => total + pick(request), 0);
+  const input = sum((request) => request.input);
+  const output = sum((request) => request.output);
+  const cachedRead = sum((request) => request.cachedRead);
+  const cachedWrite = sum((request) => request.cachedWrite);
+  return {
+    input,
+    output,
+    total: input + output + cachedRead + cachedWrite,
+    cachedRead,
+    cachedWrite,
+    thought: null,
+  };
+}
+
 export function createTurnTokens(countsSubagentsApart: boolean): TurnTokens {
   let earlier: TokenUsage | null = null;
   return {
+    addCycle(requests, subagentTokens) {
+      if (requests.length === 0 && subagentTokens === 0) return [];
+      const own = requestTokens(requests);
+      const cycle = countsSubagentsApart ? withSubagents(own, null, subagentTokens) : own;
+      earlier = added(earlier, cycle);
+      return [{ kind: 'tokens', tokens: earlier }];
+    },
     add(response, subagentTokens) {
       const own = promptTokens(response.usage)[0];
       if (!own || own.kind !== 'tokens') return [];

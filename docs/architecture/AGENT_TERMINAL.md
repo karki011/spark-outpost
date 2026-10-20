@@ -48,7 +48,7 @@ So with `terminal: true` no adapter would call us, and nothing would change for 
 
 Two things the adapters do offer, which we are not choosing now:
 
-- Claude reports background Bash tasks through the JetBrains AIR `asyncTasks` capability: `async_task_spawned` with an output file path, and a `_session/async_task/stop` request (`dist/async-tasks.js:350-368`, `dist/acp-agent.js:165`, `:1966-1979`). This is Claude-only, and the task dies with the agent process at turn end. It could later give live output and a per-command Stop for Claude background commands inside a turn.
+- Claude reports background Bash tasks through the JetBrains AIR `asyncTasks` capability: `async_task_spawned` with an output file path, and a `_session/async_task/stop` request (`dist/async-tasks.js:350-368`, `dist/acp-agent.js:165`, `:1966-1979`). This is Claude-only. Since October 19, 2026 Spark advertises it on chat turns and keeps the agent process and run open while such tasks run, so their completion continues the chat ([PROTOCOL_ALIGNMENT.md](PROTOCOL_ALIGNMENT.md#background-work-after-the-reply-october-19-2026)). It could later give live output and a per-command Stop.
 - Codex has `thread/backgroundTerminals/list` and `terminate` on its app-server (`dist/index.js:34981-34986`). The adapter does not expose them over ACP.
 
 ### B. A Spark tool that runs the command in a Spark-owned tab

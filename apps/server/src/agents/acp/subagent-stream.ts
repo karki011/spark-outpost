@@ -4,6 +4,7 @@ import { objectFields } from './object-fields.ts';
 import { reportedByAdapter, reportedSchema } from './subagent-report.ts';
 
 export const SUBAGENT_SESSIONS_CAPABILITY = 'nativeSubagentSessions';
+export const ASYNC_TASKS_CAPABILITY = 'asyncTasks';
 
 const MARK_KEY = 'sparkSubagent';
 const ATTRIBUTED_UPDATES = new Set(['tool_call', 'tool_call_update', 'agent_message_chunk']);
@@ -30,6 +31,12 @@ const markSchema = z.discriminatedUnion('event', [
     reported: reportedSchema.optional(),
   }),
   z.object({ event: z.literal('update'), id: z.string().min(1) }),
+  z.object({
+    event: z.literal('task'),
+    id: z.string().min(1),
+    ended: z.boolean(),
+    name: z.string().optional(),
+  }),
 ]);
 export type SubagentMark = z.infer<typeof markSchema>;
 
@@ -43,6 +50,12 @@ const stateSchema = z.object({
   subagentSessionId: z.string().min(1),
   state: z.string(),
 });
+
+const TASK_END_STATES = new Set(['completed', 'failed', 'stopped']);
+
+const taskSchema = z.object({ asyncTaskId: z.string().min(1) });
+const spawnedTaskSchema = taskSchema.extend({ name: z.string().optional() });
+const taskStateSchema = taskSchema.extend({ state: z.string() });
 
 const updateSchema = z.looseObject({
   method: z.literal(acp.methods.client.session.update),
@@ -76,6 +89,19 @@ function control(message: UpdateMessage, sessionId: string, mark: SubagentMark):
   };
 }
 
+function taskMark(update: UpdateMessage['params']['update']): SubagentMark | null {
+  if (update.sessionUpdate === 'async_task_spawned') {
+    const spawned = spawnedTaskSchema.safeParse(update);
+    if (!spawned.success) return null;
+    const { asyncTaskId: id, name } = spawned.data;
+    return { event: 'task', id, ended: false, ...(name ? { name } : {}) };
+  }
+  const changed = taskStateSchema.safeParse(update);
+  if (update.sessionUpdate !== 'async_task_state_update' || !changed.success) return null;
+  const ended = TASK_END_STATES.has(changed.data.state);
+  return ended ? { event: 'task', id: changed.data.asyncTaskId, ended } : null;
+}
+
 function unmarked(update: UpdateMessage['params']['update']): UpdateMessage['params']['update'] {
   const meta = Object.fromEntries(
     Object.entries(objectFields(update._meta)).filter(([key]) => key !== MARK_KEY),
@@ -98,6 +124,10 @@ export function createSubagentRouter(): (message: unknown) => unknown {
     const parsed = updateSchema.safeParse(message);
     if (!parsed.success) return message;
     const { sessionId, update } = parsed.data.params;
+    if (update.sessionUpdate.startsWith('async_task_')) {
+      const mark = taskMark(update);
+      return mark ? control(parsed.data, rootOf(sessionId), mark) : null;
+    }
     if (update.sessionUpdate === 'subagent_spawned') {
       const spawned = spawnedSchema.safeParse(update);
       if (!spawned.success || spawned.data.subagentSessionId === sessionId) return null;

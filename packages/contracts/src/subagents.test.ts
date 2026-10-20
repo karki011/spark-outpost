@@ -188,5 +188,52 @@ describe('sub-agent roster', () => {
     expect(subagentSummary([{ state: 'failed' }])).toBe('1 sub-agent · 1 failed');
     expect(waitingOnLabel(2)).toBe('Waiting on 2 sub-agents');
     expect(waitingOnLabel(1)).toBe('Waiting on 1 sub-agent');
+    expect(waitingOnLabel(2, { agents: 2, tasks: 0, names: [] })).toBe(
+      'Waiting on 2 background agents',
+    );
+    expect(waitingOnLabel(2, { agents: 1, tasks: 1, names: [] })).toBe(
+      'Waiting on 1 background agent and 1 background task',
+    );
+  });
+
+  it('shows a resumed generation as the same sub-agent working again', () => {
+    const roster = fold([
+      started('a'),
+      { type: EventType.SUBAGENT_FINISHED, subagentRunId: 'a', outcome: { type: 'success' } },
+      started('a:generation:2', { name: 'again', description: '<task-notification>' }),
+      step('STEP_STARTED', 'Read', 'a:generation:2'),
+    ] as RunEvent[]);
+    expect(roster.rows).toEqual([
+      expect.objectContaining({
+        id: 'a',
+        name: 'name a',
+        task: 'task a',
+        state: 'working',
+        step: 'Read',
+      }),
+    ]);
+    const done = applySubagentEvent(roster, {
+      type: EventType.SUBAGENT_FINISHED,
+      subagentRunId: 'a:generation:2',
+      outcome: { type: 'success' },
+    } as RunEvent);
+    expect(done.rows[0]).toMatchObject({ state: 'done' });
+  });
+
+  it('keeps the background wait until the run ends', () => {
+    const background = { agents: 1, tasks: 0, names: ['Schema'] };
+    const waiting = fold([
+      {
+        type: EventType.ACTIVITY_SNAPSHOT,
+        messageId: SUBAGENTS_ACTIVITY,
+        activityType: SUBAGENTS_ACTIVITY,
+        content: { waitingOn: 1, background },
+        replace: true,
+      } as RunEvent,
+    ]);
+    expect(waiting).toMatchObject({ waitingOn: 1, background });
+    expect(applySubagentEvent(waiting, { type: EventType.RUN_FINISHED } as RunEvent)).toMatchObject(
+      { waitingOn: 0, background: null },
+    );
   });
 });

@@ -1,4 +1,4 @@
-import type { BusyEnterAction } from '@spark-outpost/contracts';
+import type { BackgroundWait, BusyEnterAction } from '@spark-outpost/contracts';
 import { MAC } from '../../ui/shortcuts.ts';
 import type { AttachmentsState } from '../attachments/use-attachments.ts';
 import { busyHint } from '../queue/send-choice.ts';
@@ -8,11 +8,12 @@ export function composerHint(
   queueing: boolean,
   preferred: BusyEnterAction,
   waitingOn = 0,
+  background: BackgroundWait | null = null,
 ): string {
   if (attachments.uploading) return 'Uploading your files…';
   if (attachments.failed) return 'Remove or retry the files that failed';
   if (queueing && attachments.items.length > 0) return 'Files wait until this turn ends';
-  if (queueing) return busyHint(preferred, MAC, waitingOn);
+  if (queueing) return busyHint(preferred, MAC, waitingOn, background);
   return 'Enter to send, Shift + Enter for a new line';
 }
 

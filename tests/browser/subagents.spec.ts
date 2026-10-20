@@ -138,3 +138,41 @@ test('a finished turn keeps its sub-agents, nested ones under their parent, afte
   await expect(page.getByRole('list', { name: 'Usage by sub-agent' })).toContainText('Explore');
   await shot(page, 'subagents-chat-finished.png');
 });
+
+test('a Claude turn that ends with background work running waits on it instead of saying done', async ({
+  page,
+}) => {
+  const input = await ask(page, 'Check the schema #build #backgroundforever');
+  const turn = page.locator('.msg.ai').last();
+  await expect(mood(page)).toHaveText('waiting on 1 background agent', { timeout: 30_000 });
+  await expect(turn.locator('.background-work')).toContainText(
+    'Still running in the background: Schema.',
+  );
+  await expect(turn.locator('.md').last()).toContainText("I'll send the write-up once it reports.");
+  const sidebar = page.getByRole('navigation', { name: 'Chats' });
+  await expect(sidebar.locator('.row.st-running.active')).toHaveCount(1);
+  await input.fill('Any news?');
+  await expect(page.locator('.hint').first()).toHaveAttribute(
+    'title',
+    /^Enter to send to the agent now, while it waits on 1 background agent/,
+  );
+  await input.fill('');
+  await shot(page, 'background-waiting.png');
+
+  const stop = turn.getByRole('button', { name: 'Stop background tasks' });
+  await stop.focus();
+  await expect(stop).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(turn.locator('.background-work')).toHaveCount(0, { timeout: 30_000 });
+  await expect(turn).toContainText('Stopped before finishing.');
+});
+
+test('a Claude turn picks up again on its own when its background work reports', async ({
+  page,
+}) => {
+  await ask(page, 'Check the schema #build #background');
+  const turn = page.locator('.msg.ai').last();
+  await expect(turn).toContainText('Schema finished: turns live in events.', { timeout: 30_000 });
+  await expect(mood(page)).toHaveText('done');
+  await expect(turn.getByRole('button', { name: '1 sub-agent · 1 done' })).toBeVisible();
+});

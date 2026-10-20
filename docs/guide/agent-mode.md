@@ -20,7 +20,7 @@ Models your sign-in can't use are left out; a pinned one shows **Unavailable** a
 
 A pinned name such as `sonnet` runs the agent's current model of that name; the button shows the model that ran.
 
-A new chat starts on **Auto**; earlier chats keep their setting. The agent picks models for its own sub-agents.
+A new chat starts on **Auto**; earlier chats keep theirs. The agent picks models for its sub-agents.
 
 ## Set the effort
 

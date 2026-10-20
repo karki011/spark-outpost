@@ -1,5 +1,5 @@
 import type { ClientCapabilities, Implementation } from '@agentclientprotocol/sdk';
-import { SUBAGENT_SESSIONS_CAPABILITY } from './subagent-stream.ts';
+import { ASYNC_TASKS_CAPABILITY, SUBAGENT_SESSIONS_CAPABILITY } from './subagent-stream.ts';
 
 export const CLIENT_INFO: Implementation = {
   name: 'spark-outpost',
@@ -23,7 +23,10 @@ export function turnCapabilities(readFiles: boolean, writeFiles: boolean): Clien
     ...clientCapabilities(readFiles, writeFiles),
     _meta: {
       jetbrains: {
-        air: { version: 1, capabilities: ['sessionFailure', SUBAGENT_SESSIONS_CAPABILITY] },
+        air: {
+          version: 1,
+          capabilities: ['sessionFailure', SUBAGENT_SESSIONS_CAPABILITY, ASYNC_TASKS_CAPABILITY],
+        },
       },
     },
   };

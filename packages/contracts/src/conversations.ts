@@ -23,7 +23,7 @@ import {
 import { taskOverviewSchema } from './tasks.ts';
 import { railFlagSchema } from './rail-flags.ts';
 import { conversationUsageSchema } from './usage.ts';
-import { subagentRowSchema } from './subagents.ts';
+import { backgroundWaitSchema, subagentRowSchema } from './subagents.ts';
 import {
   nativeTerminalProviderSchema,
   nativeTerminalSessionSchema,
@@ -100,6 +100,7 @@ export const conversationSummarySchema = z.object({
       interruptionChoice: interruptionChoiceSchema.nullable().optional(),
       needsYou: z.string().nullable().optional(),
       waitingOn: z.number().int().positive().optional(),
+      background: backgroundWaitSchema.optional(),
       finishedAt: z.string().nullable().optional(),
     })
     .nullable(),

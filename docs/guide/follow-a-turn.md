@@ -6,22 +6,25 @@ order: 216
 summary: See what the agent is doing, stop it, queue more messages while it works, and delete a running chat.
 ---
 
-You'll follow a running turn, stop it and queue more messages. About 2 minutes.
+You'll follow, stop and queue a turn. About 2 minutes.
 
 ## See what's happening
 
-1. Read the reply's header, such as **Reading api.ts · 3 steps**, or the line above the message box.
+1. Read the reply's header, such as **Reading api.ts · 3 steps**.
 2. Select the step count, then **Thinking** to read it.
-3. Select **Show work panel** for the plan, files and cost.
-4. Select **Agent TV** in the chat's **…** menu.
+3. **Show work panel** has the plan, files and cost; **Agent TV** is in the **…** menu.
 
 When the agent needs you, the line says **Waiting for you**. Select it or press **⌘⇧Y**.
 
-Commands show output in the reply: passing ones fold, failed ones stay open. **Open in terminal** shows it in a [dock tab](terminals.md#watch-an-agents-command).
+Command output shows in the reply; failed ones stay open. **Open in terminal** shows it in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 
 1. Select **Stop**, which replaces the send button. Its sub-agents stop too.
+
+## Background work
+
+A Claude agent may reply while background agents still run. The chat shows **Waiting on 1 background agent**, not Done, then continues. **Enter** reaches the agent; **Stop background tasks** ends the work.
 
 ## Queue messages
 
@@ -30,12 +33,12 @@ Commands show output in the reply: passing ones fold, failed ones stay open. **O
 3. While the agent waits on sub-agents, **Enter** sends now.
 4. Use **Edit**, **Move up**, **Move down**, **Remove** or **Send now** on a queued message.
 
-| When                           | Spark                                                          |
-| ------------------------------ | -------------------------------------------------------------- |
-| The turn finishes              | Sends queued messages in order.                                |
-| You send one now               | Shows its status; a turn only waiting on sub-agents queues it. |
-| You stop the turn, or it fails | Pauses the queue until you select **Send now**.                |
-| You reload or restart          | Keeps the queue.                                               |
+| When                           | Spark                                           |
+| ------------------------------ | ----------------------------------------------- |
+| The turn finishes              | Sends queued messages in order.                 |
+| You send one now               | Shows its status.                               |
+| You stop the turn, or it fails | Pauses the queue until you select **Send now**. |
+| You reload or restart          | Keeps the queue.                                |
 
 Only text can be queued.
 

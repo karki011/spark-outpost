@@ -185,6 +185,13 @@
   font-size: 14px;
 }
 
+.background-work {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .error-line {
   margin: 8px 0 0;
   padding: 8px 12px;

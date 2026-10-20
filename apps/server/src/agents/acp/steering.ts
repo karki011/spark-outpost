@@ -30,9 +30,13 @@ export function attachSteering(
   init: acp.InitializeResponse,
   sessionId: string,
   steering: SteerRequests | undefined,
+  deliversWhenIdle = false,
 ): () => void {
-  if (!steering || !steeringSupported(init)) return () => undefined;
-  return steering.attach((text) => steer(ctx, sessionId, text));
+  const supported = steeringSupported(init);
+  if (!steering || (!supported && !deliversWhenIdle)) return () => undefined;
+  return steering.attach((text) =>
+    supported ? steer(ctx, sessionId, text) : Promise.resolve(false),
+  );
 }
 
 export async function nextMessage(

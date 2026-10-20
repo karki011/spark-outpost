@@ -416,6 +416,9 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                       waitingOn,
                     )}
                     waitingOn={waitingOn}
+                    waitingBackground={
+                      running ? (detail.data?.conversation.latestRun?.background ?? null) : null
+                    }
                     above={
                       <PrCard
                         conversationId={conversationId}

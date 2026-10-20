@@ -3,6 +3,7 @@ import type { Db } from '../persistence/db.ts';
 import { findExpiredLeases, type Lease } from '../persistence/jobs.ts';
 import { failRunningPieces, skipUnstartedPieces } from '../persistence/pieces.ts';
 import { LeaseLostError, appendRunEvent } from '../persistence/run-events.ts';
+import { runWaitedInBackground } from '../persistence/subagents.ts';
 import { runEvents, type RunIdentity } from './run-events.ts';
 
 export const OUTCOME_UNKNOWN_MESSAGE =
@@ -13,6 +14,9 @@ export const PIECE_OUTCOME_UNKNOWN = 'Outcome unknown: the worker stopped while 
 export const PIECE_NOT_STARTED = 'Not started: the worker stopped before it.';
 
 export const WAITING_OUTCOME_MESSAGE = `${OUTCOME_UNKNOWN_MESSAGE} It was waiting for your approval, so that action never ran.`;
+
+export const BACKGROUND_OUTCOME_MESSAGE =
+  'Spark stopped while the agent was waiting on background work. That work stopped with it, so its results never arrived. Nothing was retried automatically.';
 
 export async function recoverExpiredLeases(db: Db): Promise<number> {
   const expired = await findExpiredLeases(db);
@@ -37,7 +41,12 @@ async function markOutcomeUnknown(db: Db, lease: Lease): Promise<boolean> {
       });
     }
     const expired = await expirePendingApprovals(db, lease.runId, 'recovery');
-    const message = expired > 0 ? WAITING_OUTCOME_MESSAGE : OUTCOME_UNKNOWN_MESSAGE;
+    const message =
+      expired > 0
+        ? WAITING_OUTCOME_MESSAGE
+        : (await runWaitedInBackground(db, lease.runId))
+          ? BACKGROUND_OUTCOME_MESSAGE
+          : OUTCOME_UNKNOWN_MESSAGE;
     await appendRunEvent(db, lease, runEvents.error(message, 'outcome_unknown'), {
       expectExpired: true,
       transition: { status: 'outcome_unknown', error: message },

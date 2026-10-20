@@ -22,7 +22,7 @@ const TIP_WORDS: Record<SessionState, string> = {
 
 function tipWord(chat: ConversationSummary, state: SessionState): string {
   const waitingOn = state === 'working' ? (chat.latestRun?.waitingOn ?? 0) : 0;
-  return waitingOn > 0 ? waitingOnLabel(waitingOn) : TIP_WORDS[state];
+  return waitingOn > 0 ? waitingOnLabel(waitingOn, chat.latestRun?.background) : TIP_WORDS[state];
 }
 
 const BADGES: Partial<Record<SessionState, string>> = {

@@ -55,7 +55,10 @@ import {
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
 import { newSessionRequest } from './session-request.ts';
 import { extraRoots, openProject, sessionMeta } from './session-start.ts';
-import { attachSteering, nextMessage, untilFailure } from './steering.ts';
+import { attachSteering } from './steering.ts';
+import { createBackgroundWork } from './background-work.ts';
+import { createRequestLog, runPrompts } from './turn-loop.ts';
+import { updateSink } from './update-sink.ts';
 import {
   namedMcpServers,
   prepareRepoSession,
@@ -319,6 +322,7 @@ async function converse(
   const doing = workspace.changing ? gated : null;
   const rails = gated ? createRailWatch({ roots: gated.policy.roots, cwd: gated.cwd }) : null;
   const secretRead = (label: string) => push([{ kind: 'secret_read', paths: [label] }]);
+  const requests = createRequestLog();
   const client = acp
     .client(CLIENT_INFO)
     .onRequest(acp.methods.client.session.requestPermission, (ctx) => {
@@ -342,7 +346,9 @@ async function converse(
       if (params && definition.reportsModelAccess) push([{ kind: 'account', account: params }]);
     })
     .onNotification(SDK_MESSAGE_METHOD, parseRequestUsage, ({ params }) => {
-      if (params) push([{ kind: 'request_usage', request: params }]);
+      if (!params) return;
+      requests.see(params);
+      push([{ kind: 'request_usage', request: params }]);
     });
   if (policy) {
     client.onRequest(acp.methods.client.fs.readTextFile, (ctx) =>
@@ -450,44 +456,33 @@ async function converse(
         ? followUpBlocks(text, promptOptions)
         : conversationBlocks(sent.history, text, promptOptions);
       const textOnly = { ...promptOptions, attachments: [] };
-      const detachSteering = attachSteering(ctx, init, session.sessionId, turn.steering);
-      const tokens = createTurnTokens(definition.cli === 'claude');
-      let promptFailure = untilFailure(session.prompt(blocks));
-      for (;;) {
-        const message = await Promise.race([session.nextUpdate(), promptFailure]);
-        if (message.kind === 'stop') {
-          push(tokens.add(message.response, mapper.takeSubagentTokens()));
-          mapper.stopped(message.response._meta);
-          const next = await nextMessage(turn, message.stopReason, signal);
-          if (next) {
-            promptFailure = untilFailure(session.prompt(followUpBlocks(next, textOnly)));
-            continue;
-          }
-          stopRequests?.();
-          detachSteering();
-          if (turn.session) await closeQuietly(ctx, init, session.sessionId);
-          return message.stopReason;
-        }
-        if (message.update.sessionUpdate === 'config_option_update') {
-          live.adopt(message.update.configOptions);
-        }
-        push(mapper.map(message.update));
-        push(ranModel.see(message.update));
-        push(commands.see(message.update));
-        const observed = await rails?.observe(message.update);
-        for (const flag of doing ? (observed?.rails ?? []) : []) {
-          push([{ kind: 'rail_flag', flag }]);
-        }
-        if (observed?.secretReads.length) {
-          push([{ kind: 'secret_read', paths: observed.secretReads }]);
-        }
-        const unsafe = mapper.unsafeModeChange();
-        if (unsafe) {
-          throw new ProviderError(
-            `${definition.name} switched to ${modeName(live.options(), unsafe)} mode, so the run was stopped.`,
-          );
-        }
-      }
+      const stopReason = await runPrompts({
+        session,
+        blocks,
+        followUp: textOnly,
+        turn,
+        signal,
+        mapper,
+        tokens: createTurnTokens(definition.cli === 'claude'),
+        requests,
+        push,
+        see: updateSink({
+          agentName: definition.name,
+          live,
+          mapper,
+          ranModel,
+          commands,
+          rails,
+          flagsRails: doing !== null,
+          push,
+        }),
+        background: definition.cli === 'claude' ? createBackgroundWork() : null,
+        steer: (steering, whenIdle) =>
+          attachSteering(ctx, init, session.sessionId, steering, whenIdle),
+      });
+      stopRequests?.();
+      if (turn.session) await closeQuietly(ctx, init, session.sessionId);
+      return stopReason;
     } finally {
       session.dispose();
     }

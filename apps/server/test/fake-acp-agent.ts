@@ -20,6 +20,7 @@ import {
   subagentsTurn,
 } from './fake-acp-subagents.ts';
 import { commandTurn, reportContext } from './fake-acp-context.ts';
+import { BACKGROUND_TRIGGER, backgroundTurn } from './fake-acp-background.ts';
 import { rateLimitTurn } from './fake-acp-rate-limit.ts';
 import { requestsTurn } from './fake-acp-requests.ts';
 import {
@@ -237,6 +238,7 @@ async function turn(
   const requested = await requestsTurn(text, client, sessionRequest?.meta, say);
   if (requested) return requested;
   if (text.includes('#orphan ')) return orphanedCommandTurn(client, sessionId, text, signal);
+  if (text.includes(BACKGROUND_TRIGGER)) return backgroundTurn(client, sessionId, text, say);
   if (text.includes('#heldtitle')) return heldTitleTurn(say);
   if (text.includes('#subagentsask')) return subagentAsksTurn(client, sessionId, say);
   if (text.includes('#subagents')) {

@@ -1,8 +1,10 @@
 import {
+  BACKGROUND_NAMES_SHOWN,
   EventType,
   OWN_SUBAGENT_METADATA,
   SUBAGENTS_ACTIVITY,
   SUBAGENT_REPORT,
+  type BackgroundWait,
   type RunEvent,
   type SubagentReport,
 } from '@spark-outpost/contracts';
@@ -26,7 +28,8 @@ export function createSubagentProgress({
 }: ProgressOptions): SubagentProgress {
   const working = new Set<string>();
   let ownOpen = 0;
-  let waitingOn = 0;
+  let background: BackgroundWait | null = null;
+  let shown = '';
 
   const lifecycle = (output: ProviderOutput): RunEvent[] => {
     if (output.kind === 'subagent_started') {
@@ -95,17 +98,31 @@ export function createSubagentProgress({
     ownOpen = output.kind === 'step_started' ? ownOpen + 1 : Math.max(0, ownOpen - 1);
   };
 
+  const noteBackground = (output: ProviderOutput) => {
+    if (output.kind !== 'background_work') return;
+    const { agents, tasks } = output;
+    const names = output.names.slice(0, BACKGROUND_NAMES_SHOWN).map(storable);
+    background = agents + tasks > 0 ? { agents, tasks, names } : null;
+  };
+
+  const wait = (): { waitingOn: number; background?: BackgroundWait } => {
+    if (background) {
+      const waitingOn = ownOpen > 0 ? 0 : background.agents + background.tasks;
+      return { waitingOn, background };
+    }
+    return { waitingOn: ownOpen > 0 ? 0 : working.size };
+  };
+
   return {
     observe(output) {
       const events = [...lifecycle(output), ...reported(output)];
       countOwn(output);
-      const waiting = ownOpen === 0 ? working.size : 0;
-      if (waiting === waitingOn) return events;
-      waitingOn = waiting;
-      return [
-        ...events,
-        runEvents.activity(SUBAGENTS_ACTIVITY, SUBAGENTS_ACTIVITY, { waitingOn: waiting }),
-      ];
+      noteBackground(output);
+      const content = wait();
+      const key = JSON.stringify(content);
+      if (key === shown || (shown === '' && content.waitingOn === 0)) return events;
+      shown = key;
+      return [...events, runEvents.activity(SUBAGENTS_ACTIVITY, SUBAGENTS_ACTIVITY, content)];
     },
   };
 }

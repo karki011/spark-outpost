@@ -441,6 +441,7 @@ export async function runAgentTurn(
         if (finalStarts) titles?.startMessage(redaction.pending());
         await sayText(redaction.push(output.delta));
       }
+      if (output.kind === 'background_work') await sayText(redaction.finish());
       await commands.observe(output);
     }
     await events.close();
