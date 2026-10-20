@@ -29,7 +29,7 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 
 1. In the panel, select **+**, then **Ask Spark**, or press **⌘3**.
 2. Type a question, or pick a suggestion such as **Who needs me?**, and press **Enter**.
-3. Scroll up for earlier questions. **New topic** starts fresh; earlier answers stay.
+3. Scroll up for earlier questions; **New topic** starts fresh.
 4. **Open in Spark** shows the whole conversation.
 
 Who needs you, what's running, spend and your next meeting answer at once (**Live · answered instantly**) until the island reloads. Others use a [fast model](settings.md#spark-assistant).
@@ -38,9 +38,9 @@ Answers link to the chats they name; **Review** opens a waiting card in place.
 
 ## Let Ask Spark act
 
-Ask it to start, message, stop or archive a chat, pause Spark, work on a ticket, or answer a card. Each shows **Do it** and **Don’t** first, unless [When Ask Spark acts](settings.md#spark-assistant) is **Act**.
+Ask it to act on [chats, tickets, outposts, Inbox items, meetings or cards](spark-tools.md#ask-spark-tools). Each shows **Do it** and **Don’t** first, in **Needs you** too, unless [When Ask Spark acts](settings.md#spark-assistant) is **Act**.
 
-In **Act**, it answers a card only when you ask and name its chat. Hold-to-confirm, Mac, calendar, Terminal and spoken-question cards stay with you. Its messages never authorize a push.
+In **Act**, it answers a card only when you ask and name its chat. Hold-to-confirm, Mac, calendar, Terminal and spoken-question cards stay with you. Its messages never authorize a push; it never sees meeting details.
 
 ## Change a shortcut
 

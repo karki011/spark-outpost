@@ -10,7 +10,7 @@ import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
 import { homeApi } from '../home/home-api.ts';
 import { ARMING_MS } from './island-parts.tsx';
 import { IslandInbox, type InboxBundle } from './IslandInbox.tsx';
-import { card, chat, CHAT_B, run } from './inbox-test-fixtures.ts';
+import { approval, card, chat, CHAT_B, run } from './inbox-test-fixtures.ts';
 
 const standup = event('Standup', at(10, 8), at(10, 23), { link: link('zoom') });
 
@@ -167,6 +167,52 @@ describe('the island inbox', () => {
     expect(onOpenChat).toHaveBeenLastCalledWith(CHAT_B);
     fireEvent.click(screen.getByRole('button', { name: /^Standup/ }));
     expect(cal.onOpenEvent).toHaveBeenCalledWith(standup.key);
+  });
+
+  it('lists Ask Spark’s waiting cards under Needs you with Do it and Don’t', async () => {
+    const asked = approval({
+      id: 'b2f0c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d',
+      title: 'Clear “Done work” from Finished',
+      payload: {
+        command: null,
+        cwd: null,
+        paths: [],
+        diffs: [],
+        truncated: false,
+        sparkAction: {
+          action: 'ask_spark',
+          op: 'clear_finished',
+          summary: 'Clear “Done work” from Finished',
+          conversationId: CHAT_B,
+          projectId: null,
+          approvalId: null,
+          answer: null,
+          ticket: null,
+          text: null,
+          outpostId: null,
+          meeting: null,
+        },
+      } as never,
+      options: [
+        { optionId: 'confirm', name: 'Do it', kind: 'allow_once' },
+        { optionId: 'decline', name: 'Don’t', kind: 'reject_once' },
+      ],
+    });
+    show(
+      inbox({
+        cards: [],
+        chats: [],
+        ask: { conversationId: 'a1b2c3d4-0000-4000-8000-000000000001', cards: [asked] },
+      }),
+      calendar({ upcoming: [] }),
+    );
+    const group = screen.getByRole('group', { name: 'Clear “Done work” from Finished' });
+    expect(group.closest('li')?.textContent).toContain('Ask Spark');
+    expect(screen.queryByText('Nothing needs you')).toBeNull();
+    expect(screen.getByRole('heading', { name: /Needs you/ }).textContent).toContain('· 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Do it' }));
+    await flush();
+    expect(decide).toHaveBeenCalledWith(asked.id, expect.objectContaining({ optionId: 'confirm' }));
   });
 
   it('says so when nothing needs you', () => {

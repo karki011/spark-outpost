@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ApprovalPayload } from '@spark-outpost/contracts';
-import { ensureAssistantChat } from '../src/companion/assistant.ts';
 import { ASK_SPARK_REFUSALS } from '../src/spark-mcp/actions/ask-spark-limits.ts';
 import { getApproval, insertApproval } from '../src/persistence/approvals.ts';
 import { addToQueue } from '../src/persistence/chat-queue.ts';
@@ -20,7 +19,13 @@ import {
   type SparkToolsHarness,
 } from './spark-mcp-support.ts';
 import { createTestApp, localClient } from './app-support.ts';
-import { connectCliProvider, createTestDb, eventually, startChat, type TestDb } from './support.ts';
+import {
+  assistantRun as assistantRunIn,
+  assistantScope,
+  assistantSetup,
+  setActs as setActsIn,
+} from './ask-spark-support.ts';
+import { createTestDb, eventually, startChat, type TestDb } from './support.ts';
 import { LINEAR_KEY } from './fake-linear.ts';
 import { startTicketStubs } from './ticket-support.ts';
 
@@ -37,13 +42,7 @@ const PLAIN_OPTIONS = [
 
 beforeEach(async () => {
   t = await createTestDb();
-  await connectCliProvider(t, 'claude');
-  await t.db.query(
-    `INSERT INTO profiles (workspace_id, display_name, default_provider, onboarding_completed_at)
-     VALUES ($1, 'Test User', 'claude', now())`,
-    [t.workspaceId],
-  );
-  assistant = await ensureAssistantChat(t.db, t.workspaceId);
+  assistant = await assistantSetup(t);
   askRun = await assistantRun('Do something for me');
   recorded = recordedHooks();
 });
@@ -55,36 +54,16 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-async function assistantRun(question: string, source = 'ui'): Promise<string> {
-  const messageId = randomUUID();
-  const runId = randomUUID();
-  await t.db.query(
-    `INSERT INTO messages (id, conversation_id, role, content) VALUES ($1, $2, 'user', $3)`,
-    [messageId, assistant, question],
-  );
-  await t.db.query(
-    `INSERT INTO runs (id, conversation_id, user_message_id, provider, status, source)
-     VALUES ($1, $2, $3, 'claude', 'running', $4)`,
-    [runId, assistant, messageId, source],
-  );
-  return runId;
+function assistantRun(question: string, source = 'ui'): Promise<string> {
+  return assistantRunIn(t, assistant, question, source);
 }
 
-async function setActs(acts: 'act' | 'manual') {
-  await t.db.query('UPDATE profiles SET assistant_acts = $2 WHERE workspace_id = $1', [
-    t.workspaceId,
-    acts,
-  ]);
+function setActs(acts: 'act' | 'manual') {
+  return setActsIn(t, acts);
 }
 
 async function open(runId = askRun) {
-  tools = await startSparkTools(t, {
-    conversationId: assistant,
-    runId,
-    readOnly: true,
-    assistant: true,
-    actions: recorded.hooks,
-  });
+  tools = await startSparkTools(t, assistantScope(assistant, runId, recorded));
   return tools;
 }
 
@@ -268,17 +247,10 @@ describe('Ask Spark acts', () => {
         { source: 'linear', apiKey: LINEAR_KEY },
       );
       await t.db.query('DELETE FROM provider_connections WHERE workspace_id = $1', [t.workspaceId]);
-      tools = await startSparkTools(
-        t,
-        {
-          conversationId: assistant,
-          runId: askRun,
-          readOnly: true,
-          assistant: true,
-          actions: recorded.hooks,
-        },
-        { secrets, linearApiUrl: stubs.linearUrl },
-      );
+      tools = await startSparkTools(t, assistantScope(assistant, askRun, recorded), {
+        secrets,
+        linearApiUrl: stubs.linearUrl,
+      });
       const result = await tools.call('spark_start_ticket', { source: 'linear', key: 'ENG-12' });
       expect(result.isError).toBe(true);
       const chats = await t.db.query('SELECT 1 FROM conversations WHERE id <> $1', [assistant]);
