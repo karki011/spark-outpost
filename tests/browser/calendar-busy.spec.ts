@@ -65,7 +65,7 @@ test.afterAll(() => {
 test('the day panel shows a few people, never a room, and copies an email', async ({ page }) => {
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await openToday(page);
-  const card = scheduled(page).locator('.rl-card', { hasText: 'Launch review' });
+  const card = scheduled(page).locator('.rl-card', { hasText: /^Launch review/ });
   await expect(card).toContainText('Agenda: pricing page review and launch checklist.');
   await expect(card).not.toContainText('-::~');
   await expect(card).not.toContainText('Meeting ID');
@@ -76,7 +76,7 @@ test('the day panel shows a few people, never a room, and copies an email', asyn
   await expect(card.locator('.cal-where')).toHaveText('33 Arch St-14-Bay Village (2)');
 
   const alexandra = people.getByRole('button', { name: /^Alexandra Wong-Fitzgerald, / });
-  await expect(alexandra).toHaveAttribute('title', 'alexandra.wong-fitzgerald@cloudzero.example');
+  await expect(alexandra).toHaveAttribute('title', 'alexandra.wong-fitzgerald@acme.example');
   const name = alexandra.locator('.cal-person-name');
   const box = await name.boundingBox();
   const cardBox = await card.boundingBox();
@@ -84,7 +84,7 @@ test('the day panel shows a few people, never a room, and copies an email', asyn
   await alexandra.click();
   await expect(page.getByRole('status').filter({ hasText: 'Copied' })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-    'alexandra.wong-fitzgerald@cloudzero.example',
+    'alexandra.wong-fitzgerald@acme.example',
   );
   await expect(page.getByRole('dialog')).toBeHidden();
 
@@ -112,7 +112,7 @@ test('the popover links the description, collapses the dial-ins and joins in the
   await popover.getByRole('button', { name: 'Join Zoom Launch review' }).click();
   expect(await opened(page)).toEqual([
     'https://docs.example.com/d/launch',
-    'https://cloudzero.zoom.us/j/81234567890?pwd=abc123',
+    'https://acme.zoom.us/j/81234567890?pwd=abc123',
   ]);
   await page.keyboard.press('Escape');
   await expect(popover).toBeHidden();
@@ -217,7 +217,8 @@ test('ended meetings are dimmed everywhere and ongoing ones stay full strength',
   const chip = (title: string) => cell(page).locator('.mo-ev', { hasText: title });
   await expect(chip('Earlier sync')).toHaveAttribute('data-ended', 'true');
   await expect(chip('Ongoing review')).not.toHaveAttribute('data-ended');
-  const card = (title: string) => scheduled(page).locator('.rl-card', { hasText: title });
+  const card = (title: string) =>
+    scheduled(page).locator('.rl-card', { hasText: new RegExp(`^${title}`) });
   await expect(card('Earlier sync')).toHaveAttribute('data-past', 'true');
   await expect(card('Ongoing review')).not.toHaveAttribute('data-past');
   await today(page).getByRole('radio', { name: 'Day' }).click();

@@ -71,28 +71,24 @@ describe('matching a tab to a saved sign-in', () => {
 
 describe('a sign-in with several sites', () => {
   const sites = signInSites({
-    origin: 'https://app.cloudzero.example',
-    sites: [
-      'https://auth.cloudzero.example',
-      'https://cloudzero.okta.example',
-      'https://app.cloudzero.example',
-    ],
+    origin: 'https://app.acme.example',
+    sites: ['https://auth.acme.example', 'https://acme.okta.example', 'https://app.acme.example'],
   });
 
   it('lists the start site first and each site once', () => {
     expect(sites).toEqual([
-      'https://app.cloudzero.example',
-      'https://auth.cloudzero.example',
-      'https://cloudzero.okta.example',
+      'https://app.acme.example',
+      'https://auth.acme.example',
+      'https://acme.okta.example',
     ]);
   });
 
   it('types on any listed site and names the list and the tab when it is elsewhere', () => {
-    expect(signInOriginProblem(sites, 'https://cloudzero.okta.example/login/step')).toBeNull();
-    expect(signInOriginProblem(sites, 'https://auth.cloudzero.example/u/login')).toBeNull();
+    expect(signInOriginProblem(sites, 'https://acme.okta.example/login/step')).toBeNull();
+    expect(signInOriginProblem(sites, 'https://auth.acme.example/u/login')).toBeNull();
     const elsewhere = signInOriginProblem(sites, 'https://accounts.google.example/signin');
     expect(elsewhere).toContain(
-      'types only on https://app.cloudzero.example, https://auth.cloudzero.example or https://cloudzero.okta.example',
+      'types only on https://app.acme.example, https://auth.acme.example or https://acme.okta.example',
     );
     expect(elsewhere).toContain('the tab is on https://accounts.google.example');
     expect(elsewhere).toContain('Add this site');

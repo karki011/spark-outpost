@@ -21,6 +21,7 @@ What each document is for. Each one describes what runs today plus its open item
 - [ANALYTICS_PLAN.md](architecture/ANALYTICS_PLAN.md): the Analytics page and workflow optimizer; phases 4–6 are open.
 - [PROJECT_MAP.md](architecture/PROJECT_MAP.md): the Project Map builder, storage, API and page.
 - [ELECTRON_PLAN.md](architecture/ELECTRON_PLAN.md): the desktop shell and what packaging still needs.
+- [CI.md](architecture/CI.md): the GitHub Actions jobs, what each runs and on which runner, and the rules for workflows.
 - [REPO_AGENT_CONFIG.md](architecture/REPO_AGENT_CONFIG.md): how a linked repo's agent config, MCP servers and Spark's own tools reach agents.
 - [SPARK_TOOLS.md](architecture/SPARK_TOOLS.md): which `spark_*` tool answers each area of the app, the safety rules they share, and the gaps.
 - [ACP_AGENTS.md](architecture/ACP_AGENTS.md): how Claude, Codex and Z.ai run over ACP.

@@ -177,6 +177,10 @@ Architecture notes are in [`docs/architecture`](docs/architecture). The full doc
 
 Electron · React and Vite · Express · PostgreSQL 17 (embedded in the desktop app) · TypeScript and Zod contracts · Agent Client Protocol · MCP · Vitest and Playwright
 
+## License
+
+Spark Outpost is released under the [MIT License](LICENSE).
+
 <div align="center">
 <sub>Made for people who want agents to do the work and still sleep at night.</sub>
 </div>

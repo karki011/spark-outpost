@@ -1,0 +1,151 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+  DATABASE_URL: postgres://spark:spark-ci@127.0.0.1:5432/spark_outpost_test
+  TEST_DATABASE_URL: postgres://spark:spark-ci@127.0.0.1:5432/spark_outpost_test
+
+jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      swift: ${{ steps.filter.outputs.swift }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            swift:
+              - 'apps/desktop/mac-control/**'
+              - 'apps/desktop/calendar/**'
+              - 'apps/desktop/voice/**'
+              - 'apps/desktop/scripts/*-bundle.ts'
+              - 'apps/desktop/scripts/build-*-cli.ts'
+              - 'apps/desktop/scripts/bundled-binary.ts'
+              - '.github/workflows/ci.yml'
+
+  check:
+    name: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm check
+
+  db:
+    name: db
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/postgres
+      - run: pnpm test:db
+
+  browser:
+    name: browser (${{ matrix.shard }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1/8, 2/8, 3/8, 4/8, 5/8, 6/8, 7/8, 8/8, fake-hosts]
+    env:
+      SPARK_WEB_BUILD: '1'
+      SPARK_WEB_PREBUILT: '1'
+      PLAYWRIGHT_HTML_OPEN: never
+      SHARD: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/postgres
+      - id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Build the web app
+        working-directory: apps/web
+        env:
+          VITE_SPARK_FEEDBACK_EMAIL: beta-feedback@example.test
+        run: node node_modules/vite/bin/vite.js build
+      - name: Run browser specs
+        run: |
+          if [ "$SHARD" = fake-hosts ]; then
+            export SPARK_FAKE_CALENDAR=1 SPARK_FAKE_BROWSER=1
+            specs=(tests/browser/calendar*.spec.ts tests/browser/{browser-agent,shot-order,sign-ins,sign-in-sites}.spec.ts)
+            pnpm exec playwright test --reporter=dot,html "${specs[@]}"
+          else
+            mapfile -t specs < <(printf '%s\n' tests/browser/*.spec.ts | grep -v -- '-perf\.spec\.ts$')
+            pnpm exec playwright test --shard="$SHARD" --reporter=dot,html "${specs[@]}"
+          fi
+      - if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report-${{ strategy.job-index }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  swift:
+    name: swift (${{ matrix.helper }})
+    needs: changes
+    if: needs.changes.outputs.swift == 'true'
+    runs-on: macos-15
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        helper: [mac-control, calendar, voice]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm desktop:${{ matrix.helper }} --test
+
+  ci-ok:
+    name: ci-ok
+    needs: [changes, check, db, browser, swift]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Every job passed or was skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: $RESULTS"
+          for result in $RESULTS; do
+            if [ "$result" != success ] && [ "$result" != skipped ]; then exit 1; fi
+          done

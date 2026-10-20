@@ -6,7 +6,7 @@ import {
 import type { GoogleEvent } from '../../apps/server/src/calendar/google/api.ts';
 
 export const GOOGLE_STUB_SUBJECT = '1080000000000000042';
-export const GOOGLE_STUB_EMAIL = 'spark.tester@gmail.com';
+export const GOOGLE_STUB_EMAIL = 'spark.tester@example.com';
 
 function freshGoogle(): FakeGoogle {
   const google = fakeGoogleCalendar('http://stub');

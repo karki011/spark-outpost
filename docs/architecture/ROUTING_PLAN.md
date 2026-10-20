@@ -230,9 +230,9 @@ A provider switch doesn't have to lose the conversation, but it does lose the pr
 
 See [ELECTRON_PLAN.md](ELECTRON_PLAN.md): the scan and agents stay out of Electron's main process, and the app keeps Postgres, bundled.
 
-### 11. First test repo: `Cloudzero/feature-web-apps`
+### 11. First test repo: `feature-web-apps`
 
-Cloned (read-only use) into the session scratchpad at `scratchpad/repos/feature-web-apps`. It's an internal company repository. The profile:
+A private Nx monorepo, cloned for read-only use into a scratch folder. The profile:
 
 - 5,443 tracked files, 1,736 commits, 83 MB of git history;
 - TypeScript almost entirely: 2,513 `.ts`, 1,799 `.tsx`, plus JSON, Markdown, YAML and a little Python and shell;
@@ -242,7 +242,7 @@ Cloned (read-only use) into the session scratchpad at `scratchpad/repos/feature-
 
 It's a good test of the monorepo signals: one request can touch one Nx project or many. "Training" here means building a labelled task set and tuning our wording and thresholds; nothing trains Jev itself.
 
-**Privacy:** the local scan never leaves the machine. Jev is an external service (TypeSafe), and its state includes this repo's file paths, symbol names and the task text. The user confirmed on 2026-09-27 that the company allows this for `feature-web-apps`. Other company repositories need their own confirmation.
+**Privacy:** the local scan never leaves the machine. Jev is an external service (TypeSafe), and its state includes this repo's file paths, symbol names and the task text. The repository's owner allowed this for `feature-web-apps` on 2026-09-27. Any other private repository needs its owner's confirmation.
 
 ### 12. Cache-aware routing and the route score (September 30, 2026, policy `route-score-1-cache-aware`)
 

@@ -1,6 +1,7 @@
 {
   "name": "spark-outpost",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@12.6.0",
   "engines": {

@@ -25,21 +25,21 @@ import {
 const FIND_IDENTITY = `
   1) 18D6F1EADE7A0A5F2F6BD25D37054395847AC0E0 "Local Signing"
   2) B9E61D4DC21AE981B59F5E27C311189189241EC1 "Apple Development: Pat Doe (AAAAAAAAAA)"
-  3) 5456F3240831FDFD31B019F56CF254DF1C40C7B9 "Developer ID Application: Pat Doe (Z825V2BBX9)"
+  3) 5456F3240831FDFD31B019F56CF254DF1C40C7B9 "Developer ID Application: Pat Doe (ABCDE12345)"
      3 valid identities found
 `;
 
 describe('pickIdentity', () => {
   it('uses CSC_NAME without asking the keychain', async () => {
     let asked = false;
-    const identity = await pickIdentity({ CSC_NAME: ' Pat Doe (Z825V2BBX9) ' }, () => {
+    const identity = await pickIdentity({ CSC_NAME: ' Pat Doe (ABCDE12345) ' }, () => {
       asked = true;
       return Promise.resolve(FIND_IDENTITY);
     });
     expect(identity).toEqual({
       kind: 'developer-id',
-      sign: 'Pat Doe (Z825V2BBX9)',
-      label: 'Pat Doe (Z825V2BBX9)',
+      sign: 'Pat Doe (ABCDE12345)',
+      label: 'Pat Doe (ABCDE12345)',
     });
     expect(asked).toBe(false);
   });
@@ -49,7 +49,7 @@ describe('pickIdentity', () => {
     expect(identity).toEqual({
       kind: 'developer-id',
       sign: '5456F3240831FDFD31B019F56CF254DF1C40C7B9',
-      label: 'Developer ID Application: Pat Doe (Z825V2BBX9)',
+      label: 'Developer ID Application: Pat Doe (ABCDE12345)',
     });
   });
 
@@ -264,9 +264,9 @@ describe('missingPrerequisites', () => {
 describe('designatedRequirement', () => {
   it('reads the requirement line from codesign output', () => {
     const output =
-      'Executable=/x/Contents/MacOS/Electron\ndesignated => identifier "com.sparkoutpost.dev" and certificate leaf[subject.OU] = Z825V2BBX9\n';
+      'Executable=/x/Contents/MacOS/Electron\ndesignated => identifier "com.sparkoutpost.dev" and certificate leaf[subject.OU] = ABCDE12345\n';
     expect(designatedRequirement(output)).toBe(
-      'identifier "com.sparkoutpost.dev" and certificate leaf[subject.OU] = Z825V2BBX9',
+      'identifier "com.sparkoutpost.dev" and certificate leaf[subject.OU] = ABCDE12345',
     );
     expect(designatedRequirement('Executable=/x')).toBeNull();
   });

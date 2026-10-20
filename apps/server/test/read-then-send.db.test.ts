@@ -30,7 +30,7 @@ const READ_EARLIER = [
   ['secret_file', 'a secret file'],
   ['secret_file', 'apps/web/.env'],
   ['secret_file', '.env'],
-  ['web_page', 'web page https://auth-dev-alfa.cloudzero.com'],
+  ['web_page', 'web page https://auth-dev.acme.example'],
   ['private_data', 'private work data (spark_chats)'],
   ['private_data', 'private work data (spark_pr_follow_up)'],
   ['private_data', 'private work data (spark_pr)'],
