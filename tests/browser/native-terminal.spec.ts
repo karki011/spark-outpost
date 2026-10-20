@@ -326,6 +326,7 @@ test('native terminal keeps its process across reconnects, fills the pane in foc
 });
 
 test('an exited terminal session starts again in the same chat @packaged', async ({ page }) => {
+  test.skip(process.platform !== 'darwin', 'Control+D reaches the terminal only on macOS');
   test.setTimeout(60_000);
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();

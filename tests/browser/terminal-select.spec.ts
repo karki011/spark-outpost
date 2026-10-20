@@ -172,6 +172,7 @@ test('a terminal selection is copied and offers Add to terminal, Ask, Comment an
 });
 
 test('an ended session keeps Copy and a new chat for its last output', async ({ page }) => {
+  test.skip(process.platform !== 'darwin', 'Control+D reaches the terminal only on macOS');
   test.setTimeout(120_000);
   const { conversationId, workspace } = await startTerminal(page);
   try {
@@ -204,6 +205,7 @@ test('an ended session keeps Copy and a new chat for its last output', async ({ 
 test('an agent that reports focus and uses the mouse keeps focus, Comment and Option-select', async ({
   page,
 }) => {
+  test.skip(process.platform !== 'darwin', 'Option-select is the macOS terminal gesture');
   test.setTimeout(60_000);
   const { conversationId, workspace } = await startTerminal(page);
   try {
@@ -275,6 +277,7 @@ test('an agent that reports focus and uses the mouse keeps focus, Comment and Op
 test('a toolbar survives the pointer crossing an agent that tracks every mouse move', async ({
   page,
 }) => {
+  test.skip(process.platform !== 'darwin', 'Option-select is the macOS terminal gesture');
   test.setTimeout(60_000);
   const { conversationId, workspace } = await startTerminal(page);
   try {
@@ -314,6 +317,7 @@ test('a toolbar survives the pointer crossing an agent that tracks every mouse m
 test('a note opened long after selecting stays open while the agent repaints on losing focus', async ({
   page,
 }) => {
+  test.skip(process.platform !== 'darwin', 'Option-select is the macOS terminal gesture');
   test.setTimeout(60_000);
   const { conversationId, workspace } = await startTerminal(page);
   try {
