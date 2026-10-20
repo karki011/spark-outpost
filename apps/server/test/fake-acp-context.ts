@@ -44,7 +44,12 @@ export async function reportContext(
   if (!contextSize) return;
   const used = nextUsed(sessionId, request);
   recordContext(sessionId, used);
-  await update({ sessionUpdate: 'usage_update', used, size: contextSize });
+  await update({
+    sessionUpdate: 'usage_update',
+    used,
+    size: contextSize,
+    cost: { amount: 0, currency: 'USD' },
+  });
 }
 
 export async function commandTurn(

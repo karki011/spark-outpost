@@ -53,7 +53,7 @@ function seedLead(agentMode: string | null, inOutpost = false): void {
     }),
   ]);
   client.setQueryData(queryKeys.conversation(DOCS_CHAT), {
-    settings: { provider: 'codex', model: null, routing: 'auto', agentMode },
+    settings: { provider: 'codex', model: null, agentMode },
   });
 }
 
@@ -129,7 +129,7 @@ describe('OutpostCreate from a draft a chat proposed', () => {
     open();
     const name = await screen.findByRole('textbox', { name: /^Name/ });
     fireEvent.keyDown(name, { key: 'Enter' });
-    expect(screen.getByText('api · Codex Auto · Read-only')).toBeTruthy();
+    expect(screen.getByText('api · Codex GPT-5 · Read-only')).toBeTruthy();
     fireEvent.click(button(/^Continue/));
     fireEvent.click(button(/^Start outpost/));
     await waitFor(() => expect(requests).toHaveLength(1));

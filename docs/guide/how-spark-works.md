@@ -24,15 +24,13 @@ Spark adds nothing to the reply except a line about publishing.
 
 The agent decides. Spark never splits a turn into roles.
 
-| Work                                                | Who does it                                                                          |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| A small change                                      | The agent itself.                                                                    |
-| Independent parts in one repo and branch            | The agent's own sub-agents. The turn lists each one; their steps are gated, audited. |
-| Several repos, branches or pull requests            | Sub-chats in an [outpost](outpost-stories.md) that the agent starts or proposes.     |
-| A job for a [Spark](sparks.md) you mention with `@` | That Spark, in the same chat.                                                        |
+| Work                                                | Who does it                                                                      |
+| --------------------------------------------------- | -------------------------------------------------------------------------------- |
+| A small change                                      | The agent itself.                                                                |
+| Independent parts in one repo and branch            | The agent's own sub-agents, listed in the turn and Agent TV; gated, audited.     |
+| Several repos, branches or pull requests            | Sub-chats in an [outpost](outpost-stories.md) that the agent starts or proposes. |
+| A job for a [Spark](sparks.md) you mention with `@` | That Spark, in the same chat.                                                    |
 
 ## What Spark leaves to the agent
 
-Spark runs no tests, picks no model and reviews no diff. The agent runs your project's checks; hooks and CI run on a push. For a second opinion, ask another chat.
-
-The reply and Agent TV list sub-agents; select one for its steps, files and usage.
+Spark runs no tests and reviews no diff. The agent runs your checks; hooks and CI run on a push. For a second opinion, ask another chat.

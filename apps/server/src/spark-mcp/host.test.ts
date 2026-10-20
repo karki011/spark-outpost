@@ -1,4 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { mkdir, mkdtemp, rm, stat } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { BrowserHost } from '../browser/host-client.ts';
 import type { Db } from '../persistence/db.ts';
 import { memorySecretStore } from '../setup/secrets.ts';
 import { sparkGrantKey, startSparkMcpHost, type SparkMcpHost } from './host.ts';
@@ -72,6 +76,57 @@ describe('Spark tools host', () => {
     await expect(host.restore(scope, grant.token)).rejects.toThrow('cannot be restored');
     restored.revoke();
     expect((await post(grant.url, auth)).status).toBe(401);
+  });
+
+  it('rebinds a grant to a new scope without ending a call already in flight', async () => {
+    let release = () => {};
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const grant = await host.grant({ ...scope, rebinds: true, beforeToolCall: () => waiting });
+    const auth = { Authorization: `Bearer ${grant.token}` };
+    const call = JSON.stringify({
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'tools/call',
+      params: { name: 'spark_providers', arguments: {} },
+    });
+    const inFlight = post(grant.url, auth, call);
+
+    const rebinding = host.rebind({ ...scope, runId: null }, sparkGrantKey(grant.token));
+    expect((await post(grant.url, auth)).status).toBe(200);
+    const rebound = await rebinding;
+    release();
+
+    expect((await inFlight).status).toBe(200);
+    expect((await post(grant.url, auth)).status).toBe(200);
+    await expect(host.rebind(scope, grant.token)).rejects.toThrow('cannot be rebound');
+    rebound.revoke();
+    expect((await post(grant.url, auth)).status).toBe(401);
+  });
+
+  it('ends the browser run of the turn that ended when it rebinds to the next turn', async () => {
+    await host.close();
+    const shotDir = await mkdtemp(join(tmpdir(), 'spark-shots-'));
+    const requests: unknown[] = [];
+    const browser = {
+      request: async (request: unknown) => {
+        requests.push(request);
+        return {} as never;
+      },
+    } as unknown as BrowserHost;
+    host = await startSparkMcpHost({ ...deps(), browser, shotDir });
+    const first = { workspaceId: 'w', conversationId: 'c', runId: 'run-1' };
+    const grant = await host.grant(first);
+    await mkdir(join(shotDir, 'run-1'));
+
+    await host.rebind({ ...first, runId: 'run-2' }, sparkGrantKey(grant.token));
+
+    await vi.waitFor(() =>
+      expect(requests).toContainEqual({ op: 'end_run', chatId: 'c', runId: 'run-1' }),
+    );
+    await expect(stat(join(shotDir, 'run-1'))).rejects.toThrow();
+    await rm(shotDir, { recursive: true, force: true });
   });
 
   it('listens on another port when the one it had is taken', async () => {

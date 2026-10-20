@@ -112,7 +112,7 @@ export type AuditRunRoute = z.infer<typeof auditRunRouteSchema>;
 
 export const auditRunSummarySchema = z.object({
   runId: z.uuid(),
-  userMessageId: z.uuid(),
+  userMessageId: z.uuid().nullable(),
   provider: z.string(),
   role: z.string(),
   runMode: runModeSchema.nullable(),

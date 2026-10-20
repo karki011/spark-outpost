@@ -3,6 +3,7 @@ import '../../chat/composer/model-picker.css';
 import type { ProviderId } from '@spark-outpost/contracts';
 import { ProviderBlob } from '../../brand/ProviderBlob.tsx';
 import { ModelList } from '../../chat/composer/ModelList.tsx';
+import { currentModel } from '../../chat/composer/model-options.ts';
 import { ProviderSwitch } from '../../chat/composer/ProviderSwitch.tsx';
 import type { AgentChoice } from './create-draft.ts';
 import type { AgentView } from './create-labels.ts';
@@ -28,6 +29,7 @@ export function AgentField({
 }: AgentFieldProps) {
   const setup = data.providers.find((provider) => provider.id === choice.provider);
   const provider = choice.provider;
+  const capabilities = provider ? data.capabilitiesOf(provider) : undefined;
 
   const switchTo = (id: ProviderId) => {
     if (id === provider) return;
@@ -62,12 +64,10 @@ export function AgentField({
           )}
           <ModelList
             provider={setup}
-            capabilities={data.capabilitiesOf(provider)}
+            capabilities={capabilities}
             loading={data.loadingOf(provider)}
-            selected={choice.model}
-            routing={choice.model === null ? 'auto' : 'pinned'}
+            selected={currentModel(choice, capabilities)?.id ?? choice.model}
             onSelect={(model) => onChange({ model })}
-            onAuto={() => onChange({ model: null })}
           />
         </>
       )}

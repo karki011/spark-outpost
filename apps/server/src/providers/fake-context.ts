@@ -5,6 +5,9 @@ import type { ProviderOutput, ProviderTurn } from './provider.ts';
 const CONTEXT_TRIGGER = /#ctx(\d{1,3})\b/;
 const NO_COMPACT_TRIGGER = '#nocompact';
 const LONG_WINDOW_TRIGGER = '#window1m';
+const MID_TURN_TRIGGER = '#midturn';
+const ADAPTER_DEFAULT_WINDOW = 200_000;
+const LONG_WINDOW_MODEL = 'claude-opus-5-5';
 export const FAKE_CONTEXT_SIZE = 200_000;
 const FAKE_LONG_CONTEXT_SIZE = 1_000_000;
 const RESTING_PERCENT = 6;
@@ -65,6 +68,21 @@ export function fakeCompactOutputs(turn: ProviderTurn): ProviderOutput[] {
   return [
     { kind: 'text_delta', delta: FAKE_COMPACT_REPLY },
     usageAt(COMPACTED_PERCENT, windowOf(turn)),
+  ];
+}
+
+export function fakeMidTurnUsage(turn: ProviderTurn): Usage[] {
+  if (!tracksContext(turn) || !turn.prompt.includes(MID_TURN_TRIGGER)) return [];
+  const window = windowOf(turn);
+  const asked = Number(CONTEXT_TRIGGER.exec(turn.prompt)?.[1] ?? RESTING_PERCENT);
+  const model = window === FAKE_LONG_CONTEXT_SIZE ? LONG_WINDOW_MODEL : turn.settings.model;
+  return [
+    {
+      ...usageAt(asked, window),
+      contextSize: ADAPTER_DEFAULT_WINDOW,
+      provisionalWindow: true,
+      ...(model ? { model } : {}),
+    },
   ];
 }
 

@@ -58,7 +58,7 @@ export const decisionMetaLineSchema = z.object({
 
 export const turnLineSchema = z.object({
   type: z.literal('turn'),
-  userMessageId: z.uuid(),
+  userMessageId: z.uuid().nullable(),
   at: z.string(),
   messageChars: count,
   messageText: z.string().nullable(),
@@ -79,7 +79,7 @@ export type TurnLine = z.infer<typeof turnLineSchema>;
 export const runEndLineSchema = z.object({
   type: z.literal('run_end'),
   runId: z.uuid(),
-  userMessageId: z.uuid(),
+  userMessageId: z.uuid().nullable(),
   role: z.string().nullable(),
   attempt: count.nullable(),
   status: z.string(),
@@ -106,7 +106,7 @@ export const jevLineSchema = z.object({
   type: z.literal('jev'),
   runId: z.uuid(),
   childRunId: z.uuid().nullable(),
-  userMessageId: z.uuid(),
+  userMessageId: z.uuid().nullable(),
   at: z.string(),
   purpose: z.string(),
   status: z.string(),
@@ -128,7 +128,7 @@ export type JevLine = z.infer<typeof jevLineSchema>;
 export const cardLineSchema = z.object({
   type: z.literal('card'),
   runId: z.uuid(),
-  userMessageId: z.uuid(),
+  userMessageId: z.uuid().nullable(),
   kind: z.string(),
   title: z.string(),
   status: z.string(),

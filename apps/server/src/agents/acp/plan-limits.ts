@@ -8,6 +8,7 @@ import type {
   ProviderOutput,
 } from '../../providers/provider.ts';
 import { objectFields } from './object-fields.ts';
+import { reportedModel } from './long-context.ts';
 
 export const RATE_LIMIT_META = '_claude/rateLimit';
 
@@ -85,11 +86,13 @@ export function planOutputs(meta: unknown): ProviderOutput[] {
 type UsageUpdate = Extract<SessionUpdate, { sessionUpdate: 'usage_update' }>;
 
 export function usageOutputs(update: UsageUpdate): ProviderOutput[] {
+  const model = reportedModel(update._meta);
   const usage: ProviderOutput = {
     kind: 'usage',
     contextUsed: update.used,
     contextSize: update.size,
     costUsd: update.cost?.currency === 'USD' ? update.cost.amount : null,
+    ...(model ? { model } : {}),
   };
   return [usage, ...planOutputs(update._meta)];
 }

@@ -5,7 +5,7 @@ import {
 } from '@spark-outpost/contracts';
 
 export interface AuditTurn {
-  userMessageId: string;
+  key: string;
   runs: AuditRunSummary[];
 }
 
@@ -17,9 +17,10 @@ export function runLabel(run: Pick<AuditRunSummary, 'role' | 'provider'>): strin
 export function auditTurns(runs: readonly AuditRunSummary[]): AuditTurn[] {
   const turns: AuditTurn[] = [];
   for (const run of runs) {
-    const turn = turns.find((candidate) => candidate.userMessageId === run.userMessageId);
+    const key = run.userMessageId ?? run.runId;
+    const turn = turns.find((candidate) => candidate.key === key);
     if (turn) turn.runs.push(run);
-    else turns.push({ userMessageId: run.userMessageId, runs: [run] });
+    else turns.push({ key, runs: [run] });
   }
   return turns;
 }

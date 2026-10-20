@@ -107,6 +107,8 @@ describe('one session per chat and provider', { timeout: 180_000 }, () => {
 
   it('seeds a replacement with the handoff, says in one line that the session is gone and records why', async () => {
     await turn(BUILD);
+    await worker.stop();
+    worker = startTurnWorker(t, { sessions: store, agentEnv: LISTS_SESSIONS });
     for (const file of readdirSync(store)) rmSync(join(store, file));
     const question = await turn(QUESTION);
 

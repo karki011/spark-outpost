@@ -1,12 +1,14 @@
-import type { ConversationSummary, ProviderCapabilities } from '@spark-outpost/contracts';
-import { shortLabel } from '../../chat/composer/model-options.ts';
+import {
+  shownModelName,
+  type ConversationSummary,
+  type ProviderCapabilities,
+} from '@spark-outpost/contracts';
+import { currentModel, shortLabel } from '../../chat/composer/model-options.ts';
 import { permissionState, type PermissionRisk } from '../../chat/composer/mode-summary.ts';
 import { providerName } from '../../chat/provider-name.ts';
 import { countLabel } from '../../ui/count-label.ts';
 import { memberId, type AgentChoice, type ChatDraft } from './create-draft.ts';
 import type { StartSummary } from './create-request.ts';
-
-export const AUTO_MODEL = 'Auto';
 
 export interface AgentView {
   provider: string;
@@ -29,8 +31,8 @@ export function agentView(
   capabilities: ProviderCapabilities | undefined,
 ): AgentView | null {
   if (choice.provider === null) return null;
-  const option = capabilities?.models.find((model) => model.id === choice.model);
-  const model = choice.model === null ? AUTO_MODEL : shortLabel(option?.label ?? choice.model);
+  const option = currentModel(choice, capabilities);
+  const model = option ? shownModelName(option) : shortLabel(choice.model ?? 'default');
   const provider = providerName(choice.provider);
   const permission = permissionState(
     {

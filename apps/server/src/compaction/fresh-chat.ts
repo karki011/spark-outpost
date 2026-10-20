@@ -31,9 +31,8 @@ export async function startFreshChat(
     );
     const named = continuedTitle(rows[0]?.title ?? '');
     await client.query(
-      `INSERT INTO conversations (id, workspace_id, title, title_source, provider, overrides,
-         model_routing)
-       SELECT $1, workspace_id, $3, 'user', provider, overrides, model_routing
+      `INSERT INTO conversations (id, workspace_id, title, title_source, provider, overrides)
+       SELECT $1, workspace_id, $3, 'user', provider, overrides
        FROM conversations WHERE id = $2`,
       [id, from, named],
     );

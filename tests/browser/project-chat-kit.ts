@@ -84,8 +84,6 @@ export async function projectChat(page: Page, repo: ChatRepo, level: Level): Pro
   await linkedChat(page, repo);
   await page.getByRole('button', { name: /^Model and effort/ }).click();
   const panel = pickerPanel(page);
-  await panel.getByRole('radio', { name: /^Auto/ }).click();
-  await expect(panel.getByRole('radio', { name: /^Auto/ })).toHaveAttribute('aria-checked', 'true');
   await panel.getByRole('tab', { name: /Permissions/ }).click();
   await pickPermission(page, level);
   await page.keyboard.press('Escape');

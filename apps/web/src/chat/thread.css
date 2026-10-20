@@ -82,6 +82,12 @@
   gap: 6px;
 }
 
+.on-its-own {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
 .bubble {
   max-width: 82%;
   background: var(--user);

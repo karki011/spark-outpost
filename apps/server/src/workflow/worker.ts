@@ -12,6 +12,7 @@ import { sweepSessions } from './turn-session.ts';
 import { assistantIdleCompaction, type IdleLimits } from '../companion/assistant-idle.ts';
 import type { ParkedTurns } from './parked-turns.ts';
 import { chatTarget, drainQueue, drainWaiting, type ResolveTarget } from './queue-drain.ts';
+import { watchLiveSessions } from './live-sessions.ts';
 
 export interface WorkerOptions extends ChatTurnDeps {
   concurrency: number;
@@ -93,6 +94,7 @@ export function startWorker(given: WorkerOptions): Worker {
   };
 
   options.parked?.onChange(wake);
+  const live = watchLiveSessions(options.db, options.providers, queueTarget(options), wake);
 
   const loop = (async () => {
     while (!stopped) {
@@ -104,7 +106,8 @@ export function startWorker(given: WorkerOptions): Worker {
             await recoverExpiredLeases(options.db);
             await cleanOrphanedCopies(options.db);
             await sweepChatWorktrees(options.db);
-            await sweepSessions(options.db, options.sessionLimits);
+            await live.sweep();
+            await sweepSessions(options.db, options.sessionLimits, live.workdirs());
             await assistantIdle.sweep();
             await drainWaiting(options.db, queueTarget(options));
           } finally {
@@ -125,7 +128,9 @@ export function startWorker(given: WorkerOptions): Worker {
       stopped = true;
       wake();
       await loop;
+      options.parked?.quit();
       await Promise.allSettled([...active]);
+      await live.closeAll();
     },
     async idle() {
       while (active.size > 0) await Promise.allSettled([...active]);

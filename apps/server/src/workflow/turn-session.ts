@@ -14,6 +14,7 @@ import {
   startProviderSession,
   sweepProviderSessions,
   type ContextReading,
+  type ProviderSessionRecord,
   type SweepLimits,
 } from '../persistence/provider-sessions.ts';
 import { insertCompaction, settleTokensAfter } from '../persistence/compactions.ts';
@@ -22,6 +23,7 @@ import { recordSessionCommands, sessionCommands } from '../persistence/session-c
 import type { ProviderOutput, SessionTarget } from '../providers/provider.ts';
 import type { StopReason } from './agent-turn.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
+import { sameModel, type KnownWindow } from '../usage/context-window.ts';
 import type { RunInput } from './run-input.ts';
 import { insertSessionEvent, recordAppliedSettings } from '../persistence/session-events.ts';
 import { modelChange, sessionEvent, type SessionFacts } from './session-events.ts';
@@ -53,6 +55,7 @@ type SettingsOutput = Extract<ProviderOutput, { kind: 'session_settings' }>;
 
 export interface TurnSession {
   target: SessionTarget;
+  knownWindow: KnownWindow | null;
   started(output: SessionOutput): Promise<void>;
   commands(commands: readonly AgentCommand[]): Promise<void>;
   settings(output: SettingsOutput): Promise<void>;
@@ -228,6 +231,10 @@ export async function prepareTurnSession(
       ...(handoff ? { handoff } : {}),
       ...(missed.length > 0 ? { missed } : {}),
     },
+    knownWindow:
+      previous && !switchedModel(stored, input)
+        ? { model: stored?.model ?? null, size: previous.size }
+        : null,
     noteSession,
     async started(output) {
       noteSession(output);
@@ -277,7 +284,7 @@ export async function prepareTurnSession(
         });
         return;
       }
-      if (result.outcome !== 'succeeded' || (chatTurn && !result.messageId)) {
+      if (result.outcome !== 'succeeded' || (chatTurn && !result.messageId && !input.agentCycle)) {
         await closeProviderSession(db, rowId, RESUME_REASONS.unfinished);
         return;
       }
@@ -289,6 +296,12 @@ export async function prepareTurnSession(
       });
     },
   };
+}
+
+function switchedModel(stored: ProviderSessionRecord | null, input: RunInput): boolean {
+  const chosen = input.settings.model;
+  if (chosen === null || !stored?.model) return false;
+  return !sameModel(input.provider, stored.model, chosen);
 }
 
 export interface TurnSessionDeps {
@@ -307,7 +320,8 @@ function seedChars(input: RunInput): number {
 }
 
 function resumableStop(input: RunInput, result: TurnEnd): boolean {
-  if (result.outcome !== 'cancelled' || result.stopReason !== 'cancelled') return false;
+  const stopped = result.stopReason === 'cancelled' || result.stopReason === 'quit';
+  if (result.outcome !== 'cancelled' || !stopped) return false;
   return input.parentRunId !== null || result.messageId !== null;
 }
 
@@ -355,9 +369,11 @@ export async function removeWorkdirs(paths: readonly string[]): Promise<void> {
 export async function sweepSessions(
   db: Db,
   limits: SweepLimits = DEFAULT_SWEEP_LIMITS,
+  inUse: readonly string[] = [],
 ): Promise<number> {
   const closed = await sweepProviderSessions(db, limits);
   for (const workdir of await idleWorkdirs(db, limits.idleMs)) {
+    if (inUse.includes(workdir)) continue;
     await removeWorkdirs([workdir]);
     await forgetWorkdir(db, workdir);
   }

@@ -1,12 +1,10 @@
 import { backgroundParking } from './background-parking.ts';
 import type { ParkedTurns } from './parked-turns.ts';
 import type { RunSnapshot } from '../persistence/run-snapshots.ts';
-import type { RunEvent } from '@spark-outpost/contracts';
+import { STOPPED_BY_QUIT, type RunEvent } from '@spark-outpost/contracts';
 import { sparkPreferences } from '../persistence/setup.ts';
-import { teammateBrief } from '../persistence/teammate-chats.ts';
-import { subagentBrief } from '../persistence/spark-mentions.ts';
 import { auditSparkHandoff } from './spark-audit.ts';
-import { briefWithFile } from '../projects/instructions-file.ts';
+import { editsFiles, liveTurn, sessionBrief } from './turn-facts.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { recordSuggestedTitle } from '../persistence/auto-title.ts';
@@ -48,7 +46,7 @@ import {
   recordRunMetrics,
   recordSessionSettings,
   recordTokens,
-  recordUsage,
+  spendRecorder,
 } from './run-metadata.ts';
 import { TEST_RUNNER_ALLOWLIST } from '../approvals/command-kinds.ts';
 import { proposedPlan } from '../plans/codex-plan.ts';
@@ -87,20 +85,6 @@ import { scannedObserver } from '../observations/output-scan.ts';
 import type { RunControl, StopReason } from './run-control.ts';
 
 export { startControl, type RunControl, type StopReason } from './run-control.ts';
-
-function editsFiles(input: RunInput): boolean {
-  if (input.mode !== 'do' || input.assistant || plansThisTurn(input)) return false;
-  return input.role === null;
-}
-
-async function sessionBrief(db: Db, input: RunInput) {
-  if (input.assistant) return null;
-  if (input.parentRunId && input.role !== 'spark') return null;
-  const brief = input.parentRunId
-    ? await subagentBrief(db, input.identity.runId)
-    : await teammateBrief(db, input.identity.threadId);
-  return brief ? briefWithFile(brief) : null;
-}
 
 const INBOX_POLL_MS = 1000;
 
@@ -250,7 +234,7 @@ export async function runAgentTurn(
         append,
       });
   const redaction = createRedactionFilter(secretValues);
-  const parking = backgroundParking(deps.parked, lease.runId);
+  const parking = backgroundParking(deps.parked, lease.runId, () => control.stop('quit'));
   const watch = { ...input, db: deps.db, runId: lease.runId, observations };
   const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
@@ -314,10 +298,7 @@ export async function runAgentTurn(
     const shown = asAgentReads(input);
     turnSession = await turnSessionFor(deps, shown);
     const session = turnSession;
-    const recordSpend = async (output: Extract<ProviderOutput, { kind: 'usage' }>) => {
-      const counted = session ? await session.usage(output) : output;
-      await recordUsage(deps.db, lease.runId, counted);
-    };
+    const recordSpend = spendRecorder(deps.db, lease.runId, input.provider, session);
     const recordRequest = (request: RequestUsage) =>
       recordRequestUsage(deps.db, lease.runId, request, new Date());
     const userMcp = input.assistant
@@ -382,6 +363,7 @@ export async function runAgentTurn(
       ...(preamble ? { preamble } : {}),
       ...(turnPreamble ? { turnPreamble } : {}),
       ...(session ? { session: session.target } : {}),
+      ...liveTurn(input, session),
       ...(repo.length > 0 ? { repo } : {}),
       ...(userMcp.length > 0 ? { userMcp } : {}),
       spark,
@@ -468,6 +450,7 @@ export async function runAgentTurn(
     await tasks.replied(text);
     const codexPlan = proposedPlan(text);
     if (codexPlan) await plans.propose(codexPlan, 'codex');
+    if (control.reason() === 'quit') return await ended(result('cancelled', STOPPED_BY_QUIT));
     return await ended(result(control.signal.aborted ? 'cancelled' : 'succeeded'));
   } catch (error) {
     if (error instanceof LeaseLostError || control.reason() === 'lease_lost') {
@@ -482,6 +465,7 @@ export async function runAgentTurn(
     await settleAudit();
     const reason = control.reason();
     if (reason === 'cancelled') return ended(result('cancelled'));
+    if (reason === 'quit') return ended(result('cancelled', STOPPED_BY_QUIT));
     await recordErrorDetails(deps.db, lease.runId, error).catch(() => undefined);
     const failed = failureMessage(error, reason);
     const { workspaceId, provider } = input;

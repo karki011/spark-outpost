@@ -119,7 +119,7 @@ export function AuditTimeline({ runs }: { runs: readonly AuditRunSummary[] }) {
       </p>
       {turns.map((turn, index) => (
         <TurnWaterfall
-          key={turn.userMessageId}
+          key={turn.key}
           turn={turn}
           index={index}
           now={turnTicks(turn) ? now : FROZEN_NOW}

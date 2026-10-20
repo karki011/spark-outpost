@@ -98,7 +98,7 @@ export function chatOutline(detail: OutlineSource, facts: OutlineFacts): Outline
     {
       id: run.id,
       anchor: turnAnchor(run.id),
-      label: promptLabel(userMessage?.content),
+      label: run.agentCycle ? 'Continued on its own' : promptLabel(userMessage?.content),
       reply: replyPreview(assistantMessage?.content),
       marks: order.filter((kind) => marked.get(run.id)?.has(kind)),
     },

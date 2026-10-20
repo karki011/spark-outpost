@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { EventType, SUBAGENTS_ACTIVITY, type RunEvent } from '@spark-outpost/contracts';
+import {
+  EventType,
+  STOPPED_BY_QUIT,
+  SUBAGENTS_ACTIVITY,
+  type RunEvent,
+} from '@spark-outpost/contracts';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import { listQueue } from '../src/persistence/chat-queue.ts';
@@ -163,10 +168,31 @@ describe('a Claude chat whose turn ends with background work running', { timeout
     await settled(waiting.runId);
   });
 
-  it('says it lost track of the background work when Spark stopped during the wait', async () => {
-    begin(1);
+  it('stops a turn waiting on endless background work at once on Quit, and keeps its session', async () => {
+    begin();
     const { conversationId, runId } = await send('#backgroundforever');
     await eventually(async () => (await latestRun(conversationId))?.step === WAITING, 20_000);
+
+    const started = Date.now();
+    await worker?.stop();
+    worker = null;
+
+    expect(Date.now() - started).toBeLessThan(10_000);
+    const run = await getRun(t.db, runId);
+    expect(run).toMatchObject({ status: 'cancelled', error: STOPPED_BY_QUIT });
+    await expectConformantRun(t.db, runId);
+    const sessions = await t.db.query<{ closed: boolean }>(
+      'SELECT closed_at IS NOT NULL AS closed FROM provider_sessions WHERE conversation_id = $1',
+      [conversationId],
+    );
+    expect(sessions.rows).toEqual([{ closed: false }]);
+  });
+
+  it('says it lost track of the background work when Spark stopped during the wait', async () => {
+    begin(3);
+    const { conversationId, runId } = await send('#backgroundforever');
+    await eventually(async () => (await latestRun(conversationId))?.step === WAITING, 20_000);
+    await expireLeases(t, runId);
     await worker?.stop();
     worker = null;
     await expireLeases(t, runId);

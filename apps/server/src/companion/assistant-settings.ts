@@ -134,13 +134,7 @@ export async function followAssistantSettings(
   const saved = await updateChatSettings(db, conversationId, {
     provider: target.provider,
     ...(readOnly ? { agentMode: readOnly } : {}),
-    ...(changes
-      ? {
-          model: target.pick.model,
-          effort: target.pick.effort,
-          routing: target.pick.model ? 'pinned' : 'auto',
-        }
-      : {}),
+    ...(changes ? { model: target.pick.model, effort: target.pick.effort } : {}),
   })
     .then(() => true)
     .catch(() => false);

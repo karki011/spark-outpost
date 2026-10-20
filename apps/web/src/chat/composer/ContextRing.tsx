@@ -125,7 +125,7 @@ export function ContextRing({ runs, provider, usageTotals, onAudit }: ContextRin
             style={{ strokeDashoffset: RING * (1 - Math.max(percent, reading ? 2 : 0) / 100) }}
           />
         </svg>
-        <span className="ctxpct">{percent}%</span>
+        {reading && <span className="ctxpct">{percent}%</span>}
       </button>
       <div
         ref={panelRef}

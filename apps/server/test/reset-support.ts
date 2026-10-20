@@ -21,7 +21,6 @@ export async function seedRun(t: TestDb): Promise<string> {
     depth: 'direct',
     depthSource: 'rules',
     risk: 'read-only',
-    routing: 'auto',
   });
   return sent.run.id;
 }

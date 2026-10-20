@@ -32,6 +32,7 @@ export const SHOTS_SPECS = [
 
 export const SPEC_GROUPS = {
   chat: [
+    'agent-continues',
     'attachments',
     'chat',
     'chat-clean',
@@ -43,6 +44,7 @@ export const SPEC_GROUPS = {
     'chat-ticks',
     'compaction',
     'composer-status',
+    'context-ring',
     'delete-busy-chat',
     'feedback',
     'feedback-note',
@@ -150,6 +152,7 @@ export const SPEC_GROUPS = {
     'mac-control-settings',
     'mcp-settings',
     'model-availability',
+    'model-default',
     'models',
     'onboarding',
     'onboarding-providers',

@@ -10,15 +10,16 @@ Newest first.
 
 ## October 2026
 
-| What changed                                                                                                 | What to do                                                        |
-| ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| Agents can start sub-chats themselves; phones can **Start** a draft.                                         | See [Start it](outpost-stories.md#start-it-from-a-chat).          |
-| Claude chats show **Waiting on…** for background agents, not Done.                                           | See [Background work](follow-a-turn.md#background-work).          |
-| Archiving the open chat opens a new chat; display fixes.                                                     | —                                                                 |
-| Today: readable notes, tidy short meetings, early **Join**.                                                  | See [Use it](calendar.md#use-it).                                 |
-| No line, chime or notification for a chat you're viewing. Spark Island takes the first click.                | See [Spark Island](desktop-companion.md#answer-a-card).           |
-| Browser: developer tools, network log, multi-site sign-ins, SSO handoff.                                     | See [Use the browser](use-the-browser.md).                        |
-| **Atlassian** replaces Jira. Agent deletes in Jira, Confluence and Calendar follow your mode.                | See [Connect](tickets-and-github.md#connect-atlassian-or-linear). |
-| Meetings: Scout lowers a card mid-screen; optional **Join meetings automatically**; 12-hour times.           | See [Use it](calendar.md#use-it).                                 |
-| Spark Island opens only from Scout. **Hide in screen sharing**.                                              | See [Spark Island](desktop-companion.md).                         |
-| **Today** from macOS or Google: **Month**, nudges, **Join** at 10 min, **Choose** for clashes, agent access. | See [Use it](calendar.md#use-it).                                 |
+| What changed                                                                                                                      | What to do                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Agents can start sub-chats themselves; phones can **Start** a draft.                                                              | See [Start it](outpost-stories.md#start-it-from-a-chat).          |
+| Model picker changed: no **Auto**; chats show their model.                                                                        | See [Pick a model](agent-mode.md#pick-a-model).                   |
+| Agents stay running between messages; **Continued on its own** turns; **Waiting on…** for background agents; **Stopped by Quit**. | See [Background work](follow-a-turn.md#background-work).          |
+| Archiving the open chat opens a new chat; display and context ring fixes.                                                         | —                                                                 |
+| Today: readable notes, tidy short meetings, early **Join**.                                                                       | See [Use it](calendar.md#use-it).                                 |
+| No line, chime or notification for a chat you're viewing. Spark Island takes the first click.                                     | See [Spark Island](desktop-companion.md#answer-a-card).           |
+| Browser: developer tools, network log, multi-site sign-ins, SSO handoff.                                                          | See [Use the browser](use-the-browser.md).                        |
+| **Atlassian** replaces Jira. Agent deletes in Jira, Confluence and Calendar follow your mode.                                     | See [Connect](tickets-and-github.md#connect-atlassian-or-linear). |
+| Meetings: Scout lowers a card mid-screen; optional **Join meetings automatically**; 12-hour times.                                | See [Use it](calendar.md#use-it).                                 |
+| Spark Island opens only from Scout. **Hide in screen sharing**.                                                                   | See [Spark Island](desktop-companion.md).                         |
+| **Today** from macOS or Google: **Month**, nudges, **Join** at 10 min, **Choose** for clashes, agent access.                      | See [Use it](calendar.md#use-it).                                 |

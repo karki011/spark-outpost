@@ -104,7 +104,6 @@ export function orchestration(overrides: Partial<Orchestration> = {}): Orchestra
     depthSource: 'jev',
     risk: 'edits',
     level: 'hands-off',
-    routing: 'auto',
     provider: 'claude',
     planVersion: 2,
     retries: 0,

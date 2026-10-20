@@ -95,7 +95,7 @@ async function createMemberChat(
   await createConversation(db, workspaceId, chat.conversationId, { projectIds: [chat.projectId] });
   await updateChatSettings(db, chat.conversationId, {
     provider: chat.provider,
-    ...(chat.model ? { model: chat.model, routing: 'pinned' as const } : {}),
+    ...(chat.model ? { model: chat.model } : {}),
     ...(chat.agentMode ? { agentMode: chat.agentMode } : {}),
     ...(chat.level ? { level: chat.level } : {}),
   });

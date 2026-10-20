@@ -94,7 +94,6 @@ describe('the run that answers a question during a build', () => {
     depth: 'execute',
     depth_source: 'rules',
     risk: 'edits',
-    routing: 'auto',
     retries: 0,
     active_ms: 0,
     tool_calls: 0,

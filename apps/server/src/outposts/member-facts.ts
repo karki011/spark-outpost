@@ -1,4 +1,4 @@
-import { shortModelLabel } from '@spark-outpost/contracts';
+import { shownModelName } from '@spark-outpost/contracts';
 import { getCapabilities, resolveChatSettings } from '../persistence/chat-settings.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { cardFor } from '../model-cards/cards.ts';
@@ -43,8 +43,7 @@ export async function memberFacts(
     project: place.project,
     agent: agentLabel({
       provider: catalogEntry(settings.provider).name,
-      model: model ? shortModelLabel(model.label) : cardNameOf(modelId, settings.provider),
-      auto: settings.routing === 'auto',
+      model: model ? shownModelName(model) : cardNameOf(modelId, settings.provider),
     }),
     mode: mode?.label ?? settings.agentMode,
   };
