@@ -3,31 +3,45 @@ title: Keyboard shortcuts
 section: Reference
 type: reference
 order: 620
-summary: Shortcuts for chats, the Changes drawer, the Map, Tickets and Spark Island.
+summary: Shortcuts for chats, the Browser pane, the Changes drawer, the Map, Tickets and Spark Island.
 ---
 
 On Windows and Linux, use **Ctrl** for **⌘**.
 
 ## Chats
 
-| Keys                        | Action                                                    |
-| --------------------------- | --------------------------------------------------------- |
-| **⌘⇧O**                     | New chat                                                  |
-| **⌘K**                      | Search chats                                              |
-| **⌘⇧K**                     | Open **Sessions** to find and jump to a session           |
-| **⌘B**                      | Show or hide the chat list                                |
-| **Enter** / **Shift+Enter** | Send / new line                                           |
-| **Enter** / **⌘Enter**      | While a turn runs: queue / send now                       |
-| **@** / **/**               | Add a file / run a command                                |
-| **⌘⇧Y**                     | Jump to the card that waits for you                       |
-| **⌘D**                      | Open the **Changes** drawer                               |
-| **⌘⇧A**                     | Add selected text to the chat or prompt                   |
-| **⌘⇧B**                     | Show or hide the Browser pane (Mac app)                   |
-| **⌘J**                      | Join, or choose a meeting                                 |
-| **⌃\`**                     | Show or hide the terminal                                 |
-| **⌘⇧F**                     | Focus a Terminal session, or leave it                     |
-| **⌥Tab** / **⌥⇧Tab**        | Leave a Terminal session for the next or previous control |
-| **Esc**                     | Close Agent TV, a drawer or a menu                        |
+| Keys                        | Action                                  |
+| --------------------------- | --------------------------------------- |
+| **⌘⇧O**                     | New chat                                |
+| **⌘K**                      | Search chats                            |
+| **⌘⇧K**                     | Find a session in **Sessions**          |
+| **⌘B**                      | Show or hide the chat list              |
+| **Enter** / **Shift+Enter** | Send / new line                         |
+| **Enter** / **⌘Enter**      | While a turn runs: queue / send now     |
+| **@** / **/**               | Add a file / run a command              |
+| **⌘⇧Y**                     | Jump to the card that waits for you     |
+| **⌘D**                      | Open the **Changes** drawer             |
+| **⌘⇧A**                     | Add selected text to the chat or prompt |
+| **⌘⇧B**                     | Show or hide the Browser pane (Mac app) |
+| **⌘J**                      | Join, or choose a meeting               |
+| **⌃\`**                     | Show or hide the terminal               |
+| **⌘⇧F**                     | Focus a Terminal session, or leave it   |
+| **⌥Tab** / **⌥⇧Tab**        | Leave a Terminal session                |
+| **Esc**                     | Close Agent TV, a drawer or a menu      |
+
+## Browser pane, Mac app
+
+When the pane has focus:
+
+| Keys                      | Action                         |
+| ------------------------- | ------------------------------ |
+| **⌘T** / **⌘W** / **⌘⇧T** | New, close, reopen a tab       |
+| **⌘1**–**⌘8** / **⌘9**    | That tab / the last tab        |
+| **⌃Tab** / **⌃⇧Tab**      | Next / previous tab            |
+| **⌘L** / **⌘⇧C**          | Address bar / copy the address |
+| **⌘R** / **⌘⇧R**          | Reload / hard reload           |
+| **⌘[** / **⌘]**           | Back / forward                 |
+| **⌘F**                    | Find in page                   |
 
 ## Cards
 

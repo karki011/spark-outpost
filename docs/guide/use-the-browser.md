@@ -14,7 +14,7 @@ Open pages beside a chat for you and the agent. About 2 minutes. Mac app only.
 2. Type an address, like `localhost:5173`; press **Enter**.
 3. **+** adds a tab.
 
-Chat links open here; **⌘**-click opens yours.
+Chat links open here; **⌘**-click opens yours. Copy buttons work for your clicks, not an agent's. [Keys](keyboard-shortcuts.md#browser-pane-mac-app).
 
 ## Let the agent look and browse
 
