@@ -179,7 +179,7 @@
 
 @keyframes tl-pulse {
   0% {
-    background-color: color-mix(in srgb, var(--accent) 30%, transparent);
+    background-color: color-mix(in srgb, var(--accent) 18%, transparent);
   }
 }
 
