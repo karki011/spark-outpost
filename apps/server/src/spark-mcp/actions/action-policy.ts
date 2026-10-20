@@ -80,8 +80,8 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     'tickets?|issues?|comments?|[A-Z][A-Z0-9]+-\\d+|summary|description|labels?|priority',
   ),
   start_outpost: asked(
-    'start|split|spin up|kick off|launch|create|open|run',
-    'sub-?chats?|chats?|outposts?|sub-?tasks?',
+    'start|split|spin up|kick off|launch|create',
+    'sub-?chats?|outposts?|sub-?tasks?|parallel chats?|separate chats?',
   ),
   confluence_edit: asked(
     'create|write|add|draft|publish|change|update|edit|rename|rewrite|delete|remove|trash|comment|post',
