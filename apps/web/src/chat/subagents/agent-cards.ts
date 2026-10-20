@@ -36,10 +36,6 @@ export function agentsLine(counts: AgentCounts): string {
   );
 }
 
-export function agentsWorking(counts: AgentCounts): string {
-  return `${counts.working} of ${agents(counts.total)} working`;
-}
-
 export function agentPurpose(task: string, name: string): string | null {
   const text = task.trim();
   if (text === '' || text === name) return null;

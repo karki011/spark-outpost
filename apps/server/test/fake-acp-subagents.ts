@@ -84,7 +84,7 @@ export async function subagentsTurn(
     messageId: 'report',
     content: { type: 'text', text: 'Found 4 routes and moved them.' },
   });
-  await send(rootId, {
+  const completed = {
     sessionUpdate: 'subagent_state_update',
     subagentSessionId: 'sub-1',
     state: 'completed',
@@ -94,7 +94,9 @@ export async function subagentsTurn(
         summary: 'Moved 4 routes',
       },
     },
-  });
+  };
+  await send(rootId, completed);
+  await send(rootId, completed);
   await end(rootId, 'sub-2', 'failed');
   await say('All done');
   return 'end_turn';

@@ -156,10 +156,10 @@ describe("an agent's own sub-agents in a chat turn", { timeout: 40_000 }, () => 
     );
   });
 
-  it('shows the chat as waiting on its sub-agents, and stops them with the turn', async () => {
+  it('shows the chat as waiting on its sub-agents, counts them and stops them with the turn', async () => {
     const { conversationId, runId } = await send('#subagentshold');
     await eventually(
-      async () => (await latestStep(conversationId)) === 'Waiting on 2 sub-agents',
+      async () => (await latestStep(conversationId)) === '2 of 2 agents working',
       20_000,
     );
     expect((await latestRun(conversationId))?.waitingOn).toBe(2);

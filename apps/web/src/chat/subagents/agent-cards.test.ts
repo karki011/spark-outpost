@@ -6,7 +6,6 @@ import {
   agentMeta,
   agentPurpose,
   agentsLine,
-  agentsWorking,
 } from './agent-cards.ts';
 
 function row(change: Partial<SubagentRow>): SubagentRow {
@@ -32,7 +31,6 @@ describe('the sub-agents line', () => {
       row({ id: 'c' }),
     ]);
     expect(agentsLine(counts)).toBe('Waiting on 2 agents · 1 done · writing up when all finish');
-    expect(agentsWorking(counts)).toBe('2 of 3 agents working');
   });
 
   it('sums up once every agent has ended', () => {

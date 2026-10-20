@@ -36,7 +36,7 @@ async function collect(prompt: string) {
 }
 
 describe('ACP provider with an agent that reports its sub-agents', { timeout: 20_000 }, () => {
-  it('records each sub-agent, attributes its tool calls and keeps its words out of the reply', async () => {
+  it('records each sub-agent, attributes its tool calls and keeps its words and commands out of the reply', async () => {
     const outputs = await collect('#subagents');
     expect(replyText(outputs)).toBe('Launching. All done');
     const lifecycle = outputs.filter(
@@ -93,11 +93,13 @@ describe('ACP provider with an agent that reports its sub-agents', { timeout: 20
         usage: { tokens: 3400, toolUses: 3, durationMs: 41_000 },
         message: 'Found 4 routes and moved them.',
       },
+      { id: 'sub-1', usage: { tokens: 3400, toolUses: 3, durationMs: 41_000 } },
     ]);
     const closed = outputs.flatMap((output) =>
       output.kind === 'step_finished' && output.subagent ? [output.subagent] : [],
     );
     expect(closed).toEqual(['sub-1', 'sub-2', 'sub-3', 'sub-1', 'sub-1', 'sub-1', 'sub-2']);
+    expect(outputs.filter((output) => output.kind.startsWith('command_'))).toEqual([]);
     const calls = outputs.flatMap((output) =>
       output.kind === 'tool_started' ? [[output.id, output.subagent]] : [],
     );

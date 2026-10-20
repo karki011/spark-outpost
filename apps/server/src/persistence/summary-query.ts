@@ -38,6 +38,11 @@ export const summaryQuery = `
         AND e.payload->>'activityType' = 'subagents'
       ORDER BY e.seq DESC LIMIT 1
     ) END AS latest_run_wait,
+    CASE WHEN r.status = 'running' THEN (
+      SELECT jsonb_agg(e.payload ORDER BY e.seq) FROM run_events e
+      WHERE e.run_id = r.id
+        AND e.type IN ('SUBAGENT_STARTED', 'SUBAGENT_FINISHED', 'SUBAGENT_ERROR')
+    ) END AS latest_run_agents,
     CASE WHEN r.status = 'succeeded' THEN (
       SELECT CASE WHEN strpos(work.text, '${NEEDS_YOU_PREFIX}') > 0 THEN work.text END
       FROM (${workReply('r.id', 'm.content')}) work

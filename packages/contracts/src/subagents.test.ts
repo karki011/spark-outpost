@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { EventType, type RunEvent } from './run-events.ts';
 import { SUBAGENT_REPORT, subagentUsageParts } from './subagent-report.ts';
 import {
+  agentsWorkingLabel,
   applySubagentEvent,
   emptySubagentRoster,
+  rosterCounts,
   OWN_SUBAGENT_METADATA,
   SUBAGENTS_ACTIVITY,
-  subagentSummary,
   waitingOnLabel,
 } from './subagents.ts';
 
@@ -181,11 +182,7 @@ describe('sub-agent roster', () => {
     expect(applySubagentEvent(roster, wait(0))).toBe(roster);
   });
 
-  it('words the summary and the waiting line', () => {
-    expect(subagentSummary([{ state: 'working' }, { state: 'working' }, { state: 'done' }])).toBe(
-      '3 sub-agents · 2 working, 1 done',
-    );
-    expect(subagentSummary([{ state: 'failed' }])).toBe('1 sub-agent · 1 failed');
+  it('words the waiting line', () => {
     expect(waitingOnLabel(2)).toBe('Waiting on 2 sub-agents');
     expect(waitingOnLabel(1)).toBe('Waiting on 1 sub-agent');
     expect(waitingOnLabel(2, { agents: 2, tasks: 0, names: [] })).toBe(
@@ -235,5 +232,26 @@ describe('sub-agent roster', () => {
     expect(applySubagentEvent(waiting, { type: EventType.RUN_FINISHED } as RunEvent)).toMatchObject(
       { waitingOn: 0, background: null },
     );
+  });
+
+  it('counts the working agents out of all of them', () => {
+    const roster = fold([
+      started('a'),
+      started('b'),
+      { type: EventType.SUBAGENT_FINISHED, subagentRunId: 'a', timestamp: 20 } as RunEvent,
+    ]);
+    expect(rosterCounts(roster)).toEqual({ working: 1, total: 2 });
+    expect(agentsWorkingLabel(1, 2)).toBe('1 of 2 agents working');
+    expect(agentsWorkingLabel(1, 1)).toBe('1 of 1 agent working');
+  });
+
+  it('keeps one usage figure when the end is reported twice', () => {
+    const report = {
+      type: EventType.CUSTOM,
+      name: SUBAGENT_REPORT,
+      value: { id: 'a', usage: { tokens: 3400, durationMs: 41_000 } },
+    } as RunEvent;
+    const roster = fold([started('a'), report, report]);
+    expect(roster.rows[0]?.usage).toEqual({ tokens: 3400, durationMs: 41_000 });
   });
 });

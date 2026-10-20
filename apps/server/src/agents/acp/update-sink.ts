@@ -4,6 +4,7 @@ import { modeName, type SettingsSession } from './apply-settings.ts';
 import type { CommandTracker } from './command-output.ts';
 import type { RailWatch } from './rail-watch.ts';
 import type { RanModelWatch } from './ran-model.ts';
+import { subagentMark } from './subagent-stream.ts';
 import type { TurnMapper } from './subagent-updates.ts';
 
 export interface UpdateSink {
@@ -24,7 +25,7 @@ export function updateSink(sink: UpdateSink): (update: SessionUpdate) => Promise
     if (update.sessionUpdate === 'current_mode_update') live.adoptMode(update.currentModeId);
     push(mapper.map(update));
     push(sink.ranModel.see(update));
-    push(sink.commands.see(update));
+    if (subagentMark(update)?.event !== 'update') push(sink.commands.see(update));
     const observed = await sink.rails?.observe(update);
     for (const flag of sink.flagsRails ? (observed?.rails ?? []) : []) {
       push([{ kind: 'rail_flag', flag }]);
