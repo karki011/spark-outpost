@@ -18,6 +18,7 @@ import { MAP } from './map-pairs.ts';
 import { PHONE } from './phone-pairs.ts';
 import { PULL_REQUESTS } from './pull-request-pairs.ts';
 import { RAIL_CLOCK } from './rail-clock-pairs.ts';
+import { CALENDAR_SELECTION } from './calendar-selection-pairs.ts';
 import { TICKETS } from './ticket-pairs.ts';
 import { surfaceText, type HuePair, type Pair, type PairKind } from './pair-types.ts';
 
@@ -66,6 +67,7 @@ export const PAIRS: Pair[] = [
   ...PULL_REQUESTS,
   ...COMMANDS,
   ...RAIL_CLOCK,
+  ...CALENDAR_SELECTION,
 ];
 
 export const HUE_PAIRS: HuePair[] = [

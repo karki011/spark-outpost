@@ -58,20 +58,44 @@
   text-align: left;
 }
 
-.tl-ev b {
+.tl-ev > * {
+  flex: none;
+  min-width: 0;
+}
+
+.tl-ev > b {
   display: -webkit-box;
   overflow: hidden;
   font-weight: 600;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: var(--tl-title-lines, 1);
 }
 
-.tl-ev[data-short] b {
-  -webkit-line-clamp: 1;
+.tl-one {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.tl-ev[data-clash] b {
+.tl-one b {
+  font-weight: 600;
+}
+
+.tl-at {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.tl-ev[data-rows='1'] {
+  justify-content: center;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.tl-ev[data-clash] > b,
+.tl-ev[data-clash] .tl-one {
   padding-right: 16px;
 }
 
@@ -89,8 +113,11 @@
 }
 
 .tl-meta {
+  overflow: hidden;
   color: var(--muted);
   font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tl-meta .cal-clip {
@@ -114,7 +141,8 @@
 }
 
 .tl-ev[data-ended] b,
-.tl-ev[data-ended] .tl-meta {
+.tl-ev[data-ended] .tl-meta,
+.tl-ev[data-ended] .tl-at {
   color: var(--faint);
 }
 
@@ -133,24 +161,25 @@
 .tl-ev[aria-expanded='true'],
 .tl-allday-ev[aria-expanded='true'] {
   z-index: 2;
-  border-color: var(--accent);
   background: var(--accent-soft);
-  box-shadow:
-    0 0 0 2px var(--accent),
-    0 6px 18px rgba(0, 0, 0, 0.22);
+}
+
+.tl-ev[aria-expanded='true'] b,
+.tl-ev[aria-expanded='true'] .tl-meta,
+.tl-ev[aria-expanded='true'] .tl-at,
+.tl-allday-ev[aria-expanded='true'] {
+  color: var(--accent-text);
 }
 
 @media (prefers-reduced-motion: no-preference) {
   [data-pulse] {
-    animation: tl-pulse 0.7s ease-out 2;
+    animation: tl-pulse 1.2s ease-out 1;
   }
 }
 
 @keyframes tl-pulse {
-  50% {
-    box-shadow:
-      0 0 0 5px var(--accent),
-      0 6px 18px rgba(0, 0, 0, 0.22);
+  0% {
+    background-color: color-mix(in srgb, var(--accent) 18%, transparent);
   }
 }
 
@@ -164,7 +193,8 @@
   background: var(--warn);
 }
 
-.tl-ev:focus-visible {
+.tl-ev:focus-visible,
+.tl-allday-ev:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -237,10 +267,6 @@
   color: var(--danger);
   font-family: var(--font-mono);
   font-size: 11px;
-}
-
-.tl-ev[data-short] .tl-meta {
-  display: none;
 }
 
 .tl-allday {

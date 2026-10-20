@@ -151,13 +151,31 @@
 .cal-agenda,
 .cal-conf p {
   margin: 0;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.cal-conf p {
+  white-space: pre-wrap;
 }
 
 .cal-agenda {
   max-height: 16em;
   overflow: auto;
+}
+
+.cal-agenda p,
+.cal-agenda ul,
+.cal-agenda ol {
+  margin: 0 0 6px;
+}
+
+.cal-agenda > :last-child {
+  margin-bottom: 0;
+}
+
+.cal-agenda ul,
+.cal-agenda ol {
+  padding-left: 18px;
 }
 
 .cal-conf summary {
@@ -285,4 +303,22 @@ button.cal-person:hover {
   gap: 10px;
   min-width: 0;
   margin: 8px 0 12px;
+}
+
+.cal-join-early {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cal-join-early .btn[aria-disabled='true'] {
+  color: var(--muted);
+  cursor: default;
+  opacity: 1;
+}
+
+.cal-join-early small {
+  color: var(--muted);
+  font-size: 12px;
 }

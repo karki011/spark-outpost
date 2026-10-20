@@ -69,3 +69,21 @@ export function hourMarks(span: TimelineSpan): number[] {
   for (let at = span.start; at <= span.end; at += 3_600_000) marks.push(at);
   return marks;
 }
+
+const BLOCK_CHROME_PX = 8;
+const TITLE_LINE_PX = 17;
+const TAG_LINE_PX = 15;
+const META_LINE_PX = 16;
+
+export interface BlockRows {
+  rows: 1 | 2 | 3;
+  titleLines: 1 | 2;
+}
+
+export function blockRows(height: number): BlockRows {
+  const room = height - BLOCK_CHROME_PX;
+  if (room < TITLE_LINE_PX + META_LINE_PX) return { rows: 1, titleLines: 1 };
+  if (room < TITLE_LINE_PX + TAG_LINE_PX + META_LINE_PX) return { rows: 2, titleLines: 1 };
+  const twoTitles = room >= 2 * TITLE_LINE_PX + TAG_LINE_PX + META_LINE_PX;
+  return { rows: 3, titleLines: twoTitles ? 2 : 1 };
+}

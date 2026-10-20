@@ -121,4 +121,16 @@ describe('JoinButton', () => {
       (screen.getByRole('button', { name: 'Standup has ended' }) as HTMLButtonElement).disabled,
     ).toBe(true);
   });
+
+  it('shows a quiet Join with its opening time in the panels before the window', () => {
+    const open = vi.fn();
+    vi.stubGlobal('open', open);
+    render(<JoinButton event={standup} now={at(9)} label="Join Zoom" early="subtle" />);
+    const button = screen.getByRole('button', { name: 'Join Zoom Standup' });
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    expect(button.getAttribute('title')).toBe('Join opens at 9:50 AM');
+    expect(screen.getByText('Opens at 9:50 AM').id).toBe(button.getAttribute('aria-describedby'));
+    button.click();
+    expect(open).not.toHaveBeenCalled();
+  });
 });

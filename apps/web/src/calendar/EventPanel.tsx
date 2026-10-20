@@ -16,7 +16,7 @@ import { ClashTag } from './ClashTag.tsx';
 import { dateOf, span } from './calendar-format.ts';
 import { EventInfo } from './EventDetails.tsx';
 import { JoinButton } from './JoinButton.tsx';
-import { joinHint, openJoin } from './today-model.ts';
+import { openJoin } from './today-model.ts';
 
 interface EventPanelProps {
   id: string;
@@ -24,7 +24,6 @@ interface EventPanelProps {
   date: string;
   calendars: ReadonlyMap<string, CalendarChoice>;
   clashes?: readonly string[] | undefined;
-  isToday: boolean;
   now: number;
   onStartChat: (text: string) => void;
 }
@@ -52,25 +51,24 @@ function Act(props: {
   );
 }
 
-function JoinRow({ event, isToday, now }: { event: CalendarEvent; isToday: boolean; now: number }) {
+function JoinRow({ event, now }: { event: CalendarEvent; now: number }) {
   const link = event.link;
   if (!link) return null;
-  const open = isToday && joinOpen(spanOf(event), now);
-  const hint = isToday ? joinHint(event, now) : null;
+  const open = joinOpen(spanOf(event), now);
   const host = link.unwrappedFrom
     ? `${link.host}, unwrapped from ${link.unwrappedFrom}`
     : link.host;
-  const when = open ? ' · opens in your browser or app' : hint ? ` · Join opens ${hint}` : '';
   return (
     <div className="td-join">
       <JoinButton
         event={event}
-        now={isToday ? now : 0}
+        now={now}
         label={`Join ${CALENDAR_SERVICE_NAMES[link.service]}`}
+        early="subtle"
       />
       <small>
         {host}
-        {when}
+        {open && ' · opens in your browser or app'}
       </small>
     </div>
   );
@@ -114,12 +112,11 @@ export function EventMeta({ event, date, calendars }: EventMetaProps) {
 
 interface EventActionsProps {
   event: CalendarEvent;
-  isToday: boolean;
   now: number;
   onStartChat: (text: string) => void;
 }
 
-export function EventActions({ event, isToday, now, onStartChat }: EventActionsProps) {
+export function EventActions({ event, now, onStartChat }: EventActionsProps) {
   const mark = useMark(event);
   const occurrence = { eventId: event.id, start: event.start, calendarKey: event.calendarKey };
   const google = isGoogleEventId(event.id);
@@ -146,7 +143,7 @@ export function EventActions({ event, isToday, now, onStartChat }: EventActionsP
   const error = mark.error ?? openInCalendar.error ?? startChat.error;
   return (
     <>
-      <JoinRow event={event} isToday={isToday} now={now} />
+      <JoinRow event={event} now={now} />
       <Act
         icon={<ExternalLinkIcon />}
         label={google ? 'Open in Google Calendar' : 'Open in Calendar'}
@@ -192,7 +189,6 @@ export function EventPanel({
   date,
   calendars,
   clashes,
-  isToday,
   now,
   onStartChat,
 }: EventPanelProps) {
@@ -206,7 +202,7 @@ export function EventPanel({
         </p>
       )}
       <EventInfo event={event} now={now} />
-      <EventActions event={event} isToday={isToday} now={now} onStartChat={onStartChat} />
+      <EventActions event={event} now={now} onStartChat={onStartChat} />
     </section>
   );
 }
