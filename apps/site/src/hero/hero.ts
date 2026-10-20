@@ -19,10 +19,14 @@ export function setUpHero(): void {
   if (!stage || !poke) return;
   if (reducedMotion() || !webglAvailable()) return;
   whenIdle(async () => {
-    await document.fonts.load('600 36px "Geist Variable"').catch(() => []);
-    const { startScoutScene } = await import('./scout-scene.ts');
-    await startScoutScene(stage, poke);
-    stage.dataset.live = 'true';
-    poke.hidden = false;
+    try {
+      await document.fonts.load('600 36px "Geist Variable"').catch(() => []);
+      const { startScoutScene } = await import('./scout-scene.ts');
+      await startScoutScene(stage, poke);
+      stage.dataset.live = 'true';
+      poke.hidden = false;
+    } catch {
+      stage.querySelector('canvas')?.remove();
+    }
   });
 }

@@ -26,6 +26,7 @@ import { createOrbitCards, type CardPalette } from './orbit-cards.ts';
 import { createScout, SCOUT_TEAL, SPARK_AMBER } from './scout-mesh.ts';
 
 const SPARK_COUNT = 70;
+const REST_AFTER_MS = 6000;
 
 function token(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -149,6 +150,8 @@ export function startScoutScene(host: HTMLElement, poke: HTMLButtonElement): Pro
   let hopSpeed = 0;
   let nextBlink = 2.5;
   let narrow = false;
+  let lastActive = performance.now();
+  let resting = false;
 
   const onPointer = (event: PointerEvent) => {
     const rect = host.getBoundingClientRect();
@@ -157,11 +160,14 @@ export function startScoutScene(host: HTMLElement, poke: HTMLButtonElement): Pro
       -1.5,
       Math.min(1.5, -(((event.clientY - rect.top) / rect.height) * 2 - 1)),
     );
+    wake();
   };
   poke.addEventListener('click', () => {
     squashSpeed += 5.5;
     hopSpeed += 3.2;
+    wake();
   });
+  poke.addEventListener('focus', () => wake());
 
   const resize = () => {
     const width = host.clientWidth;
@@ -183,6 +189,11 @@ export function startScoutScene(host: HTMLElement, poke: HTMLButtonElement): Pro
 
   const frame = () => {
     if (!running) return;
+    if (performance.now() - lastActive > REST_AFTER_MS && Math.abs(squashSpeed) < 0.01) {
+      resting = true;
+      sync();
+      return;
+    }
     const delta = Math.min(clock.getDelta(), 0.05);
     const time = clock.elapsedTime;
     look.x += (pointer.x - look.x) * Math.min(1, delta * 6);
@@ -221,21 +232,28 @@ export function startScoutScene(host: HTMLElement, poke: HTMLButtonElement): Pro
     requestAnimationFrame(frame);
   };
 
-  const sync = () => {
-    const shouldRun = onScreen && document.visibilityState === 'visible';
+  function sync() {
+    const shouldRun = onScreen && !resting && document.visibilityState === 'visible';
     if (shouldRun === running) return;
     running = shouldRun;
-    if (running) {
-      clock.getDelta();
-      window.addEventListener('pointermove', onPointer, { passive: true });
-      requestAnimationFrame(frame);
-    } else {
-      window.removeEventListener('pointermove', onPointer);
-    }
-  };
+    if (!running) return;
+    clock.getDelta();
+    requestAnimationFrame(frame);
+  }
+  function wake() {
+    lastActive = performance.now();
+    resting = false;
+    sync();
+  }
   onVisibility(host, (visible) => {
     onScreen = visible;
-    sync();
+    if (visible) {
+      window.addEventListener('pointermove', onPointer, { passive: true });
+      wake();
+    } else {
+      window.removeEventListener('pointermove', onPointer);
+      sync();
+    }
   });
   document.addEventListener('visibilitychange', sync);
   return ready;
