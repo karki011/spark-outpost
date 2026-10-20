@@ -6,7 +6,7 @@ order: 712
 summary: Fixes for a provider that won't connect, a rejected key, an empty model picker, a failing test message and rate limits.
 ---
 
-Open **Settings → AI providers** and select the provider's tile. The message under **Test** says what's wrong.
+In **Settings → AI providers**, select the provider's tile; the message under **Test** says what's wrong.
 
 ## A provider won't connect
 

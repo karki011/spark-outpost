@@ -32,10 +32,6 @@ Spark keeps changes by itself, in a **Changes kept** record: files, lines, commi
 
 **Revert file** restores one file, or deletes one the run created. It refuses a file changed since. Commits and pushes stay. The agent is told next turn.
 
-Only the agent's own edits are counted and reverted, not changes it pulls in from the main branch. In a folder without git, only what its edit tools changed counts; a command's changes go unseen.
-
-## Checks
-
-Spark runs no tests itself; the agent runs your checks and says what it verified.
+Only the agent's own edits count and revert, not changes pulled in from the main branch. Without git, only its edit tools' changes count; a command's go unseen.
 
 **Next:** [Manage a long chat](compaction.md)

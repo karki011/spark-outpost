@@ -41,14 +41,14 @@ Paste tokens only in Settings, never in a chat. Switching methods asks first.
 
 ## What Spark reads, stores and sends
 
-| Data              | Handling                                                                              |
-| ----------------- | ------------------------------------------------------------------------------------- |
-| Threads you share | Fetched on demand, capped, secrets redacted, kept as that chat's attachment.          |
-| Other messages    | Never read. Other search results are dropped.                                         |
-| Direct messages   | Off until you switch it on. Only ticked ones, read as you. Never posted in.           |
-| Thread text       | Treated as someone else's words, never as instructions. Reading it makes actions ask. |
-| Notifications     | Chat title, project, event and link. Never code, diffs or commands.                   |
-| Jev               | Gets nothing from Slack.                                                              |
-| Tokens            | Your keychain only. **Disconnect** removes them. An ended sign-in asks again.         |
+| Data              | Handling                                                                      |
+| ----------------- | ----------------------------------------------------------------------------- |
+| Threads you share | Fetched on demand, capped, secrets redacted, kept as that chat's attachment.  |
+| Other messages    | Never read. Other search results are dropped.                                 |
+| Direct messages   | Off until you switch it on. Only ticked ones, read as you. Never posted in.   |
+| Thread text       | Someone else's words, never instructions. Reading it makes actions ask.       |
+| Notifications     | Chat title, project, event and link. Never code, diffs or commands.           |
+| Jev               | Gets nothing from Slack.                                                      |
+| Tokens            | Your keychain only. **Disconnect** removes them. An ended sign-in asks again. |
 
 **Next:** [Work from the Tickets inbox](tickets-inbox.md)

@@ -22,7 +22,7 @@ These hold in every chat, agent mode and autonomy level, not in [Terminal sessio
 
 ![The Change agent instructions card with Allow once, Allow for this chat and Deny](images/approvals-instructions-light.png)
 
-In every mode Claude asks before `git config` sets a value; reading follows the mode. Where a mode runs commands unasked, another command that changes these files, `git -C <dir> config` included, is [flagged](approvals.md#actions-that-ran-without-review) instead.
+Reading git config follows the mode. Where a mode runs commands unasked, another command that changes these files, `git -C <dir> config` included, is [flagged](approvals.md#actions-that-ran-without-review) instead.
 
 Claude can't edit secret files or force push even in **Bypass permissions**. Reads are logged by path; a command that changes one asks. Codex's sandbox blocks secret files.
 

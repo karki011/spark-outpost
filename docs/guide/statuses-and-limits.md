@@ -18,14 +18,14 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 
 ## Chat list
 
-A dot shows what happened since you last opened the chat; point at it.
+A dot shows changes since you last opened the chat; point at it.
 
-| Dot                         | Means                                                        |
-| --------------------------- | ------------------------------------------------------------ |
-| **Working**: a pulsing ring | A turn, background agents or a Terminal session are running. |
-| **Waiting for you**: amber  | A card, a question, or a Terminal session waiting on you.    |
-| **Done**: green             | A turn finished.                                             |
-| **Couldn't finish**: red    | A turn failed or was interrupted.                            |
+| Dot                         | Means                                                |
+| --------------------------- | ---------------------------------------------------- |
+| **Working**: a pulsing ring | A turn, background agents or a Terminal session run. |
+| **Waiting for you**: amber  | A card, a question or a Terminal session waits.      |
+| **Done**: green             | A turn finished.                                     |
+| **Couldn't finish**: red    | A turn failed or was interrupted.                    |
 
 ## Chats and Sparks
 
@@ -44,7 +44,7 @@ A dot shows what happened since you last opened the chat; point at it.
 | **Working**   | Its turn runs; the line below says what it's doing.                                         |
 | **Needs you** | An approval card waits, or the reply ends **Needs you: …**.                                 |
 | **Answered**  | The answer is under the request.                                                            |
-| **Failed**    | The turn failed and the line says why, or **Not delivered: …**.                             |
+| **Failed**    | The turn failed, saying why, or **Not delivered: …**.                                       |
 | **Cancelled** | You cancelled it or stopped its turn.                                                       |
 
 ## Ticket groups
@@ -55,17 +55,17 @@ A dot shows what happened since you last opened the chat; point at it.
 | **In progress with Spark** | A linked chat is running.                     |
 | **Started**                | In progress in your tracker, no chat running. |
 | **Up next**                | Assigned to you and not started.              |
-| **In review / PR open**    | In review or PR open, with a checks badge.    |
+| **In review / PR open**    | Either, with a checks badge.                  |
 | **Done recently**          | Done, or its PR merged, in the last 7 days.   |
 
 ## Map status
 
-| Status             | Means                                                 |
-| ------------------ | ----------------------------------------------------- |
-| **Updated** _time_ | Up to date.                                           |
-| **Waiting**        | The build hasn't started.                             |
-| **Paused**         | Agents are running. The map resumes when they finish. |
-| **Map failed**     | Point at it to read why.                              |
+| Status             | Means                                 |
+| ------------------ | ------------------------------------- |
+| **Updated** _time_ | Up to date.                           |
+| **Waiting**        | The build hasn't started.             |
+| **Paused**         | Agents are running; it resumes after. |
+| **Map failed**     | Point at it for why.                  |
 
 ## Spark Island states
 

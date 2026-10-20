@@ -14,8 +14,8 @@ These come from the agent's mode or a [protected path](protected-paths.md). They
 
 | Card                                         | Means                                                                 | Buttons                                                                 |
 | -------------------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Run a command?**                           | The agent wants to run a command.                                     | **Allow**, **Always allow**, **Always allow in this project**, **Deny** |
-| **Change a file?** / **Change these files?** | The agent wants to edit.                                              | **Allow**, **Always allow**, **Deny**                                   |
+| **Run a command?**                           | A command to run.                                                     | **Allow**, **Always allow**, **Always allow in this project**, **Deny** |
+| **Change a file?** / **Change these files?** | A file edit.                                                          | **Allow**, **Always allow**, **Deny**                                   |
 | **Change agent instructions?**               | An edit to `AGENTS.md`, `CLAUDE.md` and similar.                      | **Allow once**, **Allow for this chat**, **Deny**                       |
 | **Change git hooks or config?**              | An edit to `.git/hooks`, `.git/config` or `git config`.               | **Hold to allow once**, **Deny**                                        |
 | **Force push?**                              | A push that rewrites remote history.                                  | **Hold to force push**, **Deny**                                        |
