@@ -110,6 +110,7 @@ export const PASSED_ENV = [
   'SPARK_CALENDAR_SEED_ONE',
   'SPARK_FAKE_OPEN_EXTERNAL',
   'SPARK_TEST_LIVE_SESSION_IDLE_MS',
+  'SPARK_VOICE_FILE_INPUT',
 ] as const;
 
 function envArgs(options: OpenOptions): string[] {

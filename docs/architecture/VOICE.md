@@ -231,9 +231,21 @@ On 2026-10-16, in the same signed **Spark Outpost Dev** shell with Microphone, I
 | Short phrases through the speaker | "who needs me" was heard as "Unici", "Unique" and similar in 5 tries, and "send it" as "Sender" and "Semi"; the same phrases as `say` WAVs through the file input were exact, with and without the hint. A one-second pre-roll did not help                                                                                                                                                        |
 | Fn twice                          | Not run: this Mac has 🌐 on Show Emoji & Symbols and Dictation on, so Spark named the setting and kept ⌥⇧V, as designed                                                                                                                                                                                                                                                                            |
 
-Still open: Fn twice (it needs **Press 🌐 key to** set to Do Nothing and Dictation off or on another shortcut); ticket matching by voice (no tracker was connected, so phrase 1's CP-49084 was not run); and short phrases spoken into the mic. "who needs me" was never heard right through the speaker, so the spoken instant answer was checked with "what's running". The WAV `testPress` path can't run in the signed shell, because `dev-app.ts` passes only the calendar variables; it last ran on 2026-10-15.
+Still open: Fn twice (it needs **Press 🌐 key to** set to Do Nothing and Dictation off or on another shortcut); ticket matching by voice (no tracker was connected, so phrase 1's CP-49084 was not run); and short phrases spoken into the mic. "who needs me" was never heard right through the speaker, so the spoken instant answer was checked with "what's running". `dev-app.ts` passes `SPARK_VOICE_FILE_INPUT`, so the WAV `testPress` path runs in the signed shell.
 
 The run found that the island kept the project list it loaded at start, so a project linked later was missing from spoken commands and the hint until a restart. A `command` listen now starts at once with the cached hint and fetches the projects alongside; the transcript is matched against the fresh list (or the cached one after 500 ms), so a hold-to-talk release is never held back by the fetch.
+
+On 2026-10-20 (the island inbox change, signed **Spark Outpost Dev** shell, throwaway data folder, microphone and Input Monitoring already granted, 🌐 set to Emoji so the shortcut was ⌥⇧V; no provider signed in): the base model downloaded through **Turn on** and matched its sha256. With `say` WAVs through `testPress`:
+
+- "reply to the deploy the site chat saying ship it after lunch" opened the island's New chat as a follow-up in **Deploy the site** with the draft "ship and after lunch" (one word misheard), and sent nothing.
+- "open the dashboards chat" showed **Found Dashboards** waiting for Enter.
+- "what tickets do I have pending" and "who needs me" were transcribed exactly, answered at once and spoken. Esc and a new press ("what's running") each stopped a spoken answer (`interrupted: true`).
+- Esc during a listen gave `cancelled` and no result.
+- The paused phrase ended at its first pause as a command (`paused`) and ran through both pauses as a dictation (`stopped`), with "add a test for it" heard as "at a test rate".
+- A start phrase naming a project that didn't exist said so and started nothing, and no chat was created during the run.
+- `lsof` showed no socket for `spark-voice`.
+
+Not run that day: Fn twice, the mic through the speakers, the Browser pane's `getUserMedia`, and the real Claude chat, Terminal and Ask Spark sends.
 
 ## Phases
 
