@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import {
+  SPARK_ACTION_OPTION,
+  browserClosedTabSchema,
   browserPaneStateSchema,
   browserPickSchema,
   browserSelectedTextSchema,
@@ -9,6 +11,7 @@ import {
   type BrowserPick,
   type BrowserSelectedText,
 } from '@spark-outpost/contracts';
+import { approvalsApi } from '../api/approvals.ts';
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 
 export interface ChatBrowser {
@@ -133,6 +136,16 @@ export function dismissAgentOpened(chatId: string): void {
 
 export function sendBrowserCommand(chatId: string, command: BrowserCommand): void {
   void desktopBrowser()?.command(chatId, command);
+}
+
+export async function closeBrowserTab(chatId: string, tabId: string): Promise<void> {
+  const answer = await desktopBrowser()
+    ?.command(chatId, { command: 'close', tabId })
+    .catch(() => null);
+  const handoff = browserClosedTabSchema.safeParse(answer).data?.handoff;
+  if (!handoff) return;
+  const decline = { optionId: SPARK_ACTION_OPTION.decline, scope: 'once' } as const;
+  await approvalsApi.decide(handoff.approvalId, decline).catch(() => undefined);
 }
 
 export function activeTab(browser: ChatBrowser): BrowserPaneTab | null {

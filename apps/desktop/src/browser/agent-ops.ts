@@ -14,7 +14,7 @@ import type { BrowserPanes } from './panes.ts';
 import { agentOpenProblem } from './request-guard.ts';
 import { SIGN_IN_TIMING, SignInError, signInOnPage } from './sign-in.ts';
 import { textFieldNodes, type DomNode } from './sensitive-nodes.ts';
-import type { PaneTab } from './tab.ts';
+import { TabClosedError, type PaneTab } from './tab.ts';
 import { BrowserOpError, refuseHeld, tabFacts, targetTab } from './op-tab.ts';
 import { chooseOpenTab } from './tab-rules.ts';
 import { isDevtoolsOp, runDevtoolsOp } from './devtools-ops.ts';
@@ -271,6 +271,7 @@ export async function runBrowserOp(
     return await endRun(panes, request);
   } catch (error) {
     if (error instanceof BrowserOpError) throw error;
+    if (error instanceof TabClosedError) throw new BrowserOpError('no_tab', error.message);
     if (error instanceof PageToolError) throw new BrowserOpError(error.code, error.message);
     if (error instanceof RefError) throw new BrowserOpError('no_ref', error.message);
     if (error instanceof SignInError) throw new BrowserOpError(error.code, error.message);

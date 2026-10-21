@@ -6,6 +6,7 @@ import {
   type BrowserHandoff,
   type BrowserHandoffAction,
 } from '@spark-outpost/contracts';
+import { BrowserHostError } from '../../../browser/host-client.ts';
 import type { Queryable } from '../../../persistence/db.ts';
 import { actionRun, postCard } from '../../actions/confirm.ts';
 import { SparkToolError, type SparkToolContext } from '../../tool.ts';
@@ -22,6 +23,8 @@ export const HANDOFF_DONE_NOTE =
 export const HANDOFF_STILL_WAITING =
   'The user has not finished signing in yet, and the tab is still theirs. Call spark_browser_sign_in with handOver true again to keep waiting; Spark sets no limit.';
 export const HANDOFF_CANCELLED = 'The user cancelled the sign-in. Do not ask again unless they do.';
+export const HANDOFF_TAB_CLOSED =
+  'The user closed the tab, so the sign-in was cancelled. Do not ask again unless they do.';
 export const HANDOFF_TAB_GONE =
   'The tab you handed over is gone, so nothing was handed back. Open the site again and check whether it is signed in before asking the user again.';
 const NOT_A_PAGE = 'Open the sign-in page in your tab first; the tab is not on a web page.';
@@ -143,9 +146,21 @@ export async function handOver(context: SparkToolContext, tab: string | undefine
   if (outcome === 'pending' && !stopped(context)) {
     return { outcome: 'waiting_for_user', tab: tabId, site, message: HANDOFF_STILL_WAITING };
   }
-  const released = await holdTab(context, tabId, null).catch(() => null);
+  let tabClosed = false;
+  const released = await holdTab(context, tabId, null).catch((error: unknown) => {
+    tabClosed = error instanceof BrowserHostError && error.code === 'no_tab';
+    return null;
+  });
+  if (outcome !== 'allowed' && stopped(context)) {
+    record(context, waiting, 'user_declined', 'stopped');
+    return { outcome: 'cancelled', tab: tabId, site, message: HANDOFF_CANCELLED };
+  }
+  if (outcome !== 'allowed' && tabClosed) {
+    record(context, waiting, 'user_declined', 'tab_closed');
+    return { outcome: 'tab_closed', tab: tabId, site, message: HANDOFF_TAB_CLOSED };
+  }
   if (outcome !== 'allowed') {
-    record(context, waiting, 'user_declined', stopped(context) ? 'stopped' : 'cancelled');
+    record(context, waiting, 'user_declined', 'cancelled');
     return { outcome: 'cancelled', tab: tabId, site, message: HANDOFF_CANCELLED };
   }
   if (!released) {
