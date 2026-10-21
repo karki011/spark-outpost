@@ -44,6 +44,16 @@ describe('railRows', () => {
     expect(rows[1]).toMatchObject({ text: 'Claude · Opus 5.5', detail: 'Plan', action: null });
   });
 
+  it('names the mode of a linked chat and reads the no-tools note plainly', () => {
+    const linked = railRows({ ...base, repoNames: ['acme-web'] })[1];
+    expect(linked?.label).toBe('Agent Claude · Opus 5.5, mode Plan');
+    const plain = railRows({ ...base, mode: 'No tools without a project' })[1];
+    expect(plain).toMatchObject({
+      detail: 'No tools without a project',
+      label: 'Agent Claude · Opus 5.5, No tools without a project',
+    });
+  });
+
   it('names the project, its branch and where the chat works', () => {
     const [project] = railRows({
       ...base,
