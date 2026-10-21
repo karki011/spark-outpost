@@ -18,6 +18,7 @@ import {
   orphanedCommandTurn,
   subagentAsksTurn,
   subagentsTurn,
+  wideSubagentTurn,
 } from './fake-acp-subagents.ts';
 import { commandTurn, reportContext } from './fake-acp-context.ts';
 import {
@@ -253,6 +254,7 @@ async function turn(
   if (text.includes(HANDBACK_TRIGGER)) return handbackTurn(client, sessionId, text, say);
   if (text.includes(LATER_TRIGGER)) return laterTurn(client, sessionId, text, say, sessionCwd);
   if (text.includes('#heldtitle')) return heldTitleTurn(say);
+  if (text.includes('#subagentswide')) return wideSubagentTurn(client, sessionId, say, signal);
   if (text.includes('#subagentsask')) return subagentAsksTurn(client, sessionId, say);
   if (text.includes('#subagents')) {
     return subagentsTurn(client, sessionId, say, text.includes('#subagentshold') ? signal : null);

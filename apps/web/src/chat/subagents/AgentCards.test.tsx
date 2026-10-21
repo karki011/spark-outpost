@@ -51,7 +51,8 @@ describe('AgentCards', () => {
     expect(cards[0]!.textContent).toContain('Done');
     expect(cards[1]!.dataset.state).toBe('working');
     expect(cards[1]!.textContent).toContain('Now: Read chat-store.ts');
-    expect(cards[1]!.textContent).toContain('grep -rn "useQuery" apps/web/src/chat');
+    expect(cards[1]!.textContent).not.toContain('grep -rn');
+    expect(cards[1]!.querySelectorAll('.ac-now')).toHaveLength(1);
     expect(cards[1]!.textContent).toContain('2 steps');
   });
 
