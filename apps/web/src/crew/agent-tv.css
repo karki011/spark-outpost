@@ -1,10 +1,13 @@
 .tv {
   position: fixed;
   z-index: 40;
-  right: 24px;
-  bottom: 24px;
+  right: var(--tv-right, 24px);
+  bottom: var(--tv-bottom, 24px);
+  display: flex;
+  flex-direction: column;
   width: max-content;
-  max-width: calc(100vw - 16px);
+  max-width: var(--tv-max-w, calc(100vw - 16px));
+  max-height: var(--tv-max-h, calc(100dvh - 16px));
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: calc(var(--r) + 4px);
@@ -21,8 +24,11 @@
     0 0 0 2px var(--accent),
     0 18px 60px rgba(0, 0, 0, 0.32);
 }
-body:has(.wp.on:not(.over)) .tv:not(.watch) {
-  right: 392px;
+.tv > .tv-stage {
+  flex: none;
+}
+.tv > .tvl {
+  min-height: 0;
 }
 @keyframes tv-in {
   from {
@@ -58,6 +64,7 @@ body:has(.wp.on:not(.over)) .tv:not(.watch) {
   }
 }
 .tv-h {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -141,6 +148,8 @@ body:has(.wp.on:not(.over)) .tv:not(.watch) {
   }
 }
 .tv-subagents {
+  contain: inline-size;
+  min-height: 72px;
   max-height: 220px;
   overflow-y: auto;
   padding: 8px 12px;
@@ -151,6 +160,8 @@ body:has(.wp.on:not(.over)) .tv:not(.watch) {
   outline-offset: -2px;
 }
 .tv-cap {
+  flex: none;
+  contain: inline-size;
   margin: 0;
   padding: 8px 12px 10px;
   border-top: 1px solid var(--line);
@@ -191,6 +202,9 @@ body:has(.wp.on:not(.over)) .tv:not(.watch) {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .tv {
+    transition: none;
+  }
   .tv,
   .tv.watch,
   .tv-dim,

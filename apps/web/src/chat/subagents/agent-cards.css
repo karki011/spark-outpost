@@ -82,15 +82,9 @@ button.ac-name:hover {
   white-space: nowrap;
 }
 
-.ac-cmd code {
+.ac-now > code {
   font-family: var(--font-mono);
   font-size: 12px;
-}
-
-.ac-cmd {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .ac-card .sa-detail {

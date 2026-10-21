@@ -5,10 +5,13 @@ import { run } from './test-run.ts';
 import { tvCaption } from './tv-caption.ts';
 import {
   bubbleBox,
-  clampToViewport,
+  chatArea,
+  clampInto,
+  dockInto,
   handoffPath,
   stageLayout,
   STAGES,
+  tvStage,
   watchStage,
   dockStage,
 } from './tv-layout.ts';
@@ -75,10 +78,33 @@ describe('Agent TV stage layout', () => {
     expect(centre).toMatchObject({ left: 90, width: 120, arrow: 60, below: false, edge: 121 });
   });
 
-  it('keeps a dragged panel inside the viewport', () => {
+  it('keeps a dragged panel inside the chat area', () => {
     const size = { width: 300, height: 320 };
-    const viewport = { width: 1000, height: 700 };
-    expect(clampToViewport({ x: -40, y: 900 }, size, viewport)).toEqual({ x: 8, y: 372 });
+    const area = { left: 100, top: 50, right: 1000, bottom: 700 };
+    expect(clampInto({ x: -40, y: 900 }, size, area)).toEqual({ x: 108, y: 372 });
+    expect(clampInto({ x: 900, y: 0 }, size, area)).toEqual({ x: 692, y: 58 });
+  });
+
+  it('docks inside the chat column, left of a side pane', () => {
+    const column = { left: 300, top: 60, right: 1400, bottom: 860 };
+    const pane = { left: 1000, top: 0, right: 1680, bottom: 1000 };
+    const area = chatArea(column, pane);
+    expect(area.right).toBe(1000);
+    expect(chatArea(column, { ...pane, left: 1500, right: 1600 })).toBe(column);
+    expect(dockInto(area, { width: 1680, height: 1000 })).toEqual({
+      right: 696,
+      bottom: 156,
+      maxWidth: 668,
+      maxHeight: 768,
+    });
+  });
+
+  it('picks the largest stage that fits and shortens it for a lone agent', () => {
+    expect(tvStage('l', null, 2)).toBe(STAGES.l);
+    expect(tvStage('l', 400, 2)).toBe(STAGES.m);
+    expect(tvStage('l', 360, 2)).toBe(STAGES.s);
+    expect(tvStage('m', 1000, 0)).toMatchObject({ width: 380, height: 234 });
+    expect(tvStage('s', 240, 1).width).toBe(240);
   });
 });
 

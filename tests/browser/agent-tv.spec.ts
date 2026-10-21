@@ -206,7 +206,7 @@ test('dragging moves the TV and the position survives a reload', async ({ page }
   const start = (await header.boundingBox())!;
   await page.mouse.move(start.x + 40, start.y + 10);
   await page.mouse.down();
-  await page.mouse.move(start.x - 300, start.y - 200, { steps: 6 });
+  await page.mouse.move(start.x - 150, start.y - 150, { steps: 6 });
   await page.mouse.up();
   const moved = (await tvOf(page).boundingBox())!;
   const { position } = (await savedTv(page)) as { position: { x: number; y: number } };
