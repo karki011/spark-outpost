@@ -7,7 +7,7 @@ import {
   type InvolvementLevel,
 } from '@spark-outpost/contracts';
 import { RadioRow } from '../../ui/RadioRow.tsx';
-import { withCurrentMode } from './mode-summary.ts';
+import { NO_PROJECT_NOTE, withCurrentMode } from './mode-summary.ts';
 
 interface ModeOptionsProps {
   provider: string;
@@ -58,7 +58,7 @@ export function ModeOptions({
           />
         ))}
       </div>
-      {hasRepos && <p className="eff-note mode-line">{combinationLine(facts)}</p>}
+      <p className="eff-note mode-line">{hasRepos ? combinationLine(facts) : NO_PROJECT_NOTE}</p>
       {warning && (
         <p className="mode-warn" role="note">
           {warning}

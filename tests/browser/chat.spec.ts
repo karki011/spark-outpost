@@ -160,16 +160,20 @@ test('the composer picks a model and effort per chat and shows context use', asy
   await expect(panel).not.toContainText('Plain chat');
   await expect(panel).not.toContainText('no folder');
   const tab = panel.getByRole('tab', { name: /Permissions/ });
-  await expect(tab).toHaveText(/Plan$/);
+  await expect(tab).toHaveText(/No file tools without a project$/);
   const modes = panel.getByRole('radiogroup', { name: 'Agent mode', exact: true });
   await modes.getByRole('radio', { name: 'Auto', exact: true }).click();
-  await expect(tab).toHaveText(/Auto$/);
+  await expect(modes.getByRole('radio', { name: 'Auto', exact: true })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(panel).toContainText('Your mode still decides whether Spark’s own tools ask first.');
   await page.keyboard.press('Escape');
   const chip = page.getByRole('button', { name: /^Permissions: / });
-  await expect(chip).toHaveAccessibleName('Permissions: Auto');
-  await expect(chip).toHaveText('Auto');
+  await expect(chip).toHaveAccessibleName('Permissions: No file tools without a project');
+  await expect(chip).toHaveText('No file tools without a project');
   await chip.hover();
-  await expect(page.getByRole('tooltip')).toHaveText('Claude handles permission decisions');
+  await expect(page.getByRole('tooltip')).toContainText('can’t read or change files');
   await page.getByRole('button', { name: 'Choose project' }).hover();
   await expect(page.getByRole('tooltip')).toHaveText(
     'Pick a project so the agent can read and change files.',

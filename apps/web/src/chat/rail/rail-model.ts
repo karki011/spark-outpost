@@ -134,11 +134,12 @@ function usageRow(facts: RailFacts): RailRow | null {
 export function railRows(facts: RailFacts): RailRow[] {
   const rows: RailRow[] = [projectRow(facts)];
   const agent = [facts.provider, facts.model].filter(Boolean).join(' · ');
+  const mode = facts.repoNames.length > 0 ? `mode ${facts.mode}` : facts.mode;
   rows.push({
     id: 'agent',
     text: agent,
     detail: facts.mode,
-    label: `Agent ${agent}, mode ${facts.mode}`,
+    label: `Agent ${agent}, ${mode}`,
     action: facts.hasTask && facts.hasStoredCrew ? { kind: 'tab', tab: 'crew' } : null,
   });
   if (facts.autonomy) {

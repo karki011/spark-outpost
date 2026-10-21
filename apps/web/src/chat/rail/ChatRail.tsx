@@ -18,7 +18,7 @@ import { useTooltip } from '../../ui/Tooltip.tsx';
 import { contextPercent, latestContext } from '../../usage/format.ts';
 import { currentModel } from '../composer/model-options.ts';
 import { unlistedPinName } from '../composer/shown-model.ts';
-import { permissionState } from '../composer/mode-summary.ts';
+import { permissionState, projectPermission } from '../composer/mode-summary.ts';
 import { requestProjectMenu } from '../project/project-menu-request.ts';
 import { useChatWorkspace } from '../project/use-chat-workspace.ts';
 import { providerName } from '../provider-name.ts';
@@ -107,7 +107,10 @@ function OpenRail({
   const picked = currentModel(settings, capabilities.data);
   const listed = picked ? shownModelName(picked) : null;
   const unlisted = unlistedPinName(settings, capabilities.data, detail.runs);
-  const mode = permissionState(settings, capabilities.data).label;
+  const mode = projectPermission(
+    permissionState(settings, capabilities.data),
+    repos.length > 0,
+  ).label;
   const rows = railRows({
     repoNames: repos.map((repo) => repo.name),
     branch: branch ? { name: branch.branch, worktree: branch.worktree } : null,

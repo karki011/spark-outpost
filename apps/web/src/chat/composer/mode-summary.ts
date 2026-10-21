@@ -85,3 +85,17 @@ export function withCurrentMode(
   if (!current || modes.some((mode) => mode.id === current)) return [...modes];
   return [...modes, { id: current, label: current, description: null, kind: null }];
 }
+
+export const NO_PROJECT_TOOLS = 'No file tools without a project';
+export const NO_PROJECT_NOTE =
+  'Without a project the agent can’t read or change files or run commands. Your mode still decides whether Spark’s own tools ask first.';
+
+export function projectPermission(state: PermissionState, hasRepos: boolean): PermissionState {
+  if (hasRepos) return state;
+  return {
+    ...state,
+    label: NO_PROJECT_TOOLS,
+    short: NO_PROJECT_TOOLS,
+    description: NO_PROJECT_NOTE,
+  };
+}

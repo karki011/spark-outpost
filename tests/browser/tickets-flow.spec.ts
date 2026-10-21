@@ -248,6 +248,14 @@ test('the grouped list has no serious accessibility issues in light, dark and at
     .click();
 
   const violations = async (label: string) => {
+    await page.evaluate(() =>
+      Promise.all(
+        document
+          .getAnimations()
+          .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+          .map((animation) => animation.finished.catch(() => null)),
+      ),
+    );
     const results = await new AxeBuilder({ page })
       .include('main.tk')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])

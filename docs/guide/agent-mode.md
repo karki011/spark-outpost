@@ -29,7 +29,7 @@ The agent picks models for its sub-agents.
 
 ## Pick the agent's mode
 
-1. Select the **Permissions** tab, or the permissions chip next to the model button.
+1. Select the **Permissions** tab, or the permissions chip next to the model button (unlinked: **No file tools without a project**).
 2. Pick a mode under **Agent mode**. The provider's default has a **Default** tag.
 
 ![The Permissions tab listing Claude's modes](images/chats-and-modes-permissions-light.png)
