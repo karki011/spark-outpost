@@ -99,6 +99,10 @@ test('clicking the agent shows its status, Go to scrolls, and Esc steps back', a
   await expect(bubble).toBeVisible();
   await expect(bubble).toContainText('Claude');
   await expect(agent(page)).toHaveAttribute('aria-expanded', 'true');
+  const stage = (await tv.locator('.tv-stage').boundingBox())!;
+  const shown = (await bubble.boundingBox())!;
+  expect(shown.y).toBeGreaterThanOrEqual(stage.y);
+  expect(shown.y + shown.height).toBeLessThanOrEqual(stage.y + stage.height);
 
   await scrollThread(page, 'top');
   await bubble.getByRole('button', { name: 'Go to' }).click();
@@ -113,6 +117,8 @@ test('clicking the agent shows its status, Go to scrolls, and Esc steps back', a
 
   const ask = tv.getByRole('button', { name: /change notes\.txt\?/i });
   await expect(ask).toBeVisible();
+  const asked = (await ask.boundingBox())!;
+  expect(asked.y).toBeGreaterThanOrEqual(stage.y);
   await scrollThread(page, 'top');
   await ask.click();
   await expect(edit).toBeInViewport();
@@ -206,7 +212,7 @@ test('dragging moves the TV and the position survives a reload', async ({ page }
   const start = (await header.boundingBox())!;
   await page.mouse.move(start.x + 40, start.y + 10);
   await page.mouse.down();
-  await page.mouse.move(start.x - 300, start.y - 200, { steps: 6 });
+  await page.mouse.move(start.x - 150, start.y - 150, { steps: 6 });
   await page.mouse.up();
   const moved = (await tvOf(page).boundingBox())!;
   const { position } = (await savedTv(page)) as { position: { x: number; y: number } };

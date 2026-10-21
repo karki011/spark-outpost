@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { emptySubagentRecord, type SubagentRow } from '@spark-outpost/contracts';
-import {
-  agentCounts,
-  agentLatestCommand,
-  agentMeta,
-  agentNow,
-  agentPurpose,
-  agentsLine,
-} from './agent-cards.ts';
+import { agentCounts, agentActivity, agentMeta, agentPurpose, agentsLine } from './agent-cards.ts';
 
 function row(change: Partial<SubagentRow>): SubagentRow {
   return {
@@ -71,9 +64,9 @@ describe('an agent card', () => {
 
   it('says what a working agent does now, falling back to its latest step', () => {
     const steps = [{ name: 'Read `a.ts`', done: true }];
-    expect(agentNow(row({ step: 'Grep', steps }))).toBe('Grep');
-    expect(agentNow(row({ steps }))).toBe('Read `a.ts`');
-    expect(agentNow(row({ steps, state: 'done' }))).toBeNull();
+    expect(agentActivity(row({ step: 'Grep', steps }))).toMatchObject({ text: 'Grep' });
+    expect(agentActivity(row({ steps }))).toMatchObject({ text: 'Read `a.ts`', full: 'Read a.ts' });
+    expect(agentActivity(row({ steps, state: 'done' }))).toBeNull();
   });
 
   it('keeps file names with dots inside the first sentence', () => {
@@ -84,8 +77,23 @@ describe('an agent card', () => {
 
   it('shows the latest command only while the agent works', () => {
     const commands = ['ls', 'grep -rn "useQuery" apps/web/src/chat'];
-    expect(agentLatestCommand(row({ commands }))).toBe(commands[1]);
-    expect(agentLatestCommand(row({ commands, state: 'done' }))).toBeNull();
+    expect(agentActivity(row({ commands }))).toEqual({
+      text: commands[1],
+      command: true,
+      full: commands[1],
+    });
+    expect(agentActivity(row({ commands, state: 'done' }))).toBeNull();
+  });
+
+  it('shows one line when the current step is the latest command', () => {
+    const command = 'cd "/tmp/x y" &&  grep -n "a\\|b" file.html';
+    const step = `Allowed \`${command.replace(/\s+/g, ' ')}\` (Bypass permissions)`;
+    expect(agentActivity(row({ step, commands: [command] }))).toMatchObject({
+      text: command,
+      command: true,
+    });
+    const reading = agentActivity(row({ step: 'Read routes.ts', commands: [command] }));
+    expect(reading).toMatchObject({ text: 'Read routes.ts', command: false });
   });
 
   it('shows the step count while working and the time and tokens when done', () => {
