@@ -21,7 +21,6 @@ import { seedChats } from './sidebar-seed.ts';
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
 const SIZES = ['small', 'medium', 'large', 'xlarge'] as const;
 const NOTCH = { width: 220, height: 38, menuBar: 44 };
-const OUT_GAP = 4;
 const deploy = {
   title: 'Deploy the site',
   run: { status: 'awaiting_approval' },
@@ -66,18 +65,25 @@ async function tuckedUnder(page: Page, size: (typeof SIZES)[number], edge: numbe
   expect(look.eyesTop).toBeGreaterThan(edge);
 }
 
-async function fullyOut(page: Page, size: (typeof SIZES)[number], edge: number) {
+async function inStrip(page: Page, edge: number) {
+  await expect(island(page)).toHaveAttribute('data-view', 'now');
   await expect(island(page)).not.toHaveClass(/\btucked\b/);
-  await expect
-    .poll(() => scoutLook(page))
-    .toMatchObject({ top: edge + OUT_GAP, size: ISLAND_BLOB[size], hidden: 0 });
+  await settled(page);
+  const look = await scoutLook(page);
+  expect(look.hidden).toBe(0);
+  expect(look.top).toBeGreaterThanOrEqual(edge);
+  const scout = (await island(page).locator('.isl-scout-wrap').boundingBox())!;
+  const drawn = (await island(page).boundingBox())!;
+  expect(scout.x + scout.width).toBeLessThan(VIEWPORT.width / 2 - NOTCH.width / 2);
+  expect(scout.x).toBeGreaterThanOrEqual(drawn.x);
+  expect(scout.y + scout.height).toBeLessThanOrEqual(drawn.y + drawn.height);
 }
 
 for (const notch of [true, false]) {
   const edge = notch ? NOTCH.menuBar : 0;
   const where = notch ? 'under a 220x38 notch' : 'at the top edge of a flat display';
   for (const size of SIZES) {
-    test(`at ${size} size the resting blob shows its lower half ${where}, comes out when a chat needs you and tucks back`, async ({
+    test(`at ${size} size the resting blob shows its lower half ${where}, moves into the strip when a chat needs you and tucks back`, async ({
       page,
     }) => {
       await resetTestDatabase({ onboarded: true });
@@ -88,13 +94,13 @@ for (const notch of [true, false]) {
       await shot(page, `${notch ? 'notch' : 'flat'}-${size}-rest`);
 
       const [chat] = await seedChats([deploy]);
-      await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
-      await expect(island(page)).toHaveAttribute('data-view', 'peek');
-      await fullyOut(page, size, edge);
+      await expect(island(page).locator('.isl-strip-count')).toHaveText('1');
+      await inStrip(page, edge);
       await shot(page, `${notch ? 'notch' : 'flat'}-${size}-needs-you`);
 
       await archive(chat!);
-      await expect(island(page).locator('.isl-pbadge')).toHaveCount(0);
+      await expect(island(page)).toHaveAttribute('data-view', 'peek');
+      await expect(island(page).locator('.isl-strip, .isl-pbadge')).toHaveCount(0);
       await tuckedUnder(page, size, edge);
     });
   }
@@ -222,14 +228,15 @@ test('a floating blob opens from its body, not the space round it', async ({ pag
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
 });
 
-test('a working chat keeps the blob out and a floating island is never tucked', async ({
+test('a working chat brings Scout out into the strip and a floating island is never tucked', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
   await seedChats([{ title: 'Fix billing totals', run: { status: 'running' }, minutesAgo: 1 }]);
   await open(page, { size: 'large' });
+  await expect(island(page).locator('.isl-strip-work')).toHaveAttribute('aria-label', '1 working');
   await expect(island(page).locator('.isl-scout-wrap svg.scout')).toHaveClass(/\bworking\b/);
-  await fullyOut(page, 'large', NOTCH.menuBar);
+  await inStrip(page, NOTCH.menuBar);
 
   await resetTestDatabase({ onboarded: true });
   await open(page, { size: 'xlarge', docked: false });
@@ -241,14 +248,19 @@ test('a working chat keeps the blob out and a floating island is never tucked', 
   await shot(page, 'floating-xlarge');
 });
 
-test('with reduced motion the blob is out or tucked at once, with no slide', async ({ page }) => {
+test('with reduced motion the blob is in the strip or tucked at once, with no slide', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await resetTestDatabase({ onboarded: true });
   await open(page, { size: 'xlarge' });
   await tuckedUnder(page, 'xlarge', NOTCH.menuBar);
   await seedChats([deploy]);
   await expect(island(page)).not.toHaveClass(/\btucked\b/);
-  expect((await scoutLook(page)).top).toBe(NOTCH.menuBar + OUT_GAP);
+  const first = await page.locator('.isl-scout-wrap').boundingBox();
+  await page.waitForTimeout(300);
+  expect(await page.locator('.isl-scout-wrap').boundingBox()).toEqual(first);
+  await inStrip(page, NOTCH.menuBar);
   expect(
     await island(page)
       .locator('.isl-scout-wrap .sc-look')
@@ -269,7 +281,7 @@ test.describe('screenshots', () => {
           await tuckedUnder(page, size, notch ? NOTCH.menuBar : 0);
           await shot(page, `${theme}-${where}-${size}-rest`);
           await seedChats([deploy]);
-          await fullyOut(page, size, notch ? NOTCH.menuBar : 0);
+          await inStrip(page, notch ? NOTCH.menuBar : 0);
           await shot(page, `${theme}-${where}-${size}-needs-you`);
         });
       }

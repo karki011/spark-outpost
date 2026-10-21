@@ -54,7 +54,7 @@ export const askSparkLabels = {
 export const assistantActsSchema = z.enum(['manual', 'act']);
 export type AssistantActs = z.infer<typeof assistantActsSchema>;
 
-export const ISLAND_REQUEST_KINDS = ['snooze_meeting', 'join_meeting', 'set_aside'] as const;
+export const ISLAND_REQUEST_KINDS = ['snooze_meeting', 'join_meeting'] as const;
 export const islandRequestKindSchema = z.enum(ISLAND_REQUEST_KINDS);
 export type IslandRequestKind = z.infer<typeof islandRequestKindSchema>;
 

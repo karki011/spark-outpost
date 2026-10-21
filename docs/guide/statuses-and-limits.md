@@ -31,7 +31,7 @@ A dot shows changes since you last opened the chat; point at it.
 
 | Status                | Where      | Means                                                                  |
 | --------------------- | ---------- | ---------------------------------------------------------------------- |
-| **Flagged by Spark**  | Island     | An unreviewed action crossed a protected path.                         |
+| **Flagged by Spark**  | Chat list  | An unreviewed action crossed a protected path; it never counts.        |
 | **Working**           | Spark card | A request in one of its chats is running.                              |
 | **Needs you**         | Spark card | A card in one of its chats waits.                                      |
 | **Done** / **Failed** | Spark card | Its latest request finished in the last hour / failed in the last day. |
@@ -69,15 +69,15 @@ A dot shows changes since you last opened the chat; point at it.
 
 ## Spark Island states
 
-| You see                                           | Means                                                       |
-| ------------------------------------------------- | ----------------------------------------------------------- |
-| Scout's eyes scan; a blob has a spinning ring     | **Working…**                                                |
-| A number badge on Scout; a blob pulses with **!** | **Needs you**                                               |
-| A dashed count on Scout                           | Set aside                                                   |
-| A happy face; a blob pops a star once             | **Done**                                                    |
-| A worried face; a grey blob with a red badge      | **Failed**                                                  |
-| A dimmed blob                                     | **Quiet**                                                   |
-| **Terminal session** on the card                  | Answer in **Open terminal**. The card never shows commands. |
+| You see                                     | Means                                                       |
+| ------------------------------------------- | ----------------------------------------------------------- |
+| Scout's eyes scan; small blobs in the strip | **Working…**                                                |
+| An amber count beside Scout                 | **Needs you**                                               |
+| A dashed count on Scout                     | Set aside                                                   |
+| A happy face                                | **Done**                                                    |
+| A worried face                              | **Failed**                                                  |
+| Scout alone                                 | **Quiet**                                                   |
+| **Terminal session** on the card            | Answer in **Open terminal**. The card never shows commands. |
 
 With **Reduce motion** on, only faces change.
 

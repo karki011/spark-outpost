@@ -37,6 +37,21 @@ describe('remote policy', () => {
     }
   });
 
+  it('lets a paired device read the inbox and mark its items, with the switches off', () => {
+    expect(remoteDecision('GET', '/api/attention', ALL_OFF).kind).toBe('allow');
+    for (const mark of ['read', 'set-aside', 'dismiss']) {
+      const path = `/api/attention/approval:${ID}/${mark}`;
+      expect([mark, remoteDecision('POST', path, ALL_OFF).kind]).toEqual([mark, 'allow']);
+    }
+    expect(remoteDecision('POST', `/api/attention/chats/${ID}/read`, ALL_OFF).kind).toBe('allow');
+    expect(remoteDecision('POST', `/api/attention/approval:${ID}/allow`, ALL_ON).kind).toBe(
+      'refuse',
+    );
+    expect(remoteDecision('DELETE', `/api/attention/approval:${ID}/read`, ALL_ON).kind).toBe(
+      'refuse',
+    );
+  });
+
   it('lets a paired device start a proposed draft as proposed, but not create or edit outposts', () => {
     expect(remoteDecision('POST', `/api/outposts/drafts/${ID}/start`, ALL_OFF).kind).toBe('allow');
     expect(remoteDecision('GET', `/api/outposts/drafts/${ID}`, ALL_ON).kind).toBe('refuse');

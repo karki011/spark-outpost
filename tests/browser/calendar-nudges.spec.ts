@@ -31,7 +31,8 @@ async function upcoming(page: Page) {
   return calendarNowSchema.parse(await response.json()).upcoming;
 }
 
-const meetings = (page: Page) => island(page).getByRole('region', { name: 'Next meeting' });
+const meetings = (page: Page) =>
+  island(page).getByRole('list', { name: 'Meetings left today' }).getByRole('listitem').first();
 const scout = (page: Page) => island(page).locator('.isl-scout-wrap svg.scout');
 
 async function soundOn(page: Page) {
@@ -84,7 +85,7 @@ test('with reduced motion the island glows instead of hopping', async ({ page })
   expect((await fakeState(page)).chimes).toBe(0);
 });
 
-test('the inbox shows the next meeting with Join while it opens, and opens Today on it', async ({
+test('Home lists the next meeting with Join while it opens, and opens Today on it', async ({
   page,
 }) => {
   await connect(page);
@@ -130,6 +131,6 @@ for (const size of ['small', 'large'] as const) {
     const [shell, box] = await Promise.all([view.boundingBox(), row.boundingBox()]);
     expect(box!.x).toBeGreaterThanOrEqual(shell!.x);
     expect(box!.x + box!.width).toBeLessThanOrEqual(shell!.x + shell!.width + 1);
-    expect(box!.height).toBeLessThanOrEqual(48);
+    expect(box!.height).toBeLessThanOrEqual(72);
   });
 }

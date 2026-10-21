@@ -35,7 +35,7 @@ describe('native terminal activity across surfaces', () => {
     const waiting = chat('waiting_for_input');
     expect(terminalNeedsInput(waiting)).toBe(true);
     expect(sessionState(waiting)).toBe('waiting');
-    expect(pendingCards([waiting], new Map(), new Set())).toEqual([
+    expect(pendingCards([waiting], new Map())).toEqual([
       { kind: 'open', chat: waiting, approval: null, loading: false },
     ]);
     expect(rowState(chat('waiting_for_permission'), false).tone).toBe('permission');

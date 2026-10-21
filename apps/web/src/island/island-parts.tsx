@@ -83,13 +83,3 @@ export function Kbd({ children }: { children: ReactNode }) {
     </span>
   );
 }
-
-export function RunDots() {
-  return (
-    <span className="isl-run-dots" aria-hidden="true">
-      <i />
-      <i />
-      <i />
-    </span>
-  );
-}

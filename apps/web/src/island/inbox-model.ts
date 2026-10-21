@@ -4,8 +4,6 @@ import { hideSecrets } from '../chat/status/status-text.ts';
 import { sessionState, type Card } from './island-model.ts';
 import { waitingTitle } from './island-rest-line.ts';
 
-export const INBOX_FINISHED = 4;
-
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
@@ -18,34 +16,8 @@ export function shortAgo(iso: string, now: number): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-export interface Answered {
-  approvals: ReadonlySet<string>;
-  chats: ReadonlyMap<string, string>;
-}
-
-export const NONE_ANSWERED: Answered = { approvals: new Set(), chats: new Map() };
-
-export function answer(answered: Answered, card: Card): Answered {
-  const approvals = new Set(answered.approvals);
-  if (card.approval) approvals.add(card.approval.id);
-  return { approvals, chats: new Map(answered.chats).set(card.chat.id, card.chat.updatedAt) };
-}
-
-function answeredCard(card: Card, answered: Answered): boolean {
-  if (card.approval) return answered.approvals.has(card.approval.id);
-  return answered.chats.get(card.chat.id) === card.chat.updatedAt;
-}
-
-export function stillAsking(cards: readonly Card[], answered: Answered): Card[] {
-  return cards.filter((card) => !answeredCard(card, answered));
-}
-
 export function answerable(card: Card): boolean {
   return !card.loading && card.approval !== null && card.kind === 'approval';
-}
-
-export function topAnswerable(cards: readonly Card[]): Card | null {
-  return cards.find(answerable) ?? null;
 }
 
 export interface RunningRow {
@@ -66,10 +38,6 @@ function agentsText(counts: AgentCounts): string {
   return `${counts.working} of ${counts.total} ${noun} working`;
 }
 
-export function agentsProgress(counts: AgentCounts): number {
-  return counts.total === 0 ? 0 : (counts.total - counts.working) / counts.total;
-}
-
 export function runningRows(
   chats: readonly ConversationSummary[],
   details: ReadonlyMap<string, ConversationDetail>,
@@ -82,50 +50,6 @@ export function runningRows(
       const step = chat.latestRun?.step ? hideSecrets(chat.latestRun.step) : null;
       return { chat, agents, detail: agents ? agentsText(agents) : (step ?? 'working') };
     });
-}
-
-export interface FinishedRow {
-  kind: 'done' | 'failed';
-  chat: ConversationSummary;
-  detail: string;
-  at: string;
-}
-
-function failedUnseen(chat: ConversationSummary): boolean {
-  const finishedAt = chat.latestRun?.finishedAt;
-  if (!finishedAt) return false;
-  return !chat.seenAt || Date.parse(finishedAt) > Date.parse(chat.seenAt);
-}
-
-function finishedKind(chat: ConversationSummary): FinishedRow['kind'] | null {
-  if (chat.archivedAt || chat.needsInput) return null;
-  const status = chat.latestRun?.status;
-  if (status === 'failed') return failedUnseen(chat) ? 'failed' : null;
-  if (status === 'succeeded') return chat.unread ? 'done' : null;
-  return null;
-}
-
-function finishedDetail(kind: FinishedRow['kind'], chat: ConversationSummary): string {
-  if (kind === 'done') return 'done';
-  const error = chat.latestRun?.error ? hideSecrets(chat.latestRun.error) : null;
-  return error ? `failed: ${error}` : 'failed';
-}
-
-export function finishedRows(
-  chats: readonly ConversationSummary[],
-  cleared: ReadonlySet<string>,
-): FinishedRow[] {
-  const rows = chats.flatMap((chat): FinishedRow[] => {
-    const kind = finishedKind(chat);
-    if (!kind || cleared.has(chat.id)) return [];
-    const at = chat.latestRun?.finishedAt ?? chat.updatedAt;
-    return [{ kind, chat, detail: finishedDetail(kind, chat), at }];
-  });
-  const newest = rows.toSorted((a, b) => b.at.localeCompare(a.at));
-  return [
-    ...newest.filter((row) => row.kind === 'failed'),
-    ...newest.filter((row) => row.kind === 'done'),
-  ].slice(0, INBOX_FINISHED);
 }
 
 export interface CardLine {

@@ -44,14 +44,24 @@ async function addSteps(conversationId: string, count: number) {
   }
 }
 
-async function hoverOpen(page: Page) {
+async function hoverLine(page: Page) {
   await pointAtScout(page);
-  await expect(island(page)).toHaveAttribute('data-view', 'panel');
+  await expect(island(page).locator('.isl-hover')).toBeVisible();
 }
 
 async function leave(page: Page) {
   await page.mouse.move(5, 600, { steps: 4 });
-  await expect(island(page)).not.toHaveAttribute('data-view', 'panel', { timeout: 10_000 });
+  await expect(island(page).locator('.isl-strip')).toBeVisible({ timeout: 10_000 });
+}
+
+async function openHome(page: Page) {
+  await island(page).locator('.isl-strip').click();
+  await expect(island(page)).toHaveAttribute('data-view', 'panel');
+}
+
+async function close(page: Page) {
+  await page.keyboard.press('Escape');
+  await leave(page);
 }
 
 test('Spark Island stays smooth with many chats and live activity', async ({ page }) => {
@@ -67,13 +77,20 @@ test('Spark Island stays smooth with many chats and live activity', async ({ pag
   const phases: Record<string, ProbeResult> = {};
 
   for (let round = 0; round < 4; round++) {
-    await hoverOpen(page);
+    await hoverLine(page);
     await page.waitForTimeout(400);
     await leave(page);
   }
-  phases['hover open and close x4'] = await takeProbe(page);
+  phases['hover line in and out x4'] = await takeProbe(page);
 
-  await hoverOpen(page);
+  for (let round = 0; round < 4; round++) {
+    await openHome(page);
+    await page.waitForTimeout(400);
+    await close(page);
+  }
+  phases['open and close Home x4'] = await takeProbe(page);
+
+  await openHome(page);
   const newChat = island(page).getByRole('button', { name: 'New chat' });
   const newChatClickMs = await clickFeedbackMs(newChat);
   const message = island(page).getByRole('textbox', { name: 'Message' });
@@ -84,12 +101,12 @@ test('Spark Island stays smooth with many chats and live activity', async ({ pag
   await message.fill('');
   phases['type in New chat'] = await takeProbe(page);
 
-  const back = island(page).getByRole('button', { name: 'Back to the inbox' });
-  const inboxClickMs = await clickFeedbackMs(back);
-  await expect(island(page).getByRole('region', { name: /^Running/ })).toBeVisible();
+  const home = island(page).getByRole('button', { name: /^Home/ });
+  const homeClickMs = await clickFeedbackMs(home);
+  await expect(island(page).getByRole('region', { name: /^Working/ })).toBeVisible();
   await addSteps(running!, LIVE_STEPS);
   await page.waitForTimeout(1_500);
-  phases['inbox with live steps'] = await takeProbe(page);
+  phases['Home with live steps'] = await takeProbe(page);
   await page.keyboard.press('Escape');
   await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
   await page.waitForTimeout(1_000);
@@ -99,7 +116,7 @@ test('Spark Island stays smooth with many chats and live activity', async ({ pag
     chats: 50,
     liveSteps: LIVE_STEPS,
     restingBusyPercent: restingBusy,
-    clicks: { newChat: newChatClickMs, inbox: inboxClickMs },
+    clicks: { newChat: newChatClickMs, home: homeClickMs },
     phases,
     growth: {
       heapMb: Number((after.heapMb - before.heapMb).toFixed(1)),
@@ -110,7 +127,7 @@ test('Spark Island stays smooth with many chats and live activity', async ({ pag
   writeReport('island', summary);
   test.info().annotations.push({ type: 'island perf', description: JSON.stringify(summary) });
 
-  expect(Math.max(newChatClickMs, inboxClickMs)).toBeLessThan(CLICK_LIMIT_MS);
+  expect(Math.max(newChatClickMs, homeClickMs)).toBeLessThan(CLICK_LIMIT_MS);
   for (const [name, phase] of Object.entries(phases)) {
     expect.soft(phase.maxTaskMs, name).toBeLessThan(TASK_LIMIT_MS);
   }

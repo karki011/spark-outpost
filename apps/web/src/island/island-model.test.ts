@@ -1,21 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
-import { fastAnswer } from './ask-fast-path.ts';
 import {
   hoverOpensHome,
   islandView,
   newMoments,
   panelWidth,
   nextStreak,
-  peekClearance,
-  peekOffset,
-  peekRow,
   pendingCards,
   quickShortcutTarget,
   viewWidth,
   runStatuses,
   sessionState,
-  type Card,
   type IslandInputs,
 } from './island-model.ts';
 import { crewQuirk, scoutMoodFor, sessionExpression } from './island-mood.ts';
@@ -76,18 +71,16 @@ const quiet: IslandInputs = {
   panel: null,
   cards: [],
   review: null,
-  nudge: false,
+  strip: false,
 };
 
 const resting = { waiting: 0, hour: 14, idleMinutes: 0, running: 0, moment: null, failed: false };
 
 describe('island state machine', () => {
-  it('rests whatever is running or waiting, and hovering opens the full panel', () => {
+  it('rests as Scout alone with nothing to show, where hover opens the panel', () => {
     const card = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
-    expect(islandView(quiet).kind).toBe('peek');
-    expect(islandView({ ...quiet, cards: [card] }).kind).toBe('peek');
+    expect(islandView(quiet)).toEqual({ kind: 'peek' });
     expect(hoverOpensHome(islandView(quiet))).toBe(true);
-    expect(hoverOpensHome(islandView({ ...quiet, cards: [card], nudge: true }))).toBe(true);
     expect(hoverOpensHome(islandView({ ...quiet, panel: 'quick' }))).toBe(false);
     expect(hoverOpensHome(islandView({ ...quiet, note: true }))).toBe(false);
     expect(hoverOpensHome(islandView({ ...quiet, cards: [card], review: card.chat.id }))).toBe(
@@ -95,62 +88,30 @@ describe('island state machine', () => {
     );
   });
 
-  it('rests as blobs alone at every size while one chat works, narrower than any row', () => {
-    const working = chat('a', { latestRun: run('r1', 'running') });
-    const row = peekRow([working], new Set(), Date.parse(working.updatedAt));
-    expect(row.sessions.map((session) => session.id)).toEqual(['a']);
-    for (const full of [true, false]) {
-      const view = islandView({ ...quiet, hoverOnly: true, full });
-      expect(view).toEqual({ kind: 'peek' });
-      expect(viewWidth(view, 0, 1440)).toBeLessThan(
-        viewWidth({ kind: 'now', card: null }, 0, 1440),
-      );
-      expect(viewWidth(view, 186, 1440)).toBe(186);
-    }
-  });
-
-  it('stays collapsed in hover-only mode even with Full size and pending requests', () => {
+  it('rests as one strip when something needs you, a meeting is close or chats work', () => {
     const card = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
-    const inputs = { ...quiet, hoverOnly: true, full: true, cards: [card], nudge: true };
-    expect(islandView(inputs)).toEqual({ kind: 'peek' });
-    expect(hoverOpensHome(islandView(inputs))).toBe(true);
-    expect(quickShortcutTarget(null, islandView(inputs), card)).toEqual({
-      kind: 'review',
-      chatId: 'a',
-    });
-    expect(islandView({ ...inputs, panel: 'home' }).kind).toBe('panel');
-    expect(islandView({ ...inputs, review: 'a' }).kind).toBe('card');
+    const strip = islandView({ ...quiet, cards: [card], strip: true });
+    expect(strip).toEqual({ kind: 'now' });
+    expect(hoverOpensHome(strip)).toBe(false);
+    expect(quickShortcutTarget(null, strip, card)).toEqual({ kind: 'review', chatId: 'a' });
+    expect(quickShortcutTarget(null, strip)).toEqual({ kind: 'quick' });
+    expect(islandView({ ...quiet, cards: [card], strip: true, review: 'a' }).kind).toBe('card');
+    expect(islandView({ ...quiet, strip: true, panel: 'home' }).kind).toBe('panel');
+    expect(scoutMoodFor(strip, { ...resting, waiting: 1 })).toBe('alert');
+    expect(scoutMoodFor(strip, { ...resting, running: 2 })).toBe('working');
   });
 
-  it('rests as the full bar at Full size, carrying the request instead of a pill', () => {
-    const card = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
-    const full = { ...quiet, full: true };
-    expect(islandView(full)).toEqual({ kind: 'now', card: null });
-    expect(islandView({ ...full, cards: [card] })).toEqual({ kind: 'now', card: null });
-    const asking = islandView({ ...full, cards: [card], nudge: true });
-    expect(asking).toEqual({ kind: 'now', card });
-    expect(hoverOpensHome(asking)).toBe(true);
-    expect(hoverOpensHome(islandView(full))).toBe(true);
-    expect(quickShortcutTarget(null, asking)).toEqual({ kind: 'review', chatId: 'a' });
-    expect(quickShortcutTarget(null, islandView(full))).toEqual({ kind: 'quick' });
-    expect(islandView({ ...full, cards: [card], review: 'a' }).kind).toBe('card');
-    expect(islandView({ ...full, panel: 'home' }).kind).toBe('panel');
-    expect(scoutMoodFor(asking, { ...resting, running: 2 })).toBe('alert');
-    expect(scoutMoodFor(islandView(full), { ...resting, running: 2 })).toBe('working');
-  });
-
-  it('keeps the full bar clear of the notch and the resting strip as wide as the notch', () => {
-    expect(viewWidth({ kind: 'now', card: null }, 0, 1512)).toBe(400);
-    expect(viewWidth({ kind: 'now', card: null }, 238, 1512)).toBe(446);
+  it('keeps the strip clear of the notch and the empty rest as wide as the notch', () => {
+    expect(viewWidth({ kind: 'now' }, 0, 1512)).toBe(460);
+    expect(viewWidth({ kind: 'now' }, 400, 1512)).toBe(608);
     expect(viewWidth({ kind: 'peek' }, 186, 1512)).toBe(186);
     expect(viewWidth({ kind: 'peek' }, 0, 1512)).toBe(72);
   });
 
-  it('keeps resting with a waiting card, and opens it on review', () => {
+  it('opens a waiting card on review', () => {
     const first = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
     const second = { kind: 'question' as const, chat: chat('b'), approval: null, loading: false };
     const cards = [first, second];
-    expect(islandView({ ...quiet, cards, nudge: true })).toEqual({ kind: 'peek' });
     expect(islandView({ ...quiet, cards, review: second.chat.id })).toEqual({
       kind: 'card',
       card: second,
@@ -158,7 +119,6 @@ describe('island state machine', () => {
       total: 2,
     });
     expect(islandView({ ...quiet, cards, review: 'gone' }).kind).toBe('peek');
-    expect(islandView({ ...quiet, cards, nudge: true, panel: 'home' }).kind).toBe('panel');
     expect(islandView({ ...quiet, panel: 'quick', note: true }).kind).toBe('note');
   });
 
@@ -211,7 +171,7 @@ describe('island state machine', () => {
     );
   });
 
-  it('queues pending approvals oldest first and skips snoozed ones', () => {
+  it('queues pending approvals oldest first', () => {
     const approval = (id: string, createdAt: string, forcePush?: string[]) =>
       ({
         id,
@@ -241,38 +201,11 @@ describe('island state machine', () => {
       ['a', [approval('p1', '2026-09-30T10:05:00Z')]],
       ['b', [approval('p2', '2026-09-30T10:01:00Z', ['main'])]],
     ]);
-    const cards = pendingCards(chats, approvals, new Set());
+    const cards = pendingCards(chats, approvals);
     expect(cards.map((card) => [card.chat.id, card.kind])).toEqual([
       ['b', 'force'],
       ['a', 'approval'],
     ]);
-    expect(pendingCards(chats, approvals, new Set(['p2'])).map((card) => card.chat.id)).toEqual([
-      'a',
-    ]);
-  });
-
-  it('picks up to five recently active sessions for the peek row, spread around Scout', () => {
-    const now = Date.parse('2026-09-30T10:30:00Z');
-    const chats = Array.from({ length: 7 }, (_, index) =>
-      chat(`c${index}`, { updatedAt: new Date(now - index * 60_000).toISOString() }),
-    );
-    chats.push(chat('stale', { updatedAt: '2026-09-30T09:00:00Z' }));
-    const row = peekRow(chats, new Set(['c6']), now);
-    expect(row.sessions.map((session) => session.id)).toEqual(['c0', 'c1', 'c2', 'c3', 'c4']);
-    expect(row.more).toBe(1);
-    expect([0, 1, 2, 3, 4].map((slot) => peekOffset(slot, 38))).toEqual([38, -38, 64, -64, 90]);
-  });
-
-  it('keeps the peek row clear of a bigger hanging Spark and its badge', () => {
-    const flatEdge = (blob: number) => peekClearance(true, blob) * 1.25 - 14 - 4;
-    for (const blob of [38, 48, 58, 116]) {
-      expect(flatEdge(blob)).toBeGreaterThanOrEqual(blob / 2 + 8);
-    }
-    expect(peekClearance(true, 58)).toBeGreaterThan(peekClearance(true, 38));
-    expect(peekClearance(false, 30)).toBe(38);
-    for (const blob of [38, 48, 58, 116]) {
-      expect(peekClearance(false, blob) - 11).toBeGreaterThanOrEqual(blob / 2 + 12);
-    }
   });
 
   it('reads each chat as working, waiting, done, failed or quiet', () => {
@@ -348,81 +281,10 @@ describe('moods and quirks', () => {
   });
 });
 
-describe('Ask Spark fast path', () => {
-  const state = {
-    waiting: [{ id: 'a', title: 'Deploy the site', detail: 'wants to run pnpm deploy' }],
-    running: [],
-    spendToday: 1.24,
-  };
-
-  it('answers the common questions from Spark’s own state', () => {
-    expect(fastAnswer('Does anyone need anything?', state)).toEqual({
-      text: '1 chat needs you: “Deploy the site”.',
-      chats: state.waiting,
-    });
-    expect(fastAnswer('what’s running?', state)?.text).toBe('Nothing is running right now.');
-    expect(fastAnswer('What did I spend today?', state)?.text).toBe('You’ve spent $1.24 today.');
-  });
-
-  it('leaves anything else to the model', () => {
-    expect(fastAnswer('How is the upload chat going?', state)).toBeNull();
-    expect(fastAnswer('What did I spend last week?', state)).toBeNull();
-    expect(fastAnswer('Which provider is cheapest?', state)).toBeNull();
-  });
-
-  describe('the quick shortcut target', () => {
-    const waiting = chat('a', { needsInput: true });
-    const loadingCard: Card = {
-      kind: 'open' as const,
-      chat: waiting,
-      approval: null,
-      loading: true,
-    };
-    const approvalCard: Card = {
-      kind: 'approval' as const,
-      chat: waiting,
-      approval: null,
-      loading: false,
-    };
-    const openCard: Card = { kind: 'open' as const, chat: waiting, approval: null, loading: false };
-    const bar = (card: Card) => ({ kind: 'now' as const, card });
-    const reviewCard = (card: Card) => ({
-      kind: 'card' as const,
-      card,
-      index: 1,
-      total: 1,
-    });
-
-    it('reviews a needs-you item whose details are still loading instead of starting a chat', () => {
-      expect(quickShortcutTarget(null, bar(loadingCard))).toEqual({
-        kind: 'review',
-        chatId: 'a',
-      });
-      expect(quickShortcutTarget(null, reviewCard(loadingCard))).toEqual({
-        kind: 'review',
-        chatId: 'a',
-      });
-    });
-
-    it('reviews a loaded approval and keeps its chat id when the details arrive', () => {
-      expect(quickShortcutTarget(null, bar(approvalCard))).toEqual({
-        kind: 'review',
-        chatId: 'a',
-      });
-    });
-
-    it('opens the composer when nothing needs approving and closes an open panel', () => {
-      expect(quickShortcutTarget(null, { kind: 'peek' })).toEqual({ kind: 'quick' });
-      expect(quickShortcutTarget(null, bar(openCard))).toEqual({ kind: 'quick' });
-      expect(quickShortcutTarget('home', bar(loadingCard))).toEqual({ kind: 'close' });
-    });
-  });
-});
-
 describe('panel width', () => {
   it('grows with the screen between a floor and a ceiling', () => {
     expect([1280, 1512, 1728, 1920, 3008].map((screen) => panelWidth('home', screen))).toEqual([
-      560, 560, 622, 640, 640,
+      640, 640, 726, 760, 760,
     ]);
     expect([1280, 1728, 1920].map((screen) => panelWidth('quick', screen))).toEqual([
       640, 726, 760,

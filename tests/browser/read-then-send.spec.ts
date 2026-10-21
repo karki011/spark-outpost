@@ -65,7 +65,7 @@ for (const mode of ['Bypass permissions', 'Auto']) {
     await expect(flags(page)).toHaveCount(1);
     await expect(flags(page)).toContainText('sent data to example.com after reading .env');
     await expect(flags(page)).toContainText("Spark didn't stop the run. Spark can't revert this.");
-    await flags(page).getByRole('button', { name: 'Dismiss' }).click();
+    await flags(page).getByRole('button', { name: 'Got it' }).click();
     await expect(flags(page).getByRole('status')).toHaveText('Dismissed.');
   });
 }

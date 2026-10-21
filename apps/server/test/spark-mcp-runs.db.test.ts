@@ -4,7 +4,9 @@ import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { markAttention } from '../src/persistence/attention-items.ts';
 import { insertDecision } from '../src/persistence/orchestrations.ts';
+import { insertRailFlag } from '../src/persistence/rail-flags.ts';
 import { insertPlanDocument } from '../src/persistence/plan-documents.ts';
 import { seedConversation, seedIntake, seedTask, seedTurn } from './outcome-seed.ts';
 import { startSparkTools, type SparkToolsHarness } from './spark-mcp-support.ts';
@@ -41,12 +43,13 @@ async function otherWorkspaceChat(): Promise<{ conversationId: string; runId: st
 }
 
 async function pendingCard(runId: string, title: string, command: string | null = null) {
+  const id = randomUUID();
   await t.db.query(
     `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash, options,
        status, created_at)
      VALUES ($1, $2, $3, 'execute', $4, $5, 'h', $6, 'pending', now() - interval '5 minutes')`,
     [
-      randomUUID(),
+      id,
       runId,
       randomUUID(),
       title,
@@ -57,6 +60,7 @@ async function pendingCard(runId: string, title: string, command: string | null 
       ]),
     ],
   );
+  return id;
 }
 
 describe('spark_attention', () => {
@@ -95,6 +99,40 @@ describe('spark_attention', () => {
     expect(body.failedChats).toEqual([
       expect.objectContaining({ id: broken.conversationId, error: 'Agent crashed' }),
     ]);
+  });
+
+  it('counts only what blocks the user: a flag is an update and a set-aside card is not waiting', async () => {
+    const flagged = await startChat(t, 'Sent it');
+    await t.db.query(`UPDATE runs SET status = 'succeeded', finished_at = now() WHERE id = $1`, [
+      flagged.runId,
+    ]);
+    await insertRailFlag(t.db, flagged.runId, 'Claude', {
+      toolCallId: null,
+      rail: 'sent_out',
+      paths: ['https://example.com'],
+      inside: false,
+      originals: [],
+      read: ['.env'],
+    });
+    const waiting = await startChat(t, 'Later');
+    const card = await pendingCard(waiting.runId, 'Run later');
+    await markAttention(t.db, t.workspaceId, `approval:${card}`, 'set-aside');
+
+    const body = (await (await open()).call('spark_attention')).json<{
+      needsYou: boolean;
+      pendingCards: unknown[];
+      updates: { kind: string; chat: { id: string } }[];
+    }>();
+    expect(body.needsYou).toBe(false);
+    expect(body.pendingCards).toEqual([]);
+    expect(body.updates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'flag',
+          chat: expect.objectContaining({ id: flagged.conversationId }),
+        }),
+      ]),
+    );
   });
 
   it('says nobody needs anything when nothing waits', async () => {

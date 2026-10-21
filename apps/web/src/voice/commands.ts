@@ -27,14 +27,11 @@ export interface SpeechLists {
   sources: readonly string[];
 }
 
-export type FastQuestion = 'needs' | 'running' | 'spend' | 'tickets' | 'ticket_status';
-
 export type OpenTarget = { kind: 'chat'; chat: ChatRef } | { kind: 'ticket'; ticket: TicketRef };
 
 export type Command =
   | { intent: 'start_chat'; project: Matched<ProjectRef>; ticket: TicketRef | null; task: string }
   | { intent: 'open'; target: Matched<OpenTarget> }
-  | { intent: 'ask_fast'; question: FastQuestion; ticket: TicketRef | null }
   | { intent: 'reply'; chat: Matched<ChatRef>; text: string }
   | { intent: 'none'; text: string };
 
@@ -42,18 +39,7 @@ export type Confirmation = { answer: 'yes' } | { answer: 'no' } | { answer: 'pic
 
 type Intent = Command['intent'];
 
-const TEMPLATES: readonly { intent: Intent; question?: FastQuestion; source: string }[] = [
-  { intent: 'ask_fast', question: 'needs', source: '(who|what) needs me [now]' },
-  { intent: 'ask_fast', question: 'needs', source: 'does (anyone|anything) need me' },
-  { intent: 'ask_fast', question: 'running', source: '(whats|what is) running [now]' },
-  { intent: 'ask_fast', question: 'spend', source: '(what|how much) did i spend [today]' },
-  { intent: 'ask_fast', question: 'tickets', source: 'what tickets do i have [pending]' },
-  { intent: 'ask_fast', question: 'tickets', source: '(what are|show me) my [pending] tickets' },
-  {
-    intent: 'ask_fast',
-    question: 'ticket_status',
-    source: '((whats|what is) the status of|hows|how is) [ticket] {ticket} [going]',
-  },
+const TEMPLATES: readonly { intent: Intent; source: string }[] = [
   {
     intent: 'start_chat',
     source:
@@ -73,8 +59,10 @@ const TEMPLATES: readonly { intent: Intent; question?: FastQuestion; source: str
   { intent: 'reply', source: '(reply|respond) to [the] {chat} [chat] [saying] {text}' },
 ];
 
-const COMPILED: readonly { intent: Intent; question?: FastQuestion; template: Template }[] =
-  TEMPLATES.map((entry) => ({ ...entry, template: parseTemplate(entry.source) }));
+const COMPILED: readonly { intent: Intent; template: Template }[] = TEMPLATES.map((entry) => ({
+  ...entry,
+  template: parseTemplate(entry.source),
+}));
 
 const CONFIRM: readonly { answer: Confirmation; template: Template }[] = [
   {
@@ -124,7 +112,6 @@ function scoreOf(matched: Matched<unknown>): number {
 
 function build(
   intent: Intent,
-  question: FastQuestion | undefined,
   captures: Captures,
   lists: SpeechLists,
   original: string,
@@ -134,8 +121,6 @@ function build(
   const ticketScore = ticket ? (ticket.known ? 1 : 0.9) : 0;
   const text = textFrom(captures.text, original);
   switch (intent) {
-    case 'ask_fast':
-      return { command: { intent, question: question!, ticket }, score: 1 + ticketScore };
     case 'start_chat': {
       const project = rank(
         spoken(captures.project),
@@ -192,7 +177,7 @@ export function matchCommand(transcript: string, lists: SpeechLists): Command {
   let best: Parsed | null = null;
   for (const entry of COMPILED) {
     for (const captures of matchTemplate(entry.template, heard)) {
-      const parsed = build(entry.intent, entry.question, captures, lists, original);
+      const parsed = build(entry.intent, captures, lists, original);
       if (parsed && (!best || parsed.score > best.score)) best = parsed;
     }
   }

@@ -95,3 +95,61 @@
 .isl-pane[data-dir='prev'] {
   animation: isl-slide-prev 0.36s var(--spring-soft) both;
 }
+
+.isl-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+.isl-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  min-width: 36px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.isl-tab svg {
+  width: 17px;
+  height: 17px;
+}
+
+.isl-tab:hover,
+.isl-tab[aria-pressed='true'] {
+  color: var(--text);
+}
+
+.isl-tab[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.isl-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.isl-tab-count {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--warn);
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 17px;
+  text-align: center;
+}

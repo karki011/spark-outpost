@@ -1,12 +1,11 @@
 import path from 'node:path';
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { pointAtScout } from './island-pointer.ts';
 import {
   focusCalls,
   island,
   openNotchIsland,
-  restSize,
   settled,
   underNotch,
   VIEWPORT,
@@ -15,7 +14,6 @@ import {
 import { seedChats } from './sidebar-seed.ts';
 
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
-const LONG_COMMAND = 'pnpm deploy --prod --region eu-west-1 --tag release-candidate --confirm';
 const install = {
   title: 'Add the image library',
   run: { status: 'awaiting_approval' },
@@ -27,13 +25,17 @@ const PLACES: Record<string, Partial<NotchSetup>> = {
   floating: { notch: false, docked: false },
 };
 
-const line = (page: Page) => island(page).locator('.isl-restline');
+const strip = (page: Page) => island(page).locator('.isl-strip');
+const count = (page: Page) => island(page).getByLabel('1 need you', { exact: true });
+const hoverLine = (page: Page) => island(page).locator('.isl-hover');
+const focusCard = (page: Page) =>
+  island(page).getByRole('article', { name: 'Add the image library needs you' });
 
 async function shot(page: Page, name: string) {
   if (!SHOTS) return;
   await page.waitForTimeout(900);
   await page.screenshot({
-    path: path.join(SHOTS, `island-nudge-${name}.png`),
+    path: path.join(SHOTS, `island-strip-${name}.png`),
     clip: { x: 240, y: 0, width: 800, height: 240 },
   });
 }
@@ -53,174 +55,123 @@ const answerAll = () =>
        decision_option_id = 'allow', scope = 'once' WHERE status = 'pending'`,
   );
 
-const endRun = (chatId: string, status: string) =>
-  sql(`UPDATE runs SET status = $2, finished_at = now() WHERE conversation_id = $1`, [
-    chatId,
-    status,
-  ]);
+const pending = async () =>
+  (await sql(`SELECT count(*)::int AS n FROM approvals WHERE status = 'pending'`)).rows[0]!.n;
 
-async function overlaps(first: Locator, second: Locator): Promise<boolean> {
-  const a = (await first.boundingBox())!;
-  const b = (await second.boundingBox())!;
-  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+const statuses = async () =>
+  (await sql(`SELECT status FROM approvals ORDER BY created_at`)).rows.map((row) => row.status);
+
+async function setAsideKeys(page: Page): Promise<string[]> {
+  const response = await page.request.get('/api/attention');
+  const body = (await response.json()) as { items: { key: string; setAsideAt: string | null }[] };
+  return body.items.filter((item) => item.setAsideAt !== null).map((item) => item.key);
+}
+
+async function openHomeFromStrip(page: Page) {
+  await page.mouse.move(5, 600);
+  await strip(page).click();
+  await expect(island(page)).toHaveAttribute('data-view', 'panel');
+  await expect(island(page).locator('[data-panel="home"]')).toBeVisible();
 }
 
 for (const [place, setup] of Object.entries(PLACES)) {
-  for (const size of ['small', 'large', 'xlarge'] as const) {
-    test(`${place}, ${size}: the resting island hangs the request under Scout and a click opens it`, async ({
-      page,
-    }) => {
-      await resetTestDatabase({ onboarded: true });
-      const theme = size === 'large' ? 'apricot' : 'graphite';
-      await openNotchIsland(page, { size, autoExpand: false, theme, ...setup });
-      await seedChats([install]);
-      await expect(line(page)).toHaveText('Approve: run npm install sharp·Review');
-      await expect(line(page)).toHaveAttribute('title', 'Approve: run npm install sharp · Review');
-      await expect(island(page)).toHaveAttribute('data-view', 'peek');
-      await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
-      await settled(page);
-      const box = (await line(page).boundingBox())!;
-      const scout = (await island(page).locator('.isl-scout-wrap').boundingBox())!;
-      expect(box.y).toBeGreaterThan(scout.y);
-      expect(await overlaps(line(page), island(page).locator('.isl-scout-wrap'))).toBe(false);
-      expect(box.x).toBeGreaterThanOrEqual(0);
-      expect(box.x + box.width).toBeLessThanOrEqual(VIEWPORT.width);
-      expect(box.y).toBeGreaterThanOrEqual(0);
-      for (const blob of await page.locator('.isl-peekblob, .isl-pb').all()) {
-        expect(await overlaps(line(page), blob)).toBe(false);
-      }
-      if (setup.notch !== false) expect(await underNotch(page)).toEqual([]);
-      if (place === 'flat') {
-        await expect
-          .poll(async () => ((await restSize(page))?.width ?? 0) / 2)
-          .toBeGreaterThanOrEqual(box.x + box.width - VIEWPORT.width / 2);
-        expect((await restSize(page))!.height).toBeGreaterThanOrEqual(box.y + box.height);
-      }
-      await shot(page, `waiting-${place}-${size}-${theme}`);
-
-      await line(page).click();
-      await expect(island(page)).toHaveAttribute('data-view', 'card');
-      await expect(island(page).getByRole('button', { name: /Allow once/ })).toBeVisible();
-      await expect.poll(() => focusCalls(page)).toContain(true);
-    });
-  }
+  test(`${place}: a waiting request rests as a count in the strip and a click opens Home`, async ({
+    page,
+  }) => {
+    await resetTestDatabase({ onboarded: true });
+    await openNotchIsland(page, { size: 'large', autoExpand: false, ...setup });
+    await seedChats([install]);
+    await expect(island(page)).toHaveAttribute('data-view', 'now');
+    await expect(count(page)).toHaveText('1');
+    await expect(island(page).locator('.isl-restline')).toHaveCount(0);
+    await settled(page);
+    const box = (await strip(page).boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(VIEWPORT.width);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    if (setup.notch !== false) {
+      expect((await underNotch(page)).filter((hit) => !hit.includes('isl-strip"'))).toEqual([]);
+    }
+    await shot(page, `count-${place}`);
+    await strip(page).click();
+    await expect(island(page)).toHaveAttribute('data-view', 'panel');
+    await expect(focusCard(page)).toBeVisible();
+    await expect(focusCard(page).getByRole('button', { name: /^Allow/ })).toBeVisible();
+  });
 }
 
-test('several waiting requests show the oldest, cut short with its full text in the title, and count the rest', async ({
-  page,
-}) => {
-  await resetTestDatabase({ onboarded: true });
-  await openNotchIsland(page, { size: 'medium', autoExpand: false });
-  await seedChats([
-    {
-      title: 'Deploy the site',
-      run: { status: 'awaiting_approval' },
-      approval: { kind: 'execute', title: 'Deploy', command: LONG_COMMAND },
-    },
-    install,
-    {
-      title: 'Rename the helper',
-      run: { status: 'awaiting_approval' },
-      approval: { kind: 'edit', title: 'Edit', paths: ['src/util/format-date.ts'] },
-    },
-  ]);
-  await expect(line(page)).toContainText('+2 more');
-  await expect(island(page).locator('.isl-pbadge')).toHaveText('3');
-  await expect(line(page)).toHaveAttribute(
-    'title',
-    `Approve: run ${LONG_COMMAND} · Review · +2 more`,
-  );
-  const text = line(page).locator('.isl-restline-text');
-  const cut = await text.evaluate((element) => ({
-    shown: element.clientWidth,
-    full: element.scrollWidth,
-    overflow: getComputedStyle(element).textOverflow,
-  }));
-  expect(cut.full).toBeGreaterThan(cut.shown);
-  expect(cut.shown).toBeGreaterThan(30);
-  expect(cut.overflow).toBe('ellipsis');
-  const box = (await line(page).boundingBox())!;
-  expect(box.x + box.width).toBeLessThanOrEqual(VIEWPORT.width / 2 + 360);
-  await expect(line(page).getByText('Review')).toBeVisible();
-  expect(await underNotch(page)).toEqual([]);
-  await shot(page, 'several-waiting');
-});
+for (const answer of ['Allow', 'Deny'] as const) {
+  test(`hovering Scout turns the strip into the request's line and ${answer} answers it in place without taking focus`, async ({
+    page,
+  }) => {
+    await resetTestDatabase({ onboarded: true });
+    await openNotchIsland(page, { size: 'large', autoExpand: false, notch: false });
+    await seedChats([install]);
+    await expect(count(page)).toHaveText('1');
+    await pointAtScout(page);
+    await expect(hoverLine(page)).toBeVisible();
+    await expect(hoverLine(page)).toContainText('Add the image library');
+    await expect(hoverLine(page)).toContainText('npm install sharp');
+    await expect(island(page)).toHaveAttribute('data-view', 'now');
+    await expect(island(page).locator('[data-panel="home"]')).toHaveCount(0);
+    await shot(page, `hover-${answer.toLowerCase()}`);
+    await hoverLine(page).getByRole('button', { name: answer, exact: true }).click();
+    await expect.poll(statuses).toEqual([answer === 'Allow' ? 'allowed' : 'denied']);
+    expect(await focusCalls(page)).not.toContain(true);
+    await page.mouse.move(5, 600);
+    await expect(island(page)).not.toHaveAttribute('data-view', 'card');
+    await expect(island(page).locator('[data-panel="home"]')).toHaveCount(0);
+    await expect(count(page)).toHaveCount(0);
+  });
+}
 
-test('the line appears without motion under Reduce Motion, takes keyboard focus with a visible ring, and Enter opens the request', async ({
+test('the strip rests without motion under Reduce Motion, takes keyboard focus with a visible ring, and Enter opens Home', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await resetTestDatabase({ onboarded: true });
   await openNotchIsland(page, { size: 'large', autoExpand: false, notch: false });
   await seedChats([install]);
-  await expect(line(page)).toBeVisible();
-  expect(await line(page).evaluate((element) => getComputedStyle(element).animationName)).toBe(
+  await expect(strip(page)).toBeVisible();
+  expect(await strip(page).evaluate((element) => getComputedStyle(element).animationName)).toBe(
     'none',
   );
   for (let presses = 0; presses < 6; presses += 1) {
     await page.keyboard.press('Tab');
-    if (await line(page).evaluate((element) => element === document.activeElement)) break;
+    if (await strip(page).evaluate((element) => element === document.activeElement)) break;
   }
-  await expect(line(page)).toBeFocused();
-  expect(await line(page).evaluate((element) => getComputedStyle(element).outlineStyle)).toBe(
+  await expect(strip(page)).toBeFocused();
+  expect(await strip(page).evaluate((element) => getComputedStyle(element).outlineStyle)).toBe(
     'solid',
   );
   await page.keyboard.press('Enter');
-  await expect(island(page)).toHaveAttribute('data-view', 'card');
-  await expect(island(page).locator('.isl-card')).toBeFocused();
+  await expect(island(page)).toHaveAttribute('data-view', 'panel');
+  await expect(focusCard(page)).toBeVisible();
 });
 
-for (const [status, kind, said] of [
-  ['succeeded', 'done', 'Fix billing totals is done.'],
-  ['failed', 'failed', 'Fix billing totals couldn’t finish.'],
-] as const) {
-  test(`a chat that ${kind === 'done' ? 'finishes' : 'fails'} says so beside Scout once, then the line leaves`, async ({
-    page,
-  }) => {
-    await resetTestDatabase({ onboarded: true });
-    const [chatId] = await seedChats([{ title: 'Fix billing totals', run: { status: 'running' } }]);
-    await openNotchIsland(page, { size: 'large', autoExpand: false, notch: false });
-    await expect(page.getByRole('button', { name: /^Chat: Fix billing totals/ })).toBeVisible();
-    await expect(line(page)).toHaveCount(0);
-    await endRun(chatId!, status);
-    await expect(line(page)).toHaveText(said);
-    await expect(line(page)).toHaveAttribute('data-kind', kind);
-    await expect(line(page)).toHaveAttribute('title', said);
-    await expect(page.locator('.isl-root [aria-live]')).toHaveCount(1);
-    await expect(page.locator('.isl-root [aria-live]')).toHaveText(said);
-    await expect(line(page)).not.toHaveAttribute('role');
-    await shot(page, `${kind}-line`);
-    await expect(line(page)).toHaveCount(0, { timeout: 8_000 });
-    await expect(island(page)).toHaveAttribute('data-view', 'peek');
-  });
-}
-
-test('Later leaves a set-aside mark instead of the alert badge, survives a reload and ends with a new request', async ({
+test('Later sets the request aside on the server, leaves a set-aside mark that survives a reload, and a new request counts again', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
   await openNotchIsland(page, { size: 'large', autoExpand: false, notch: false });
   const [chatId] = await seedChats([install]);
-  await line(page).click();
-  await island(page).getByRole('button', { name: 'Later' }).click();
-  await page.mouse.move(5, 600);
-  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await openHomeFromStrip(page);
+  await focusCard(page).getByRole('button', { name: 'Later' }).click();
+  await expect.poll(() => setAsideKeys(page)).toHaveLength(1);
+  await expect(island(page).getByRole('region', { name: /^Set aside/ })).toContainText(
+    'Add the image library',
+  );
+
+  await page.reload();
   const mark = island(page).locator('.isl-aside');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await expect(mark).toHaveText('1');
   await expect(island(page).locator('.isl-pbadge')).toHaveCount(0);
-  await expect(line(page)).toHaveCount(0);
+  await expect(strip(page)).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: 'Spark: 1 set aside. Open Spark Island' }),
   ).toBeVisible();
-  await expect(island(page)).toHaveClass(/\btucked\b/);
-  const shown = (await mark.boundingBox())!;
-  expect(shown.y).toBeGreaterThanOrEqual(0);
   await shot(page, 'set-aside');
-
-  await page.reload();
-  await expect(mark).toHaveText('1');
-  await expect(island(page).locator('.isl-pbadge')).toHaveCount(0);
-  await expect(line(page)).toHaveCount(0);
 
   await answerAll();
   const run = await sql(`SELECT id FROM runs WHERE conversation_id = $1`, [chatId]);
@@ -232,9 +183,11 @@ test('Later leaves a set-aside mark instead of the alert badge, survives a reloa
      FROM approvals WHERE run_id = $1 LIMIT 1`,
     [run.rows[0]!.id],
   );
-  await expect(line(page)).toContainText('Approve: run npm test');
+  await expect(island(page)).toHaveAttribute('data-view', 'now');
+  await expect(count(page)).toHaveText('1');
   await expect(mark).toHaveCount(0);
-  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
+  await pointAtScout(page);
+  await expect(hoverLine(page)).toContainText('npm test');
 });
 
 test('a request that opened by itself stays open under the pointer and away from it until it is answered', async ({
@@ -254,14 +207,11 @@ test('a request that opened by itself stays open under the pointer and away from
   await expect(island(page).getByRole('button', { name: /Allow once/ })).toBeVisible();
   await answerAll();
   await sql(`UPDATE runs SET status = 'running' WHERE status = 'awaiting_approval'`);
-  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect(island(page)).toHaveAttribute('data-view', 'now');
+  await expect(island(page).getByLabel('1 working', { exact: true })).toBeVisible();
 });
 
-test('after one answer in the inbox the next request of that chat cannot be answered at once', async ({
-  page,
-}) => {
-  await resetTestDatabase({ onboarded: true });
-  await openNotchIsland(page, { size: 'large', autoExpand: false, notch: false });
+async function seedTwoRequests() {
   await seedChats([
     {
       title: 'Add the image library',
@@ -269,15 +219,40 @@ test('after one answer in the inbox the next request of that chat cannot be answ
       approvals: [install.approval, { kind: 'execute', title: 'npm test', command: 'npm test' }],
     },
   ]);
-  await pointAtScout(page);
-  const waiting = island(page).getByRole('region', { name: /^Needs you/ });
-  const allow = waiting.getByRole('button', { name: /^Allow/ });
+}
+
+test('after one answer on Home the next request of that chat cannot be answered at once', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await openNotchIsland(page, { size: 'large', autoExpand: false, notch: false });
+  await seedTwoRequests();
+  await openHomeFromStrip(page);
+  const allow = focusCard(page).getByRole('button', { name: /^Allow/ });
   await expect(allow).toBeEnabled();
-  const pending = async () =>
-    (await sql(`SELECT count(*)::int AS n FROM approvals WHERE status = 'pending'`)).rows[0]!.n;
   await allow.click();
   await expect.poll(pending).toBe(1);
-  await expect(waiting).toContainText('npm test');
+  await expect(focusCard(page)).toContainText('npm test');
+  await expect(allow).toBeDisabled();
+  await page.waitForTimeout(300);
+  expect(await pending()).toBe(1);
+  await expect(allow).toBeEnabled();
+  await allow.click();
+  await expect.poll(pending).toBe(0);
+});
+
+test('after one answer on the hover line the next request of that chat cannot be answered at once', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await openNotchIsland(page, { size: 'large', autoExpand: false, notch: false });
+  await seedTwoRequests();
+  await pointAtScout(page);
+  const allow = hoverLine(page).getByRole('button', { name: 'Allow', exact: true });
+  await expect(allow).toBeEnabled();
+  await allow.click();
+  await expect.poll(pending).toBe(1);
+  await expect(hoverLine(page)).toContainText('npm test');
   await expect(allow).toBeDisabled();
   await page.waitForTimeout(300);
   expect(await pending()).toBe(1);

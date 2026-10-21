@@ -1,4 +1,12 @@
-import type { ApprovalKind, ApprovalOption } from '@spark-outpost/contracts';
+import {
+  approvalAttentionKey,
+  freshUpdate,
+  waitingOnYou,
+  type ApprovalKind,
+  type ApprovalOption,
+  type AttentionItem,
+} from '@spark-outpost/contracts';
+import { listAttentionItems } from '../../persistence/attention-items.ts';
 import { attentionSnapshot } from '../../persistence/attention-settings.ts';
 import { listConversations } from '../../persistence/conversations.ts';
 import { nowOf } from '../deps.ts';
@@ -6,6 +14,7 @@ import { limitInput, sparkTool, type SparkToolContext } from '../tool.ts';
 import { chatState } from './chat-tools.ts';
 
 interface PendingRow {
+  id: string;
   kind: ApprovalKind;
   title: string;
   command: string | null;
@@ -22,7 +31,7 @@ interface PendingRow {
 
 async function pendingCards({ deps, scope }: SparkToolContext): Promise<PendingRow[]> {
   const { rows } = await deps.db.query<PendingRow>(
-    `SELECT a.kind, a.title, a.payload->>'command' AS command, a.options, a.created_at,
+    `SELECT a.id, a.kind, a.title, a.payload->>'command' AS command, a.options, a.created_at,
        a.auto_continue_at, r.id AS run_id, r.role, COALESCE(r.route->>'name', r.agent_label) AS agent,
        r.provider, c.id AS chat_id, c.title AS chat_title
      FROM approvals a
@@ -50,17 +59,34 @@ function cardLine(row: PendingRow, now: Date) {
   };
 }
 
+function updateLine(item: AttentionItem, titles: ReadonlyMap<string, string>) {
+  return {
+    chat: { id: item.conversationId, title: titles.get(item.conversationId) ?? '' },
+    kind: item.kind,
+    ...(item.detail ? { detail: item.detail } : {}),
+    at: item.at,
+  };
+}
+
 async function attention(context: SparkToolContext, limit: number) {
   const { deps, scope } = context;
-  const [cards, chats, flagged] = await Promise.all([
+  const [pending, chats, flagged, items] = await Promise.all([
     pendingCards(context),
     listConversations(deps.db, scope.workspaceId, ''),
     attentionSnapshot(deps.db, scope.workspaceId),
+    listAttentionItems(deps.db, scope.workspaceId),
   ]);
   const now = nowOf(deps);
+  const waiting = items.filter(waitingOnYou);
+  const waitingKeys = new Set(waiting.map((item) => item.key));
+  const cards = pending.filter((row) => waitingKeys.has(approvalAttentionKey(row.id)));
+  const titles = new Map(chats.map((chat) => [chat.id, chat.title]));
+  const updates = items.filter(freshUpdate);
+  const terminals = waiting.filter((item) => item.kind === 'terminal').length;
   const failed = chats.filter((chat) => chat.archivedAt === null && chatState(chat) === 'failed');
   return {
-    needsYou: cards.length + failed.length + flagged.items.length > 0,
+    needsYou: waiting.length > 0,
+    ...(terminals > 0 ? { terminalsWaiting: terminals } : {}),
     pendingCards: cards.slice(0, limit).map((row) => cardLine(row, now)),
     ...(cards.length > limit ? { morePendingCards: cards.length - limit } : {}),
     failedChats: failed.slice(0, limit).map((chat) => ({
@@ -69,6 +95,7 @@ async function attention(context: SparkToolContext, limit: number) {
       error: chat.latestRun?.error ?? null,
       updatedAt: chat.updatedAt,
     })),
+    updates: updates.slice(0, limit).map((item) => updateLine(item, titles)),
     flaggedTickets: flagged.items.slice(0, limit),
     note: 'Answer cards in the chat they belong to; Spark tools cannot approve or deny them.',
   };
@@ -79,7 +106,7 @@ export const attentionTool = sparkTool({
   privateData: true,
   title: 'What needs you',
   description:
-    'Does anyone need anything? Every card waiting for the user across all chats (permission to run or edit, clarifying questions, plans, pieces, checkpoints, Spark action cards) with the chat, who asks, how long it has waited and the choices; chats whose last run failed; and tickets flagged for attention. Oldest first.',
+    'Does anyone need anything? needsYou is true only when something blocks on the user: cards waiting across all chats (permission, questions, plans, checkpoints, Spark action cards) not set aside, with the chat, who asks, wait time and choices, or a waiting Terminal session. Also unread updates (Spark flags, finished and failed turns), failed chats and flagged tickets, which never set needsYou. Oldest first.',
   input: { limit: limitInput(20, 50) },
   run: (args, context) => attention(context, args.limit),
 });

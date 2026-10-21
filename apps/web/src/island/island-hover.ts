@@ -4,7 +4,7 @@ import { shownBox } from './island-fit.ts';
 import { noteSeen } from './use-island-moments.ts';
 
 const MINUTE_MS = 60_000;
-const HOVER_IN_MS = 140;
+const HOVER_IN_MS = 300;
 const HOVER_OUT_MS = 400;
 
 export function useHoverIntent(settleRef: RefObject<(inside: boolean) => void>) {
@@ -31,6 +31,34 @@ export function useHoverIntent(settleRef: RefObject<(inside: boolean) => void>) 
   }, []);
   useEffect(() => () => clearTimeout(timer.current), []);
   return [hover, onHover, cancelEnter] as const;
+}
+
+export const PASS_SPEED = 0.9;
+export const SETTLE_MS = 120;
+export const MENU_QUIET_MS = 1_000;
+
+export interface PointerSample {
+  x: number;
+  y: number;
+  at: number;
+}
+
+export function pointerSpeed(previous: PointerSample | null, next: PointerSample): number {
+  if (!previous) return 0;
+  const elapsed = Math.max(1, next.at - previous.at);
+  return Math.hypot(next.x - previous.x, next.y - previous.y) / elapsed;
+}
+
+export type PointerIntent = 'hover' | 'passing' | 'menu-bar' | 'away';
+
+export function pointerIntent(input: {
+  onIsland: boolean;
+  speed: number;
+  y: number;
+  menuBar: number;
+}): PointerIntent {
+  if (input.onIsland) return input.speed > PASS_SPEED ? 'passing' : 'hover';
+  return input.y <= input.menuBar ? 'menu-bar' : 'away';
 }
 
 export function minuteOf(time: number): number {
@@ -67,13 +95,6 @@ export function scoutHit(island: HTMLElement | null): ScoutHit | null {
 export function onScout(island: HTMLElement | null, x: number, y: number): boolean {
   const hit = scoutHit(island);
   return hit ? onScoutBody(hit.box, hit.edge, x, y) : false;
-}
-
-export function flatRowRects(row: HTMLElement | null): DOMRect[] {
-  if (!row?.matches('[data-flat]')) return [];
-  return Array.from(row.querySelectorAll('[data-shown] button'), (element) =>
-    element.getBoundingClientRect(),
-  );
 }
 
 export function lineRects(island: HTMLElement | null): DOMRect[] {

@@ -55,10 +55,8 @@ export const summaryQuery = `
     EXISTS (
       SELECT 1 FROM profiles apf WHERE apf.assistant_conversation_id = c.id
     ) AS assistant,
-    COALESCE(pl.latest_pending_at, fl.flag_created_at) AS waiting_since,
-    COALESCE(
-      r.status = 'awaiting_approval' OR p.pending_id IS NOT NULL OR fl.flag_id IS NOT NULL, false
-    ) AS needs_input,
+    pl.latest_pending_at AS waiting_since,
+    COALESCE(r.status = 'awaiting_approval' OR p.pending_id IS NOT NULL, false) AS needs_input,
     fl.flag_title,
     COALESCE((
       SELECT bool_or(w.pr_state = 'merged') AND NOT bool_or(w.pr_state = 'open')
@@ -111,8 +109,12 @@ export const summaryQuery = `
     WHERE la.status = 'pending' AND (lr.id = r.id OR lr.parent_run_id = r.id)
   ) pl ON true
   LEFT JOIN LATERAL (
-    SELECT f.id AS flag_id, f.title AS flag_title, f.created_at AS flag_created_at
+    SELECT f.title AS flag_title
     FROM rail_flags f
-    WHERE f.conversation_id = c.id AND f.status = 'open'
+    WHERE f.conversation_id = c.id AND f.status = 'open' AND NOT EXISTS (
+      SELECT 1 FROM attention_marks am
+      WHERE am.workspace_id = c.workspace_id AND am.key = 'flag:' || f.id
+        AND am.dismissed_at IS NOT NULL
+    )
     ORDER BY f.created_at DESC LIMIT 1
   ) fl ON true`;

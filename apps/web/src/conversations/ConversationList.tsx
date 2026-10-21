@@ -33,6 +33,7 @@ import { HistoryChats } from './HistoryChats.tsx';
 import { ProjectMenu } from './ProjectMenu.tsx';
 import { membersByOutpost, memberships, outsideOutposts } from './outpost-members.ts';
 import { attention } from './row-state.ts';
+import { useAlertingChats } from '../attention/use-attention.ts';
 import { activeGroups } from './sidebar-groups.ts';
 import { NO_PROJECT, chatLayout, groupOf, listIn, pinnedIn } from './sidebar-order.ts';
 import {
@@ -106,6 +107,7 @@ export const ConversationList = memo(function ConversationList({
   const searchRef = useRef<HTMLInputElement>(null);
 
   const all = conversations.data ?? [];
+  const alerting = useAlertingChats();
   const actions = useChatActions({
     toaster,
     projects: projectList,
@@ -126,7 +128,7 @@ export const ConversationList = memo(function ConversationList({
   );
   const byId = new Map([...chats, ...visible].map((chat) => [chat.id, chat]));
   const activeCount = chats.filter((chat) => !chat.archivedAt).length;
-  const waiting = attention(chats, selectedId);
+  const waiting = attention(chats, selectedId, alerting);
 
   const projectAdded = async (project: Project) => {
     setAddingProject(false);

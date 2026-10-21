@@ -88,6 +88,13 @@ async function islandRequests() {
   return rows;
 }
 
+async function setAsideKeys() {
+  const { rows } = await t.db.query<{ key: string }>(
+    'SELECT key FROM attention_marks WHERE set_aside_at IS NOT NULL',
+  );
+  return rows.map((row) => row.key);
+}
+
 describe('Ask Spark in outposts and the Inbox', () => {
   it('in Manual posts a request to an outpost chat after Do it, never as the user', async () => {
     const outpostId = await createOutpostRow(t, 'Orders launch');
@@ -146,7 +153,7 @@ describe('Ask Spark in outposts and the Inbox', () => {
     await harness.call('spark_clear_finished', { chat: conversationId });
     expect(await seenAt(conversationId)).toBeNull();
     const done = await confirmCard(t);
-    expect(done.payload.sparkResult?.message).toBe('Cleared “Done work” from Finished.');
+    expect(done.payload.sparkResult?.message).toBe('Cleared “Done work” from Updates.');
     expect(await seenAt(conversationId)).not.toBeNull();
 
     await setActs(t, 'act');
@@ -161,16 +168,16 @@ describe('Ask Spark in outposts and the Inbox', () => {
     expect(refused.text).toBe(INBOX_REFUSALS.notFinished);
   });
 
-  it('sets a waiting card aside through the island, in Act at once and in Manual after Do it', async () => {
+  it('sets a waiting card aside everywhere, in Act at once and in Manual after Do it', async () => {
     const { runId } = await startChat(t, 'Deploy the site');
     const card = await waitingCard(runId);
     const { tools: harness } = await open();
     await harness.call('spark_set_aside', { card: card.id });
-    expect(await islandRequests()).toEqual([]);
+    expect(await setAsideKeys()).toEqual([]);
     await confirmCard(t);
-    expect(await islandRequests()).toEqual([{ kind: 'set_aside', target: card.id }]);
+    expect(await setAsideKeys()).toEqual([`approval:${card.id}`]);
+    expect(await islandRequests()).toEqual([]);
 
-    await t.db.query('DELETE FROM island_requests');
     const archived = await startChat(t, 'Archived work');
     const hidden = await waitingCard(archived.runId);
     await t.db.query('UPDATE conversations SET archived_at = now() WHERE id = $1', [
@@ -181,7 +188,7 @@ describe('Ask Spark in outposts and the Inbox', () => {
     await setActs(t, 'act');
     const again = await harness.call('spark_set_aside', { card: card.id });
     expect(again.json()).toMatchObject({ outcome: 'done' });
-    expect(await islandRequests()).toEqual([{ kind: 'set_aside', target: card.id }]);
+    expect(await setAsideKeys()).toEqual([`approval:${card.id}`]);
   });
 
   it('lets the island claim a request once, and drops expired ones', async () => {
@@ -192,8 +199,8 @@ describe('Ask Spark in outposts and the Inbox', () => {
       expiresAt: new Date(Date.now() + 60_000),
     });
     await addIslandRequest(t.db, t.workspaceId, {
-      kind: 'set_aside',
-      target: randomUUID(),
+      kind: 'join_meeting',
+      target: 'evt@2026-10-20T11:00:00.000Z',
       expiresAt: new Date(Date.now() - 1_000),
     });
     const listed = await api.get('/api/island/requests');

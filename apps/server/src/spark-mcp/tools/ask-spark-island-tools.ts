@@ -57,10 +57,10 @@ const postOutpostTool = sparkTool({
 
 const clearFinishedTool = sparkTool({
   name: 'spark_clear_finished',
-  title: 'Clear a finished chat',
+  title: 'Clear a finished chat from Updates',
   acts: true,
   assistantOnly: true,
-  description: `Clear a chat from Finished in the Inbox, as its ✕ does. ${ACTS_NOTE}`,
+  description: `Clear a chat's finished or failed turn from Updates (marks it read everywhere). ${ACTS_NOTE}`,
   input: { chat: chatIdInput },
   run: async (args, context) => {
     const chat = await targetChat(context, args.chat);
@@ -71,7 +71,7 @@ const clearFinishedTool = sparkTool({
       context,
       action({
         op: 'clear_finished',
-        summary: summary(`Clear “${chat.title}” from Finished`),
+        summary: summary(`Clear “${chat.title}” from Updates`),
         conversationId: chat.id,
       }),
     );
@@ -83,7 +83,7 @@ const setAsideTool = sparkTool({
   title: 'Set a card aside',
   acts: true,
   assistantOnly: true,
-  description: `Set another chat's waiting card aside for later, as Later in the Inbox does (card ids come from spark_attention or spark_chat). ${ACTS_NOTE}`,
+  description: `Set another chat's waiting card aside for later, as Later does; it stops counting everywhere until a new card comes (card ids come from spark_attention or spark_chat). ${ACTS_NOTE}`,
   input: { card: uuidInput },
   run: async (args, context) => {
     const card = await waitingCard(context.deps.db, context.scope.workspaceId, args.card);

@@ -74,7 +74,8 @@ export async function reserveNativeTerminalLaunch(
        ON CONFLICT (conversation_id) DO UPDATE SET state = 'starting', cwd = EXCLUDED.cwd,
          label = EXCLUDED.label, active_run_id = EXCLUDED.active_run_id,
          launch_message_id = EXCLUDED.launch_message_id, generation = native_terminal_sessions.generation + 1,
-         native_turn_id = NULL, observation = EXCLUDED.observation, reason = EXCLUDED.reason, updated_at = now()
+         native_turn_id = NULL, observation = EXCLUDED.observation, reason = EXCLUDED.reason, updated_at = now(),
+         waiting_since = NULL
        RETURNING *`,
       [
         input.id,
@@ -107,7 +108,11 @@ export async function setNativeTerminalState(
     if (!row || (endedStates.has(row.state) && !endedStates.has(input.state))) return false;
     await client.query(
       `UPDATE native_terminal_sessions SET state = $3, reason = $4,
-         native_session_id = COALESCE($5, native_session_id), native_turn_id = COALESCE($6, native_turn_id), updated_at = now()
+         native_session_id = COALESCE($5, native_session_id), native_turn_id = COALESCE($6, native_turn_id), updated_at = now(),
+         waiting_since = CASE
+           WHEN $3 NOT IN ('waiting_for_permission', 'waiting_for_input') THEN NULL
+           WHEN state = $3 THEN COALESCE(waiting_since, now())
+           ELSE now() END
        WHERE id = $1 AND generation = $2`,
       [
         input.id,
@@ -345,7 +350,7 @@ export async function recoverNativeTerminals(
     for (const row of rows) {
       await finishLockedRun(client, row, 'outcome_unknown', reason);
       await client.query(
-        `UPDATE native_terminal_sessions SET state = 'interrupted', reason = $2, updated_at = now() WHERE id = $1`,
+        `UPDATE native_terminal_sessions SET state = 'interrupted', reason = $2, updated_at = now(), waiting_since = NULL WHERE id = $1`,
         [row.id, reason],
       );
       await notifyNativeTerminal(client, row.conversation_id);

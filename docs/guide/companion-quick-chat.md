@@ -32,7 +32,7 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 3. Scroll up for earlier questions; **New topic** starts fresh.
 4. **Open in Spark** shows the whole conversation.
 
-Who needs you, what's running, spend and your next meeting answer at once (**Live · answered instantly**) until the island reloads. Others use a [fast model](settings.md#spark-assistant).
+Every question, typed or spoken, goes to the [Spark assistant model](settings.md#spark-assistant), which looks up live state with Spark's tools.
 
 Answers link to the chats they name; **Review** opens a waiting card in place.
 

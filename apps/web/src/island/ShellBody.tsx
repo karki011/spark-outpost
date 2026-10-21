@@ -1,18 +1,16 @@
 import { useState, type RefObject } from 'react';
 import type { CalendarLine } from '../calendar/island-calendar.ts';
 import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
-import type { ConversationDetail, ConversationSummary, Project } from '@spark-outpost/contracts';
+import type { ConversationDetail, Project } from '@spark-outpost/contracts';
 import type { ScoutMood } from '../brand/BlobScout.tsx';
 import type { IslandGeometry, IslandSize } from '../desktop/desktop-bridge.ts';
 import type { Voice } from '../spark/voice.ts';
-import type { FastState } from './ask-fast-path.ts';
 import { AskSpark } from './AskSpark.tsx';
 import { CardView } from './CardView.tsx';
 import type { Decided } from './use-decide.ts';
-import type { Card, IslandView, Panel, PeekRow as PeekRowData } from './island-model.ts';
-import type { RestLine } from './island-rest-line.ts';
-import { IslandInbox, type InboxBundle } from './IslandInbox.tsx';
-import { NowBar } from './NowBar.tsx';
+import type { Card, IslandView, Panel } from './island-model.ts';
+import { IslandHome, type HomeBundle } from './IslandHome.tsx';
+import { RestStrip, type StripData } from './RestStrip.tsx';
 import { IslandBar, PANEL_ORDER, type BarActions, type BarCounts } from './PanelTabs.tsx';
 import { QuickChat, type Compose, type FollowUp, type QuickDraft } from './QuickChat.tsx';
 import { SparkTiles, type SparkTileActions } from './SparkTiles.tsx';
@@ -43,7 +41,6 @@ export interface IslandShellProps {
   waiting: number;
   asking: number;
   setAside: number;
-  line: RestLine | null;
   calendar: IslandCalendar;
   calendarLine: CalendarLine | null;
   voice: Voice;
@@ -52,18 +49,16 @@ export interface IslandShellProps {
   note: Decided | null;
   detailFor: (chatId: string) => ConversationDetail | undefined;
   focusSignal: number;
-  inbox: InboxBundle;
+  home: HomeBundle;
+  strip: StripData;
   sparks: SparkTileActions;
-  nowChat: ConversationSummary | null;
   bar: BarActions;
   counts: BarCounts;
-  peek: PeekRowData;
   sleepy: boolean;
   projects: readonly Project[];
   draftId: string;
   draft: QuickDraft;
   followUp: FollowUp | null;
-  fast: FastState;
   askSession: AskSession;
   announcement: string;
   onDraft: (draft: QuickDraft) => void;
@@ -73,9 +68,7 @@ export interface IslandShellProps {
   onLater: () => void;
   onReview: (card: Card) => void;
   onReviewChat: (chatId: string) => void;
-  onLine: (line: RestLine) => void;
   onScout: () => void;
-  onPeekOpen: (id: string) => void;
   onSent: (id: string, title: string, project: string | null) => void;
 }
 
@@ -86,8 +79,8 @@ function PanelPane({ panel, props }: { panel: Panel; props: IslandShellProps }) 
   switch (panel) {
     case 'home':
       return (
-        <IslandInbox
-          inbox={props.inbox}
+        <IslandHome
+          home={props.home}
           calendar={props.calendar}
           now={props.now}
           onOpenChat={props.onOpenChat}
@@ -110,14 +103,12 @@ function PanelPane({ panel, props }: { panel: Panel; props: IslandShellProps }) 
     case 'ask':
       return (
         <AskSpark
-          fast={props.fast}
           voice={props.voice}
           focusDelay={focusDelay}
           session={props.askSession}
-          meetings={props.calendar.connected ? props.calendar.upcoming : null}
           links={{
             reviewable: new Set(
-              [...props.inbox.cards, ...props.inbox.aside].map((card) => card.chat.id),
+              [...props.home.cards, ...props.home.aside].map((card) => card.chat.id),
             ),
             onReview: props.onReviewChat,
             onOpenChat: props.onOpenChat,
@@ -187,7 +178,13 @@ export function ViewBody({ props }: { props: IslandShellProps }) {
     case 'now':
       return (
         <div className="isl-body">
-          <NowBar chat={props.nowChat} card={view.card} onReview={props.onReview} />
+          <RestStrip
+            strip={props.strip}
+            hover={props.hover}
+            calendar={props.calendar}
+            onOpen={props.onScout}
+            onDecided={props.home.onDecided}
+          />
         </div>
       );
     default:

@@ -13,7 +13,7 @@ You'll answer agents from Spark Island. About 2 minutes.
 1. Open **Settings → Notifications**, **Spark Island**.
 2. Switch **Show Spark Island** on or off.
 3. Pick a **Spark Island size**.
-4. **Island chimes** play when a chat needs you, finishes or fails, except in a chat you're viewing.
+4. **Island chimes** play when a new request needs you.
 5. **Hide in screen sharing** keeps it out of shares; some apps may still show it.
 
 ![The Spark Island settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
@@ -22,25 +22,20 @@ Drag Scout to place it. At top centre it docks, half hidden when quiet.
 
 ## Open it
 
-1. Point at Scout itself: the inbox opens until the pointer leaves.
-2. Click inside to keep it open; **Esc** closes it.
+Resting, Scout shows one strip: requests that need you, a meeting within 10 minutes and working chats. Rest the pointer on it to answer the top request or join; click for Home. Passing over it opens nothing.
 
-![The Spark Island inbox: a request with Allow, Deny and Later, a running chat and finished chats](images/companion-island-home-light.png)
+![Spark Island Home: one big request card with Allow, Deny and Later, and working chats below](images/companion-island-home-light.png)
 
-**Allow**, **Deny**, **Later**, **Join** and **✕** act in place; a row, **Answer in Spark** or **⌘O** opens Spark. **+** starts a chat, with your Sparks.
+Home shows one big card: a request, a question's choices or a meeting that starts. **‹ ›** moves between requests. **Home**, **Ask Spark** and **+** sit on top; **⌘O** opens Spark, **Esc** closes.
 
-Steps never show secrets. See [Spark Island states](statuses-and-limits.md#spark-island-states).
+Spark Island and Spark share one inbox: opening a request or its chat anywhere marks it read everywhere, and it stays as **Seen** until answered. **Later** sets it aside. Finished chats and flags stay in Spark.
 
 ## Answer a card
-
-A request shows a line beside Scout, such as **Approve: run npm test · Review**; select it for the card. Finished and failed chats show there.
-
-A chat you're viewing gets no line, chime or notification; opening one clears them.
 
 With **Open requests by themselves** on, a card opens once until you answer.
 
 1. Press **⌥Space** to focus it.
-2. Press **Y** to allow once or **N** to deny, also for the inbox's top request.
+2. Press **Y** to allow once or **N** to deny, also on Home.
 
 Edit cards show the first changed lines, never secret files.
 
@@ -50,11 +45,11 @@ Edit cards show the first changed lines, never secret files.
 | -------------------------- | ----------------------------------------------------------------- |
 | **Always in this project** | Adds a plain command to the project's list.                       |
 | **Open chat**              | Plans and instruction-file changes offer only this and **Later**. |
-| **Later**                  | Sets it aside: a dashed count on Scout until it changes.          |
+| **Later**                  | Sets it aside: a dashed count on Scout until a new request.       |
 
 ## When Spark Island is off
 
-With **Dock badge and notifications** on, the Dock counts waiting chats and a notification names them. Opening the chat clears it.
+With **Dock badge and notifications** on, the Dock counts unread requests and a notification names them. Reading one anywhere clears it.
 
 ## Inside the app
 
