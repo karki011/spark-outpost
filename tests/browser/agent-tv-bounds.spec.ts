@@ -9,6 +9,7 @@ const SHOTS = process.env.SPARK_REVIEW_SHOTS ?? '';
 
 const WIDE = { width: 1680, height: 1000 };
 const NARROW = { width: 1180, height: 820 };
+const SHORT = { width: 1680, height: 600 };
 
 test.beforeEach(async ({ page }) => {
   test.slow();
@@ -102,6 +103,18 @@ test('Agent TV stays inside the chat column beside the Browser pane, above the c
   await settled(page);
   await expectInsideChatColumn(page);
   await expectCardFits(page);
+
+  await page.setViewportSize(SHORT);
+  await settled(page);
+  await expectInsideChatColumn(page);
+  await expectCardFits(page);
+  const clipped = await tvOf(page).evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const card = element.querySelector('.ac-card')!.getBoundingClientRect();
+    return element.scrollHeight > element.clientHeight + 1 || card.bottom > box.bottom;
+  });
+  expect(clipped).toBe(false);
+  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'agent-tv-bounds-short.png') });
 
   await page.setViewportSize(WIDE);
   await settled(page);

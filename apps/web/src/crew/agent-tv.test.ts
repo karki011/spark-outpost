@@ -8,6 +8,7 @@ import {
   chatArea,
   clampInto,
   dockInto,
+  stageRoom,
   handoffPath,
   stageLayout,
   STAGES,
@@ -100,11 +101,25 @@ describe('Agent TV stage layout', () => {
   });
 
   it('picks the largest stage that fits and shortens it for a lone agent', () => {
+    const roomy = { width: 1000, height: 800 };
     expect(tvStage('l', null, 2)).toBe(STAGES.l);
-    expect(tvStage('l', 400, 2)).toBe(STAGES.m);
-    expect(tvStage('l', 360, 2)).toBe(STAGES.s);
-    expect(tvStage('m', 1000, 0)).toMatchObject({ width: 380, height: 234 });
-    expect(tvStage('s', 240, 1).width).toBe(240);
+    expect(tvStage('l', { width: 400, height: 800 }, 2)).toBe(STAGES.m);
+    expect(tvStage('l', { width: 360, height: 800 }, 2)).toBe(STAGES.s);
+    expect(tvStage('m', roomy, 0)).toMatchObject({ width: 380, height: 234 });
+    expect(tvStage('s', { width: 240, height: 800 }, 1).width).toBe(240);
+  });
+
+  it('picks a stage that fits a short window under the header, caption and sub-agents', () => {
+    const dock = dockInto(
+      { left: 300, top: 60, right: 1300, bottom: 480 },
+      { width: 1400, height: 600 },
+    );
+    const room = stageRoom(dock, true);
+    expect(room.height).toBe(388 - 76 - 90);
+    const short = tvStage('l', room, 3);
+    expect(short.height).toBeLessThanOrEqual(room.height);
+    expect(short.width).toBeLessThanOrEqual(room.width);
+    expect(tvStage('l', { width: 1000, height: 300 }, 3)).toBe(STAGES.m);
   });
 });
 

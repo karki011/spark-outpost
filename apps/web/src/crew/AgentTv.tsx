@@ -41,7 +41,7 @@ import { TvList } from './TvList.tsx';
 import type { TvRows } from './tv-list.ts';
 import { tvCaption } from './tv-caption.ts';
 import { StageGaze } from './tv-gaze.ts';
-import { clampInto, dockInto, tvStage, watchStage, type TvDock } from './tv-layout.ts';
+import { clampInto, dockInto, stageRoom, tvStage, watchStage, type TvDock } from './tv-layout.ts';
 import type { TvAsk } from './tv-scene.ts';
 import { useChatArea, useThrottledText, useViewport } from './use-tv-env.ts';
 import { useTvChatter } from './use-tv-events.ts';
@@ -126,7 +126,11 @@ export function AgentTv({
   const dock = area && !narrow && !watch ? dockInto(area, viewport) : null;
   const metrics = watch
     ? watchStage(viewport)
-    : tvStage(narrow ? 's' : size, dock ? dock.maxWidth - 2 : null, members.length - 1);
+    : tvStage(
+        narrow ? 's' : size,
+        dock ? stageRoom(dock, subagents.length > 0) : null,
+        members.length - 1,
+      );
   const viewTip = useTooltip(view === 'list' ? 'List view' : 'Stage view');
   const sizeTip = useTooltip('Small / Medium / Large TV');
   const muteTip = useTooltip(muted ? 'Show speech bubbles' : 'Mute speech bubbles');
