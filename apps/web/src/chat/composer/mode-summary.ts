@@ -86,9 +86,9 @@ export function withCurrentMode(
   return [...modes, { id: current, label: current, description: null, kind: null }];
 }
 
-export const NO_PROJECT_TOOLS = 'No tools without a project';
+export const NO_PROJECT_TOOLS = 'No file tools without a project';
 export const NO_PROJECT_NOTE =
-  'The agent only chats: it can’t read or change files or run commands. Your mode applies once you link a project.';
+  'Without a project the agent can’t read or change files or run commands. Your mode still decides whether Spark’s own tools ask first.';
 
 export function projectPermission(state: PermissionState, hasRepos: boolean): PermissionState {
   if (hasRepos) return state;
@@ -96,7 +96,6 @@ export function projectPermission(state: PermissionState, hasRepos: boolean): Pe
     ...state,
     label: NO_PROJECT_TOOLS,
     short: NO_PROJECT_TOOLS,
-    risk: 'read',
     description: NO_PROJECT_NOTE,
   };
 }

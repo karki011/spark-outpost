@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   EMPTY_CONVERSATION_USAGE,
   titleFromMessage,
   type Attachment,
+  type UpdateChatSettingsRequest,
 } from '@spark-outpost/contracts';
 import { api, newDraftId, queryKeys } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
@@ -32,6 +33,16 @@ interface Started {
   kept: boolean;
 }
 
+async function nextDraft(carried: UpdateChatSettingsRequest | null) {
+  const next = newDraftId();
+  if (!carried) return { next, kept: true };
+  const kept = await api.updateChatSettings(next, carried).then(
+    () => true,
+    () => false,
+  );
+  return { next, kept };
+}
+
 function useStarted() {
   const [started, setStarted] = useState<Started | null>(null);
   useEffect(() => {
@@ -51,13 +62,12 @@ export function HomeComposer(props: HomeComposerProps) {
     queryFn: () => api.getConversation(draftId),
   });
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
-  const connected = setup.data?.providers.filter((provider) => provider.connection) ?? [];
+  const connected = useMemo(
+    () => setup.data?.providers.filter((provider) => provider.connection) ?? [],
+    [setup.data],
+  );
   const repos = useLinkedProjects(detail.data?.conversation.projectIds ?? NO_REPOS);
   const attachments = useAttachments();
-  const stale = detail.data ? isStartedChat(detail.data) : false;
-  useEffect(() => {
-    if (stale) onRotate(newDraftId());
-  }, [stale, onRotate]);
   const send = useMutation({
     mutationFn: async (message: Outgoing) => {
       const carried = carriedSettings(detail.data, connected);
@@ -67,13 +77,7 @@ export function HomeComposer(props: HomeComposerProps) {
         message.content,
         message.attachments.map((attachment) => attachment.id),
       );
-      const next = newDraftId();
-      const kept = carried
-        ? await api.updateChatSettings(next, carried).then(
-            () => true,
-            () => false,
-          )
-        : true;
+      const { next, kept } = await nextDraft(carried);
       return { next, kept, title: titleFromMessage(message.content) };
     },
     onSuccess: async ({ next, kept, title }) => {
@@ -85,6 +89,14 @@ export function HomeComposer(props: HomeComposerProps) {
       ]);
     },
   });
+
+  const stale = !send.isPending && detail.data !== undefined && isStartedChat(detail.data);
+  const recovered = useRef<string | null>(null);
+  useEffect(() => {
+    if (!stale || !detail.data || recovered.current === draftId) return;
+    recovered.current = draftId;
+    void nextDraft(carriedSettings(detail.data, connected)).then(({ next }) => onRotate(next));
+  }, [stale, draftId, detail.data, connected, onRotate]);
 
   return (
     <section className="home-compose" aria-label="Start a new chat">

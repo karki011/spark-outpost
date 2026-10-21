@@ -138,7 +138,9 @@ test('a finished answer keeps one quiet meta row and no plan or Jev lines', asyn
   await expect(page.getByText(/^Jev:/)).toHaveCount(0);
   await expect(page.locator('.taskc')).toHaveCount(0);
   await expect(page.locator('.turn-foot .run-usage')).toContainText('61');
-  await expect(page.locator('.ctx-unlinked')).toHaveText('Not linked, so the agent has no tools');
+  await expect(page.locator('.ctx-unlinked')).toHaveText(
+    'Not linked, so the agent has no file tools',
+  );
 
   const column = (await page.locator('.col').boundingBox())!;
   const composer = (await page.locator('.composer').boundingBox())!;

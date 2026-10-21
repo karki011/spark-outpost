@@ -119,17 +119,17 @@ describe('mode summary', () => {
     });
   });
 
-  it("doesn't show the picked mode as in effect without a project", () => {
+  it('says a chat without a project has no file tools and keeps the mode risk', () => {
     const picked = modePermission('claude', 'acceptEdits', { modes } as never);
     expect(projectPermission(picked, true)).toBe(picked);
     const plain = projectPermission(picked, false);
     expect(plain).toMatchObject({
       mode: 'acceptEdits',
-      label: 'No tools without a project',
-      short: 'No tools without a project',
-      risk: 'read',
+      label: 'No file tools without a project',
+      short: 'No file tools without a project',
+      risk: 'edit',
     });
-    expect(plain.description).toContain('applies once you link a project');
+    expect(plain.description).toContain('Spark’s own tools ask first');
   });
 
   it('keeps a mode the agent no longer lists', () => {

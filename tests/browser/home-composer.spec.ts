@@ -56,13 +56,15 @@ test('the Home composer keeps its mode and project across a reload and after a s
   await page.reload();
   await expect(box.getByRole('button', { name: 'Choose project' })).toBeVisible();
   await expect(permissionChip(page)).toHaveAccessibleName(
-    'Permissions: No tools without a project',
+    'Permissions: No file tools without a project',
   );
   expect(failed).toEqual([]);
 
   await permissionChip(page).click();
   await pickMode(page, 'Manual');
-  await expect(pickerPanel(page)).toContainText('Your mode applies once you link a project.');
+  await expect(pickerPanel(page)).toContainText(
+    'Your mode still decides whether Spark’s own tools ask first.',
+  );
   await page.keyboard.press('Escape');
 
   await box.getByRole('button', { name: 'Choose project' }).click();
@@ -88,25 +90,37 @@ test('the Home composer keeps its mode and project across a reload and after a s
   await expect(box.locator('.ctx-repo')).toContainText(name);
   await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Manual');
   await expect(box.getByRole('textbox', { name: 'Message' })).toHaveValue('');
+
+  const kept = await page.evaluate(() => localStorage.getItem('spark-outpost.home-draft'));
+  const sent = await page.request.post(`/api/conversations/${kept}/messages`, {
+    data: { id: crypto.randomUUID(), content: 'Sent before the page saved its next draft' },
+  });
+  expect(sent.ok()).toBe(true);
+  await page.reload();
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('spark-outpost.home-draft')))
+    .not.toBe(kept);
+  await expect(box.locator('.ctx-repo')).toContainText(name);
+  await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Manual');
 });
 
-test('a chat with no project says the agent has no tools instead of showing its mode', async ({
-  page,
-}) => {
+test('a chat with no project says the agent has no file tools', async ({ page }) => {
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await expect(page.locator('.ctx-unlinked')).toHaveText('Not linked, so the agent has no tools');
+  await expect(page.locator('.ctx-unlinked')).toHaveText(
+    'Not linked, so the agent has no file tools',
+  );
   const chip = permissionChip(page);
-  await expect(chip).toHaveAccessibleName('Permissions: No tools without a project');
-  await expect(chip).toHaveText('No tools without a project');
+  await expect(chip).toHaveAccessibleName('Permissions: No file tools without a project');
+  await expect(chip).toHaveText('No file tools without a project');
   await chip.hover();
-  await expect(page.getByRole('tooltip')).toContainText('it can’t read or change files');
+  await expect(page.getByRole('tooltip')).toContainText('can’t read or change files');
   await page.mouse.move(0, 0);
 
   await chip.click();
   await pickMode(page, 'Auto');
   const tab = pickerPanel(page).getByRole('tab', { name: /Permissions/ });
-  await expect(tab).toHaveText(/No tools without a project$/);
+  await expect(tab).toHaveText(/No file tools without a project$/);
   await page.keyboard.press('Escape');
-  await expect(chip).toHaveAccessibleName('Permissions: No tools without a project');
+  await expect(chip).toHaveAccessibleName('Permissions: No file tools without a project');
 });

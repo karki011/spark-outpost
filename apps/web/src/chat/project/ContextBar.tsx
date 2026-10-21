@@ -133,7 +133,7 @@ export function ContextBar({
 
   return (
     <ProjectFolders conversationId={conversationId} repos={repos} popover={popover} lead={lead}>
-      {!primary && <span className="ctx-unlinked">Not linked, so the agent has no tools</span>}
+      {!primary && <span className="ctx-unlinked">Not linked, so the agent has no file tools</span>}
       {branchChip}
       {placeMenu}
       <TalkToChip conversationId={conversationId} />
