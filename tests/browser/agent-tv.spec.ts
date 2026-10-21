@@ -99,6 +99,10 @@ test('clicking the agent shows its status, Go to scrolls, and Esc steps back', a
   await expect(bubble).toBeVisible();
   await expect(bubble).toContainText('Claude');
   await expect(agent(page)).toHaveAttribute('aria-expanded', 'true');
+  const stage = (await tv.locator('.tv-stage').boundingBox())!;
+  const shown = (await bubble.boundingBox())!;
+  expect(shown.y).toBeGreaterThanOrEqual(stage.y);
+  expect(shown.y + shown.height).toBeLessThanOrEqual(stage.y + stage.height);
 
   await scrollThread(page, 'top');
   await bubble.getByRole('button', { name: 'Go to' }).click();
@@ -113,6 +117,8 @@ test('clicking the agent shows its status, Go to scrolls, and Esc steps back', a
 
   const ask = tv.getByRole('button', { name: /change notes\.txt\?/i });
   await expect(ask).toBeVisible();
+  const asked = (await ask.boundingBox())!;
+  expect(asked.y).toBeGreaterThanOrEqual(stage.y);
   await scrollThread(page, 'top');
   await ask.click();
   await expect(edit).toBeInViewport();

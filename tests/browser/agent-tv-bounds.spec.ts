@@ -83,6 +83,15 @@ test('Agent TV stays inside the chat column beside the Browser pane, above the c
   const stage = (await tvOf(page).locator('.tv-stage').boundingBox())!;
   expect(stage.height).toBeLessThan(250);
 
+  const docked = (await tvOf(page).boundingBox())!;
+  await page.keyboard.press('ControlOrMeta+Shift+B');
+  await expect(page.getByRole('region', { name: 'Browser' })).toBeHidden();
+  await expect.poll(async () => (await tvOf(page).boundingBox())!.x).toBeGreaterThan(docked.x);
+  await page.keyboard.press('ControlOrMeta+Shift+B');
+  await expect(page.getByRole('region', { name: 'Browser' })).toBeVisible();
+  await settled(page);
+  await expectInsideChatColumn(page);
+
   await page.setViewportSize(NARROW);
   await settled(page);
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'agent-tv-bounds-narrow.png') });
