@@ -69,15 +69,15 @@ A dot shows changes since you last opened the chat; point at it.
 
 ## Spark Island states
 
-| You see                                     | Means                                                       |
-| ------------------------------------------- | ----------------------------------------------------------- |
-| Scout's eyes scan; small blobs in the strip | **Working…**                                                |
-| An amber count beside Scout                 | **Needs you**                                               |
-| A dashed count on Scout                     | Set aside                                                   |
-| A happy face                                | **Done**                                                    |
-| A worried face                              | **Failed**                                                  |
-| Scout alone                                 | **Quiet**                                                   |
-| **Terminal session** on the card            | Answer in **Open terminal**. The card never shows commands. |
+| You see                          | Means                                                       |
+| -------------------------------- | ----------------------------------------------------------- |
+| Scout's eyes scan                | **Working…**                                                |
+| An amber count beside Scout      | **Needs you**                                               |
+| A dashed count on Scout          | Set aside                                                   |
+| A happy face                     | **Done**                                                    |
+| A worried face                   | **Failed**                                                  |
+| Scout alone                      | **Quiet**                                                   |
+| **Terminal session** on the card | Answer in **Open terminal**. The card never shows commands. |
 
 With **Reduce motion** on, only faces change.
 

@@ -51,11 +51,11 @@ async function hoverLine(page: Page) {
 
 async function leave(page: Page) {
   await page.mouse.move(5, 600, { steps: 4 });
-  await expect(island(page).locator('.isl-strip')).toBeVisible({ timeout: 10_000 });
+  await expect(island(page)).toHaveAttribute('data-view', 'peek', { timeout: 10_000 });
 }
 
 async function openHome(page: Page) {
-  await island(page).locator('.isl-strip').click();
+  await island(page).locator('.isl-scout-btn').click();
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
 }
 

@@ -25,8 +25,8 @@ const PLACES: Record<string, Partial<NotchSetup>> = {
   floating: { notch: false, docked: false },
 };
 
-const strip = (page: Page) => island(page).locator('.isl-strip');
-const count = (page: Page) => island(page).getByLabel('1 need you', { exact: true });
+const scoutButton = (page: Page) => island(page).locator('.isl-scout-btn');
+const count = (page: Page) => island(page).locator('.isl-pbadge');
 const hoverLine = (page: Page) => island(page).locator('.isl-hover');
 const focusCard = (page: Page) =>
   island(page).getByRole('article', { name: 'Add the image library needs you' });
@@ -35,7 +35,7 @@ async function shot(page: Page, name: string) {
   if (!SHOTS) return;
   await page.waitForTimeout(900);
   await page.screenshot({
-    path: path.join(SHOTS, `island-strip-${name}.png`),
+    path: path.join(SHOTS, `island-rest-${name}.png`),
     clip: { x: 240, y: 0, width: 800, height: 240 },
   });
 }
@@ -67,33 +67,32 @@ async function setAsideKeys(page: Page): Promise<string[]> {
   return body.items.filter((item) => item.setAsideAt !== null).map((item) => item.key);
 }
 
-async function openHomeFromStrip(page: Page) {
+async function openHomeFromScout(page: Page) {
   await page.mouse.move(5, 600);
-  await strip(page).click();
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await scoutButton(page).click();
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
   await expect(island(page).locator('[data-panel="home"]')).toBeVisible();
 }
 
 for (const [place, setup] of Object.entries(PLACES)) {
-  test(`${place}: a waiting request rests as a count in the strip and a click opens Home`, async ({
+  test(`${place}: a waiting request rests as a count on Scout and a click opens Home`, async ({
     page,
   }) => {
     await resetTestDatabase({ onboarded: true });
     await openNotchIsland(page, { size: 'large', autoExpand: false, ...setup });
     await seedChats([install]);
-    await expect(island(page)).toHaveAttribute('data-view', 'now');
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
     await expect(count(page)).toHaveText('1');
-    await expect(island(page).locator('.isl-restline')).toHaveCount(0);
+    await expect(island(page).locator('.isl-restline, .isl-view')).toHaveCount(0);
     await settled(page);
-    const box = (await strip(page).boundingBox())!;
+    const box = (await island(page).locator('.isl-scout-wrap').boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(VIEWPORT.width);
-    expect(box.y).toBeGreaterThanOrEqual(0);
-    if (setup.notch !== false) {
-      expect((await underNotch(page)).filter((hit) => !hit.includes('isl-strip"'))).toEqual([]);
-    }
+    expect(box.y + box.height).toBeGreaterThan(0);
+    if (setup.notch !== false) expect(await underNotch(page)).toEqual([]);
     await shot(page, `count-${place}`);
-    await strip(page).click();
+    await scoutButton(page).click();
     await expect(island(page)).toHaveAttribute('data-view', 'panel');
     await expect(focusCard(page)).toBeVisible();
     await expect(focusCard(page).getByRole('button', { name: /^Allow/ })).toBeVisible();
@@ -101,7 +100,7 @@ for (const [place, setup] of Object.entries(PLACES)) {
 }
 
 for (const answer of ['Allow', 'Deny'] as const) {
-  test(`hovering Scout turns the strip into the request's line and ${answer} answers it in place without taking focus`, async ({
+  test(`hovering Scout shows the request's line and ${answer} answers it in place without taking focus`, async ({
     page,
   }) => {
     await resetTestDatabase({ onboarded: true });
@@ -125,25 +124,23 @@ for (const answer of ['Allow', 'Deny'] as const) {
   });
 }
 
-test('the strip rests without motion under Reduce Motion, takes keyboard focus with a visible ring, and Enter opens Home', async ({
+test('resting Scout takes keyboard focus with a visible ring under Reduce Motion, and Enter opens Home', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await resetTestDatabase({ onboarded: true });
   await openNotchIsland(page, { size: 'large', autoExpand: false, notch: false });
   await seedChats([install]);
-  await expect(strip(page)).toBeVisible();
-  expect(await strip(page).evaluate((element) => getComputedStyle(element).animationName)).toBe(
-    'none',
-  );
+  await expect(count(page)).toHaveText('1');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
   for (let presses = 0; presses < 6; presses += 1) {
     await page.keyboard.press('Tab');
-    if (await strip(page).evaluate((element) => element === document.activeElement)) break;
+    if (await scoutButton(page).evaluate((element) => element === document.activeElement)) break;
   }
-  await expect(strip(page)).toBeFocused();
-  expect(await strip(page).evaluate((element) => getComputedStyle(element).outlineStyle)).toBe(
-    'solid',
-  );
+  await expect(scoutButton(page)).toBeFocused();
+  expect(
+    await scoutButton(page).evaluate((element) => getComputedStyle(element).outlineStyle),
+  ).toBe('solid');
   await page.keyboard.press('Enter');
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
   await expect(focusCard(page)).toBeVisible();
@@ -155,7 +152,7 @@ test('Later sets the request aside on the server, leaves a set-aside mark that s
   await resetTestDatabase({ onboarded: true });
   await openNotchIsland(page, { size: 'large', autoExpand: false, notch: false });
   const [chatId] = await seedChats([install]);
-  await openHomeFromStrip(page);
+  await openHomeFromScout(page);
   await focusCard(page).getByRole('button', { name: 'Later' }).click();
   await expect.poll(() => setAsideKeys(page)).toHaveLength(1);
   await expect(island(page).getByRole('region', { name: /^Set aside/ })).toContainText(
@@ -166,8 +163,7 @@ test('Later sets the request aside on the server, leaves a set-aside mark that s
   const mark = island(page).locator('.isl-aside');
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await expect(mark).toHaveText('1');
-  await expect(island(page).locator('.isl-pbadge')).toHaveCount(0);
-  await expect(strip(page)).toHaveCount(0);
+  await expect(count(page)).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: 'Spark: 1 set aside. Open Spark Island' }),
   ).toBeVisible();
@@ -183,7 +179,7 @@ test('Later sets the request aside on the server, leaves a set-aside mark that s
      FROM approvals WHERE run_id = $1 LIMIT 1`,
     [run.rows[0]!.id],
   );
-  await expect(island(page)).toHaveAttribute('data-view', 'now');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await expect(count(page)).toHaveText('1');
   await expect(mark).toHaveCount(0);
   await pointAtScout(page);
@@ -207,8 +203,8 @@ test('a request that opened by itself stays open under the pointer and away from
   await expect(island(page).getByRole('button', { name: /Allow once/ })).toBeVisible();
   await answerAll();
   await sql(`UPDATE runs SET status = 'running' WHERE status = 'awaiting_approval'`);
-  await expect(island(page)).toHaveAttribute('data-view', 'now');
-  await expect(island(page).getByLabel('1 working', { exact: true })).toBeVisible();
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect(island(page).locator('.isl-scout-wrap svg.scout')).toHaveClass(/\bworking\b/);
 });
 
 async function seedTwoRequests() {
@@ -227,7 +223,7 @@ test('after one answer on Home the next request of that chat cannot be answered 
   await resetTestDatabase({ onboarded: true });
   await openNotchIsland(page, { size: 'large', autoExpand: false, notch: false });
   await seedTwoRequests();
-  await openHomeFromStrip(page);
+  await openHomeFromScout(page);
   const allow = focusCard(page).getByRole('button', { name: /^Allow/ });
   await expect(allow).toBeEnabled();
   await allow.click();

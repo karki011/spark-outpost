@@ -37,8 +37,8 @@ for (const [mode, theme] of Object.entries(THEMES)) {
     await seedTerminal(chat!, { state: 'working', cwd: '/Users/ada/code/parser', turn: TURN });
     await fakeHomeDesktop(page, theme);
     await openIsland(page);
-    await expect(island(page)).toHaveAttribute('data-view', 'now');
-    await island(page).locator('.isl-strip').click();
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
+    await island(page).locator('.isl-scout-btn').click();
     const working = island(page).getByRole('region', { name: /^Working/ });
     await expect(working.getByRole('listitem')).toHaveCount(1);
     await expect(working).toContainText('Port the parser');
@@ -51,14 +51,14 @@ for (const [mode, theme] of Object.entries(THEMES)) {
   });
 }
 
-test('a working Terminal session rests as a working count, and an ended turn leaves Scout alone with no line', async ({
+test('a working Terminal session rests as working Scout, and an ended turn leaves Scout alone with no line', async ({
   page,
 }) => {
   const [chat] = await seedChats([{ title: 'Port the parser' }]);
   await seedTerminal(chat!, { state: 'working' });
   await openNotchIsland(page, { size: 'large', autoExpand: false, notch: false });
-  await expect(island(page)).toHaveAttribute('data-view', 'now');
-  await expect(island(page).getByLabel('1 working', { exact: true })).toBeVisible();
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect(island(page).locator('.isl-scout-wrap svg.scout')).toHaveClass(/\bworking\b/);
   await setTerminalState(chat!, 'ready');
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await expect(island(page).locator('.isl-restline')).toHaveCount(0);

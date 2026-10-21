@@ -145,7 +145,7 @@ test('Desktop companion screenshots', async ({ page }) => {
     },
   ]);
   await runsByClaude();
-  await expect(island(page).locator('.isl-strip-count')).toHaveText('1', { timeout: 15_000 });
+  await expect(island(page).locator('.isl-pbadge')).toHaveText('1', { timeout: 15_000 });
   await page.keyboard.press('Alt+Space');
   await expect(island(page)).toHaveAttribute('data-view', 'card');
   const card = island(page).getByRole('group', { name: /wants to run a command/ });

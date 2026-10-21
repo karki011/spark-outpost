@@ -15,7 +15,6 @@ const PARTS = [
   '.isl-khint',
   '.isl-hcard',
   '.isl-dots',
-  '.isl-strip',
   '.isl-hover',
   '.isl-focus',
   '.isl-working',
@@ -35,9 +34,9 @@ const TEXT = [
 ];
 
 const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
-const strip = (page: Page) => island(page).locator('button.isl-strip');
+const scout = (page: Page) => island(page).locator('button.isl-scout-btn');
 const hoverLine = (page: Page) => island(page).locator('.isl-hover');
-const needYou = (page: Page) => island(page).getByLabel('1 need you', { exact: true });
+const needYou = (page: Page) => island(page).locator('.isl-pbadge');
 
 async function sql(text: string, values: unknown[] = []) {
   const db = openTestDb();
@@ -213,10 +212,9 @@ for (const width of [420, 1280]) {
       { title: 'Add dark mode toggle', run: { status: 'succeeded' } },
       { title: 'Speed up cold start', run: { status: 'succeeded' } },
     ]);
-    await expect(island(page)).toHaveAttribute('data-view', 'now');
-    await expect(island(page).getByLabel('1 working', { exact: true })).toBeVisible();
-    await expectClean(page, 'resting strip');
-    await strip(page).click();
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
+    await expectClean(page, 'resting Scout');
+    await scout(page).click();
     await expect(island(page)).toHaveAttribute('data-view', 'panel');
     await expect(island(page).getByRole('region', { name: /^Working/ })).toContainText(
       'Fix image uploads',
@@ -225,7 +223,7 @@ for (const width of [420, 1280]) {
     await expectClean(page, 'home with work');
     await page.keyboard.press('Escape');
     await page.mouse.move(width / 2, 600);
-    await expect(island(page)).toHaveAttribute('data-view', 'now');
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
 
     await expect(island(page).locator('.isl-view')).toHaveCount(1);
     await command(page, 'sessions');
@@ -242,14 +240,16 @@ for (const width of [420, 1280]) {
       },
     ]);
     await expect(needYou(page)).toBeVisible();
-    await expect(island(page)).toHaveAttribute('data-view', 'now');
-    await expectClean(page, 'strip with a request');
-    await strip(page).click();
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
+    await expectClean(page, 'Scout with a request');
+    await scout(page).click();
     await expect(island(page).getByRole('article', { name: `${LONG} needs you` })).toBeVisible();
     await expectClean(page, 'home with a long request');
     await page.keyboard.press('Escape');
+    await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
+    await page.waitForTimeout(800);
     await page.mouse.move(width / 2, 600);
-    await expect(island(page)).toHaveAttribute('data-view', 'now');
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
     await pointAtScout(page);
     await expect(hoverLine(page)).toContainText(LONG);
     await expectClean(page, 'hover line');
@@ -267,8 +267,8 @@ for (const width of [420, 1280]) {
       `UPDATE runs SET status = 'succeeded', finished_at = now() WHERE conversation_id = $1`,
       [asking],
     );
-    await expect(island(page)).toHaveAttribute('data-view', 'now');
-    await strip(page).click();
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
+    await scout(page).click();
     await expect(island(page).getByRole('region', { name: /^Working/ })).toContainText(
       'Fix image uploads',
     );
@@ -285,9 +285,9 @@ test('running and finished work never expand the island', async ({ page }) => {
   const [running] = await seedChats([{ title: 'Fix image uploads', run: { status: 'running' } }]);
   const scout = island(page).locator('.isl-scout-wrap svg.scout');
   await expect(scout).toHaveClass(/\bworking\b/);
-  await expect(island(page)).toHaveAttribute('data-view', 'now');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await page.waitForTimeout(1200);
-  await expect(island(page)).toHaveAttribute('data-view', 'now');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await command(page, 'quick');
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
   await sql(
@@ -323,7 +323,7 @@ for (const { name, sparkFocused } of [
     ]);
     await expect(needYou(page)).toBeVisible();
     await page.waitForTimeout(1200);
-    await expect(island(page)).toHaveAttribute('data-view', 'now');
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
     await pointAtScout(page);
     await expect(hoverLine(page).getByRole('button', { name: 'Allow' })).toBeVisible();
     await expect(island(page)).toHaveAttribute('data-view', 'now');
@@ -356,7 +356,7 @@ test('clicking Scout opens Home, quiet or busy, and the shortcuts still open the
     { title: 'Speed up cold start', run: { status: 'succeeded' } },
   ]);
   await page.mouse.move(640, 600);
-  await expect(island(page)).toHaveAttribute('data-view', 'now');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await scoutButton.focus();
   await page.keyboard.press('Enter');
   await expect(island(page).getByRole('region', { name: /^Working/ })).toContainText(
@@ -374,7 +374,7 @@ test('clicking Scout opens Home, quiet or busy, and the shortcuts still open the
   );
 });
 
-test('hovering Scout shows the top request, Allow answers in place without taking focus, and leaving restores the strip', async ({
+test('hovering Scout shows the top request, Allow answers in place without taking focus, and leaving rests as Scout again', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -391,7 +391,7 @@ test('hovering Scout shows the top request, Allow answers in place without takin
     },
   ]);
   await expect(needYou(page)).toBeVisible();
-  await expect(island(page)).toHaveAttribute('data-view', 'now');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await pointAtScout(page);
   const allow = hoverLine(page).getByRole('button', { name: 'Allow' });
   await expect(allow).toBeVisible();
@@ -410,6 +410,5 @@ test('hovering Scout shows the top request, Allow answers in place without takin
   expect(recorded.opened).toEqual([]);
   await page.mouse.move(640, 600);
   await expect(hoverLine(page)).toHaveCount(0);
-  await expect(strip(page)).toBeVisible();
-  await expect(island(page)).toHaveAttribute('data-view', 'now');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
 });

@@ -46,8 +46,8 @@ test('an edit approval card shows its first changed lines as text', async ({ pag
     },
   ]);
   await openIsland(page);
-  await expect(island(page)).toHaveAttribute('data-view', 'now');
-  await expect(island(page).getByLabel('1 need you', { exact: true })).toHaveText('1');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
   await page.keyboard.press('Alt+Space');
   const card = island(page).getByRole('group', { name: /wants to change a file/ });
   await expect(card).toBeFocused();
@@ -88,8 +88,8 @@ test('an edit approval card for a secret file shows only its path', async ({ pag
     },
   ]);
   await openIsland(page);
-  await expect(island(page)).toHaveAttribute('data-view', 'now');
-  await expect(island(page).getByLabel('1 need you', { exact: true })).toHaveText('1');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
   await page.keyboard.press('Alt+Space');
   const card = island(page).getByRole('group', { name: /wants to change a file/ });
   await expect(card).toContainText('.env');

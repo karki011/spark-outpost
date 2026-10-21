@@ -71,37 +71,39 @@ const quiet: IslandInputs = {
   panel: null,
   cards: [],
   review: null,
-  strip: false,
+  hoverLine: false,
 };
 
 const resting = { waiting: 0, hour: 14, idleMinutes: 0, running: 0, moment: null, failed: false };
 
 describe('island state machine', () => {
-  it('rests as Scout alone with nothing to show, where hover opens the panel', () => {
+  it('rests as Scout alone, where hover opens the panel unless a top item has a line', () => {
     const card = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
     expect(islandView(quiet)).toEqual({ kind: 'peek' });
-    expect(hoverOpensHome(islandView(quiet))).toBe(true);
-    expect(hoverOpensHome(islandView({ ...quiet, panel: 'quick' }))).toBe(false);
-    expect(hoverOpensHome(islandView({ ...quiet, note: true }))).toBe(false);
-    expect(hoverOpensHome(islandView({ ...quiet, cards: [card], review: card.chat.id }))).toBe(
-      false,
-    );
+    expect(islandView({ ...quiet, cards: [card] })).toEqual({ kind: 'peek' });
+    expect(hoverOpensHome(islandView(quiet), false)).toBe(true);
+    expect(hoverOpensHome(islandView({ ...quiet, cards: [card] }), true)).toBe(false);
+    expect(hoverOpensHome(islandView({ ...quiet, panel: 'quick' }), false)).toBe(false);
+    expect(hoverOpensHome(islandView({ ...quiet, note: true }), false)).toBe(false);
+    expect(
+      hoverOpensHome(islandView({ ...quiet, cards: [card], review: card.chat.id }), false),
+    ).toBe(false);
+    expect(scoutMoodFor(islandView(quiet), { ...resting, waiting: 1 })).toBe('alert');
+    expect(scoutMoodFor(islandView(quiet), { ...resting, running: 2 })).toBe('working');
   });
 
-  it('rests as one strip when something needs you, a meeting is close or chats work', () => {
+  it('shows the top item as one line only while hovered', () => {
     const card = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
-    const strip = islandView({ ...quiet, cards: [card], strip: true });
-    expect(strip).toEqual({ kind: 'now' });
-    expect(hoverOpensHome(strip)).toBe(false);
-    expect(quickShortcutTarget(null, strip, card)).toEqual({ kind: 'review', chatId: 'a' });
-    expect(quickShortcutTarget(null, strip)).toEqual({ kind: 'quick' });
-    expect(islandView({ ...quiet, cards: [card], strip: true, review: 'a' }).kind).toBe('card');
-    expect(islandView({ ...quiet, strip: true, panel: 'home' }).kind).toBe('panel');
-    expect(scoutMoodFor(strip, { ...resting, waiting: 1 })).toBe('alert');
-    expect(scoutMoodFor(strip, { ...resting, running: 2 })).toBe('working');
+    const line = islandView({ ...quiet, cards: [card], hoverLine: true });
+    expect(line).toEqual({ kind: 'now' });
+    expect(hoverOpensHome(line, true)).toBe(false);
+    expect(quickShortcutTarget(null, line, card)).toEqual({ kind: 'review', chatId: 'a' });
+    expect(quickShortcutTarget(null, line)).toEqual({ kind: 'quick' });
+    expect(islandView({ ...quiet, cards: [card], hoverLine: true, review: 'a' }).kind).toBe('card');
+    expect(islandView({ ...quiet, hoverLine: true, panel: 'home' }).kind).toBe('panel');
   });
 
-  it('keeps the strip clear of the notch and the empty rest as wide as the notch', () => {
+  it('keeps the hover line clear of the notch and the rest as wide as the notch', () => {
     expect(viewWidth({ kind: 'now' }, 0, 1512)).toBe(460);
     expect(viewWidth({ kind: 'now' }, 400, 1512)).toBe(608);
     expect(viewWidth({ kind: 'peek' }, 186, 1512)).toBe(186);

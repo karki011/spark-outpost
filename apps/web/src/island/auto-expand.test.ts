@@ -60,16 +60,16 @@ describe('opening a request by itself', () => {
 });
 
 describe('resting with requests opening by themselves', () => {
-  const rest = { note: false, panel: null, review: null, strip: true };
+  const rest = { note: false, panel: null, review: null, hoverLine: false };
 
-  it('rests as the strip until a request opens, and again once it is put away', () => {
+  it('rests as Scout until a request opens, and again once it is put away', () => {
     const request = card('a', 'one');
     const shown = new Set<string>();
-    expect(islandView({ ...rest, strip: false, cards: [] })).toEqual({ kind: 'peek' });
-    expect(islandView({ ...rest, cards: [request] })).toEqual({ kind: 'now' });
+    expect(islandView({ ...rest, cards: [] })).toEqual({ kind: 'peek' });
+    expect(islandView({ ...rest, cards: [request] })).toEqual({ kind: 'peek' });
     const opened = nextToExpand([request], [request], shown);
     expect(islandView({ ...rest, cards: [request], review: opened!.chat.id }).kind).toBe('card');
-    expect(islandView({ ...rest, cards: [request] })).toEqual({ kind: 'now' });
+    expect(islandView({ ...rest, cards: [request] })).toEqual({ kind: 'peek' });
     expect(nextToExpand([], [request], shown)).toBeNull();
   });
 
