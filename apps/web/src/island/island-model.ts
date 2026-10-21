@@ -162,9 +162,14 @@ function cardKind(chat: ConversationSummary, approval: Approval | null): CardKin
   return 'approval';
 }
 
+function pickApproval(pending: readonly Approval[], wanted: string | undefined): Approval | null {
+  return pending.find((candidate) => candidate.id === wanted) ?? pending.at(-1) ?? null;
+}
+
 export function pendingCards(
   chats: readonly ConversationSummary[],
   approvalsByChat: ReadonlyMap<string, readonly Approval[]>,
+  putOff: (approvalId: string) => boolean = () => false,
 ): Card[] {
   return chats
     .filter((chat) => !chat.archivedAt && needsInput(chat))
@@ -173,8 +178,8 @@ export function pendingCards(
         (approval) => approval.status === 'pending',
       );
       const wanted = chat.attention?.approvalId;
-      const approval =
-        pending.find((candidate) => candidate.id === wanted) ?? pending.at(-1) ?? null;
+      const active = pending.filter((approval) => !putOff(approval.id));
+      const approval = pickApproval(active, wanted) ?? pickApproval(pending, wanted);
       return {
         kind: cardKind(chat, approval),
         chat,

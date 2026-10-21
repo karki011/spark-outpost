@@ -18,8 +18,9 @@ export interface StripData {
   top: Card | null;
 }
 
-export function stripHasContent(strip: StripData): boolean {
-  return strip.count > 0 || strip.meeting !== null || strip.working.length > 0;
+export function stripShows(strip: StripData, calendarLine: boolean): boolean {
+  if (strip.count > 0 || strip.working.length > 0) return true;
+  return strip.meeting !== null && !calendarLine;
 }
 
 interface RestStripProps {

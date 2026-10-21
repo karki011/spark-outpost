@@ -121,10 +121,17 @@ describe('spark_attention', () => {
     const body = (await (await open()).call('spark_attention')).json<{
       needsYou: boolean;
       pendingCards: unknown[];
+      setAsideCards: { asks: string; chat: { id: string } }[];
       updates: { kind: string; chat: { id: string } }[];
     }>();
     expect(body.needsYou).toBe(false);
     expect(body.pendingCards).toEqual([]);
+    expect(body.setAsideCards).toEqual([
+      expect.objectContaining({
+        asks: 'Run later',
+        chat: expect.objectContaining({ id: waiting.conversationId }),
+      }),
+    ]);
     expect(body.updates).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

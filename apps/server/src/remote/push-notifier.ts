@@ -70,7 +70,7 @@ export function startPushNotifier(
   const terminals = new TerminalWaits();
   const scanning = new Set<string>();
   const heldChats = new Map<string, QueuedPush[]>();
-  const shown = new Map<string, Set<string>>();
+  const shown = new Map<string, { keys: Set<string>; targets: Set<string> }>();
   let stopped = false;
   let work: Promise<void> = Promise.resolve();
 
@@ -135,13 +135,13 @@ export function startPushNotifier(
     });
   }
 
-  async function sender(): Promise<{ targets: PushTarget[]; sender: Sender } | null> {
+  async function sender(
+    reaches: (target: PushTarget) => boolean = (target) =>
+      !quietDevice(target.deviceId, deps.focus.focusedClients()),
+  ): Promise<{ targets: PushTarget[]; sender: Sender } | null> {
     const access = await remoteAccess(db, workspaceId);
     if (!access.hostname || !access.switches.notifications) return null;
-    const focused = deps.focus.focusedClients();
-    const targets = (await pushTargets(db, workspaceId, access.hostname)).filter(
-      (target) => !quietDevice(target.deviceId, focused),
-    );
+    const targets = (await pushTargets(db, workspaceId, access.hostname)).filter(reaches);
     if (targets.length === 0) return null;
     const keys = await deps.keys.get();
     const subject = pushSubject(await pushContact(db, workspaceId), access.hostname);
@@ -172,9 +172,10 @@ export function startPushNotifier(
     if (!chat) return;
     const payload = JSON.stringify(pushMessage(chat, live));
     await Promise.all(ready.targets.map((target) => sendTo(target, payload, ready.sender)));
-    const keys = shown.get(conversationId) ?? new Set<string>();
-    for (const item of live) keys.add(item.source);
-    shown.set(conversationId, keys);
+    const record = shown.get(conversationId) ?? { keys: new Set<string>(), targets: new Set() };
+    for (const item of live) record.keys.add(item.source);
+    for (const target of ready.targets) record.targets.add(target.id);
+    shown.set(conversationId, record);
   }
 
   async function alertingSources(conversationId: string): Promise<Set<string>> {
@@ -185,14 +186,14 @@ export function startPushNotifier(
   }
 
   async function settle(conversationId: string): Promise<void> {
-    const keys = shown.get(conversationId);
-    if (!keys) return;
+    const record = shown.get(conversationId);
+    if (!record) return;
     const alerting = await alertingSources(conversationId);
-    if ([...keys].some((key) => alerting.has(key))) return;
+    if ([...record.keys].some((key) => alerting.has(key))) return;
     shown.delete(conversationId);
-    const ready = await sender();
+    const ready = await sender((target) => record.targets.has(target.id));
     if (!ready) return;
-    const payload = JSON.stringify(closePush(conversationId, [...keys]));
+    const payload = JSON.stringify(closePush(conversationId, [...record.keys]));
     await Promise.all(ready.targets.map((target) => sendTo(target, payload, ready.sender)));
   }
 

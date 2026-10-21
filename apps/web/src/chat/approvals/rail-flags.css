@@ -61,7 +61,7 @@
 .open-items {
   position: sticky;
   top: 0;
-  z-index: 3;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 8px;

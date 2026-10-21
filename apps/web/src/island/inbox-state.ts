@@ -1,4 +1,4 @@
-import { alertingChats, approvalAttentionKey, type AttentionItem } from '@spark-outpost/contracts';
+import { alerting, approvalAttentionKey, type AttentionItem } from '@spark-outpost/contracts';
 import type { Card } from './island-model.ts';
 
 export function cardItem(card: Card, items: readonly AttentionItem[]): AttentionItem | null {
@@ -27,17 +27,16 @@ export function inboxCards(
 ): InboxCards {
   const sorted: InboxCards = { waiting: [], aside: [], unread: [], seen: new Set() };
   const seen = new Set<Card>();
-  const alertingIds = alertingChats(items);
   for (const card of cards) {
     const item = cardItem(card, items);
     if (loaded && !item) continue;
     if (item?.dismissedAt) continue;
-    if (item?.setAsideAt && !alertingIds.has(card.chat.id)) {
+    if (item?.setAsideAt) {
       sorted.aside.push(card);
       continue;
     }
     sorted.waiting.push(card);
-    if (loaded && alertingIds.has(card.chat.id)) sorted.unread.push(card);
+    if (loaded && item && alerting(item)) sorted.unread.push(card);
     else if (item?.readAt) seen.add(card);
   }
   return { ...sorted, seen };

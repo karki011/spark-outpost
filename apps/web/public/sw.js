@@ -33,7 +33,14 @@ function closeTagOf(event) {
   }
 }
 
-async function closeShown(tag) {
+async function replaceThenClose(tag) {
+  await self.registration.showNotification('Spark Outpost', {
+    body: 'Handled in Spark',
+    tag,
+    silent: true,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+  });
   const shown = await self.registration.getNotifications({ tag });
   for (const notification of shown) notification.close();
 }
@@ -41,7 +48,7 @@ async function closeShown(tag) {
 self.addEventListener('push', (event) => {
   const closing = closeTagOf(event);
   if (closing) {
-    event.waitUntil(closeShown(closing));
+    event.waitUntil(replaceThenClose(closing));
     return;
   }
   const message = messageOf(event);

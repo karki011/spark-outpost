@@ -13,6 +13,7 @@ import {
 
 const CHAT = '11111111-2222-4333-8444-555555555555';
 const OTHER = '66666666-7777-4888-8999-aaaaaaaaaaaa';
+const THIRD = 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff';
 
 function request(key: string, chatId = CHAT, chat = 'Fix login'): AttentionRequest {
   return {
@@ -105,7 +106,7 @@ describe('noticesFor', () => {
     const fresh = [
       request('a'),
       request('b', OTHER, 'Add tests'),
-      request('c', OTHER, 'Ship docs'),
+      request('c', THIRD, 'Ship docs'),
     ];
     expect(noticesFor(fresh)).toEqual([
       {
@@ -114,9 +115,24 @@ describe('noticesFor', () => {
         title: '3 chats need you',
         body: 'Fix login, Add tests and 1 more',
         requests: ['a', 'b', 'c'],
-        chats: [CHAT, OTHER],
+        chats: [CHAT, OTHER, THIRD],
       },
     ]);
+  });
+
+  it('counts chats, not requests, when one chat asks twice', () => {
+    expect(noticesFor([request('a'), request('b')])).toEqual([
+      {
+        key: 'a',
+        chatId: CHAT,
+        title: 'Spark needs you: Fix login',
+        body: 'Claude wants to run a command',
+        requests: ['a', 'b'],
+        chats: [CHAT],
+      },
+    ]);
+    const [notice] = noticesFor([request('a'), request('b'), request('c', OTHER, 'Add tests')]);
+    expect(notice).toMatchObject({ title: '2 chats need you', chats: [CHAT, OTHER] });
   });
 
   it('names both chats when two are new', () => {
@@ -125,7 +141,7 @@ describe('noticesFor', () => {
   });
 
   it('shows one summary for the requests already waiting when Spark starts unwatched', () => {
-    const report = { count: 3, requests: [request('a'), request('b', OTHER), request('c', OTHER)] };
+    const report = { count: 3, requests: [request('a'), request('b', OTHER), request('c', THIRD)] };
     const launch = decideAttention(context({ report }));
     expect(launch.notify.map((notice) => notice.title)).toEqual(['3 chats need you']);
     expect(decideAttention(context({ report, seen: launch.seen })).notify).toEqual([]);

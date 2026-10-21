@@ -1,5 +1,9 @@
 import { useMemo } from 'react';
-import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
+import {
+  approvalAttentionKey,
+  type Approval,
+  type ConversationSummary,
+} from '@spark-outpost/contracts';
 import {
   useAttentionItems,
   useHandledAttention,
@@ -20,7 +24,14 @@ export function useIslandAttention(
   const forget = useHandledAttention();
   const readChat = useReadChat();
   const viewed = useViewedChats();
-  const allCards = useMemo(() => pendingCards(chats, approvalsByChat), [chats, approvalsByChat]);
+  const allCards = useMemo(() => {
+    const putOff = new Set(
+      items
+        .filter((item) => item.setAsideAt !== null || item.dismissedAt !== null)
+        .map((item) => item.key),
+    );
+    return pendingCards(chats, approvalsByChat, (id) => putOff.has(approvalAttentionKey(id)));
+  }, [chats, approvalsByChat, items]);
   const sorted = useMemo(() => inboxCards(allCards, items, loaded), [allCards, items, loaded]);
   const alerts = useMemo(
     (): Alert[] | null =>

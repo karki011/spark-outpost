@@ -1,5 +1,6 @@
 import {
   approvalAttentionKey,
+  asideItem,
   freshUpdate,
   waitingOnYou,
   type ApprovalKind,
@@ -80,6 +81,8 @@ async function attention(context: SparkToolContext, limit: number) {
   const waiting = items.filter(waitingOnYou);
   const waitingKeys = new Set(waiting.map((item) => item.key));
   const cards = pending.filter((row) => waitingKeys.has(approvalAttentionKey(row.id)));
+  const asideKeys = new Set(items.filter(asideItem).map((item) => item.key));
+  const aside = pending.filter((row) => asideKeys.has(approvalAttentionKey(row.id)));
   const titles = new Map(chats.map((chat) => [chat.id, chat.title]));
   const updates = items.filter(freshUpdate);
   const terminals = waiting.filter((item) => item.kind === 'terminal').length;
@@ -89,6 +92,9 @@ async function attention(context: SparkToolContext, limit: number) {
     ...(terminals > 0 ? { terminalsWaiting: terminals } : {}),
     pendingCards: cards.slice(0, limit).map((row) => cardLine(row, now)),
     ...(cards.length > limit ? { morePendingCards: cards.length - limit } : {}),
+    ...(aside.length > 0
+      ? { setAsideCards: aside.slice(0, limit).map((row) => cardLine(row, now)) }
+      : {}),
     failedChats: failed.slice(0, limit).map((chat) => ({
       id: chat.id,
       title: chat.title,
@@ -106,7 +112,7 @@ export const attentionTool = sparkTool({
   privateData: true,
   title: 'What needs you',
   description:
-    'Does anyone need anything? needsYou is true only when something blocks on the user: cards waiting across all chats (permission, questions, plans, checkpoints, Spark action cards) not set aside, with the chat, who asks, wait time and choices, or a waiting Terminal session. Also unread updates (Spark flags, finished and failed turns), failed chats and flagged tickets, which never set needsYou. Oldest first.',
+    'Does anyone need anything? needsYou is true only when something blocks on the user: cards waiting across all chats (permission, questions, plans, checkpoints, Spark action cards) not set aside, with the chat, who asks, wait time and choices, or a waiting Terminal session. setAsideCards are cards the user put off with Later: still unanswered, never in needsYou; call them set aside. Also unread updates (Spark flags, finished and failed turns), failed chats and flagged tickets, which never set needsYou. Oldest first.',
   input: { limit: limitInput(20, 50) },
   run: (args, context) => attention(context, args.limit),
 });

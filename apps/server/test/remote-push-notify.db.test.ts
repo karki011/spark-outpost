@@ -242,6 +242,27 @@ describe('who gets it', () => {
     ]);
   });
 
+  it('closes the notification on a device that came into focus after it was sent, and only where it was sent', async () => {
+    const tablet = await addDevice('Tablet');
+    await subscribe(tablet, 'https://web.push.apple.com/tablet');
+    focused = [`device:${tablet}`];
+    await changed();
+    await notifier.settled();
+    expect(sent).toHaveLength(1);
+    focused = [`device:${phone}`];
+    const { rows } = await t.db.query<{ id: string }>(
+      `SELECT id FROM approvals WHERE status = 'pending' LIMIT 1`,
+    );
+    await markAttention(t.db, t.workspaceId, `approval:${rows[0]!.id}`, 'read');
+    notifier.changed({ kind: 'attention', conversationId: chat.conversationId, runId: null });
+    await notifier.settled();
+    expect(sent).toHaveLength(2);
+    expect(sent[1]!.endpoint).toBe(sent[0]!.endpoint);
+    expect(JSON.parse(sent[1]!.payload)).toMatchObject({
+      close: `spark-chat-${chat.conversationId}`,
+    });
+  });
+
   it('skips a revoked device and one not seen for 30 days', async () => {
     const stale = await addDevice('Old phone');
     await subscribe(stale, 'https://web.push.apple.com/old');

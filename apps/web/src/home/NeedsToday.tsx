@@ -10,6 +10,7 @@ interface NeedsTodayProps {
   mode: NeedsMode;
   brief: Brief;
   rows: readonly FeedRow[];
+  waiting: number;
   entries: readonly BriefEntry[];
   connectHint: boolean;
   voice: Voice;
@@ -88,10 +89,10 @@ export function NeedsToday(props: NeedsTodayProps) {
       <div className="hsec-h">
         <h2 id="home-needs-h">
           {quiet ? 'Pick up where you left off' : 'What needs you today'}
-          {!quiet && (
+          {!quiet && props.waiting > 0 && (
             <>
               {' '}
-              <span className="n">{rows.length}</span>
+              <span className="n">{props.waiting}</span>
             </>
           )}
         </h2>

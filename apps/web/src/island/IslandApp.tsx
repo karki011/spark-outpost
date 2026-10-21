@@ -18,7 +18,7 @@ import type { ConversationSummary, Project } from '@spark-outpost/contracts';
 import { newDraftId } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { useAppEvents } from '../app/live/use-app-events.ts';
-import { companionFeed, statusText } from '../companion/companion-model.ts';
+import { islandStatus } from './RestLine.tsx';
 import { useThrottledAnnouncement } from '../companion/use-companion-signals.ts';
 import {
   sparkDesktop,
@@ -53,7 +53,7 @@ import { useIslandDrop } from './use-island-drop.ts';
 import { coreRects, lineRects, minuteOf, useHoverIntent } from './island-hover.ts';
 import { useIslandKeys } from './use-island-keys.ts';
 import { soonMeeting } from './home-model.ts';
-import { stripHasContent, type StripData } from './RestStrip.tsx';
+import { stripShows, type StripData } from './RestStrip.tsx';
 import { useAskSession } from './use-ask-session.ts';
 import { useIslandData } from './use-island-data.ts';
 import { useIslandAttention } from './use-island-attention.ts';
@@ -165,10 +165,12 @@ export function IslandApp() {
     panel,
     cards: allCards,
     review,
-    strip: stripHasContent(strip) && calendar.line === null,
+    strip: stripShows(strip, calendar.line !== null),
   });
-  const feed = useMemo(() => companionFeed(data.chats), [data.chats]);
-  const spoken = useThrottledAnnouncement(statusText(feed), true);
+  const spoken = useThrottledAnnouncement(
+    islandStatus(fresh.length, attention.aside.length, running.length),
+    true,
+  );
   const sleepy = isSleepyTime(new Date(now).getHours(), 0);
 
   useEffect(() => {

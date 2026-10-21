@@ -206,6 +206,13 @@ describe('island state machine', () => {
       ['b', 'force'],
       ['a', 'approval'],
     ]);
+
+    const two = new Map([
+      ['a', [approval('p0', '2026-09-30T10:00:00Z'), approval('p1', '2026-09-30T10:05:00Z')]],
+    ]);
+    const putOff = (id: string) => id === 'p1';
+    expect(pendingCards([chats[0]!], two, putOff)[0]!.approval!.id).toBe('p0');
+    expect(pendingCards([chats[0]!], two, () => true)[0]!.approval!.id).toBe('p1');
   });
 
   it('reads each chat as working, waiting, done, failed or quiet', () => {
