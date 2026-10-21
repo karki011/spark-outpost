@@ -91,6 +91,7 @@ export const SPEC_GROUPS = {
     'browser-pane',
     'browser-pane-input',
     'browser-pane-keys',
+    'browser-tab-close',
     'browser-tab-life',
     'chat-links',
     'chat-terminal',

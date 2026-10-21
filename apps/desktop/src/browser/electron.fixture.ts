@@ -138,6 +138,8 @@ export class FakeContents extends EventEmitter {
   readonly id = ++contentsIds;
   url = '';
   destroyed = false;
+  focused = false;
+  blocksUnload = false;
   private opener: ((details: { url: string }) => { action: string }) | null = null;
   private readonly cdpListeners = new Set<CdpListener>();
   readonly navigationHistory = {
@@ -172,8 +174,23 @@ export class FakeContents extends EventEmitter {
     return this.destroyed;
   }
 
-  close(): void {
+  isFocused(): boolean {
+    if (this.destroyed) throw new TypeError('Object has been destroyed');
+    return this.focused;
+  }
+
+  close(options?: { waitForBeforeUnload?: boolean }): void {
+    if (this.destroyed) throw new TypeError('Object has been destroyed');
+    if (options?.waitForBeforeUnload && this.blocksUnload) {
+      this.emit('will-prevent-unload', prevention());
+      return;
+    }
     this.destroyed = true;
+    this.emit('destroyed');
+  }
+
+  crash(): void {
+    this.emit('render-process-gone', {}, { reason: 'crashed' });
   }
 
   stop(): void {}

@@ -125,7 +125,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     const template = menuTemplate(
       items,
       (intent) => sendSelection(tab, params.selectionText, intent),
-      () => tab.view()?.webContents.copy(),
+      () => tab.contents()?.copy(),
     );
     Menu.buildFromTemplate(template).popup({ window });
   };
@@ -190,16 +190,6 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     panes.layout();
   };
 
-  const keepPageFocus = (chatId: string, change: () => void) => {
-    const focused = panes.tabsOf(chatId).some((tab) => tab.view()?.webContents.isFocused());
-    change();
-    if (!focused) return;
-    const active = panes.tabsOf(chatId).find((tab) => tab.active);
-    const contents = active?.view()?.webContents;
-    if (contents && !contents.isDestroyed()) contents.focus();
-    else options.window()?.webContents.focus();
-  };
-
   const command = async (chatId: string, action: BrowserCommand) => {
     if (action.command === 'new_tab') {
       const url = action.url ? addressToUrl(action.url) : null;
@@ -220,12 +210,16 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
       return;
     }
     const tab = panes.tab(chatId, action.tabId);
-    if (!tab) return;
+    if (!tab) {
+      panes.resync(chatId);
+      return;
+    }
     if (action.command === 'navigate') await navigate(chatId, tab, action.url);
-    else if (action.command === 'select') keepPageFocus(chatId, () => panes.select(chatId, tab.id));
+    else if (action.command === 'select')
+      panes.keepFocus(chatId, () => panes.select(chatId, tab.id));
     else if (action.command === 'close') {
-      await stopPick(tab);
-      keepPageFocus(chatId, () => panes.closeByUser(chatId, tab.id));
+      panes.keepFocus(chatId, () => panes.closeByUser(chatId, tab.id));
+      void stopPick(tab).catch(() => undefined);
     } else if (action.command === 'copy_url') {
       const url = tab.currentUrl();
       if (url !== 'about:blank') clipboard.writeText(url);
@@ -235,7 +229,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     } else if (action.command === 'stop_find') {
       tab.stopFind();
     } else if (action.command === 'focus') {
-      tab.view()?.webContents.focus();
+      tab.contents()?.focus();
     } else if (action.command === 'pin') {
       tab.pinned = action.pinned;
       panes.noteChange(chatId);

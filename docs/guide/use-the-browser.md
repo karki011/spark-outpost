@@ -50,6 +50,6 @@ Right-click highlighted text: **Add to chat** or **Ask about this** (**⌘⇧A**
 1. In **Settings** → **Projects**, select **Add** beside **Saved sign-ins**: label, site, **Other sign-in sites**, test account.
 2. Ask the agent to sign in; allow the card once per chat.
 
-Spark types only there; the agent never sees them. Refused? **Add this site**. For SSO, the agent hands you its tab; sign in, then **Done**.
+Spark types only there; the agent never sees them. Refused? **Add this site**. For SSO, the agent hands you its tab; sign in, then **Done**. Closing the tab cancels.
 
 **Next:** [Make a Spark](sparks.md)

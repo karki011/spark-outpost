@@ -3,7 +3,7 @@ import type { BrowserPaneTab } from '@spark-outpost/contracts';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { PinIcon, PlusIcon, SpinnerIcon, UnpinIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
-import { sendBrowserCommand } from './browser-store.ts';
+import { closeBrowserTab, sendBrowserCommand } from './browser-store.ts';
 import { PANE_KEYS } from './pane-shortcuts.ts';
 import { tabLabel } from './tab-label.ts';
 
@@ -74,7 +74,7 @@ function PageTab({
         className="bp-tab-x"
         aria-label={`Close ${label}`}
         aria-keyshortcuts={tab.active ? PANE_KEYS.close.aria : undefined}
-        onClick={() => sendBrowserCommand(chatId, { command: 'close', tabId: tab.id })}
+        onClick={() => void closeBrowserTab(chatId, tab)}
       >
         <CloseIcon />
       </button>

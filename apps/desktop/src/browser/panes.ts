@@ -177,7 +177,8 @@ export class BrowserPanes {
         changed: () => this.changed(pane),
         popup: (url, opener) => this.openPopup(pane, url, opener),
         viewCreated: (view) => this.attach(view, tab),
-        viewClosed: (view) => this.detach(view),
+        viewClosed: (view) => this.detach(view, tab),
+        gone: (owner) => this.close(chatId, owner.id),
         visited: (url) => this.visited(pane, projectId, url),
         contextMenu: (owner, params) => this.options.contextMenu(owner, params),
         addShortcut: (owner) => this.options.addShortcut(owner),
@@ -209,7 +210,10 @@ export class BrowserPanes {
     });
     if (!tab) return;
     if (opener.active) this.select(pane.chatId, tab.id);
-    void tab.load(url).then(() => this.layout());
+    void tab
+      .load(url)
+      .then(() => this.layout())
+      .catch(() => undefined);
   }
 
   tabOfContents(contents: WebContents | null): PaneTab | null {
@@ -231,8 +235,10 @@ export class BrowserPanes {
     this.layout();
   }
 
-  private detach(view: WebContentsView): void {
-    this.byContents.delete(view.webContents.id);
+  private detach(view: WebContentsView, tab: PaneTab): void {
+    for (const [id, owner] of this.byContents) {
+      if (owner === tab) this.byContents.delete(id);
+    }
     const window = this.options.window();
     if (!window || window.isDestroyed()) return;
     window.contentView.removeChildView(view);
@@ -251,11 +257,29 @@ export class BrowserPanes {
     const pane = this.chats.get(chatId);
     const tab = pane?.tabs.find((candidate) => candidate.id === tabId);
     if (!pane || !tab) return;
-    tab.sleep();
     pane.tabs = pane.tabs.filter((candidate) => candidate !== tab);
     if (tab.active && pane.tabs.length > 0) pane.tabs.at(-1)!.active = true;
     this.changed(pane);
+    try {
+      tab.close();
+    } catch (error) {
+      this.options.log(`Could not close a browser tab cleanly: ${(error as Error).message}`);
+    }
     this.layout();
+  }
+
+  resync(chatId: string): void {
+    this.options.stateChanged(this.state(chatId));
+  }
+
+  keepFocus(chatId: string, change: () => void): void {
+    const focused = this.tabsOf(chatId).some((tab) => tab.contents()?.isFocused() ?? false);
+    change();
+    if (!focused) return;
+    const active = this.tabsOf(chatId).find((tab) => tab.active);
+    const contents = active?.contents();
+    if (contents) contents.focus();
+    else this.options.window()?.webContents.focus();
   }
 
   closeByUser(chatId: string, tabId: string): void {
@@ -386,7 +410,7 @@ export class BrowserPanes {
     const pane = this.chats.get(chatId);
     if (!pane) return;
     if (pane.idle) clearTimeout(pane.idle);
-    for (const tab of pane.tabs) tab.sleep();
+    for (const tab of pane.tabs) tab.close();
     this.chats.delete(chatId);
   }
 

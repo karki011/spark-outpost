@@ -4,6 +4,7 @@ import {
   type ContextMenuParams,
   type Input,
   type Session,
+  type WebContents,
 } from 'electron';
 import {
   browserPlaceOf,
@@ -29,6 +30,7 @@ export interface TabHooks {
   popup(url: string, opener: PaneTab): void;
   viewCreated(view: WebContentsView): void;
   viewClosed(view: WebContentsView): void;
+  gone(tab: PaneTab): void;
   visited(url: string): void;
   contextMenu(tab: PaneTab, params: ContextMenuParams): void;
   addShortcut(tab: PaneTab): void;
@@ -54,6 +56,14 @@ export interface LiveTab {
 const BLANK = 'about:blank';
 const BLOCKED = 'Spark does not let a page in the Browser pane go to that address.';
 const VIEW_RADIUS = 10;
+
+export const TAB_CLOSED = 'The user closed this tab.';
+
+export class TabClosedError extends Error {
+  constructor() {
+    super(TAB_CLOSED);
+  }
+}
 
 const MENU_SHORTCUTS: ReadonlySet<BrowserShortcut> = new Set([
   'close_tab',
@@ -106,6 +116,7 @@ export class PaneTab {
   private waking: Promise<LiveTab> | null = null;
   private readonly hooks: TabHooks;
   private devtools: BrowserWindow | null = null;
+  private closed = false;
 
   constructor(init: TabInit, hooks: TabHooks) {
     this.id = init.id;
@@ -177,6 +188,11 @@ export class PaneTab {
     return this.live?.view ?? null;
   }
 
+  contents(): WebContents | null {
+    const contents = this.live?.view.webContents;
+    return contents && !contents.isDestroyed() ? contents : null;
+  }
+
   facts(): TabFacts {
     return {
       id: this.id,
@@ -218,6 +234,7 @@ export class PaneTab {
   }
 
   async ensure(): Promise<LiveTab> {
+    if (this.closed) throw new TabClosedError();
     if (this.live) return this.live;
     this.opening ??= this.open().finally(() => {
       this.opening = null;
@@ -309,6 +326,13 @@ export class PaneTab {
     const cdp = attachCdp(contents);
     const logs = await capturePageLogs(cdp);
     await cdp.send('Page.enable');
+    if (this.closed || contents.isDestroyed()) {
+      this.discard({ view, cdp, logs });
+      throw new TabClosedError();
+    }
+    contents.once('destroyed', () => {
+      if (this.live?.view === view) this.hooks.gone(this);
+    });
     this.live = { view, cdp, logs };
     this.hooks.viewCreated(view);
     return this.live;
@@ -394,6 +418,13 @@ export class PaneTab {
     return true;
   }
 
+  close(): void {
+    this.closed = true;
+    this.handoff = null;
+    this.handoffRun = null;
+    this.sleep();
+  }
+
   sleep(): void {
     const live = this.live;
     if (!live) return;
@@ -406,11 +437,17 @@ export class PaneTab {
     this.lastAction = null;
     this.refs.clear();
     this.filled.clear();
+    this.discard(live);
+  }
+
+  private discard(live: LiveTab): void {
     for (const step of [
       () => live.logs.stop(),
       () => live.cdp.detach(),
       () => this.hooks.viewClosed(live.view),
-      () => live.view.webContents.close(),
+      () => {
+        if (!live.view.webContents.isDestroyed()) live.view.webContents.close();
+      },
     ]) {
       try {
         step();
