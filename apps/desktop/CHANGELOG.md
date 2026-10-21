@@ -2,6 +2,10 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.27
+
+- Spark Island rests as Scout again: working chats change Scout's mood and requests show as its count, and the island never opens into a wide panel on its own. Hover on Scout shows the top request in one line, or opens Home when nothing needs you; a click opens Home.
+
 ## 0.1.0-beta.26
 
 - Spark Island is one big card for what needs you: the asking chat's own blob, the command or question, and Allow, Deny and Later. A meeting takes the card when it starts, or rides along as a strip; working chats show as small tiles. At rest it's Scout with a count, and it opens only when you rest the pointer on it, not when you click other menu bar icons.

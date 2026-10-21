@@ -8,6 +8,7 @@ Versions before 0.1.0-beta.2 have no disk image on the update feed and are not l
 
 | Version | Released | Apple silicon | Intel |
 | --- | --- | --- | --- |
+| [0.1.0-beta.27](0.1.0-beta.27.md) | 2026-10-21 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.27-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.27-x64.dmg) |
 | [0.1.0-beta.26](0.1.0-beta.26.md) | 2026-10-21 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.26-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.26-x64.dmg) |
 | [0.1.0-beta.25](0.1.0-beta.25.md) | 2026-10-20 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.25-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.25-x64.dmg) |
 | [0.1.0-beta.24](0.1.0-beta.24.md) | 2026-10-20 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.24-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.24-x64.dmg) |
