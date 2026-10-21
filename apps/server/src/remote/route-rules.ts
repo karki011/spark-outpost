@@ -58,6 +58,11 @@ GET /api/conversations/:id/agent-terminals
 PATCH /api/conversations/:id
 POST /api/conversations/:id/fresh-session
 POST /api/conversations/:id/seen
+GET /api/attention
+POST /api/attention/chats/:id/read
+POST /api/attention/:key/read
+POST /api/attention/:key/set-aside
+POST /api/attention/:key/dismiss
 PUT /api/conversations/pinned-order
 GET /api/home/digest
 GET /api/home/today

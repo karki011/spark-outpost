@@ -18,9 +18,10 @@ export function nextToExpand(
 
 export function opensByItself(
   view: IslandView,
-  state: { sparkFocused: boolean; dragging: boolean },
+  state: { sparkFocused: boolean; dragging: boolean; menuBarBusy: boolean },
 ): boolean {
-  return view.kind === 'peek' && !state.sparkFocused && !state.dragging;
+  const resting = view.kind === 'peek' || view.kind === 'now';
+  return resting && !state.sparkFocused && !state.dragging && !state.menuBarBusy;
 }
 
 interface AutoExpandOptions {

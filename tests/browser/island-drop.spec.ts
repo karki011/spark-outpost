@@ -130,7 +130,7 @@ test('dropping an image and a text file grabs them into a new chat', async ({ pa
   ];
   await drag(page, 'dragenter', files, BLOB);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
-  await expect(island(page).getByRole('button', { name: 'Chat', exact: true })).toHaveAttribute(
+  await expect(island(page).getByRole('button', { name: 'New chat', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',
   );

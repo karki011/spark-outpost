@@ -287,22 +287,22 @@ test('Esc while the first listen is still starting cancels it once it resolves',
   expect(listens).toHaveLength(2);
 });
 
-test('an instant answer arms no confirmation: "yes" afterwards sends no draft', async ({
+test('a spoken question waits in Ask Spark until confirmed, and "yes" sends it to the model as text', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
   await installFakeVoice(page);
   await openIsland(page);
-  await say(page, 'What did I spend today?');
-  const ask = island(page).getByRole('textbox', { name: 'Ask Spark' });
-  await ask.fill('Delete every branch I have');
   const before = await userMessages();
   await say(page, 'Who needs me?');
-  await expect(island(page).getByText('Nothing needs you right now.')).toBeVisible();
-  const next = await say(page, 'yes');
-  expect(next.purpose).toBe('command');
+  const ask = island(page).getByRole('textbox', { name: 'Ask Spark' });
+  await expect(ask).toHaveValue('Who needs me');
+  await expect(island(page).getByText('Nothing needs you right now.')).toHaveCount(0);
   await page.waitForTimeout(400);
   expect(await userMessages()).toBe(before);
+  const next = await say(page, 'yes');
+  expect(next.purpose).toBe('confirm');
+  await expect(island(page).getByText('You wrote: "Who needs me"')).toBeVisible();
 });
 
 test('open shows a result card with the best match preselected, and Enter opens it', async ({
@@ -332,7 +332,9 @@ test('open shows a result card with the best match preselected, and Enter opens 
     .toEqual([dashboards]);
 });
 
-test('who needs me answers at once in Ask Spark, read-only, and speaks it', async ({ page }) => {
+test('who needs me goes to Ask Spark as text for the model, unsent and unspoken until Enter', async ({
+  page,
+}) => {
   await resetTestDatabase({ onboarded: true });
   await seedChats([
     {
@@ -345,10 +347,11 @@ test('who needs me answers at once in Ask Spark, read-only, and speaks it', asyn
   await openIsland(page);
   const before = await userMessages();
   await say(page, 'Who needs me?');
-  await expect(island(page).getByText(/1 chat needs you: “Speed up the test suite”/)).toBeVisible();
-  await expect
-    .poll(async () => (await voiceCalls(page)).find((call) => call.op === 'speak')?.args[0])
-    .toMatch(/1 chat needs you/);
+  await expect(island(page).getByRole('textbox', { name: 'Ask Spark' })).toHaveValue(
+    'Who needs me',
+  );
+  await page.waitForTimeout(400);
+  expect((await voiceCalls(page)).filter((call) => call.op === 'speak')).toEqual([]);
   expect(await userMessages()).toBe(before);
 });
 

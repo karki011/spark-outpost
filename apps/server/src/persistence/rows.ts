@@ -293,7 +293,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
     seenAt: iso(row.seen_at ?? null),
     waitingSince: row.needs_input ? iso(row.waiting_since ?? null) : null,
     needsInput: row.needs_input,
-    attention: row.needs_input ? toAttention(row) : null,
+    attention: row.needs_input || row.flag_title ? toAttention(row) : null,
     titleSource: titleSourceSchema.safeParse(row.title_source).data ?? 'message',
     category: categorySchema.safeParse(row.category).data ?? null,
     teammate: toTeammateTag(row),

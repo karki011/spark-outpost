@@ -13,8 +13,8 @@ const SNOOZE: IslandRequest = {
 };
 const ASIDE: IslandRequest = {
   id: '7b2a1d3f-4c5e-4f6a-9b0c-1d2e3f4a5b6c',
-  kind: 'set_aside',
-  target: 'card',
+  kind: 'join_meeting',
+  target: 'evt@2026-10-20T11:00:00.000Z',
 };
 const UNKNOWN: IslandRequest = {
   id: '8c3b2e4a-5d6f-4a7b-8c1d-2e3f4a5b6c7d',

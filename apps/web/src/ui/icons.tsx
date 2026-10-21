@@ -313,6 +313,12 @@ export function SearchIcon() {
   return <StrokeIcon path="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm9 2-3.5-3.5" />;
 }
 
+export function HomeIcon() {
+  return (
+    <StrokeIcon path="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1v-7.5Z" />
+  );
+}
+
 export function SessionsIcon() {
   return <StrokeIcon path="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />;
 }

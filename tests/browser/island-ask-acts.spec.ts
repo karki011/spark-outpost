@@ -82,7 +82,7 @@ test('in Manual, Ask Spark shows a confirm card and acts only on Do it', async (
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'island-ask-acts-thread.png') });
 });
 
-test('a waiting Ask Spark card shows in the Inbox’s Needs you, and Do it there acts', async ({
+test('a waiting Ask Spark card shows on Home under Ask Spark needs you, and Do it there acts', async ({
   page,
 }) => {
   test.setTimeout(60_000);
@@ -96,7 +96,7 @@ test('a waiting Ask Spark card shows in the Inbox’s Needs you, and Do it there
   });
 
   await page.keyboard.press('Meta+1');
-  const needs = island(page).getByRole('region', { name: /Needs you/ });
+  const needs = island(page).getByRole('region', { name: 'Ask Spark needs you' });
   const card = needs.getByRole('group', { name: 'Stop “Build the site”' });
   await expect(card).toBeVisible({ timeout: 15_000 });
   await expect(needs.getByText('Ask Spark', { exact: true })).toBeVisible();

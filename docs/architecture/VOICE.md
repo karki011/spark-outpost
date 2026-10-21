@@ -93,13 +93,12 @@ Pinned sha256 (the Hugging Face LFS oid, read 2026-10-15):
 
 Matching runs locally in TypeScript with a subset of Home Assistant's [hassil](https://github.com/OHF-Voice/hassil/blob/main/docs/template_syntax.md) template syntax: `[optional]`, `(a|b)`, `{list}` slots and a `{text}` wildcard. Spark writes its own templates and borrows no code or sentences. A leading "Spark" is dropped.
 
-| Intent       | Templates (examples)                                                                                                                       |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `start_chat` | `(start\|new) [a] chat (in\|for) {project} [for [ticket] {ticket}] [to] {text}`; `work on {ticket} in {project} [{text}]`                  |
-| `open`       | `(open\|show [me]\|find) [the] ({chat}\|{ticket}) [chat]`                                                                                  |
-| `ask_fast`   | `who needs me`, `what's running`, `what did I spend [today]`, `what tickets do I have [pending]`, `(what's the status of\|how's) {ticket}` |
-| `reply`      | `reply to {chat} [saying] {text}`                                                                                                          |
-| `confirm`    | `(yes\|send [it]\|open it)`, `(no\|cancel)`, only while a voice result is open                                                             |
+| Intent       | Templates (examples)                                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `start_chat` | `(start\|new) [a] chat (in\|for) {project} [for [ticket] {ticket}] [to] {text}`; `work on {ticket} in {project} [{text}]` |
+| `open`       | `(open\|show [me]\|find) [the] ({chat}\|{ticket}) [chat]`                                                                 |
+| `reply`      | `reply to {chat} [saying] {text}`                                                                                         |
+| `confirm`    | `(yes\|send [it]\|open it)`, `(no\|cancel)`, only while a voice result is open                                            |
 
 ### Slots and fuzzy matching
 
@@ -110,8 +109,7 @@ Matching runs locally in TypeScript with a subset of Home Assistant's [hassil](h
 
 ### Answers
 
-- **Instant answers** read Spark's local data with no model call: `ask-fast-path.ts` for who needs you, what's running and spend, and the Tickets inbox cache for pending tickets (counts by section, the top three) and a cached ticket's status, chat and pull request.
-- **Any other question** goes into **Ask Spark** as text, sent on the same confirm as a typed question; its read-only session looks things up with the Spark tools (`spark_tickets` `list`, `read`, `search` for tickets).
+- **Every question** goes into **Ask Spark** as text, sent on the same confirm as a typed question, including questions about Spark (who needs me, what's running, spend, pending tickets, a ticket's status); its read-only session looks things up with the Spark tools (`spark_attention`, `spark_tickets` `list`, `read`, `search`). There are no instant answers: they answered from stale local state, so "What's happening? Anything new?" got "Nothing is running right now." The `open` intent's result card is a command, not an answer, and stays.
 - **Answers never act.** They may offer **Open** buttons; nothing in an answer starts, sends or changes anything.
 
 ## UI flows
@@ -124,13 +122,12 @@ Matching runs locally in TypeScript with a subset of Home Assistant's [hassil](h
 | ------------ | --------------------------------------------------------------------------- | ------------------------ |
 | `start_chat` | **New chat** with the project chip, a removable ticket chip (new), the task | Enter, Send, or "send"   |
 | `open`       | A result card of what was found, the best match preselected                 | Enter, a click, or "yes" |
-| `ask_fast`   | **Ask Spark** with the answer                                               | none: it only shows      |
 | `reply`      | **Chats** → the chat → **Reply**, text filled                               | Enter, Send, or "send"   |
 | none         | **Ask Spark** with the transcript in the box                                | Enter, Ask, or "send"    |
 
 With a ticket, Send uses the existing ticket start route (`projectId`, `note` = the task) and shows its **Move to In Progress** choice, since that writes to Jira or Linear. **Confirming by voice** needs a fresh press; Spark never listens on its own after a result, and `confirm` is bound to that result's id.
 
-**Speak answers** (off by default) reads aloud instant answers, Ask Spark's reply as plain text, what an `open` card found ("Found Fix login redirect. Open it?") and **Didn't catch that**, with an installed Apple system voice. Esc or a new press stops it before the mic opens, so Spark never records itself; the mic is not left open to hear the user talk over it.
+**Speak answers** (off by default) reads aloud Ask Spark's reply as plain text, what an `open` card found ("Found Fix login redirect. Open it?") and **Didn't catch that**, with an installed Apple system voice. Esc or a new press stops it before the mic opens, so Spark never records itself; the mic is not left open to hear the user talk over it.
 
 **Dictation:** a mic button in the chat composer (`Composer.tsx`) and the island's text boxes, with partial text dimmed at the caret; the draft is never sent. In a Terminal session the user sends through the existing `POST /conversations/:id/terminal/message` route, its refusals unchanged (an agent waiting for an answer, a CLI menu, a leading `/` or `!`); a spoken "slash" stays a word. Paired devices use their keyboard's dictation.
 
@@ -176,20 +173,20 @@ No Phase 1 PR is done until each check below has run on this Mac and the PR repo
   4. "who needs me"
   5. a dictated chat message with pauses.
 
-| Check                          | Evidence                                                                             |
-| ------------------------------ | ------------------------------------------------------------------------------------ |
-| Transcript accurate            | Transcript beside each phrase, `say` and WAV                                         |
-| Fuzzy match right              | 1 picks the feature-web-apps project and CP-49084; 2 the Dashboards chat             |
-| Prefilled card, nothing starts | Screenshot; no run or message until Enter or "send"                                  |
-| Spoken answer plays and stops  | 3 and 4 spoken; Esc and a new press each stop it                                     |
-| End rules                      | A command ends after about 1.5 s of silence; 5 runs through its pauses until a press |
-| Shortcut                       | Fn twice starts listening; with 🌐 set to Emoji, Spark says why and uses ⌥⇧V         |
-| Esc cancels                    | No transcript, no result                                                             |
-| Audio never leaves             | `nettop` during a run: no connection but the provider's for a sent message           |
-| Browser pane has no mic        | `getUserMedia` on a page in the pane is denied                                       |
-| Real Claude, chat              | A dictated message sent in a Spark chat; Claude answers                              |
-| Real Claude, Terminal session  | A dictated message reaches a Claude Terminal session through the message route       |
-| Ask Spark                      | A spoken free-form question, sent, answered and spoken                               |
+| Check                          | Evidence                                                                               |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| Transcript accurate            | Transcript beside each phrase, `say` and WAV                                           |
+| Fuzzy match right              | 1 picks the feature-web-apps project and CP-49084; 2 the Dashboards chat               |
+| Prefilled card, nothing starts | Screenshot; no run or message until Enter or "send"                                    |
+| Spoken answer plays and stops  | 3 and 4 prefill Ask Spark; once sent, the reply is spoken; Esc and a new press stop it |
+| End rules                      | A command ends after about 1.5 s of silence; 5 runs through its pauses until a press   |
+| Shortcut                       | Fn twice starts listening; with 🌐 set to Emoji, Spark says why and uses ⌥⇧V           |
+| Esc cancels                    | No transcript, no result                                                               |
+| Audio never leaves             | `nettop` during a run: no connection but the provider's for a sent message             |
+| Browser pane has no mic        | `getUserMedia` on a page in the pane is denied                                         |
+| Real Claude, chat              | A dictated message sent in a Spark chat; Claude answers                                |
+| Real Claude, Terminal session  | A dictated message reaches a Claude Terminal session through the message route         |
+| Ask Spark                      | A spoken free-form question, sent, answered and spoken                                 |
 
 ## Built in Phase 1
 

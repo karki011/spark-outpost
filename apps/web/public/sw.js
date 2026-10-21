@@ -22,7 +22,35 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+const CLOSE_TAG = /^spark-chat-[0-9a-f-]{36}$/;
+
+function closeTagOf(event) {
+  try {
+    const data = event.data ? event.data.json() : null;
+    return data && typeof data.close === 'string' && CLOSE_TAG.test(data.close) ? data.close : null;
+  } catch {
+    return null;
+  }
+}
+
+async function replaceThenClose(tag) {
+  await self.registration.showNotification('Spark Outpost', {
+    body: 'Handled in Spark',
+    tag,
+    silent: true,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+  });
+  const shown = await self.registration.getNotifications({ tag });
+  for (const notification of shown) notification.close();
+}
+
 self.addEventListener('push', (event) => {
+  const closing = closeTagOf(event);
+  if (closing) {
+    event.waitUntil(replaceThenClose(closing));
+    return;
+  }
   const message = messageOf(event);
   event.waitUntil(
     self.registration.showNotification(message.title, {

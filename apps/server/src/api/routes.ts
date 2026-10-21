@@ -37,6 +37,7 @@ import { AttachmentError } from '../persistence/attachment-content.ts';
 import { FolderError } from '../projects/folders.ts';
 import { ProjectNotFoundError } from '../projects/projects.ts';
 import { TaskNotFoundError } from '../persistence/tasks.ts';
+import { AttentionItemNotFoundError } from '../persistence/attention-items.ts';
 import {
   BadRequestError,
   RequestTooLargeError,
@@ -241,7 +242,11 @@ export function statusForError(error: unknown): { status: number; message: strin
   if (error instanceof ConversationNotFoundError || error instanceof ConversationMissingError) {
     return { status: 404, message: 'Conversation not found.' };
   }
-  if (error instanceof ProjectNotFoundError || error instanceof ChatNotFoundError) {
+  if (
+    error instanceof ProjectNotFoundError ||
+    error instanceof ChatNotFoundError ||
+    error instanceof AttentionItemNotFoundError
+  ) {
     return { status: 404, message: error.message };
   }
   if (error instanceof TaskNotFoundError) return { status: 404, message: 'Task not found.' };

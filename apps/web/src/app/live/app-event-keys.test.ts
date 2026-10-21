@@ -165,6 +165,25 @@ describe('app event invalidation', () => {
     ]);
   });
 
+  it('a mark on an inbox item refreshes the inbox and the chat list on every surface', async () => {
+    const client = new QueryClient();
+    client.setQueryData(['attention'], 'cached');
+    for (const invalidation of mergeInvalidations([event('attention')])) {
+      await client.invalidateQueries(invalidation);
+    }
+    expect(client.getQueryState(['attention'])?.isInvalidated).toBe(true);
+    expect(await invalidatedBy(event('attention'))).toEqual(['list']);
+  });
+
+  it('anything that refreshes the chat list refreshes the inbox too', () => {
+    for (const kind of ['seen', 'approval', 'run', 'conversation'] as const) {
+      const keys = mergeInvalidations([event(kind)]).map((each) => each.queryKey[0]);
+      expect([kind, keys.includes('attention')]).toEqual([kind, true]);
+    }
+    const stepKeys = mergeInvalidations([event('calendar')]).map((each) => each.queryKey[0]);
+    expect(stepKeys).not.toContain('attention');
+  });
+
   it('a chat marked seen refreshes the chat list and search results, nothing else', async () => {
     expect(await invalidatedBy(event('seen'))).toEqual(['list', 'search']);
   });

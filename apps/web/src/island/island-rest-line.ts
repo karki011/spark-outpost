@@ -1,13 +1,4 @@
-import type { Card, Moment } from './island-model.ts';
-
-export interface RestLine {
-  kind: 'waiting' | 'done' | 'failed';
-  key: string;
-  text: string;
-  more: number;
-  chatId: string;
-  card: Card | null;
-}
+import type { Card } from './island-model.ts';
 
 function lastPart(path: string): string {
   return path.split('/').filter(Boolean).at(-1) ?? path;
@@ -44,42 +35,4 @@ export function waitingTitle(card: Card): string {
   if (member) return member;
   if (approval?.payload.checkpoint) return `${chat.title}: ready for you`;
   return `${chat.title} needs you`;
-}
-
-export interface RestLineInput {
-  sparkFocused: boolean;
-  cards: readonly Card[];
-  moment: Moment | null;
-  momentText: string | null;
-}
-
-export function restLine(input: RestLineInput): RestLine | null {
-  if (input.sparkFocused) return null;
-  const { moment, momentText, cards } = input;
-  if (moment && momentText) {
-    return {
-      kind: moment.kind,
-      key: `${moment.kind}:${moment.runId}`,
-      text: momentText,
-      more: 0,
-      chatId: moment.chatId,
-      card: null,
-    };
-  }
-  const card = cards.find((candidate) => !candidate.loading);
-  if (!card) return null;
-  return {
-    kind: 'waiting',
-    key: `waiting:${card.approval?.id ?? card.chat.id}`,
-    text: waitingTitle(card),
-    more: cards.length - 1,
-    chatId: card.chat.id,
-    card,
-  };
-}
-
-export function restLineTitle(line: RestLine): string {
-  const action = line.kind === 'waiting' ? ' · Review' : '';
-  const more = line.more > 0 ? ` · +${line.more} more` : '';
-  return `${line.text}${action}${more}`;
 }

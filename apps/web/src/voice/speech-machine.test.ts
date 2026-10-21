@@ -8,7 +8,7 @@ import {
   type SpeechState,
 } from './speech-machine.ts';
 
-const ask: Command = { intent: 'ask_fast', question: 'needs', ticket: null };
+const ask: Command = { intent: 'none', text: 'Who needs me' };
 
 function run(actions: SpeechAction[], from: SpeechState = IDLE): SpeechState {
   return actions.reduce(speechReducer, from);

@@ -80,11 +80,14 @@ test('Choose lists each meeting with its own Join or Open, and Esc closes it', a
   await expect(choose(page)).toHaveCount(0);
 });
 
-test('the inbox tags a next meeting that clashes', async ({ page }) => {
+test('Home tags a next meeting that clashes', async ({ page }) => {
   await fakeHomeDesktop(page);
   await openIsland(page);
   await openHome(page);
-  const row = island(page).getByRole('region', { name: 'Next meeting' });
+  const row = island(page)
+    .getByRole('list', { name: 'Meetings left today' })
+    .getByRole('listitem')
+    .first();
   await expect(row).toContainText('clashes with 2 meetings');
 });
 

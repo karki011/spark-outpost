@@ -1,6 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
-import type { ConversationSummary } from '@spark-outpost/contracts';
-import { needsInput } from '../conversations/row-state.ts';
+import { useEffect, useRef } from 'react';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { useCompanionStatus } from '../desktop/use-companion-status.ts';
 import type { Moment } from './island-model.ts';
@@ -57,21 +55,17 @@ export function useIslandSound(): IslandSound | null {
   return { on, toggle: () => void companion.setSound?.(!on) };
 }
 
-export function waitingChats(chats: readonly ConversationSummary[]): string[] {
-  return chats.filter((chat) => !chat.archivedAt && needsInput(chat)).map((chat) => chat.id);
+export interface Alert {
+  key: string;
+  chatId: string;
 }
 
-export function needsChime(
+export function alertChime(
   before: ReadonlySet<string>,
-  waiting: readonly string[],
+  alerts: readonly Alert[],
   viewed: ReadonlySet<string>,
 ): boolean {
-  return waiting.some((id) => !before.has(id) && !viewed.has(id));
-}
-
-export function momentChime(moment: Moment, viewed: ReadonlySet<string>): Chime | null {
-  if (viewed.has(moment.chatId)) return null;
-  return moment.kind;
+  return alerts.some((alert) => !before.has(alert.key) && !viewed.has(alert.chatId));
 }
 
 export interface ChimeHold {
@@ -94,31 +88,34 @@ function sound(chime: Chime, facts: { on: boolean; hold: ChimeHold }): void {
 
 export function useChimes(
   on: boolean,
-  chats: readonly ConversationSummary[] | null,
+  alerts: readonly Alert[] | null,
   moment: Moment | null,
   viewed: ReadonlySet<string>,
   hold: ChimeHold = NOT_HELD,
 ): void {
   const facts = useRef({ on, viewed, hold });
   const seen = useRef<ReadonlySet<string> | null>(null);
-  const chimedRun = useRef<string | null>(null);
-  const waiting = useMemo(() => (chats ? waitingChats(chats) : null), [chats]);
+  const heldRun = useRef<string | null>(null);
+  const keys = alerts ? alerts.map((alert) => alert.key).join(' ') : null;
+  const latest = useRef(alerts);
 
   useEffect(() => {
     facts.current = { on, viewed, hold };
-  }, [on, viewed, hold]);
+    latest.current = alerts;
+  });
 
   useEffect(() => {
+    const current = latest.current;
     const before = seen.current;
-    seen.current = waiting ? new Set(waiting) : null;
-    if (!before || !waiting) return;
-    if (needsChime(before, waiting, facts.current.viewed)) sound('needs', facts.current);
-  }, [waiting]);
+    seen.current = current ? new Set(current.map((alert) => alert.key)) : null;
+    if (!before || !current) return;
+    if (alertChime(before, current, facts.current.viewed)) sound('needs', facts.current);
+  }, [keys]);
 
   useEffect(() => {
-    if (!moment || chimedRun.current === moment.runId) return;
-    chimedRun.current = moment.runId;
-    const chime = momentChime(moment, facts.current.viewed);
-    if (chime) sound(chime, facts.current);
+    if (!moment || heldRun.current === moment.runId) return;
+    heldRun.current = moment.runId;
+    const { hold: current, viewed: open } = facts.current;
+    if (current.held && !open.has(moment.chatId)) current.onHeld(moment.kind);
   }, [moment]);
 }

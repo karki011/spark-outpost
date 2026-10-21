@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { insertApproval } from '../src/persistence/approvals.ts';
+import { markAttention } from '../src/persistence/attention-items.ts';
 import { pushKeys } from '../src/remote/push-keys.ts';
 import { startPushNotifier, type PushNotifier } from '../src/remote/push-notifier.ts';
 import { PUSH_CONTACT_DEFAULT } from '@spark-outpost/contracts';
@@ -114,6 +115,39 @@ describe('a chat the user has looked at', () => {
     expect(sent).toEqual([]);
   });
 
+  it('sends nothing for a card read, set aside or dismissed anywhere during the wait', async () => {
+    for (const mark of ['read', 'set-aside', 'dismiss'] as const) {
+      const card = await ask('execute');
+      notifier.changed({
+        kind: 'approval',
+        conversationId: chat.conversationId,
+        runId: chat.runId,
+      });
+      await scanned();
+      await markAttention(t.db, t.workspaceId, `approval:${card.id}`, mark);
+      await notifier.settled();
+      expect([mark, sent]).toEqual([mark, []]);
+    }
+  });
+
+  it('sends a close for a notification once its card is read or answered elsewhere', async () => {
+    const card = await ask('execute');
+    await changed();
+    await notifier.settled();
+    expect(payloads()).toHaveLength(1);
+    expect(payloads()[0]).toMatchObject({ keys: [`approval:${card.id}`] });
+    await markAttention(t.db, t.workspaceId, `approval:${card.id}`, 'read');
+    notifier.changed({ kind: 'attention', conversationId: chat.conversationId, runId: null });
+    await notifier.settled();
+    expect(payloads()[1]).toEqual({
+      close: `spark-chat-${chat.conversationId}`,
+      keys: [`approval:${card.id}`],
+    });
+    notifier.changed({ kind: 'attention', conversationId: chat.conversationId, runId: null });
+    await notifier.settled();
+    expect(payloads()).toHaveLength(2);
+  });
+
   it('still sends for a card that arrives after the user last looked', async () => {
     await markSeen();
     await ask('execute');
@@ -132,6 +166,7 @@ describe('a card waiting', () => {
         body: 'Needs your approval',
         chatId: chat.conversationId,
         tag: `spark-chat-${chat.conversationId}`,
+        keys: [expect.stringMatching(/^approval:/)],
       },
     ]);
     expect(sent[0]).toMatchObject({
@@ -205,6 +240,27 @@ describe('who gets it', () => {
     expect(sent.map((delivery) => delivery.endpoint)).toEqual([
       'https://web.push.apple.com/tablet',
     ]);
+  });
+
+  it('closes the notification on a device that came into focus after it was sent, and only where it was sent', async () => {
+    const tablet = await addDevice('Tablet');
+    await subscribe(tablet, 'https://web.push.apple.com/tablet');
+    focused = [`device:${tablet}`];
+    await changed();
+    await notifier.settled();
+    expect(sent).toHaveLength(1);
+    focused = [`device:${phone}`];
+    const { rows } = await t.db.query<{ id: string }>(
+      `SELECT id FROM approvals WHERE status = 'pending' LIMIT 1`,
+    );
+    await markAttention(t.db, t.workspaceId, `approval:${rows[0]!.id}`, 'read');
+    notifier.changed({ kind: 'attention', conversationId: chat.conversationId, runId: null });
+    await notifier.settled();
+    expect(sent).toHaveLength(2);
+    expect(sent[1]!.endpoint).toBe(sent[0]!.endpoint);
+    expect(JSON.parse(sent[1]!.payload)).toMatchObject({
+      close: `spark-chat-${chat.conversationId}`,
+    });
   });
 
   it('skips a revoked device and one not seen for 30 days', async () => {
@@ -301,10 +357,15 @@ describe('a Terminal session waiting', () => {
   });
 
   const setState = (state: string) =>
-    t.db.query('UPDATE native_terminal_sessions SET state = $2, updated_at = now() WHERE id = $1', [
-      sessionId,
-      state,
-    ]);
+    t.db.query(
+      `UPDATE native_terminal_sessions SET state = $2, updated_at = now(),
+         waiting_since = CASE
+           WHEN $2 NOT IN ('waiting_for_permission', 'waiting_for_input') THEN NULL
+           WHEN state = $2 THEN COALESCE(waiting_since, now())
+           ELSE now() END
+       WHERE id = $1`,
+      [sessionId, state],
+    );
 
   it('sends once each time the session starts waiting', async () => {
     await changed('conversation');
@@ -322,8 +383,9 @@ describe('a Terminal session waiting', () => {
     await changed('conversation');
     await setState('waiting_for_input');
     await changed('conversation');
-    expect(payloads().map((payload) => (payload as { body: string }).body)).toEqual([
+    expect(payloads().map((payload) => (payload as { body?: string }).body ?? 'close')).toEqual([
       'Waiting for permission in the terminal',
+      'close',
       'Waiting for input in the terminal',
     ]);
     expect(sent.some((delivery) => delivery.payload.includes('secret-project'))).toBe(false);

@@ -28,6 +28,7 @@ export * from './compaction.ts';
 export * from './command-runs.ts';
 export * from './conversations.ts';
 export * from './attention-line.ts';
+export * from './attention-items.ts';
 export * from './attention-report.ts';
 export * from './file-view.ts';
 export * from './orchestration.ts';

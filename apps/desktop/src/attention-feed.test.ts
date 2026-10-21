@@ -3,6 +3,7 @@ import type { AttentionReport } from '@spark-outpost/contracts';
 import { changesChatList, eventFrames, startAttentionFeed } from './attention-feed.ts';
 
 const CHAT = '11111111-2222-4333-8444-555555555555';
+const CARD = '22222222-2222-4333-8444-555555555555';
 const ORIGIN = 'http://127.0.0.1:31000';
 
 function waitingChat(needsInput: boolean) {
@@ -24,6 +25,20 @@ function waitingChat(needsInput: boolean) {
   };
 }
 
+function cardItem(read: boolean) {
+  return {
+    key: `approval:${CARD}`,
+    kind: 'approval',
+    blocking: true,
+    conversationId: CHAT,
+    detail: null,
+    at: '2026-10-12T10:00:00.000Z',
+    readAt: read ? '2026-10-12T10:01:00.000Z' : null,
+    setAsideAt: null,
+    dismissedAt: null,
+  };
+}
+
 function frame(kind: string): string {
   return `data: ${JSON.stringify({ kind, conversationId: CHAT, runId: null })}\n\n`;
 }
@@ -35,18 +50,24 @@ interface Server {
   lists: () => number;
   streams: () => number;
   setChats(chats: unknown[]): void;
+  setRead(read: boolean): void;
 }
 
 function server(): Server {
   const encoder = new TextEncoder();
   let controller: ReadableStreamDefaultController<Uint8Array> | null = null;
-  let chats: unknown[] = [];
+  let chats: { needsInput: boolean }[] = [];
+  let read = false;
   let lists = 0;
   let streams = 0;
   const fetchImpl = ((input: string, init?: RequestInit) => {
     if (input === `${ORIGIN}/api/conversations`) {
       lists += 1;
       return Promise.resolve(Response.json(chats));
+    }
+    if (input === `${ORIGIN}/api/attention`) {
+      const items = chats.some((chat) => chat.needsInput) ? [cardItem(read)] : [];
+      return Promise.resolve(Response.json({ items }));
     }
     streams += 1;
     const body = new ReadableStream<Uint8Array>({
@@ -64,7 +85,10 @@ function server(): Server {
     lists: () => lists,
     streams: () => streams,
     setChats: (next) => {
-      chats = next;
+      chats = next as { needsInput: boolean }[];
+    },
+    setRead: (next) => {
+      read = next;
     },
   };
 }
@@ -118,7 +142,10 @@ describe('startAttentionFeed', () => {
     api.setChats([waitingChat(true)]);
     const { feed, reports } = feedOn(api);
     await vi.waitFor(() => expect(reports).toHaveLength(1));
-    expect(reports[0]).toMatchObject({ count: 1, requests: [{ chatId: CHAT, chat: 'Fix login' }] });
+    expect(reports[0]).toMatchObject({
+      count: 1,
+      requests: [{ key: `approval:${CARD}`, chatId: CHAT, chat: 'Fix login' }],
+    });
     feed.stop();
   });
 
@@ -132,6 +159,18 @@ describe('startAttentionFeed', () => {
     api.send(text.slice(20));
     await vi.waitFor(() => expect(reports).toHaveLength(2));
     expect(reports.map((report) => report.count)).toEqual([0, 1]);
+    feed.stop();
+  });
+
+  it('drops a request once it is read anywhere, on the attention event', async () => {
+    const api = server();
+    api.setChats([waitingChat(true)]);
+    const { feed, reports } = feedOn(api);
+    await vi.waitFor(() => expect(reports).toHaveLength(1));
+    api.setRead(true);
+    api.send(frame('attention'));
+    await vi.waitFor(() => expect(reports).toHaveLength(2));
+    expect(reports[1]).toEqual({ count: 0, requests: [] });
     feed.stop();
   });
 

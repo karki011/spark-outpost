@@ -61,32 +61,46 @@ export interface AttentionNotice {
   chats: string[];
 }
 
-function summaryBody(fresh: readonly AttentionRequest[]): string {
-  const [first, second] = fresh.map((request) => request.chat);
-  const more = fresh.length - 2;
+function summaryBody(firsts: readonly AttentionRequest[]): string {
+  const [first, second] = firsts.map((request) => request.chat);
+  const more = firsts.length - 2;
   const text = more > 0 ? `${first}, ${second} and ${more} more` : `${first} and ${second}`;
   return clip(text, MAX_BODY);
 }
 
+function firstPerChat(fresh: readonly AttentionRequest[]): AttentionRequest[] {
+  const byChat = new Map<string, AttentionRequest>();
+  for (const request of fresh) {
+    if (!byChat.has(request.chatId)) byChat.set(request.chatId, request);
+  }
+  return [...byChat.values()];
+}
+
 export function noticesFor(fresh: readonly AttentionRequest[]): AttentionNotice[] {
-  if (fresh.length < 2) {
-    return fresh.map((request) => ({
-      key: request.key,
-      chatId: request.chatId,
-      title: request.title,
-      body: request.body,
-      requests: [request.key],
-      chats: [request.chatId],
-    }));
+  const firsts = firstPerChat(fresh);
+  const requests = fresh.map((request) => request.key);
+  if (firsts.length === 0) return [];
+  if (firsts.length === 1) {
+    const request = firsts[0]!;
+    return [
+      {
+        key: request.key,
+        chatId: request.chatId,
+        title: request.title,
+        body: request.body,
+        requests,
+        chats: [request.chatId],
+      },
+    ];
   }
   return [
     {
-      key: `summary:${fresh[0]!.key}`,
+      key: `summary:${firsts[0]!.key}`,
       chatId: null,
-      title: `${fresh.length} chats need you`,
-      body: summaryBody(fresh),
-      requests: fresh.map((request) => request.key),
-      chats: [...new Set(fresh.map((request) => request.chatId))],
+      title: `${firsts.length} chats need you`,
+      body: summaryBody(firsts),
+      requests,
+      chats: firsts.map((request) => request.chatId),
     },
   ];
 }

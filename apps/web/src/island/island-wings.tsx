@@ -4,10 +4,8 @@ import { Kbd } from './island-parts.tsx';
 
 export interface WingProps {
   view: IslandView;
-  waiting: number;
   greeting: string | null;
   followUp: { title: string } | null;
-  hugsNotch: boolean;
   onTab: (panel: Panel) => void;
 }
 
@@ -22,7 +20,7 @@ function panelLabel(panel: Panel, followUp: boolean): string {
 }
 
 export function wingsFor(props: WingProps): { left: ReactNode; right: ReactNode } {
-  const { view, waiting, greeting } = props;
+  const { view, greeting } = props;
   switch (view.kind) {
     case 'card':
       return {
@@ -47,17 +45,6 @@ export function wingsFor(props: WingProps): { left: ReactNode; right: ReactNode 
             ? greeting
             : panelLabel(view.panel, props.followUp !== null),
         right: <Kbd>⌥ Space</Kbd>,
-      };
-    case 'now':
-      return {
-        left: props.hugsNotch ? null : 'Spark',
-        right:
-          !props.hugsNotch && waiting > 1 ? (
-            <>
-              <span className="isl-badge">{waiting}</span>
-              <span>need you</span>
-            </>
-          ) : null,
       };
     default:
       return { left: null, right: null };
