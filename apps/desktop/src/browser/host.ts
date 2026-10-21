@@ -16,6 +16,7 @@ import {
   browserIdSchema,
   browserSignOutSchema,
   browserPlacementSchema,
+  type BrowserClosedTab,
   type BrowserCommand,
   type BrowserPick,
   type BrowserFound,
@@ -218,8 +219,12 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     else if (action.command === 'select')
       panes.keepFocus(chatId, () => panes.select(chatId, tab.id));
     else if (action.command === 'close') {
-      panes.keepFocus(chatId, () => panes.closeByUser(chatId, tab.id));
+      let closed: BrowserClosedTab = { handoff: null };
+      panes.keepFocus(chatId, () => {
+        closed = panes.closeByUser(chatId, tab.id);
+      });
       void stopPick(tab).catch(() => undefined);
+      return closed;
     } else if (action.command === 'copy_url') {
       const url = tab.currentUrl();
       if (url !== 'about:blank') clipboard.writeText(url);
@@ -273,8 +278,11 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
   ipcMain.handle(
     IPC.browserCommand,
     guarded(async (_event, chatId, action) => {
-      await command(browserIdSchema.parse(chatId), browserCommandSchema.parse(action));
-      return true;
+      const result = await command(
+        browserIdSchema.parse(chatId),
+        browserCommandSchema.parse(action),
+      );
+      return result ?? true;
     }),
   );
   ipcMain.handle(

@@ -66,15 +66,20 @@ for (const [name, tab] of cases) {
   });
 }
 
-test('closing a tab waiting on a sign-in cancels the hand-off after the close', async ({
-  page,
-}) => {
+async function mainClosesWith(page: Page, closed: unknown) {
+  await page.evaluate((answer) => {
+    (window as unknown as { browserClosed: unknown }).browserClosed = answer;
+  }, closed);
+}
+
+const waiting = { title: 'Sign in', url: 'https://idp.example.com/login', owner: 'agent' };
+
+test('closing a tab main says was waiting on a sign-in cancels the hand-off', async ({ page }) => {
   await withDesktopBrowser(page);
   const decisions = await recordDecisions(page);
   const { pane, chatId } = await openPane(page);
-  const waiting = { title: 'Sign in', url: 'https://idp.example.com/login', owner: 'agent' };
-  await push(page, chatId, [{ ...waiting, active: true, kept: true, handoff }]);
-  await expect(pane.getByText('Claude is waiting for you to sign in to')).toBeVisible();
+  await mainClosesWith(page, { handoff });
+  await push(page, chatId, [{ ...waiting, active: true, kept: true, handoff: null }]);
   await pane.getByRole('button', { name: 'Close Sign in' }).click();
   await expect.poll(() => decisions).toEqual([{ optionId: 'decline', scope: 'once' }]);
   expect((await calls(page, 'command')).at(-1)).toEqual({
@@ -82,8 +87,21 @@ test('closing a tab waiting on a sign-in cancels the hand-off after the close', 
     command: { command: 'close', tabId: 't1' },
   });
 
-  await push(page, chatId, [{ ...waiting, active: true, kept: true, handoff }]);
+  await push(page, chatId, [{ ...waiting, active: true, kept: true, handoff: null }]);
   await pane.getByRole('button', { name: 'Close Sign in' }).focus();
   await page.keyboard.press('ControlOrMeta+W');
   await expect.poll(() => decisions.length).toBe(2);
+});
+
+test('a hand-off shown only in a stale pane is not cancelled by a close', async ({ page }) => {
+  await withDesktopBrowser(page);
+  const decisions = await recordDecisions(page);
+  const { pane, chatId } = await openPane(page);
+  await mainClosesWith(page, { handoff: null });
+  await push(page, chatId, [{ ...waiting, active: true, kept: true, handoff }]);
+  await pane.getByRole('button', { name: 'Close Sign in' }).click();
+  await expect
+    .poll(async () => (await calls(page, 'command')).at(-1))
+    .toEqual({ chatId, command: { command: 'close', tabId: 't1' } });
+  expect(decisions).toEqual([]);
 });

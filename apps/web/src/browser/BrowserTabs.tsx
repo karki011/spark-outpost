@@ -74,7 +74,7 @@ function PageTab({
         className="bp-tab-x"
         aria-label={`Close ${label}`}
         aria-keyshortcuts={tab.active ? PANE_KEYS.close.aria : undefined}
-        onClick={() => void closeBrowserTab(chatId, tab)}
+        onClick={() => void closeBrowserTab(chatId, tab.id)}
       >
         <CloseIcon />
       </button>

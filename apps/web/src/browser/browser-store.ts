@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import {
   SPARK_ACTION_OPTION,
+  browserClosedTabSchema,
   browserPaneStateSchema,
   browserPickSchema,
   browserSelectedTextSchema,
@@ -137,13 +138,14 @@ export function sendBrowserCommand(chatId: string, command: BrowserCommand): voi
   void desktopBrowser()?.command(chatId, command);
 }
 
-export async function closeBrowserTab(chatId: string, tab: BrowserPaneTab): Promise<void> {
-  await desktopBrowser()
-    ?.command(chatId, { command: 'close', tabId: tab.id })
-    .catch(() => undefined);
-  if (!tab.handoff) return;
+export async function closeBrowserTab(chatId: string, tabId: string): Promise<void> {
+  const answer = await desktopBrowser()
+    ?.command(chatId, { command: 'close', tabId })
+    .catch(() => null);
+  const handoff = browserClosedTabSchema.safeParse(answer).data?.handoff;
+  if (!handoff) return;
   const decline = { optionId: SPARK_ACTION_OPTION.decline, scope: 'once' } as const;
-  await approvalsApi.decide(tab.handoff.approvalId, decline).catch(() => undefined);
+  await approvalsApi.decide(handoff.approvalId, decline).catch(() => undefined);
 }
 
 export function activeTab(browser: ChatBrowser): BrowserPaneTab | null {

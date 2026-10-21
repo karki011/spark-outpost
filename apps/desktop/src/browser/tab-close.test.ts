@@ -1,4 +1,4 @@
-import type { BrowserPaneState } from '@spark-outpost/contracts';
+import type { BrowserClosedTab, BrowserPaneState } from '@spark-outpost/contracts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runBrowserOp } from './agent-ops.ts';
 import { net, type FakeContents, type FakeView } from './electron.fixture.ts';
@@ -78,8 +78,12 @@ function contentsOf(tabId: string): FakeContents {
   return panes.tab(CHAT, tabId)!.view()!.webContents as unknown as FakeContents;
 }
 
-function userCloses(tabId: string): void {
-  panes.keepFocus(CHAT, () => panes.closeByUser(CHAT, tabId));
+function userCloses(tabId: string): BrowserClosedTab {
+  let closed: BrowserClosedTab = { handoff: null };
+  panes.keepFocus(CHAT, () => {
+    closed = panes.closeByUser(CHAT, tabId);
+  });
+  return closed;
 }
 
 function expectClosed(tabId: string, contents: FakeContents): void {
@@ -93,7 +97,7 @@ describe('the user closing a Browser pane tab', () => {
     const tabId = await userOpens('https://docs.example.com/a');
     const contents = contentsOf(tabId);
     contents.focused = true;
-    userCloses(tabId);
+    expect(userCloses(tabId)).toEqual({ handoff: null });
     expectClosed(tabId, contents);
   });
 
@@ -117,7 +121,7 @@ describe('the user closing a Browser pane tab', () => {
       signal,
     );
     const contents = contentsOf(tabId);
-    userCloses(tabId);
+    expect(userCloses(tabId)).toEqual({ handoff });
     expectClosed(tabId, contents);
     await expect(
       runBrowserOp(

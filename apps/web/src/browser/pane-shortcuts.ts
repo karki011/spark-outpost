@@ -60,7 +60,7 @@ export function runPaneShortcut(
   else if (shortcut === 'reopen_tab') sendBrowserCommand(chatId, { command: 'reopen' });
   else if (shortcut === 'focus_address') ui.focusAddress();
   else if (shortcut === 'close_tab') {
-    if (tab) void closeBrowserTab(chatId, tab);
+    if (tab) void closeBrowserTab(chatId, tab.id);
   } else if (shortcut === 'copy_url') {
     if (!page) return;
     sendBrowserCommand(chatId, { command: 'copy_url', tabId: tab.id });

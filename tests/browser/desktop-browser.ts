@@ -56,8 +56,11 @@ export async function withDesktopBrowser(page: Page) {
         browser: {
           state: async () => null,
           place: async (placement: unknown) => calls.push({ kind: 'place', payload: placement }),
-          command: async (chatId: string, command: unknown) =>
-            calls.push({ kind: 'command', payload: { chatId, command } }),
+          command: async (chatId: string, command: { command?: string }) => {
+            calls.push({ kind: 'command', payload: { chatId, command } });
+            if (command.command !== 'close') return true;
+            return (window as unknown as { browserClosed?: unknown }).browserClosed ?? true;
+          },
           start: async (placement: { chatId: string }) => {
             calls.push({ kind: 'start', payload: placement });
             return { chatId: placement.chatId, tabs: [tab('t1', { active: true })] };

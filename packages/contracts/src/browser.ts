@@ -109,6 +109,9 @@ export const browserHandoffSchema = z.object({
 });
 export type BrowserHandoff = z.infer<typeof browserHandoffSchema>;
 
+export const browserClosedTabSchema = z.object({ handoff: browserHandoffSchema.nullable() });
+export type BrowserClosedTab = z.infer<typeof browserClosedTabSchema>;
+
 export const browserPaneTabSchema = browserTabSchema.extend({
   loading: z.boolean(),
   canGoBack: z.boolean(),

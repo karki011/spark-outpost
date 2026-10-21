@@ -5,6 +5,7 @@ import {
   browserOrigin,
   classifyBrowserUrl,
   type BrowserBounds,
+  type BrowserClosedTab,
   type BrowserPaneState,
   type BrowserPlacement,
   type BrowserShortcut,
@@ -282,11 +283,14 @@ export class BrowserPanes {
     else this.options.window()?.webContents.focus();
   }
 
-  closeByUser(chatId: string, tabId: string): void {
+  closeByUser(chatId: string, tabId: string): BrowserClosedTab {
     const pane = this.chats.get(chatId);
-    const url = this.tab(chatId, tabId)?.currentUrl();
+    const tab = this.tab(chatId, tabId);
+    const url = tab?.currentUrl();
     if (pane && url && url !== BLANK) pane.closed = [...pane.closed, url].slice(-CLOSED_KEPT);
+    const closed = { handoff: tab?.handoff ?? null };
     this.close(chatId, tabId);
+    return closed;
   }
 
   takeClosed(chatId: string): string | null {
