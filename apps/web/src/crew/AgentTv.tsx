@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type MouseEvent,
   type PointerEvent,
 } from 'react';
@@ -40,9 +41,9 @@ import { TvList } from './TvList.tsx';
 import type { TvRows } from './tv-list.ts';
 import { tvCaption } from './tv-caption.ts';
 import { StageGaze } from './tv-gaze.ts';
-import { clampToViewport, STAGES, watchStage } from './tv-layout.ts';
+import { clampInto, dockInto, stageRoom, tvStage, watchStage, type TvDock } from './tv-layout.ts';
 import type { TvAsk } from './tv-scene.ts';
-import { useThrottledText, useViewport } from './use-tv-env.ts';
+import { useChatArea, useThrottledText, useViewport } from './use-tv-env.ts';
 import { useTvChatter } from './use-tv-events.ts';
 
 const CAPTION_THROTTLE_MS = 2500;
@@ -70,6 +71,16 @@ const VIEW_OPTIONS = [
 
 function isNarrow(): boolean {
   return matchesMedia(PHONE_QUERY);
+}
+
+function dockStyle(dock: TvDock | null): CSSProperties | undefined {
+  if (!dock) return undefined;
+  return {
+    '--tv-right': `${dock.right}px`,
+    '--tv-bottom': `${dock.bottom}px`,
+    '--tv-max-w': `${dock.maxWidth}px`,
+    '--tv-max-h': `${dock.maxHeight}px`,
+  } as CSSProperties;
 }
 
 function focusButton() {
@@ -111,7 +122,15 @@ export function AgentTv({
   const captionText = [caption.lead, caption.text].filter(Boolean).join(': ');
   const spoken = useThrottledText(captionText, CAPTION_THROTTLE_MS);
   const narrow = usePhone();
-  const metrics = watch ? watchStage(viewport) : STAGES[narrow ? 's' : size];
+  const area = useChatArea();
+  const dock = area && !narrow && !watch ? dockInto(area, viewport) : null;
+  const metrics = watch
+    ? watchStage(viewport)
+    : tvStage(
+        narrow ? 's' : size,
+        dock ? stageRoom(dock, subagents.length > 0) : null,
+        members.length - 1,
+      );
   const viewTip = useTooltip(view === 'list' ? 'List view' : 'Stage view');
   const sizeTip = useTooltip('Small / Medium / Large TV');
   const muteTip = useTooltip(muted ? 'Show speech bubbles' : 'Mute speech bubbles');
@@ -153,10 +172,10 @@ export function AgentTv({
       Object.assign(element.style, { left: '', top: '', right: '', bottom: '' });
       return;
     }
-    const next = clampToViewport(
+    const next = clampInto(
       position,
       { width: element.offsetWidth, height: element.offsetHeight },
-      { width: innerWidth, height: innerHeight },
+      area ?? { left: 0, top: 0, right: innerWidth, bottom: innerHeight },
     );
     Object.assign(element.style, {
       left: `${next.x}px`,
@@ -164,7 +183,7 @@ export function AgentTv({
       right: 'auto',
       bottom: 'auto',
     });
-  }, [position, size, watch, view, viewport.width, viewport.height]);
+  }, [position, size, watch, view, area, viewport.width, viewport.height]);
 
   const close = () => {
     closeAgentTv();
@@ -211,6 +230,7 @@ export function AgentTv({
       <div
         ref={panel}
         className={classes.filter(Boolean).join(' ')}
+        style={dockStyle(dock)}
         role="dialog"
         aria-label="Agent TV"
         tabIndex={-1}

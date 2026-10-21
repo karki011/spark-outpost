@@ -1,4 +1,4 @@
-import type { TvSize } from './agent-tv-store.ts';
+import { TV_SIZES, type TvSize } from './agent-tv-store.ts';
 
 export interface Seat {
   x: number;
@@ -147,9 +147,69 @@ export function textWidth(text: string, fontPx = 12): number {
   return Math.ceil(text.length * fontPx * 0.54 + 26);
 }
 
-export function clampToViewport(position: Seat, size: Box, viewport: Box, margin = 8): Seat {
+export interface Rect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+export interface TvDock {
+  right: number;
+  bottom: number;
+  maxWidth: number;
+  maxHeight: number;
+}
+
+const DOCK_GAP = 16;
+const LONE_HEIGHT = 0.78;
+
+export function chatArea(column: Rect, pane: Rect | null): Rect {
+  if (!pane || pane.left >= column.right || pane.right <= column.left) return column;
+  return { ...column, right: Math.max(column.left, Math.min(column.right, pane.left)) };
+}
+
+export function dockInto(area: Rect, viewport: Box, gap = DOCK_GAP): TvDock {
   return {
-    x: Math.max(margin, Math.min(viewport.width - size.width - margin, position.x)),
-    y: Math.max(margin, Math.min(viewport.height - size.height - margin, position.y)),
+    right: Math.round(viewport.width - area.right + gap),
+    bottom: Math.round(viewport.height - area.bottom + gap),
+    maxWidth: Math.max(0, Math.round(area.right - area.left - gap * 2)),
+    maxHeight: Math.max(0, Math.round(area.bottom - area.top - gap * 2)),
+  };
+}
+
+const TV_CHROME = 76;
+const SUBAGENTS_MIN = 90;
+
+export function stageRoom(dock: TvDock, subagents: boolean): Box {
+  return {
+    width: dock.maxWidth - 2,
+    height: dock.maxHeight - TV_CHROME - (subagents ? SUBAGENTS_MIN : 0),
+  };
+}
+
+function forCrew(stage: StageMetrics, crew: number): StageMetrics {
+  if (crew > 0) return stage;
+  return { ...stage, height: Math.round(stage.height * LONE_HEIGHT) };
+}
+
+function fits(stage: Box, room: Box | null): boolean {
+  return !room || (stage.width <= room.width && stage.height <= room.height);
+}
+
+export function tvStage(size: TvSize, room: Box | null, crew: number): StageMetrics {
+  const choices = TV_SIZES.slice(0, TV_SIZES.indexOf(size) + 1).reverse();
+  const fit = choices
+    .map((choice) => forCrew(STAGES[choice], crew))
+    .find((stage) => fits(stage, room));
+  if (fit || !room) return fit ?? forCrew(STAGES.s, crew);
+  const aspect = DOCK.width / forCrew(DOCK, crew).height;
+  return forCrew(dockStage(Math.min(room.width, room.height * aspect)), crew);
+}
+
+export function clampInto(position: Seat, size: Box, area: Rect, margin = 8): Seat {
+  return {
+    x: Math.max(area.left + margin, Math.min(area.right - size.width - margin, position.x)),
+    y: Math.max(area.top + margin, Math.min(area.bottom - size.height - margin, position.y)),
   };
 }

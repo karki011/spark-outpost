@@ -4,7 +4,7 @@ import { useId, useState } from 'react';
 import type { SubagentRow } from '@spark-outpost/contracts';
 import { StepIcon, StepName } from '../WorkLog.tsx';
 import { SubagentDetail } from './SubagentDetail.tsx';
-import { agentLatestCommand, agentMeta, agentNow, agentPurpose } from './agent-cards.ts';
+import { agentActivity, agentMeta, agentPurpose } from './agent-cards.ts';
 import { SUBAGENT_STATE_WORDS, hasDetail, subagentLines } from './subagent-view.ts';
 
 const ICON_STATUS = { working: 'open', cancelled: 'open', done: 'done', failed: 'failed' } as const;
@@ -14,8 +14,7 @@ function AgentCard({ row, nested, live }: { row: SubagentRow; nested: boolean; l
   const detailId = useId();
   const purpose = agentPurpose(row.task, row.name);
   const working = row.state === 'working';
-  const command = agentLatestCommand(row);
-  const now = agentNow(row);
+  const activity = agentActivity(row);
   const meta = agentMeta(row);
   const task = row.task && row.task !== row.name ? row.task : null;
   return (
@@ -41,16 +40,14 @@ function AgentCard({ row, nested, live }: { row: SubagentRow; nested: boolean; l
         <span className="sr-only">{SUBAGENT_STATE_WORDS[row.state]}</span>
         {meta && <span className="ac-meta">{meta}</span>}
       </div>
-      {purpose && !open && <p className="ac-purpose">{purpose}</p>}
-      {now && !open && (
-        <p className="ac-now">
-          Now: <StepName name={now} />
+      {purpose && !open && (
+        <p className="ac-purpose" title={row.task.trim()}>
+          {purpose}
         </p>
       )}
-      {command && !open && (
-        <p className="ac-cmd">
-          <span aria-hidden="true">› </span>
-          <code>{command}</code>
+      {activity && !open && (
+        <p className="ac-now" title={activity.full}>
+          Now: {activity.command ? <code>{activity.text}</code> : <StepName name={activity.text} />}
         </p>
       )}
       {open && <SubagentDetail id={detailId} row={row} task={task} live={live} />}
