@@ -2,6 +2,15 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.26
+
+- Spark Island is one big card for what needs you: the asking chat's own blob, the command or question, and Allow, Deny and Later. A meeting takes the card when it starts, or rides along as a strip; working chats show as small tiles. At rest it's Scout with a count, and it opens only when you rest the pointer on it, not when you click other menu bar icons.
+- One notification state for the island and Spark: answering or opening a request anywhere clears it everywhere, including the Dock badge, Mac notifications and phone notifications. Only requests that block an agent count as needs you; warnings and finished or failed runs never count or chime, and a chat's open cards are pinned at its top.
+- Ask Spark sends every question to the model, typed or spoken, keeps its history with New topic, and can act: start and message chats, stop, pause and archive, cards, outposts, the Inbox, meetings and tickets, with Do it in Manual.
+- Agent TV stays inside the chat, clear of the Browser pane and the message box, and sub-agent cards show one Now line.
+- Browser pane: × and ⌘W always close a tab, including one stuck after a sign-in page closed itself; closing a tab waiting on your sign-in cancels it for the agent.
+- Home keeps your mode and project across reloads, and a chat with no project says No file tools without a project.
+
 ## 0.1.0-beta.25
 
 - Spark Island is an inbox: Needs you, Running and Finished, with Allow, Deny and Later right on the card. Acting in the island no longer switches to Spark; only opening a row, Answer in Spark or ⌘O does. The island's chat list and chat view are gone.
