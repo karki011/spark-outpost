@@ -29,7 +29,7 @@ interface Footprint {
   island: number;
   scoutLeft: number;
   scoutRight: number;
-  widest: number;
+  scoutRegion: number;
   rest: number | null;
 }
 
@@ -47,8 +47,9 @@ async function footprint(page: Page, notch: boolean): Promise<Footprint> {
     };
   });
   const regions = await latestRegions(page);
-  const widest = Math.max(0, ...(regions?.boxes ?? []).map((box) => box.width));
-  return { ...drawn, widest, rest: (await restSize(page))?.width ?? null };
+  expect(regions?.boxes ?? []).toEqual([]);
+  const scoutRegion = regions?.scout?.box.width ?? 0;
+  return { ...drawn, scoutRegion, rest: (await restSize(page))?.width ?? null };
 }
 
 function compactWidth(notch: boolean, blob: number): number {
@@ -60,7 +61,8 @@ function expectCompact(seen: Footprint, notch: boolean, blob: number) {
   expect(seen.view).toBe('peek');
   expect(seen.island).toBeLessThanOrEqual(limit);
   expect(seen.scoutRight - seen.scoutLeft).toBeLessThanOrEqual(blob + BORDER);
-  expect(seen.widest).toBeLessThanOrEqual(limit + 2 * HIT_MARGIN);
+  expect(seen.scoutRegion).toBeGreaterThan(0);
+  expect(seen.scoutRegion).toBeLessThanOrEqual(blob + BORDER);
   if (notch) return;
   expect(seen.rest).not.toBeNull();
   expect(seen.rest!).toBeLessThanOrEqual(blob + BADGE_ROOM + 2 * HIT_MARGIN);

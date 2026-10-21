@@ -51,6 +51,31 @@ test('resting Scout takes the click when a request appears, and the island stays
   ).toBeVisible();
 });
 
+test('on a flat display the window grows to hold the hover line and shrinks back to Scout', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await openNotchIsland(page, { size: 'large', autoExpand: false, notch: false });
+  await expect.poll(() => restSize(page)).not.toBeNull();
+  const compact = (await restSize(page))!;
+  await seedChats([install]);
+  await expect(count(page)).toHaveText('1');
+
+  await pointAtScout(page);
+  const line = island(page).locator('.isl-hover');
+  await expect(line).toBeVisible();
+  const box = (await line.boundingBox())!;
+  await expect
+    .poll(async () => ((await restSize(page))?.width ?? 0) / 2)
+    .toBeGreaterThanOrEqual(box.x + box.width - VIEWPORT.width / 2);
+  expect((await restSize(page))!.height).toBeGreaterThanOrEqual(box.y + box.height);
+
+  await page.mouse.move(5, 600);
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await page.waitForTimeout(REST_DELAY_MS);
+  await expect.poll(async () => (await restSize(page))?.width).toBe(compact.width);
+});
+
 test('the open island takes the pointer over itself and its margin, and the rest stays clear', async ({
   page,
 }) => {
