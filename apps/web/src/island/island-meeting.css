@@ -1,0 +1,186 @@
+.isl-date {
+  display: flex;
+  flex-direction: column;
+  width: 120px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  border-radius: 18px;
+  background: var(--panel);
+  text-align: center;
+}
+
+.isl-date-month {
+  padding: 6px 0;
+  background: var(--danger);
+  color: var(--accent-ink);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.isl-date-day {
+  padding: 4px 0 8px;
+  color: var(--text);
+  font-size: 54px;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.isl-meet-when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.isl-meet-when b {
+  color: var(--text);
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.isl-meet-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.isl-meet-service {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent-text);
+}
+
+.isl-meet-service svg {
+  width: 14px;
+  height: 14px;
+}
+
+.isl-meet-bar {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.isl-meet-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--warn));
+  transform-origin: left;
+}
+
+.isl-meet-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.isl-meet-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--card-line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+.isl-meet-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.isl-meet-row-text span,
+.isl-meetstrip-text span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.isl-meetstrip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--card-line));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent) 7%, var(--card));
+}
+
+.isl-meetstrip > svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--accent-text);
+}
+
+.isl-meetstrip-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.isl-next {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 4px 6px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.isl-next-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+
+.isl-next-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.isl-next-text b {
+  color: var(--text);
+}

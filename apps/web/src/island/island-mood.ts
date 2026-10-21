@@ -21,11 +21,10 @@ export function scoutMoodFor(view: IslandView, context: MoodContext): ScoutMood 
   switch (view.kind) {
     case 'card':
       return 'alert';
-    case 'now':
-      return view.card ? 'alert' : restingMood(context);
     case 'note':
     case 'panel':
       return null;
+    case 'now':
     case 'peek':
       return restingMood(context);
   }

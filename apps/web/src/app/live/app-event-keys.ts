@@ -22,6 +22,7 @@ import {
 import { ticketKeys } from '../../tickets/tickets-api.ts';
 import { calendarKeys } from '../../calendar/calendar-api.ts';
 import { islandRequestsKey } from '../../island/island-requests.ts';
+import { attentionKey } from '../../attention/attention-api.ts';
 import { sparkPauseKey } from '../pause/spark-pause-api.ts';
 
 interface Invalidation {
@@ -46,6 +47,7 @@ export const LIVE_ROOTS: readonly string[] = [
   agentTerminalKeys.all[0],
   calendarKeys.all[0],
   islandRequestsKey[0],
+  attentionKey[0],
 ];
 
 export function isLiveQueryKey(key: QueryKey): boolean {
@@ -53,6 +55,7 @@ export function isLiveQueryKey(key: QueryKey): boolean {
 }
 
 const list: Invalidation = { queryKey: queryKeys.conversations, exact: true };
+const attention: Invalidation = { queryKey: attentionKey, exact: true };
 const search: Invalidation = { queryKey: queryKeys.conversationSearches };
 const tasks: Invalidation = { queryKey: taskKeys.all };
 const changeSummaries: Invalidation = { queryKey: diffKeys.summaries };
@@ -166,7 +169,13 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
       return [{ queryKey: calendarKeys.all }];
     case 'island_request':
       return [{ queryKey: islandRequestsKey, exact: true }];
+    case 'attention':
+      return [list];
   }
+}
+
+function withAttention(invalidations: Invalidation[]): Invalidation[] {
+  return invalidations.includes(list) ? [...invalidations, attention] : invalidations;
 }
 
 export function isStepEvent(event: AppEvent): boolean {
@@ -182,7 +191,7 @@ function covers(broad: Invalidation, narrow: Invalidation): boolean {
 
 export function mergeInvalidations(events: readonly AppEvent[]): Invalidation[] {
   const unique = new Map<string, Invalidation>();
-  for (const invalidation of events.flatMap(invalidationsFor)) {
+  for (const invalidation of events.flatMap((event) => withAttention(invalidationsFor(event)))) {
     unique.set(JSON.stringify([invalidation.queryKey, invalidation.exact ?? false]), invalidation);
   }
   const all = [...unique.values()];

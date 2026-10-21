@@ -202,6 +202,7 @@ export const SPEC_GROUPS = {
     'outposts-story',
   ],
   'island-desktop': [
+    'attention-sync',
     'boot-screen',
     'desktop-companion',
     'desktop-updates',
@@ -269,6 +270,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/web/src/analytics/', groups: ['analytics-audit'] },
   { prefix: 'apps/web/src/audit/', groups: ['analytics-audit', 'chat'] },
   { prefix: 'apps/web/src/browser/', groups: ['terminal-preview-browser'] },
+  { prefix: 'apps/web/src/attention/', groups: ['island-desktop', 'chat', 'home'] },
   { prefix: 'apps/web/src/calendar/', groups: ['home', 'island-desktop'] },
   { prefix: 'apps/web/src/categories/', groups: ['chat', 'sidebar-projects'] },
   {

@@ -25,7 +25,7 @@ function settledLine(flag: RailFlag): string {
   return flag.status === 'reverted' ? 'Reverted to before this run.' : 'Dismissed.';
 }
 
-function RailFlagCard({ flag, conversationId }: { flag: RailFlag; conversationId: string }) {
+export function RailFlagCard({ flag, conversationId }: { flag: RailFlag; conversationId: string }) {
   const queryClient = useQueryClient();
   const decide = useMutation({
     mutationFn: (action: 'dismiss' | 'revert') => approvalsApi.decideFlag(flag.id, { action }),
@@ -69,7 +69,7 @@ function RailFlagCard({ flag, conversationId }: { flag: RailFlag; conversationId
               disabled={decide.isPending}
               onClick={() => decide.mutate('dismiss')}
             >
-              Dismiss
+              Got it
             </button>
           </div>
         </>
@@ -83,7 +83,9 @@ function RailFlagCard({ flag, conversationId }: { flag: RailFlag; conversationId
 }
 
 export function RailFlags({ detail, runId }: { detail: ConversationDetail; runId: string }) {
-  const flags = (detail.railFlags ?? []).filter((flag) => flag.turnRunId === runId);
+  const flags = (detail.railFlags ?? []).filter(
+    (flag) => flag.turnRunId === runId && flag.status !== 'open',
+  );
   if (flags.length === 0) return null;
   return (
     <>

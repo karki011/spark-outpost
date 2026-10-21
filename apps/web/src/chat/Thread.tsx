@@ -14,6 +14,7 @@ import { AssistantTopicDivider } from './compaction/DividerLine.tsx';
 import { placeTopics } from './compaction/topic-model.ts';
 import { TodaySoFar } from './today/TodaySoFar.tsx';
 import { useStickToBottom } from './use-stick-to-bottom.ts';
+import { OpenItems } from './approvals/OpenItems.tsx';
 import { useMessageJump } from './message-jump.ts';
 import { QuoteMarks } from './quotes/QuoteMarks.tsx';
 import { QuoteToolbar } from './quotes/QuoteToolbar.tsx';
@@ -122,6 +123,7 @@ export const Thread = memo(function Thread({
       <div className="thread" ref={scrollerRef}>
         <RailSlot />
         <div className="col">
+          <OpenItems detail={detail} />
           <OutlineTicks detail={detail} taskId={taskId} scroller={scroller} />
           <CommandDockContext value={remote ? null : detail.conversation.id}>
             {turns.map(({ run, userMessage, assistantMessage, laterMessages }) => (

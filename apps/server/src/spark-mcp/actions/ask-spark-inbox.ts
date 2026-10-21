@@ -1,15 +1,13 @@
-import type { AskSparkAction } from '@spark-outpost/contracts';
-import { addIslandRequest } from '../../companion/island-requests.ts';
+import { approvalAttentionKey, type AskSparkAction } from '@spark-outpost/contracts';
 import { OutpostError } from '../../persistence/outposts.ts';
 import { postToOutpost } from '../../outposts/post-service.ts';
 import { getApproval } from '../../persistence/approvals.ts';
+import { markAttention } from '../../persistence/attention-items.ts';
 import { markConversationSeen } from '../../persistence/conversation-actions.ts';
 import type { Queryable } from '../../persistence/db.ts';
 import { SparkToolError, type SparkToolContext } from '../tool.ts';
 import { ASK_SPARK_REFUSALS, assistantChatOf } from './ask-spark-limits.ts';
 import type { Performed } from './performed.ts';
-
-const SET_ASIDE_REQUEST_MS = 10 * 60_000;
 
 export const INBOX_REFUSALS = {
   notFinished: 'That chat has no finished turn to clear.',
@@ -67,19 +65,15 @@ async function clearFinished(context: SparkToolContext, action: AskSparkAction) 
   const title = await finishedChat(db, workspaceId, chatId);
   if (title === null) throw new SparkToolError(INBOX_REFUSALS.notFinished);
   await markConversationSeen(db, workspaceId, chatId);
-  return { message: `Cleared “${title}” from Finished.`, chatId };
+  return { message: `Cleared “${title}” from Updates.`, chatId };
 }
 
 async function setAside(context: SparkToolContext, action: AskSparkAction) {
   const { db } = context.deps;
   const { workspaceId } = context.scope;
   const card = await waitingCard(db, workspaceId, required(action.approvalId, 'card'));
-  await addIslandRequest(db, workspaceId, {
-    kind: 'set_aside',
-    target: card.id,
-    expiresAt: new Date(Date.now() + SET_ASIDE_REQUEST_MS),
-  });
-  return `Spark Island sets “${card.title}” in “${card.chatTitle}” aside for later.`;
+  await markAttention(db, workspaceId, approvalAttentionKey(card.id), 'set-aside');
+  return `Set “${card.title}” in “${card.chatTitle}” aside for later.`;
 }
 
 async function postOutpost(context: SparkToolContext, action: AskSparkAction) {

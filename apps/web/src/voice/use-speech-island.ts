@@ -8,18 +8,10 @@ import type {
 } from '@spark-outpost/contracts';
 import { ticketsFlowFrom } from '@spark-outpost/contracts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
-import { homeApi, homeKeys } from '../home/home-api.ts';
-import type { FastState } from '../island/ask-fast-path.ts';
 import type { Panel } from '../island/island-model.ts';
 import { ticketKeys, ticketsApi } from '../tickets/tickets-api.ts';
 import { useTicketInbox } from '../tickets/use-ticket-inbox.ts';
-import {
-  chatAnswer,
-  lookedUpAnswer,
-  ticketsAnswer,
-  ticketStatusAnswer,
-  type InstantAnswer,
-} from './answers.ts';
+import { lookedUpAnswer, ticketStatusAnswer, type InstantAnswer } from './answers.ts';
 import {
   matchCommand,
   matchConfirmation,
@@ -47,7 +39,6 @@ const PROJECTS_WAIT_MS = 500;
 export interface SpeechIslandOptions {
   chats: readonly ConversationSummary[];
   projects: readonly Project[];
-  fast: FastState;
   panel: Panel | null;
   openPanel(panel: Panel): void;
   replyTo(chat: ConversationSummary): void;
@@ -183,10 +174,8 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
     setHanded(next.id);
   };
 
-  const answerTicket = async (
-    command: Extract<Command, { intent: 'ask_fast' }>,
-  ): Promise<InstantAnswer> => {
-    const ref = await resolve(command.ticket!);
+  const answerTicket = async (ticket: TicketRef): Promise<InstantAnswer> => {
+    const ref = await resolve(ticket);
     if (ref.source === null)
       return { text: `${ref.key} isn’t in a connected ticket tracker.`, chats: [] };
     const cached = queryClient
@@ -203,26 +192,6 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
     } catch {
       return { text: `Spark couldn’t find ${ref.key}.`, chats: [] };
     }
-  };
-
-  const instant = async (
-    command: Extract<Command, { intent: 'ask_fast' }>,
-  ): Promise<InstantAnswer> => {
-    const { fast } = latest.current.options;
-    if (command.question === 'tickets') {
-      const inbox = queryClient.getQueryData<{ tickets: Parameters<typeof ticketsAnswer>[0] }>(
-        ticketKeys.inbox,
-      );
-      return ticketsAnswer(inbox ? inbox.tickets : null);
-    }
-    if (command.question === 'ticket_status') return answerTicket(command);
-    if (command.question === 'spend' && fast.spendToday === null) {
-      const spend = await queryClient
-        .fetchQuery({ queryKey: homeKeys.spend('today'), queryFn: () => homeApi.spend('today') })
-        .catch(() => null);
-      return chatAnswer('spend', { ...fast, spendToday: spend?.costUsd ?? null });
-    }
-    return chatAnswer(command.question as 'needs' | 'running' | 'spend', fast);
   };
 
   const act = async (result: SpeechResult, index: number | null) => {
@@ -265,21 +234,9 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
         const known = latest.current.lists.tickets.find(
           (ticket) => ticket.key === target.ticket.key,
         );
-        const answer = await answerTicket({
-          intent: 'ask_fast',
-          question: 'ticket_status',
-          ticket: { ...target.ticket, known: Boolean(known) },
-        });
+        const answer = await answerTicket({ ...target.ticket, known: Boolean(known) });
         hand({ kind: 'ask', id: result.id, question: `Open ${target.ticket.key}`, answer });
         openPanel('ask');
-        return;
-      }
-      case 'ask_fast': {
-        const answer = await instant(command);
-        hand({ kind: 'ask', id: result.id, question: result.transcript, answer });
-        dispatch({ type: 'close' });
-        openPanel('ask');
-        speak(answer.text);
         return;
       }
       case 'none':

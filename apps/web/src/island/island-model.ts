@@ -1,4 +1,8 @@
-import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
+import {
+  approvalAttentionKey,
+  type Approval,
+  type ConversationSummary,
+} from '@spark-outpost/contracts';
 import { terminalMood } from '../terminal/native-state.ts';
 import {
   terminalStateEntry,
@@ -6,7 +10,7 @@ import {
   terminalTurnDone,
   terminalTurnFinished,
 } from '../terminal/turn-done.ts';
-import { isRunning, needsInput, rowState } from '../conversations/row-state.ts';
+import { needsInput, rowState } from '../conversations/row-state.ts';
 
 export type Panel = 'home' | 'quick' | 'ask';
 
@@ -30,16 +34,14 @@ export interface IslandInputs {
   panel: Panel | null;
   cards: readonly Card[];
   review: string | null;
-  nudge: boolean;
-  full?: boolean;
-  hoverOnly?: boolean;
+  strip: boolean;
 }
 
 export type IslandView =
   | { kind: 'note' }
   | { kind: 'panel'; panel: Panel }
   | { kind: 'card'; card: Card; index: number; total: number }
-  | { kind: 'now'; card: Card | null }
+  | { kind: 'now' }
   | { kind: 'peek' };
 
 export function islandView(inputs: IslandInputs): IslandView {
@@ -50,10 +52,7 @@ export function islandView(inputs: IslandInputs): IslandView {
   if (reviewed >= 0) {
     return { kind: 'card', card: inputs.cards[reviewed]!, index: reviewed + 1, total };
   }
-  if (inputs.hoverOnly) return { kind: 'peek' };
-  const first = (inputs.nudge && inputs.cards[0]) || null;
-  if (inputs.full) return { kind: 'now', card: first };
-  return { kind: 'peek' };
+  return inputs.strip ? { kind: 'now' } : { kind: 'peek' };
 }
 
 export type QuickShortcutTarget =
@@ -65,8 +64,7 @@ export function quickShortcutTarget(
   pending: Card | null = null,
 ): QuickShortcutTarget {
   if (panel) return { kind: 'close' };
-  const card =
-    view.kind === 'card' || view.kind === 'now' ? view.card : view.kind === 'peek' ? pending : null;
+  const card = view.kind === 'card' ? view.card : view.kind === 'note' ? null : pending;
   if (!card) return { kind: 'quick' };
   if (card.loading || card.kind === 'approval' || card.kind === 'force') {
     return { kind: 'review', chatId: card.chat.id };
@@ -75,7 +73,7 @@ export function quickShortcutTarget(
 }
 
 export function hoverOpensHome(view: IslandView): boolean {
-  return view.kind === 'peek' || view.kind === 'now';
+  return view.kind === 'peek';
 }
 
 const CARD_WIDTHS = {
@@ -85,9 +83,9 @@ const CARD_WIDTHS = {
   open: 520,
 } as const;
 const NOTE_WIDTH = 420;
-const NOW_WIDTH = 400;
+const NOW_WIDTH = 460;
 const NOW_WING = 104;
-const HOME_WIDTH = { share: 0.36, min: 560, max: 640 } as const;
+const HOME_WIDTH = { share: 0.42, min: 640, max: 760 } as const;
 const PANEL_WIDTH = { share: 0.42, min: 640, max: 760 } as const;
 
 function scaled(screenWidth: number, range: { share: number; min: number; max: number }): number {
@@ -164,10 +162,17 @@ function cardKind(chat: ConversationSummary, approval: Approval | null): CardKin
   return 'approval';
 }
 
+function pickApproval(
+  pending: readonly Approval[],
+  wanted: string | null | undefined,
+): Approval | null {
+  return pending.find((candidate) => candidate.id === wanted) ?? pending.at(-1) ?? null;
+}
+
 export function pendingCards(
   chats: readonly ConversationSummary[],
   approvalsByChat: ReadonlyMap<string, readonly Approval[]>,
-  snoozed: ReadonlySet<string>,
+  putOff: (approvalId: string) => boolean = () => false,
 ): Card[] {
   return chats
     .filter((chat) => !chat.archivedAt && needsInput(chat))
@@ -176,8 +181,8 @@ export function pendingCards(
         (approval) => approval.status === 'pending',
       );
       const wanted = chat.attention?.approvalId;
-      const approval =
-        pending.find((candidate) => candidate.id === wanted) ?? pending.at(-1) ?? null;
+      const active = pending.filter((approval) => !putOff(approval.id));
+      const approval = pickApproval(active, wanted) ?? pickApproval(pending, wanted);
       return {
         kind: cardKind(chat, approval),
         chat,
@@ -186,7 +191,6 @@ export function pendingCards(
           (chat.sessionType !== 'terminal' || chat.needsInput) && !approvalsByChat.has(chat.id),
       };
     })
-    .filter((card) => !snoozed.has(cardKey(card)))
     .sort((a, b) => cardTime(a).localeCompare(cardTime(b)));
 }
 
@@ -195,7 +199,9 @@ function cardTime(card: Card): string {
 }
 
 export function cardKey(card: Card): string {
-  return card.approval?.id ?? `chat:${card.chat.id}:${card.chat.updatedAt}`;
+  return card.approval
+    ? approvalAttentionKey(card.approval.id)
+    : `chat:${card.chat.id}:${card.chat.updatedAt}`;
 }
 
 export type SessionState = 'working' | 'waiting' | 'done' | 'failed' | 'idle';
@@ -209,47 +215,4 @@ export function sessionState(chat: ConversationSummary): SessionState {
   if (tone === 'error') return 'failed';
   if (chat.latestRun?.status === 'succeeded') return 'done';
   return 'idle';
-}
-
-export const ACTIVE_MS = 20 * 60_000;
-export const PEEK_LIMIT = 5;
-
-export interface PeekRow {
-  sessions: ConversationSummary[];
-  more: number;
-}
-
-export function peekRow(
-  chats: readonly ConversationSummary[],
-  hidden: ReadonlySet<string>,
-  now: number,
-): PeekRow {
-  const active = chats
-    .filter((chat) => !chat.archivedAt && !hidden.has(chat.id))
-    .filter(
-      (chat) =>
-        isRunning(chat) || needsInput(chat) || now - Date.parse(chat.updatedAt) <= ACTIVE_MS,
-    )
-    .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  return { sessions: active.slice(0, PEEK_LIMIT), more: Math.max(0, active.length - PEEK_LIMIT) };
-}
-
-const SLOT_GAP = 26;
-const NOTCH_ROOM = 23;
-const FLAT_SPREAD = 1.25;
-const FLAT_BADGE_ROOM = 30;
-
-export function peekClearance(flat: boolean, blob: number): number {
-  if (!flat) return Math.ceil(blob / 2) + NOTCH_ROOM;
-  return Math.ceil((blob / 2 + FLAT_BADGE_ROOM) / FLAT_SPREAD);
-}
-
-export function peekOffset(slot: number, clearance: number): number {
-  const side = slot % 2 === 0 ? 1 : -1;
-  return side * (clearance + Math.floor(slot / 2) * SLOT_GAP);
-}
-
-export function waitingCount(chats: readonly ConversationSummary[], hidden: ReadonlySet<string>) {
-  return chats.filter((chat) => !chat.archivedAt && !hidden.has(chat.id) && needsInput(chat))
-    .length;
 }

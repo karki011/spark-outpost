@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { attentionReport, type ConversationSummary } from '@spark-outpost/contracts';
-import { attention, rowState } from '../conversations/row-state.ts';
+import {
+  attentionReport,
+  type AttentionItem,
+  type ConversationSummary,
+} from '@spark-outpost/contracts';
+import { rowState } from '../conversations/row-state.ts';
 
 const CHAT = '11111111-2222-4333-8444-555555555555';
 const OTHER = '66666666-7777-4888-8999-aaaaaaaaaaaa';
@@ -38,17 +42,32 @@ const asking = chat({
   },
 });
 
+function cardItem(overrides: Partial<AttentionItem> = {}): AttentionItem {
+  return {
+    key: `approval:${APPROVAL}`,
+    kind: 'approval',
+    blocking: true,
+    conversationId: CHAT,
+    detail: null,
+    at: '2026-10-12T10:00:00.000Z',
+    readAt: null,
+    setAsideAt: null,
+    dismissedAt: null,
+    ...overrides,
+  };
+}
+
 describe('attentionReport', () => {
   it('reports nothing when no chat needs the user', () => {
-    expect(attentionReport([chat()])).toEqual({ count: 0, requests: [] });
+    expect(attentionReport([chat()], [])).toEqual({ count: 0, requests: [] });
   });
 
-  it('names the chat and uses the sidebar attention line, keyed by the request', () => {
-    expect(attentionReport([asking])).toEqual({
+  it('names the chat and uses the sidebar attention line, keyed by the item', () => {
+    expect(attentionReport([asking], [cardItem()])).toEqual({
       count: 1,
       requests: [
         {
-          key: APPROVAL,
+          key: `approval:${APPROVAL}`,
           chatId: CHAT,
           chat: 'Fix login',
           title: 'Spark needs you: Fix login',
@@ -61,26 +80,19 @@ describe('attentionReport', () => {
 
   it('names an outpost member by its handle and outpost', () => {
     const member = { ...asking, outpost: { id: OTHER, name: 'Launch', handle: 'api' } };
-    expect(attentionReport([member]).requests[0]!.title).toBe('@api needs you in Launch');
+    expect(attentionReport([member], [cardItem()]).requests[0]!.title).toBe(
+      '@api needs you in Launch',
+    );
   });
 
-  it('counts what the sidebar counts and leaves archived chats out', () => {
-    const chats = [asking, chat({ id: OTHER, needsInput: true, archivedAt: '2026-10-01' })];
-    const report = attentionReport(chats);
-    expect(report.count).toBe(attention(chats, null).count);
-    expect(report.requests.map((request) => request.chatId)).toEqual([CHAT]);
-  });
-
-  it('keys a request without an approval by its chat and turn', () => {
-    const run = {
-      id: RUN,
-      status: 'running' as const,
-      error: null,
-      step: null,
-      provider: null,
-      progress: null,
-    };
-    const waiting = chat({ needsInput: true, latestRun: run });
-    expect(attentionReport([waiting]).requests[0]!.key).toBe(`chat:${CHAT}:${RUN}`);
+  it('leaves archived chats and items read anywhere out', () => {
+    const archived = chat({ id: OTHER, needsInput: true, archivedAt: '2026-10-01' });
+    const items = [
+      cardItem(),
+      cardItem({ key: `approval:${RUN}`, conversationId: OTHER }),
+      cardItem({ key: `approval:${OTHER}`, readAt: '2026-10-12T10:01:00.000Z' }),
+    ];
+    const report = attentionReport([asking, archived], items);
+    expect(report.requests.map((request) => request.key)).toEqual([`approval:${APPROVAL}`]);
   });
 });

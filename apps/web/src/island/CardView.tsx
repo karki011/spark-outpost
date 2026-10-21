@@ -35,7 +35,7 @@ function shortCwd(cwd: string | null): string | null {
   return cwd.replace(/^\/Users\/[^/]+/, '~');
 }
 
-function heading(card: Card, who: string): string {
+export function cardHeading(card: Card, who: string): string {
   const approval = card.approval;
   if (card.kind === 'force') return `${who} wants to force-push`;
   if (!approval) return attentionLine(card.chat.attention);
@@ -48,7 +48,7 @@ function heading(card: Card, who: string): string {
   return `${who} wants to ${approval.title}`;
 }
 
-function Target({ approval }: { approval: Approval }) {
+export function Target({ approval }: { approval: Approval }) {
   const command = approval.payload.command;
   const cwd = shortCwd(approval.payload.cwd);
   if (command) {
@@ -232,7 +232,7 @@ export function CardView({
   const armed = useArmed(approval?.id ?? card.chat.id);
   const decide = useDecide(approval, onDecided, agent.name);
   const cardRef = useRef<HTMLDivElement>(null);
-  const title = heading(card, agent.name);
+  const title = cardHeading(card, agent.name);
 
   useEffect(() => {
     if (focusSignal > 0) cardRef.current?.focus({ preventScroll: true });

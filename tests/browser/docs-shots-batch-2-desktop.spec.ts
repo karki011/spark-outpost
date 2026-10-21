@@ -127,10 +127,7 @@ test('Desktop companion screenshots', async ({ page }) => {
   await seedDemo(page, repo);
   await runsByClaude();
   await openIsland(page);
-  await expect(island(page)).toHaveAttribute('data-view', 'peek');
-  await expect(
-    page.getByRole('toolbar', { name: 'Active chats' }).getByRole('button').first(),
-  ).toBeVisible();
+  await expect(island(page)).toHaveAttribute('data-view', /peek|now/);
 
   await page.keyboard.press('Alt+Space');
   const message = island(page).getByRole('textbox', { name: 'Message' });
@@ -148,7 +145,7 @@ test('Desktop companion screenshots', async ({ page }) => {
     },
   ]);
   await runsByClaude();
-  await expect(island(page).locator('.isl-pbadge')).toHaveText('1', { timeout: 15_000 });
+  await expect(island(page).locator('.isl-strip-count')).toHaveText('1', { timeout: 15_000 });
   await page.keyboard.press('Alt+Space');
   await expect(island(page)).toHaveAttribute('data-view', 'card');
   const card = island(page).getByRole('group', { name: /wants to run a command/ });
@@ -158,8 +155,10 @@ test('Desktop companion screenshots', async ({ page }) => {
   await page.mouse.move(640, 600);
   await page.keyboard.press('Escape');
   await page.keyboard.press('Alt+Shift+Space');
-  await expect(island(page).getByRole('region', { name: /^Needs you/ })).toBeVisible();
-  await shootClip(page, 'companion-island-home', { x: 300, y: 0, width: 680, height: 320 });
+  await expect(
+    island(page).getByRole('article', { name: 'Run the invoice tests needs you' }),
+  ).toBeVisible();
+  await shootClip(page, 'companion-island-home', { x: 240, y: 0, width: 800, height: 400 });
 });
 
 test('Companion settings and updates screenshots', async ({ page }) => {

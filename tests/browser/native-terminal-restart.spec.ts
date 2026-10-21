@@ -104,7 +104,7 @@ test('the sidebar, the palette, the island and the companion follow a re-adopted
   await fakeHomeDesktop(islandPage);
   await openIsland(islandPage);
   await openHome(islandPage);
-  const islandRunning = island(islandPage).getByRole('region', { name: /^Running/ });
+  const islandRunning = island(islandPage).getByRole('region', { name: /^Working/ });
   const homePage = await context.newPage();
   await homePage.addInitScript(() => localStorage.setItem('spark-outpost.view', 'home'));
   await homePage.goto('/');

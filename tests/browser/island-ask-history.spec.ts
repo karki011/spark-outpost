@@ -100,12 +100,18 @@ test('Ask Spark keeps its history, starts a new topic and links answers to cards
   await expect(ask).toBeFocused();
 
   await chips.getByRole('button', { name: 'Who needs me?' }).click();
-  await expect(log(page)).toContainText('1 chat needs you: “Deploy the site”.');
-  await expect(log(page).getByText('Live · answered instantly')).toBeVisible();
+  await expect(log(page)).toContainText('You wrote: "Who needs me?"', { timeout: 20_000 });
+  await expect(log(page).getByText('Live · answered instantly')).toHaveCount(0);
+  await ask.fill('Is Deploy the site waiting on me?');
+  await page.keyboard.press('Enter');
+  await expect(log(page).getByRole('button', { name: 'Review “Deploy the site”' })).toBeVisible({
+    timeout: 20_000,
+  });
   await expect(log(page).locator('.isl-ask-q, [role="separator"]')).toHaveText([
     'What did pipeline-poc change?',
     'New topic · today',
     'Who needs me?',
+    'Is Deploy the site waiting on me?',
   ]);
   await shot(page, 'topic');
 
@@ -117,8 +123,12 @@ test('Ask Spark keeps its history, starts a new topic and links answers to cards
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await page.keyboard.press('Alt+Shift+Space');
   await page.keyboard.press('Meta+3');
-  await expect(log(page).locator('.isl-ask-q')).toHaveText(['What did pipeline-poc change?']);
-  await expect(divider).toBeVisible();
+  await expect(log(page).locator('.isl-ask-q, [role="separator"]')).toHaveText([
+    'What did pipeline-poc change?',
+    'New topic · today',
+    'Who needs me?',
+    'Is Deploy the site waiting on me?',
+  ]);
 });
 
 test('Ask Spark loads older questions as you scroll up and keeps your place', async ({ page }) => {

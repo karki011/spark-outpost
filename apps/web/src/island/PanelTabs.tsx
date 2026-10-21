@@ -1,9 +1,16 @@
-import { ChevronIcon, GearIcon, PlusIcon, SoundIcon } from '../ui/icons.tsx';
+import { BlobScout } from '../brand/BlobScout.tsx';
+import {
+  AskIcon,
+  ExternalLinkIcon,
+  GearIcon,
+  HomeIcon,
+  PlusIcon,
+  SoundIcon,
+} from '../ui/icons.tsx';
 import type { Panel } from './island-model.ts';
-import { Kbd } from './island-parts.tsx';
 import type { IslandSound } from './island-sound.ts';
 
-export const PANEL_ORDER: readonly Panel[] = ['home', 'quick', 'ask'];
+export const PANEL_ORDER: readonly Panel[] = ['home', 'ask', 'quick'];
 
 export interface BarActions {
   sound: IslandSound | null;
@@ -23,60 +30,52 @@ interface IslandBarProps {
   onTab: (panel: Panel) => void;
 }
 
-function NewModes({ panel, onTab }: { panel: Panel; onTab: (panel: Panel) => void }) {
-  return (
-    <div className="isl-modes" role="group" aria-label="Start something">
-      <button type="button" aria-pressed={panel === 'quick'} onClick={() => onTab('quick')}>
-        Chat
-      </button>
-      <button type="button" aria-pressed={panel === 'ask'} onClick={() => onTab('ask')}>
-        Ask Spark
-      </button>
-    </div>
-  );
-}
-
-function Pills({ counts }: { counts: BarCounts }) {
-  return (
-    <span className="isl-pills" role="status">
-      {counts.waiting > 0 && <span className="isl-pill wait">{counts.waiting} need you</span>}
-      {counts.running > 0 && <span className="isl-pill run">{counts.running} running</span>}
-    </span>
-  );
+function homeLabel(waiting: number): string {
+  return waiting > 0 ? `Home, ${waiting} need you` : 'Home';
 }
 
 export function IslandBar({ panel, counts, actions, onTab }: IslandBarProps) {
-  const home = panel === 'home';
   return (
     <div className="isl-topbar">
-      {home ? (
-        <Pills counts={counts} />
-      ) : (
-        <>
-          <button
-            type="button"
-            className="isl-ibtn isl-back"
-            aria-label="Back to the inbox"
-            title="Inbox · ⌘1"
-            onClick={() => onTab('home')}
-          >
-            <ChevronIcon />
-          </button>
-          <NewModes panel={panel} onTab={onTab} />
-        </>
-      )}
-      <span className="isl-sp" />
-      {home && (
+      <div className="isl-tabs" role="group" aria-label="Spark Island">
         <button
           type="button"
-          className="isl-ibtn"
+          className="isl-tab home"
+          aria-pressed={panel === 'home'}
+          aria-label={homeLabel(counts.waiting)}
+          title="Home · ⌘1"
+          onClick={() => onTab('home')}
+        >
+          <BlobScout size={18} />
+          <HomeIcon />
+          {counts.waiting > 0 && (
+            <span className="isl-tab-count" aria-hidden="true">
+              {counts.waiting}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          className="isl-tab"
+          aria-pressed={panel === 'ask'}
+          aria-label="Ask Spark"
+          title="Ask Spark · ⌘3"
+          onClick={() => onTab('ask')}
+        >
+          <AskIcon />
+        </button>
+        <button
+          type="button"
+          className="isl-tab"
+          aria-pressed={panel === 'quick'}
           aria-label="New chat"
           title="New chat · ⌘2"
           onClick={() => onTab('quick')}
         >
           <PlusIcon />
         </button>
-      )}
+      </div>
+      <span className="isl-sp" />
       {actions.onSettings && (
         <button
           type="button"
@@ -100,8 +99,14 @@ export function IslandBar({ panel, counts, actions, onTab }: IslandBarProps) {
           <SoundIcon on={actions.sound.on} />
         </button>
       )}
-      <button type="button" className="isl-open-spark" onClick={actions.onOpenSpark}>
-        Open Spark <Kbd>⌘O</Kbd>
+      <button
+        type="button"
+        className="isl-ibtn"
+        aria-label="Open Spark"
+        title="Open Spark · ⌘O"
+        onClick={actions.onOpenSpark}
+      >
+        <ExternalLinkIcon />
       </button>
     </div>
   );

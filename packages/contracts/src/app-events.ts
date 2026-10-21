@@ -22,6 +22,7 @@ export const appEventKindSchema = z.enum([
   'spark_pause',
   'calendar',
   'island_request',
+  'attention',
 ]);
 export type AppEventKind = z.infer<typeof appEventKindSchema>;
 

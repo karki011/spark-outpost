@@ -5,19 +5,19 @@ import { Kbd } from './island-parts.tsx';
 const PANEL_HINTS: Record<Panel, ReactNode> = {
   home: (
     <>
-      Click a row to open it in Spark · <Kbd>Y</Kbd> / <Kbd>N</Kbd> answer the top card ·{' '}
+      <Kbd>Y</Kbd> / <Kbd>N</Kbd> answer · <Kbd>⌘ J</Kbd> join · <Kbd>⌘ O</Kbd> open Spark ·{' '}
       <Kbd>Esc</Kbd> close
     </>
   ),
   quick: (
     <>
-      <Kbd>Enter</Kbd> send · <Kbd>⇧ Enter</Kbd> new line · <Kbd>⌘ 1</Kbd> inbox · <Kbd>Esc</Kbd>{' '}
+      <Kbd>Enter</Kbd> send · <Kbd>⇧ Enter</Kbd> new line · <Kbd>⌘ 1</Kbd> home · <Kbd>Esc</Kbd>{' '}
       close
     </>
   ),
   ask: (
     <>
-      <Kbd>Enter</Kbd> ask · <Kbd>⌘ 2</Kbd> new chat · <Kbd>⌘ 1</Kbd> inbox · <Kbd>Esc</Kbd> close
+      <Kbd>Enter</Kbd> ask · <Kbd>⌘ 2</Kbd> new chat · <Kbd>⌘ 1</Kbd> home · <Kbd>Esc</Kbd> close
     </>
   ),
 };

@@ -134,15 +134,20 @@ export async function openIsland(page: Page) {
   await expect(island(page)).toBeVisible();
 }
 
+export const homeTab = (page: Page) =>
+  island(page).getByRole('group', { name: 'Spark Island' }).getByRole('button', { name: /^Home/ });
+
+export const homeBody = (page: Page) => island(page).locator('.isl-home');
+
 export async function openHome(page: Page) {
   await page.mouse.move(640, 600);
   await island(page)
-    .getByRole('button', { name: /Open Spark Island/ })
+    .getByRole('button', { name: /Open Spark Island$/ })
+    .first()
     .click();
-  await expect(needsYou(page)).toBeVisible();
+  await expect(homeTab(page)).toHaveAttribute('aria-pressed', 'true');
+  await expect(homeBody(page)).toBeVisible();
 }
-
-export const needsYou = (page: Page) => island(page).getByRole('region', { name: /^Needs you/ });
 
 export async function shot(page: Page, name: string, settle = 900) {
   if (!SHOTS) return;

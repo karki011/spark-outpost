@@ -71,6 +71,7 @@ import { DefaultLevelNotice } from '../spark/DefaultLevelNotice.tsx';
 import { PasskeyOffer } from '../phone/PasskeyOffer.tsx';
 import { openTeammateSheet } from '../teammates/teammate-store.ts';
 import { useAttentionTitle } from './use-attention-title.ts';
+import { useAlertingChats } from '../attention/use-attention.ts';
 import { useAttentionReport } from '../desktop/use-attention-report.ts';
 import { useChatRequests } from './chat-request.ts';
 import { useSlackPresence } from '../slack/use-slack-presence.ts';
@@ -144,7 +145,8 @@ function ChatShell({ entering }: { entering: boolean }) {
     queryFn: api.listConversations,
   });
   const chats = conversations.data ?? [];
-  const waiting = attention(chats, null).count;
+  const alerting = useAlertingChats();
+  const waiting = attention(chats, null, alerting).count;
   const { inbox } = useTicketInbox();
   const ticketsWaiting = (inbox.data?.tickets ?? []).filter(
     (ticket) => ticket.section === 'attention',

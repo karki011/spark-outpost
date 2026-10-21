@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isPushEndpoint,
+  closePush,
   pushMessage,
   quietDevice,
   SentKeys,
@@ -50,6 +51,14 @@ describe('pushMessage', () => {
       body: 'Needs your approval (2) · Has changes for you to review',
       chatId: CHAT,
       tag: `spark-chat-${CHAT}`,
+      keys: ['approval:1', 'approval:2', 'approval:3'],
+    });
+  });
+
+  it('closes a chat’s notification by its tag, carrying the keys it showed', () => {
+    expect(closePush(CHAT, ['approval:1'])).toEqual({
+      close: `spark-chat-${CHAT}`,
+      keys: ['approval:1'],
     });
   });
 

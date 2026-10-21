@@ -84,6 +84,7 @@ export interface IslandCalendar {
   onCapture: (line: CalendarLine) => void;
   onDismiss: (line: CalendarLine) => void;
   onSnooze: (event: CalendarEvent) => void;
+  onSnoozeAlert: (event: CalendarEvent) => void;
   onDismissNudge: (event: CalendarEvent) => void;
   countdown: MeetingCountdown | null;
   onCancelJoin: () => void;
@@ -268,6 +269,10 @@ export function useIslandCalendar(
     onSnooze: (event) =>
       nudges.setMarks((current) =>
         snoozeNudge(current, event.key, Date.parse(event.end), Date.now()),
+      ),
+    onSnoozeAlert: (event) =>
+      nudges.setMarks((current) =>
+        snoozeNudgeFor(current, event.key, Date.parse(event.end), Date.now(), ALERT_SNOOZE_MS),
       ),
     onDismissNudge: (event) => {
       nudges.setMarks((current) => dismissNudge(current, event.key, Date.parse(event.end)));

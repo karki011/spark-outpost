@@ -73,6 +73,21 @@ const setSize = (page: Page, size: string) =>
 const lastRest = (page: Page) =>
   page.evaluate(() => (window as unknown as SizeWindow).islandRest.at(-1) ?? null);
 
+async function settledBoxes(page: Page) {
+  let last = '';
+  await expect
+    .poll(async () => {
+      const boxes = JSON.stringify([
+        await island(page).boundingBox(),
+        await island(page).locator('.isl-scout-wrap').boundingBox(),
+      ]);
+      const same = boxes === last;
+      last = boxes;
+      return same;
+    })
+    .toBe(true);
+}
+
 async function restingBlob(page: Page, size: number, tuck: number) {
   const scout = island(page).locator('.isl-scout-wrap');
   await expect.poll(async () => (await scout.boundingBox())!.height).toBe(size);
@@ -115,7 +130,7 @@ test('the resting island follows the chosen size live and still opens on hover',
   await restingBlob(page, 48, 25);
 });
 
-test('pending requests stay as blobs with one line at every size, including saved Full', async ({
+test('a pending request rests in the strip with Scout at its left at every size, including saved Full', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -127,28 +142,33 @@ test('pending requests stay as blobs with one line at every size, including save
       approval: { kind: 'execute', title: 'npm test', command: 'npm test' },
     },
   ]);
-  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
+  await expect(island(page).locator('.isl-strip-count')).toHaveText('1');
   const scout = island(page).locator('.isl-scout-wrap');
-  for (const [size, blob] of [
-    ['small', 38],
-    ['medium', 48],
-    ['large', 58],
-    ['xlarge', 116],
-    ['full', 58],
-  ] as const) {
+  let first: { width: number; height: number } | null = null;
+  for (const size of ['small', 'medium', 'large', 'xlarge', 'full'] as const) {
     await setSize(page, size);
-    await expect(island(page)).toHaveAttribute('data-view', 'peek');
-    await expect(island(page).locator('.isl-nowbar')).toHaveCount(0);
-    await expect.poll(() => scout.boundingBox()).toMatchObject({ y: 4, height: blob });
-    const line = (await island(page).locator('.isl-restline').boundingBox())!;
-    const height = Math.max(blob + 18, line.y + line.height + 14);
-    await expect
-      .poll(async () => Math.abs(((await lastRest(page))?.height ?? 0) - height))
-      .toBeLessThanOrEqual(1);
+    await expect(island(page)).toHaveAttribute('data-view', 'now');
+    await expect(island(page).locator('.isl-restline, .isl-pbadge')).toHaveCount(0);
+    await settledBoxes(page);
+    const drawn = (await island(page).boundingBox())!;
+    const blob = (await scout.boundingBox())!;
+    expect(blob.x + blob.width).toBeLessThan(drawn.x + drawn.width / 2);
+    expect(blob.y + blob.height).toBeLessThanOrEqual(drawn.y + drawn.height);
+    await expect.poll(() => lastRest(page)).not.toBeNull();
+    const rest = (await lastRest(page))!;
+    expect(rest.width).toBeGreaterThanOrEqual(drawn.width);
+    expect(rest.height).toBeGreaterThanOrEqual(drawn.height);
+    first ??= rest;
+    expect(rest).toEqual(first);
   }
   await pointAtScout(page);
-  const waiting = island(page).getByRole('region', { name: /^Needs you/ });
-  await expect(waiting).toContainText('npm test');
+  const line = island(page).locator('.isl-hover');
+  await expect(line).toContainText('Speed up the test suite');
+  await expect(line.getByRole('button', { name: 'Deny' })).toBeVisible();
   await page.mouse.move(5, 600);
-  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await island(page).locator('.isl-strip').click();
+  const card = island(page).getByRole('article', { name: 'Speed up the test suite needs you' });
+  await expect(card).toContainText('npm test');
+  await page.keyboard.press('Escape');
+  await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
 });

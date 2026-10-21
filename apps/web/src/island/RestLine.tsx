@@ -1,12 +1,19 @@
-import type { CSSProperties } from 'react';
-import { restLineTitle, type RestLine as RestLineData } from './island-rest-line.ts';
-
-export function scoutLabel(asking: number, setAside: number): string {
-  const parts = [
+function countParts(asking: number, setAside: number, working = 0): string[] {
+  return [
     asking > 0 ? `${asking} need you` : null,
     setAside > 0 ? `${setAside} set aside` : null,
+    working > 0 ? `${working} working` : null,
   ].filter((part) => part !== null);
+}
+
+export function scoutLabel(asking: number, setAside: number): string {
+  const parts = countParts(asking, setAside);
   return parts.length > 0 ? `Spark: ${parts.join(', ')}. Open Spark Island` : 'Open Spark Island';
+}
+
+export function islandStatus(asking: number, setAside: number, working: number): string {
+  const parts = countParts(asking, setAside, working);
+  return parts.length > 0 ? parts.join(', ') : 'all quiet';
 }
 
 export function ScoutMarks({ asking, setAside }: { asking: number; setAside: number }) {
@@ -23,34 +30,5 @@ export function ScoutMarks({ asking, setAside }: { asking: number; setAside: num
         </span>
       )}
     </>
-  );
-}
-
-interface RestLineProps {
-  line: RestLineData;
-  top: number;
-  onOpen: (line: RestLineData) => void;
-}
-
-export function RestLine({ line, top, onOpen }: RestLineProps) {
-  return (
-    <button
-      type="button"
-      className="isl-restline"
-      data-kind={line.kind}
-      title={restLineTitle(line)}
-      style={{ '--line-top': `${top}px` } as CSSProperties}
-      onClick={() => onOpen(line)}
-    >
-      <span className="isl-restline-dot" aria-hidden="true" />
-      <span className="isl-restline-text">{line.text}</span>
-      {line.kind === 'waiting' && (
-        <>
-          <span aria-hidden="true">·</span>
-          <b>Review</b>
-        </>
-      )}
-      {line.more > 0 && <span className="isl-restline-more">+{line.more} more</span>}
-    </button>
   );
 }

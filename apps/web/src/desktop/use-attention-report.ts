@@ -6,10 +6,12 @@ import {
   type ConversationSummary,
 } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
+import { useAttentionItems } from '../attention/use-attention.ts';
 import { sparkDesktop } from './desktop-bridge.ts';
 
 export function useAttentionReport(chats: readonly ConversationSummary[] | undefined): void {
-  const report = chats ? JSON.stringify(attentionReport(chats)) : null;
+  const { items, loaded } = useAttentionItems();
+  const report = chats && loaded ? JSON.stringify(attentionReport(chats, items)) : null;
   useEffect(() => {
     if (report === null) return;
     sparkDesktop()?.attention?.report(JSON.parse(report) as AttentionReport);

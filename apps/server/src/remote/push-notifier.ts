@@ -1,10 +1,12 @@
-import type { AppEvent } from '@spark-outpost/contracts';
+import { terminalAttentionKey, type AppEvent } from '@spark-outpost/contracts';
+import { readAttentionKeys } from '../persistence/attention-items.ts';
 import type { Db } from '../persistence/db.ts';
 import type { ClientFocus } from '../slack/client-focus.ts';
 import { chatOf } from '../slack/notifier.ts';
 import { NotifyBatcher } from '../slack/notify-plan.ts';
 import type { PushKeys, VapidKeys } from './push-keys.ts';
 import {
+  closePush,
   isPushEndpoint,
   meetingPush,
   pushMessage,
@@ -21,6 +23,7 @@ import { recordRemoteAudit, remoteAccess } from './store.ts';
 
 export const PUSH_BATCH_MS = 8000;
 const WATCHED_KINDS = new Set(['approval', 'run', 'conversation']);
+const SETTLE_KINDS = new Set(['approval', 'run', 'conversation', 'seen', 'attention']);
 
 export interface PushNotifierDeps {
   db: Db;
@@ -67,6 +70,7 @@ export function startPushNotifier(
   const terminals = new TerminalWaits();
   const scanning = new Set<string>();
   const heldChats = new Map<string, QueuedPush[]>();
+  const shown = new Map<string, { keys: Set<string>; targets: Set<string> }>();
   let stopped = false;
   let work: Promise<void> = Promise.resolve();
 
@@ -83,9 +87,10 @@ export function startPushNotifier(
        FROM approvals a JOIN runs r ON r.id = a.run_id
        WHERE r.conversation_id = $1 AND a.status = 'pending' AND a.created_at >= $2
        UNION ALL
-       SELECT 'terminal', t.id::text, t.state, t.generation, t.updated_at
+       SELECT 'terminal', t.id::text, t.state, t.generation,
+         COALESCE(t.waiting_since, t.updated_at)
        FROM native_terminal_sessions t
-       WHERE t.conversation_id = $1 AND t.updated_at >= $2`,
+       WHERE t.conversation_id = $1 AND COALESCE(t.waiting_since, t.updated_at) >= $2`,
       [conversationId, since],
     );
     return rows.flatMap((row): QueuedPush[] => {
@@ -95,7 +100,8 @@ export function startPushNotifier(
         return [{ key: source, source, kind: 'approval', detail: row.detail, at }];
       }
       const key = terminals.key(row.id, row.generation, row.detail);
-      return key ? [{ key, source: key, kind: 'terminal', detail: row.detail, at }] : [];
+      const source = terminalAttentionKey(row.id, row.generation, row.since);
+      return key ? [{ key, source, kind: 'terminal', detail: row.detail, at }] : [];
     });
   }
 
@@ -129,13 +135,13 @@ export function startPushNotifier(
     });
   }
 
-  async function sender(): Promise<{ targets: PushTarget[]; sender: Sender } | null> {
+  async function sender(
+    reaches: (target: PushTarget) => boolean = (target) =>
+      !quietDevice(target.deviceId, deps.focus.focusedClients()),
+  ): Promise<{ targets: PushTarget[]; sender: Sender } | null> {
     const access = await remoteAccess(db, workspaceId);
     if (!access.hostname || !access.switches.notifications) return null;
-    const focused = deps.focus.focusedClients();
-    const targets = (await pushTargets(db, workspaceId, access.hostname)).filter(
-      (target) => !quietDevice(target.deviceId, focused),
-    );
+    const targets = (await pushTargets(db, workspaceId, access.hostname)).filter(reaches);
     if (targets.length === 0) return null;
     const keys = await deps.keys.get();
     const subject = pushSubject(await pushContact(db, workspaceId), access.hostname);
@@ -157,15 +163,37 @@ export function startPushNotifier(
       heldChats.set(conversationId, [...(heldChats.get(conversationId) ?? []), ...items]);
       return;
     }
-    const still = new Set((await waiting(conversationId)).map((item) => item.source));
-    const unseen = unseenPushes(items, await seenAt(conversationId));
-    const live = unseen.filter((item) => still.has(item.source));
+    const alerting = await alertingSources(conversationId);
+    const live = items.filter((item) => alerting.has(item.source));
     if (live.length === 0) return;
     const ready = await sender();
     if (!ready) return;
     const chat = await chatOf({ db, workspaceId }, conversationId);
     if (!chat) return;
     const payload = JSON.stringify(pushMessage(chat, live));
+    await Promise.all(ready.targets.map((target) => sendTo(target, payload, ready.sender)));
+    const record = shown.get(conversationId) ?? { keys: new Set<string>(), targets: new Set() };
+    for (const item of live) record.keys.add(item.source);
+    for (const target of ready.targets) record.targets.add(target.id);
+    shown.set(conversationId, record);
+  }
+
+  async function alertingSources(conversationId: string): Promise<Set<string>> {
+    const waitingNow = unseenPushes(await waiting(conversationId), await seenAt(conversationId));
+    const sources = waitingNow.map((item) => item.source);
+    const read = await readAttentionKeys(db, workspaceId, sources);
+    return new Set(sources.filter((source) => !read.has(source)));
+  }
+
+  async function settle(conversationId: string): Promise<void> {
+    const record = shown.get(conversationId);
+    if (!record) return;
+    const alerting = await alertingSources(conversationId);
+    if ([...record.keys].some((key) => alerting.has(key))) return;
+    shown.delete(conversationId);
+    const ready = await sender((target) => record.targets.has(target.id));
+    if (!ready) return;
+    const payload = JSON.stringify(closePush(conversationId, [...record.keys]));
     await Promise.all(ready.targets.map((target) => sendTo(target, payload, ready.sender)));
   }
 
@@ -186,7 +214,11 @@ export function startPushNotifier(
   return {
     changed(event) {
       const { conversationId } = event;
-      if (stopped || !conversationId || !WATCHED_KINDS.has(event.kind)) return;
+      if (stopped || !conversationId) return;
+      if (SETTLE_KINDS.has(event.kind) && shown.has(conversationId)) {
+        enqueue(() => settle(conversationId));
+      }
+      if (!WATCHED_KINDS.has(event.kind)) return;
       if (scanning.has(conversationId)) return;
       scanning.add(conversationId);
       enqueue(() => scan(conversationId));

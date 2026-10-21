@@ -71,10 +71,11 @@ function routeOf(action: SparkAction): Route | null {
     case 'post_outpost':
       return { method: 'POST', path: `/api/outposts/${PLACEHOLDER}/posts` };
     case 'clear_finished':
-      return { method: 'POST', path: `/api/conversations/${PLACEHOLDER}/seen` };
+      return { method: 'POST', path: `/api/attention/chats/${PLACEHOLDER}/read` };
     case 'dismiss_meeting':
       return { method: 'PUT', path: '/api/calendar/marks' };
     case 'set_aside':
+      return { method: 'POST', path: `/api/attention/${PLACEHOLDER}/set-aside` };
     case 'snooze_meeting':
     case 'join_meeting':
       return { method: 'POST', path: `/api/island/requests/${PLACEHOLDER}/claim` };

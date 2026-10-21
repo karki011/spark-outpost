@@ -188,7 +188,7 @@ test('a sent Home message is not restored when its settings fail to carry over',
   expect(sent).toBe(1);
 });
 
-test('the Needs you feed lists asking, then errors, then finished chats and jumps to the card', async ({
+test('the Needs you feed lists asking, then errors, then finished chats, counts only what waits on you and jumps to the card', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -205,9 +205,9 @@ test('the Needs you feed lists asking, then errors, then finished chats and jump
   ]);
   await openHome(page);
 
-  await expect(home(page).locator('.home-summary')).toHaveText('3 things need you.');
-  await expect(today(page).getByRole('heading', { level: 2 })).toHaveText('What needs you today 3');
-  await home(page).getByRole('button', { name: '3 things need you' }).click();
+  await expect(home(page).locator('.home-summary')).toHaveText('1 thing needs you.');
+  await expect(today(page).getByRole('heading', { level: 2 })).toHaveText('What needs you today 1');
+  await home(page).getByRole('button', { name: '1 thing needs you' }).click();
   await expect(feed(page).locator('.lr-main').first()).toBeFocused();
   await expect(feed(page).locator('.lr-main .t')).toHaveText([
     'Deploy the site',

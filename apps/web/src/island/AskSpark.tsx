@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CalendarEvent } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { assistantApi, assistantKeys } from '../api/assistant.ts';
 import type { Voice } from '../spark/voice.ts';
@@ -8,9 +7,7 @@ import { ExternalLinkIcon } from '../ui/icons.tsx';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
-import { fastAnswer, type FastState } from './ask-fast-path.ts';
 import { askRows, lastExchange, type PendingAsk } from './ask-history-model.ts';
-import { meetingAnswer, NEXT_MEETING_QUESTION } from './ask-meeting.ts';
 import { AskLog, type AskLinks } from './AskLog.tsx';
 import { assistantCards, assistantQuery, useAssistant } from './ask-assistant.ts';
 import { queueApi } from '../chat/queue/queue-api.ts';
@@ -21,11 +18,9 @@ import { useSeed, useSpeechSeeds } from '../voice/speech-seed.tsx';
 import { joinDictation } from '../voice/use-dictation.ts';
 
 interface AskSparkProps {
-  fast: FastState;
   voice: Voice;
   focusDelay: number;
   session: AskSession;
-  meetings: readonly CalendarEvent[] | null;
   links: AskLinks;
 }
 
@@ -64,7 +59,7 @@ function useCheer(thinking: boolean, latest: string | null): string | null {
   return cheer;
 }
 
-export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: AskSparkProps) {
+export function AskSpark({ voice, focusDelay, session, links }: AskSparkProps) {
   const queryClient = useQueryClient();
   const assistant = useAssistant();
   const history = useHistory();
@@ -122,19 +117,7 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
     },
   });
 
-  const instantly = (question: string): boolean => {
-    const answer = fastAnswer(question, fast);
-    if (answer) {
-      session.add(question, answer.text, answer.chats);
-      return true;
-    }
-    const meeting = meetingAnswer(question, meetings, Date.now());
-    if (meeting) session.add(question, meeting, []);
-    return meeting !== null;
-  };
-
   const send = (question: string, spoken = false) => {
-    if (instantly(question)) return;
     ask.mutate({ id: crypto.randomUUID(), question, spoken });
   };
 
@@ -191,7 +174,6 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
   const step = run?.step ? plainLine(run.step) : null;
   const cards = assistantCards(detail);
   const busy = thinking || ask.isPending || latest?.status === 'waiting';
-  const chips = meetings ? [...ASKED_CHIPS, NEXT_MEETING_QUESTION] : ASKED_CHIPS;
   const error = ask.error ?? newTopic.error ?? assistant.error ?? history.error;
   return (
     <div className="isl-panel">
@@ -230,7 +212,7 @@ export function AskSpark({ fast, voice, focusDelay, session, meetings, links }: 
         cards={{ conversationId: assistant.id, byRun: cards }}
       />
       <div className="isl-ask-chips" role="group" aria-label="Suggested questions">
-        {chips.map((chip) => (
+        {ASKED_CHIPS.map((chip) => (
           <button key={chip} type="button" className="isl-chip" onClick={() => send(chip)}>
             {chip}
           </button>

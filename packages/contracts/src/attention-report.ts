@@ -1,4 +1,5 @@
-import { needsInput, waitingLine } from './attention-line.ts';
+import { waitingLine } from './attention-line.ts';
+import { alerting, type AttentionItem } from './attention-items.ts';
 import type { ConversationSummary } from './conversations.ts';
 
 export interface AttentionRequest {
@@ -14,25 +15,28 @@ export interface AttentionReport {
   requests: AttentionRequest[];
 }
 
-function requestKey(chat: ConversationSummary): string {
-  return chat.attention?.approvalId ?? `chat:${chat.id}:${chat.latestRun?.id ?? ''}`;
-}
-
-function requestTitle(chat: ConversationSummary): string {
+export function attentionRequestTitle(chat: ConversationSummary): string {
   if (chat.outpost) return `@${chat.outpost.handle} needs you in ${chat.outpost.name}`;
   return `Spark needs you: ${chat.title}`;
 }
 
-export function attentionReport(chats: readonly ConversationSummary[]): AttentionReport {
-  const waiting = chats.filter((chat) => !chat.archivedAt && needsInput(chat));
-  return {
-    count: waiting.length,
-    requests: waiting.map((chat) => ({
-      key: requestKey(chat),
-      chatId: chat.id,
-      chat: chat.title,
-      title: requestTitle(chat),
-      body: waitingLine(chat),
-    })),
-  };
+export function attentionReport(
+  chats: readonly ConversationSummary[],
+  items: readonly AttentionItem[],
+): AttentionReport {
+  const byId = new Map(chats.map((chat) => [chat.id, chat]));
+  const requests = items.filter(alerting).flatMap((item): AttentionRequest[] => {
+    const chat = byId.get(item.conversationId);
+    if (!chat || chat.archivedAt) return [];
+    return [
+      {
+        key: item.key,
+        chatId: chat.id,
+        chat: chat.title,
+        title: attentionRequestTitle(chat),
+        body: waitingLine(chat),
+      },
+    ];
+  });
+  return { count: new Set(requests.map((request) => request.chatId)).size, requests };
 }
