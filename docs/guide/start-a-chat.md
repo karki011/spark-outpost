@@ -15,7 +15,7 @@ You'll start a chat linked to your code. About 1 minute.
 
 ![A new chat with the message box and the context bar above it](images/chats-and-modes-new-chat-light.png)
 
-Or type in **Start a new chat** on **Home**.
+Or type in **Start a new chat** on **Home**, which keeps your picks.
 
 Choose **Terminal** for native Claude Code or Codex: [Open a terminal](terminals.md).
 

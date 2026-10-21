@@ -65,6 +65,7 @@ import { Analytics, OutpostView, Phone, preloadView, Tickets, Today } from './la
 import { JoinShortcut } from '../calendar/JoinShortcut.tsx';
 import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
+import { readHomeDraftId, saveHomeDraftId } from '../home/home-draft.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
 import { DefaultLevelNotice } from '../spark/DefaultLevelNotice.tsx';
 import { PasskeyOffer } from '../phone/PasskeyOffer.tsx';
@@ -123,7 +124,11 @@ function ChatShell({ entering }: { entering: boolean }) {
     setView('docs');
     setSettings(null);
   });
-  const [homeDraftId, setHomeDraftId] = useState(newDraftId);
+  const [homeDraftId, setHomeDraftId] = useState(readHomeDraftId);
+  const rotateHomeDraft = useCallback((next: string) => {
+    saveHomeDraftId(next);
+    setHomeDraftId(next);
+  }, []);
   const [ticketFocus, setTicketFocus] = useState<string | null>(null);
   const openTicket = useCallback(
     (itemId: string) => {
@@ -327,7 +332,7 @@ function ChatShell({ entering }: { entering: boolean }) {
               mood={mood}
               draftId={homeDraftId}
               onOpenChat={openAtCard}
-              onRotateDraft={setHomeDraftId}
+              onRotateDraft={rotateHomeDraft}
               onOpenId={openChat}
               onChats={() => setView('chats')}
               onTickets={(itemId) => {

@@ -32,6 +32,8 @@ The agent picks models for its sub-agents.
 1. Select the **Permissions** tab, or the permissions chip next to the model button.
 2. Pick a mode under **Agent mode**. The provider's default has a **Default** tag.
 
+Unlinked, the chip shows **No tools without a project**.
+
 ![The Permissions tab listing Claude's modes](images/chats-and-modes-permissions-light.png)
 
 What each mode allows: [Agent modes](modes-and-levels.md#agent-modes). A read-only mode never changes files: switch modes, then ask.

@@ -85,3 +85,18 @@ export function withCurrentMode(
   if (!current || modes.some((mode) => mode.id === current)) return [...modes];
   return [...modes, { id: current, label: current, description: null, kind: null }];
 }
+
+export const NO_PROJECT_TOOLS = 'No tools without a project';
+export const NO_PROJECT_NOTE =
+  'The agent only chats: it can’t read or change files or run commands. Your mode applies once you link a project.';
+
+export function projectPermission(state: PermissionState, hasRepos: boolean): PermissionState {
+  if (hasRepos) return state;
+  return {
+    ...state,
+    label: NO_PROJECT_TOOLS,
+    short: NO_PROJECT_TOOLS,
+    risk: 'read',
+    description: NO_PROJECT_NOTE,
+  };
+}

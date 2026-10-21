@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { modeLabel, modeSummary, permissionState, withCurrentMode } from './mode-summary.ts';
+import {
+  modeLabel,
+  modePermission,
+  modeSummary,
+  permissionState,
+  projectPermission,
+  withCurrentMode,
+} from './mode-summary.ts';
 
 const modes = [
   { id: 'default', label: 'Manual', description: 'Always ask', kind: 'standard' },
@@ -110,6 +117,19 @@ describe('mode summary', () => {
       expect(permissionState(settings('codex', 'agent'), codex).risk).toBe('auto');
       expect(permissionState(settings('claude', 'default'), claude).risk).toBe('ask');
     });
+  });
+
+  it("doesn't show the picked mode as in effect without a project", () => {
+    const picked = modePermission('claude', 'acceptEdits', { modes } as never);
+    expect(projectPermission(picked, true)).toBe(picked);
+    const plain = projectPermission(picked, false);
+    expect(plain).toMatchObject({
+      mode: 'acceptEdits',
+      label: 'No tools without a project',
+      short: 'No tools without a project',
+      risk: 'read',
+    });
+    expect(plain.description).toContain('applies once you link a project');
   });
 
   it('keeps a mode the agent no longer lists', () => {

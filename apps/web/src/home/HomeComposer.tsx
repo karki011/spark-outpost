@@ -4,15 +4,13 @@ import {
   EMPTY_CONVERSATION_USAGE,
   titleFromMessage,
   type Attachment,
-  type ConversationDetail,
-  type ProviderSetup,
-  type UpdateChatSettingsRequest,
 } from '@spark-outpost/contracts';
 import { api, newDraftId, queryKeys } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { useAttachments } from '../chat/attachments/use-attachments.ts';
 import { Composer } from '../chat/Composer.tsx';
 import { useLinkedProjects } from '../chat/project/use-chat-repos.ts';
+import { carriedSettings, isStartedChat } from './carried-settings.ts';
 
 const NO_REPOS: string[] = [];
 const STARTED_MS = 6000;
@@ -32,24 +30,6 @@ interface Started {
   id: string;
   title: string;
   kept: boolean;
-}
-
-function carriedSettings(
-  detail: ConversationDetail | undefined,
-  providers: readonly ProviderSetup[],
-): UpdateChatSettingsRequest | null {
-  if (!detail || detail.conversation.teammate) return null;
-  const { settings } = detail;
-  const defaultModel = providers.find((provider) => provider.id === settings.provider)?.connection
-    ?.model;
-  const carried: UpdateChatSettingsRequest = {};
-  if (settings.provider) carried.provider = settings.provider;
-  if (settings.model && settings.model !== defaultModel) carried.model = settings.model;
-  if (settings.effort) carried.effort = settings.effort;
-  if (settings.agentMode) carried.agentMode = settings.agentMode;
-  if (settings.level) carried.level = settings.level;
-  if (Object.keys(settings.options).length > 0) carried.options = settings.options;
-  return carried;
 }
 
 function useStarted() {
@@ -74,6 +54,10 @@ export function HomeComposer(props: HomeComposerProps) {
   const connected = setup.data?.providers.filter((provider) => provider.connection) ?? [];
   const repos = useLinkedProjects(detail.data?.conversation.projectIds ?? NO_REPOS);
   const attachments = useAttachments();
+  const stale = detail.data ? isStartedChat(detail.data) : false;
+  useEffect(() => {
+    if (stale) onRotate(newDraftId());
+  }, [stale, onRotate]);
   const send = useMutation({
     mutationFn: async (message: Outgoing) => {
       const carried = carriedSettings(detail.data, connected);
