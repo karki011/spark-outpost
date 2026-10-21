@@ -162,7 +162,10 @@ function cardKind(chat: ConversationSummary, approval: Approval | null): CardKin
   return 'approval';
 }
 
-function pickApproval(pending: readonly Approval[], wanted: string | undefined): Approval | null {
+function pickApproval(
+  pending: readonly Approval[],
+  wanted: string | null | undefined,
+): Approval | null {
   return pending.find((candidate) => candidate.id === wanted) ?? pending.at(-1) ?? null;
 }
 
