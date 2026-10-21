@@ -25,7 +25,7 @@ async function captureReports(page: Page) {
 }
 
 async function islandCount(page: Page): Promise<number> {
-  const count = island(page).locator('.isl-strip-count');
+  const count = island(page).locator('.isl-pbadge');
   return (await count.count()) > 0 ? Number(await count.innerText()) : 0;
 }
 

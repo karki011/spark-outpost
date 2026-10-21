@@ -53,7 +53,7 @@ import { useIslandDrop } from './use-island-drop.ts';
 import { coreRects, lineRects, minuteOf, useHoverIntent } from './island-hover.ts';
 import { useIslandKeys } from './use-island-keys.ts';
 import { soonMeeting } from './home-model.ts';
-import { stripShows, type StripData } from './RestStrip.tsx';
+import { hasHoverLine, type StripData } from './RestStrip.tsx';
 import { useAskSession } from './use-ask-session.ts';
 import { useIslandData } from './use-island-data.ts';
 import { useIslandAttention } from './use-island-attention.ts';
@@ -155,17 +155,16 @@ export function IslandApp() {
     },
   );
   const strip: StripData = {
-    count: waiting,
     meeting: calendar.connected ? soonMeeting(calendar.upcoming, calendar.at) : null,
-    working: running,
     top: fresh[0] ?? cards[0] ?? null,
   };
+  const hoverLine = hasHoverLine(strip, calendar.line !== null);
   const view = islandView({
     note: note !== null,
     panel,
     cards: allCards,
     review,
-    strip: stripShows(strip, calendar.line !== null),
+    hoverLine: hover && hoverLine,
   });
   const spoken = useThrottledAnnouncement(
     islandStatus(fresh.length, attention.aside.length, running.length),
@@ -377,7 +376,7 @@ export function IslandApp() {
   useEffect(() => {
     settleHover.current = (inside: boolean) => {
       if (inside) {
-        if (grab.phase === 'idle' && hoverOpensHome(view)) openPanel('home', 'hover');
+        if (grab.phase === 'idle' && hoverOpensHome(view, hoverLine)) openPanel('home', 'hover');
         return;
       }
       if (panel && opener === 'hover') closePanel();

@@ -34,7 +34,7 @@ export interface IslandInputs {
   panel: Panel | null;
   cards: readonly Card[];
   review: string | null;
-  strip: boolean;
+  hoverLine: boolean;
 }
 
 export type IslandView =
@@ -52,7 +52,7 @@ export function islandView(inputs: IslandInputs): IslandView {
   if (reviewed >= 0) {
     return { kind: 'card', card: inputs.cards[reviewed]!, index: reviewed + 1, total };
   }
-  return inputs.strip ? { kind: 'now' } : { kind: 'peek' };
+  return inputs.hoverLine ? { kind: 'now' } : { kind: 'peek' };
 }
 
 export type QuickShortcutTarget =
@@ -72,8 +72,8 @@ export function quickShortcutTarget(
   return { kind: 'quick' };
 }
 
-export function hoverOpensHome(view: IslandView): boolean {
-  return view.kind === 'peek';
+export function hoverOpensHome(view: IslandView, hoverLine: boolean): boolean {
+  return view.kind === 'peek' && !hoverLine;
 }
 
 const CARD_WIDTHS = {

@@ -180,7 +180,6 @@ export function ViewBody({ props }: { props: IslandShellProps }) {
         <div className="isl-body">
           <RestStrip
             strip={props.strip}
-            hover={props.hover}
             calendar={props.calendar}
             onOpen={props.onScout}
             onDecided={props.home.onDecided}

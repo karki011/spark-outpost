@@ -6,8 +6,8 @@ import { seedChats } from './sidebar-seed.ts';
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
 
 const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
-const strip = (page: Page) => island(page).locator('.isl-strip');
-const working = (page: Page) => island(page).locator('.isl-strip-work');
+const count = (page: Page) => island(page).locator('.isl-pbadge');
+const workingScout = (page: Page) => island(page).locator('.isl-scout-wrap svg.scout.working');
 
 interface Setup {
   size: 'small' | 'medium' | 'large';
@@ -102,18 +102,14 @@ async function shot(page: Page, name: string) {
   });
 }
 
-test('the strip counts requests and shows only working chats as blobs', async ({ page }) => {
+test('resting Scout counts requests and draws no blobs for chats', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await seedEveryState();
   await fakeDesktop(page, { size: 'medium', notch: true, theme: 'graphite' });
 
-  await expect(island(page)).toHaveAttribute('data-view', 'now');
-  await expect(strip(page).locator('.isl-strip-count')).toHaveAttribute('aria-label', '1 need you');
-  await expect(working(page)).toHaveAttribute('aria-label', '1 working');
-  await expect(strip(page).locator('.isl-sblob')).toHaveCount(1);
-  await expect(working(page).locator('.isl-sblob')).toHaveAttribute('data-state', 'working');
-  await expect(strip(page)).toHaveText(/^1\s*1$/);
-  await expect(island(page).locator('.isl-sblob:not([data-state="working"])')).toHaveCount(0);
+  await expect(count(page)).toHaveText('1');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect(island(page).locator('.isl-sblob, .isl-view')).toHaveCount(0);
 });
 
 test('with only finished, failed or quiet chats the island rests as Scout and nothing loops', async ({
@@ -127,22 +123,23 @@ test('with only finished, failed or quiet chats the island rests as Scout and no
   ]);
   await fakeDesktop(page, { size: 'small', notch: false, theme: 'graphite' });
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
-  await expect(island(page).locator('.isl-strip, .isl-sblob')).toHaveCount(0);
+  await expect(island(page).locator('.isl-sblob, .isl-view')).toHaveCount(0);
   await expect(page.locator('.isl-root')).toHaveAttribute('data-rest', 'true');
   expect(await runningLoops(page)).toEqual([]);
 
   await seedChats([{ title: 'Fix billing totals', run: { status: 'running' }, minutesAgo: 0 }]);
-  await expect(working(page)).toHaveAttribute('aria-label', '1 working');
+  await expect(workingScout(page)).toHaveCount(1);
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await expect(page.locator('.isl-root')).toHaveAttribute('data-rest', 'true');
   await expect.poll(() => runningLoops(page)).toContain('sc-spin');
 });
 
-test('reduced motion keeps the resting strip still', async ({ page }) => {
+test('reduced motion keeps resting Scout still', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await resetTestDatabase({ onboarded: true });
   await seedEveryState();
   await fakeDesktop(page, { size: 'large', notch: false, theme: 'apricot' });
-  await expect(working(page).locator('.isl-sblob')).toHaveAttribute('data-state', 'working');
+  await expect(count(page)).toHaveText('1');
   await page.waitForTimeout(500);
   expect(await runningLoops(page)).toEqual([]);
 });
@@ -151,14 +148,14 @@ test.describe('screenshots', () => {
   test.use({ deviceScaleFactor: 3 });
   for (const size of ['small', 'medium', 'large'] as const) {
     for (const notch of [true, false]) {
-      test(`shows the resting strip at ${size} size ${notch ? 'under a notch' : 'flat'}`, async ({
+      test(`shows resting Scout at ${size} size ${notch ? 'under a notch' : 'flat'}`, async ({
         page,
       }) => {
         test.skip(!SHOTS, 'screenshots only');
         await resetTestDatabase({ onboarded: true });
         await seedEveryState();
         await fakeDesktop(page, { size, notch, theme: size === 'medium' ? 'apricot' : 'graphite' });
-        await expect(working(page)).toHaveAttribute('aria-label', '1 working');
+        await expect(count(page)).toHaveText('1');
         await shot(page, `${size}-${notch ? 'notch' : 'flat'}`);
       });
     }

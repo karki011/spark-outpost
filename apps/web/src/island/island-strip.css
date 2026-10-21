@@ -1,45 +1,6 @@
-.isl-strip {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 34px;
-  padding: 2px 14px 2px 52px;
-  border: 0;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  font-size: 13.5px;
-  cursor: pointer;
-}
-
-.isl-strip:focus-visible,
 .isl-hover-text:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-}
-
-.isl-strip-count {
-  color: var(--warn);
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.isl-strip-part {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding-left: 12px;
-  border-left: 1px solid var(--card-line);
-  white-space: nowrap;
-}
-
-.isl-strip-meet b {
-  color: var(--warn);
-}
-
-.isl-strip-work {
-  color: var(--muted);
 }
 
 .isl-hover {

@@ -22,7 +22,7 @@ Drag Scout to place it. At top centre it docks, half hidden when quiet.
 
 ## Open it
 
-Resting, Scout shows one strip: requests that need you, a meeting within 10 minutes and working chats. Rest the pointer on it to answer the top request or join; click for Home. Passing over it opens nothing.
+Resting, Scout sits at the notch, with an amber count when something needs you. Rest the pointer on Scout to answer the top request or join a meeting within 10 minutes; click for Home. Passing over opens nothing.
 
 ![Spark Island Home: one big request card with Allow, Deny and Later, and working chats below](images/companion-island-home-light.png)
 
