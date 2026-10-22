@@ -22,6 +22,7 @@ import {
   parsePayload,
   parsePlace,
   rigFor,
+  shortcutJoin,
 } from './alert-model.ts';
 
 const CLIMB_MS = 600;
@@ -170,10 +171,12 @@ export function MeetingAlertApp() {
     }
     if (key.key.toLowerCase() === 'j' && key.metaKey) {
       key.preventDefault();
-      const joinable = payload.events.find((event) => joinState(event, at) === 'open');
+      const joinable = shortcutJoin(payload.events, at);
       if (joinable?.link) {
         openJoin(joinable.link.url);
         act('joined', joinable.key);
+      } else {
+        cardRef.current?.querySelector<HTMLButtonElement>('.ma-btn.primary')?.focus();
       }
     }
   };
