@@ -9,6 +9,7 @@ import {
   OWN_SUBAGENT_METADATA,
   SUBAGENTS_ACTIVITY,
   waitingOnLabel,
+  wakeTime,
 } from './subagents.ts';
 
 const started = (id: string, extra: Partial<RunEvent> = {}): RunEvent =>
@@ -190,6 +191,18 @@ describe('sub-agent roster', () => {
     );
     expect(waitingOnLabel(2, { agents: 1, tasks: 1, names: [] })).toBe(
       'Waiting on 1 background agent and 1 background task',
+    );
+  });
+
+  it('words a sleeping agent by the time it wakes', () => {
+    const wakesAt = new Date(2026, 9, 22, 10, 48).getTime();
+    const at = wakeTime(wakesAt);
+    expect(at).toMatch(/10.48/);
+    expect(waitingOnLabel(1, { agents: 0, tasks: 0, names: [], wakesAt })).toBe(
+      `Sleeping until ${at}`,
+    );
+    expect(waitingOnLabel(2, { agents: 0, tasks: 1, names: [], wakesAt })).toBe(
+      `Waiting on 1 background task and a wakeup at ${at}`,
     );
   });
 
