@@ -55,7 +55,6 @@ const CLOSED_KEPT = 20;
 
 export class BrowserPanes {
   private readonly chats = new Map<string, ChatPane>();
-  private readonly rootsByChat = new Map<string, Set<string>>();
   private readonly driving = new Map<string, NodeJS.Timeout>();
   private readonly byContents = new Map<number, PaneTab>();
   private placement: BrowserPlacement | null = null;
@@ -79,21 +78,13 @@ export class BrowserPanes {
       };
       this.chats.set(chatId, pane);
     }
-    if (home) {
-      pane.home = home;
-      this.allowRoots(pane);
-    }
+    if (home) pane.home = home;
     return pane;
   }
 
-  private allowRoots(pane: ChatPane): void {
-    const roots = this.rootsByChat.get(pane.chatId) ?? new Set<string>();
-    for (const root of pane.home.roots) roots.add(root);
-    this.rootsByChat.set(pane.chatId, roots);
-  }
-
   private rootsOf(chatId: string | null): string[] {
-    return chatId ? [...(this.rootsByChat.get(chatId) ?? [])] : [];
+    const pane = chatId ? this.chats.get(chatId) : undefined;
+    return pane ? [...pane.home.roots] : [];
   }
 
   guardFacts(chatId: string): GuardFacts {
@@ -408,7 +399,6 @@ export class BrowserPanes {
     if (pane.idle) clearTimeout(pane.idle);
     for (const tab of pane.tabs) tab.close();
     this.chats.delete(chatId);
-    this.rootsByChat.delete(chatId);
   }
 
   dispose(): void {

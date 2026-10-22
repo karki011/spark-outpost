@@ -106,6 +106,18 @@ describe('one Browser pane profile for every chat', () => {
     ).rejects.toMatchObject({ code: 'not_allowed' });
   });
 
+  it('stops loading a folder the chat no longer links', async () => {
+    const inA = await agentOpens(CHAT_A, homeA, `${SITE}/a`);
+    const both = { projectId: PROJECT_A, roots: ['/Users/me/app-a', '/Users/me/wt-a'] };
+    panes.touch(CHAT_A, both);
+    expect(inA.session.requestCancelled('file:///Users/me/wt-a/index.html', inA)).toBe(false);
+
+    panes.touch(CHAT_A, homeA);
+    expect(panes.guardFacts(CHAT_A).roots).toEqual(['/Users/me/app-a']);
+    expect(inA.session.requestCancelled('file:///Users/me/wt-a/index.html', inA)).toBe(true);
+    expect(inA.session.requestCancelled('file:///Users/me/app-a/index.html', inA)).toBe(false);
+  });
+
   it('forgets a removed chat’s project files', async () => {
     const inA = await agentOpens(CHAT_A, homeA, `${SITE}/a`);
     const keep = await agentOpens(CHAT_B, homeB, `${SITE}/b`);
