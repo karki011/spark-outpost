@@ -63,7 +63,7 @@ The Mac app adds four guards (`apps/desktop/src/artifact-frames.ts`):
 - A request from the artifact frame never gets the launch token added.
 - Downloads and permission requests from the artifact origin are refused.
 
-**Save as…** downloads `GET /api/artifacts/:id/versions/:version/file` (an attachment, `default-src 'none'; sandbox`) through the app's normal save dialog. **Copy** copies the stored text.
+**Save as…** fetches `GET /api/artifacts/:id/versions/:version/file` (an attachment, `default-src 'none'; sandbox`) and saves it with the shared `ExportButton`, as the audit export does. **Copy** copies the stored text.
 
 ## Paired devices
 
@@ -75,6 +75,7 @@ On a phone the frame is on the Serve origin, still opaque. A device's browser ha
 
 - `artifacts.db.test.ts`: publish in Auto with the `resource_link`, versions and read, Manual's card, the 2 MB limit, a bad SVG, another chat's id, secret-value scrubbing and the audit.
 - `artifact-origin.db.test.ts`: the policy and headers, the host check, method, unknown key and changed file, no Markdown or SVG page, and the API's view, file and page routes.
-- `artifact-links.test.ts`: the ACP mapping.
+- `artifacts-remote.db.test.ts`: **Open artifacts** off by default, `view` and `page` refused until it is on, `file` always refused.
+- `artifact-links.test.ts`: the ACP mapping. `artifact-pages.test.ts`: the artifact port stays in range and never equals the API port.
 - `artifact-frames.test.ts` and `downloads.test.ts`: the Mac app guards.
-- `tests/browser/artifacts.spec.ts`: card, tab, sandbox attribute, the frame's fetch to the API blocked and `document.cookie` denied, the version picker, Copy, Save as… and close, Markdown and SVG.
+- `tests/browser/artifacts.spec.ts`: card, tab, sandbox attribute, the frame's fetch to the API blocked and `document.cookie` denied, the version picker, Copy, Save as… and close, Markdown and SVG, and in Manual the **Show it** card, then the turn's card without a reload.
