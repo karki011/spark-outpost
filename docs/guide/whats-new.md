@@ -14,7 +14,7 @@ What changed recently, newest first.
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | Agents ask with a question card.                                                                                                             | See [Cards](cards.md#approval-cards).                             |
 | One shared inbox, cleared everywhere; answer or set aside in place; flags never count. Meeting **Dismiss** sticks; **Refresh now** on Today. | See [Spark Island](desktop-companion.md#open-it).                 |
-| Ask Spark has a chat’s tools. **Let agents read my calendar** is now on; had it off? Turn it off again.                                      | See [Ask Spark](companion-quick-chat.md#ask-spark).               |
+| Ask Spark has a chat’s tools, for spoken questions too. **Let agents read my calendar** is now on; had it off? Turn it off again.            | See [Ask Spark](companion-quick-chat.md#ask-spark).               |
 | **Spark rules** in Settings; **Work on a pull request…**.                                                                                    | See [Spark rules](protected-paths.md#spark-rules).                |
 | Autonomy moved to the **Work** panel; phones get **⋯**.                                                                                      | See [Spark autonomy](spark-autonomy.md#for-one-chat).             |
 | Browser: shared sign-ins, copy buttons, keys, find, developer tools, network log, SSO handoff.                                               | See [Keys](keyboard-shortcuts.md#browser-pane-mac-app).           |
