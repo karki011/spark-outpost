@@ -27,7 +27,7 @@ Select a ticket for **Development**, including linked pull requests.
 ## Start a chat from a ticket
 
 1. Point at a ticket's row and select **Start**.
-2. Pick **Chat** or **Terminal**; Terminal also asks for **Claude Code** or **Codex**.
+2. Pick **Chat** or **Terminal**; Terminal asks for **Claude Code** or **Codex**.
 3. Under **How to start**, pick **Plan first** or **Build**.
 4. Pick the **Project folder**.
 5. Leave **Move** _KEY_ **to In progress** on to update your tracker.

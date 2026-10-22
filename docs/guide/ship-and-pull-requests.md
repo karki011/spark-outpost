@@ -40,6 +40,6 @@ Every pull request from the chat or its terminal shows above the message box and
 
 ## Ready for review or draft
 
-In **Settings → Pull requests**, set **Open pull requests as** to **Ready for review** (the default) or **Draft**. Or ask for a draft in your message.
+In **Settings → Pull requests**, set **Open pull requests as** to **Ready for review** (default) or **Draft**. Or ask for a draft in your message.
 
 **Next:** [Let Spark handle PR feedback](pr-follow-up.md)

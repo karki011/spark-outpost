@@ -101,3 +101,10 @@ export const HELP_ICON = (
 );
 
 export const RESET_ICON = <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8M3 3v5h5" />;
+
+export const BROWSER_ICON = (
+  <>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M3 9h18M6.5 6.5h.01M9 6.5h.01" />
+  </>
+);

@@ -37,6 +37,7 @@ import {
   type SelectionIntent,
   type SelectionMenuItem,
 } from './selection-menu.ts';
+import { removeRetiredPartitions } from './retired-partitions.ts';
 import { signOut, signedInSites } from './sessions.ts';
 import type { PaneTab } from './tab.ts';
 
@@ -78,6 +79,7 @@ function menuTemplate(
 
 export async function startBrowserHost(options: BrowserHostOptions): Promise<DesktopBrowserHost> {
   const blocked = new Set<number>(options.blockedPorts);
+  await removeRetiredPartitions(options.userData, options.log);
   const origins = await loadRecentOrigins(options.userData, options.log);
   const picks = new Map<string, PickSession>();
   const send = (channel: string, payload: unknown) => {
@@ -298,14 +300,14 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
   );
   ipcMain.handle(
     IPC.browserSites,
-    guarded((_event, projectId) => signedInSites(browserIdSchema.parse(projectId))),
+    guarded(() => signedInSites()),
   );
   ipcMain.handle(
     IPC.browserSignOut,
     guarded(async (_event, raw) => {
-      const { projectId, origin } = browserSignOutSchema.parse(raw);
-      await signOut(projectId, origin);
-      return signedInSites(projectId);
+      const { origin } = browserSignOutSchema.parse(raw);
+      await signOut(origin);
+      return signedInSites();
     }),
   );
 

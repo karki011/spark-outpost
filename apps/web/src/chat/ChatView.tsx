@@ -249,7 +249,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const browserHome = {
     chatId: conversationId,
     projectId: firstRepo?.id ?? null,
-    keepSignIns: firstRepo?.browserKeepSignIns ?? true,
     roots: panelRoots,
     sendsTo: terminalSession ? ('terminal' as const) : ('chat' as const),
   };

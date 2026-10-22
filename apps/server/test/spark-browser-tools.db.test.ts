@@ -248,7 +248,6 @@ describe('spark_browser_open', () => {
       chatId: chat.conversationId,
       runId: chat.runId,
       projectId: null,
-      keepSignIns: true,
     });
     expect(audits()[0]!.params).toMatchObject({
       tool: 'spark_browser_open',

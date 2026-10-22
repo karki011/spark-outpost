@@ -64,7 +64,6 @@ test('a link in a reply opens in the Browser pane, not in a new window', async (
   expect(((await calls(page, 'start')) as { bounds: unknown }[])[0]).toMatchObject({
     bounds: null,
     projectId: null,
-    keepSignIns: true,
   });
 
   await pushTabs(page, [{ url: SITE, title: 'Example', place: 'external', active: true }]);

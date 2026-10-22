@@ -24,11 +24,7 @@ type Request<Op extends BrowserHostRequest['op']> = Extract<BrowserHostRequest, 
 export { BrowserOpError };
 
 async function open(panes: BrowserPanes, request: Request<'open'>, signal: AbortSignal) {
-  const home = {
-    projectId: request.projectId,
-    keepSignIns: request.keepSignIns,
-    roots: request.roots,
-  };
+  const home = { projectId: request.projectId, roots: request.roots };
   panes.touch(request.chatId, home);
   const problem = agentOpenProblem(request.url, panes.guardFacts(request.chatId));
   if (problem) throw new BrowserOpError('not_allowed', problem);

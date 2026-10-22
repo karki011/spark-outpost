@@ -77,9 +77,8 @@ async function insertProject(
 ): Promise<ProjectRow> {
   const inserted = await client.query<ProjectRow>(
     `INSERT INTO projects
-       (id, workspace_id, name, root_path, created_at, command_allowlist, work_place,
-        browser_keep_sign_ins, preview)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
+       (id, workspace_id, name, root_path, created_at, command_allowlist, work_place, preview)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
      ON CONFLICT DO NOTHING RETURNING ${PROJECT_COLUMNS}`,
     [
       project.id,
@@ -89,7 +88,6 @@ async function insertProject(
       project.createdAt,
       project.commandAllowlist,
       project.workPlace ?? DEFAULT_WORK_PLACE,
-      project.browserKeepSignIns ?? true,
       project.preview ? JSON.stringify(project.preview) : null,
     ],
   );

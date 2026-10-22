@@ -1,7 +1,7 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { calendarNowSchema, type MeetingAlertPayload } from '../../packages/contracts/src/index.ts';
-import { apiNow, matchApiClock } from './api-clock.ts';
+import { apiNow, matchApiClock, setPageClock } from './api-clock.ts';
 import { resetTestDatabase } from './database.ts';
 import { island, openNotchIsland } from './island-notch-desktop.ts';
 import { FAKE_CALENDAR_STATE } from './stub-config.ts';
@@ -190,6 +190,25 @@ test('the hanging card offers Join, Snooze and Dismiss, and Esc dismisses once c
 
   await page.evaluate(() => (window as unknown as AlertWindow).alertFeed.leave());
   await expect(card).toBeHidden();
+});
+
+test('a card that comes back at the start says it starts now straight away', async ({ page }) => {
+  const payload = await standupPayload(page);
+  const start = Date.parse(payload.events[0]!.start);
+  await setPageClock(page, start - 2 * MINUTE);
+  await openOverlay(page, payload);
+  await page.clock.pauseAt(start - 90_000);
+  await expect(page.getByRole('alertdialog', { name: 'Standup starts in 2 min' })).toBeVisible();
+
+  await page.evaluate(() => (window as unknown as AlertWindow).alertFeed.leave());
+  await page.clock.runFor(1_000);
+  await expect(page.getByRole('alertdialog')).toBeHidden();
+  await page.clock.setSystemTime(start);
+  await page.evaluate(
+    (value) => (window as unknown as AlertWindow).alertFeed.payload(value),
+    payload,
+  );
+  await expect(page.getByRole('alertdialog', { name: 'Standup starts now' })).toBeVisible();
 });
 
 test('meetings that start together share one card with a Join for each', async ({ page }) => {

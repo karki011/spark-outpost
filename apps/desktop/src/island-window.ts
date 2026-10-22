@@ -29,6 +29,7 @@ import { windowPoint } from './island-pointer.ts';
 import { regionPointer } from './region-pointer.ts';
 import { ISLAND_LEVEL, ISLAND_PATH, islandWindowOptions } from './island-options.ts';
 import { islandVisibility } from './island-visibility.ts';
+import type { PreventActivation } from './no-activate.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 import { revealGate } from './reveal-gate.ts';
 import { guardNavigation } from './window.ts';
@@ -60,6 +61,7 @@ interface IslandWindowOptions {
   hideInShare: () => boolean;
   savePosition: (position: IslandPosition) => void;
   onGone: () => void;
+  preventActivation: PreventActivation;
   log: (line: string) => void;
 }
 
@@ -88,6 +90,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   let sentTop = 0;
   let lastPointer = '';
 
+  options.preventActivation(window);
   window.setAlwaysOnTop(true, ISLAND_LEVEL);
   window.setVisibleOnAllWorkspaces(true, {
     visibleOnFullScreen: true,

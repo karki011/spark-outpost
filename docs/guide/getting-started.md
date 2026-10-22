@@ -13,7 +13,7 @@ Only your name and one provider are required. Change the rest later in **Setting
 ## Meet Spark and pick a theme
 
 1. Type your name under **What should Spark call you?**.
-2. Pick a **Personality**: **Playful**, **Friendly** (the default) or **Just the facts**.
+2. Pick a **Personality**: **Playful**, **Friendly** (default) or **Just the facts**.
 3. Select **Continue**.
 4. Select a theme card, then **Continue**. **Graphite** is the default.
 
