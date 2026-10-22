@@ -127,11 +127,9 @@ describe('ACP elicitation/create becomes a question card', { timeout: 20_000 }, 
     expect(result.text).toMatch(/asked=(withdrawn|\{"action":"cancel"\})/);
   });
 
-  it('cancels and says so when the run has no place to ask', async () => {
+  it('skips and says so when the run has no place to ask, so the agent carries on', async () => {
     const result = await run('#askcodex', null);
-    expect(result.text).toContain('asked={"action":"cancel"}');
-    expect(result.steps).toContain(
-      "Fake asked a question this run can't show, so it was cancelled.",
-    );
+    expect(result.text).toContain('asked={"action":"decline"}');
+    expect(result.steps).toContain("Fake asked a question this run can't show, so it was skipped.");
   });
 });

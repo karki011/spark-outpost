@@ -152,6 +152,18 @@ function notesByQuestion(properties: readonly [string, Property][]): Map<string,
   return notes;
 }
 
+function askedInMessage(
+  field: AgentField,
+  properties: readonly [string, Property][],
+  message: string,
+): AgentField[] {
+  const propertyOf = (key: string | null) => properties.find(([name]) => name === key)?.[1];
+  const described = Boolean(propertyOf(field.key)?.description?.trim());
+  const claudeAsks = propertyOf(field.noteKey)?._meta?.[CLAUDE_CUSTOM_ANSWER] !== undefined;
+  if (described || !claudeAsks || !message.trim()) return [field];
+  return [{ ...field, question: message.trim() }];
+}
+
 export function agentForm(params: acp.CreateElicitationRequest): AgentForm {
   if (params.mode !== 'form') invalid('Spark answers form elicitations only.');
   const schema = formSchema.safeParse((params as { requestedSchema?: unknown }).requestedSchema);
@@ -165,7 +177,9 @@ export function agentForm(params: acp.CreateElicitationRequest): AgentForm {
     .map(([key, property]) => toField(key, property, required.has(key), notes.get(key) ?? null));
   if (fields.length === 0) invalid('The form asks nothing.');
   if (fields.length > AGENT_QUESTION_FIELDS_MAX) invalid('The form asks too many questions.');
-  const form = agentFormSchema.safeParse({ message: params.message, fields });
+  const asked =
+    fields.length === 1 ? askedInMessage(fields[0]!, properties, params.message) : fields;
+  const form = agentFormSchema.safeParse({ message: params.message, fields: asked });
   if (!form.success) invalid('The form is too large to show as a question card.');
   return form.data;
 }

@@ -10,7 +10,7 @@ Cards appear in the chat, under the reply, and on [Spark Island](desktop-compani
 
 ## Approval cards
 
-These come from the agent's mode or a [protected path](protected-paths.md). They never go on by themselves and expire after 30 minutes.
+These come from the agent's mode, a [protected path](protected-paths.md) or the agent's question. They never go on by themselves and expire after 30 minutes.
 
 | Card                                         | Means                                                                                | Buttons                                                                 |
 | -------------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |

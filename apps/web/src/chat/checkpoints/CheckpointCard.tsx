@@ -195,7 +195,9 @@ interface Decision {
 function lead(approval: CheckpointApproval): string | null {
   const checkpoint = approval.payload.checkpoint;
   if (checkpoint.kind === 'retry') return retryLine(checkpoint);
-  return approval.payload.form?.message || null;
+  const form = approval.payload.form;
+  if (!form?.message || form.fields.some((field) => field.question === form.message)) return null;
+  return form.message;
 }
 
 export function CheckpointCard({ approval: incoming }: { approval: CheckpointApproval }) {

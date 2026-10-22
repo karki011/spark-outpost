@@ -88,10 +88,12 @@ describe('a Claude AskUserQuestion elicitation (claude-agent-acp 0.81.2)', () =>
     ]);
   });
 
-  it('shows the question as the message when Claude asks one', () => {
+  it('asks the question itself, not its header, when Claude asks one', () => {
     const form = agentForm(claudeRequest([storeQuestion]));
     expect(form.message).toBe('Which store should the cache use?');
-    expect(form.fields.map((field) => field.key)).toEqual(['question_0']);
+    expect(form.fields.map((field) => [field.key, field.question])).toEqual([
+      ['question_0', 'Which store should the cache use?'],
+    ]);
   });
 
   it('answers in the shape the tool reads back', () => {

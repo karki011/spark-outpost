@@ -39,8 +39,8 @@ export async function askQuestion(
 ): Promise<acp.CreateElicitationResponse> {
   const form = readForm(params, ctx);
   if (!ctx.gate) {
-    ctx.note(`${ctx.agent} asked a question this run can't show, so it was cancelled.`);
-    return CANCEL;
+    ctx.note(`${ctx.agent} asked a question this run can't show, so it was skipped.`);
+    return { action: 'decline' };
   }
   if (ctx.signal.aborted) return CANCEL;
   return ctx.gate.ask(
