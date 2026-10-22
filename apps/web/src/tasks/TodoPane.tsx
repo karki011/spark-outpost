@@ -18,7 +18,7 @@ export function TodoPane({ taskId, todo, recorded, detail, roots }: TodoPaneProp
       {todo.length > 0 && (
         <section className="wsec" aria-labelledby="todo-pane-h">
           <div className="wsec-h">
-            <h3 id="todo-pane-h">To-do</h3>
+            <h3 id="todo-pane-h">Latest list</h3>
             <span>as the agent sent it</span>
           </div>
           <TodoList rows={todo} />

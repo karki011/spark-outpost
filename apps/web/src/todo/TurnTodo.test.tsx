@@ -26,7 +26,7 @@ describe('the to-do card in a turn', () => {
 
   it('lists every item while the turn runs, with the current one in progress', () => {
     render(<TurnTodo entries={list} live />);
-    const card = screen.getByRole('region', { name: 'To-do' });
+    const card = screen.getByRole('region', { name: "This turn's to-do" });
     expect(card.textContent).toContain('1 of 3');
     expect(screen.getByRole('img', { name: 'Working' })).toBeTruthy();
     expect(screen.getAllByRole('listitem')).toHaveLength(3);

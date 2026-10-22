@@ -5,7 +5,7 @@ import { openChats } from './navigation.ts';
 const PR_TITLE = 'spark-outpost/demo#42';
 const WIDE = { width: 2000, height: 1100 };
 
-const thread = (page: Page) => page.locator('.thread');
+const thread = (page: Page) => page.locator('.thread section[aria-label="Turn"]');
 const turns = (page: Page) => page.locator('.thread section[aria-label="Turn"]');
 const rail = (page: Page) => page.getByRole('region', { name: 'Chat context' });
 const panel = (page: Page) => page.getByRole('complementary', { name: 'Work panel' });
@@ -31,15 +31,19 @@ async function finished(page: Page, count: number) {
 
 test("the agent's to-do ticks live in the turn, then folds to one line", async ({ page }) => {
   await send(page, 'Fix the date divider #plan #slow');
-  const card = thread(page).getByRole('region', { name: 'To-do' });
+  const card = thread(page).getByRole('region', { name: "This turn's to-do" });
   await expect(card).toContainText('0 of 3', { timeout: 15_000 });
   await expect(card.getByRole('img', { name: 'Working' })).toHaveCount(1);
-  await expect(page.locator('.cs-todo')).toHaveText('Read the request');
   const before = await card.boundingBox();
+  await page.addStyleTag({ content: '.thread .col { padding-bottom: 200vh; }' });
+  await page.locator('.thread').evaluate((element) => (element.scrollTop = element.scrollHeight));
+  await expect(page.locator('.cs-todo')).toHaveText('Read the request');
 
-  await expect(card).toContainText('1 of 3', { timeout: 15_000 });
+  await expect(page.locator('.cs-todo')).toHaveText('Look through the code', { timeout: 15_000 });
+  await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
+  await expect(card).toContainText('1 of 3');
   await expect(card.getByRole('img', { name: 'Done' })).toHaveCount(1);
-  await expect(page.locator('.cs-todo')).toHaveText('Look through the code');
+  expect((await card.boundingBox())?.height).toBe(before?.height);
   const after = await card.boundingBox();
   expect(after?.height).toBe(before?.height);
 
@@ -64,7 +68,7 @@ test("the agent's to-do ticks live in the turn, then folds to one line", async (
 test('each turn keeps its own list and the rail shows the latest', async ({ page }) => {
   await page.setViewportSize(WIDE);
   await send(page, 'Fix the date divider #plan #slow');
-  const card = thread(page).getByRole('region', { name: 'To-do' });
+  const card = thread(page).getByRole('region', { name: "This turn's to-do" });
   await expect(card).toContainText('1 of 3', { timeout: 20_000 });
   await stop(page).click();
   await finished(page, 1);

@@ -131,9 +131,11 @@ test('the work panel slides open and closed without moving the thread', async ({
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
   await input.press('Enter');
-  await expect(page.getByRole('region', { name: 'To-do' })).toContainText('3 of 3', {
+  const rail = page.getByRole('region', { name: 'Chat context' });
+  await expect(rail.getByRole('region', { name: 'To-do' })).toContainText('3 of 3', {
     timeout: 20_000,
   });
+  await page.getByRole('button', { name: 'To-do: 3 of 3 done' }).click();
   await page
     .getByRole('main')
     .locator('.head')

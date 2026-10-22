@@ -11,7 +11,7 @@ interface TurnTodoProps {
 
 function LiveTodo({ entries }: { entries: readonly PlanEntry[] }) {
   return (
-    <section className="todo-card" aria-label="To-do">
+    <section className="todo-card" aria-label="This turn's to-do">
       <div className="todo-head">
         <b>To-do</b>
         <span className="todo-count">
