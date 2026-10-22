@@ -15,10 +15,12 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **⌘⇧O**                     | New chat                                |
 | **⌘K**                      | Search chats                            |
 | **⌘⇧K**                     | Find a session in **Sessions**          |
-| **⌘B**                      | Show or hide the chat list              |
+| **⌃⌘S**                     | Show or hide the chat list              |
 | **Enter** / **Shift+Enter** | Send / new line                         |
 | **Enter** / **⌘Enter**      | While a turn runs: queue / send now     |
 | **@** / **/**               | Add a file / run a command              |
+| **⌘B** / **⌘I** / **⌘⇧X**   | Bold / italic / strikethrough           |
+| **Enter** / **⌘Enter**      | Code block: new line / send             |
 | **⌘⇧Y**                     | Jump to the card that waits for you     |
 | **⌘D**                      | Open the **Changes** drawer             |
 | **⌘⇧A**                     | Add selected text to the chat or prompt |
