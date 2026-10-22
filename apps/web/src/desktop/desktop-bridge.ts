@@ -117,6 +117,7 @@ export interface SparkDesktop {
     gone(): void;
     ready(): void;
     focus(): void;
+    onTakeFocus(callback: () => void): Unsubscribe;
     setRegions(regions: IslandRegions): void;
     pointerMoved(): void;
   };

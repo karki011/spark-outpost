@@ -24,6 +24,8 @@ Connect your calendars. About 2 minutes.
 
 At a meeting's start, Scout lowers a card: **Join**, **Snooze 1 min** or **Dismiss** (for good). Esc dismisses; **⌘J** joins one meeting.
 
+With VoiceOver or keyboard navigation on, the card takes focus; **⌃⌥⌘M** focuses it anytime. A silent notification offers **Join** and **Snooze 1 min** too.
+
 **Meeting alerts**: **Bubble from Scout** adds **Open** and **Choose** for clashes. Focus blocks hold chimes.
 
 **Join meetings automatically** (off) joins at the start after a cancellable 10-second countdown; never in a clash, a hold or when away. Times follow your Mac's 24-hour setting.

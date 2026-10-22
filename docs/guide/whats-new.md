@@ -12,6 +12,7 @@ What changed recently, newest first.
 
 | What changed                                                                                                                                 | What to do                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Meeting cards take focus with VoiceOver or keyboard navigation; **⌃⌥⌘M** focuses one. A silent notification offers **Join**.                 | See [Calendar](calendar.md#use-it).                                      |
 | Claude agents can sleep: **Sleeping until 10:48**; the turn then picks up.                                                                   | See [Background work](follow-a-turn.md#background-work).                 |
 | An outpost no longer shows the last chat's Browser pane on its left.                                                                         | See [Outposts](outposts.md).                                             |
 | Spark Island answers one-pick questions; its card count skips set-aside cards.                                                               | See [Cards](cards.md#approval-cards).                                    |

@@ -17,11 +17,13 @@ import { systemHourCycle } from './hour-cycle.ts';
 import type { Point } from './island-geometry.ts';
 import { ISLAND_LEVEL } from './island-options.ts';
 import { IPC } from './ipc-channels.ts';
+import type { MeetingNotifier, NoticeChoice } from './meeting-notification.ts';
 import type { PreventActivation } from './no-activate.ts';
 import { regionPointer, type RegionPointer } from './region-pointer.ts';
 import { guardNavigation } from './window.ts';
 
 export const MEETING_ALERT_PATH = '/meeting-alert';
+export const FOCUS_CARD_SHORTCUT = 'Control+Alt+Command+M';
 
 type SparkEvent = IpcMainEvent | IpcMainInvokeEvent;
 
@@ -34,6 +36,10 @@ interface MeetingAlertHostOptions {
   sendToIsland: (channel: string, payload: unknown) => void;
   hideInShare: () => boolean;
   preventActivation: PreventActivation;
+  assistive: () => Promise<boolean>;
+  register: (accelerator: string, run: () => void) => boolean;
+  unregister: (accelerator: string) => void;
+  notifier: MeetingNotifier;
   log: (line: string) => void;
 }
 
@@ -88,6 +94,8 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
   let latestPlace: unknown = null;
   let locked = false;
   let asleep = false;
+  let shortcutHeld = false;
+  let focusWanted = false;
 
   const fromOverlay = (event: SparkEvent) =>
     options.trusted(event) && window !== null && !window.isDestroyed()
@@ -131,6 +139,53 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
     send(IPC.meetingAlertPlace, latestPlace);
   };
 
+  const focusWindow = (): boolean => {
+    if (!window || window.isDestroyed() || !window.isVisible()) return false;
+    window.setFocusable(true);
+    window.focus();
+    window.webContents.focus();
+    return true;
+  };
+
+  const takeFocus = () => {
+    if (!focusWindow()) return;
+    focusWanted = true;
+    send(IPC.meetingAlertTakeFocus, null);
+  };
+
+  const holdShortcut = () => {
+    if (shortcutHeld) return;
+    shortcutHeld = options.register(FOCUS_CARD_SHORTCUT, takeFocus);
+    if (!shortcutHeld) {
+      options.log('Could not register ⌃⌥⌘M for the meeting card; another app holds it.');
+    }
+  };
+
+  const releaseShortcut = () => {
+    if (!shortcutHeld) return;
+    options.unregister(FOCUS_CARD_SHORTCUT);
+    shortcutHeld = false;
+  };
+
+  const choose = (choice: NoticeChoice) => {
+    if (choice.kind === 'show') {
+      takeFocus();
+      return;
+    }
+    const key = latestPayload?.key;
+    if (!key) return;
+    const eventKey = choice.kind === 'join' ? choice.eventKey : null;
+    options.sendToIsland(IPC.meetingAlertAction, { kind: choice.kind, key, eventKey });
+  };
+
+  const focusIfAssisted = (key: string) => {
+    void options.assistive().then((on) => {
+      if (!on || shownKey !== key) return;
+      takeFocus();
+      options.log('Meeting alert took focus for assistive technology.');
+    });
+  };
+
   const show = (payload: MeetingAlertPayload) => {
     const shown = ensure();
     const key = JSON.stringify(payload);
@@ -140,15 +195,21 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
     latestPayload = payload;
     if (fresh) place(shown);
     send(IPC.meetingAlertPayload, payload);
+    options.notifier.post(payload, choose);
     if (fresh) {
       shown.showInactive();
       pointer?.start();
+      holdShortcut();
+      focusIfAssisted(key);
       options.log('Meeting alert shown in the centre of the screen.');
     }
   };
 
   const hide = () => {
     latestPayload = null;
+    focusWanted = false;
+    options.notifier.close();
+    releaseShortcut();
     if (!window || window.isDestroyed() || !window.isVisible()) return;
     shownKey = '';
     send(IPC.meetingAlertLeave, null);
@@ -176,6 +237,7 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
     if (!fromOverlay(event)) return;
     if (latestPlace) send(IPC.meetingAlertPlace, latestPlace);
     if (latestPayload) send(IPC.meetingAlertPayload, latestPayload);
+    if (focusWanted) send(IPC.meetingAlertTakeFocus, null);
   });
   ipcMain.on(IPC.meetingAlertAct, (event, value: unknown) => {
     if (!fromOverlay(event)) return;
@@ -183,10 +245,7 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
     if (parsed.success) options.sendToIsland(IPC.meetingAlertAction, parsed.data);
   });
   ipcMain.on(IPC.meetingAlertFocus, (event) => {
-    if (!fromOverlay(event) || !window) return;
-    window.setFocusable(true);
-    window.focus();
-    window.webContents.focus();
+    if (fromOverlay(event)) focusWindow();
   });
   ipcMain.on(IPC.meetingAlertRegions, (event, value: unknown) => {
     if (!fromOverlay(event)) return;
@@ -237,6 +296,8 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
       powerMonitor.off('suspend', onSuspend);
       powerMonitor.off('resume', onResume);
       pointer?.stop();
+      releaseShortcut();
+      options.notifier.close();
       if (window && !window.isDestroyed()) window.destroy();
     },
   };

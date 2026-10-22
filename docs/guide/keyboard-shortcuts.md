@@ -24,6 +24,7 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **⌘⇧A**                     | Add selected text to the chat or prompt |
 | **⌘⇧B**                     | Show or hide the Browser pane (Mac app) |
 | **⌘J**                      | Join, or choose a meeting               |
+| **⌃⌥⌘M**                    | Focus the meeting card (Mac app)        |
 | **⌃\`**                     | Show or hide the terminal               |
 | **⌘⇧F**                     | Focus a Terminal session, or leave it   |
 | **⌥Tab** / **⌥⇧Tab**        | Leave a Terminal session                |

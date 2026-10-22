@@ -59,6 +59,7 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     gone: () => ipcRenderer.send(IPC.meetingAlertGone),
     ready: () => ipcRenderer.send(IPC.meetingAlertReady),
     focus: () => ipcRenderer.send(IPC.meetingAlertFocus),
+    onTakeFocus: (callback: () => void) => listen(IPC.meetingAlertTakeFocus, callback),
     setRegions: (regions: unknown) => ipcRenderer.send(IPC.meetingAlertRegions, regions),
     pointerMoved: () => ipcRenderer.send(IPC.meetingAlertPointerMoved),
   },
