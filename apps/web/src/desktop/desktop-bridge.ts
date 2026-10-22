@@ -168,6 +168,11 @@ export interface SparkDesktop {
   };
   browser?: DesktopBrowser;
   macControl?: DesktopMacControl;
+  menu?: {
+    onOpenSettings(callback: () => void): Unsubscribe;
+    onToggleSidebar(callback: () => void): Unsubscribe;
+    reportSidebar(shown: boolean): void;
+  };
   onOpenChat(callback: (id: string, runId: string | null) => void): Unsubscribe;
   onOpenSettings?(callback: (target: IslandSettingsTarget) => void): Unsubscribe;
 }

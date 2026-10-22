@@ -7,6 +7,7 @@ import {
   ipcMain,
   Menu,
   shell,
+  type IpcMainEvent,
   type IpcMainInvokeEvent,
 } from 'electron';
 import {
@@ -27,7 +28,7 @@ export interface HelpOptions {
   logsFolder: string;
   apiUrl: string;
   token: string;
-  trusted: (event: IpcMainInvokeEvent) => boolean;
+  trusted: (event: IpcMainInvokeEvent | IpcMainEvent) => boolean;
   showSpark: () => void;
   mainWindow: () => BrowserWindow | null;
   paneShortcut: HelpActions['paneShortcut'];
@@ -96,11 +97,14 @@ export function startHelp(options: HelpOptions): Help {
     logsFolder: options.logsFolder,
   };
   let feedbackPending = false;
+  const toMainWindow = (channel: string) => {
+    const window = options.mainWindow();
+    if (window && !window.isDestroyed()) window.webContents.send(channel);
+  };
   const sendFeedback = () => {
     feedbackPending = true;
     options.showSpark();
-    const window = options.mainWindow();
-    if (window && !window.isDestroyed()) window.webContents.send(IPC.helpOpen);
+    toMainWindow(IPC.helpOpen);
   };
   const handle = (channel: string, handler: () => Promise<unknown> | unknown) => {
     ipcMain.handle(channel, (event) => (options.trusted(event) ? handler() : null));
@@ -113,19 +117,36 @@ export function startHelp(options: HelpOptions): Help {
     feedbackPending = false;
     return pending;
   });
-  Menu.setApplicationMenu(
-    Menu.buildFromTemplate(
-      appMenuTemplate({
-        sendFeedback,
-        exportDiagnostics: () => void exportFromMenu(options),
-        showLogs: () => void showLogs(options.logsFolder),
-        paneShortcut: options.paneShortcut,
-      }),
-    ),
-  );
+  let sidebarShown = true;
+  const buildMenu = () =>
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate(
+        appMenuTemplate({
+          dev: !app.isPackaged,
+          sidebarShown,
+          openSettings: () => {
+            options.showSpark();
+            toMainWindow(IPC.menuOpenSettings);
+          },
+          toggleSidebar: () => toMainWindow(IPC.menuToggleSidebar),
+          sendFeedback,
+          exportDiagnostics: () => void exportFromMenu(options),
+          showLogs: () => void showLogs(options.logsFolder),
+          paneShortcut: options.paneShortcut,
+        }),
+      ),
+    );
+  const onSidebarShown = (event: IpcMainEvent, shown: unknown) => {
+    if (!options.trusted(event) || typeof shown !== 'boolean' || shown === sidebarShown) return;
+    sidebarShown = shown;
+    buildMenu();
+  };
+  ipcMain.on(IPC.menuSidebarShown, onSidebarShown);
+  buildMenu();
   return {
     dispose() {
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);
+      ipcMain.off(IPC.menuSidebarShown, onSidebarShown);
     },
   };
 }
