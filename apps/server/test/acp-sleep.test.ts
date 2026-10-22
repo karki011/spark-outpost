@@ -54,6 +54,24 @@ describe('ACP provider when a Claude agent schedules a wakeup', { timeout: 20_00
     expect(spent.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('wakes in the same turn after another background cycle ended long before the wakeup', async () => {
+    let deadline: NodeJS.Timeout | null = null;
+    const outputs = await collect('#sleepbeside', (_output, controller) => {
+      deadline ??= setTimeout(() => controller.abort(), 8_000);
+    });
+    if (deadline) clearTimeout(deadline);
+
+    expect(replyText(outputs)).toBe(
+      'Running the tests and sleeping until the deploy.\n\nTests passed.\n\nAwake: the build is green.',
+    );
+    expect(waits(outputs).at(-1)).toEqual({
+      kind: 'background_work',
+      agents: 0,
+      tasks: 0,
+      names: [],
+    });
+  });
+
   it('ends the sleep on Stop', async () => {
     const outputs = await collect('#sleeplong', (output, controller) => {
       if (sleeping(output)) controller.abort();

@@ -207,5 +207,6 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
       stopWaiting();
       return 'end_turn';
     }
+    worked = false;
   }
 }
