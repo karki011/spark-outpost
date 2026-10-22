@@ -14,7 +14,7 @@ You'll answer agents from Spark Island. About 2 minutes.
 2. Switch **Show Spark Island** on or off.
 3. Pick a **Spark Island size**.
 4. **Island chimes** play when a new request needs you.
-5. **Hide in screen sharing** keeps it out of shares; some apps may still show it.
+5. **Hide in screen sharing** keeps it out of most shares.
 
 ![The Spark Island settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 
@@ -22,13 +22,13 @@ Drag Scout to place it. At top centre it docks, half hidden when quiet.
 
 ## Open it
 
-Resting, Scout sits at the notch, with an amber count when something needs you. Rest the pointer on Scout to answer the top request or join a meeting within 10 minutes; click for Home. Passing over opens nothing.
+Resting, Scout sits at the notch, with an amber count when you're needed. Hover over Scout to answer the top request or join a meeting within 10 minutes; click for Home; passing over opens nothing.
 
 ![Spark Island Home: one big request card with Allow, Deny and Later, and working chats below](images/companion-island-home-light.png)
 
-Home shows one big card: a request, a question's choices or a meeting that starts. **‹ ›** moves between requests. **Home**, **Ask Spark** and **+** sit on top; **⌘O** opens Spark, **Esc** closes.
+Home shows one big card: a request, a question's choices or a starting meeting. **‹ ›** moves between requests. **Home**, **Ask Spark** and **+** sit on top; **⌘O** opens Spark, **Esc** closes.
 
-Spark Island and Spark share one inbox: opening a request or its chat anywhere marks it read everywhere, and it stays as **Seen** until answered. **Later** sets it aside. Finished chats and flags stay in Spark.
+Spark Island and Spark share one inbox: opening a request or its chat anywhere marks it read everywhere; it stays **Seen** until answered. **Later** sets it aside. Finished chats and flags stay in Spark.
 
 ## Answer a card
 
@@ -49,7 +49,7 @@ Edit cards show the first changed lines, never secret files.
 
 ## When Spark Island is off
 
-With **Dock badge and notifications** on, the Dock counts unread requests and a notification names them. Reading one anywhere clears it.
+With **Dock badge and notifications** on, the Dock counts unread requests and a notification names them; reading one clears it.
 
 ## Inside the app
 

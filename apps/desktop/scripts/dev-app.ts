@@ -222,11 +222,19 @@ export function missingPrerequisites(
     path.join(repoRoot, 'apps/web/dist/index.html'),
   ].filter((file) => !exists(file));
   const helper = path.join(repoRoot, '.local/mac-control', arch, 'spark-mac-control');
-  const warnings = exists(helper)
-    ? []
-    : [
-        `No Mac control helper at ${helper}; run pnpm desktop:mac-control there to use Mac control.`,
-      ];
+  const addon = path.join(repoRoot, '.local/no-activate', arch, 'no-activate.node');
+  const warnings = [
+    ...(exists(helper)
+      ? []
+      : [
+          `No Mac control helper at ${helper}; run pnpm desktop:mac-control there to use Mac control.`,
+        ]),
+    ...(exists(addon)
+      ? []
+      : [
+          `No no-activate addon at ${addon}; run pnpm desktop:no-activate there, or clicks on Spark Island bring Spark forward.`,
+        ]),
+  ];
   return { missing, warnings };
 }
 

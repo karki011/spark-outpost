@@ -28,6 +28,7 @@ import { isSize } from './island-geometry.ts';
 import { trayTemplate } from './island-options.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
 import { appLayout } from './layout.ts';
+import { noActivate } from './no-activate.ts';
 import { startMeetingAlertHost } from './meeting-alert-host.ts';
 import { startViewingHost } from './viewing-host.ts';
 import { watchHourCycle } from './hour-cycle.ts';
@@ -119,6 +120,13 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       .catch((error: Error) => console.error(`[companion] Could not save: ${error.message}`));
   };
 
+  const layout = appLayout({
+    isPackaged: app.isPackaged,
+    appPath: app.getAppPath(),
+    resourcesPath: process.resourcesPath,
+  });
+  const preventActivation = noActivate(layout.noActivateAddon, options.log);
+
   const companion = createCompanion(initial, {
     supported: process.platform === 'darwin',
     openIsland: (onGone) => {
@@ -129,6 +137,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         size: () => companion.status().islandSize,
         hideInShare: () => companion.status().hideInShare,
         savePosition: (position) => companion.setPosition(position),
+        preventActivation,
         log: options.log,
         onGone: () => {
           if (island === opened) island = null;
@@ -299,14 +308,10 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     islandCenter: () => island?.center() ?? null,
     sendToIsland: (channel, payload) => island?.post(channel, payload),
     hideInShare: () => companion.status().hideInShare,
+    preventActivation,
     log: options.log,
   });
 
-  const layout = appLayout({
-    isPackaged: app.isPackaged,
-    appPath: app.getAppPath(),
-    resourcesPath: process.resourcesPath,
-  });
   const voice: VoiceHost | null = await startVoiceHost({
     helperPath: layout.voiceBin,
     modelsDir: layout.voiceModels,

@@ -10,6 +10,7 @@ export interface AppLayout {
   calendarSeedBin: string | null;
   voiceBin: string;
   voiceModels: string;
+  noActivateAddon: string;
   googleClientFile: string | null;
 }
 
@@ -32,6 +33,7 @@ export function appLayout(source: LayoutSource): AppLayout {
       calendarSeedBin: null,
       voiceBin: path.join(resourcesPath, 'voice/bin/spark-voice'),
       voiceModels: path.join(resourcesPath, 'voice/models'),
+      noActivateAddon: path.join(resourcesPath, 'no-activate/no-activate.node'),
       googleClientFile: null,
     };
   }
@@ -45,6 +47,7 @@ export function appLayout(source: LayoutSource): AppLayout {
     calendarSeedBin: path.join(repoRoot, '.local/calendar', arch, 'spark-calendar-seed'),
     voiceBin: path.join(repoRoot, '.local/voice', arch, 'spark-voice'),
     voiceModels: path.join(repoRoot, '.local/voice', arch, 'models'),
+    noActivateAddon: path.join(repoRoot, '.local/no-activate', arch, 'no-activate.node'),
     googleClientFile: path.join(repoRoot, '.local', GOOGLE_CLIENT_FILE_NAME),
   };
 }
