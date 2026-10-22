@@ -2,6 +2,9 @@ globalThis.__zod_globalConfig = { jitless: true };
 if (location.pathname === '/island' || location.pathname === '/meeting-alert') {
   document.documentElement.dataset.island = '';
 }
+if (location.pathname === '/settings' && window.sparkDesktop) {
+  document.documentElement.dataset.settingsWindow = '';
+}
 try {
   var key = 'spark-outpost.theme';
   var desktop = window.sparkDesktop && window.sparkDesktop.theme;

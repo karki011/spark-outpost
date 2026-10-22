@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useSyncExternalStore } from 'react';
 import { FEEDBACK_SETTINGS_FOCUS } from '@spark-outpost/contracts';
+import { useFirstContent } from '../app/first-content.ts';
 import { useAppEvents } from '../app/live/use-app-events.ts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { requestFeedback } from '../help/feedback-request.ts';
@@ -62,6 +63,7 @@ function useDocLinksInMainWindow(): void {
 export function SettingsWindowApp() {
   const hash = useSyncExternalStore(subscribeHash, currentHash);
   const section = parseSettingsRoute(hash) ?? 'spark';
+  useFirstContent(true);
   useAppEvents();
   useAnnounceSettingChanges();
   useSettingsTargets();

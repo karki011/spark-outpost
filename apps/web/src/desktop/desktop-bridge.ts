@@ -182,7 +182,7 @@ export interface SparkDesktop {
   browser?: DesktopBrowser;
   macControl?: DesktopMacControl;
   menu?: {
-    onToggleSidebar(callback: () => void): Unsubscribe;
+    onCommand(callback: (command: unknown) => void): Unsubscribe;
     reportSidebar(shown: boolean): void;
   };
   settingsWindow?: DesktopSettingsWindow;

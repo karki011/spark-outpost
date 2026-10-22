@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { sparkDesktop } from './desktop-bridge.ts';
 
+const TOGGLE_SIDEBAR_COMMAND = 'toggle-sidebar';
+
 interface AppMenuActions {
   sidebarShown: boolean;
   toggleSidebar: () => void;
@@ -12,7 +14,13 @@ export function useAppMenu({ sidebarShown, toggleSidebar }: AppMenuActions): voi
     latest.current = toggleSidebar;
   });
 
-  useEffect(() => sparkDesktop()?.menu?.onToggleSidebar(() => latest.current()), []);
+  useEffect(
+    () =>
+      sparkDesktop()?.menu?.onCommand((command) => {
+        if (command === TOGGLE_SIDEBAR_COMMAND) latest.current();
+      }),
+    [],
+  );
 
   useEffect(() => {
     sparkDesktop()?.menu?.reportSidebar(sidebarShown);

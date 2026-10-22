@@ -25,6 +25,7 @@ import { startSettingsWindow } from './settings-window.ts';
 
 const EXPORT_TIMEOUT_MS = 60_000;
 const HELP_ROUTE = '#/settings/help';
+const TOGGLE_SIDEBAR_COMMAND = 'toggle-sidebar';
 
 export interface HelpOptions {
   version: string;
@@ -102,9 +103,9 @@ export function startHelp(options: HelpOptions): Help {
     beta: isBetaVersion(options.version),
     logsFolder: options.logsFolder,
   };
-  const toMainWindow = (channel: string) => {
+  const toMainWindow = (channel: string, payload: string) => {
     const window = options.mainWindow();
-    if (window && !window.isDestroyed()) window.webContents.send(channel);
+    if (window && !window.isDestroyed()) window.webContents.send(channel, payload);
   };
   const handle = (channel: string, handler: () => Promise<unknown> | unknown) => {
     ipcMain.handle(channel, (event) => (options.trusted(event) ? handler() : null));
@@ -129,7 +130,7 @@ export function startHelp(options: HelpOptions): Help {
           dev: !app.isPackaged,
           sidebarShown,
           openSettings: settingsWindow.show,
-          toggleSidebar: () => toMainWindow(IPC.menuToggleSidebar),
+          toggleSidebar: () => toMainWindow(IPC.menuCommand, TOGGLE_SIDEBAR_COMMAND),
           sendFeedback: () =>
             settingsWindow.open({ route: HELP_ROUTE, focus: FEEDBACK_SETTINGS_FOCUS }),
           exportDiagnostics: () => void exportFromMenu(options),

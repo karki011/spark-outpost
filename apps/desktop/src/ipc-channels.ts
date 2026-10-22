@@ -64,7 +64,7 @@ export const IPC = {
   helpInfo: 'help:info',
   helpExportDiagnostics: 'help:export-diagnostics',
   helpShowLogs: 'help:show-logs',
-  menuToggleSidebar: 'menu:toggle-sidebar',
+  menuCommand: 'menu:command',
   settingsWindowOpen: 'settings-window:open',
   settingsWindowTake: 'settings-window:take',
   settingsWindowChanged: 'settings-window:changed',
