@@ -40,7 +40,6 @@ function begin(leaseSeconds = 30) {
     db: t.db,
     providers: new Map([['claude', provider]]),
     leaseSeconds,
-    concurrency: 1,
     parked: new ParkedTurns(),
     pollMs: 20,
     cancelPollMs: 20,
@@ -154,7 +153,7 @@ describe('a Claude chat whose turn ends with background work running', { timeout
     await settled(runId);
   });
 
-  it('frees its worker slot while it waits, so other chats still run', async () => {
+  it('lets other chats run while it waits', async () => {
     begin();
     const waiting = await send('#backgroundforever');
     await eventually(

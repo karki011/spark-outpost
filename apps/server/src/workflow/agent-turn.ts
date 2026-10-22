@@ -234,7 +234,7 @@ export async function runAgentTurn(
         append,
       });
   const redaction = createRedactionFilter(secretValues);
-  const parking = backgroundParking(deps.parked, lease.runId, () => control.stop('quit'));
+  const parking = backgroundParking(deps.parked, () => control.stop('quit'));
   const watch = { ...input, db: deps.db, runId: lease.runId, observations };
   const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);

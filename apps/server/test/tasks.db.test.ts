@@ -43,7 +43,6 @@ function start(provider: Provider = createFakeProvider({ stepMs: 0, wordMs: 0 })
     db: t.db,
     providers: new Map([[provider.name, provider]]),
     leaseSeconds: 30,
-    concurrency: 1,
     pollMs: 20,
   });
   return provider.name;

@@ -66,7 +66,6 @@ function begin(extraEnv: Record<string, string> = {}) {
     db: t.db,
     providers: new Map([['claude', provider]]),
     leaseSeconds: 30,
-    concurrency: 2,
     pollMs: 20,
     cancelPollMs: 20,
     approvalPollMs: 20,
