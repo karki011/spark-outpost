@@ -22,6 +22,7 @@ import { appMenuTemplate, type HelpActions } from './help-menu.ts';
 import { IPC } from './ipc-channels.ts';
 
 const EXPORT_TIMEOUT_MS = 60_000;
+const TOGGLE_SIDEBAR_COMMAND = 'toggle-sidebar';
 
 export interface HelpOptions {
   version: string;
@@ -97,9 +98,9 @@ export function startHelp(options: HelpOptions): Help {
     logsFolder: options.logsFolder,
   };
   let feedbackPending = false;
-  const toMainWindow = (channel: string) => {
+  const toMainWindow = (channel: string, payload?: string) => {
     const window = options.mainWindow();
-    if (window && !window.isDestroyed()) window.webContents.send(channel);
+    if (window && !window.isDestroyed()) window.webContents.send(channel, payload);
   };
   const sendFeedback = () => {
     feedbackPending = true;
@@ -128,7 +129,7 @@ export function startHelp(options: HelpOptions): Help {
             options.showSpark();
             toMainWindow(IPC.menuOpenSettings);
           },
-          toggleSidebar: () => toMainWindow(IPC.menuToggleSidebar),
+          toggleSidebar: () => toMainWindow(IPC.menuCommand, TOGGLE_SIDEBAR_COMMAND),
           sendFeedback,
           exportDiagnostics: () => void exportFromMenu(options),
           showLogs: () => void showLogs(options.logsFolder),

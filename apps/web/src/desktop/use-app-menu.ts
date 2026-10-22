@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { sparkDesktop } from './desktop-bridge.ts';
 
+const TOGGLE_SIDEBAR_COMMAND = 'toggle-sidebar';
+
 interface AppMenuActions {
   sidebarShown: boolean;
   toggleSidebar: () => void;
@@ -16,7 +18,9 @@ export function useAppMenu({ sidebarShown, toggleSidebar, openSettings }: AppMen
   useEffect(() => {
     const menu = sparkDesktop()?.menu;
     if (!menu) return;
-    const stopToggle = menu.onToggleSidebar(() => latest.current.toggleSidebar());
+    const stopToggle = menu.onCommand((command) => {
+      if (command === TOGGLE_SIDEBAR_COMMAND) latest.current.toggleSidebar();
+    });
     const stopSettings = menu.onOpenSettings(() => latest.current.openSettings());
     return () => {
       stopToggle();

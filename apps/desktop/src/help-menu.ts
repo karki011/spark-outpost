@@ -95,8 +95,6 @@ export function appMenuTemplate(actions: HelpActions): MenuItemConstructorOption
         { role: 'resetZoom' },
         { role: 'zoomIn' },
         { role: 'zoomOut' },
-        { type: 'separator' },
-        { role: 'togglefullscreen' },
       ],
     },
     { role: 'windowMenu' },

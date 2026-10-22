@@ -150,8 +150,6 @@ describe('the View menu', () => {
       'resetZoom',
       'zoomIn',
       'zoomOut',
-      'separator',
-      'togglefullscreen',
     ]);
   });
 });

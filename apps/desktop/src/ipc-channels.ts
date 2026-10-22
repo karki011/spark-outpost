@@ -67,7 +67,7 @@ export const IPC = {
   helpOpen: 'help:open',
   helpPending: 'help:pending',
   menuOpenSettings: 'menu:open-settings',
-  menuToggleSidebar: 'menu:toggle-sidebar',
+  menuCommand: 'menu:command',
   menuSidebarShown: 'menu:sidebar-shown',
   privacyOpenFullDiskAccess: 'privacy:open-full-disk-access',
   browserState: 'browser:state',

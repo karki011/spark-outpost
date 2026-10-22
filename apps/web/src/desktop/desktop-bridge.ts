@@ -170,7 +170,7 @@ export interface SparkDesktop {
   macControl?: DesktopMacControl;
   menu?: {
     onOpenSettings(callback: () => void): Unsubscribe;
-    onToggleSidebar(callback: () => void): Unsubscribe;
+    onCommand(callback: (command: unknown) => void): Unsubscribe;
     reportSidebar(shown: boolean): void;
   };
   onOpenChat(callback: (id: string, runId: string | null) => void): Unsubscribe;
