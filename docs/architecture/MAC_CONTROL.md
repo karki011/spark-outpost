@@ -104,12 +104,13 @@ Every result is redacted, scrubbed and wrapped like a page: `<page_evidence … 
 
 ### Who gets it
 
-| Run                                                                 | Offered                                                                                                                                                                                                                     |
-| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A chat on the Mac                                                   | Yes, with the switch on; Plan and Read-only chats get it with its card                                                                                                                                                      |
-| A Terminal session                                                  | Yes: Spark runs these tools itself, so the floor and hard limits hold; a floor action with no card shown is refused, never run                                                                                              |
-| Companion read-only session, Sparks' child runs, outpost child runs | No                                                                                                                                                                                                                          |
-| A paired device                                                     | Never. The gateway marks a run started from a paired device with the admitted device id (never the client's `source`), and such a run gets no `spark_mac_*` tools. A device sees that a card is waiting but can't answer it |
+| Run                                    | Offered                                                                                                                                                                                                                     |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A chat on the Mac                      | Yes, with the switch on; Plan and Read-only chats get it with its card                                                                                                                                                      |
+| A Terminal session                     | Yes: Spark runs these tools itself, so the floor and hard limits hold; a floor action with no card shown is refused, never run                                                                                              |
+| Ask Spark                              | Yes, with the switch on; never for a spoken question (`spokenRun` in `mac-control/offered.ts`), and its cards are answered in Spark                                                                                         |
+| Sparks' child runs, outpost child runs | No                                                                                                                                                                                                                          |
+| A paired device                        | Never. The gateway marks a run started from a paired device with the admitted device id (never the client's `source`), and such a run gets no `spark_mac_*` tools. A device sees that a card is waiting but can't answer it |
 
 ### Audit
 
