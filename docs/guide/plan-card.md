@@ -20,7 +20,7 @@ While the agent plans, a chat set to **Auto** or **Bypass permissions** runs com
 
 ## The plan line
 
-Spark has no plan card and saves no plan of its own. Without `/plan` or **Plan** mode the agent builds at once, and the steps it lists show under **Tasks**.
+Spark has no plan card and saves no plan of its own. Without `/plan` or **Plan** mode the agent builds at once, and the steps it lists show as its [**To-do**](follow-a-turn.md#see-whats-happening).
 
 The plan you approve becomes the chat's agreed plan. The thread shows **Plan saved**; select it to open the plan in **Work**. A revised plan you approve is saved as a new version.
 

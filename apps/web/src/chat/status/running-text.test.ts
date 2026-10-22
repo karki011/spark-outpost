@@ -14,4 +14,10 @@ describe('the line above the message box while a turn runs', () => {
   it('says the agent is thinking when it reports nothing else', () => {
     expect(runningText(claude, null)).toBe('Claude is thinking…');
   });
+
+  it("names the agent's current to-do item", () => {
+    expect(runningText({ ...claude, todo: 'Update the divider test' }, null)).toBe(
+      'Claude is thinking… · Update the divider test',
+    );
+  });
 });

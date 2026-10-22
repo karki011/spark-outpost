@@ -27,6 +27,14 @@ A dot shows changes since you last opened the chat; point at it.
 | **Done**: green             | A turn finished.                                     |
 | **Couldn't finish**: red    | A turn failed or was interrupted.                    |
 
+## To-do
+
+| Mark         | Means                                      |
+| ------------ | ------------------------------------------ |
+| A tick       | Done.                                      |
+| A spinner    | What the agent is on now.                  |
+| An open ring | Not started; after the turn, not finished. |
+
 ## Chats and Sparks
 
 | Status                | Where      | Means                                                                  |

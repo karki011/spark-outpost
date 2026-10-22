@@ -7,6 +7,7 @@ import {
   faceFromName,
   teammateFaceSchema,
   titleSourceSchema,
+  todoListSchema,
   subagentWaitSchema,
   waitingOnLabel,
   agentsWorkingLabel,
@@ -48,6 +49,7 @@ export interface RunRow {
   user_message_id: string | null;
   provider: string;
   source?: string | null;
+  todo?: unknown;
   status: RunStatus;
   error: string | null;
   cancel_requested_at: Date | null;
@@ -176,6 +178,7 @@ export function toRun(row: RunRow): Run {
     agentLabel: row.agent_label ?? null,
     category: categorySchema.safeParse(row.category).data ?? null,
     following: row.followed_instructions ?? null,
+    todo: todoListSchema.safeParse(row.todo).data ?? null,
     continuesRunId: row.continues_run_id ?? null,
     interruptionChoice: row.interruption_choice ?? null,
     modelSwitch: modelSwitchSchema.safeParse(row.model_switch).data ?? null,

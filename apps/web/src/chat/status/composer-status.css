@@ -66,6 +66,15 @@
 .cs-line.run .cs-what {
   flex: 0 1 auto;
 }
+.cs-todo {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
 .cstatus code,
 .cs-list code {
   padding: 1px 5px;

@@ -1,4 +1,4 @@
-import type { PlanEntry } from '@spark-outpost/contracts';
+import { TODO_ACTIVITY, samePlan, type PlanEntry } from '@spark-outpost/contracts';
 import { latestPlan } from '../persistence/artifacts.ts';
 import type { Db } from '../persistence/db.ts';
 import { addTaskLink, runTask, taskForWorkingRun, type RunTask } from '../persistence/tasks.ts';
@@ -26,6 +26,7 @@ export function createTaskRecorder(
 ): TaskRecorder {
   let task: RunTask | null | undefined;
   let latest: StoredPlan | null | undefined;
+  let todo: readonly PlanEntry[] | null = null;
 
   const current = async (): Promise<RunTask | null> => {
     if (task === undefined) task = await runTask(db, runId);
@@ -41,6 +42,12 @@ export function createTaskRecorder(
       runEvents.activity('task', 'task', { taskId: task.taskId, opened: joined.opened }),
     );
     return task;
+  };
+
+  const recordTodo = async (entries: PlanEntry[]) => {
+    if (todo && samePlan(todo, entries)) return;
+    todo = entries;
+    await append(runEvents.activity('todo', TODO_ACTIVITY, { entries }), { todo: entries });
   };
 
   const recordPlan = async (entries: PlanEntry[]) => {
@@ -79,7 +86,10 @@ export function createTaskRecorder(
   return {
     async observe(output) {
       if (output.kind === 'step_started' && output.tool) await ensure();
-      if (output.kind === 'plan') await recordPlan(output.entries);
+      if (output.kind === 'plan') {
+        await recordTodo(output.entries);
+        await recordPlan(output.entries);
+      }
       if (output.kind === 'link') {
         await recordLink({ url: output.url, title: output.title, source: output.source });
       }

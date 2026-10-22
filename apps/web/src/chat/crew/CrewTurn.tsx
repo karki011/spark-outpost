@@ -1,5 +1,4 @@
 import './crew-turn.css';
-import type { ReactNode } from 'react';
 import {
   isCheckApproval,
   isTerminalRunStatus,
@@ -63,12 +62,11 @@ interface CrewTurnProps {
   detail: ConversationDetail;
   orchestration: Orchestration;
   repo: Project | null;
-  taskCard: ReactNode;
 }
 
 const NO_STEPS: RunStep[] = [];
 
-export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTurnProps) {
+export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
   const runsById = new Map(detail.runs.map((candidate) => [candidate.id, candidate]));
   const handedOffAt = handOffAt(orchestration.crew, run.id);
   const textByRun = memberTexts(detail.messages, run.id, handedOffAt);
@@ -193,7 +191,6 @@ export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTur
           anchor={agentAnchor(orchestration.runId, 'jev')}
           status={jevStatus}
         />
-        {taskCard}
       </div>
       {steeredAfter(-1)}
       {items.flatMap((item, index) => [itemBlock(item, index), ...steeredAfter(index)])}

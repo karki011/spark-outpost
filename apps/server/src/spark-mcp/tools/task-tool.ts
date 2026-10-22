@@ -116,10 +116,9 @@ async function taskView(
     plan: currentPlan(task),
     agreedPlan: agreedPlan(agreed.documents, agreed.staleFiles),
     ...proposedPlan(agreed.documents),
-    checklist: task.items.map((item) => ({
+    checklist: [...task.todo, ...task.recorded].map((item) => ({
       item: item.label,
       state: item.state,
-      ...(item.name ? { by: item.name } : {}),
     })),
     filesChanged: changed,
     links: task.links.map((link) => ({ kind: link.kind, url: link.url, title: link.title })),

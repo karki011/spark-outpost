@@ -2,14 +2,17 @@ import {
   EventType,
   MODEL_SWITCH_ACTIVITY,
   ORCHESTRATION_ACTIVITY,
+  TODO_ACTIVITY,
   applySubagentEvent,
   emptySubagentRoster,
   modelSwitchSchema,
   orchestrationSchema,
   stepMark,
+  todoActivitySchema,
   type Approval,
   type ModelSwitch,
   type Orchestration,
+  type PlanEntry,
   type AgentTerminalStarted,
   type RunEvent,
   type SubagentRoster,
@@ -147,6 +150,7 @@ export interface RunProjection extends ReplyStream {
   commands: readonly LiveCommand[];
   terminals: readonly AgentTerminalStarted[];
   subagents: SubagentRoster;
+  todo: readonly PlanEntry[] | null;
 }
 
 export const initialRunProjection: RunProjection = {
@@ -161,6 +165,7 @@ export const initialRunProjection: RunProjection = {
   commands: [],
   terminals: [],
   subagents: emptySubagentRoster,
+  todo: null,
 };
 
 export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent): RunProjection {
@@ -193,6 +198,10 @@ export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent
       if (event.activityType === MODEL_SWITCH_ACTIVITY) {
         const change = modelSwitchSchema.safeParse(event.content);
         return change.success ? { ...next, modelSwitch: change.data } : next;
+      }
+      if (event.activityType === TODO_ACTIVITY) {
+        const list = todoActivitySchema.safeParse(event.content);
+        return list.success ? { ...next, todo: list.data.entries } : next;
       }
       if (event.activityType !== ORCHESTRATION_ACTIVITY) return next;
       const parsed = orchestrationSchema.safeParse(event.content);

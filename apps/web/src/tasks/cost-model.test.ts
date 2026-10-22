@@ -33,7 +33,8 @@ function task(runs: TaskRun[], extra: Partial<TaskDetail> = {}): TaskDetail {
     closedAt: null,
     runIds: runs.map((run) => run.id),
     planVersion: null,
-    items: [],
+    todo: [],
+    recorded: [],
     summary: { done: 0, total: 0, waiting: 0, text: '' },
     costUsd: null,
     tokens: null,
@@ -58,7 +59,6 @@ describe('costSummary', () => {
       { advisors: [{ advisor: 'jev', calls: 3, inputTokens: 2300, costUsd: 0.0001 }] },
     );
     const identities = runIdentities(
-      detail,
       [],
       [
         { id: ids[0]!, name: 'Sketch', role: 'architect' },

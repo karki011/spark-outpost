@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import {
   isTerminalRunStatus,
   waitingOnLabel,
@@ -57,6 +56,8 @@ import { shownSubagents } from './subagents/subagent-view.ts';
 import { runSeconds } from './turns.ts';
 import { useRunStream } from './use-run-stream.ts';
 import { StepList, StepToggle, turnHeading, useStepLog } from './WorkLog.tsx';
+import { currentTodo, shownTodo } from '../todo/todo-model.ts';
+import { TurnTodo } from '../todo/TurnTodo.tsx';
 
 const liveStates: Record<LiveRunStatus, TurnState> = {
   connecting: 'working',
@@ -90,7 +91,6 @@ const finishedMoods: Record<TerminalRunStatus, string> = {
 
 interface SoloTurnProps {
   run: Run;
-  taskCount?: ReactNode;
   detail: ConversationDetail;
   assistantMessage: Message | null;
   laterMessages: readonly Message[];
@@ -130,14 +130,7 @@ function turnStatus(run: Run, stream: RunProjection, waiting: boolean) {
   return { state: liveStates[stream.status], label: liveMoods[stream.status] };
 }
 
-export function SoloTurn({
-  run,
-  detail,
-  assistantMessage,
-  laterMessages,
-  repo,
-  taskCount,
-}: SoloTurnProps) {
+export function SoloTurn({ run, detail, assistantMessage, laterMessages, repo }: SoloTurnProps) {
   const { member, child } = soloChild(run, detail);
   const provider = member?.provider ?? run.provider;
   const finished = isTerminalRunStatus(run.status);
@@ -168,6 +161,8 @@ export function SoloTurn({
     ? detail.activity[run.id]!
     : (detail.activity[member?.runId ?? ''] ?? []);
   const steps = shownSteps(stream, persistedSteps, leads);
+  const todo = shownTodo(stream.todo, child?.todo ?? run.todo);
+  const doingTodo = working && !waitingText ? currentTodo(todo) : null;
   const stepsRunId = !leads && detail.activity[run.id]?.length ? run.id : streamRunId;
   useLiveReport(
     {
@@ -176,6 +171,7 @@ export function SoloTurn({
       provider,
       kind: 'agent',
       ...(waitingText ? { doing: waitingText } : {}),
+      ...(doingTodo ? { todo: doingTodo } : {}),
     },
     working,
     waitingText ? [] : steps,
@@ -244,21 +240,11 @@ export function SoloTurn({
       liveId={working && !waiting ? run.id : null}
       following={child?.following ?? run.following}
       status={
-        log || taskCount ? (
-          <>
-            {log && (
-              <StepToggle
-                log={log}
-                label={turnHeading(log.views, waitingText ? 'waiting' : state, seconds, log.open)}
-              />
-            )}
-            {log && taskCount && (
-              <span className="mood-dot" aria-hidden="true">
-                ·
-              </span>
-            )}
-            {taskCount}
-          </>
+        log ? (
+          <StepToggle
+            log={log}
+            label={turnHeading(log.views, waitingText ? 'waiting' : state, seconds, log.open)}
+          />
         ) : null
       }
     >
@@ -282,6 +268,7 @@ export function SoloTurn({
           <Markdown text={part} streaming={last && leads && active && !publishing} />
         )}
       </TurnReply>
+      <TurnTodo entries={todo} live={working} />
       <BackgroundWork
         runId={run.id}
         background={working && !waiting ? stream.subagents.background : null}

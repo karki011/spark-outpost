@@ -104,7 +104,7 @@ test('a heavy chat resizes and switches panels without long main-thread work', a
   await page.setViewportSize({ width: 1400, height: 900 });
   await openHeavyChat(page);
   const work = page.getByRole('complementary', { name: 'Work panel' });
-  await expect(work.getByRole('tab', { name: 'Tasks' })).toBeVisible();
+  await expect(work.getByRole('tab', { name: 'To-do' })).toBeVisible();
   await page.waitForTimeout(1500);
   const layers = await compositedLayers(page);
   await watchLongTasks(page);
@@ -123,7 +123,7 @@ test('a heavy chat resizes and switches panels without long main-thread work', a
   );
 
   const clicks: Record<string, number> = {};
-  for (const name of ['Plan', 'Crew', 'Links', 'Cost', 'Tasks']) {
+  for (const name of ['Plan', 'Crew', 'Links', 'Cost', 'To-do']) {
     const tab = work.getByRole('tab', { name });
     if ((await tab.count()) === 0) continue;
     clicks[name] = await clickLatency(tab);

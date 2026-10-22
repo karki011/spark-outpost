@@ -22,7 +22,7 @@ function whoText(worker: Worker, step: StepActivity | null): string {
 
 export function runningText(worker: Worker, activity: StepActivity | null): string {
   const step = busyStep(activity);
-  const who = whoText(worker, step);
+  const who = worker.todo ? `${whoText(worker, step)} · ${worker.todo}` : whoText(worker, step);
   if (!step) return who;
   return `${who}: ${step.target ? `${step.verb} ${step.target}` : step.verb}`;
 }
@@ -46,6 +46,14 @@ export function RunningLine({
     <p className="cs-line run">
       <WorkerFace worker={worker} idle={!step} />
       <span className="cs-word">{whoText(worker, step)}</span>
+      {worker.todo && (
+        <>
+          <Dot />
+          <span className="cs-todo" title={worker.todo}>
+            {worker.todo}
+          </span>
+        </>
+      )}
       {step && (
         <>
           <Dot />

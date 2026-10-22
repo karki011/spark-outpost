@@ -10,9 +10,10 @@ What changed recently, newest first.
 
 ## October 2026
 
-| What changed                                                                   | What to do                            |
-| ------------------------------------------------------------------------------ | ------------------------------------- |
-| Spark Island answers one-pick questions; its card count skips set-aside cards. | See [Cards](cards.md#approval-cards). |
+| What changed                                                                   | What to do                                                 |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| The agent's to-do ticks off in the turn; **To-do** replaces **Tasks**.         | See [Follow a turn](follow-a-turn.md#see-whats-happening). |
+| Spark Island answers one-pick questions; its card count skips set-aside cards. | See [Cards](cards.md#approval-cards).                      |
 
 | **Add folder…** ends every project picker. | See [Link a project](start-a-chat.md#link-a-project). || Agents are signed in wherever you are in the Browser pane. Sign in again once. | See [Use the browser](use-the-browser.md#let-the-agent-look-and-browse). |
 | Meeting lines: on-time countdowns, wrap-ups name the chat, joined meetings drop. Card at start; **Alert at** sets earlier. | See [Use it](calendar.md#use-it). |

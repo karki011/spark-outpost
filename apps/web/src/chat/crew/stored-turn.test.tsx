@@ -31,7 +31,7 @@ function show(status: Run['status']) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const tree = (current: ReturnType<typeof crewTurn>) => (
     <QueryClientProvider client={client}>
-      <CrewTurn {...current} repo={null} taskCard={null} />
+      <CrewTurn {...current} repo={null} />
     </QueryClientProvider>
   );
   const view = render(tree(turn));
@@ -102,7 +102,7 @@ describe('a stored crew turn', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const view = render(
       <QueryClientProvider client={client}>
-        <CrewTurn {...turn} orchestration={stored} repo={null} taskCard={null} />
+        <CrewTurn {...turn} orchestration={stored} repo={null} />
       </QueryClientProvider>,
     );
     expect(view.container.querySelector('.crew-summary')?.textContent).toBe(CLOSING_REPLY);
