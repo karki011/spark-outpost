@@ -13,6 +13,6 @@ You'll talk to Spark. About 2 minutes.
 1. In **Settings → Voice**, switch on **Voice** and allow the microphone.
 2. Press **⌥⇧V** or **Dictate**, speak, then press again. **Esc** cancels.
 
-Say "start a chat in spark-outpost for CP-49084", "open the dashboards chat" or "who needs me". Nothing starts until you press **Enter** or say "send" after a new press.
+Say "start a chat in spark-outpost for CP-49084", "open the dashboards chat" or "who needs me". Nothing is sent until you press **Enter** or say "send" after a new press. Ask Spark then [acts](companion-quick-chat.md#let-ask-spark-act) as when you type.
 
 **Next:** [Mac privacy settings](mac-privacy.md)

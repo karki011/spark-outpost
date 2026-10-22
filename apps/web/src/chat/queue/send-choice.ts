@@ -1,10 +1,10 @@
 import {
-  waitedOn,
   type BackgroundWait,
   type BusyEnterAction,
   type MemberMessage,
   type Run,
 } from '@spark-outpost/contracts';
+import { waitedOnText } from '../wait-label.ts';
 
 export interface ModifierKeys {
   metaKey: boolean;
@@ -51,7 +51,7 @@ export function busyHint(
   background: BackgroundWait | null = null,
 ): string {
   if (waitingOn > 0) {
-    const waits = `while it waits on ${waitedOn(waitingOn, background)}`;
+    const waits = `while it waits on ${waitedOnText(waitingOn, background)}`;
     return `Enter to send to the agent now, ${waits} · ${modifiedEnter(mac)} to queue`;
   }
   const other = otherAction(preferred);

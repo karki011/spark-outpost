@@ -33,6 +33,7 @@ export const SHOTS_SPECS = [
 export const SPEC_GROUPS = {
   chat: [
     'agent-continues',
+    'agent-sleep',
     'artifacts',
     'attachments',
     'chat',

@@ -34,6 +34,7 @@ export const backgroundWaitSchema = z.object({
   agents: z.number().int().nonnegative(),
   tasks: z.number().int().nonnegative(),
   names: z.array(z.string().max(BACKGROUND_NAME_MAX)).max(BACKGROUND_NAMES_SHOWN).default([]),
+  wakesAt: z.number().int().positive().optional(),
 });
 export type BackgroundWait = z.infer<typeof backgroundWaitSchema>;
 
@@ -224,15 +225,34 @@ function counted(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
 
-export function waitedOn(count: number, background?: BackgroundWait | null): string {
+export type TimeFormat = (at: number) => string;
+
+export function wakeTime(wakesAt: number): string {
+  return new Date(wakesAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+export function waitedOn(
+  count: number,
+  background?: BackgroundWait | null,
+  time: TimeFormat = wakeTime,
+): string {
   if (!background) return subagentCount(count);
   const agents = background.agents > 0 ? counted(background.agents, 'background agent') : null;
   const tasks = background.tasks > 0 ? counted(background.tasks, 'background task') : null;
-  return [agents, tasks].filter((part) => part !== null).join(' and ');
+  const wakeup =
+    background.wakesAt === undefined ? null : `a wakeup at ${time(background.wakesAt)}`;
+  return [agents, tasks, wakeup].filter((part) => part !== null).join(' and ');
 }
 
-export function waitingOnLabel(count: number, background?: BackgroundWait | null): string {
-  return `Waiting on ${waitedOn(count, background)}`;
+export function waitingOnLabel(
+  count: number,
+  background?: BackgroundWait | null,
+  time: TimeFormat = wakeTime,
+): string {
+  if (background?.wakesAt !== undefined && background.agents + background.tasks === 0) {
+    return `Sleeping until ${time(background.wakesAt)}`;
+  }
+  return `Waiting on ${waitedOn(count, background, time)}`;
 }
 
 export function agentsWorkingLabel(working: number, total: number): string {
