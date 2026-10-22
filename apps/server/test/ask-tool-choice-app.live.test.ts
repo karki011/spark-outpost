@@ -60,7 +60,6 @@ beforeAll(async () => {
     db: t.db,
     providers: createProviders('acp', undefined, undefined, host),
     leaseSeconds: 60,
-    concurrency: 4,
     pollMs: 100,
     approvalPollMs: 200,
   });
