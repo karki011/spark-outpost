@@ -30,6 +30,7 @@ export const summaryQuery = `
     CASE WHEN r.status = 'queued' THEN (
       SELECT count(*)::int FROM jobs mine JOIN jobs other ON other.status = 'queued'
         AND (other.available_at, other.created_at) < (mine.available_at, mine.created_at)
+      JOIN runs other_run ON other_run.id = other.run_id AND other_run.role IS DISTINCT FROM 'digest'
       WHERE mine.run_id = r.id AND mine.status = 'queued'
     ) END AS latest_run_ahead,
     CASE WHEN r.status = 'running' THEN (
