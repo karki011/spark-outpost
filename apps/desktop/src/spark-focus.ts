@@ -16,8 +16,13 @@ export const FOCUS_EVENTS = [
   'did-resign-active',
 ] as const;
 
-export function watchSparkFocus(source: FocusSource, changed: () => void): () => void {
+export function watchSparkFocus(
+  source: FocusSource,
+  open: readonly ClosingWindow[],
+  changed: () => void,
+): () => void {
   const onCreated = (_event: unknown, window: ClosingWindow) => window.once('closed', changed);
+  for (const window of open) window.once('closed', changed);
   for (const name of FOCUS_EVENTS) source.on(name, changed);
   source.on('browser-window-created', onCreated as Listener);
   return () => {

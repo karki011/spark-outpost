@@ -170,7 +170,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       focused = next;
       island?.sparkFocus(next);
     });
-  const stopFocusWatch = watchSparkFocus(app, reportFocus);
+  const stopFocusWatch = watchSparkFocus(app, BrowserWindow.getAllWindows(), reportFocus);
   ipcMain.handle(IPC.islandSparkFocused, (event) => fromIsland(event) && sparkFocused());
   ipcMain.handle(IPC.islandPickFolder, async (event) => {
     if (!fromIsland(event)) return null;
