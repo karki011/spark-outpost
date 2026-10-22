@@ -60,7 +60,9 @@ test('an answer is drawn as Markdown and is the final reply, without the comment
     await expect(text).not.toContainText('`');
     await expect(text).not.toContainText('**');
     await expect(answer.getByRole('link')).toHaveCount(0);
-    await expect(request.locator('.op-text').first()).toContainText('`NOTES.md`');
+    await expect(request.locator('.op-text').first().locator('code').first()).toHaveText(
+      'NOTES.md',
+    );
   });
 
   await request.getByRole('button', { name: 'Open @api in chat' }).click();
