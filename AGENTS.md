@@ -60,6 +60,7 @@ Read `docs/product/PLAN.md` for product direction and `docs/architecture/PROTOCO
 ## Interface conventions
 
 - Follow the design kit in `docs/design/`. Use the shared semantic colors in `apps/web/public/theme.css`; do not hard-code palette colors in feature styles. Load the saved theme before React mounts.
+- Follow Apple's Human Interface Guidelines for the Mac app shell (standard menus with **Settings…** ⌘,, View and Format; Apple's keyboard shortcuts never reused for other actions; a Settings window, context menus, panels, trailing inspectors, focus and VoiceOver, Increase Contrast, Reduce Motion, the system appearance by default). The design kit governs content, tokens and type on every surface; where they conflict on the Mac shell, Apple wins. Text is never under 12px; controls are at least 28px on the Mac and 44px on touch; status is an icon plus a word, never colour alone, one meaning per colour. See `docs/design/README.md`.
 - Keep onboarding and Integrations on the same connection components and query cache. Show only supported connection methods and backend-reported status.
 - Use shared outline icons, restrained accent colors and visible keyboard focus; preserve mounted conversations when changing appearance.
 
