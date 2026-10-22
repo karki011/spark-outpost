@@ -11,6 +11,7 @@ import {
   WEB_FETCH_LOCAL_DENY_RULES,
 } from './claude-tools.ts';
 import { withPermissionRules, type ClaudeRepoOptions } from './repo-session.ts';
+import { sessionMeta } from './session-start.ts';
 
 type Options = {
   tools: string[];
@@ -65,10 +66,24 @@ describe('Claude built-in tools', () => {
     expect(CLAUDE_READ_TOOLS).not.toContain('Bash');
   });
 
-  it('keeps a chat with no project to its question tool', () => {
+  it('keeps a chat with no project to its question tool and its wakeup', () => {
     const chat = optionsOf(agentDefinitions.claude.conversationSessionMeta?.());
-    expect(chat.tools).toEqual(['AskUserQuestion']);
+    expect(chat.tools).toEqual(['AskUserQuestion', 'ScheduleWakeup']);
     expect(chat.disallowedTools).toEqual(expect.arrayContaining(CLAUDE_OFF_TOOL_NAMES));
+  });
+
+  it('lets every chat turn schedule a wakeup, and keeps it off in Ask Spark', () => {
+    const claude = agentDefinitions.claude;
+    const asking = optionsOf(claude.projectSessionMeta?.([], null, false, false));
+    const doing = optionsOf(claude.doSessionMeta?.([]));
+    for (const options of [asking, doing]) expect(options.tools).toContain('ScheduleWakeup');
+    expect(CLAUDE_OFF_TOOL_NAMES).not.toContain('ScheduleWakeup');
+
+    const assistant = { sparkScope: { assistant: true } } as Parameters<typeof sessionMeta>[4];
+    const ask = optionsOf(sessionMeta(claude, null, false, null, assistant) ?? undefined);
+    expect(ask.tools).toEqual(['AskUserQuestion']);
+    expect(ask.disallowedTools).toContain('ScheduleWakeup');
+    expect(ask.settings.permissions.deny).toContain('ScheduleWakeup');
   });
 });
 

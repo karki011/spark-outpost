@@ -14,6 +14,7 @@ import {
   CLAUDE_PLAN_TOOLS,
   CLAUDE_QUESTION_TOOLS,
   CLAUDE_READ_TOOLS,
+  CLAUDE_WAIT_TOOLS,
   gatedAskRules,
   toolDenyRules,
 } from './claude-tools.ts';
@@ -259,7 +260,7 @@ const claudeSessions = {
   windowAtResult: true,
   readsProjectFolders: true,
   conversationSessionMeta: (repo?: ClaudeRepoOptions | null) =>
-    claudeSessionMeta(CLAUDE_QUESTION_TOOLS, [], repo ?? null),
+    claudeSessionMeta([...CLAUDE_QUESTION_TOOLS, ...CLAUDE_WAIT_TOOLS], [], repo ?? null),
   probeSessionMeta: claudeSessionMeta([], [], null, false, true),
   projectSessionMeta: (
     extraRoots: readonly string[],

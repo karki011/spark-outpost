@@ -54,7 +54,7 @@ describe('Claude session options', () => {
       'ExitPlanMode',
       'AskUserQuestion',
     ]);
-    expect(chat.tools).toEqual(['AskUserQuestion']);
+    expect(chat.tools).toEqual(['AskUserQuestion', 'ScheduleWakeup']);
   });
 
   it('passes extra repos only as deny-rule anchors, never as directories in _meta', () => {

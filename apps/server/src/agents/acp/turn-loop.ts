@@ -103,11 +103,13 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
   let quiet: Promise<Woken> = never;
   let writeUpTimer: AbortController | null = null;
   let shown = '';
+  let sleeping = false;
 
   const report = (count: BackgroundCount) => {
     const key = JSON.stringify(count);
     if (key === shown) return;
     shown = key;
+    sleeping = count.wakesAt !== undefined;
     push([{ kind: 'background_work', ...count }]);
   };
   const sendPrompt = (text: string) => {
@@ -192,10 +194,13 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
     background?.see(message.update);
     if (subagentMark(message.update)?.event === 'ended') handedBack = true;
     if (!waiting) continue;
-    worked ||= startsAgentCycle(message.update);
+    if (!worked && startsAgentCycle(message.update)) {
+      worked = true;
+      background?.cycleStarted();
+    }
     if (worked) endWriteUp();
     const count = background?.count();
-    if (count && count.agents + count.tasks > 0) report(count);
+    if (count && (count.agents + count.tasks > 0 || sleeping)) report(count);
     if (!worked || !endsAgentCycle(message.update)) continue;
     push(loop.tokens.addCycle(loop.requests.take(), mapper.takeSubagentTokens()));
     if (!background?.busy()) {

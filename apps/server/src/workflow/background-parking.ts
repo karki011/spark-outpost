@@ -18,7 +18,7 @@ export function backgroundParking(
   return {
     observe(output) {
       if (output.kind !== 'background_work') return false;
-      if (output.agents + output.tasks === 0) release();
+      if (output.agents + output.tasks === 0 && output.wakesAt === undefined) release();
       else unpark ??= parked?.park(onQuit) ?? null;
       return true;
     },
