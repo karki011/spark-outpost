@@ -56,6 +56,11 @@ export function joinState(event: CalendarEvent, at: number): 'open' | 'later' | 
   return at < window.end ? 'later' : 'none';
 }
 
+export function shortcutJoin(events: readonly CalendarEvent[], at: number): CalendarEvent | null {
+  const open = events.filter((event) => joinState(event, at) === 'open');
+  return open.length === 1 ? open[0]! : null;
+}
+
 export function joinOpensAt(event: CalendarEvent): string {
   return clock(spanOf(event).start - JOIN_LEAD_MS);
 }

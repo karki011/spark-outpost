@@ -30,6 +30,7 @@ import { openIslandWindow, type IslandWindow } from './island-window.ts';
 import { appLayout } from './layout.ts';
 import { noActivate } from './no-activate.ts';
 import { startMeetingAlertHost } from './meeting-alert-host.ts';
+import { watchSparkFocus } from './spark-focus.ts';
 import { startViewingHost } from './viewing-host.ts';
 import { watchHourCycle } from './hour-cycle.ts';
 import { startVoiceHost, type VoiceHost } from './voice/host.ts';
@@ -178,9 +179,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       focused = next;
       island?.sparkFocus(next);
     });
-  app.on('browser-window-focus', reportFocus);
-  app.on('browser-window-blur', reportFocus);
-  app.on('did-become-active', reportFocus);
+  const stopFocusWatch = watchSparkFocus(app, BrowserWindow.getAllWindows(), reportFocus);
   ipcMain.handle(IPC.islandSparkFocused, (event) => fromIsland(event) && sparkFocused());
   ipcMain.handle(IPC.islandPickFolder, async (event) => {
     if (!fromIsland(event)) return null;
@@ -379,9 +378,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       ]) {
         ipcMain.removeAllListeners(channel);
       }
-      app.off('browser-window-focus', reportFocus);
-      app.off('browser-window-blur', reportFocus);
-      app.off('did-become-active', reportFocus);
+      stopFocusWatch();
       tray.destroy();
     },
   };
