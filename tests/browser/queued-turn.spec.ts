@@ -1,11 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
-import { seedChats } from './sidebar-seed.ts';
+import { notifyChanged, seedChats } from './sidebar-seed.ts';
 
 const TITLE = 'Third in line';
 
-async function queueBehindOthers(): Promise<void> {
+async function queueBehindOthers(): Promise<string[]> {
   const ids = await seedChats([
     { title: 'First in line', minutesAgo: 30, run: { status: 'queued' } },
     { title: 'Second in line', minutesAgo: 20, run: { status: 'queued' } },
@@ -24,6 +24,20 @@ async function queueBehindOthers(): Promise<void> {
   } finally {
     await db.end();
   }
+  return ids;
+}
+
+async function startFirst(chatId: string): Promise<void> {
+  const db = openTestDb();
+  try {
+    await db.query(
+      `UPDATE jobs SET status = 'leased' WHERE run_id IN (SELECT id FROM runs WHERE conversation_id = $1)`,
+      [chatId],
+    );
+  } finally {
+    await db.end();
+  }
+  await notifyChanged('conversation', chatId);
 }
 
 const row = (page: Page) =>
@@ -34,7 +48,7 @@ test.beforeEach(async () => {
 });
 
 test('a queued turn says it is waiting to start and how many runs are ahead', async ({ page }) => {
-  await queueBehindOthers();
+  const [first] = await queueBehindOthers();
   await openChats(page);
   await expect(page.locator('.chat-title')).toHaveText(TITLE);
 
@@ -48,4 +62,12 @@ test('a queued turn says it is waiting to start and how many runs are ahead', as
   const status = page.locator('.cstatus');
   await expect(status).toContainText('is waiting to start · 2 ahead');
   await expect(status).not.toContainText(/thinking|working/);
+
+  await startFirst(first!);
+  await expect(head.locator('.mood')).toHaveText('waiting to start · 1 ahead');
+  await expect(status).toContainText('is waiting to start · 1 ahead');
+  await expect(row(page).locator('.row-open')).toHaveAttribute(
+    'title',
+    /Waiting to start · 1 ahead/,
+  );
 });

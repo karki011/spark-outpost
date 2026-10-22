@@ -49,6 +49,7 @@ import { ErrorLine, ModelSwitchNote } from './ModelSwitchNote.tsx';
 import { providerName } from './provider-name.ts';
 import { useLiveReport } from './status/status-context.ts';
 import { waitingToStart } from '../conversations/waiting-to-start.ts';
+import { useQueuedAhead } from './use-queued-ahead.ts';
 import { BackgroundWork } from './BackgroundWork.tsx';
 import { SubagentsLine } from './subagents/SubagentsLine.tsx';
 import { useShowAgents } from './subagents/agent-board.ts';
@@ -120,10 +121,9 @@ function turnApprovals(
   return shownApprovals(stored, pendingCheckpoint ? [pendingCheckpoint] : [], stream.approvals);
 }
 
-function queuedLine(run: Run, detail: ConversationDetail, stream: RunProjection): string | null {
+function queuedLine(run: Run, stream: RunProjection, ahead: number | undefined): string | null {
   if (run.status !== 'queued' || stream.status !== 'connecting') return null;
-  const latest = detail.conversation.latestRun;
-  return waitingToStart(latest?.id === run.id ? latest.ahead : undefined).toLowerCase();
+  return waitingToStart(ahead).toLowerCase();
 }
 
 function turnStatus(run: Run, stream: RunProjection, waiting: boolean) {
@@ -167,7 +167,8 @@ export function SoloTurn({
   const waitingOn = working && !waiting ? stream.subagents.waitingOn : 0;
   const waitingText =
     waitingOn > 0 ? waitingOnLabel(waitingOn, stream.subagents.background).toLowerCase() : null;
-  const queuedText = queuedLine(run, detail, stream);
+  const ahead = useQueuedAhead(detail.conversation.id, run.id);
+  const queuedText = queuedLine(run, stream, ahead);
   const doingText = queuedText ?? waitingText;
   const label = doingText ?? status.label;
 
