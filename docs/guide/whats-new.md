@@ -22,6 +22,7 @@ What changed recently, newest first.
 | Agents can start sub-chats themselves; phones can **Start** a draft.                                                                         | See [Start it](outpost-stories.md#start-it-from-a-chat).          |
 | Picker: no **Auto**, shows the model; no-project chats get a folder. Agents search the web, show artifacts; links ask first.                 | See [Agent tools](modes-and-levels.md#agent-tools).               |
 | Agents stay running between messages: **Continued on its own**, **Waiting on…**, **Stopped by Quit**. Every chat starts at once.             | See [Background work](follow-a-turn.md#background-work).          |
+| Spark Island survives closing Spark's window.                                                                                                | See [Spark Island](desktop-companion.md#open-it).                 |
 | Nothing chimes for the chat you're viewing. Spark Island opens from Scout; **Hide in screen sharing**.                                       | See [Spark Island](desktop-companion.md#answer-a-card).           |
 | **Atlassian** replaces Jira. Agent deletes in Jira, Confluence and Calendar follow your mode.                                                | See [Connect](tickets-and-github.md#connect-atlassian-or-linear). |
 | **Today** from macOS or Google: **Month**, nudges, early **Join**, **Choose**, agent access; optional **Join meetings automatically**.       | See [Use it](calendar.md#use-it).                                 |
