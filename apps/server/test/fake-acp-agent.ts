@@ -31,6 +31,7 @@ import {
   laterTurn,
 } from './fake-acp-background.ts';
 import { rateLimitTurn } from './fake-acp-rate-limit.ts';
+import { SLEEP_TRIGGER, sleepTurn } from './fake-acp-sleep.ts';
 import { windowTurn } from './fake-acp-window.ts';
 import { requestsTurn } from './fake-acp-requests.ts';
 import {
@@ -254,6 +255,7 @@ async function turn(
   if (requested) return requested;
   if (text.includes('#orphan ')) return orphanedCommandTurn(client, sessionId, text, signal);
   if (text.includes(BACKGROUND_TRIGGER)) return backgroundTurn(client, sessionId, text, say);
+  if (text.includes(SLEEP_TRIGGER)) return sleepTurn(client, sessionId, text, say);
   if (text.includes(HANDBACK_TRIGGER)) return handbackTurn(client, sessionId, text, say);
   if (text.includes(LATER_TRIGGER)) return laterTurn(client, sessionId, text, say, sessionCwd);
   if (text.includes('#heldtitle')) return heldTitleTurn(say);

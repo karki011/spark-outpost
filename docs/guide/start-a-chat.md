@@ -43,7 +43,7 @@ To unlink, select **No project folder** in the menu.
 
 Or paste or drag files into the box.
 
-The box styles Markdown as you type and sends it as typed. Select text, or **Aa**, to format. In a code block, **Enter** adds a line.
+Markdown styles as you type; select text or **Aa** to format.
 
 ## Share a chat with another chat
 

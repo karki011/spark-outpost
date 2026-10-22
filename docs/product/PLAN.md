@@ -348,7 +348,7 @@ Electron is preferred because the backend is Node: the server, the worker, and A
 - `contextIsolation` on, sandboxed renderer, no Node in the renderer, navigation restricted to our origin.
 - Closing the window keeps the tray process, worker, and agents running when background execution is enabled.
 - Every bundled executable (PostgreSQL, agent adapters) is signed and notarized on macOS.
-- Migrations run in the worker at startup after a backup; a failed migration stops startup rather than leaving a partial schema.
+- Migrations run in the API and the worker at startup, under an advisory lock, after a backup when `BACKUP_DIR` is set; a failed migration stops startup rather than leaving a partial schema.
 - Avoid native Node modules in the server where possible.
 - Agent CLIs are either bundled or detected on the user's PATH, matching the onboarding Local CLI path.
 

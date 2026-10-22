@@ -209,7 +209,7 @@ Registered only for a top-level chat turn of a member, through a new `SparkToolN
 - Deadlock: two user-started turns can ask each other and both wait. When a waiting ask targets a chat whose active turn has an open waiting request to the asker, the ask returns at once as not waiting and says so. This is a cycle check on open requests, not a heuristic.
 - No agent tool adds or removes a member by hand, renames a handle, pauses, cancels a request, pins, addresses a guest or uses `@all`. Since October 20, 2026 one tool, `spark_outpost_start`, creates an outpost and its sub-chats from the agent's own story (section 17).
 
-**Tool budget.** `pnpm exec tsx scripts/spark-tool-budget.ts` today: plain chat 28 tools, 25,620 characters against a cap of 27,000, instructions 1,546 against 1,700 (`apps/server/test/spark-tool-budget.test.ts`). The three member tools sit behind `'outpost'`, which must be left out of `HOW_TO_GET` in `availability.ts`. `spark_outpost_draft` is the one tool a plain chat pays for and has 1,380 characters to fit in; if it cannot, raising the cap is the owner's call.
+**Tool budget.** `pnpm exec tsx scripts/spark-tool-budget.ts` today: plain chat 28 tools, 25,646 characters against a cap of 27,000, instructions 1,664 against 1,700 (`apps/server/test/spark-tool-budget.test.ts`). The three member tools sit behind `'outpost'`, which must be left out of `HOW_TO_GET` in `availability.ts`. `spark_outpost_draft` is the one tool a plain chat pays for and has 1,354 characters to fit in; if it cannot, raising the cap is the owner's call.
 
 **What the receiving agent is told.** `loadRunInput` wraps the prompt of a `source = 'outpost'` run. For a request another chat wrote:
 
