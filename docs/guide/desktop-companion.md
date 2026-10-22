@@ -22,13 +22,13 @@ Drag Scout to place it. At top centre it docks, half hidden when quiet.
 
 ## Open it
 
-Resting, Scout sits at the notch, with an amber count when something needs you. Rest the pointer on Scout to answer the top request or join a meeting within 10 minutes; click for Home. Passing over opens nothing.
+Resting, Scout sits at the notch, with an amber count when something needs you. Rest on Scout to answer the top request or join a meeting within 10 minutes; click for Home. Passing over opens nothing.
 
 ![Spark Island Home: one big request card with Allow, Deny and Later, and working chats below](images/companion-island-home-light.png)
 
 Home shows one big card: a request, a question's choices or a meeting that starts. **‹ ›** moves between requests. **Home**, **Ask Spark** and **+** sit on top; **⌘O** opens Spark, **Esc** closes.
 
-Spark Island and Spark share one inbox: opening a request or its chat anywhere marks it read everywhere, and it stays as **Seen** until answered. **Later** sets it aside. Finished chats and flags stay in Spark.
+Spark Island and Spark share one inbox: opening a request or its chat anywhere marks it read everywhere, and it stays as **Seen** until answered. Finished chats and flags stay in Spark.
 
 ## Answer a card
 
