@@ -6,6 +6,15 @@ export function apiNow(): number {
   return Date.now() + readCalendarClock(FAKE_CALENDAR_STATE);
 }
 
+function apiClockInstalled(): boolean {
+  return readCalendarClock(FAKE_CALENDAR_STATE) !== 0;
+}
+
 export async function matchApiClock(page: Page): Promise<void> {
-  if (readCalendarClock(FAKE_CALENDAR_STATE) !== 0) await page.clock.install({ time: apiNow() });
+  if (apiClockInstalled()) await page.clock.install({ time: apiNow() });
+}
+
+export async function setPageClock(page: Page, time: number): Promise<void> {
+  if (apiClockInstalled()) await page.clock.setSystemTime(time);
+  else await page.clock.install({ time });
 }
