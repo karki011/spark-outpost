@@ -176,6 +176,7 @@ export const CHAT_TURN_ONLY: ReadonlySet<string> = new Set([
   'spark_outpost_ask',
   'spark_outpost_start',
   'spark_browser_sign_in',
+  'spark_artifact',
 ]);
 
 function offeredTo(tool: SparkTool, scope: Pick<SparkScope, 'readOnly' | 'assistant'>): boolean {
