@@ -41,6 +41,7 @@ export function MessageRow({ post, anchor, targets, body, createdAt, children }:
       <div className="op-msg-body">
         <div className="op-post-head">
           <b>{senderName(post)}</b>
+          {note && <span className="op-nfy">{note}</span>}
           {targets && targets.length > 0 && (
             <span className="op-to">
               <MoveIcon />
@@ -56,7 +57,6 @@ export function MessageRow({ post, anchor, targets, body, createdAt, children }:
               Pinned
             </span>
           )}
-          {note && <span className="op-nfy">{note}</span>}
         </div>
         <PostText text={body} what={what} markdown />
         {post.files > 0 && (

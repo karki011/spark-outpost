@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 import type { OutpostDetail } from '@spark-outpost/contracts';
-import { api, queryKeys } from '../api/client.ts';
+import type { api } from '../api/client.ts';
+import { queryKeys } from '../api/client.ts';
 import { projectKeys } from '../api/projects.ts';
 import { OutpostView } from './OutpostView.tsx';
 import { outpostKeys } from './outposts-api.ts';
@@ -29,7 +30,7 @@ function json(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), { status });
 }
 
-export function useOutpostViewHarness(): void {
+export function setUpOutpostView(): void {
   beforeEach(() => {
     client = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },

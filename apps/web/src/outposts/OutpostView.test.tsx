@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { api, queryKeys } from '../api/client.ts';
 import { phoneKeys } from '../phone/phone-api.ts';
-import { SENT, calls, client, show, useOutpostViewHarness, view } from './outpost-view-harness.tsx';
+import { SENT, calls, client, show, setUpOutpostView, view } from './outpost-view-harness.tsx';
 import {
   API_CHAT,
   FE_CHAT,
@@ -16,7 +16,7 @@ import {
 } from './test-fixtures.ts';
 import { stackedStory } from './story-fixtures.ts';
 
-useOutpostViewHarness();
+setUpOutpostView();
 
 describe('OutpostView', () => {
   it('shows the name, the chats, the thread and one message box', () => {

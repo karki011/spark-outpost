@@ -3,10 +3,10 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { api } from '../api/client.ts';
 import { phoneKeys } from '../phone/phone-api.ts';
-import { SENT, calls, client, show, useOutpostViewHarness, view } from './outpost-view-harness.tsx';
+import { SENT, calls, client, show, setUpOutpostView, view } from './outpost-view-harness.tsx';
 import { API_CHAT, FE_CHAT, OUTPOST_ID, detail, post } from './test-fixtures.ts';
 
-useOutpostViewHarness();
+setUpOutpostView();
 
 const overview = () => screen.getByRole('complementary', { name: 'Overview' });
 const pane = () => screen.getByRole('complementary', { name: 'Thread with @api' });

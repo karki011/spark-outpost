@@ -160,10 +160,12 @@ test('a sub-task waits for the one it starts after until Start anyway', async ({
   await startStory(page);
   await openOutpost(page);
   const held = post(page, FE_TASK);
-  await expect(held.locator('.op-post-head').first()).toContainText('@leadnot from you');
-  await expect(held.locator('.op-post-head .chat-face')).toHaveCount(2);
-  await expect(held.locator('.op-reason')).toHaveText('Waiting for @api');
-  await expect(stateOf(held)).toHaveText('Sent');
+  await expect(held.locator('.op-post-head').first()).toContainText(
+    '@leadstarted by you, not written by you',
+  );
+  await expect(held.locator('.chat-face')).toHaveCount(2);
+  await expect(held.locator('.op-card-meta')).toHaveText('Waiting for @api');
+  await expect(stateOf(held)).toHaveText('Held');
   await expect(stateOf(post(page, 'Summarise'))).toHaveText('Working', { timeout: TURN_TIMEOUT });
 
   const summary = stories(page).locator('summary');
@@ -185,8 +187,7 @@ test('a sub-task waits for the one it starts after until Start anyway', async ({
   await startAnyway.focus();
   await page.keyboard.press('Enter');
   await expect(startAnyway).toHaveCount(0);
-  await expect(held.locator('.op-reason')).toHaveCount(0, { timeout: TURN_TIMEOUT });
-  await expect(stateOf(held)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
+  await expect(stateOf(held)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
   expect(starts).toHaveLength(1);
   await expect(rows.nth(1)).toContainText('Answered');
   await expect(summary).toContainText(/[12] of 2 answered/);
@@ -226,6 +227,8 @@ test('the story bar shows stacked pull requests and hands a stack update to the 
   expect(sent).toHaveLength(0);
 
   await page.setViewportSize(PHONE);
+  await page.getByRole('radio', { name: /^Overview/ }).click();
+  await stories(page).locator('summary').click();
   await expect(subTasks(page)).toBeVisible();
   await expectNoSidewaysScroll(page);
   await shot(page, 'outpost-r2-story-phone');

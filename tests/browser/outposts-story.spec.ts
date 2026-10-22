@@ -9,6 +9,7 @@ import { openChats } from './navigation.ts';
 import {
   NAME,
   TURN_TIMEOUT,
+  openThread,
   outpostPage,
   post,
   proceed,
@@ -19,6 +20,7 @@ import {
   stateOf,
   stepNow,
   thread,
+  threadPane,
 } from './outposts-kit.ts';
 import { seedChats } from './sidebar-seed.ts';
 
@@ -176,10 +178,12 @@ test('a chat proposes sub-chats, the user starts them, held ones follow, and the
   await reviewAndStart(page);
 
   const [api, fe, docs] = [post(page, API_TASK), post(page, FE_TASK), post(page, DOCS_TASK)];
-  await expect(api.locator('.op-post-head').first()).toContainText('@leadnot from youto@api');
+  await expect(api.locator('.op-post-head').first()).toContainText(
+    '@leadstarted by you, not written by youto@api',
+  );
   await expect(stateOf(api)).toHaveText('Working', { timeout: TURN_TIMEOUT });
-  await expect(fe.locator('.op-reason')).toHaveText('Waiting for @api');
-  await expect(docs.locator('.op-reason')).toHaveText('Waiting for @fe');
+  await expect(fe.locator('.op-card-meta')).toHaveText('Waiting for @api');
+  await expect(docs.locator('.op-card-meta')).toHaveText('Waiting for @fe');
 
   const summary = page.getByRole('region', { name: 'Stories' }).locator('summary');
   await expect(summary).toContainText(`${STORY}0 of 3 answered`);
@@ -193,11 +197,10 @@ test('a chat proposes sub-chats, the user starts them, held ones follow, and the
 
   const starts = requestsTo(page, START_NOW_URL, 'POST');
   finish('api');
-  await expect(stateOf(api)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
-  await expect(fe.locator('.op-reason')).toHaveCount(0, { timeout: TURN_TIMEOUT });
+  await expect(stateOf(api)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
   await expect(stateOf(fe)).toHaveText('Working', { timeout: TURN_TIMEOUT });
   expect(starts).toHaveLength(0);
-  await expect(docs.locator('.op-reason')).toHaveText('Waiting for @fe');
+  await expect(docs.locator('.op-card-meta')).toHaveText('Waiting for @fe');
 
   const startAnyway = docs.getByRole('button', { name: 'Start the request to @docs anyway' });
   await startAnyway.focus();
@@ -208,18 +211,19 @@ test('a chat proposes sub-chats, the user starts them, held ones follow, and the
   await expect(thread(page).locator('.op-post', { hasText: 'has ended' })).toHaveCount(0);
 
   finish('docs');
-  await expect(stateOf(docs)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
+  await expect(stateOf(docs)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
   finish('fe');
-  await expect(stateOf(fe)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
+  await expect(stateOf(fe)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
 
   const wrapUp = post(page, `Every sub-task of the story "${STORY}" has ended.`);
   await expect(wrapUp).toHaveCount(1, { timeout: TURN_TIMEOUT });
   await expect(wrapUp.locator('.op-post-head').first()).toContainText('Sparknot from youto@lead');
-  await expect(stateOf(wrapUp)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
+  await expect(stateOf(wrapUp)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
   await expect(summary).toContainText('3 of 3 answered');
   await inBothThemes(page, '6-wrap-up', '.main.op');
 
-  await wrapUp.getByRole('button', { name: 'Open @lead in chat' }).click();
+  await openThread(wrapUp, 'lead');
+  await threadPane(page, 'lead').getByRole('button', { name: 'Open @lead in chat' }).click();
   await expect(page.locator('.chat-title')).toHaveText('Checkout plan');
   const header = page.locator('.bubble.from', { hasText: 'has ended' });
   await expect(header.locator('.from-head b')).toHaveText('From Spark');

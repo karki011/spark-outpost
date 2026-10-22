@@ -352,3 +352,21 @@
     display: none;
   }
 }
+
+@media (prefers-contrast: more) {
+  .op-card {
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+  }
+
+  .op-card-meta,
+  .op-nfy,
+  .op-pill,
+  .op-pill svg,
+  .op-trow-sub {
+    color: var(--text);
+  }
+
+  .op-dot {
+    box-shadow: inset 0 0 0 1.5px var(--text);
+  }
+}
