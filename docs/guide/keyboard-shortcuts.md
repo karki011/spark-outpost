@@ -10,24 +10,25 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 
 ## Chats
 
-| Keys                        | Action                                  |
-| --------------------------- | --------------------------------------- |
-| **⌘⇧O**                     | New chat                                |
-| **⌘K**                      | Search chats                            |
-| **⌘⇧K**                     | Find a session in **Sessions**          |
-| **⌘B**                      | Show or hide the chat list              |
-| **Enter** / **Shift+Enter** | Send / new line                         |
-| **Enter** / **⌘Enter**      | While a turn runs: queue / send now     |
-| **@** / **/**               | Add a file / run a command              |
-| **⌘⇧Y**                     | Jump to the card that waits for you     |
-| **⌘D**                      | Open the **Changes** drawer             |
-| **⌘⇧A**                     | Add selected text to the chat or prompt |
-| **⌘⇧B**                     | Show or hide the Browser pane (Mac app) |
-| **⌘J**                      | Join, or choose a meeting               |
-| **⌃\`**                     | Show or hide the terminal               |
-| **⌘⇧F**                     | Focus a Terminal session, or leave it   |
-| **⌥Tab** / **⌥⇧Tab**        | Leave a Terminal session                |
-| **Esc**                     | Close Agent TV, a drawer or a menu      |
+| Keys                           | Action                                  |
+| ------------------------------ | --------------------------------------- |
+| **⌘⇧O**                        | New chat                                |
+| **⌘K**                         | Search chats                            |
+| **⌘⇧K**                        | Find a session in **Sessions**          |
+| **⌘B**; **⌃⌘S** in the Mac app | Show or hide the chat list              |
+| **⌘,**                         | Open **Settings** (Mac app)             |
+| **Enter** / **Shift+Enter**    | Send / new line                         |
+| **Enter** / **⌘Enter**         | While a turn runs: queue / send now     |
+| **@** / **/**                  | Add a file / run a command              |
+| **⌘⇧Y**                        | Jump to the card that waits for you     |
+| **⌘D**                         | Open the **Changes** drawer             |
+| **⌘⇧A**                        | Add selected text to the chat or prompt |
+| **⌘⇧B**                        | Show or hide the Browser pane (Mac app) |
+| **⌘J**                         | Join, or choose a meeting               |
+| **⌃\`**                        | Show or hide the terminal               |
+| **⌘⇧F**                        | Focus a Terminal session, or leave it   |
+| **⌥Tab** / **⌥⇧Tab**           | Leave a Terminal session                |
+| **Esc**                        | Close Agent TV, a drawer or a menu      |
 
 ## Browser pane, Mac app
 
@@ -43,10 +44,11 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 
 ## Cards
 
-| Keys               | Action                                    |
-| ------------------ | ----------------------------------------- |
-| **Tab**, **Enter** | Move between a card's buttons, choose one |
-| Hold **Space**     | Hold-to-confirm buttons, for 1.5 seconds  |
+| Keys                    | Action                                    |
+| ----------------------- | ----------------------------------------- |
+| **Tab**, **Enter**      | Move between a card's buttons, choose one |
+| Arrow keys, **1**–**9** | Pick an answer to a question              |
+| Hold **Space**          | Hold-to-confirm buttons, for 1.5 seconds  |
 
 ## Changes drawer
 
