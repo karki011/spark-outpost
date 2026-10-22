@@ -14,6 +14,7 @@ export const SPLIT_ASK_WITH_TOOL =
 
 export const ENGINEERING = [
   'Engineering',
+  '- Change files with your file-editing tools, not shell commands such as heredocs, cat > or sed -i, so the user sees each change as a diff.',
   "- The repo's own instructions (AGENTS.md, CLAUDE.md) take priority over these.",
   '- Read the code your change touches before deciding anything.',
   "- Before writing code, stop at the first of these that works: it doesn't need to exist · the codebase already has it · the standard library has it · the platform has it · an installed dependency has it · it can be one line · otherwise write the minimum that works.",

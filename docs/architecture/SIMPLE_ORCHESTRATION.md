@@ -185,6 +185,7 @@ How to split work
 - If the request is unclear, ask one question and stop.
 
 Engineering
+- Change files with your file-editing tools, not shell commands such as heredocs, cat > or sed -i, so the user sees each change as a diff.
 - The repo's own instructions (AGENTS.md, CLAUDE.md) take priority over these.
 - Read the code your change touches before deciding anything.
 - Before writing code, stop at the first of these that works: it doesn't need to exist · the codebase already has it · the standard library has it · the platform has it · an installed dependency has it · it can be one line · otherwise write the minimum that works.
@@ -216,6 +217,8 @@ Why, measured with real Claude Opus 5.5 through the whole Spark path (worker, Sp
 | The line above (shipped)                   |      3/3 |       3/3 |   3/3 |     1/3 |      3/3 | 13/15 |
 
 Before the change, a turn that didn't ask with the tool wrote the options as prose and ended, as the owner saw. Plain Claude over ACP without Spark's block asked in 10 of 12 provider-only runs (`claude -p` can't be compared: it has no AskUserQuestion tool). The unclear prompt rarely asks with any wording; Claude makes a small change instead. Codex never called request_user_input in a Do turn (0 of 15 with the old line, 0 of 15 with the new one, 0 of 12 with no block): codex-acp 1.13.1 offers it in Plan turns, where a live run asked and got the answer back (`questions.live.test.ts`).
+
+The first Engineering line was added on October 21, 2026 and needs the owner's confirmation. Without it, Claude Opus 5.5 under this block wrote follow-up changes with shell heredocs in 10 of 12 real runs in Accept edits (a 2-turn fix-then-add-a-test task; plain `claude -p` did so in 1 of 3), so the user got no diff and an approval card for each write. With it, follow-ups made shell writes in 0 of 6 runs in Accept edits, 0 of 3 in Manual and 0 of 3 in Auto (one Auto first turn still did; 3 of 3 without the line). In Bypass permissions and Auto, Claude Code itself tells the model that shell edits are fine; in Bypass permissions it still did in 2 of 3 (3 of 3 without the line). The tool lists were right in every case; this is the model's choice of tool, not a missing tool.
 
 | Case                                                      | What the block says                                                                                          |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
