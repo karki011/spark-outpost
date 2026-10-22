@@ -53,7 +53,7 @@ export const CALENDAR_DEFAULT_SETTINGS: CalendarSettings = {
   briefBlock: true,
   agentsRead: true,
   alertStyle: 'center',
-  alertLead: 1,
+  alertLead: 0,
   autoJoin: false,
 };
 

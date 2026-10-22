@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { CalendarNow } from '@spark-outpost/contracts';
+import { CALENDAR_DEFAULT_SETTINGS, type CalendarNow } from '@spark-outpost/contracts';
 import { at, event, link } from './test-fixtures.ts';
 import {
   autoJoinPlan,
@@ -41,6 +41,17 @@ describe('meetingAlert', () => {
     const input = { now: now(), held: false, marks: NO_NUDGE_MARKS, at: at(9, 57) };
     expect(meetingAlert({ ...input, settings: { ...centre, alertLead: 0 } })).toBeNull();
     expect(meetingAlert({ ...input, settings: { ...centre, alertLead: 5 } })).not.toBeNull();
+  });
+
+  it('comes down exactly at the start by default', () => {
+    const input = {
+      now: now(),
+      settings: CALENDAR_DEFAULT_SETTINGS,
+      held: false,
+      marks: NO_NUDGE_MARKS,
+    };
+    expect(meetingAlert({ ...input, at: at(10) - 1 })).toBeNull();
+    expect(meetingAlert({ ...input, at: at(10) })?.events).toEqual([standup]);
   });
 
   it('stays at the island for the bubble style and during a hold', () => {
