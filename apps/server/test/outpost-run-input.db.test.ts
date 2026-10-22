@@ -56,6 +56,7 @@ describe('the input of a turn an outpost request started', () => {
       fromHandle: null,
       fromTitle: null,
       userStarted: false,
+      agentStarted: false,
       wrapUp: false,
     });
     expect(input.userRequest).toBe(BODY);
@@ -108,6 +109,7 @@ describe('the input of a turn an outpost request started', () => {
       fromHandle: null,
       fromTitle: null,
       userStarted: false,
+      agentStarted: false,
       wrapUp: false,
     });
   });
@@ -217,6 +219,7 @@ describe('who the row says sent a request', () => {
       fromHandle: 'lead',
       fromTitle: 'Checkout plan',
       userStarted: false,
+      agentStarted: false,
       wrapUp: false,
     });
     expect(requestAuthor(input.outpostRequest!)).toEqual({
