@@ -12,7 +12,7 @@ What changed recently, newest first.
 
 | What changed                                                                                                                                 | What to do                                                        |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Meeting lines: on-time countdowns, wrap-ups name the chat, joined meetings drop.                                                             | See [Use it](calendar.md#use-it).                                 |
+| Meeting lines: on-time countdowns, wrap-ups name the chat, joined meetings drop. Card at start; **Alert at** sets earlier.                   | See [Use it](calendar.md#use-it).                                 |
 | Agents ask with a question card.                                                                                                             | See [Cards](cards.md#approval-cards).                             |
 | One shared inbox, cleared everywhere; answer or set aside in place; flags never count. Meeting **Dismiss** sticks; **Refresh now** on Today. | See [Spark Island](desktop-companion.md#open-it).                 |
 | Ask Spark has a chat’s tools. **Let agents read my calendar** is now on; had it off? Turn it off again.                                      | See [Ask Spark](companion-quick-chat.md#ask-spark).               |

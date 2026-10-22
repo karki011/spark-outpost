@@ -22,7 +22,7 @@ Connect your calendars. About 2 minutes.
 - Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before** or **Hold alerts during this**.
 - **Refresh now** re-reads them.
 
-A minute before a meeting, Scout lowers a card mid-screen: **Join**, **Snooze 1 min** or **Dismiss** (for good). Esc dismisses; **⌘J** joins one meeting.
+At a meeting's start, Scout lowers a card: **Join**, **Snooze 1 min** or **Dismiss** (for good). Esc dismisses; **⌘J** joins one meeting.
 
 **Meeting alerts**: **Bubble from Scout** adds **Open** and **Choose** for clashes. Focus blocks hold chimes.
 
@@ -33,8 +33,8 @@ A minute before a meeting, Scout lowers a card mid-screen: **Join**, **Snooze 1 
 1. On the Calendar card, **Let agents read my calendar** is on by default.
 2. Turn on **Agents can edit** per calendar; Google asks first.
 
-Agents follow their [mode](spark-tools.md#when-actions-ask-first). In **Accept edits**, a vague request shows a card. Events with guests and shared calendars always ask.
+Agents follow their [mode](spark-tools.md#when-actions-ask-first). In **Accept edits**, a vague request shows a card. Guest events and shared calendars always ask.
 
-[Ask Spark](companion-quick-chat.md#let-ask-spark-act) reads and edits with these switches too, and snoozes, dismisses or joins meetings without them.
+[Ask Spark](companion-quick-chat.md#let-ask-spark-act) uses these switches too, and snoozes, dismisses or joins meetings without them.
 
 **Next:** [Talk to Spark](voice.md)
