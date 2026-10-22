@@ -35,11 +35,33 @@ export function provenance(post: OutpostPost): string | null {
   return `Written by ${senderName(post)}, ${note}. It is not your request to push or open a pull request.`;
 }
 
-export function metaLine(card: ThreadCard): string | null {
+interface MetaLine {
+  lead: string;
+  facts: string | null;
+  branch: string | null;
+}
+
+export function metaLine(card: ThreadCard): MetaLine | null {
   const { branch, facts } = card.git;
+  if (card.summary) {
+    return { lead: card.summary, facts: facts.length > 0 ? facts.join(' · ') : null, branch };
+  }
   const git = [branch, ...facts].filter((part): part is string => part !== null);
-  if (git.length > 0) return git.join(' · ');
-  return card.summary;
+  return git.length > 0 ? { lead: git.join(' · '), facts: null, branch: null } : null;
+}
+
+function CardMeta({ meta }: { meta: MetaLine }) {
+  return (
+    <p className="op-card-meta">
+      <span className="op-card-lead">{meta.lead}</span>
+      {meta.facts && (
+        <span className="op-card-facts" title={meta.branch ?? undefined}>
+          {' · '}
+          {meta.facts}
+        </span>
+      )}
+    </p>
+  );
 }
 
 export function RequestCard({
@@ -76,7 +98,7 @@ export function RequestCard({
         <span className="op-card-title">{card.title}</span>
         <StatusPill status={status} label={card.pill} />
       </div>
-      {meta && <p className="op-card-meta">{meta}</p>}
+      {meta && <CardMeta meta={meta} />}
       <div className="op-card-foot">
         {post.state === 'needs_you' && chatId && answerable && (
           <button

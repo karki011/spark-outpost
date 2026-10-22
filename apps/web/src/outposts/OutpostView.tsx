@@ -234,6 +234,7 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
       members={members}
       stories={stories}
       selectedId={layout.threadId}
+      sections={layout.phone}
       onTab={layout.setTab}
       onOpenThread={layout.openThread}
       onOpenChat={onOpenChat}

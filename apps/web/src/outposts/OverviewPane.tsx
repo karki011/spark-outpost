@@ -21,6 +21,7 @@ interface OverviewPaneProps {
   members: readonly MemberView[];
   stories: readonly OutpostStory[];
   selectedId: string | null;
+  sections?: boolean;
   onTab: (tab: OverviewTab) => void;
   onOpenThread: (postId: string) => void;
   onOpenChat: (conversationId: string) => void;
@@ -40,6 +41,15 @@ function isTab(id: string): id is OverviewTab {
   return (TAB_IDS as readonly string[]).includes(id);
 }
 
+function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  return (
+    <section className="op-overview-section" aria-labelledby={id}>
+      <h2 id={id}>{title}</h2>
+      {children}
+    </section>
+  );
+}
+
 export function OverviewPane({
   tab,
   cards,
@@ -47,24 +57,43 @@ export function OverviewPane({
   members,
   stories,
   selectedId,
+  sections = false,
   onTab,
   onOpenThread,
   onOpenChat,
   onFill,
 }: OverviewPaneProps) {
-  let body: ReactNode;
-  if (tab === 'threads') {
-    body = (
-      <>
-        <StoryBar stories={stories} onOpenChat={onOpenChat} onFill={onFill} />
-        <ThreadsTab cards={cards} selectedId={selectedId} onOpenThread={onOpenThread} />
-      </>
+  const threads = (
+    <>
+      <StoryBar stories={stories} onOpenChat={onOpenChat} onFill={onFill} />
+      <ThreadsTab cards={cards} selectedId={selectedId} onOpenThread={onOpenThread} />
+    </>
+  );
+  const library = <LibraryTab members={members} onOpenChat={onOpenChat} />;
+  const pullRequests = <PullsTab pulls={pulls} />;
+
+  if (sections) {
+    return (
+      <aside className="op-pane op-overview" aria-label="Overview">
+        <div className="op-pane-scroll">
+          <Section id="op-overview-threads" title="Threads">
+            {threads}
+          </Section>
+          <Section id="op-overview-library" title="Library">
+            {library}
+          </Section>
+          <Section id="op-overview-pulls" title="Pull requests">
+            {pullRequests}
+          </Section>
+        </div>
+      </aside>
     );
-  } else if (tab === 'library') {
-    body = <LibraryTab members={members} onOpenChat={onOpenChat} />;
-  } else {
-    body = <PullsTab pulls={pulls} />;
   }
+
+  let body: ReactNode;
+  if (tab === 'threads') body = threads;
+  else if (tab === 'library') body = library;
+  else body = pullRequests;
 
   return (
     <aside className="op-pane op-overview" aria-label="Overview">

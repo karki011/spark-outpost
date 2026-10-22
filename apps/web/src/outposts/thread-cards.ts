@@ -1,4 +1,4 @@
-import type { OutpostPost, ThreadItem } from '@spark-outpost/contracts';
+import { addressees, type OutpostPost, type ThreadItem } from '@spark-outpost/contracts';
 import { countLabel } from '../ui/count-label.ts';
 import { splitQuestion } from './answer-text.ts';
 import { isOpenPull, pullOf, type OutpostPull } from './outpost-pulls.ts';
@@ -58,9 +58,14 @@ function clip(text: string, max: number): string {
   return text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`;
 }
 
-export function requestTitle(body: string): string {
-  const first = body
-    .split('\n')
+function linesFor(body: string, handle: string | null): string[] {
+  const lines = body.split('\n');
+  const own = handle ? lines.find((line) => addressees(line, [handle]).length > 0) : undefined;
+  return own === undefined ? lines : [own, ...lines];
+}
+
+export function requestTitle(body: string, handle: string | null = null): string {
+  const first = linesFor(body, handle)
     .map((line) => plain(line.replace(LEADING_HANDLES, '')))
     .find((line) => line !== '');
   return first ? clip(first, TITLE_MAX) : 'Request';
@@ -132,7 +137,7 @@ export function threadCard(
     post,
     status,
     pill: pillOf(post, status),
-    title: requestTitle(post.body),
+    title: requestTitle(post.body, post.toHandle),
     summary: cardSummary(post, activity),
     git: gitLine(post, pull),
     pull,

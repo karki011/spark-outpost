@@ -22,6 +22,7 @@
 
 .op-title-menu {
   min-width: 0;
+  margin-left: -6px;
 }
 
 .op-title-menu .chat-title {
@@ -34,8 +35,8 @@
   align-items: center;
   gap: 4px;
   max-width: 100%;
+  min-height: 28px;
   padding: 2px 6px;
-  margin-left: -6px;
   border-radius: var(--r-sm);
   font: inherit;
   color: inherit;
@@ -247,12 +248,23 @@
 }
 
 .op-card-meta {
+  display: flex;
+  min-width: 0;
   margin: 4px 0 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--muted);
   font-size: var(--op-meta-size);
+}
+
+.op-card-lead {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.op-card-facts {
+  flex-shrink: 0;
+  white-space: pre;
 }
 
 .op-card-foot {
@@ -345,6 +357,30 @@
 
 .op-suggested li .op-line {
   margin: 0;
+}
+
+@media (pointer: coarse) {
+  .op-title-btn {
+    position: relative;
+  }
+
+  :is(.op-title-btn, .op-stack .op-member)::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+
+  .op-stack .op-member {
+    margin-left: 6px;
+  }
+
+  .op-trow {
+    min-height: 44px;
+  }
 }
 
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {

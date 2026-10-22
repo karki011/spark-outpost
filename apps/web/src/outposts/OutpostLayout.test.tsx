@@ -141,7 +141,7 @@ describe('a thread in the side pane', () => {
 });
 
 describe('on a phone', () => {
-  it('switches between the conversation and Overview with one segmented control', () => {
+  it('switches between the conversation and Overview with one segmented control, and lists Overview in sections', () => {
     onPhone();
     show(detail(threads()));
     view();
@@ -150,6 +150,12 @@ describe('on a phone', () => {
     fireEvent.click(within(views).getByRole('radio', { name: 'Overview · 1 waiting' }));
     expect(overview()).toBeTruthy();
     expect(screen.queryByRole('list', { name: 'Outpost thread' })).toBeNull();
+    expect(within(overview()).queryByRole('radiogroup')).toBeNull();
+    expect(
+      within(overview())
+        .getAllByRole('heading', { level: 2 })
+        .map((heading) => heading.textContent),
+    ).toEqual(['Threads', 'Library', 'Pull requests']);
     fireEvent.click(within(overview()).getByRole('button', { name: /Add the endpoint/ }));
     expect(pane()).toBeTruthy();
     expect(screen.queryByRole('radiogroup', { name: 'Outpost view' })).toBeNull();

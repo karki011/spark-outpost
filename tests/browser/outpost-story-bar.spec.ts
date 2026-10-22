@@ -146,6 +146,7 @@ const subTasks = (page: Page) => page.getByRole('list', { name: 'Sub-tasks of Us
 async function expectAccessible(page: Page): Promise<void> {
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
+    await page.waitForTimeout(300);
     const results = await new AxeBuilder({ page })
       .include('.main.op')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])

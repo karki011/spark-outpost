@@ -80,6 +80,15 @@ describe('the title of a request', () => {
     );
   });
 
+  it('is the first line addressed to its own chat when one message asks several', () => {
+    const body = '@api Add the endpoint\n\n@web Draw the page for it';
+    expect(requestTitle(body, 'web')).toBe('Draw the page for it');
+    expect(requestTitle(body, 'api')).toBe('Add the endpoint');
+    expect(requestTitle('Please, @api and @web: ship it', 'web')).toBe(
+      'Please, @api and @web: ship it',
+    );
+  });
+
   it('skips empty lines, cuts a long line, and has a fallback', () => {
     expect(requestTitle('\n\n@api Fix it')).toBe('Fix it');
     expect(requestTitle('x'.repeat(200))).toHaveLength(80);

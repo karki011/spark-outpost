@@ -80,7 +80,7 @@ export function LibraryTab({ members, onOpenChat }: LibraryTabProps) {
       <p className="op-pane-empty" aria-busy={loading}>
         {loading
           ? 'Gathering the chats’ files…'
-          : 'No files yet. Pages and files the chats make show here.'}
+          : 'No files yet. Pages the chats make and files added to them show here; changed code shows on each request.'}
       </p>
     );
   }

@@ -142,6 +142,12 @@ test('on a phone the conversation and Overview are one segmented control, and a 
   await views.getByRole('radio', { name: 'Overview' }).click();
   await expect(overview(page)).toBeVisible();
   await expect(page.getByRole('list', { name: 'Outpost thread' })).toBeHidden();
+  await expect(overview(page).getByRole('radiogroup')).toHaveCount(0);
+  await expect(overview(page).getByRole('heading', { level: 2 })).toHaveText([
+    'Threads',
+    'Library',
+    'Pull requests',
+  ]);
   await expectNoSidewaysScroll(page);
 
   await overview(page)

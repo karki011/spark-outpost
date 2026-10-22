@@ -60,7 +60,7 @@ describe('RequestCard', () => {
     );
   });
 
-  it('shows the answer in one meta line: the branch facts, or else a short summary', () => {
+  it('shows the answer in one meta line: a short summary and the git facts, or else the branch', () => {
     renderCard(
       post(1, {
         state: 'answered',
@@ -83,9 +83,11 @@ describe('RequestCard', () => {
         },
       ],
     );
-    expect(
-      screen.getByText('spark/usage · Not committed · Pushed · 2 files · PR #12'),
-    ).toBeTruthy();
+    const meta = screen.getByText('Added the endpoint.').parentElement!;
+    expect(meta.textContent).toBe(
+      'Added the endpoint. · Not committed · Pushed · 2 files · PR #12',
+    );
+    expect(screen.getByTitle('spark/usage')).toBeTruthy();
     expect(screen.getByText('Ready for review')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Review PR' }).getAttribute('href')).toBe(PR_URL);
     cleanup();
@@ -96,6 +98,14 @@ describe('RequestCard', () => {
       }),
     );
     expect(screen.getByText('It returns a list.')).toBeTruthy();
+    cleanup();
+    renderCard(
+      post(1, {
+        state: 'answered',
+        answer: { text: '', branch: 'spark/usage', changes: ['a.ts'], pullRequests: [] },
+      }),
+    );
+    expect(screen.getByText('spark/usage · 1 file')).toBeTruthy();
   });
 
   it('puts who wrote a request from another chat in its name and tooltip, not on its face', () => {
