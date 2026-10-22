@@ -10,13 +10,13 @@ One chat is one agent session: Claude Code, Codex or Z.ai. Your message goes to 
 
 ## What happens to a message
 
-| Step       | What happens                                                                                                                    |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Place   | In a mode that can change files, the chat gets its own [worktree](where-spark-works.md) and branch.                             |
-| 2. Plan    | Only when you ask: `/plan` or **Plan** mode has the agent [plan first](plan-card.md).                                           |
-| 3. Work    | The agent answers or changes code. Every action passes the [approval gate](approvals.md) and the audit.                         |
-| 4. Keep    | Changed files are kept, with a **Changes kept** record you can [revert](review-changes.md).                                     |
-| 5. Publish | You [ship](ship-and-pull-requests.md), or the agent pushes and opens the PR. Spark then [handles PR feedback](pr-follow-up.md). |
+| Step       | What happens                                                                                                                               |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1. Place   | In a mode that can change files, the chat gets its own [worktree](where-spark-works.md) and branch, or a private folder without a project. |
+| 2. Plan    | Only when you ask: `/plan` or **Plan** mode has the agent [plan first](plan-card.md).                                                      |
+| 3. Work    | The agent answers or changes code. Every action passes the [approval gate](approvals.md) and the audit.                                    |
+| 4. Keep    | Changed files are kept, with a **Changes kept** record you can [revert](review-changes.md).                                                |
+| 5. Publish | You [ship](ship-and-pull-requests.md), or the agent pushes and opens the PR. Spark then [handles PR feedback](pr-follow-up.md).            |
 
 Spark adds nothing to the reply except a line about publishing.
 

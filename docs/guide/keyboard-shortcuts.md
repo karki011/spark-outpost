@@ -16,7 +16,7 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **⌘K**                         | Search chats                            |
 | **⌘⇧K**                        | Find a session in **Sessions**          |
 | **⌘B**; **⌃⌘S** in the Mac app | Show or hide the chat list              |
-| **⌘,**                         | Open **Settings** (Mac app)             |
+| **⌘,**                         | **Settings** (Mac app)                  |
 | **Enter** / **Shift+Enter**    | Send / new line                         |
 | **Enter** / **⌘Enter**         | While a turn runs: queue / send now     |
 | **@** / **/**                  | Add a file / run a command              |
@@ -44,11 +44,10 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 
 ## Cards
 
-| Keys                    | Action                                    |
-| ----------------------- | ----------------------------------------- |
-| **Tab**, **Enter**      | Move between a card's buttons, choose one |
-| Arrow keys, **1**–**9** | Pick an answer to a question              |
-| Hold **Space**          | Hold-to-confirm buttons, for 1.5 seconds  |
+| Keys               | Action                                    |
+| ------------------ | ----------------------------------------- |
+| **Tab**, **Enter** | Move between a card's buttons, choose one |
+| Hold **Space**     | Hold-to-confirm buttons, for 1.5 seconds  |
 
 ## Changes drawer
 

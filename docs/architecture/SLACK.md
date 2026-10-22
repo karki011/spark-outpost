@@ -197,12 +197,12 @@ A failed delivery is logged without tokens, recorded on the delivery row and sho
 
 `spark_slack_post` builds a `post_slack` Spark action (channel, optional thread, text). It follows `actionPath` like every Spark action:
 
-| Situation                                                                | Result                                          |
-| ------------------------------------------------------------------------ | ----------------------------------------------- |
-| The run read secrets or private data (including Slack)                   | Confirm card                                    |
-| Auto, Bypass permissions, Approve for me, Full access, or Full auto → PR | Posted at once                                  |
-| Accept edits and the message asked to post to Slack                      | Posted at once                                  |
-| Anything else                                                            | Confirm card with the channel and editable text |
+| Situation                                                                           | Result                                          |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------- |
+| A direct or group message, or a post as you (signed in with your own Slack account) | Confirm card in every mode                      |
+| Auto, Bypass permissions, Approve for me or Full access                             | Posted at once                                  |
+| Accept edits and the message asked to post to Slack                                 | Posted at once                                  |
+| Anything else                                                                       | Confirm card with the channel and editable text |
 
 The text is redacted when the card is built and again when sent, `&`, `<` and `>` are escaped so mentions and links in agent text cannot ping anyone, and posts to one channel are spaced 1.1 seconds apart. HTTP 429 is retried after `Retry-After` (up to twice, 30 seconds at most). `not_in_channel` tells the user to `/invite` the app. Each post writes a `slack_events` row and the usual `spark/post_slack` audit entry.
 

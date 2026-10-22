@@ -2,16 +2,19 @@ import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { firstGenerationId } from '@spark-outpost/contracts';
 import { z } from 'zod';
 import { objectFields } from './object-fields.ts';
+import { EARLY_WAKE_MS, scheduledWakeup } from './scheduled-wakeup.ts';
 import { subagentMark } from './subagent-stream.ts';
 
 export interface BackgroundCount {
   agents: number;
   tasks: number;
   names: string[];
+  wakesAt?: number;
 }
 
 export interface BackgroundWork {
   see(update: SessionUpdate): void;
+  cycleStarted(): void;
   count(): BackgroundCount;
   busy(): boolean;
 }
@@ -21,6 +24,7 @@ const originSchema = z.object({ kind: z.string().min(1) });
 
 export function endsAgentCycle(update: SessionUpdate): boolean {
   if (update.sessionUpdate !== 'usage_update') return false;
+  if (update.cost) return true;
   return originSchema.safeParse(objectFields(update._meta)[ORIGIN_KEY]).success;
 }
 
@@ -31,11 +35,20 @@ function startedTaskId(update: SessionUpdate): string | null {
   return typeof id === 'string' && id !== '' ? id : null;
 }
 
-export function createBackgroundWork(): BackgroundWork {
+export function createBackgroundWork(now: () => number = Date.now): BackgroundWork {
   const agents = new Set<string>();
   const tasks = new Set<string>();
   const owners = new Map<string, string>();
   const names = new Map<string, string>();
+  let wakesAt: number | null = null;
+  let exactCall: string | null = null;
+
+  const noteWakeup = (update: SessionUpdate) => {
+    const change = scheduledWakeup(update, now());
+    if (!change || (!change.exact && change.call === exactCall)) return;
+    if (change.exact) exactCall = change.call;
+    wakesAt = change.wakesAt;
+  };
 
   const count = (): BackgroundCount => {
     const busyAgents = new Set([...agents].map(firstGenerationId));
@@ -49,11 +62,13 @@ export function createBackgroundWork(): BackgroundWork {
       const name = names.get(id);
       return name ? [name] : [];
     });
-    return { agents: busyAgents.size, tasks: loose.length, names: shown };
+    const counted = { agents: busyAgents.size, tasks: loose.length, names: shown };
+    return wakesAt === null ? counted : { ...counted, wakesAt };
   };
 
   return {
     see(update) {
+      noteWakeup(update);
       const mark = subagentMark(update);
       if (!mark) return;
       if (mark.event === 'spawned') {
@@ -72,10 +87,13 @@ export function createBackgroundWork(): BackgroundWork {
         if (task) owners.set(task, firstGenerationId(mark.id));
       }
     },
+    cycleStarted() {
+      if (wakesAt !== null && now() >= wakesAt - EARLY_WAKE_MS) wakesAt = null;
+    },
     count,
     busy() {
-      const now = count();
-      return now.agents + now.tasks > 0;
+      const current = count();
+      return current.agents + current.tasks > 0 || current.wakesAt !== undefined;
     },
   };
 }

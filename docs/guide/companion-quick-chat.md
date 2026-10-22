@@ -27,14 +27,14 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 
 ## Ask Spark
 
-1. In the panel, select **+**, then **Ask Spark**, or press **⌘3**.
+1. In the panel, select **Ask Spark**, or press **⌘3**.
 2. Type a question, or pick a suggestion such as **Who needs me?**, and press **Enter**.
 3. Scroll up for earlier questions; **New topic** starts fresh.
 4. **Open in Spark** shows the whole conversation.
 
 Every question, typed or spoken, goes to the [Spark assistant model](settings.md#spark-assistant).
 
-Answers link to named chats; **Review** opens a waiting card in place.
+Answers link to named chats; **Review** opens a waiting card in place. It never sleeps until a wakeup.
 
 ## Let Ask Spark act
 
