@@ -13,6 +13,7 @@
     "mac-control": "node --import tsx scripts/build-mac-control-cli.ts",
     "calendar": "node --import tsx scripts/build-calendar-cli.ts",
     "voice": "node --import tsx scripts/build-voice-cli.ts",
+    "no-activate": "node --import tsx scripts/build-no-activate-cli.ts",
     "dev-app": "node --import tsx scripts/dev-app-cli.ts",
     "e2e:update": "node --import tsx scripts/e2e-update.ts",
     "release": "node --import tsx scripts/release.ts",

@@ -10,7 +10,7 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 
 ## Start a chat
 
-1. Press **⌥Space** anywhere on your Mac. The panel opens on **New chat**.
+1. Press **⌥Space** anywhere. The panel opens on **New chat**.
 2. Type your task in **Start a new chat…**.
 3. Optionally select **Choose project**, or the autonomy chip to change it.
 4. Press **Enter**. **Esc** closes the panel and keeps your draft.
@@ -34,7 +34,7 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 
 Every question, typed or spoken, goes to the [Spark assistant model](settings.md#spark-assistant).
 
-Answers link to the chats they name; **Review** opens a waiting card in place.
+Answers link to named chats; **Review** opens a waiting card in place.
 
 ## Let Ask Spark act
 
