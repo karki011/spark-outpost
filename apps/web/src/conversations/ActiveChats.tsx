@@ -13,6 +13,7 @@ import { useSidebarLayout } from './sidebar-layout.tsx';
 import type { SidebarDnd } from './use-sidebar-dnd.ts';
 import type { SidebarFolds } from './use-sidebar-folds.ts';
 import { listSorting, projectDragId } from './sidebar-dnd-geometry.ts';
+import { PHONE_SWITCH_OFF } from '../phone/use-remote-client.ts';
 
 type RenderRow = (
   chat: ConversationSummary,
@@ -36,6 +37,7 @@ interface ActiveChatsProps {
   renderRow: RenderRow;
   members: OutpostMembers;
   onAddProject: () => void;
+  canAddProject: boolean;
   onNewInProject: (projectId: string) => void;
   onProjectMenu: (projectId: string, element: HTMLElement) => void;
   onProjectRename: (project: Project, name: string | null) => void;
@@ -56,6 +58,7 @@ export function ActiveChats({
   renderRow,
   members,
   onAddProject,
+  canAddProject,
   onNewInProject,
   onProjectMenu,
   onProjectRename,
@@ -109,7 +112,8 @@ export function ActiveChats({
           type="button"
           className="icon-btn"
           aria-label="Add project"
-          title="Add project"
+          title={canAddProject ? 'Add project' : PHONE_SWITCH_OFF}
+          disabled={!canAddProject}
           onClick={onAddProject}
         >
           <PlusIcon />

@@ -11,6 +11,7 @@ import { queryKeys } from '../api/client.ts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { requestChat } from '../app/chat-request.ts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { useAddFolder } from '../projects/use-add-folder.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
 import {
@@ -41,6 +42,7 @@ function StartFromLink({ onStarted }: { onStarted: () => void }) {
   const [url, setUrl] = useState('');
   const [mode, setMode] = useState<TicketStartMode>('plan');
   const [projectId, setProjectId] = useState(CHANNEL_DEFAULT);
+  const adder = useAddFolder({ onAdded: (project) => setProjectId(project.id) });
   const [note, setNote] = useState('');
   const projects = useQuery({ queryKey: projectKeys.all, queryFn: projectsApi.list });
   const start = useMutation({
@@ -111,6 +113,7 @@ function StartFromLink({ onStarted }: { onStarted: () => void }) {
         label="Project folder"
         choices={projectChoices}
         value={projectId}
+        actions={adder.actions}
         onChange={setProjectId}
       />
       <label className="sr-only" htmlFor={`${id}-note`}>

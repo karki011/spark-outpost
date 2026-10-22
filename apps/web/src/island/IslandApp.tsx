@@ -49,7 +49,7 @@ import { opensByItself, useAutoExpand } from './auto-expand.ts';
 import { IslandShell } from './IslandShell.tsx';
 import type { FollowUp, QuickDraft } from './QuickChat.tsx';
 import { useAttachments } from '../chat/attachments/use-attachments.ts';
-import { useAddProject } from './use-add-project.ts';
+import { useAddFolder } from '../projects/use-add-folder.tsx';
 import { useIslandBridge, useSparkFocus } from './use-island-bridge.ts';
 import { useIslandDrop } from './use-island-drop.ts';
 import { coreRects, lineRects, minuteOf, useHoverIntent } from './island-hover.ts';
@@ -117,9 +117,12 @@ export function IslandApp() {
   const [added, setAdded] = useState<{ project: Project; signal: number } | null>(null);
   const [dropNote, setDropNote] = useState<string | null>(null);
   const beforeDrop = useRef<Panel | null>(null);
-  const adder = useAddProject((project) => {
-    setAdded((last) => ({ project, signal: (last?.signal ?? 0) + 1 }));
-    setDraft((current) => ({ ...current, projectId: project.id }));
+  const adder = useAddFolder({
+    inline: true,
+    onAdded: (project) => {
+      setAdded((last) => ({ project, signal: (last?.signal ?? 0) + 1 }));
+      setDraft((current) => ({ ...current, projectId: project.id }));
+    },
   });
 
   const openPanel = (next: Panel, by: PanelOpener = 'user') => {
@@ -350,7 +353,7 @@ export function IslandApp() {
     onAbort: backFromDrop,
     onFiles: attachments.add,
     onFolders: async (folders, use) => {
-      await Promise.all(folders.map(adder.linkFolderAsync));
+      await Promise.all(folders.map(adder.linkFolder));
       if (use === 'chat') setFollowUp(null);
     },
     onDone: (outcome) => {

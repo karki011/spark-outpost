@@ -136,7 +136,6 @@ export interface SparkDesktop {
     onEscape(callback: () => void): Unsubscribe;
     onPointer?(callback: (point: { x: number; y: number }) => void): Unsubscribe;
     sparkFocused(): Promise<boolean>;
-    pickFolder(): Promise<string | null>;
     pathForFile(file: File): string | null;
     onSparkFocus(callback: (focused: boolean) => void): Unsubscribe;
     setInteractive(on: boolean): void;

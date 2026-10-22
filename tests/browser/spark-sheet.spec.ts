@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { ADD_FOLDER, keepPlainFolder } from './add-folder-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { animationsSettled } from './settle.ts';
 
@@ -271,13 +272,18 @@ test('points standing instructions at a file with the themed picker @packaged', 
 test('picks any folder as the default project from the sheet', async ({ page }) => {
   const form = await openNewSpark(page);
   await form.getByRole('textbox', { name: 'Name' }).fill('Bolt');
-  await form.getByRole('button', { name: 'Choose folder…' }).click();
+  await form.getByRole('button', { name: 'Default project' }).click();
+  await page
+    .getByRole('menu', { name: 'Default project' })
+    .getByRole('menuitem', { name: ADD_FOLDER })
+    .click();
   const picker = page.getByRole('dialog', { name: 'Choose a project folder' });
   await browseTo(picker, path.join(base, 'webapp'));
   await picker.getByRole('button', { name: 'Use this folder' }).click();
   await expect(picker).toHaveCount(0);
+  await keepPlainFolder(page, 'webapp');
   await expect(form.getByRole('button', { name: 'Default project' })).toContainText('webapp');
-  await expect(form.getByRole('button', { name: 'Choose folder…' })).toBeFocused();
+  await expect(form.getByRole('button', { name: 'Default project' })).toBeFocused();
 
   await form.getByRole('button', { name: 'Create Spark' }).click();
   await expect(form).toHaveCount(0);

@@ -261,10 +261,32 @@ describe('switches', () => {
   it('projects: folder listing and linking', async () => {
     await phone.get(`/api/folders?path=${encodeURIComponent(root)}`).expect(200);
     expect((await phone.send('post', '/api/projects', { path: root })).status).not.toBe(403);
+    const gitInit = `/api/projects/${crypto.randomUUID()}/git-init`;
+    expect((await phone.send('post', gitInit)).status).not.toBe(403);
     await setSwitches(app, { projects: false });
     await phone.get(`/api/folders?path=${encodeURIComponent(root)}`).expect(403);
     await phone.send('post', '/api/projects', { path: root }).expect(403);
+    await phone.send('post', '/api/folders', { parent: root, name: 'blocked' }).expect(403);
+    await phone.send('post', gitInit).expect(403);
     await phone.get('/api/projects').expect(200);
+  });
+
+  it('projects: a device makes a new folder on the Mac and it is audited', async () => {
+    const home = process.env.HOME;
+    process.env.HOME = root;
+    try {
+      const made = await phone
+        .send('post', '/api/folders', { parent: root, name: 'from-phone' })
+        .expect(201);
+      expect((made.body as { path: string }).path).toBe(join(root, 'from-phone'));
+      await phone.send('post', '/api/folders', { parent: root, name: '../escape' }).expect(400);
+    } finally {
+      process.env.HOME = home;
+    }
+    const { rows } = await t.db.query<{ device_id: string; detail: { folder: string } }>(
+      `SELECT device_id, detail FROM remote_audit WHERE action = 'folder_created'`,
+    );
+    expect(rows).toEqual([{ device_id: device.id, detail: { folder: join(root, 'from-phone') } }]);
   });
 
   it('agent mode: mode and autonomy fields on chat settings', async () => {

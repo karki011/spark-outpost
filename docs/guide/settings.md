@@ -31,7 +31,7 @@ Select **Settings** at the bottom of the rail. **Search settings** finds a secti
 
 ## Work
 
-**Projects**: linked folders. Open one for trust, **Where Spark works**, **Saved sign-ins** and **Preview**. See [Where a chat works](where-spark-works.md).
+**Projects**: linked folders and **Add folder…**. Open one for trust, **Where Spark works**, **Saved sign-ins** and **Preview**. See [Where a chat works](where-spark-works.md).
 
 **Chats & autonomy**:
 

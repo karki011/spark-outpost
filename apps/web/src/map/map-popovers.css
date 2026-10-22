@@ -190,3 +190,8 @@
   align-items: flex-start;
   gap: 2px;
 }
+
+.map-pop-add:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

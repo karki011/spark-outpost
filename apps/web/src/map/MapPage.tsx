@@ -15,6 +15,7 @@ import { FocusView, type FocusTarget } from './focus/FocusView.tsx';
 import type { MapFilters as Filters } from './frame.ts';
 import { categoryCounts, highlights, kindCounts, needsCheck } from './map-model.ts';
 import { useMapView, useViewTips, type MapViewId } from './map-views.ts';
+import { useAddFolder } from '../projects/use-add-folder.tsx';
 import { MapEmpty, MapUnreachable, projectListView } from './MapEmpty.tsx';
 import { MapFilters } from './MapFilters.tsx';
 import { MapHeader } from './MapHeader.tsx';
@@ -63,6 +64,7 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
     refetchInterval: (query) => (query.state.status === 'error' ? RETRY_MS : false),
   });
   const projects = projectList.data ?? [];
+  const adder = useAddFolder({ onAdded: () => undefined });
   const { selected, choose } = useMapSelection(projects);
   const data = useMapData(projects, selected);
   const { scene, require } = data;
@@ -288,7 +290,14 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
       />
     );
   }
-  if (listView === 'empty') return <MapEmpty />;
+  if (listView === 'empty') {
+    return (
+      <>
+        <MapEmpty canAdd={adder.allowed} onAdd={adder.openDialog} />
+        {adder.flow}
+      </>
+    );
+  }
 
   const stageView = (current: MapViewId) => {
     if (current === 'sky') {
@@ -484,6 +493,7 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
           <ToastHost toaster={toaster} />
         </div>
       </div>
+      {adder.flow}
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   attachmentSchema,
+  createdFolderSchema,
   folderListingSchema,
   instructionsFileSchema,
   projectGitSchema,
@@ -9,6 +10,7 @@ import {
   projectSchema,
   removedProjectSchema,
   type Attachment,
+  type CreatedFolder,
   type FolderListing,
   type InstructionsFile,
   type Project,
@@ -90,6 +92,13 @@ export const projectsApi = {
     }),
   git: (projectId: string): Promise<ProjectGit> =>
     request(projectGitSchema, `/projects/${projectId}/git`),
+  gitInit: (projectId: string): Promise<ProjectGit> =>
+    request(projectGitSchema, `/projects/${projectId}/git-init`, { method: 'POST' }),
+  createFolder: (parent: string, name: string): Promise<CreatedFolder> =>
+    request(createdFolderSchema, '/folders', {
+      method: 'POST',
+      body: JSON.stringify({ parent, name }),
+    }),
   folders: (path: string | null, pick: FolderPick = FOLDERS_ONLY): Promise<FolderListing> =>
     request(
       folderListingSchema,

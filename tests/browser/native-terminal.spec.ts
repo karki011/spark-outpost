@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
+import { ADD_FOLDER, keepPlainFolder } from './add-folder-kit.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { startFixtureTerminal } from './native-terminal-fixture.ts';
 import { pickTerminalAgent } from './native-terminal-support.ts';
@@ -40,7 +41,7 @@ test('terminal uses the chat folder browser and preserves linked folders at laun
       .toBeLessThanOrEqual(projectButton.y);
     await page
       .getByRole('dialog', { name: 'Project folders' })
-      .getByRole('button', { name: 'Choose a folder…' })
+      .getByRole('button', { name: ADD_FOLDER })
       .click();
     const browser = page.getByRole('dialog', { name: 'Choose a project folder' });
     await expect(browser).toBeVisible();
@@ -49,7 +50,7 @@ test('terminal uses the chat folder browser and preserves linked folders at laun
     await page.getByRole('button', { name: 'Choose project', exact: true }).click();
     await page
       .getByRole('dialog', { name: 'Project folders' })
-      .getByRole('button', { name: 'Choose a folder…' })
+      .getByRole('button', { name: ADD_FOLDER })
       .click();
     await browser
       .getByRole('navigation', { name: 'Folder path' })
@@ -76,6 +77,7 @@ test('terminal uses the chat folder browser and preserves linked folders at laun
     await expect(page.getByRole('button', { name: 'Linking folder…', exact: true })).toBeDisabled();
     releaseFolder();
     await expect(browser).toBeHidden();
+    await keepPlainFolder(page, 'terminal-project');
     await expect(
       page.getByRole('button', { name: 'Project folders: terminal-project' }),
     ).toBeFocused();

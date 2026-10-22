@@ -25,7 +25,7 @@ Cloudflare receives it and adds the country. Spark in a browser sends nothing.
 
 ## Full Disk Access
 
-Optional: it stops macOS asking each time an agent reads a protected folder, such as `~/Library`, Desktop, Documents or Downloads.
+Optional: it stops macOS asking each time Spark reads a protected folder, such as `~/Library`, Desktop, Documents or Downloads.
 
 1. Open **Settings → Help** and find **Full Disk Access**.
 2. Select **Open System Settings**.

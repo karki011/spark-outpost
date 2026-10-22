@@ -71,7 +71,6 @@ export async function installFakeVoice(page: Page, options: FakeVoiceOptions = {
           onEscape: none,
           sparkFocused: async () => false,
           onSparkFocus: none,
-          pickFolder: async () => null,
           pathForFile: () => null,
           setInteractive: () => undefined,
           setFocusable: () => undefined,
