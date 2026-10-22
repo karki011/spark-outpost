@@ -4,7 +4,6 @@ import { projectPolicy, RootMissingError } from '../../projects/project-fs.ts';
 import { excludeSparkDir } from '../../projects/worktrees.ts';
 import { ProviderError, type ProviderTurn } from '../../providers/provider.ts';
 import type { AgentDefinition } from './agents.ts';
-import { CLAUDE_WAIT_TOOLS } from './claude-tools.ts';
 import type { ClaudeRepoOptions } from './repo-session.ts';
 
 export async function openProject(
@@ -39,30 +38,6 @@ export function extraRoots(policy: PathPolicy | null): string[] {
 
 const THINKING_ARGS = { 'thinking-display': 'summarized' };
 
-interface ClaudeOptions {
-  tools?: string[];
-  disallowedTools?: string[];
-  settings?: { permissions?: { deny?: string[] } };
-}
-
-function withoutWaiting(meta: Record<string, unknown>): Record<string, unknown> {
-  const claudeCode = meta.claudeCode as { options?: ClaudeOptions } | undefined;
-  const options = claudeCode?.options;
-  if (!options?.tools) return meta;
-  const waits = (tool: string) => (CLAUDE_WAIT_TOOLS as readonly string[]).includes(tool);
-  const permissions = options.settings?.permissions ?? {};
-  const kept = {
-    ...options,
-    tools: options.tools.filter((tool) => !waits(tool)),
-    disallowedTools: [...(options.disallowedTools ?? []), ...CLAUDE_WAIT_TOOLS],
-    settings: {
-      ...options.settings,
-      permissions: { ...permissions, deny: [...(permissions.deny ?? []), ...CLAUDE_WAIT_TOOLS] },
-    },
-  };
-  return { ...meta, claudeCode: { ...claudeCode, options: kept } };
-}
-
 function withThinkingShown(meta: Record<string, unknown>): Record<string, unknown> {
   const claudeCode = meta.claudeCode as { options: Record<string, unknown> };
   const options = { ...claudeCode.options, extraArgs: THINKING_ARGS };
@@ -78,7 +53,7 @@ function definedMeta(
     changesProject,
     planning,
     approvals,
-  }: Pick<ProviderTurn, 'changesProject' | 'planning' | 'approvals' | 'sparkScope'>,
+  }: Pick<ProviderTurn, 'changesProject' | 'planning' | 'approvals'>,
 ) {
   if (!policy) return definition.conversationSessionMeta?.(repo) ?? null;
   const roots = extraRoots(policy);
@@ -91,7 +66,6 @@ function definedMeta(
 }
 
 export function sessionMeta(...args: Parameters<typeof definedMeta>) {
-  const defined = definedMeta(...args);
-  const meta = defined && args[4].sparkScope?.assistant ? withoutWaiting(defined) : defined;
+  const meta = definedMeta(...args);
   return meta && args[0].summarizesThinking ? withThinkingShown(meta) : meta;
 }

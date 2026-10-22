@@ -22,7 +22,8 @@ describe('live Claude sleeping until a wakeup over ACP', () => {
     const outputs: { at: number; output: ProviderOutput }[] = [];
     const started = Date.now();
     for await (const output of provider.run({
-      prompt: 'Sleep for 1 minute, then reply with the single word AWAKE.',
+      prompt:
+        'Sleep for 1 minute using your ScheduleWakeup tool, then reply with the single word AWAKE.',
       history: [],
       settings: { method: 'cli', model: null, modelLabel: null, effort: 'low' },
       signal: new AbortController().signal,
