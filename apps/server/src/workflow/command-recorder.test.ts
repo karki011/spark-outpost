@@ -19,7 +19,7 @@ interface Saved {
   values: unknown[];
 }
 
-function setup(reply = { shown: 'Running it now.', held: 0 }) {
+function setup(reply = { shown: 'Running it now.', held: 0 }, chatFolder = false) {
   const events: { name: string; value: Record<string, unknown> }[] = [];
   const saved: Saved[] = [];
   const db = {
@@ -38,6 +38,7 @@ function setup(reply = { shown: 'Running it now.', held: 0 }) {
     },
     secretValues: [SECRET],
     projectRoots: ['/repo'],
+    chatFolder,
     replySoFar: () => reply,
     flushMs: 5,
     now: () => clock,
@@ -114,6 +115,27 @@ describe('command recorder', () => {
     expect(everything).not.toContain(SECRET);
     expect(everything).not.toContain('ghp_abcdefghijklmnopqrstuvwxyz0123');
     expect(t.streamed()).toContain('token is [redacted:secret_value]');
+  });
+
+  it('shows no folder for a command in the hidden folder of a chat with no project', async () => {
+    const t = setup(undefined, true);
+    await t.recorder.observe({
+      kind: 'command_started',
+      id: 'c1',
+      command: 'ls',
+      cwd: '/repo',
+      live: true,
+    });
+    await t.recorder.observe({
+      kind: 'command_started',
+      id: 'c2',
+      command: 'ls',
+      cwd: '/repo/out',
+      live: true,
+    });
+    const started = t.events.filter((event) => event.name === COMMAND_STARTED);
+    expect(started.map((event) => event.value.cwd)).toEqual([null, './out']);
+    expect(JSON.stringify(t.saved)).not.toContain('"/repo"');
   });
 
   it('hides a secret in the command line itself', async () => {

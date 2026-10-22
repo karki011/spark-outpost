@@ -43,6 +43,7 @@ export interface CommandRecorderOptions {
   append: (event: RunEvent) => Promise<unknown>;
   secretValues: readonly string[];
   projectRoots: readonly string[];
+  chatFolder?: boolean;
   replySoFar: () => { shown: string; held: number };
   flushMs?: number;
   saveMs?: number;
@@ -87,6 +88,14 @@ export function cwdLabel(cwd: string | null, roots: readonly string[]): string |
   return cwd === home || cwd.startsWith(`${home}${path.sep}`) ? `~${cwd.slice(home.length)}` : cwd;
 }
 
+function shownCwd(
+  cwd: string | null,
+  options: Pick<CommandRecorderOptions, 'projectRoots' | 'chatFolder'>,
+): string | null {
+  const label = cwdLabel(cwd, options.projectRoots);
+  return options.chatFolder && label === './' ? null : label;
+}
+
 const custom = (name: string, value: unknown): RunEvent => ({
   type: EventType.CUSTOM,
   name,
@@ -112,7 +121,7 @@ export function createCommandRecorder(options: CommandRecorderOptions): CommandR
     const started: CommandStarted = {
       id: newId(),
       command: redactSecrets(storableText(output.command), secretValues).slice(0, COMMAND_TEXT_MAX),
-      cwd: cwdLabel(output.cwd ?? options.projectRoots[0] ?? null, options.projectRoots),
+      cwd: shownCwd(output.cwd ?? options.projectRoots[0] ?? null, options),
       live: output.live,
       startedAt: new Date(now()).toISOString(),
       ...shotAnchor(options.replySoFar().shown, options.replySoFar().held),
