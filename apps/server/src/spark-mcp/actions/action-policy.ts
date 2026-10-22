@@ -64,6 +64,10 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     'post|send|share|reply|tell|message|notify|announce|update',
     'slack|channel|thread',
   ),
+  publish_artifact: asked(
+    'make|build|create|draw|show|publish|update|change|render|chart|plot|design',
+    'artifacts?|pages?|dashboards?|charts?|diagrams?|reports?|graphs?|visuali[sz]ations?|apps?|slides?|mockups?',
+  ),
   calendar_read: asked(
     "what|what's|whats|when|show|list|check|read|look|see|find|am i|do i|tell me",
     'calendar|schedule|agenda|events?|meetings?|free|busy|appointments?',

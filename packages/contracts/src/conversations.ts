@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { promptCacheSchema } from './prompt-cache.ts';
 import { browserShotSchema } from './browser.ts';
 import { chatFileSchema } from './chat-files.ts';
+import { artifactPageSchema } from './artifact-pages.ts';
 import { commandRunSchema } from './command-runs.ts';
 import { adviceSummarySchema } from './advice.ts';
 import { ANNOTATIONS_PER_MESSAGE, annotationInputSchema } from './annotations.ts';
@@ -174,6 +175,7 @@ export const conversationDetailSchema = z.object({
   railFlags: z.array(railFlagSchema).optional(),
   browserShots: z.array(browserShotSchema).optional(),
   chatFiles: z.array(chatFileSchema).optional(),
+  artifactPages: z.array(artifactPageSchema).optional(),
   commands: z.array(commandRunSchema).optional(),
   interruption: interruptionSchema.nullable().optional(),
   subagents: z.record(z.string(), z.array(subagentRowSchema)).optional(),

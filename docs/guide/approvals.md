@@ -30,7 +30,7 @@ Checks run in Spark, not the model, so nothing an agent says can approve its own
 In **Bypass permissions**, **Approve for me** or **Full access**, Spark doesn't stop the agent; it watches:
 
 - Each such tool call is marked **Ran without review** in the audit log.
-- An action that crosses a protected path, or pushes a branch that isn't the chat's own, gets a card, such as "Bolt wrote outside the project: ~/x.txt", with **Revert** and **Got it**, pinned atop the chat until you choose. A flag never counts as needing you.
+- An action that crosses a protected path, or pushes a branch that isn't the chat's own, gets a card with **Revert** and **Got it**, pinned atop the chat until you choose. A flag never counts as needing you.
 
 ## Sending data out after reading secrets
 

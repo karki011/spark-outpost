@@ -1,12 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
-  APP_CONTENT_SECURITY_POLICY,
-  DEV_CONTENT_SECURITY_POLICY,
+  appContentSecurityPolicy,
+  devContentSecurityPolicy,
 } from '../../packages/contracts/src/content-security-policy.ts';
+import { artifactOrigin } from '../../packages/contracts/src/artifact-pages.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { headerPaneItem, openChatMenu } from './header-menu.ts';
-import { PACKAGED } from './stub-config.ts';
+import { API_PORT, PACKAGED } from './stub-config.ts';
 
 declare global {
   interface Window {
@@ -45,8 +46,8 @@ test('the app runs under its content security policy with no violations @package
   const shell = await page.goto('/');
   expect(shell?.headers()['content-security-policy']).toBe(
     PACKAGED || process.env.SPARK_WEB_BUILD
-      ? APP_CONTENT_SECURITY_POLICY
-      : DEV_CONTENT_SECURITY_POLICY,
+      ? appContentSecurityPolicy(artifactOrigin(API_PORT))
+      : devContentSecurityPolicy(artifactOrigin(API_PORT)),
   );
 
   await openChats(page);

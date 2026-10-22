@@ -13,6 +13,7 @@ export * from './chat-files.ts';
 export * from './spark-actions.ts';
 export * from './involvement-levels.ts';
 export * from './artifacts.ts';
+export * from './artifact-pages.ts';
 export * from './attachments.ts';
 export * from './audit.ts';
 export * from './decision-audit.ts';

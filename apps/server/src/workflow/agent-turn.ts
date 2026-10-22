@@ -77,6 +77,7 @@ import { createRunObservations } from '../observations/run-observations.ts';
 import { conversationHasSlackContext } from '../persistence/slack.ts';
 import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
 import { startRailFlags } from './rail-flags.ts';
+import { linkedArtifactActivity } from '../artifacts/activity.ts';
 import { withBrowserCheck } from './browser-check.ts';
 import { createObservedEdits } from './observed-edits.ts';
 import { observeSession } from './session-audit.ts';
@@ -416,6 +417,10 @@ export async function runAgentTurn(
         await recordFollowedInstructions(deps.db, lease.runId, output.files);
       }
       if (output.kind === 'rail_flag') await rails?.record(output.flag);
+      if (output.kind === 'artifact_link') {
+        const shown = await linkedArtifactActivity(deps.db, input.identity.threadId, output);
+        if (shown) await append(shown);
+      }
       if (output.kind === 'secret_read') {
         for (const label of output.paths) observations.record({ source: 'secret_file', label });
       }

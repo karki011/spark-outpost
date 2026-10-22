@@ -40,7 +40,7 @@ function listenOn(server: Server, port: number): Promise<boolean> {
 }
 
 const MCP_PATH = '/mcp';
-const BODY_LIMIT_BYTES = 1_000_000;
+const BODY_LIMIT_BYTES = 10_000_000;
 
 export const sparkGrantKey = (token: string) => createHash('sha256').update(token).digest('hex');
 const digest = sparkGrantKey;

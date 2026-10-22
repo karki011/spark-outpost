@@ -1,3 +1,4 @@
+import { appContentSecurityPolicy, artifactOrigin } from '@spark-outpost/contracts';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { agentConfigRoutes } from './agent-config-routes.ts';
 import { analyticsRoutes } from './analytics-routes.ts';
@@ -8,6 +9,7 @@ import { sparkRulesRoutes } from './spark-rules-routes.ts';
 import { adoptPullRoutes } from './adopt-pull-routes.ts';
 import { attachmentRoutes } from './attachment-routes.ts';
 import { chatFileRoutes } from './chat-file-routes.ts';
+import { artifactRoutes } from '../artifacts/routes.ts';
 import { jsonBody } from './json-body.ts';
 import { auditRoutes } from './audit-routes.ts';
 import { chatShareRoutes, type ChatShareRouteDeps } from './chat-share-routes.ts';
@@ -82,6 +84,7 @@ export interface AppOptions
   appEvents: AppEventFeed;
   outposts: OutpostDelivery;
   stackGit?: StackGit;
+  artifactOriginDown?: boolean;
   port: number;
   allowedOrigins: readonly string[];
   apiToken: string;
@@ -116,6 +119,7 @@ export function createAppParts(options: AppOptions) {
   );
   app.use('/api', attachmentRoutes(options));
   app.use('/api', chatFileRoutes(options));
+  app.use('/api', artifactRoutes(options));
   app.use(jsonBody());
   app.use(remote.bodyGuard);
   app.use('/api', remote.routes);
@@ -174,7 +178,9 @@ export function createAppParts(options: AppOptions) {
       },
     }),
   );
-  if (options.webRoot) app.use(webApp(options.webRoot));
+  if (options.webRoot) {
+    app.use(webApp(options.webRoot, appContentSecurityPolicy(artifactOrigin(options.port))));
+  }
   app.use((_req, res) => {
     res.status(404).json({ error: 'Not found.' });
   });

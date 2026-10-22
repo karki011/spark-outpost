@@ -4,6 +4,7 @@ import { targetsApi, withApiToken } from './api-token.ts';
 import type { ChannelConfig } from './channel.ts';
 import { linkTarget } from './link-target.ts';
 import { guardSessionMedia } from './media-guard.ts';
+import { allowArtifactFrames, fromArtifactPage, guardSubframes } from './artifact-frames.ts';
 import { hourCycleArgs } from './hour-cycle-arg.ts';
 import { systemHourCycle } from './hour-cycle.ts';
 import { themeArgs } from './theme-arg.ts';
@@ -39,12 +40,15 @@ function openLink(url: string, origin: string): void {
 }
 
 export function attachApiToken(origin: string, token: string): void {
+  allowArtifactFrames(Number(new URL(origin).port));
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-    callback({ requestHeaders: withApiToken(details.requestHeaders, details.url, origin, token) });
+    const target = fromArtifactPage(details.frame?.url) ? '' : details.url;
+    callback({ requestHeaders: withApiToken(details.requestHeaders, target, origin, token) });
   });
 }
 
 export function guardNavigation(window: BrowserWindow, origin: string): void {
+  guardSubframes(window.webContents);
   window.webContents.setWindowOpenHandler(({ url }) => {
     openLink(url, origin);
     return { action: 'deny' };

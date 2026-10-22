@@ -16,6 +16,7 @@ import { shortWindowNote } from './long-context.ts';
 import { planOutputs, usageOutputs } from './plan-limits.ts';
 import { createFocusTracker } from './file-focus.ts';
 import { messagePhase } from './message-phase.ts';
+import { artifactLinks } from './artifact-links.ts';
 
 export const THINKING_STEP = 'Thinking';
 export const FAILED_PREFIX = 'Failed: ';
@@ -345,10 +346,12 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
           return [{ kind: 'step_started', name: THINKING_STEP }, ...thought];
         }
         case 'agent_message_chunk': {
-          const linked =
-            update.content.type === 'resource_link'
+          const linked = [
+            ...artifactLinks(update.content),
+            ...(update.content.type === 'resource_link'
               ? links([[update.content.uri, 'resource_link']])
-              : [];
+              : []),
+          ];
           const chunk = messageText(update.content);
           if (chunk === '') return [...stopThinking(), ...linked];
           const messageId = update.messageId ?? null;
@@ -418,6 +421,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
                 )
               : []),
             ...openedLink(update.toolCallId, toolTexts(update.content, update.rawOutput)),
+            ...artifactLinks(update.content),
           ];
           if (update.status === 'completed' || update.status === 'failed') {
             return [...linked, ...finishTool(update.toolCallId, update.status === 'failed')];

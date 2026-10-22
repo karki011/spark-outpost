@@ -11,6 +11,7 @@ summary: One-line definitions of the words you see in Spark Outpost - agent, mod
 | **Agent**                 | The AI that reads and writes code: Claude Code, Codex or Z.ai.                           |
 | **Agent mode**            | The provider's own [permission setting](modes-and-levels.md#agent-modes).                |
 | **Agent TV**              | A [live view](follow-a-turn.md#see-whats-happening) of a chat's agent.                   |
+| **Artifact**              | A page an agent made; **Open** shows it beside the chat.                                 |
 | **Approval card**         | A [card asking](answer-approvals.md) before a command or edit.                           |
 | **Area**                  | A group of related files on the Map: **Core**, **Shared** or **Feature**.                |
 | **Compaction**            | [Replacing](compaction.md) a long chat's context with a summary.                         |

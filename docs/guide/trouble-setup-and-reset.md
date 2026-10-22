@@ -39,7 +39,7 @@ Nothing is sent until you send it.
 | Your settings, with your name left out               | Keys or tokens                                            |
 | Which database updates have run, and recent app logs | Anything that looks like a key: it becomes `[redacted:…]` |
 
-The draft lists Docs searches that found nothing; you can delete it.
+The draft lists Docs searches that found nothing.
 
 ## Start over
 

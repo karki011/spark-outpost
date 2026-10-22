@@ -45,6 +45,7 @@ export interface SparkToolDeps {
   shotDir?: string;
   outposts?: OutpostToolDeps | undefined;
   agentRuntime?: AgentRuntime | undefined;
+  chatFolders?: string | undefined;
 }
 
 export interface ReplySoFar {

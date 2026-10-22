@@ -47,6 +47,7 @@ import { applyConversationOptions } from './conversation-options.ts';
 import { continueOpenRequest } from '../outposts/continuation.ts';
 import { deviceStartingRun } from '../remote/run-mark.ts';
 import { listChatFiles } from '../chat-files/store.ts';
+import { listArtifactPages } from '../artifacts/store.ts';
 import {
   MESSAGE_COLUMNS,
   RUN_OUTPOST_COLUMNS,
@@ -163,6 +164,7 @@ export async function getConversationDetail(
     railFlags,
     browserShots,
     chatFiles,
+    artifactPages,
     commands,
     interruption,
     subagents,
@@ -204,6 +206,7 @@ export async function getConversationDetail(
     listRailFlags(db, id),
     listBrowserShots(db, id),
     listChatFiles(db, id),
+    listArtifactPages(db, id),
     listCommands(db, id),
     findInterruption(db, id),
     conversationSubagents(db, id),
@@ -236,6 +239,7 @@ export async function getConversationDetail(
     ...(topics.length > 0 ? { topics } : {}),
     ...(browserShots.length > 0 ? { browserShots } : {}),
     ...(chatFiles.length > 0 ? { chatFiles } : {}),
+    ...(artifactPages.length > 0 ? { artifactPages } : {}),
     ...(commands.length > 0 ? { commands } : {}),
     ...(interruption ? { interruption } : {}),
     ...(Object.keys(subagents).length > 0 ? { subagents } : {}),

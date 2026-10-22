@@ -78,6 +78,7 @@ const sparkDeps: SparkToolDeps = {
   }),
   outposts: { wakes: outpostWakes, parked: parkedTurns, stackGit },
   agentRuntime: config.AGENT_RUNTIME,
+  chatFolders: chatFoldersBase(sparkDataDir(config), config.BRANCH_PREFIX),
 };
 const sparkTools = await startSparkMcpHost(sparkDeps);
 desktopBrowser?.blockPorts([sparkTools.port]);

@@ -1,20 +1,28 @@
 import { EventEmitter } from 'node:events';
 import type { DownloadItem, Session } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
+import { allowArtifactFrames } from './artifact-frames.ts';
 import { guardDownloads } from './downloads.ts';
 
 class FakeItem extends EventEmitter {
-  constructor(private readonly name: string) {
+  constructor(
+    private readonly name: string,
+    private readonly url: string,
+  ) {
     super();
   }
 
   getFilename(): string {
     return this.name;
   }
+
+  getURL(): string {
+    return this.url;
+  }
 }
 
-function download(session: EventEmitter, name: string) {
-  const item = new FakeItem(name);
+function download(session: EventEmitter, name: string, url = `http://127.0.0.1:4318/${name}`) {
+  const item = new FakeItem(name, url);
   const event = { preventDefault: vi.fn() };
   session.emit('will-download', event, item as unknown as DownloadItem);
   return { item, event };
@@ -29,6 +37,15 @@ function setup() {
 }
 
 describe('guardDownloads', () => {
+  it('refuses a download that comes from an artifact page', () => {
+    allowArtifactFrames(4318);
+    const { session, lines } = setup();
+    const refused = download(session, 'x.html', 'http://127.0.0.1:14318/v/abc');
+    expect(refused.event.preventDefault).toHaveBeenCalledOnce();
+    expect(lines).toEqual(['Refused a download from an artifact.']);
+    expect(download(session, 'audit.jsonl').event.preventDefault).not.toHaveBeenCalled();
+  });
+
   it('lets one download open its save dialog and skips repeats until it finishes', () => {
     const { session, focus, lines } = setup();
     const first = download(session, 'audit.jsonl');

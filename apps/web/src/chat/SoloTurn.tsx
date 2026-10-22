@@ -22,6 +22,7 @@ import { RevertChanged } from './approvals/RevertChanged.tsx';
 import { askedBeforeTimeout, isLatestTurn, timedOut, WAITED_LABEL } from './approvals/timed-out.ts';
 import { FilesChanged, taskForRuns } from './changes/FilesChanged.tsx';
 import { ChatFiles } from './files/ChatFiles.tsx';
+import { ArtifactCards } from './artifacts/ArtifactCards.tsx';
 import { CheckpointCard } from './checkpoints/CheckpointCard.tsx';
 import { turnAgentTerminals } from './commands/agent-terminal-model.ts';
 import { AgentTerminalsRunning } from './commands/AgentTerminalRow.tsx';
@@ -286,6 +287,7 @@ export function SoloTurn({
         background={working && !waiting ? stream.subagents.background : null}
       />
       <ChatFiles files={(detail.chatFiles ?? []).filter((file) => file.runId === run.id)} />
+      <ArtifactCards chatId={detail.conversation.id} runId={run.id} pages={detail.artifactPages} />
       <PublishResult
         text={replies.publishText}
         commands={commands.publish}

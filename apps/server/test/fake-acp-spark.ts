@@ -82,14 +82,20 @@ async function callSpark(
   );
   try {
     const result = (await client.callTool({ name: call.tool, arguments: call.args })) as {
-      content: { type: string; text?: string }[];
+      content: acp.ContentBlock[];
     };
-    const output = result.content.map((block) => block.text ?? '').join('');
+    const output = result.content
+      .map((block) => (block.type === 'text' ? block.text : ''))
+      .join('');
+    const links = result.content.filter((block) => block.type === 'resource_link');
     await update({
       sessionUpdate: 'tool_call_update',
       toolCallId: call.id,
       status: 'completed',
       rawOutput: { text: output },
+      ...(links.length > 0
+        ? { content: links.map((link) => ({ type: 'content' as const, content: link })) }
+        : {}),
     });
     return output;
   } finally {

@@ -18,7 +18,7 @@ You'll use Spark on another device; work stays on the Mac. About 5 minutes. Need
 
 Creating or deleting an [outpost](outposts.md) and changing its chats stay on the Mac. A proposed story's **Start** works here, as proposed.
 
-A paired device can answer an agent's browser cards; the Browser pane stays on the Mac.
+A paired device can answer an agent's browser cards; the Browser pane stays on the Mac. **Open artifacts** (off) shows artifacts.
 
 **Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages and steps, with a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both start off.
 

@@ -20,6 +20,7 @@ export const remoteSwitchSchema = z.enum([
   'terminal',
   'terminalApprove',
   'notifications',
+  'artifacts',
 ]);
 export type RemoteSwitch = z.infer<typeof remoteSwitchSchema>;
 
@@ -36,6 +37,7 @@ export const remoteSwitchesSchema = z.object({
   terminal: z.boolean(),
   terminalApprove: z.boolean(),
   notifications: z.boolean(),
+  artifacts: z.boolean(),
 });
 export type RemoteSwitches = z.infer<typeof remoteSwitchesSchema>;
 
@@ -52,6 +54,7 @@ export const REMOTE_SWITCH_DEFAULTS: RemoteSwitches = {
   terminal: false,
   terminalApprove: false,
   notifications: false,
+  artifacts: false,
 };
 
 export const REMOTE_MAC_ONLY_SWITCHES: readonly RemoteSwitch[] = ['devices'];
@@ -70,6 +73,7 @@ export const REMOTE_SWITCH_LABELS: Record<RemoteSwitch, string> = {
   terminal: 'Follow, type in and stop Terminal sessions',
   terminalApprove: 'Approve in Terminal sessions',
   notifications: 'Notify when a chat needs you',
+  artifacts: 'Open artifacts',
 };
 
 export const updateRemoteSwitchesRequestSchema = remoteSwitchesSchema

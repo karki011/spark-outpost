@@ -2,6 +2,7 @@ import './spark-action-card.css';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
+  ARTIFACT_KIND_LABELS,
   editableFields,
   sparkActionQuestion,
   ticketPriorityNameSchema,
@@ -14,6 +15,7 @@ import {
   type SparkActionEdits,
 } from '@spark-outpost/contracts';
 import { approvalsApi } from '../../api/approvals.ts';
+import { formatBytes } from '../../api/attachments.ts';
 import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
 import { HoldToConfirm } from '../../ui/HoldToConfirm.tsx';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
@@ -215,6 +217,16 @@ function Facts({ action }: { action: SparkAction }) {
       );
     case 'start_outpost':
       return <OutpostStartFacts action={action} />;
+    case 'publish_artifact':
+      return (
+        <dl className="sac-facts">
+          <Fact label="Artifact">{action.title}</Fact>
+          <Fact label="Kind">
+            {ARTIFACT_KIND_LABELS[action.kind]}, version {action.version}
+          </Fact>
+          <Fact label="Size">{formatBytes(action.bytes)}</Fact>
+        </dl>
+      );
     case 'open_pr':
     case 'pr_follow_up':
     case 'ask_spark':

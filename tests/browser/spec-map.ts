@@ -33,6 +33,7 @@ export const SHOTS_SPECS = [
 export const SPEC_GROUPS = {
   chat: [
     'agent-continues',
+    'artifacts',
     'attachments',
     'chat',
     'chat-clean',
@@ -349,6 +350,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/server/src/calendar/', groups: ['home'] },
   { prefix: 'apps/server/src/mac-control/', groups: ['settings-providers'] },
   { prefix: 'apps/server/src/chat-files/', groups: ['chat'] },
+  { prefix: 'apps/server/src/artifacts/', groups: ['chat'] },
   { prefix: 'apps/server/src/chat-share/', groups: ['chat'] },
   { prefix: 'apps/server/src/checks/', groups: ['ship-pr'] },
   { prefix: 'apps/server/src/codescan/', groups: ['map'] },

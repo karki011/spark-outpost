@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react';
-import { DownloadIcon } from '../ui/icons.tsx';
-import { saveResponse } from '../ui/save-response.ts';
+import { DownloadIcon } from './icons.tsx';
+import { saveResponse } from './save-response.ts';
 
 type Phase = 'idle' | 'preparing' | 'saving';
 

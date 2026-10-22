@@ -38,6 +38,6 @@ Spark needs Git to change code. The Mac app adds an optional **Mac access** step
 
 ![The final step summarising name, theme, provider and tools](images/getting-started-done-light.png)
 
-The agent works in its own copy of the project; you can always revert.
+The agent works in its own copy of the project; you can revert.
 
 **Next:** [Connect an AI provider](connect-a-provider.md)
