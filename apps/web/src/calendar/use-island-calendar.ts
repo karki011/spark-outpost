@@ -20,7 +20,7 @@ import {
   type CatchUp,
   type HeldTally,
 } from './island-calendar.ts';
-import { eventEnds, stillOn, useEventClock } from './event-clock.ts';
+import { countdownSpans, eventEnds, stillOn, useEventClock } from './event-clock.ts';
 import {
   dismissNudge,
   nudgeHidden,
@@ -30,6 +30,7 @@ import {
   snoozeEnds,
   snoozeNudge,
   snoozeNudgeFor,
+  withJoined,
   withServerDismissed,
   type NudgeMarks,
 } from './nudge-marks.ts';
@@ -140,15 +141,24 @@ function useChoosing(home: IslandHomePanel) {
   return { choosing: home.open ? choosing : null, choose };
 }
 
+function stillChoosing(
+  choosing: readonly CalendarEvent[] | null,
+  marks: NudgeMarks,
+  at: number,
+): readonly CalendarEvent[] | null {
+  if (!choosing) return null;
+  const left = stillOn(choosing, at).filter((event) => !nudgeHidden(marks, event.key, at));
+  return left.length > 0 ? left : null;
+}
+
 function useNudgeClock(live: ReturnType<typeof useCalendarNow>['data'] | null, updatedAt: number) {
   const [marks, setMarks] = useState<NudgeMarks>(() => readSnoozes(Date.now()));
   useEffect(() => saveSnoozes(marks), [marks]);
   const nudged = live?.nudge && live.nudge.kind !== 'wrap_up' ? live.nudge.group : null;
-  const times = useMemo(
-    () => [...eventEnds([...(live?.upcoming ?? []), ...(nudged ?? [])]), ...snoozeEnds(marks)],
-    [live, nudged, marks],
-  );
-  const clock = useEventClock(times, updatedAt);
+  const meetings = useMemo(() => [...(live?.upcoming ?? []), ...(nudged ?? [])], [live, nudged]);
+  const times = useMemo(() => [...eventEnds(meetings), ...snoozeEnds(marks)], [meetings, marks]);
+  const spans = useMemo(() => countdownSpans(meetings), [meetings]);
+  const clock = useEventClock(times, updatedAt, spans);
   const kept = purgeMarks(marks, clock);
   if (kept !== marks) setMarks(kept);
   const saved = useMemo(
@@ -206,15 +216,6 @@ export function useIslandCalendar(
       return next;
     });
   const liveChats = useMemo(() => chatStates(chats), [chats]);
-  const line = calendarLine({
-    now: live,
-    at,
-    waiting,
-    catchUp: held.catchUp,
-    dismissed,
-    marks: nudges.marks,
-    chats: liveChats,
-  });
   const { choosing, choose } = useChoosing(home);
   const names = useMemo(
     () => new Map((live?.calendars ?? []).map((choice) => [choice.key, choice.title])),
@@ -230,6 +231,15 @@ export function useIslandCalendar(
     names,
     note: home.note,
     onDismissed: dismissForGood,
+  });
+  const line = calendarLine({
+    now: live,
+    at,
+    waiting,
+    catchUp: held.catchUp,
+    dismissed,
+    marks: withJoined(nudges.marks, autoJoin.joined),
+    chats: liveChats,
   });
   useIslandRequests(MEETING_REQUESTS, (pending) => {
     const event = live?.upcoming.find((candidate) => candidate.key === pending.target);
@@ -257,7 +267,7 @@ export function useIslandCalendar(
       ? stillOn(live.upcoming, at).filter((event) => !nudgeHidden(nudges.marks, event.key, at))
       : NO_MEETINGS,
     clashes,
-    choosing,
+    choosing: stillChoosing(choosing, nudges.marks, at),
     calendarName: (event) => names.get(event.calendarKey) ?? 'Calendar',
     hopKeys: hopKeys(live),
     countdown: autoJoin.countdown,
