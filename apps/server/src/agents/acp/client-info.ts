@@ -21,6 +21,7 @@ export const CLIENT_CAPABILITIES = clientCapabilities(false);
 export function turnCapabilities(readFiles: boolean, writeFiles: boolean): ClientCapabilities {
   return {
     ...clientCapabilities(readFiles, writeFiles),
+    elicitation: { form: {} },
     _meta: {
       jetbrains: {
         air: {

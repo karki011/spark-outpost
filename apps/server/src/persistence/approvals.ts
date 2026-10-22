@@ -1,9 +1,12 @@
 import { createHash } from 'node:crypto';
 import {
+  CHECKPOINT_OPTION,
   NOTE_OPTIONS,
   SPARK_ACTION_KIND,
+  agentContentSchema,
   applySparkEdits,
   editableFields,
+  formContent,
   sparkActionEditsSchema,
   isCheckpointKind,
   type Approval,
@@ -13,6 +16,8 @@ import {
   type ApprovalPayload,
   type ApprovalScope,
   type ApprovalStatus,
+  type AgentContent,
+  type QuestionAnswerInput,
   type SparkActionEdits,
   type SparkRuleAnswer,
 } from '@spark-outpost/contracts';
@@ -106,6 +111,7 @@ export interface Settlement {
   scope?: ApprovalScope | null;
   note?: string | null;
   edits?: SparkActionEdits | null;
+  answerContent?: AgentContent | null;
 }
 
 export function defaultOption(approval: Pick<NewApproval, 'payload' | 'options'>): string | null {
@@ -157,6 +163,18 @@ export async function getApproval(db: Queryable, id: string): Promise<Approval |
   return rows[0] ? toApproval(rows[0]) : null;
 }
 
+export async function approvalAnswerContent(
+  db: Queryable,
+  id: string,
+): Promise<AgentContent | null> {
+  const { rows } = await db.query<{ answer_content: unknown }>(
+    'SELECT answer_content FROM approvals WHERE id = $1',
+    [id],
+  );
+  const parsed = agentContentSchema.safeParse(rows[0]?.answer_content);
+  return parsed.success ? parsed.data : null;
+}
+
 export async function notifyApprovalChanged(db: Queryable, id: string): Promise<void> {
   await db.query(`SELECT pg_notify('approvals', $1)`, [id]);
 }
@@ -168,7 +186,7 @@ export async function settlePending(
 ): Promise<Approval | null> {
   const { rows } = await db.query<ApprovalRow>(
     `UPDATE approvals SET status = $2, decided_by = $3, decision_option_id = $4,
-       scope = COALESCE($5, 'once'), note = $6, edits = $7, decided_at = now()
+       scope = COALESCE($5, 'once'), note = $6, edits = $7, answer_content = $8, decided_at = now()
      WHERE id = $1 AND status = 'pending' RETURNING *`,
     [
       id,
@@ -178,6 +196,7 @@ export async function settlePending(
       settlement.scope ?? null,
       settlement.note ?? null,
       settlement.edits ? JSON.stringify(settlement.edits) : null,
+      settlement.answerContent ? JSON.stringify(settlement.answerContent) : null,
     ],
   );
   if (rows[0]) await notifyApprovalChanged(db, id);
@@ -222,6 +241,7 @@ export interface UserDecision {
   payloadHash?: string | undefined;
   note?: string | undefined;
   edits?: SparkActionEdits | undefined;
+  answers?: QuestionAnswerInput[] | undefined;
 }
 
 function validateDecision(approval: Approval, decision: UserDecision): ApprovalOption {
@@ -259,10 +279,22 @@ function validateDecision(approval: Approval, decision: UserDecision): ApprovalO
   }
   if (approval.kind === SPARK_ACTION_KIND) validateSparkDecision(approval, option, decision);
   else if (decision.edits) throw new ApprovalInputError('Only Spark actions take edits.');
+  if (decision.answers && !approval.payload.form) {
+    throw new ApprovalInputError('Only an agent question takes answers.');
+  }
   if (isCheckpointKind(approval.kind) && NOTE_OPTIONS.includes(option.optionId)) {
     if (!decision.note?.trim()) throw new ApprovalInputError('This answer needs a note.');
   }
   return option;
+}
+
+function answerContent(approval: Approval, decision: UserDecision): AgentContent | null {
+  const form = approval.payload.form;
+  if (!form || decision.optionId !== CHECKPOINT_OPTION.answer) return null;
+  if (!decision.answers) throw new ApprovalInputError('This answer needs your answers.');
+  const content = formContent(form, decision.answers);
+  if (!content.ok) throw new ApprovalInputError(content.error);
+  return content.value;
 }
 
 function validateSparkDecision(
@@ -319,6 +351,7 @@ export async function decideApproval(
     if (!rows[0]) throw new ApprovalNotFoundError();
     const approval = toApproval(rows[0]);
     const option = validateDecision(approval, decision);
+    const content = answerContent(approval, decision);
     const settled = await settlePending(client, id, {
       status: option.kind.startsWith('allow') ? 'allowed' : 'denied',
       decidedBy: 'user',
@@ -326,6 +359,7 @@ export async function decideApproval(
       scope: scopeFor(option, decision.scope),
       note: decision.note?.trim() || null,
       edits: decision.edits ?? null,
+      answerContent: content,
     });
     if (!settled) throw new ApprovalConflictError('This approval was already answered.');
     if (decision.scope === 'project') {

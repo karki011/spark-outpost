@@ -7,6 +7,7 @@ import {
   crewTitle,
   type ApprovalDecidedValue,
   type CheckpointPayload,
+  type QuestionAnswerInput,
 } from '@spark-outpost/contracts';
 import { approvalsApi } from '../../api/approvals.ts';
 import { queryKeys } from '../../api/client.ts';
@@ -185,10 +186,16 @@ function CheckpointHeading({ payload, title }: { payload: CheckpointPayload; tit
   );
 }
 
+interface Decision {
+  optionId: string;
+  note?: string;
+  answers?: QuestionAnswerInput[];
+}
+
 function lead(approval: CheckpointApproval): string | null {
   const checkpoint = approval.payload.checkpoint;
   if (checkpoint.kind === 'retry') return retryLine(checkpoint);
-  return null;
+  return approval.payload.form?.message || null;
 }
 
 export function CheckpointCard({ approval: incoming }: { approval: CheckpointApproval }) {
@@ -197,12 +204,13 @@ export function CheckpointCard({ approval: incoming }: { approval: CheckpointApp
   const [local, setLocal] = useState<ApprovalDecidedValue | null>(null);
   const approval = local ? (mergeDecision([incoming], local)[0] as CheckpointApproval) : incoming;
   const mutation = useMutation({
-    mutationFn: ({ optionId, note }: { optionId: string; note?: string }) =>
+    mutationFn: ({ optionId, note, answers }: Decision) =>
       approvalsApi.decide(approval.id, {
         optionId,
         scope: 'once',
         payloadHash: approval.payloadHash,
         ...(note ? { note } : {}),
+        ...(answers ? { answers } : {}),
       }),
     onSuccess: (decided) => {
       setLocal(decided);
@@ -212,9 +220,13 @@ export function CheckpointCard({ approval: incoming }: { approval: CheckpointApp
   const { countdown, hold } = useAutoContinue(approval);
   const followRequests = use(FollowContext);
   const decide: Decide = Object.assign(
-    (optionId: string, note?: string) => {
+    (optionId: string, note?: string, answers?: QuestionAnswerInput[]) => {
       followRequests?.request();
-      mutation.mutate(note === undefined ? { optionId } : { optionId, note });
+      mutation.mutate({
+        optionId,
+        ...(note === undefined ? {} : { note }),
+        ...(answers ? { answers } : {}),
+      });
     },
     { busy: mutation.isPending, countdown, hold },
   );
