@@ -2,7 +2,10 @@ import { EventEmitter } from 'node:events';
 import type { Cdp, CdpListener } from './cdp.ts';
 
 type RequestVerdict = (answer: { cancel?: boolean }) => void;
-type RequestHandler = (details: { url: string }, callback: RequestVerdict) => void;
+type RequestHandler = (
+  details: { url: string; webContents?: unknown },
+  callback: RequestVerdict,
+) => void;
 type HeaderVerdict = (answer: { requestHeaders: Record<string, string> }) => void;
 type HeaderHandler = (
   details: { url: string; requestHeaders: Record<string, string> },
@@ -84,9 +87,9 @@ export class FakeSession extends EventEmitter {
     return script.filePath;
   }
 
-  requestCancelled(url: string): boolean {
+  requestCancelled(url: string, webContents?: unknown): boolean {
     let cancelled = false;
-    this.beforeRequest?.({ url }, (answer) => {
+    this.beforeRequest?.({ url, webContents }, (answer) => {
       cancelled = answer.cancel === true;
     });
     return cancelled;
@@ -211,7 +214,9 @@ export class FakeContents extends EventEmitter {
     let url = first;
     for (;;) {
       if (url !== 'about:blank') {
-        if (this.session.requestCancelled(url)) return { url, failed: 'ERR_BLOCKED_BY_CLIENT' };
+        if (this.session.requestCancelled(url, this)) {
+          return { url, failed: 'ERR_BLOCKED_BY_CLIENT' };
+        }
         net.requests.push({
           partition: this.session.partition,
           url,

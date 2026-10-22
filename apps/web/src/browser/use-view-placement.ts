@@ -5,7 +5,6 @@ import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 export interface BrowserHome {
   chatId: string;
   projectId: string | null;
-  keepSignIns: boolean;
   roots: readonly string[];
   sendsTo: 'chat' | 'terminal';
 }
@@ -14,7 +13,6 @@ export function hiddenPlacement(home: BrowserHome): BrowserPlacement {
   return {
     chatId: home.chatId,
     projectId: home.projectId,
-    keepSignIns: home.keepSignIns,
     roots: [...home.roots].slice(0, 16),
     bounds: null,
     covered: false,
@@ -70,7 +68,7 @@ export function useViewPlacement(
   home: BrowserHome,
   shown: boolean,
 ): void {
-  const { chatId, projectId, keepSignIns, sendsTo } = home;
+  const { chatId, projectId, sendsTo } = home;
   const rootsKey = home.roots.join('\n');
 
   useEffect(() => {
@@ -102,7 +100,6 @@ export function useViewPlacement(
       const placement: BrowserPlacement = {
         chatId,
         projectId,
-        keepSignIns,
         roots,
         bounds,
         covered,
@@ -174,12 +171,11 @@ export function useViewPlacement(
       void browser.place({
         chatId,
         projectId,
-        keepSignIns,
         roots,
         bounds: null,
         covered: false,
         sendsTo,
       });
     };
-  }, [target, chatId, projectId, keepSignIns, rootsKey, shown, sendsTo]);
+  }, [target, chatId, projectId, rootsKey, shown, sendsTo]);
 }

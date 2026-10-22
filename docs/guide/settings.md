@@ -31,7 +31,7 @@ Select **Settings** at the bottom of the rail. **Search settings** finds a secti
 
 ## Work
 
-**Projects**: linked folders. Open one for trust, **Where Spark works**, **Keep sign-ins in the browser**, **Saved sign-ins** and **Preview**. See [Where a chat works](where-spark-works.md).
+**Projects**: linked folders. Open one for trust, **Where Spark works**, **Saved sign-ins** and **Preview**. See [Where a chat works](where-spark-works.md).
 
 **Chats & autonomy**:
 
@@ -45,7 +45,7 @@ Select **Settings** at the bottom of the rail. **Search settings** finds a secti
 | **On wide windows**                          | **Context rail**       | Rail, panel or nothing                                         |
 | **Record Terminal sessions like chats**      | Off                    | [Record Terminal sessions](#record-terminal-sessions)          |
 
-**Custom instructions** takes text or a UTF-8 file on your Mac (16 KB at most); select **Save instructions**. Unreadable files are skipped.
+**Custom instructions** takes text or a UTF-8 file on your Mac (16 KB at most); select **Save instructions**.
 
 ### Record Terminal sessions
 
@@ -77,6 +77,8 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 ## Mac
 
 **Mac control** (Mac app): **Let agents control other Mac apps** and the Accessibility permission. See [Let agents use Mac apps](mac-control.md).
+
+**Browser pane** (Mac app): signed-in sites and **Sign out of everything**.
 
 **Notifications**:
 
