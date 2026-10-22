@@ -56,7 +56,7 @@ afterAll(async () => {
   rmSync(base, { recursive: true, force: true });
 });
 
-type Kind = Pick<ProviderTurn, 'mode' | 'planning' | 'changesProject' | 'live'> & {
+type Kind = Pick<ProviderTurn, 'mode' | 'planning' | 'plansFirst' | 'changesProject' | 'live'> & {
   agentMode: string;
 };
 
@@ -98,7 +98,7 @@ const doing = (agentMode: string, live = false): Kind => ({
 });
 
 describe('Claude file tools across the turns of one chat, against the real adapter', () => {
-  it('sends Read, Edit and Write on do turns, fresh, live, resumed and after a plan, and never on Ask or pre-approval Plan turns', async () => {
+  it('sends Read, Edit and Write on do turns, fresh, live, resumed and in a Plan-mode chat, and never on Ask turns', async () => {
     const first = await turn(doing('acceptEdits', true));
     for (const request of first.sent) {
       expect(request.tools).toEqual(expect.arrayContaining(FILE_TOOLS));
@@ -122,13 +122,18 @@ describe('Claude file tools across the turns of one chat, against the real adapt
       expect(request.tools).toEqual(expect.arrayContaining(['Read', 'Write', 'ExitPlanMode']));
       expect(request.tools).not.toContain('Edit');
     }
+    const planChat = await turn({ ...doing('plan'), plansFirst: true });
+    for (const request of planChat.sent) {
+      expect(request.tools).toEqual(expect.arrayContaining([...FILE_TOOLS, 'ExitPlanMode']));
+    }
     const approved = await turn(doing('acceptEdits'));
     for (const request of approved.sent) {
       expect(request.tools).toEqual(expect.arrayContaining(FILE_TOOLS));
       expect(request.system).toContain(CHANGE_LINE);
     }
-    expect([first, live, ask, plan, approved].map((step) => step.continued)).toEqual([
+    expect([first, live, ask, plan, planChat, approved].map((step) => step.continued)).toEqual([
       false,
+      true,
       true,
       true,
       true,
