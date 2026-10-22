@@ -158,6 +158,13 @@ function captureLine(now: CalendarNow, dismissed: ReadonlySet<string>): Calendar
   };
 }
 
+function shownJoin(now: CalendarNow, input: CalendarLineInput): CalendarEvent | null {
+  const shown = stillOn(now.upcoming, input.at).filter(
+    (event) => !nudgeHidden(input.marks, event.key, input.at),
+  );
+  return joinTarget(shown, input.at);
+}
+
 function joinLine(now: CalendarNow, input: CalendarLineInput): CalendarLine | null {
   const target = joinTarget(stillOn(now.upcoming, input.at), input.at);
   if (!target?.link || nudgeHidden(input.marks, target.key, input.at)) return null;
@@ -263,7 +270,7 @@ function nudgeLine(now: CalendarNow, shown: CalendarNudge, input: CalendarLineIn
     eventKey: nudge.eventKey,
     text,
     event: nudge.kind === 'wrap_up' ? null : nudged,
-    join: nudged?.link ? nudged : joinTarget(stillOn(now.upcoming, input.at), input.at),
+    join: nudged?.link ? nudged : shownJoin(now, input),
     choose: null,
     capture: null,
     dismiss: null,
@@ -272,12 +279,12 @@ function nudgeLine(now: CalendarNow, shown: CalendarNudge, input: CalendarLineIn
 }
 
 export function calendarLine(input: CalendarLineInput): CalendarLine | null {
-  const { now, at } = input;
+  const { now } = input;
   const caughtUp = input.catchUp ? catchUpText(input.catchUp) : null;
   if (!now?.active) return caughtUp ? catchUpLine(caughtUp) : null;
   const nudged = now.nudge ? nudgeLine(now, now.nudge, input) : null;
   if (nudged) return nudged;
-  const held = holdLine(now, joinTarget(stillOn(now.upcoming, at), at));
+  const held = holdLine(now, shownJoin(now, input));
   if (held) return held;
   if (caughtUp) return catchUpLine(caughtUp);
   const capture = captureLine(now, input.dismissed);

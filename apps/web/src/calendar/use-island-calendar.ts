@@ -20,7 +20,7 @@ import {
   type CatchUp,
   type HeldTally,
 } from './island-calendar.ts';
-import { eventEnds, minuteMarks, stillOn, useEventClock } from './event-clock.ts';
+import { countdownSpans, eventEnds, stillOn, useEventClock } from './event-clock.ts';
 import {
   dismissNudge,
   nudgeHidden,
@@ -155,11 +155,10 @@ function useNudgeClock(live: ReturnType<typeof useCalendarNow>['data'] | null, u
   const [marks, setMarks] = useState<NudgeMarks>(() => readSnoozes(Date.now()));
   useEffect(() => saveSnoozes(marks), [marks]);
   const nudged = live?.nudge && live.nudge.kind !== 'wrap_up' ? live.nudge.group : null;
-  const times = useMemo(() => {
-    const meetings = [...(live?.upcoming ?? []), ...(nudged ?? [])];
-    return [...eventEnds(meetings), ...minuteMarks(meetings), ...snoozeEnds(marks)];
-  }, [live, nudged, marks]);
-  const clock = useEventClock(times, updatedAt);
+  const meetings = useMemo(() => [...(live?.upcoming ?? []), ...(nudged ?? [])], [live, nudged]);
+  const times = useMemo(() => [...eventEnds(meetings), ...snoozeEnds(marks)], [meetings, marks]);
+  const spans = useMemo(() => countdownSpans(meetings), [meetings]);
+  const clock = useEventClock(times, updatedAt, spans);
   const kept = purgeMarks(marks, clock);
   if (kept !== marks) setMarks(kept);
   const saved = useMemo(

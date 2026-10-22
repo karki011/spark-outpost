@@ -11,7 +11,7 @@ import {
   nudgeText,
   tallyHeld,
 } from './island-calendar.ts';
-import { dismissNudge, NO_NUDGE_MARKS, snoozeNudge } from './nudge-marks.ts';
+import { dismissNudge, NO_NUDGE_MARKS, snoozeNudge, withJoined } from './nudge-marks.ts';
 
 const iso = (time: number) => new Date(time).toISOString();
 const CHAT = '00000000-0000-4000-8000-000000000001';
@@ -184,6 +184,16 @@ describe('calendarLine', () => {
     expect(
       calendarLine(input(now({ hold: { ...hold, focus: false, title: 'Standup' } })))?.text,
     ).toBe('Standup · alerts held until 11:30 AM');
+  });
+
+  it('offers no Join on the hold line for a meeting already joined', () => {
+    const standup = event('Standup', at(9, 55), at(10, 10), { link: link('zoom') });
+    const held = now({ hold, upcoming: [standup] });
+    expect(calendarLine(input(held))?.join).toBe(standup);
+    const joined = withJoined(NO_NUDGE_MARKS, new Set([standup.key]));
+    const line = calendarLine(input(held, { marks: joined }));
+    expect(line?.text).toBe('Focus · alerts held until 11:30 AM');
+    expect(line?.join).toBeNull();
   });
 
   it('keeps the catch-up line after the calendar is disconnected', () => {
