@@ -225,24 +225,34 @@ function counted(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
 
+export type TimeFormat = (at: number) => string;
+
 export function wakeTime(wakesAt: number): string {
   return new Date(wakesAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export function waitedOn(count: number, background?: BackgroundWait | null): string {
+export function waitedOn(
+  count: number,
+  background?: BackgroundWait | null,
+  time: TimeFormat = wakeTime,
+): string {
   if (!background) return subagentCount(count);
   const agents = background.agents > 0 ? counted(background.agents, 'background agent') : null;
   const tasks = background.tasks > 0 ? counted(background.tasks, 'background task') : null;
   const wakeup =
-    background.wakesAt === undefined ? null : `a wakeup at ${wakeTime(background.wakesAt)}`;
+    background.wakesAt === undefined ? null : `a wakeup at ${time(background.wakesAt)}`;
   return [agents, tasks, wakeup].filter((part) => part !== null).join(' and ');
 }
 
-export function waitingOnLabel(count: number, background?: BackgroundWait | null): string {
+export function waitingOnLabel(
+  count: number,
+  background?: BackgroundWait | null,
+  time: TimeFormat = wakeTime,
+): string {
   if (background?.wakesAt !== undefined && background.agents + background.tasks === 0) {
-    return `Sleeping until ${wakeTime(background.wakesAt)}`;
+    return `Sleeping until ${time(background.wakesAt)}`;
   }
-  return `Waiting on ${waitedOn(count, background)}`;
+  return `Waiting on ${waitedOn(count, background, time)}`;
 }
 
 export function agentsWorkingLabel(working: number, total: number): string {

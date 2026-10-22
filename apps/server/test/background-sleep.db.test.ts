@@ -13,7 +13,7 @@ import {
 import { getRun } from '../src/persistence/runs.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
 import { ParkedTurns } from '../src/workflow/parked-turns.ts';
-import { recoverExpiredLeases, sleepOutcomeMessage } from '../src/workflow/recovery.ts';
+import { recoverExpiredLeases, SLEEP_OUTCOME_MESSAGE } from '../src/workflow/recovery.ts';
 import { stopRun } from '../src/workflow/stop-run.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { expectConformantRun } from './agui-conformance.ts';
@@ -149,7 +149,7 @@ describe('a Claude chat whose agent sleeps until a wakeup', { timeout: 40_000 },
   it('says the sleep ended when Spark stopped during it', async () => {
     begin({ leaseSeconds: 3 });
     const { conversationId, runId } = await send('#sleeplong');
-    const wakesAt = (await asleep(conversationId)).background?.wakesAt;
+    await asleep(conversationId);
     await expireLeases(t, runId);
     await worker?.stop();
     worker = null;
@@ -157,7 +157,7 @@ describe('a Claude chat whose agent sleeps until a wakeup', { timeout: 40_000 },
     expect(await recoverExpiredLeases(t.db)).toBe(1);
     expect(await getRun(t.db, runId)).toMatchObject({
       status: 'outcome_unknown',
-      error: sleepOutcomeMessage(wakesAt!),
+      error: SLEEP_OUTCOME_MESSAGE,
     });
   });
 });

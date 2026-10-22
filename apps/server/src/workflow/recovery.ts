@@ -1,4 +1,3 @@
-import { wakeTime } from '@spark-outpost/contracts';
 import { expirePendingApprovals } from '../persistence/approvals.ts';
 import type { Db } from '../persistence/db.ts';
 import { findExpiredLeases, type Lease } from '../persistence/jobs.ts';
@@ -19,15 +18,14 @@ export const WAITING_OUTCOME_MESSAGE = `${OUTCOME_UNKNOWN_MESSAGE} It was waitin
 export const BACKGROUND_OUTCOME_MESSAGE =
   'Spark stopped while the agent was waiting on background work. That work stopped with it, so its results never arrived. Nothing was retried automatically.';
 
-export function sleepOutcomeMessage(wakesAt: number): string {
-  return `Spark stopped while the agent was sleeping until ${wakeTime(wakesAt)}. Its wakeup stopped with it, so the agent did not continue. Nothing was retried automatically.`;
-}
+export const SLEEP_OUTCOME_MESSAGE =
+  'Spark stopped while the agent was sleeping until a wakeup. The wakeup stopped with it, so the agent did not continue. Nothing was retried automatically.';
 
 async function interruptedMessage(db: Db, runId: string): Promise<string> {
   const background = await runBackgroundWait(db, runId);
   if (!background) return OUTCOME_UNKNOWN_MESSAGE;
   if (background.wakesAt !== undefined && background.agents + background.tasks === 0) {
-    return sleepOutcomeMessage(background.wakesAt);
+    return SLEEP_OUTCOME_MESSAGE;
   }
   return BACKGROUND_OUTCOME_MESSAGE;
 }
