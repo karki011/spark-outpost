@@ -60,7 +60,7 @@ describe('opening a request by itself', () => {
 });
 
 describe('resting with requests opening by themselves', () => {
-  const rest = { note: false, panel: null, review: null, hoverLine: false };
+  const rest = { note: false, panel: null, aside: [], review: null, hoverLine: false };
 
   it('rests as Scout until a request opens, and again once it is put away', () => {
     const request = card('a', 'one');

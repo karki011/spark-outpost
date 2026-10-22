@@ -71,6 +71,7 @@ const quiet: IslandInputs = {
   note: false,
   panel: null,
   cards: [],
+  aside: [],
   review: null,
   hoverLine: false,
 };
@@ -127,6 +128,12 @@ describe('island state machine', () => {
       total: 2,
     });
     expect(islandView({ ...quiet, cards, review: 'gone' }).kind).toBe('peek');
+    expect(islandView({ ...quiet, cards, aside: [first], review: second.chat.id })).toEqual({
+      kind: 'card',
+      card: second,
+      index: 1,
+      total: 1,
+    });
     expect(islandView({ ...quiet, panel: 'quick', note: true }).kind).toBe('note');
   });
 
