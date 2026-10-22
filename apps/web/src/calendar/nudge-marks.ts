@@ -39,6 +39,13 @@ export function nudgeHidden(marks: NudgeMarks, eventKey: string, at: number): bo
   return mark.dismissed || (mark.snoozedUntil !== null && at < mark.snoozedUntil);
 }
 
+export function withJoined(marks: NudgeMarks, joined: ReadonlySet<string>): NudgeMarks {
+  if (joined.size === 0) return marks;
+  const next = new Map(marks);
+  for (const key of joined) next.set(key, { end: Infinity, dismissed: true, snoozedUntil: null });
+  return next;
+}
+
 export function purgeMarks(marks: NudgeMarks, at: number): NudgeMarks {
   const kept = [...marks].filter(([, mark]) => mark.end > at);
   return kept.length === marks.size ? marks : new Map(kept);

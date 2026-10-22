@@ -16,7 +16,7 @@ import {
   type AutoJoinPlan,
   type Presence,
 } from './meeting-alert.ts';
-import { dismissNudge, snoozeNudgeFor, type NudgeMarks } from './nudge-marks.ts';
+import { dismissNudge, snoozeNudgeFor, withJoined, type NudgeMarks } from './nudge-marks.ts';
 import { openJoin } from './today-model.ts';
 
 export const ALERT_SNOOZE_MS = 60_000;
@@ -68,7 +68,7 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
   const canShow = sparkDesktop()?.meetingAlert !== undefined;
   const alert =
     settings && canShow
-      ? meetingAlert({ now: live, settings, at, held, marks: marksWithout(marks, joined) })
+      ? meetingAlert({ now: live, settings, at, held, marks: withJoined(marks, joined) })
       : null;
 
   const join = (event: CalendarEvent, automatic: boolean) => {
@@ -224,12 +224,5 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
   }, [setMarks]);
 
   const joinEvent = (event: CalendarEvent) => join(event, false);
-  return { alert, countdown, cancelJoin, joinNow, markJoined, joinEvent };
-}
-
-function marksWithout(marks: NudgeMarks, joined: ReadonlySet<string>): NudgeMarks {
-  if (joined.size === 0) return marks;
-  const next = new Map(marks);
-  for (const key of joined) next.set(key, { end: Infinity, dismissed: true, snoozedUntil: null });
-  return next;
+  return { alert, countdown, joined, cancelJoin, joinNow, markJoined, joinEvent };
 }

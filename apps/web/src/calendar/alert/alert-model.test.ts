@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { at, event, link } from '../test-fixtures.ts';
-import { alertTitle, countdownSeconds, joinState, parsePlace, rigFor } from './alert-model.ts';
+import {
+  alertTitle,
+  countdownSeconds,
+  joinState,
+  parsePlace,
+  rigFor,
+  shortcutJoin,
+} from './alert-model.ts';
 
 const standup = event('Standup', at(10), at(10, 15), { link: link('zoom') });
 const design = event('Design sync', at(10), at(10, 30));
@@ -31,5 +38,12 @@ describe('alert card', () => {
   it('counts the automatic join down in whole seconds', () => {
     expect(countdownSeconds(10_000, 500)).toBe(10);
     expect(countdownSeconds(10_000, 12_000)).toBe(0);
+  });
+
+  it('lets ⌘J join only when one meeting on the card can be joined', () => {
+    const vendor = event('Vendor sync', at(10), at(10, 30), { link: link('meet') });
+    expect(shortcutJoin([standup, design], at(9, 59))?.key).toBe(standup.key);
+    expect(shortcutJoin([standup, vendor], at(9, 59))).toBeNull();
+    expect(shortcutJoin([standup], at(9, 30))).toBeNull();
   });
 });
