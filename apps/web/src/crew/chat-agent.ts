@@ -1,12 +1,8 @@
-import {
-  waitingOnLabel,
-  type ActivityStep,
-  type BackgroundWait,
-  type Run,
-} from '@spark-outpost/contracts';
+import { type ActivityStep, type BackgroundWait, type Run } from '@spark-outpost/contracts';
 import { timedOut, WAITED_LABEL } from '../chat/approvals/timed-out.ts';
 import { AGENT_DEFAULT } from '../chat/composer/model-options.ts';
 import { providerName } from '../chat/provider-name.ts';
+import { waitLabel } from '../chat/wait-label.ts';
 import { prettyModelId } from '../tasks/model-names.ts';
 import { CHAT_AGENT_ROLE, type CrewAgent, type CrewState } from './crew-model.ts';
 import { runState, stepLine } from './crew-projection.ts';
@@ -37,7 +33,7 @@ function agentLine(
   if (timedOut(run.error)) return WAITED_LABEL;
   const settled = SETTLED_LINES[state];
   if (settled) return settled;
-  if (waitingOn > 0) return waitingOnLabel(waitingOn, background).toLowerCase();
+  if (waitingOn > 0) return waitLabel(waitingOn, background).toLowerCase();
   const open = steps.findLast((step) => !step.done);
   return open ? stepLine(open.name) : 'thinking';
 }
