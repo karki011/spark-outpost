@@ -38,7 +38,7 @@ describe('chatActivity', () => {
     const doing = chatActivity(chats);
     expect([...doing]).toEqual([
       [API_CHAT, 'Running the tests'],
-      [FE_CHAT, 'Starting'],
+      [FE_CHAT, 'Waiting to start'],
     ]);
     for (const each of chats) expect(doing.get(each.id)).toBe(rowState(each, false).sub);
   });

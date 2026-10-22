@@ -48,6 +48,7 @@ import {
 import { ErrorLine, ModelSwitchNote } from './ModelSwitchNote.tsx';
 import { providerName } from './provider-name.ts';
 import { useLiveReport } from './status/status-context.ts';
+import { waitingToStart } from '../conversations/waiting-to-start.ts';
 import { BackgroundWork } from './BackgroundWork.tsx';
 import { SubagentsLine } from './subagents/SubagentsLine.tsx';
 import { useShowAgents } from './subagents/agent-board.ts';
@@ -119,6 +120,12 @@ function turnApprovals(
   return shownApprovals(stored, pendingCheckpoint ? [pendingCheckpoint] : [], stream.approvals);
 }
 
+function queuedLine(run: Run, detail: ConversationDetail, stream: RunProjection): string | null {
+  if (run.status !== 'queued' || stream.status !== 'connecting') return null;
+  const latest = detail.conversation.latestRun;
+  return waitingToStart(latest?.id === run.id ? latest.ahead : undefined).toLowerCase();
+}
+
 function turnStatus(run: Run, stream: RunProjection, waiting: boolean) {
   if (timedOut(run.error)) return { state: 'stopped' as const, label: WAITED_LABEL };
   if (isTerminalRunStatus(run.status)) {
@@ -160,7 +167,9 @@ export function SoloTurn({
   const waitingOn = working && !waiting ? stream.subagents.waitingOn : 0;
   const waitingText =
     waitingOn > 0 ? waitingOnLabel(waitingOn, stream.subagents.background).toLowerCase() : null;
-  const label = waitingText ?? status.label;
+  const queuedText = queuedLine(run, detail, stream);
+  const doingText = queuedText ?? waitingText;
+  const label = doingText ?? status.label;
 
   const persistedSteps = detail.activity[run.id]?.length
     ? detail.activity[run.id]!
@@ -173,7 +182,7 @@ export function SoloTurn({
       name: providerName(provider),
       provider,
       kind: 'agent',
-      ...(waitingText ? { doing: waitingText } : {}),
+      ...(doingText ? { doing: doingText } : {}),
     },
     working,
     waitingText ? [] : steps,
@@ -237,7 +246,7 @@ export function SoloTurn({
   return (
     <AiTurn
       provider={provider}
-      label={working && !waiting && !waitingText && !log && !text ? 'thinking' : label}
+      label={working && !waiting && !doingText && !log && !text ? 'thinking' : label}
       state={state}
       liveId={working && !waiting ? run.id : null}
       following={child?.following ?? run.following}

@@ -4,6 +4,7 @@ import {
   type BackgroundWait,
   type Run,
 } from '@spark-outpost/contracts';
+import { WAITING_TO_START } from '../conversations/waiting-to-start.ts';
 import { timedOut, WAITED_LABEL } from '../chat/approvals/timed-out.ts';
 import { AGENT_DEFAULT } from '../chat/composer/model-options.ts';
 import { providerName } from '../chat/provider-name.ts';
@@ -12,7 +13,7 @@ import { CHAT_AGENT_ROLE, type CrewAgent, type CrewState } from './crew-model.ts
 import { runState, stepLine } from './crew-projection.ts';
 
 const SETTLED_LINES: Partial<Record<CrewState, string>> = {
-  queued: 'queued',
+  queued: WAITING_TO_START.toLowerCase(),
   waiting: 'waiting for you',
   stopped: 'stopped',
   failed: 'hit a problem',

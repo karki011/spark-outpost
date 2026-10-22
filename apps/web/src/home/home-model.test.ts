@@ -131,7 +131,7 @@ describe('runningNow and recentChats', () => {
     ]);
     expect(items.map((item) => [item.chat.title, item.step, item.percent])).toEqual([
       ['Busy', 'Reading files', 50],
-      ['Queued', 'Starting', null],
+      ['Queued', 'Waiting to start', null],
     ]);
   });
 

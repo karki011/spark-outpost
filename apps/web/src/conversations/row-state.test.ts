@@ -42,8 +42,17 @@ describe('rowState', () => {
     });
   });
 
-  it('shows the running step, or a starting hint', () => {
-    expect(rowState(chat({ latestRun: run('queued') }), false).sub).toBe('Starting');
+  it('shows the running step, or that a queued turn waits to start and how many are ahead', () => {
+    expect(rowState(chat({ latestRun: run('queued') }), false)).toEqual({
+      tone: 'running',
+      label: 'Waiting to start',
+      sub: 'Waiting to start',
+    });
+    const behind = { ...run('queued')!, ahead: 2 };
+    expect(rowState(chat({ latestRun: behind }), false)).toMatchObject({
+      label: 'Waiting to start · 2 ahead',
+      sub: 'Waiting to start · 2 ahead',
+    });
     expect(rowState(chat({ latestRun: run('running', { step: 'Reading files' }) }), false)).toEqual(
       { tone: 'running', label: 'Running', sub: 'Reading files' },
     );

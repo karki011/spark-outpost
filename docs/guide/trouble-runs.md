@@ -9,15 +9,15 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 ## A run seems stuck
 
 - **You see:** a chat that doesn't move.
-- **Why:** usually it waits for you or runs a long command.
-- **Fix:** read the line above the message box. **Waiting for you** jumps to the card. Anything else, like **Running · pnpm test**, is working.
-- **Still stuck:** select **Stop**, then send a new message.
+- **Why:** it waits for you or an agent slot, or runs a long command.
+- **Fix:** read the line above the message box. **Waiting for you** jumps to the card; **Waiting to start · 2 ahead** starts when one frees. Anything else, like **Running · pnpm test**, is working.
+- **Still stuck:** **Stop**, then send a new message.
 
 ## A run stopped with the app
 
 - **You see:** the **This turn was interrupted** card.
 - **Why:** Spark Outpost stopped mid-run.
-- **Fix:** **Continue from here** resumes the session; or **Start fresh**. Nothing retries by itself.
+- **Fix:** **Continue from here** or **Start fresh**; nothing retries by itself.
 
 ## A card expired
 
@@ -30,15 +30,15 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 
 - **You see:** a step that says "Spark's policy blocked", or "Declined: … (This changes .env, a secret file)".
 - **Why:** the action crossed a [protected path](protected-paths.md), or a read-only mode was asked to change files.
-- **Fix:** in a read-only mode, switch the agent's mode. For a protected path, answer the card.
+- **Fix:** leave the read-only mode, or answer the protected path's card.
 - **Still stuck:** do that step in a [terminal](terminals.md).
 
 ## A push or PR failed
 
 - **You see:** an error with the exact `git push` command, or only a **Create PR on GitHub** link.
-- **Why:** your git login was refused and no GitHub sign-in or token covers the repo, or GitHub isn't connected.
+- **Why:** git refused your login and no GitHub sign-in or token covers the repo, or GitHub isn't connected.
 - **Fix:** open **Settings → Connectors → GitHub** and select **Test**.
-- **Still stuck:** run the shown command in a terminal, or create the PR from the link.
+- **Still stuck:** run the command in a terminal, or use the link.
 
 ## A change wasn't published
 

@@ -27,6 +27,11 @@ export const summaryQuery = `
       ) plan, jsonb_array_elements(plan.body->'entries') entry
       WHERE btrim(entry->>'content') <> ''
     ) END AS latest_run_progress,
+    CASE WHEN r.status = 'queued' THEN (
+      SELECT count(*)::int FROM jobs mine JOIN jobs other ON other.status = 'queued'
+        AND (other.available_at, other.created_at) < (mine.available_at, mine.created_at)
+      WHERE mine.run_id = r.id AND mine.status = 'queued'
+    ) END AS latest_run_ahead,
     CASE WHEN r.status = 'running' THEN (
       SELECT e.payload->>'stepName' FROM run_events e
       WHERE e.run_id = r.id AND e.type = 'STEP_STARTED' AND NOT (e.payload ? 'subagentRunId')

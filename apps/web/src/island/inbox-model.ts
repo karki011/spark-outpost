@@ -3,6 +3,7 @@ import { agentCounts, type AgentCounts } from '../chat/subagents/agent-cards.ts'
 import { hideSecrets } from '../chat/status/status-text.ts';
 import { sessionState, type Card } from './island-model.ts';
 import { waitingTitle } from './island-rest-line.ts';
+import { waitingToStart } from '../conversations/waiting-to-start.ts';
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -47,7 +48,13 @@ export function runningRows(
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .map((chat) => {
       const agents = agentsOf(chat, details.get(chat.id));
-      const step = chat.latestRun?.step ? hideSecrets(chat.latestRun.step) : null;
+      const run = chat.latestRun;
+      const step =
+        run?.status === 'queued'
+          ? waitingToStart(run.ahead)
+          : run?.step
+            ? hideSecrets(run.step)
+            : null;
       return { chat, agents, detail: agents ? agentsText(agents) : (step ?? 'working') };
     });
 }

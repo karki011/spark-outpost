@@ -65,10 +65,16 @@ describe('running rows', () => {
         [RUN_A]: [subagent('1', 'working'), subagent('2', 'working'), subagent('3', 'done')],
       },
     } as unknown as ConversationDetail;
-    const rows = runningRows([testing, working, idle], new Map([[CHAT_A, detail]]));
+    const queued = chat('0d000000-0000-4000-8000-00000000000d', {
+      title: 'Waiting chat',
+      latestRun: run('queued', { ahead: 1 }),
+      updatedAt: '2026-10-20T09:00:00.000Z',
+    });
+    const rows = runningRows([testing, working, idle, queued], new Map([[CHAT_A, detail]]));
     expect(rows.map((row) => [row.chat.title, row.detail])).toEqual([
       ['Ticket tree data', '2 of 3 agents working'],
       ['Cloudsmith setup', 'running tests'],
+      ['Waiting chat', 'Waiting to start · 1 ahead'],
     ]);
   });
 });

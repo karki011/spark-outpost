@@ -7,6 +7,7 @@ import {
 } from '@spark-outpost/contracts';
 import { terminalMood } from '../terminal/native-state.ts';
 import type { ChatFaceState } from '../brand/chat-face.ts';
+import { waitingToStart } from './waiting-to-start.ts';
 
 export type RowTone = 'running' | 'permission' | 'asking' | 'done' | 'error' | 'idle';
 
@@ -69,8 +70,10 @@ export function rowState(chat: ConversationSummary, open: boolean): RowState {
   const run = chat.latestRun;
   if (!run) return IDLE;
   switch (run.status) {
-    case 'queued':
-      return { tone: 'running', label: 'Running', sub: 'Starting' };
+    case 'queued': {
+      const waiting = waitingToStart(run.ahead);
+      return { tone: 'running', label: waiting, sub: waiting };
+    }
     case 'running':
       return { tone: 'running', label: 'Running', sub: run.step ?? 'Working' };
     case 'failed':

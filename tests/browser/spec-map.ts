@@ -53,6 +53,7 @@ export const SPEC_GROUPS = {
     'phone-context-bar',
     'prompt-cache',
     'queue-strip',
+    'queued-turn',
     'quote-to-chat',
     'responsive-chat',
     'result-block',

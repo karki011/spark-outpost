@@ -102,6 +102,7 @@ export const conversationSummarySchema = z.object({
       needsYou: z.string().nullable().optional(),
       waitingOn: z.number().int().positive().optional(),
       background: backgroundWaitSchema.optional(),
+      ahead: z.number().int().nonnegative().optional(),
       finishedAt: z.string().nullable().optional(),
     })
     .nullable(),
