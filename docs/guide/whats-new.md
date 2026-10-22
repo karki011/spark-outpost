@@ -12,6 +12,7 @@ What changed recently, newest first.
 
 | What changed                                                                                                                                 | What to do                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| A spoken question, once sent, acts like a typed one under **When Ask Spark acts**.                                                           | See [Talk to Spark](voice.md#turn-it-on).                                |
 | Claude agents can sleep: **Sleeping until 10:48**; the turn then picks up.                                                                   | See [Background work](follow-a-turn.md#background-work).                 |
 | An outpost no longer shows the last chat's Browser pane on its left.                                                                         | See [Outposts](outposts.md).                                             |
 | Spark Island answers one-pick questions; its card count skips set-aside cards.                                                               | See [Cards](cards.md#approval-cards).                                    |

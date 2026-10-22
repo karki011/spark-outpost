@@ -261,7 +261,7 @@ Recommendation: agents cannot see or drive the remote Spark.
 - The remote window is not a Browser pane tab. `spark_browser_tabs` does not list it. No `spark_browser_*` tool takes its id. No debugger is attached, so there is nothing to read with.
 - No Spark tool is added for it. `spark_docs` may describe the feature; that is all.
 - What the host shows is another machine's data: chats, diffs, tool output. It is untrusted data. If agents could read it, text in a remote chat could steer a local agent. If agents could type in it, a local agent could start runs on another Mac with that Mac's permissions.
-- When the Browser pane later lets agents open external sites, saved remote Spark hostnames must be refused there by name.
+- The Browser pane already lets agents open external sites, so saved remote Spark hostnames must be refused there by name.
 
 A user can still type the host's address into a chat's Browser pane and pair that tab. That is possible today for any browser. It stays possible, pairs as a plain browser, and still needs a confirm on the host.
 
@@ -320,7 +320,7 @@ Small files, one owner each. S1 goes first; the rest run in parallel.
 | Lane | What                                                                                                                     | Files (new unless marked)                                                                                                        |
 | ---- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | S1   | Contracts: saved-Spark schemas, `parseSparkAddress` (pure), the worker ⇄ main messages, `kind` on devices and pairings   | `packages/contracts/src/remote-sparks.ts`; edits `remote.ts`, `browser-bridge.ts`                                                |
-| S2   | Storage: migration 0163, saved-Spark queries, `kind` read and written                                                    | `apps/server/migrations/0163_*.sql`, `apps/server/src/remote-sparks/store.ts`; edits `remote/store.ts`                           |
+| S2   | Storage: a new migration, saved-Spark queries, `kind` read and written                                                   | `apps/server/migrations/<next>_*.sql`, `apps/server/src/remote-sparks/store.ts`; edits `remote/store.ts`                         |
 | S3   | Controlling-side API: the five routes, keychain read, write and delete, reset cleanup, five `never` rules                | `apps/server/src/remote-sparks/routes.ts`, `secrets.ts`; edits `remote/route-rules.ts`, `reset/reset.ts`                         |
 | S4   | Host pairing: the page reads name and kind from the link; pairing carries `kind`                                         | edits `remote/pairing-page.ts`, `remote/pairing.ts`, `remote/routes.ts`                                                          |
 | S5   | Desktop window: partition and guard, window and title, one-origin lock, cookie set and capture                           | `apps/desktop/src/remote-spark/partition.ts`, `window.ts`, `navigation.ts`, `cookie.ts`; edits `browser/bridge.ts`, `preload.ts` |

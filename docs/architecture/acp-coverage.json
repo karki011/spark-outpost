@@ -15,7 +15,7 @@
   "agent-method:session/new": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/acp-provider.ts, apps/server/src/agents/acp/probe.ts",
-    "note": "cwd is the primary linked repo. A chat without a project gets a private folder per conversation and agent key under $TMPDIR/spark-outpost-sessions so a resumed session keeps its cwd; a child run without a resumeKey gets a new temp folder. additionalDirectories carries the other linked repos when the agent advertises the capability. mcpServers carries the user-level servers enabled for the chat and the project .mcp.json servers the user turned on (see REPO_AGENT_CONFIG.md). Vendor _meta comes from agents.ts."
+    "note": "cwd is the primary linked repo. A chat without a project uses its own folder (<data>/<channel>/chats/<chat>/work) as cwd, and a chat-mode turn (such as Ask Spark's hidden chat) gets a private folder per conversation and agent key under $TMPDIR/spark-outpost-sessions, so a resumed session keeps its cwd; a child run without a resumeKey gets a new temp folder. additionalDirectories carries the other linked repos when the agent advertises the capability. mcpServers carries the user-level servers enabled for the chat and the project .mcp.json servers the user turned on (see REPO_AGENT_CONFIG.md). Vendor _meta comes from agents.ts."
   },
   "agent-method:session/load": {
     "status": "supported",
@@ -138,7 +138,7 @@
   "session-update:agent_message_chunk": {
     "status": "partial",
     "where": "apps/server/src/agents/acp/session-updates.ts",
-    "note": "Text streams, and a new messageId inserts a blank line. http and https resource_link blocks become Markdown links; other URIs, image, audio and resource blocks are dropped."
+    "note": "Text streams, and a new messageId inserts a blank line. http and https resource_link blocks become Markdown links, and a ui://spark/<chat>/<id> resource_link becomes an artifact link (artifact-links.ts); other URIs, image, audio and resource blocks are dropped."
   },
   "session-update:agent_thought_chunk": {
     "status": "partial",
@@ -153,7 +153,7 @@
   "session-update:tool_call_update": {
     "status": "partial",
     "where": "apps/server/src/agents/acp/session-updates.ts",
-    "note": "A completed or failed status closes the step; failed adds a Failed step. Title, locations and rawInput update the step target, and a changed read or edit location stores a new file_focus event. GitHub pull request URLs in text content, resource_link content and rawOutput are saved as task links. Diffs are not kept."
+    "note": "A completed or failed status closes the step; failed adds a Failed step. Title, locations and rawInput update the step target, and a changed read or edit location stores a new file_focus event. GitHub pull request URLs in text content, resource_link content and rawOutput are saved as task links, and a ui://spark/<chat>/<id> resource_link in content becomes an artifact link (artifact-links.ts). Diffs are not kept."
   },
   "session-update:plan": {
     "status": "supported",
@@ -207,7 +207,7 @@
   "content-block:resource_link": {
     "status": "partial",
     "where": "apps/server/src/agents/acp/session-updates.ts",
-    "note": "http and https links in replies become Markdown links, and a GitHub pull request link is saved as a task link. We never send resource_link in prompts, although every agent must accept it; project files and @-mentions should use it."
+    "note": "http and https links in replies become Markdown links, a GitHub pull request link is saved as a task link, and a ui://spark/<chat>/<id> link opens the artifact (ARTIFACTS.md). We never send resource_link in prompts, although every agent must accept it; project files and @-mentions should use it."
   },
   "content-block:resource": {
     "status": "partial",
@@ -288,12 +288,12 @@
   "client-capability:fs.readTextFile": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/client-info.ts",
-    "note": "true only when the run reads linked project folders (Claude with at least one repo; never Codex). The probe sends false. Neither real adapter calls fs/read_text_file."
+    "note": "true only when the run has project folders to read (a linked project, or a chat's own folder when it has none; turn-launch.ts planLaunch). The probe sends false. Neither real adapter calls fs/read_text_file."
   },
   "client-capability:fs.writeTextFile": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/client-info.ts",
-    "note": "Advertised true only for Do runs in a linked project."
+    "note": "Advertised true only for Do runs in a linked project or a chat's own folder."
   },
   "client-capability:terminal": {
     "status": "missing",
