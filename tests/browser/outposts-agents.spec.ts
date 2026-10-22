@@ -1,6 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { send } from './project-chat-kit.ts';
+import { calls, withDesktopBrowser } from './desktop-browser.ts';
+import { toggleHeaderPane } from './header-menu.ts';
 import { resetTestDatabase } from './database.ts';
 import { animationsSettled } from './settle.ts';
 import {
@@ -119,4 +121,30 @@ test('an agent leaves a note in the thread, and it starts no work', async ({ pag
   await expect(note.locator('.op-kind')).toHaveText('note');
   await expect(thread(page).locator('.op-pill')).toHaveCount(0);
   await expect(chip(page, 'api')).toContainText('Idle');
+});
+
+test("a chat's Browser pane stays with its chat and never sits beside the outpost", async ({
+  page,
+}) => {
+  await withDesktopBrowser(page);
+  await seeded(page);
+  await openMember(page, 'fe', 'Frontend');
+  await toggleHeaderPane(page, 'Browser');
+  const panel = page.getByRole('complementary', { name: 'Work panel' });
+  const pane = page.getByRole('region', { name: 'Browser' });
+  await expect(pane).toBeVisible();
+
+  const lastBounds = async () =>
+    ((await calls(page, 'place')) as { bounds: unknown }[]).at(-1)?.bounds ?? null;
+  await openOutpost(page);
+  await expect(panel).toBeHidden();
+  await expect.poll(lastBounds).toBeNull();
+
+  await chip(page, 'fe').click();
+  await expect(page.locator('.chat-title')).toHaveText('Frontend');
+  await expect(pane).toBeVisible();
+  await expect.poll(lastBounds).not.toBeNull();
+  const chat = (await page.locator('.main:not(.op)').boundingBox())!;
+  const side = (await panel.boundingBox())!;
+  expect(side.x).toBeGreaterThanOrEqual(chat.x + chat.width);
 });

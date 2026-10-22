@@ -85,4 +85,9 @@ describe('the end of an agent cycle', () => {
     ).toBe(true);
     expect(endsAgentCycle(usage)).toBe(false);
   });
+
+  it('is also the usage update that carries the cycle’s cost, as a woken cycle sends it', () => {
+    const usage = { sessionUpdate: 'usage_update', used: 1, size: 2 } as const;
+    expect(endsAgentCycle({ ...usage, cost: { amount: 0.3, currency: 'USD' } })).toBe(true);
+  });
 });

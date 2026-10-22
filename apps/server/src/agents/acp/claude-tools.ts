@@ -1,3 +1,5 @@
+export const CLAUDE_WAIT_TOOLS = ['ScheduleWakeup'] as const;
+
 export const CLAUDE_READ_TOOLS = [
   'Read',
   'Glob',
@@ -11,6 +13,7 @@ export const CLAUDE_READ_TOOLS = [
   'TaskList',
   'TaskUpdate',
   'ToolSearch',
+  ...CLAUDE_WAIT_TOOLS,
 ] as const;
 
 export const CLAUDE_GATED_TOOLS = ['WebSearch', 'WebFetch', 'Bash', 'Monitor', 'TaskStop'] as const;
@@ -40,7 +43,6 @@ export const CLAUDE_OFF_TOOLS: Readonly<Record<string, string>> = {
   CronCreate: 'schedules work that runs outside a turn',
   CronDelete: 'manages work that runs outside a turn',
   CronList: 'lists work that runs outside a turn',
-  ScheduleWakeup: 'wakes the agent outside a turn',
   RemoteTrigger: 'starts work outside a turn',
   PushNotification: "sends a notification off this computer outside Spark's own notifications",
   Artifact: 'publishes a page to claude.ai',

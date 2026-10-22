@@ -140,4 +140,17 @@ describe('sub-agent progress', () => {
       expect.objectContaining({ content: { waitingOn: 0 } }),
     ]);
   });
+
+  it('counts a scheduled wakeup as one thing the turn waits on, with its time', () => {
+    const { see } = progress();
+    const wakesAt = 1_792_680_480_000;
+    expect(see({ kind: 'background_work', agents: 0, tasks: 0, names: [], wakesAt })).toEqual([
+      expect.objectContaining({
+        content: { waitingOn: 1, background: { agents: 0, tasks: 0, names: [], wakesAt } },
+      }),
+    ]);
+    expect(see({ kind: 'background_work', agents: 0, tasks: 0, names: [] })).toEqual([
+      expect.objectContaining({ content: { waitingOn: 0 } }),
+    ]);
+  });
 });

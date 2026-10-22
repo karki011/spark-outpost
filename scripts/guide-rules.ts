@@ -59,6 +59,49 @@ export function longestParagraph(body: string): number {
   return longest;
 }
 
+function tableCells(row: string): number {
+  return row
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split(/(?<!\\)\|/).length;
+}
+
+function tableBlocks(body: string): string[][] {
+  const tables: string[][] = [];
+  let current: string[] = [];
+  for (const { line, code } of markdownLines(body)) {
+    if (!code && line.trim().startsWith('|')) {
+      current.push(line);
+      continue;
+    }
+    if (current.length > 0) tables.push(current);
+    current = [];
+  }
+  if (current.length > 0) tables.push(current);
+  return tables;
+}
+
+export function tableProblems(body: string): string[] {
+  const problems: string[] = [];
+  for (const rows of tableBlocks(body)) {
+    if (!TABLE_RULE.test(rows[1] ?? '')) {
+      problems.push(`a table starts without a header row: ${rows[0]!.trim().slice(0, 40)}`);
+      continue;
+    }
+    const columns = tableCells(rows[0]!);
+    for (const row of rows.slice(2)) {
+      const cells = tableCells(row);
+      if (cells !== columns) {
+        problems.push(
+          `a table row has ${cells} cells; its header has ${columns}: ${row.trim().slice(0, 40)}`,
+        );
+      }
+    }
+  }
+  return problems;
+}
+
 function pageShape(page: GuidePage): string[] {
   const problems: string[] = [];
   const words = proseWords(page.body);
@@ -75,6 +118,7 @@ function pageShape(page: GuidePage): string[] {
     problems.push('has a # heading; the title comes from the frontmatter');
   }
   if ((page.body.match(TIP) ?? []).length > 1) problems.push('more than one Tip');
+  problems.push(...tableProblems(page.body));
   if (page.type === 'how-to') {
     if (!TIME_ESTIMATE.test(page.body.split('\n\n')[0] ?? '')) {
       problems.push('a how-to opens with its outcome and "About N minutes."');
