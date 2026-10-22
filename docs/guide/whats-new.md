@@ -13,7 +13,7 @@ What changed recently, newest first.
 | What changed                                                                                                                                 | What to do                                                        |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | Claude agents can sleep: **Sleeping until 10:48**; the turn then picks up.                                                                   | See [Background work](follow-a-turn.md#background-work).          |
-| Meeting lines: on-time countdowns, wrap-ups name the chat, joined meetings drop.                                                             | See [Use it](calendar.md#use-it).                                 |
+| Meeting lines: on-time countdowns, wrap-ups name the chat, joined meetings drop. Card at start; **Alert at** sets earlier.                   | See [Use it](calendar.md#use-it).                                 |
 | Agents ask with a question card.                                                                                                             | See [Cards](cards.md#approval-cards).                             |
 | One shared inbox, cleared everywhere; answer or set aside in place; flags never count. Meeting **Dismiss** sticks; **Refresh now** on Today. | See [Spark Island](desktop-companion.md#open-it).                 |
 | Ask Spark has a chat’s tools. **Let agents read my calendar** is now on; had it off? Turn it off again.                                      | See [Ask Spark](companion-quick-chat.md#ask-spark).               |
@@ -25,6 +25,6 @@ What changed recently, newest first.
 | Picker: no **Auto**, shows the model; no-project chats get a folder. Agents search the web, show artifacts; links ask first.                 | See [Agent tools](modes-and-levels.md#agent-tools).               |
 | Agents stay running between messages: **Continued on its own**, **Waiting on…**, **Stopped by Quit**. Every chat starts at once.             | See [Background work](follow-a-turn.md#background-work).          |
 | Spark Island survives closing Spark's window.                                                                                                | See [Spark Island](desktop-companion.md#open-it).                 |
-| Nothing chimes for the chat you're viewing. Spark Island opens from Scout; **Hide in screen sharing**.                                       | See [Spark Island](desktop-companion.md#answer-a-card).           |
+| Nothing chimes for the chat you're viewing. Spark Island opens from Scout; **Hide in screen sharing**. Clicks keep your app active.          | See [Spark Island](desktop-companion.md#answer-a-card).           |
 | **Atlassian** replaces Jira. Agent deletes in Jira, Confluence and Calendar follow your mode.                                                | See [Connect](tickets-and-github.md#connect-atlassian-or-linear). |
 | **Today** from macOS or Google: **Month**, nudges, early **Join**, **Choose**, agent access; optional **Join meetings automatically**.       | See [Use it](calendar.md#use-it).                                 |

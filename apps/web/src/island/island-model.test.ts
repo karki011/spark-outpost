@@ -8,6 +8,7 @@ import {
   nextStreak,
   pendingCards,
   quickShortcutTarget,
+  shortcutClosesPanel,
   viewWidth,
   runStatuses,
   sessionState,
@@ -99,6 +100,11 @@ describe('island state machine', () => {
     expect(hoverOpensHome(line, true)).toBe(false);
     expect(quickShortcutTarget(null, line, card)).toEqual({ kind: 'review', chatId: 'a' });
     expect(quickShortcutTarget(null, line)).toEqual({ kind: 'quick' });
+    expect(quickShortcutTarget('home', line, null, 'user')).toEqual({ kind: 'close' });
+    expect(quickShortcutTarget('home', line, null, 'hover')).toEqual({ kind: 'quick' });
+    expect(shortcutClosesPanel('home', 'user')).toBe(true);
+    expect(shortcutClosesPanel('home', 'hover')).toBe(false);
+    expect(shortcutClosesPanel(null, 'user')).toBe(false);
     expect(islandView({ ...quiet, cards: [card], hoverLine: true, review: 'a' }).kind).toBe('card');
     expect(islandView({ ...quiet, hoverLine: true, panel: 'home' }).kind).toBe('panel');
   });
