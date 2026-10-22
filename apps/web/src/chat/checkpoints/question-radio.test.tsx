@@ -78,6 +78,18 @@ describe('a single-choice question', () => {
     expect(checked()).toEqual(['true', 'false', 'false']);
   });
 
+  it('wraps at either end and stays in the group, even when the question takes text', () => {
+    render(<QuestionsBody approval={card([{ ...store, freeText: true }])} decide={decide} />);
+    const [postgres, , sqlite] = radios();
+    sqlite!.focus();
+    fireEvent.keyDown(sqlite!, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(postgres);
+    expect(checked()).toEqual(['true', 'false', 'false']);
+    fireEvent.keyDown(postgres!, { key: 'ArrowUp' });
+    expect(document.activeElement).toBe(sqlite);
+    expect(checked()).toEqual(['false', 'false', 'true']);
+  });
+
   it('checks the answer a number key names', () => {
     render(<QuestionsBody approval={card([store])} decide={decide} />);
     radios()[0]!.focus();
@@ -97,5 +109,17 @@ describe('a choose-any question', () => {
     expect(screen.getAllByRole('button', { pressed: true })).toHaveLength(2);
     fireEvent.click(postgres);
     expect(postgres.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('moves with Up and Down only, without checking', () => {
+    render(<QuestionsBody approval={card([{ ...store, pick: 'many' }])} decide={decide} />);
+    const postgres = screen.getByRole('button', { name: 'Postgres' });
+    const redis = screen.getByRole('button', { name: 'Redis' });
+    postgres.focus();
+    fireEvent.keyDown(postgres, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(postgres);
+    fireEvent.keyDown(postgres, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(redis);
+    expect(screen.queryAllByRole('button', { pressed: true })).toHaveLength(0);
   });
 });

@@ -89,7 +89,13 @@ async function exportFromMenu(options: HelpOptions): Promise<void> {
   }
 }
 
-const CHANNELS = [IPC.helpInfo, IPC.helpExportDiagnostics, IPC.helpShowLogs, IPC.helpPending];
+const CHANNELS = [
+  IPC.helpInfo,
+  IPC.helpExportDiagnostics,
+  IPC.helpShowLogs,
+  IPC.helpPending,
+  IPC.menuSettingsPending,
+];
 
 export function startHelp(options: HelpOptions): Help {
   const info: DesktopHelpInfo = {
@@ -98,6 +104,7 @@ export function startHelp(options: HelpOptions): Help {
     logsFolder: options.logsFolder,
   };
   let feedbackPending = false;
+  let settingsPending = false;
   const toMainWindow = (channel: string, payload?: string) => {
     const window = options.mainWindow();
     if (window && !window.isDestroyed()) window.webContents.send(channel, payload);
@@ -118,6 +125,11 @@ export function startHelp(options: HelpOptions): Help {
     feedbackPending = false;
     return pending;
   });
+  handle(IPC.menuSettingsPending, () => {
+    const pending = settingsPending;
+    settingsPending = false;
+    return pending;
+  });
   let sidebarShown = true;
   const buildMenu = () =>
     Menu.setApplicationMenu(
@@ -126,6 +138,7 @@ export function startHelp(options: HelpOptions): Help {
           dev: !app.isPackaged,
           sidebarShown,
           openSettings: () => {
+            settingsPending = true;
             options.showSpark();
             toMainWindow(IPC.menuOpenSettings);
           },
