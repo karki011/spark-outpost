@@ -63,7 +63,7 @@ async function jobContext(db: Db, input: RunInput) {
     task: tasks.findLast((task) => task.closedAt === null) ?? null,
     tickets: tickets.linked,
     lastReply: input.history.findLast((turn) => turn.role === 'assistant')?.content ?? null,
-    hasProject: input.projectRoots.length > 0,
+    hasProject: input.projectRoots.length > 0 && !input.chatFolder,
   };
 }
 
@@ -84,7 +84,7 @@ async function runSpark(
       attempt: 1,
       agentLabel: sparkWho(spark),
       ...pick,
-      mode: h.input.projectRoots.length > 0 ? 'ask' : 'chat',
+      mode: h.input.projectRoots.length > 0 && !h.input.chatFolder ? 'ask' : 'chat',
       prompt,
       route: {
         name: spark.name,

@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  modeLabel,
-  modePermission,
-  modeSummary,
-  permissionState,
-  projectPermission,
-  withCurrentMode,
-} from './mode-summary.ts';
+import { modeLabel, modeSummary, permissionState, withCurrentMode } from './mode-summary.ts';
 
 const modes = [
   { id: 'default', label: 'Manual', description: 'Always ask', kind: 'standard' },
@@ -117,19 +110,6 @@ describe('mode summary', () => {
       expect(permissionState(settings('codex', 'agent'), codex).risk).toBe('auto');
       expect(permissionState(settings('claude', 'default'), claude).risk).toBe('ask');
     });
-  });
-
-  it('says a chat without a project has no file tools and keeps the mode risk', () => {
-    const picked = modePermission('claude', 'acceptEdits', { modes } as never);
-    expect(projectPermission(picked, true)).toBe(picked);
-    const plain = projectPermission(picked, false);
-    expect(plain).toMatchObject({
-      mode: 'acceptEdits',
-      label: 'No file tools without a project',
-      short: 'No file tools without a project',
-      risk: 'edit',
-    });
-    expect(plain.description).toContain('Spark’s own tools ask first');
   });
 
   it('keeps a mode the agent no longer lists', () => {

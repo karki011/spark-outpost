@@ -21,6 +21,8 @@ Choose **Terminal** for native Claude Code or Codex: [Open a terminal](terminals
 
 ## Link a project
 
+Without one, the agent works in the chat's own folder; its files show under its reply.
+
 1. Above the message box, select **Choose project**.
 2. Pick a folder under **Recent**, or select **Choose a folder…**, then **Use this folder**.
 3. For another repo, select **Add another repo…**.

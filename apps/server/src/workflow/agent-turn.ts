@@ -180,7 +180,7 @@ export async function runAgentTurn(
     observations.record({ source: 'private_data', label: SLACK_CONTEXT_OBSERVATION });
   }
   const edits =
-    input.mode === 'do'
+    input.mode === 'do' && !input.chatFolder
       ? createObservedEdits({
           db: deps.db,
           workspaceId: input.workspaceId,
@@ -282,6 +282,7 @@ export async function runAgentTurn(
             ...gateOptions,
             changesProject,
             projectRoots: input.projectRoots,
+            keepsCopies: !input.chatFolder,
             backupAlsoFor: options.backupAlsoFor,
             observe: options.observeEdits,
             plans: plans.hooks,
@@ -352,7 +353,8 @@ export async function runAgentTurn(
       audit: observer,
       ...(input.mode ? { mode: input.mode } : {}),
       ...(changesProject ? { changesProject: true } : {}),
-      ...(changesProject && startBasis(input) ? { publishes: true } : {}),
+      ...(changesProject && !input.chatFolder && startBasis(input) ? { publishes: true } : {}),
+      ...(input.chatFolder ? { chatFolder: true } : {}),
       ...(plansThisTurn(input) ? { planning: true } : {}),
       ...(input.plansFirst ? { plansFirst: true } : {}),
       ...(approvals ? { approvals } : {}),

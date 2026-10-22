@@ -17,6 +17,7 @@ import { chatTurnSteps } from './chat-turn-steps.ts';
 import { failSafely, finishRun } from './execute-run.ts';
 import { planNote } from './plan-recorder.ts';
 import { noteProjectMove } from './project-move.ts';
+import { keepChatFiles, withChatFolder } from './chat-folder.ts';
 import { runAppender } from './run-appender.ts';
 import { runEvents } from './run-events.ts';
 import { noteRevertedFiles } from './revert-note.ts';
@@ -53,6 +54,7 @@ async function afterReply(
 async function runAgentCycle(start: Start, input: RunInput): Promise<void> {
   const { deps, lease, append, control, hooks } = start;
   const reply = await runAgentTurn(deps, lease, input, append, control);
+  await keepChatFiles(deps.db, deps.chatFolders, input);
   const result = await afterReply({ deps, lease, input, append, control }, hooks, reply);
   await finishRun(append, input.identity, result, true);
 }
@@ -64,9 +66,10 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
   let input = await loadRunInput(deps.db, lease.runId);
   try {
     await append(runEvents.started(input.identity), { transition: { status: 'running' } });
+    input = await withChatFolder(deps.chatFolders, input);
     if (input.agentCycle) return await runAgentCycle(start, input);
     await auditOutpostRequest(deps.db, lease, input);
-    input = await noteProjectMove(deps.db, input, append);
+    input = await noteProjectMove(deps.db, input, append, deps.chatFolders);
     const placed = await placeChatOrStop(deps, input, append, false);
     if (!placed) return;
     const prepared = await prepareTurn(deps, lease, placed.input, append, control);
@@ -84,6 +87,7 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
     input = ready;
     const prompted = await withChatPrompt(deps, input);
     const reply = await runAgentTurn(prompted, lease, input, append, control);
+    await keepChatFiles(deps.db, deps.chatFolders, input);
     if (reply.outcome === 'succeeded') await reverted.delivered();
     const turn = { deps: prompted, lease, input, append, control };
     const result = await afterReply(turn, hooks, reply);
@@ -93,7 +97,10 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
     await failSafely(append, error);
   } finally {
     control.dispose();
-    if (input.mode === 'do') await recordKeptChanges(deps.db, input.workspaceId, lease.runId);
+    await keepChatFiles(deps.db, deps.chatFolders, input);
+    if (input.mode === 'do' && !input.chatFolder) {
+      await recordKeptChanges(deps.db, input.workspaceId, lease.runId);
+    }
   }
 }
 

@@ -28,8 +28,6 @@ import {
 } from './spark-mcp-support.ts';
 import { createTestDb, startChat, type TestDb } from './support.ts';
 
-const CONVERSATION_MODES: Record<string, string> = { claude: 'default', codex: 'read-only' };
-
 export const MODES: [provider: string, mode: string, name: string, asks: boolean][] = [
   ['claude', 'auto', 'Auto', false],
   ['claude', 'bypassPermissions', 'Bypass permissions', false],
@@ -149,7 +147,7 @@ export class CalendarHarness {
     this.chat = await startChat(this.t, message);
     await this.t.db.query(
       `UPDATE runs SET provider = $2, agent_mode = $3, used_mode = $4 WHERE id = $1`,
-      [this.chat.runId, provider, mode, CONVERSATION_MODES[provider]],
+      [this.chat.runId, provider, mode, mode],
     );
   }
 

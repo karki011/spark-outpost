@@ -169,6 +169,7 @@ POST /api/tickets/:source/:key/transition
 
 const NEVER = `
 PUT /api/spark-rules
+GET /api/chat-files/:id/content
 GET /api/projects/:id/pull-requests/open
 POST /api/conversations/:id/workspace/adopt
 POST /api/approvals/:id/spark-rule

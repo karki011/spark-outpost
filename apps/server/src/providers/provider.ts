@@ -91,6 +91,7 @@ export interface ProviderTurn {
   history: ConversationTurn[];
   settings: AgentSettings;
   projectRoots?: readonly string[];
+  chatFolder?: boolean;
   signal: AbortSignal;
   observe?: (output: ProviderOutput) => void;
   audit?: ProtocolObserver;

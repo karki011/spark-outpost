@@ -27,7 +27,7 @@ import { ProviderSwitch } from './ProviderSwitch.tsx';
 import { ExitingInert } from './ExitingInert.tsx';
 import { currentModel, selectableEfforts, unusableChoice } from './model-options.ts';
 import { useChatSettingsUpdate, type PickerRequest } from './use-picker-command.ts';
-import { permissionState, projectPermission } from './mode-summary.ts';
+import { permissionState } from './mode-summary.ts';
 import { unlistedPinName } from './shown-model.ts';
 import { PermissionChip } from './PermissionChip.tsx';
 import './model-picker.css';
@@ -106,16 +106,14 @@ export function ModelPicker({
   const model = currentModel(settings, capabilities);
   const efforts = selectableEfforts(capabilities);
   const level = settings.level ?? DEFAULT_INVOLVEMENT_LEVEL;
-  const permission = projectPermission(permissionState(settings, capabilities), hasRepos);
-  const permissionHint = hasRepos
-    ? combinationLine({
-        provider,
-        mode: permission.mode,
-        kind: modeKind(capabilities?.modes ?? [], permission.mode),
-        level,
-        hasRepos,
-      })
-    : (permission.description ?? permission.label);
+  const permission = permissionState(settings, capabilities);
+  const permissionHint = combinationLine({
+    provider,
+    mode: permission.mode,
+    kind: modeKind(capabilities?.modes ?? [], permission.mode),
+    level,
+    hasRepos,
+  });
   const configOptions = capabilities?.options ?? [];
   const unusable = unusableChoice(settings.model, capabilities) !== null;
   const listedLabel = model ? shownModelName(model) : `${setup?.name ?? provider} default`;

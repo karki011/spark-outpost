@@ -173,6 +173,7 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
       attachments: turn.attachments ?? [],
       support,
       projectRoots: policy?.roots.map((root) => root.path) ?? [],
+      chatFolder: turn.chatFolder === true,
       changesAllowed: gates.doing !== null,
       commandsAllowed: gates.gated !== null,
       toolsAvailable:

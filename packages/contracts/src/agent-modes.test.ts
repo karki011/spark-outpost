@@ -133,6 +133,14 @@ describe('the one-line summary', () => {
         level: 'hands-off',
         hasRepos: false,
       }),
-    ).toBeNull();
+    ).toMatch(/ran without review/);
+  });
+
+  it('keeps a chat without a project to its own files and never mentions a pull request', () => {
+    const plain = { ...facts, level: 'full-auto', hasRepos: false } as const;
+    expect(combinationLine({ ...plain, mode: 'auto' })).toBe(
+      'Agent decides what to ask · files stay with this chat',
+    );
+    expect(combinationLine({ ...plain, mode: 'plan' })).toBe('Agent only reads · nothing changes');
   });
 });

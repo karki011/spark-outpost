@@ -46,6 +46,7 @@ import { withNativeTerminals } from './native-terminals.ts';
 import { applyConversationOptions } from './conversation-options.ts';
 import { continueOpenRequest } from '../outposts/continuation.ts';
 import { deviceStartingRun } from '../remote/run-mark.ts';
+import { listChatFiles } from '../chat-files/store.ts';
 import {
   MESSAGE_COLUMNS,
   RUN_OUTPOST_COLUMNS,
@@ -161,6 +162,7 @@ export async function getConversationDetail(
     memberMessages,
     railFlags,
     browserShots,
+    chatFiles,
     commands,
     interruption,
     subagents,
@@ -201,6 +203,7 @@ export async function getConversationDetail(
     listMemberMessages(db, id),
     listRailFlags(db, id),
     listBrowserShots(db, id),
+    listChatFiles(db, id),
     listCommands(db, id),
     findInterruption(db, id),
     conversationSubagents(db, id),
@@ -232,6 +235,7 @@ export async function getConversationDetail(
     railFlags,
     ...(topics.length > 0 ? { topics } : {}),
     ...(browserShots.length > 0 ? { browserShots } : {}),
+    ...(chatFiles.length > 0 ? { chatFiles } : {}),
     ...(commands.length > 0 ? { commands } : {}),
     ...(interruption ? { interruption } : {}),
     ...(Object.keys(subagents).length > 0 ? { subagents } : {}),
@@ -255,11 +259,15 @@ export async function runMode(
   conversationId: string,
   permission: string | null,
 ): Promise<RunMode> {
-  const { rows } = await db.query<{ linked: boolean }>(
-    'SELECT EXISTS (SELECT 1 FROM conversation_projects WHERE conversation_id = $1) AS linked',
+  const { rows } = await db.query<{ linked: boolean; talks_only: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM conversation_projects WHERE conversation_id = $1) AS linked,
+            EXISTS (SELECT 1 FROM profiles WHERE assistant_conversation_id = $1)
+              OR EXISTS (SELECT 1 FROM conversations
+                         WHERE id = $1 AND session_type = 'terminal') AS talks_only`,
     [conversationId],
   );
-  if (!rows[0]?.linked) return 'chat';
+  const chat = rows[0];
+  if (!chat || (!chat.linked && chat.talks_only)) return 'chat';
   return permission === PERMISSION_DO ? 'do' : 'ask';
 }
 

@@ -62,7 +62,13 @@ export function MessageAttachments({ attachments }: { attachments: Attachment[] 
           </a>
         ),
       )}
-      {viewing && <ImageLightbox attachment={viewing} onClose={() => setViewing(null)} />}
+      {viewing && (
+        <ImageLightbox
+          name={viewing.name}
+          src={attachmentUrl(viewing.id)}
+          onClose={() => setViewing(null)}
+        />
+      )}
     </div>
   );
 }

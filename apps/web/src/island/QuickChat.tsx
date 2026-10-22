@@ -11,7 +11,7 @@ import {
 } from '@spark-outpost/contracts';
 import { api, capabilitiesQuery } from '../api/client.ts';
 import { shortLabel } from '../chat/composer/model-options.ts';
-import { permissionState, projectPermission } from '../chat/composer/mode-summary.ts';
+import { permissionState } from '../chat/composer/mode-summary.ts';
 import { PermissionIcon } from '../chat/composer/PermissionChip.tsx';
 import { PICK_PROJECT_HINT } from '../chat/project/repo-list.ts';
 import { providerName } from '../chat/provider-name.ts';
@@ -91,10 +91,7 @@ export function QuickChat(props: QuickChatProps) {
     projects.find((candidate) => candidate.id === draft.projectId) ??
     (added && added.project.id === draft.projectId ? added.project : null);
   const permission = defaults.settings
-    ? projectPermission(
-        permissionState(defaults.settings, defaults.capabilities),
-        Boolean(draft.projectId),
-      )
+    ? permissionState(defaults.settings, defaults.capabilities)
     : null;
 
   useEffect(() => {
