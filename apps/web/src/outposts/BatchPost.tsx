@@ -51,7 +51,7 @@ export function BatchPost({
         ))}
         <time dateTime={item.createdAt}>{postTime(item.createdAt)}</time>
       </div>
-      <PostText text={item.body} what="request" />
+      <PostText text={item.body} what="request" typed />
       <ul className="op-each-list" aria-label="Each chat this asked">
         {lines.map((line) => {
           const chatId = line.post.toConversationId ?? '';

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OutpostComposer } from './OutpostComposer.tsx';
 import type { Answering, ComposerTarget } from './composer-target.ts';
 import { API_CHAT, FE_CHAT, memberView, postId } from './test-fixtures.ts';
@@ -13,7 +13,19 @@ const ANSWERING: Answering = { postId: postId(1), conversationId: FE_CHAT, handl
 
 type Send = (target: ComposerTarget, text: string) => Promise<unknown>;
 
-afterEach(cleanup);
+class QuietResizeObserver {
+  observe(): void {}
+  disconnect(): void {}
+}
+
+beforeEach(() => {
+  vi.stubGlobal('ResizeObserver', QuietResizeObserver);
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 function composer(
   options: {

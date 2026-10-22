@@ -1,4 +1,5 @@
 import type { BaseWindow, MenuItemConstructorOptions } from 'electron';
+import { formatMenu } from './format-menu.ts';
 
 export type MenuPaneShortcut = 'close_tab' | 'reload' | 'hard_reload';
 
@@ -42,6 +43,7 @@ export function appMenuTemplate(actions: HelpActions): MenuItemConstructorOption
       ],
     },
     { role: 'editMenu' },
+    formatMenu(),
     {
       label: 'View',
       submenu: [

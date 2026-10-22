@@ -71,7 +71,7 @@ export function SpinnerIcon() {
   return <i className="spin" aria-hidden="true" />;
 }
 
-function StrokeIcon({ path }: { path: string }) {
+export function StrokeIcon({ path }: { path: string }) {
   return (
     <svg
       width="14"

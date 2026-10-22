@@ -65,6 +65,7 @@ export const IPC = {
   helpExportDiagnostics: 'help:export-diagnostics',
   helpShowLogs: 'help:show-logs',
   helpOpen: 'help:open',
+  menuCommand: 'menu:command',
   helpPending: 'help:pending',
   privacyOpenFullDiskAccess: 'privacy:open-full-disk-access',
   browserState: 'browser:state',

@@ -14,6 +14,7 @@ describe('appMenuTemplate', () => {
       'appMenu',
       'File',
       'editMenu',
+      'Format',
       'View',
       'windowMenu',
       'help',
@@ -31,7 +32,12 @@ describe('appMenuTemplate', () => {
 });
 
 describe('Close Window, Reload and Force Reload', () => {
-  type Item = { label?: string; accelerator?: string; click?: (...args: unknown[]) => void };
+  type Item = {
+    label?: string;
+    accelerator?: string;
+    registerAccelerator?: boolean;
+    click?: (...args: unknown[]) => void;
+  };
   const items = (paneShortcut: (shortcut: string) => boolean) => {
     const template = appMenuTemplate({
       sendFeedback: () => undefined,
@@ -70,7 +76,8 @@ describe('Close Window, Reload and Force Reload', () => {
     for (const label of ['Close Window', 'Reload', 'Force Reload'])
       press(all, label, fakeWindow(did));
     expect(did).toEqual(['close', 'reload', 'hard_reload']);
-    expect(all.filter((item) => item.accelerator).map((item) => item.accelerator)).toEqual([
+    const registered = all.filter((item) => item.accelerator && item.registerAccelerator !== false);
+    expect(registered.map((item) => item.accelerator)).toEqual([
       'CommandOrControl+W',
       'CommandOrControl+R',
       'Shift+CommandOrControl+R',

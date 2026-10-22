@@ -163,24 +163,27 @@ test('reduced motion keeps long titles still', async ({ page }) => {
   await expect(long).not.toHaveAttribute('data-marquee');
 });
 
-test('⌘B, the sidebar button and the Chats rail button collapse and reopen', async ({ page }) => {
+test('⌃⌘S, the sidebar button and the Chats rail button collapse and reopen', async ({ page }) => {
+  const sidebarKeys = process.platform === 'darwin' ? 'Control+Meta+s' : 'Control+Alt+s';
   await page.setViewportSize({ width: 1280, height: 800 });
   await seedChats([{ title: 'First chat' }]);
   await openChats(page);
   const hide = sidebar(page).getByRole('button', { name: 'Hide sidebar' });
   const show = page.getByRole('main').getByRole('button', { name: 'Show sidebar' });
-  await expect(hide).toHaveAttribute('aria-keyshortcuts', /^(Meta|Control)\+B$/);
+  await expect(hide).toHaveAttribute('aria-keyshortcuts', /^Control\+(Meta|Alt)\+S$/);
   await expect(toggles(page)).toHaveCount(1);
   await expect(show).toHaveCount(0);
   expect((await sidebar(page).boundingBox())?.width).toBe(300);
 
   await page.getByRole('textbox', { name: 'Message' }).focus();
   await page.keyboard.press('ControlOrMeta+b');
+  await expect(sidebar(page)).toHaveJSProperty('inert', false);
+  await page.keyboard.press(sidebarKeys);
   await expect(sidebar(page)).toHaveJSProperty('inert', true);
   await expect.poll(async () => (await sidebar(page).boundingBox())?.width).toBe(0);
   await page.reload();
   await expect(sidebar(page)).toHaveJSProperty('inert', true);
-  await page.keyboard.press('ControlOrMeta+b');
+  await page.keyboard.press(sidebarKeys);
   await expect(sidebar(page)).toHaveJSProperty('inert', false);
 
   await hide.click();
@@ -188,10 +191,12 @@ test('⌘B, the sidebar button and the Chats rail button collapse and reopen', a
   await expect(show).toBeFocused();
   await expect(toggles(page)).toHaveCount(1);
   await expect(page.getByRole('tooltip')).toHaveCount(0);
-  await page.keyboard.press('ControlOrMeta+b');
+  await page.keyboard.press(sidebarKeys);
   await expect(hide).toBeFocused();
   await expect(page.getByRole('tooltip')).toContainText('Hide sidebar');
-  await expect(page.getByRole('tooltip').locator('kbd')).toHaveText([/⌘|Ctrl/, 'B']);
+  await expect(page.getByRole('tooltip').locator('kbd')).toHaveText(
+    process.platform === 'darwin' ? ['⌃', '⌘', 'S'] : ['Ctrl', 'Alt', 'S'],
+  );
   await hide.click();
   await expect(show).toBeFocused();
   await page

@@ -151,3 +151,14 @@
   color: var(--muted);
   font-size: 13px;
 }
+
+.md-typed {
+  --overhang: 0px;
+  white-space: normal;
+}
+.md-typed :is(p, li) {
+  white-space: pre-wrap;
+}
+.md-typed p {
+  margin-bottom: 0.5em;
+}

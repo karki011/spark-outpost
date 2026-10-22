@@ -201,7 +201,7 @@ describe('RequestPost', () => {
 
   it('collapses a long request and opens it on demand', () => {
     renderRequest(post(1, { body: 'one\ntwo\nthree\nfour\nfive' }));
-    const text = screen.getByText(/one/);
+    const text = screen.getByText(/one/).closest('.op-text')!;
     expect(text.className).toContain('clamped');
     const toggle = screen.getByRole('button', { name: 'Show all of the request' });
     expect(toggle.getAttribute('aria-expanded')).toBe('false');

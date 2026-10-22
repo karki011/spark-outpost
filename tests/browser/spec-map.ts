@@ -51,6 +51,7 @@ export const SPEC_GROUPS = {
     'feedback',
     'feedback-note',
     'interrupted-turn',
+    'markdown-composer',
     'message-actions',
     'phone-context-bar',
     'prompt-cache',
@@ -196,6 +197,7 @@ export const SPEC_GROUPS = {
   'analytics-audit': ['analytics', 'audit'],
   map: ['project-map', 'project-map-states', 'project-map-views'],
   outposts: [
+    'markdown-composer-outpost',
     'outpost-address',
     'outpost-answers',
     'outpost-create',

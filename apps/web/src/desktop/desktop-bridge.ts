@@ -166,6 +166,9 @@ export interface SparkDesktop {
   privacy?: {
     openFullDiskAccess(): Promise<void>;
   };
+  menu?: {
+    onCommand(callback: (command: unknown) => void): Unsubscribe;
+  };
   browser?: DesktopBrowser;
   macControl?: DesktopMacControl;
   onOpenChat(callback: (id: string, runId: string | null) => void): Unsubscribe;

@@ -39,7 +39,7 @@ export function RequestPost({ post, answering, ...outcome }: RequestPostProps) {
         <RequestStateChip state={post.state ?? 'sent'} />
         <time dateTime={post.createdAt}>{postTime(post.createdAt)}</time>
       </div>
-      <PostText text={post.body} what="request" />
+      <PostText text={post.body} what="request" typed />
       {post.files > 0 && (
         <p className="op-attached">
           <FileIcon />

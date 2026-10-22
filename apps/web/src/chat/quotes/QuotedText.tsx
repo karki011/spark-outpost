@@ -1,9 +1,10 @@
 import './quotes.css';
+import { Markdown } from '../markdown/Markdown.tsx';
 import { splitQuoted } from './quote-text.ts';
 
 export function QuotedText({ text }: { text: string }) {
   const segments = splitQuoted(text);
-  if (!segments.some((segment) => segment.kind === 'quote')) return <>{text}</>;
+  if (!segments.some((segment) => segment.kind === 'quote')) return <Markdown text={text} typed />;
   return (
     <>
       {segments.map((segment, index) =>
@@ -11,13 +12,14 @@ export function QuotedText({ text }: { text: string }) {
           <blockquote key={index} className="msg-quote">
             {segment.text}
           </blockquote>
-        ) : (
-          <span
-            key={index}
-            className={segment.kind === 'lead' ? 'msg-quote-lead' : 'msg-quote-text'}
-          >
+        ) : segment.kind === 'lead' ? (
+          <span key={index} className="msg-quote-lead">
             {segment.text}
           </span>
+        ) : (
+          <div key={index} className="msg-quote-text">
+            <Markdown text={segment.text} typed />
+          </div>
         ),
       )}
     </>

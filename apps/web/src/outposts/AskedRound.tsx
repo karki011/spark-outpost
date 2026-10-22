@@ -28,7 +28,7 @@ export function AskedRound({ exchange, chatId, handle }: AskedRoundProps) {
         <b>You</b>
         <span className="op-mood">answered</span>
       </div>
-      <PostText text={exchange.answer} what="reply" />
+      <PostText text={exchange.answer} what="reply" typed />
     </div>
   );
 }

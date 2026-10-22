@@ -12,7 +12,7 @@ export function NotePost({ post }: { post: OutpostPost }) {
         <span className="op-kind">note</span>
         <time dateTime={post.createdAt}>{postTime(post.createdAt)}</time>
       </div>
-      <PostText text={post.body} what="note" />
+      <PostText text={post.body} what="note" typed />
     </li>
   );
 }

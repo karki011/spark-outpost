@@ -16,7 +16,9 @@
     .vstep,
     .ctx-repo,
     .ctx-details,
-    .theme-menu button
+    .theme-menu button,
+    .mdf-tool,
+    .mdf-toggle
   ) {
     position: relative;
   }
@@ -37,7 +39,9 @@
     .tk .kref,
     .vstep,
     .ctx-repo,
-    .ctx-details
+    .ctx-details,
+    .mdf-tool,
+    .mdf-toggle
   )::before {
     content: '';
     position: absolute;

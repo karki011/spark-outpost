@@ -7,18 +7,20 @@ interface PostTextProps {
   text: string;
   what: string;
   markdown?: boolean;
+  typed?: boolean;
 }
 
-export function PostText({ text, what, markdown = false }: PostTextProps) {
+export function PostText({ text, what, markdown = false, typed = false }: PostTextProps) {
   const id = useId();
   const [open, setOpen] = useState(false);
-  const long = markdown ? isLongMarkdown(text) : isLong(text);
+  const rendered = markdown || typed;
+  const long = rendered ? isLongMarkdown(text) : isLong(text);
   const className = long && !open ? 'op-text clamped' : 'op-text';
   return (
     <>
-      {markdown ? (
+      {rendered ? (
         <div id={id} className={`${className} op-md`}>
-          <Markdown text={text} />
+          <Markdown text={text} typed={typed} />
         </div>
       ) : (
         <p id={id} className={className}>

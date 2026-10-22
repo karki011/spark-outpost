@@ -160,6 +160,9 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
       return listen(IPC.helpOpen, take);
     },
   },
+  menu: {
+    onCommand: (callback: (command: unknown) => void) => listen(IPC.menuCommand, callback),
+  },
   onOpenSettings: (callback: (target: string) => void) => {
     const take = () =>
       void ipcRenderer.invoke(IPC.pendingSettings).then((target: unknown) => {

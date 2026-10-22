@@ -89,10 +89,12 @@ describe('an answer written in Markdown', () => {
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('leaves the request itself as the user typed it', () => {
+  it('renders the Markdown the user typed in the request', () => {
     renderRequest(post(1, { body: 'Keep `this` and **that** as typed.' }));
 
-    expect(screen.getByText('Keep `this` and **that** as typed.')).toBeTruthy();
+    expect(item().querySelector('code')?.textContent).toBe('this');
+    expect(item().querySelector('strong')?.textContent).toBe('that');
+    expect(item().textContent).not.toContain('**');
   });
 });
 
@@ -181,15 +183,17 @@ describe('a request the user answered on the way', () => {
     expect(rounds[1]).toContain('orderId');
   });
 
-  it('shows the user’s answer as typed', () => {
+  it('renders the Markdown in the user’s answer', () => {
     renderRequest(
       post(1, {
         state: 'answered',
-        exchanges: [{ question: 'Needs you: a name.', answer: '`a`_b_' }],
+        exchanges: [{ question: 'Needs you: a name.', answer: 'use `a` and _b_' }],
       }),
     );
 
-    expect(screen.getByText('`a`_b_')).toBeTruthy();
+    const round = item().querySelector('.op-asked')!;
+    expect(round.querySelector('code')?.textContent).toBe('a');
+    expect(round.querySelector('em')?.textContent).toBe('b');
   });
 
   it('adds nothing to a request that was never asked anything', () => {
