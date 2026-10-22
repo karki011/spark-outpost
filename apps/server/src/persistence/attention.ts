@@ -66,7 +66,7 @@ function permissionTitle(row: PendingApprovalRow, kind: ApprovalKind): string {
 }
 
 function agentFor(row: PendingApprovalRow, kind: ApprovalKind): string | null {
-  if (kind === 'clarify' && row.pending_questions) return SPARK;
+  if (kind === 'clarify' && row.pending_questions) return row.pending_asker ?? SPARK;
   if (kind === 'clarify') return row.pending_asker ?? JEV;
   if (kind === 'stuck') return row.pending_asker;
   if (kind === 'plan' || kind === 'accept') return row.pending_member ?? row.pending_agent;

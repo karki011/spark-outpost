@@ -50,7 +50,7 @@ export async function renewLease(
   return rowCount === 1;
 }
 
-export async function findExpiredLeases(db: Queryable, limit = 10): Promise<Lease[]> {
+export async function findExpiredLeases(db: Queryable): Promise<Lease[]> {
   const { rows } = await db.query<{
     id: string;
     run_id: string;
@@ -59,8 +59,7 @@ export async function findExpiredLeases(db: Queryable, limit = 10): Promise<Leas
   }>(
     `SELECT id, run_id, lease_token, attempts FROM jobs
      WHERE status = 'leased' AND lease_expires_at <= now()
-     ORDER BY lease_expires_at LIMIT $1`,
-    [limit],
+     ORDER BY lease_expires_at`,
   );
   return rows.map((row) => ({
     jobId: row.id,

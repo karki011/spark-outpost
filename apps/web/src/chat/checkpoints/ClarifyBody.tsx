@@ -13,7 +13,8 @@ export function AskedList({ approval }: { approval: CheckpointApproval }) {
   const questions = approval.payload.checkpoint.questions;
   const note = answeredNote(approval);
   const sent = sentAnswers(questions, note);
-  const guessed = approval.decisionOptionId !== CHECKPOINT_OPTION.answer || note !== null;
+  const answered = approval.decisionOptionId === CHECKPOINT_OPTION.answer;
+  const guessed = approval.payload.form ? answered : !answered || note !== null;
   return (
     <ol className="ck-asked">
       {questions.map((question, index) => {
@@ -21,7 +22,7 @@ export function AskedList({ approval }: { approval: CheckpointApproval }) {
         return (
           <li key={question.question}>
             {question.question} {answer && <b>→ {answer}</b>}
-            {!answer && guessed && <span>Best guess: {question.default}</span>}
+            {!answer && guessed && question.default && <span>Best guess: {question.default}</span>}
           </li>
         );
       })}

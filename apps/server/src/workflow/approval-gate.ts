@@ -16,7 +16,7 @@ import { ownRepoFor } from './send-context.ts';
 import { diskFiles } from '../approvals/file-lister.ts';
 import { withPrefetchedFiles } from '../approvals/prefetched-files.ts';
 import { secretReadLabels } from '../approvals/secret-reads.ts';
-import { secretSend } from '../approvals/secret-send.ts';
+import { secretSend, withoutSentSecrets } from '../approvals/secret-send.ts';
 import {
   FS_WRITE_TOOL_KIND,
   decide,
@@ -346,9 +346,11 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
   };
 
   const decideRequest = async (
-    request: ApprovalRequest,
+    asked: ApprovalRequest,
     signal: AbortSignal,
   ): Promise<GateAnswer> => {
+    const sent = await secretSend(asked);
+    const request = await withoutSentSecrets(asked, sent);
     const what = subject(request);
     await afterQueuedUpdates();
     if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
@@ -372,7 +374,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       defaultBranch: await forcePushDefault(request),
       observed: (await deps.observations?.labels()) ?? [],
       own: await ownRepoFor(deps.db, deps.runId, request),
-      secretSend: await secretSend(request),
+      secretSend: sent,
       instructionGrants,
       shell: request.kind === 'execute' ? await parseShell(request.command) : null,
       agentAsks: Boolean(request.agentReason),

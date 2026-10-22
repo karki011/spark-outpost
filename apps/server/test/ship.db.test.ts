@@ -61,7 +61,6 @@ beforeEach(async () => {
     db: t.db,
     providers: new Map([[provider.name, provider]]),
     leaseSeconds: 30,
-    concurrency: 1,
     pollMs: 20,
   });
   const { runCommand } = await import('../src/setup/command.ts');

@@ -39,6 +39,7 @@ import { stackedPushRefusal } from './stacked-push.ts';
 import type { OwnRepo } from './own-repo.ts';
 import type { SecretSend } from './secret-send.ts';
 import { secretSendReason, sentOut, type SentOut } from './taint.ts';
+import { webAddressRefusal } from './web-address.ts';
 import { writeTargets } from './write-targets.ts';
 import { commandCwd, isSecretTarget, outsideRoots, place, placedLabel } from './request-place.ts';
 import { alwaysAsk, type RailAsk } from './rails.ts';
@@ -66,6 +67,7 @@ export interface ApprovalRequest {
   roots: readonly RequestRoot[];
   home: string;
   plan?: string | null;
+  address?: string | null;
   mode?: string | null;
   mcpServer?: string | null;
   agentReason?: string | null;
@@ -259,6 +261,8 @@ function refusal(
   view: ShellView | null,
   published: PublishVerdict | null,
 ): string | null {
+  const address = request.address ? webAddressRefusal(request.address) : null;
+  if (address) return address;
   const ownAgent = ownAgentRefusal(request, options, forced, published);
   if (ownAgent) return ownAgent;
   const stacked = request.command

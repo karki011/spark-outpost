@@ -23,7 +23,6 @@ beforeEach(async () => {
     db: t.db,
     providers: new Map([['claude', fake]]),
     leaseSeconds: 30,
-    concurrency: 1,
     pollMs: 20,
     cancelPollMs: 20,
   });

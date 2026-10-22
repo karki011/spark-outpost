@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GIT_CONFIG_ASK_RULE, agentDefinitions } from '../src/agents/acp/agents.ts';
+import { CLAUDE_GATED_ASK_RULES } from '../src/agents/acp/claude-tools.ts';
 import { decide, NO_RUN_RULES, type ApprovalRequest } from '../src/approvals/decide.ts';
 import { railCrossings } from '../src/approvals/rail-crossings.ts';
 import { protectedPath } from '../src/projects/path-policy.ts';
@@ -62,10 +63,10 @@ describe('the ask rules Spark gives a Claude session that can change files', () 
     }
   });
 
-  it('name paths and one command: no rule makes a whole tool or any other command ask', () => {
+  it('name paths and one command; only the web and Monitor tools ask whole, for the gate', () => {
     const rules = doRules([EXTRA]);
     const commands = rules.filter((rule) => !rule.startsWith('Edit('));
-    expect(commands).toEqual([GIT_CONFIG_ASK_RULE]);
+    expect(commands).toEqual([...CLAUDE_GATED_ASK_RULES, GIT_CONFIG_ASK_RULE]);
     for (const rule of rules.filter((candidate) => candidate.startsWith('Edit('))) {
       expect(rule).toMatch(/^Edit\([^()]*[/.][^()]*\)$/);
     }
@@ -137,7 +138,7 @@ describe('the ask rules Spark gives a Claude session that can change files', () 
     expect(sessionAskRules(agentDefinitions.claude.projectSessionMeta?.([]))).toEqual([]);
     expect(
       sessionAskRules(agentDefinitions.claude.projectSessionMeta?.([], null, true, true)),
-    ).toEqual([GIT_CONFIG_ASK_RULE]);
+    ).toEqual([...CLAUDE_GATED_ASK_RULES, GIT_CONFIG_ASK_RULE]);
   });
 
   it('leave .spark to the flag after the fact, since a glob there would also catch plan files', () => {

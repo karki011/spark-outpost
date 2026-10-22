@@ -207,7 +207,7 @@ describe('waiting for you', () => {
         },
       ],
     });
-    const card = within(thread()).getByRole('group', { name: /Spark has a few questions/ });
+    const card = within(thread()).getByRole('group', { name: /Pip has questions/ });
     expect(card.textContent).toContain('Went with the best guesses after 10s.');
     expect(status().dataset.state).toBe('idle');
   });
@@ -322,7 +322,7 @@ describe('while the agent works', () => {
 describe('clarify questions', () => {
   it('lists each question with its best guess and quick answers', () => {
     show({ approvals: [questions] });
-    const card = within(thread()).getByRole('group', { name: /Spark has a few questions/ });
+    const card = within(thread()).getByRole('group', { name: /Pip has questions/ });
     expect(card.textContent).toContain('Spendbest guess');
     expect(card.textContent).toContain('Which period?Best guess: This month');
     const send = within(card).getByRole('button', { name: 'Send' }) as HTMLButtonElement;

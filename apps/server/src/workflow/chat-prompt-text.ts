@@ -9,9 +9,12 @@ export const SPLIT_SUB_CHATS =
 export const SPLIT_SUB_CHATS_START =
   '- Work that spans repos, needs separate branches or pull requests, or has parts that can run in parallel chats: split it into sub-chats and say why. Start them with spark_outpost_start when the user asked for it or the work needs it; propose them with spark_outpost_draft when the user should review the split first.';
 export const SPLIT_UNCLEAR = '- If the request is unclear, ask one question and stop.';
+export const SPLIT_ASK_WITH_TOOL =
+  '- When the user should choose, or a detail you need is missing, call AskUserQuestion (Codex: request_user_input) with the options instead of writing them in your reply, and use the answer it returns.';
 
 export const ENGINEERING = [
   'Engineering',
+  '- Change files with your file-editing tools, not shell commands such as heredocs, cat > or sed -i, so the user sees each change as a diff.',
   "- The repo's own instructions (AGENTS.md, CLAUDE.md) take priority over these.",
   '- Read the code your change touches before deciding anything.',
   "- Before writing code, stop at the first of these that works: it doesn't need to exist · the codebase already has it · the standard library has it · the platform has it · an installed dependency has it · it can be one line · otherwise write the minimum that works.",

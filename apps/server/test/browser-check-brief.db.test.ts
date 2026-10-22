@@ -52,7 +52,6 @@ async function turnPrompt(content: string, mode: 'do' | 'ask', browserPane: bool
     db: t.db,
     providers: new Map([['fake', recording]]),
     leaseSeconds: 30,
-    concurrency: 1,
     pollMs: 20,
     browserPane,
   });

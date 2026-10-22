@@ -66,7 +66,6 @@ export async function startAppWorld(options: { configured?: boolean } = {}): Pro
     db: t.db,
     providers: new Map([[provider.name, provider]]),
     leaseSeconds: 30,
-    concurrency: 1,
     pollMs: 20,
   });
   const appConfig = { clientId: APP_CLIENT_ID, slug: APP_SLUG, loginUrl: stub.url };

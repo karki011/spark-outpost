@@ -101,6 +101,21 @@ describe('ApprovalCard', () => {
     ).toEqual(['Hold to allow once', 'No']);
   });
 
+  it("shows a web fetch's full address while it waits, not the work log's past tense", () => {
+    const address = 'https://docs.example.com/guide?page=2';
+    const card = show(
+      {
+        ...approval,
+        kind: 'other',
+        title: `Fetch ${address}`,
+        payload: { ...approval.payload, command: null, cwd: null },
+      },
+      /Allow this action\?/,
+    );
+    expect(card.textContent).toContain(`Fetch ${address}`);
+    expect(card.textContent).not.toContain('Fetched');
+  });
+
   it('folds an answered approval into one resolved line with the command and the choice', () => {
     const card = show({
       ...approval,

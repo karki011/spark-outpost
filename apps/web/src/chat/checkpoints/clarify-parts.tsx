@@ -26,6 +26,9 @@ export function ClarifyFoot({
       <Action id={CHECKPOINT_OPTION.clarifyRules} approval={approval} decide={decide} kind="quiet">
         Let the rules decide
       </Action>
+      <Action id={CHECKPOINT_OPTION.finish} approval={approval} decide={decide} kind="quiet">
+        {optionName(approval, CHECKPOINT_OPTION.finish)}
+      </Action>
       <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
         Stop
       </Action>

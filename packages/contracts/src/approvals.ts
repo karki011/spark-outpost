@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { agentAnswersSchema, agentFormSchema } from './agent-questions.ts';
 import { checkpointKindSchema, checkpointPayloadSchema } from './checkpoints.ts';
 import type { InvolvementLevel } from './involvement-levels.ts';
 import { workPlaceSchema } from './chat-workspace.ts';
@@ -121,6 +122,7 @@ export const approvalPayloadSchema = z.object({
   agentReason: z.string().optional(),
   subagent: z.string().optional(),
   sparkRule: sparkRuleRefusalSchema.optional(),
+  form: agentFormSchema.optional(),
 });
 export type ApprovalPayload = z.infer<typeof approvalPayloadSchema>;
 
@@ -171,6 +173,7 @@ export const approvalDecisionRequestSchema = z.object({
   payloadHash: z.string().min(1).max(200).optional(),
   note: z.string().trim().max(APPROVAL_NOTE_MAX_LENGTH).optional(),
   edits: sparkActionEditsSchema.optional(),
+  answers: agentAnswersSchema.optional(),
 });
 export type ApprovalDecisionRequest = z.input<typeof approvalDecisionRequestSchema>;
 
