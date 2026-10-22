@@ -261,7 +261,7 @@
   background: var(--code);
   color: var(--text);
   font:
-    11.5px/1.5 'Geist Mono',
+    12px/1.5 'Geist Mono',
     ui-monospace,
     monospace;
   white-space: pre-wrap;

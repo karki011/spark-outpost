@@ -152,7 +152,7 @@
   overflow: hidden;
   color: var(--muted);
   font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
-  font-size: 11.5px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -165,7 +165,7 @@
   border-radius: 999px;
   background: var(--raise);
   color: var(--text);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 18px;
 }
@@ -177,7 +177,7 @@
 
 .map-tn-stack {
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -186,7 +186,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--map-warm) 14%, var(--panel));
   color: var(--warn);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 18px;
   white-space: nowrap;

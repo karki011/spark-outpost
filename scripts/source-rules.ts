@@ -1,4 +1,5 @@
 import ts from 'typescript';
+import { FONT_FLOOR_PX, findSmallFonts, isDecorative } from './font-floor.ts';
 
 export const MAX_LINES = 500;
 
@@ -99,6 +100,16 @@ export function findRemoteFonts(file: string, text: string): SourceViolation[] {
   }));
 }
 
+export function findFontsBelowFloor(file: string, text: string): SourceViolation[] {
+  return findSmallFonts(text)
+    .filter((found) => !isDecorative(file, found.selector))
+    .map((found) => ({
+      file,
+      line: found.line,
+      message: `Font size ${found.px}px is below the ${FONT_FLOOR_PX}px floor (${found.selector}); see scripts/font-floor.ts`,
+    }));
+}
+
 export function checkSource(file: string, text: string): SourceViolation[] {
   const violations: SourceViolation[] = [];
   const lines = lineCount(text);
@@ -114,6 +125,7 @@ export function checkSource(file: string, text: string): SourceViolation[] {
   if (file.endsWith('.css')) violations.push(...findBlockComments(file, text, /\/\*[\s\S]*?\*\//g));
   if (file.startsWith('apps/web/') && file.endsWith('.css')) {
     violations.push(...findStrayPhoneQueries(file, text));
+    violations.push(...findFontsBelowFloor(file, text));
   }
   if (file.endsWith('.sql')) violations.push(...findBlockComments(file, text, /^\s*--.*$/gm));
   if (file.endsWith('.sh')) violations.push(...findBlockComments(file, text, /^\s*#(?!!).*$/gm));
