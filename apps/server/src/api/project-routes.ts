@@ -1,10 +1,13 @@
-import { isRemote } from '../remote/principal.ts';
+import { isRemote, remoteDeviceOf } from '../remote/principal.ts';
+import { recordRemoteAudit } from '../remote/store.ts';
 import { isGitInternalPath } from '../remote/redaction.ts';
+import { realpath } from 'node:fs/promises';
 import { Router, type Request } from 'express';
 import {
   ATTACHMENT_TEXT_MAX_BYTES,
   attachProjectFileRequestSchema,
   conversationOrderRequestSchema,
+  createFolderRequestSchema,
   createProjectRequestSchema,
   instructionsPathSchema,
   projectOrderRequestSchema,
@@ -15,9 +18,9 @@ import {
 import type { Db } from '../persistence/db.ts';
 import { saveAttachment } from '../persistence/attachments.ts';
 import { AttachmentError, UNSUPPORTED_ATTACHMENT } from '../persistence/attachment-content.ts';
-import { listFolders } from '../projects/folders.ts';
+import { createFolder, listFolders } from '../projects/folders.ts';
 import { readInstructionsFile } from '../projects/instructions-file.ts';
-import { currentBranch } from '../projects/git.ts';
+import { currentBranch, initRepository, isRepository } from '../projects/git.ts';
 import { listProjectFiles } from '../projects/project-files.ts';
 import { projectPolicy, readProjectFile } from '../projects/project-fs.ts';
 import { PathRefusedError, type PathPolicy, type RefusalReason } from '../projects/path-policy.ts';
@@ -25,6 +28,7 @@ import { removeProject, restoreProject } from '../projects/project-removal.ts';
 import {
   createProject,
   getProject,
+  realHome,
   listProjects,
   orderProjectChats,
   orderProjects,
@@ -38,6 +42,7 @@ export interface ProjectRouteDeps {
   db: Db;
   workspaceId: string;
   secrets: SecretStore;
+  cloneTest?: { root: string } | null;
 }
 
 const TOO_LARGE = `That file is too large. Text files must be ${ATTACHMENT_TEXT_MAX_BYTES / 1024} KB or smaller.`;
@@ -81,7 +86,13 @@ async function readForAttachment(policy: PathPolicy, requested: string) {
 
 const ONLY_ON_MAC = 'This file is only shown on your Mac.';
 
-export function projectRoutes({ db, workspaceId, secrets }: ProjectRouteDeps): Router {
+export function projectRoutes({
+  db,
+  workspaceId,
+  secrets,
+  cloneTest = null,
+}: ProjectRouteDeps): Router {
+  const folderHome = async () => (cloneTest ? await realpath(cloneTest.root) : await realHome());
   const router = Router();
 
   router.get('/folders', async (req, res) => {
@@ -91,6 +102,23 @@ export function projectRoutes({ db, workspaceId, secrets }: ProjectRouteDeps): R
         hidden: queryText(req, 'hidden') === '1',
       }),
     );
+  });
+
+  router.post('/folders', async (req, res) => {
+    const { parent, name } = parseBody(createFolderRequestSchema, req);
+    const created = await createFolder(parent, name, await folderHome());
+    const device = remoteDeviceOf(res);
+    if (device) {
+      await recordRemoteAudit(db, workspaceId, {
+        action: 'folder_created',
+        device,
+        method: req.method,
+        path: req.path,
+        status: 201,
+        detail: { folder: created },
+      });
+    }
+    res.status(201).json({ path: created });
   });
 
   router.get('/instructions-file', async (req, res) => {
@@ -140,7 +168,17 @@ export function projectRoutes({ db, workspaceId, secrets }: ProjectRouteDeps): R
 
   router.get('/projects/:id/git', async (req, res) => {
     const policy = await openProject(db, workspaceId, paramId(req));
-    res.json({ branch: await currentBranch(policy.roots[0]!.path) });
+    const root = policy.roots[0]!.path;
+    res.json({ branch: await currentBranch(root), repository: await isRepository(root) });
+  });
+
+  router.post('/projects/:id/git-init', async (req, res) => {
+    const policy = await openProject(db, workspaceId, paramId(req));
+    const root = policy.roots[0]!.path;
+    if (!(await initRepository(root))) {
+      throw new BadRequestError('This folder is already a git repository.');
+    }
+    res.json({ branch: await currentBranch(root), repository: true });
   });
 
   router.get('/projects/:id/files', async (req, res) => {

@@ -1,15 +1,14 @@
 import './context-bar.css';
-import { useEffect, useId, useState, type ReactNode } from 'react';
-import { AnimatePresence } from 'motion/react';
+import { useEffect, useId, type ReactNode } from 'react';
 import type { Project } from '@spark-outpost/contracts';
 import { ChevronIcon, FolderIcon } from '../../ui/icons.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
+import { useAddFolder } from '../../projects/use-add-folder.tsx';
 import type { usePopover } from '../../ui/use-popover.ts';
-import { FolderDialog } from './FolderDialog.tsx';
 import { RepoMenu } from './RepoMenu.tsx';
 import { onProjectMenuRequest } from './project-menu-request.ts';
-import { PICK_PROJECT_HINT, recentProjects, repoSummary } from './repo-list.ts';
-import { useChatRepos, useProjects, type RepoRequest } from './use-chat-repos.ts';
+import { PICK_PROJECT_HINT, recentProjects, repoSummary, type RepoChange } from './repo-list.ts';
+import { useChatRepos, useProjects } from './use-chat-repos.ts';
 
 type RepoPopover = ReturnType<typeof usePopover<HTMLButtonElement, HTMLDivElement>>;
 
@@ -40,7 +39,6 @@ export function ProjectFolders({
   children,
 }: ProjectFoldersProps) {
   const { open, toggle, setOpen, anchorRef, panelRef } = popover;
-  const [browsing, setBrowsing] = useState(false);
   const projects = useProjects();
   const change = useChatRepos(conversationId);
   const menuId = useId();
@@ -61,29 +59,20 @@ export function ProjectFolders({
     [conversationId, setOpen, anchorRef],
   );
 
-  const apply = (request: RepoRequest) => {
-    change.mutate(request, {
-      onSuccess: () => {
-        if (browsing) {
-          setBrowsing(false);
-          anchorRef.current?.focus();
-        }
-      },
-    });
-  };
+  const apply = (request: RepoChange) => change.mutate(request);
+  const adder = useAddFolder({
+    onAdded: (project) => apply({ type: 'add', projectId: project.id }),
+    onError: () => setOpen(true),
+  });
 
-  const openBrowser = () => {
+  const startAdding = (start: () => void) => {
     change.reset();
     setOpen(false);
-    setBrowsing(true);
-  };
-
-  const closeBrowser = () => {
-    setBrowsing(false);
     anchorRef.current?.focus();
+    start();
   };
 
-  const error = change.isError && !browsing ? change.error.message : null;
+  const error = adder.error ?? (change.isError ? change.error.message : null);
 
   const folderChip = (
     <>
@@ -143,22 +132,15 @@ export function ProjectFolders({
         panelRef={panelRef}
         linked={repos}
         recent={recent}
-        busy={change.isPending}
+        busy={change.isPending || adder.busy}
         error={error ?? (projects.isError ? projects.error.message : null)}
+        actions={adder.actions.map((action) => ({
+          ...action,
+          onSelect: () => startAdding(action.onSelect),
+        }))}
         onChange={apply}
-        onBrowse={openBrowser}
       />
-      <AnimatePresence>
-        {browsing && (
-          <FolderDialog
-            key="folders"
-            linking={change.isPending}
-            error={change.isError ? change.error.message : null}
-            onUse={(rootPath) => apply({ type: 'add', rootPath })}
-            onClose={closeBrowser}
-          />
-        )}
-      </AnimatePresence>
+      {adder.flow}
     </div>
   );
 }

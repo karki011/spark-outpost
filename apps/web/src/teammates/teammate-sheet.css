@@ -180,7 +180,6 @@
 }
 
 .tm-look-row,
-.tm-pick-row,
 .tm-instructions-h {
   display: flex;
   align-items: center;
@@ -198,16 +197,6 @@
   margin-top: 12px;
 }
 
-.tm-pick-row {
-  align-items: flex-start;
-}
-
-.tm-pick-row > :first-child {
-  flex: 1;
-  min-width: 0;
-}
-
-.tm-pick-row .btn,
 .tm-instructions-h .btn {
   flex-shrink: 0;
   gap: 6px;

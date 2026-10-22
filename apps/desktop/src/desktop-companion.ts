@@ -2,7 +2,6 @@ import path from 'node:path';
 import {
   app,
   BrowserWindow,
-  dialog,
   globalShortcut,
   ipcMain,
   Menu,
@@ -23,6 +22,7 @@ import {
 } from './companion-settings.ts';
 import { targetsApi } from './api-token.ts';
 import { startAttentionHost, type AttentionHost } from './attention-host.ts';
+import { startFolderPicker } from './folder-picker.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 import { isSize } from './island-geometry.ts';
 import { trayTemplate } from './island-options.ts';
@@ -42,6 +42,7 @@ interface CompanionHostOptions {
   settingsPath: string;
   trayIcon: string;
   showSpark: () => void;
+  mainWindow: () => BrowserWindow | null;
   quit: () => void;
   log: (line: string) => void;
 }
@@ -173,16 +174,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   app.on('browser-window-blur', reportFocus);
   app.on('did-become-active', reportFocus);
   ipcMain.handle(IPC.islandSparkFocused, (event) => fromIsland(event) && sparkFocused());
-  ipcMain.handle(IPC.islandPickFolder, async (event) => {
-    if (!fromIsland(event)) return null;
-    app.focus({ steal: true });
-    const picked = await dialog.showOpenDialog({
-      title: 'Choose a project folder',
-      buttonLabel: 'Use this folder',
-      properties: ['openDirectory', 'createDirectory'],
-    });
-    return picked.canceled ? null : (picked.filePaths[0] ?? null);
-  });
+  const folderPicker = startFolderPicker({ trusted: fromSpark, mainWindow: options.mainWindow });
 
   ipcMain.handle(IPC.companionGet, (event) => (fromSpark(event) ? companion.status() : null));
   ipcMain.handle(IPC.companionSetEnabled, (event, on: unknown) =>
@@ -337,6 +329,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     companion,
     openChat,
     dispose: () => {
+      folderPicker.dispose();
       attention?.dispose();
       viewing.dispose();
       stopHourCycle();
@@ -355,7 +348,6 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.companionSetNotify,
         IPC.islandGeometry,
         IPC.islandSparkFocused,
-        IPC.islandPickFolder,
         IPC.pendingChat,
         IPC.pendingSettings,
       ]) {

@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef } from 'react';
+import type { Project } from '@spark-outpost/contracts';
 import type { AttachmentsState } from '../../chat/attachments/use-attachments.ts';
 import { recentProjects } from '../../island/ProjectMenu.tsx';
+import { useAddFolder } from '../../projects/use-add-folder.tsx';
 import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
 import { Segmented } from '../../ui/Segmented.tsx';
 import { chatPlace } from '../member-view.ts';
@@ -21,6 +23,7 @@ export interface ChatFormActions {
   onKind: (kind: ChatKind) => void;
   onPick: (chatId: string) => void;
   onProject: (projectId: string) => void;
+  onAddedProject: (project: Project) => void;
   onPatch: (changes: Partial<ChatDraft>) => void;
   onHandle: (typed: string) => void;
   onDone: () => void;
@@ -69,6 +72,7 @@ export function ChatForm(props: ChatFormProps) {
       description: chatPlace(candidate, data.projectNames),
       unavailableReason: joinBlock(candidate),
     }));
+  const adder = useAddFolder({ onAdded: props.onAddedProject });
   const projectChoices = recentProjects(data.projects).map((project) => ({
     id: project.id,
     label: project.name,
@@ -150,17 +154,16 @@ export function ChatForm(props: ChatFormProps) {
         <div className="op-form-grid">
           <div className="field">
             <span>Project</span>
-            {projectChoices.length > 0 ? (
-              <ChoicePicker
-                label="Project"
-                placeholder="Choose a project"
-                choices={projectChoices}
-                value={chat.projectId ?? NOTHING}
-                onChange={props.onProject}
-              />
-            ) : (
-              <p className="op-sheet-note">No projects yet. Add one from the Chats page first.</p>
-            )}
+            <ChoicePicker
+              label="Project"
+              placeholder="Choose a project"
+              choices={projectChoices}
+              value={chat.projectId ?? NOTHING}
+              actions={adder.actions}
+              error={adder.error}
+              onChange={props.onProject}
+            />
+            {adder.flow}
             {field('project')}
           </div>
           <div className="field">

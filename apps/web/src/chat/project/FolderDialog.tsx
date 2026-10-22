@@ -11,9 +11,10 @@ import { FileIcon } from '../attachments/attachment-icons.tsx';
 import { ClonePanel } from './clone/ClonePanel.tsx';
 import { useCloneNeedsAttention } from './clone/use-clone-jobs.ts';
 import { breadcrumbs } from './folder-path.ts';
+import { NewFolderField } from './NewFolderField.tsx';
 import { wrapTabFocus } from '../../ui/focus-trap.ts';
 import { useRemoteClient } from '../../phone/use-remote-client.ts';
-import { ChevronIcon, FolderIcon, ParentFolderIcon } from '../../ui/icons.tsx';
+import { ChevronIcon, FolderIcon, ParentFolderIcon, PlusIcon } from '../../ui/icons.tsx';
 import { Segmented } from '../../ui/Segmented.tsx';
 import { reveal } from '../../ui/transitions.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
@@ -79,8 +80,8 @@ interface FolderDialogProps {
   startPath?: string | null;
   stacked?: boolean;
   inline?: boolean;
-  fallback?: { label: string; onPick: () => void } | null;
   onCloned?: ((project: Project) => void) | null;
+  initialMode?: 'browse' | 'clone';
 }
 
 export function FolderDialog({
@@ -92,17 +93,26 @@ export function FolderDialog({
   startPath = null,
   stacked = purpose !== 'project',
   inline = false,
-  fallback = null,
   onCloned = null,
+  initialMode = 'browse',
 }: FolderDialogProps) {
   const ids = useId();
-  const [chosenMode, setMode] = useState<Mode | null>(null);
+  const [chosenMode, setMode] = useState<Mode | null>(
+    initialMode === 'clone' && onCloned ? 'clone' : null,
+  );
+  const [naming, setNaming] = useState(false);
+  const newFolderRef = useRef<HTMLButtonElement>(null);
+  const stopNaming = () => {
+    setNaming(false);
+    requestAnimationFrame(() => newFolderRef.current?.focus());
+  };
   const cloneWaiting = useCloneNeedsAttention(onCloned !== null);
   if (cloneWaiting && chosenMode === null) setMode('clone');
   const mode = chosenMode ?? 'browse';
   const [cloneParent, setCloneParent] = useState<string | null>(null);
   const copy = mode === 'browse' ? COPY[purpose] : CLONE_COPY[mode];
-  const { remote } = useRemoteClient();
+  const { remote, allows } = useRemoteClient();
+  const canMakeFolder = purpose === 'project' && allows('projects');
   const remoteLede = remote && mode !== 'browse' ? CLONE_COPY[mode].remoteLede : undefined;
   const lede = remoteLede ?? copy.lede;
   const picksFile = purpose === 'instructions';
@@ -122,6 +132,7 @@ export function FolderDialog({
   const empty = current ? emptyNote(current, picksFile) : null;
   const open = (next: string) => {
     setFile(null);
+    setNaming(false);
     setPath(next);
   };
 
@@ -149,7 +160,8 @@ export function FolderDialog({
       wrapTabFocus(event, () => buttons);
       if (event.key !== 'Escape') return;
       event.stopPropagation();
-      dismiss();
+      if (naming) stopNaming();
+      else dismiss();
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
@@ -183,17 +195,26 @@ export function FolderDialog({
               </span>
             ))}
         </nav>
+        {canMakeFolder && current && !naming && (
+          <button
+            ref={newFolderRef}
+            type="button"
+            className="btn ghost sm fdlg-new"
+            onClick={() => setNaming(true)}
+          >
+            <PlusIcon />
+            New folder
+          </button>
+        )}
       </div>
+      {naming && current && (
+        <NewFolderField parent={current.path} onCreated={open} onCancel={stopNaming} />
+      )}
       <div className="fdlg-list" aria-busy={listing.isFetching}>
         {listing.isError && (
           <p className="fdlg-note bad" role="alert">
             {listing.error.message}
           </p>
-        )}
-        {listing.isError && fallback && (
-          <button type="button" className="btn line sm fdlg-fallback" onClick={fallback.onPick}>
-            {fallback.label}
-          </button>
         )}
         {listing.isPending && <Skeleton label="Opening the folder" shape="list" rows={6} />}
         {empty && <p className="fdlg-note">{empty}</p>}

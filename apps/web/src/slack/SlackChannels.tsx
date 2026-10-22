@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import type { SlackAllowedChannel, SlackConnection } from '@spark-outpost/contracts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
+import { useAddFolder } from '../projects/use-add-folder.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { slackApi, slackKeys } from './slack-api.ts';
 import type { SlackSave } from './use-slack-save.ts';
@@ -66,6 +67,21 @@ export function SlackChannels({
       ),
     );
 
+  const [addingFor, setAddingFor] = useState<string | null>(null);
+  const adder = useAddFolder({
+    onAdded: (project) => {
+      if (addingFor) setProject(addingFor, project.id);
+    },
+  });
+  const actionsFor = (channelId: string) =>
+    adder.actions.map((action) => ({
+      ...action,
+      onSelect: () => {
+        setAddingFor(channelId);
+        action.onSelect();
+      },
+    }));
+
   const projectChoices = [
     { id: NO_PROJECT, label: 'No project' },
     ...(projects.data ?? []).map((project) => ({ id: project.id, label: project.name })),
@@ -126,6 +142,8 @@ export function SlackChannels({
                   choices={projectChoices}
                   value={mapped}
                   placeholder="No project"
+                  actions={actionsFor(channel.id)}
+                  error={addingFor === channel.id ? adder.error : null}
                   onChange={(projectId) => setProject(channel.id, projectId)}
                 />
               )}
@@ -145,6 +163,7 @@ export function SlackChannels({
           Load more channels
         </button>
       )}
+      {adder.flow}
       <p className="tk-field-help">
         A project next to a channel is where work started from that channel runs.
       </p>

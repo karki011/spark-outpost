@@ -136,7 +136,6 @@ export interface SparkDesktop {
     onEscape(callback: () => void): Unsubscribe;
     onPointer?(callback: (point: { x: number; y: number }) => void): Unsubscribe;
     sparkFocused(): Promise<boolean>;
-    pickFolder(): Promise<string | null>;
     pathForFile(file: File): string | null;
     onSparkFocus(callback: (focused: boolean) => void): Unsubscribe;
     setInteractive(on: boolean): void;
@@ -166,6 +165,9 @@ export interface SparkDesktop {
   };
   privacy?: {
     openFullDiskAccess(): Promise<void>;
+  };
+  folders?: {
+    pick(defaultPath: string | null): Promise<string | null>;
   };
   browser?: DesktopBrowser;
   macControl?: DesktopMacControl;

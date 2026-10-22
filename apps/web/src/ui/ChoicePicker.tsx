@@ -1,6 +1,6 @@
 import { useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronIcon } from './icons.tsx';
+import { ChevronIcon, PlusIcon } from './icons.tsx';
 import { useMenuPosition } from './use-menu-position.ts';
 import { usePopover } from './use-popover.ts';
 
@@ -12,13 +12,25 @@ export interface PickerChoice {
   unavailableReason?: string | null;
 }
 
+export interface PickerAction {
+  id: string;
+  label: string;
+  description?: string;
+  disabled?: boolean;
+  onSelect: () => void;
+}
+
 interface ChoicePickerProps {
   label: string;
   choices: readonly PickerChoice[];
   value: string;
   placeholder?: string;
+  actions?: readonly PickerAction[];
+  error?: string | null;
   onChange: (id: string) => void;
 }
+
+const MENU_ITEMS = '[role="menuitemradio"], [role="menuitem"]';
 
 const ROW_HEIGHT = 60;
 
@@ -27,6 +39,8 @@ export function ChoicePicker({
   choices,
   value,
   placeholder = 'Choose',
+  actions = [],
+  error = null,
   onChange,
 }: ChoicePickerProps) {
   const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
@@ -37,7 +51,7 @@ export function ChoicePicker({
     open,
     anchorRef,
     panelRef,
-    wantedHeight: ROW_HEIGHT * choices.length,
+    wantedHeight: ROW_HEIGHT * (choices.length + actions.length),
   });
   const listId = useId();
   const current = choices.find((choice) => choice.id === value);
@@ -46,13 +60,15 @@ export function ChoicePicker({
     if (!open) return;
     const panel = panelRef.current;
     const checked = panel?.querySelector<HTMLButtonElement>('[aria-checked="true"]');
-    const first = panel?.querySelector<HTMLButtonElement>('[role="menuitemradio"]:not(:disabled)');
+    const first = panel?.querySelector<HTMLButtonElement>(
+      '[role="menuitemradio"]:not(:disabled), [role="menuitem"]:not(:disabled)',
+    );
     (checked ?? first)?.focus();
   }, [open, panelRef]);
 
   const moveFocus = (delta: number) => {
     const items = Array.from(
-      panelRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]') ?? [],
+      panelRef.current?.querySelectorAll<HTMLButtonElement>(MENU_ITEMS) ?? [],
     );
     if (items.length === 0) return;
     const index = items.indexOf(document.activeElement as HTMLButtonElement);
@@ -76,6 +92,11 @@ export function ChoicePicker({
       </button>
       {current?.description && (
         <small className={current.risky ? 'note warn' : 'note'}>{current.description}</small>
+      )}
+      {error && (
+        <small className="note bad" role="alert">
+          {error}
+        </small>
       )}
       {createPortal(
         <div
@@ -121,6 +142,27 @@ export function ChoicePicker({
                   strokeLinecap="round"
                 />
               </svg>
+            </button>
+          ))}
+          {actions.length > 0 && <div className="choice-sep" role="separator" />}
+          {actions.map((action) => (
+            <button
+              key={action.id}
+              type="button"
+              role="menuitem"
+              className="choice-action"
+              disabled={action.disabled}
+              onClick={() => {
+                setOpen(false);
+                anchorRef.current?.focus();
+                action.onSelect();
+              }}
+            >
+              <PlusIcon />
+              <span>
+                <b>{action.label}</b>
+                {action.description && <small>{action.description}</small>}
+              </span>
             </button>
           ))}
         </div>,

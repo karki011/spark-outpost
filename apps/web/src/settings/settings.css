@@ -282,6 +282,15 @@
   cursor: pointer;
 }
 
+.set-projects-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.set-hint.bad {
+  color: var(--danger);
+}
 .set-projects-bar {
   position: sticky;
   top: -12px;

@@ -79,7 +79,6 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     onEscape: (callback: () => void) => listen(IPC.islandEscape, callback),
     onPointer: (callback: (point: unknown) => void) => listen(IPC.islandPointer, callback),
     sparkFocused: () => ipcRenderer.invoke(IPC.islandSparkFocused),
-    pickFolder: () => ipcRenderer.invoke(IPC.islandPickFolder),
     pathForFile: (file: File) => webUtils.getPathForFile(file) || null,
     onSparkFocus: (callback: (focused: unknown) => void) => listen(IPC.islandSparkFocus, callback),
     setInteractive: (on: boolean) => ipcRenderer.send(IPC.islandInteractive, on),
@@ -105,6 +104,9 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
   },
   privacy: {
     openFullDiskAccess: () => ipcRenderer.invoke(IPC.privacyOpenFullDiskAccess),
+  },
+  folders: {
+    pick: (defaultPath: string | null) => ipcRenderer.invoke(IPC.pickFolder, defaultPath),
   },
   macControl: {
     status: () => ipcRenderer.invoke(IPC.macControlStatus),

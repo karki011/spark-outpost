@@ -1,4 +1,4 @@
-import { readdir, realpath, stat } from 'node:fs/promises';
+import { mkdir, readdir, realpath, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import {
@@ -97,4 +97,24 @@ export async function listFolders(
     : [];
   const parent = path.dirname(real);
   return { path: real, parent: parent === real ? null : parent, folders, files };
+}
+
+function isInside(target: string, root: string): boolean {
+  return target === root || target.startsWith(`${root}${path.sep}`);
+}
+
+export async function createFolder(parent: string, name: string, home: string): Promise<string> {
+  const real = await realDirectory(parent);
+  if (!isInside(real, home)) throw new FolderError('Make new folders inside your home folder.');
+  const target = path.join(real, name);
+  if (path.dirname(target) !== real || path.basename(target) !== name) {
+    throw new FolderError('Use a folder name, not a path.');
+  }
+  try {
+    await mkdir(target);
+  } catch (error) {
+    if (errorCode(error) === 'EEXIST') throw new FolderError(`“${name}” is already there.`);
+    throw new FolderError("Spark Outpost can't make a folder there.");
+  }
+  return target;
 }

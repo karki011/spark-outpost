@@ -1,11 +1,10 @@
 import './map-empty.css';
-import { useState, type ReactNode } from 'react';
-import { AnimatePresence } from 'motion/react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { projectKeys, projectsApi } from '../api/projects.ts';
+import type { ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { projectKeys } from '../api/projects.ts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
-import { FolderDialog } from '../chat/project/FolderDialog.tsx';
+import { useAddFolder } from '../projects/use-add-folder.tsx';
 import { useVoice } from '../spark/use-voice.ts';
 import { mapIntro } from '../spark/voice.ts';
 import { PlusIcon } from '../ui/icons.tsx';
@@ -74,12 +73,9 @@ function Shell({ children }: { children: ReactNode }) {
 export function MapEmpty() {
   const voice = useVoice();
   const client = useQueryClient();
-  const [adding, setAdding] = useState(false);
-  const projectAdded = async () => {
-    setAdding(false);
-    await client.invalidateQueries({ queryKey: projectKeys.all });
-  };
-  const addProject = useMutation({ mutationFn: projectsApi.create, onSuccess: projectAdded });
+  const adder = useAddFolder({
+    onAdded: () => void client.invalidateQueries({ queryKey: projectKeys.all }),
+  });
   return (
     <Shell>
       <SkyDoodle />
@@ -99,10 +95,8 @@ export function MapEmpty() {
       <button
         type="button"
         className="btn primary mh-add"
-        onClick={() => {
-          addProject.reset();
-          setAdding(true);
-        }}
+        disabled={!adder.allowed}
+        onClick={adder.openDialog}
       >
         <PlusIcon />
         Add a project
@@ -112,18 +106,7 @@ export function MapEmpty() {
         areas, never secret files.
         <InfoTip topic="what Jev reads" text={PRIVACY} doc={{ page: 'sparkignore' }} />
       </p>
-      <AnimatePresence>
-        {adding && (
-          <FolderDialog
-            key="map-add-project"
-            linking={addProject.isPending}
-            error={addProject.isError ? addProject.error.message : null}
-            onUse={(rootPath) => addProject.mutate(rootPath)}
-            onCloned={() => void projectAdded()}
-            onClose={() => setAdding(false)}
-          />
-        )}
-      </AnimatePresence>
+      {adder.flow}
     </Shell>
   );
 }

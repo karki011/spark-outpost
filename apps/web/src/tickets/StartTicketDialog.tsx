@@ -5,6 +5,7 @@ import { ticketSourceNames, type TicketStartMode } from '@spark-outpost/contract
 import { queryKeys } from '../api/client.ts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { FolderDialog } from '../chat/project/FolderDialog.tsx';
+import { useAddFolder } from '../projects/use-add-folder.tsx';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
@@ -43,6 +44,7 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
   });
   const [mode, setMode] = useState<TicketStartMode>('plan');
   const [projectId, setProjectId] = useState(NO_PROJECT);
+  const adder = useAddFolder({ onAdded: (project) => setProjectId(project.id) });
   const [move, setMove] = useState(true);
   const [assign, setAssign] = useState(!ticket.mine);
   const [busy, setBusy] = useState(false);
@@ -173,6 +175,8 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
               label="Project folder"
               choices={projectChoices}
               value={projectId}
+              actions={adder.actions}
+              error={adder.error}
               onChange={setProjectId}
             />
             <label className="check-row">
@@ -233,6 +237,7 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
           </div>
         </motion.div>
       </div>
+      {adder.flow}
       <AnimatePresence>
         {browsing && (
           <FolderDialog

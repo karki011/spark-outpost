@@ -5,14 +5,13 @@ import './chat-row.css';
 import './chat-menu.css';
 import './sidebar-layout.css';
 import { memo, useCallback, useDeferredValue, useEffect, useRef, useState } from 'react';
-import { AnimatePresence } from 'motion/react';
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConversationSummary, Outpost, Project } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { useOutpostSeam } from '../chat/outpost/outpost-seam.ts';
-import { projectKeys, projectsApi } from '../api/projects.ts';
+import { projectKeys } from '../api/projects.ts';
 import { isConnectionLoss } from '../app/connection/connection-failure.ts';
-import { FolderDialog } from '../chat/project/FolderDialog.tsx';
+import { useAddFolder } from '../projects/use-add-folder.tsx';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
 import {
   isFiltering,
@@ -102,7 +101,6 @@ export const ConversationList = memo(function ConversationList({
   const [projectMenu, setProjectMenu] = useState<OpenProjectMenu | null>(null);
   const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null);
   const projectActions = useProjectActions(toaster, folds.open);
-  const [addingProject, setAddingProject] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -131,12 +129,27 @@ export const ConversationList = memo(function ConversationList({
   const waiting = attention(chats, selectedId, alerting);
 
   const projectAdded = async (project: Project) => {
-    setAddingProject(false);
     folds.open(project.id);
     toaster.show({ text: `Added project ${project.name}` });
     await client.invalidateQueries({ queryKey: projectKeys.all });
   };
-  const addProject = useMutation({ mutationFn: projectsApi.create, onSuccess: projectAdded });
+  const moveTarget = useRef<ConversationSummary | null>(null);
+  const adder = useAddFolder({
+    onAdded: (project) => {
+      const chat = moveTarget.current;
+      moveTarget.current = null;
+      if (chat) actions.move(chat, project.id);
+      else void projectAdded(project);
+    },
+  });
+  const moveActions = (chat: ConversationSummary) =>
+    adder.actions.map((action) => ({
+      ...action,
+      onSelect: () => {
+        moveTarget.current = chat;
+        action.onSelect();
+      },
+    }));
 
   const openChat = (id: string) => {
     onSelect(id);
@@ -337,9 +350,10 @@ export const ConversationList = memo(function ConversationList({
                   renderRows={renderRows}
                   renderRow={renderRow}
                   members={membersByOutpost(visible, membership)}
+                  canAddProject={adder.allowed}
                   onAddProject={() => {
-                    addProject.reset();
-                    setAddingProject(true);
+                    moveTarget.current = null;
+                    adder.openDialog();
                   }}
                   onNewInProject={onNewInProject}
                   onProjectMenu={(projectId, element) =>
@@ -372,6 +386,7 @@ export const ConversationList = memo(function ConversationList({
           projects={projectList}
           actions={actions}
           toaster={toaster}
+          folderActions={moveActions(menuChat)}
           onClose={closeMenu}
           onRename={() => setRenamingId(menuChat.id)}
         />
@@ -386,18 +401,7 @@ export const ConversationList = memo(function ConversationList({
           onRemove={() => projectActions.remove(menuProject)}
         />
       )}
-      <AnimatePresence>
-        {addingProject && (
-          <FolderDialog
-            key="add-project"
-            linking={addProject.isPending}
-            error={addProject.isError ? addProject.error.message : null}
-            onUse={(rootPath) => addProject.mutate(rootPath)}
-            onCloned={(project) => void projectAdded(project)}
-            onClose={() => setAddingProject(false)}
-          />
-        )}
-      </AnimatePresence>
+      {adder.flow}
     </nav>
   );
 });
