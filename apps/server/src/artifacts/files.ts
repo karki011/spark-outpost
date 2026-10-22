@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { constants } from 'node:fs';
-import { mkdir, open, writeFile } from 'node:fs/promises';
+import { mkdir, open, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   ARTIFACT_MAX_BYTES,
@@ -69,6 +69,15 @@ export async function writeVersionFile(
     mode: 0o600,
     flag: 'wx',
   });
+}
+
+export async function removeVersionFile(
+  base: string,
+  conversationId: string,
+  id: string,
+  version: number,
+): Promise<void> {
+  await rm(versionFile(base, conversationId, id, version), { force: true });
 }
 
 export async function readVersionFile(

@@ -59,9 +59,19 @@ The app's frame is `sandbox="allow-scripts"` with no `allow-same-origin`, so the
 The Mac app adds four guards (`apps/desktop/src/artifact-frames.ts`):
 
 - The artifact port is in the Browser pane's blocked ports.
-- A subframe of a Spark window may navigate only to the artifact origin (`will-frame-navigate`). Links in an artifact therefore do not open: a frame navigating itself cannot be told from a script sending data out by navigation, so nothing follows it.
+- A subframe of a Spark window may load only artifact pages (`will-frame-navigate`); every other navigation is refused, and the app's `frame-src` already stops one to another site in the renderer.
 - A request from the artifact frame never gets the launch token added.
 - Downloads and permission requests from the artifact origin are refused.
+
+### Links
+
+The artifact origin puts one script before the page (after a leading doctype, `artifacts/link-clicks.ts`). On a real click (`isTrusted`) of an `http(s)` link that the page did not handle itself, whatever its `target`, it stops the click and moves the frame to `/open?to=<address>` on the artifact origin. The Mac app catches that navigation (`artifactLinkRequest`, `guardSubframes`) and:
+
+- refuses it unless it comes from an artifact frame, within 1 second of a real mouse-up (`before-mouse-event`) or Enter or Space (`before-input-event`) in that window, with no other link question open; one click allows one question;
+- reads only `http(s)` addresses without a user name or password, shown as the parsed address (punycode for other scripts);
+- shows a dialog naming the address, **Open in Browser** or **Cancel** (the default), and opens it with the external-link path (`openExternal`) only on **Open in Browser**.
+
+A page script cannot open anything on its own: popups are blocked by the sandbox, a direct navigation is blocked by `frame-src`, and an `/open` request without a real click in the last second is dropped. A script that runs at the moment the user clicks somewhere in the window can still ask, but only the dialog, with the address in it, opens a link. The origin itself answers `/open` with 404, so outside the Mac app (a browser in development) a link opens nothing. On paired devices the `page` route gets no script: links there behave as the device's browser treats a sandboxed frame.
 
 **Save as…** fetches `GET /api/artifacts/:id/versions/:version/file` (an attachment, `default-src 'none'; sandbox`) and saves it with the shared `ExportButton`, as the audit export does. **Copy** copies the stored text.
 
@@ -77,5 +87,5 @@ On a phone the frame is on the Serve origin, still opaque. A device's browser ha
 - `artifact-origin.db.test.ts`: the policy and headers, the host check, method, unknown key and changed file, no Markdown or SVG page, and the API's view, file and page routes.
 - `artifacts-remote.db.test.ts`: **Open artifacts** off by default, `view` and `page` refused until it is on, `file` always refused.
 - `artifact-links.test.ts`: the ACP mapping. `artifact-pages.test.ts`: the artifact port stays in range and never equals the API port.
-- `artifact-frames.test.ts` and `downloads.test.ts`: the Mac app guards.
-- `tests/browser/artifacts.spec.ts`: card, tab, sandbox attribute, the frame's fetch to the API blocked and `document.cookie` denied, the version picker, Copy, Save as… and close, Markdown and SVG, and in Manual the **Show it** card, then the turn's card without a reload.
+- `artifact-frames.test.ts` and `downloads.test.ts`: the Mac app guards, including a clicked link that asks and opens, Cancel, a script's request without a click, one question per click, other schemes, sign-ins in the address and other frames. `link-clicks.test.ts`: where the link script goes.
+- `tests/browser/artifacts.spec.ts`: card, tab, sandbox attribute, the frame's fetch to the API blocked and `document.cookie` denied, the version picker, Copy, Save as… and close, Markdown and SVG, a clicked link that becomes an `/open` request while `window.open` opens nothing, and in Manual the **Show it** card, then the turn's card without a reload.

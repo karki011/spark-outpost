@@ -15,6 +15,7 @@ import {
   prepareContent,
   readVersionFile,
   writeVersionFile,
+  removeVersionFile,
 } from '../../artifacts/files.ts';
 import {
   artifactInChat,
@@ -114,14 +115,19 @@ async function stage(
     facts.version,
     prepared.text,
   );
-  await insertVersion(context.deps.db, {
-    ...facts,
-    conversationId: place.conversationId,
-    bytes: prepared.bytes,
-    sha256: prepared.sha256,
-    viewKey: newViewKey(),
-    runId: place.runId,
-  });
+  try {
+    await insertVersion(context.deps.db, {
+      ...facts,
+      conversationId: place.conversationId,
+      bytes: prepared.bytes,
+      sha256: prepared.sha256,
+      viewKey: newViewKey(),
+      runId: place.runId,
+    });
+  } catch (error) {
+    await removeVersionFile(place.base, place.conversationId, facts.artifactId, facts.version);
+    throw error;
+  }
   return {
     place,
     action: {

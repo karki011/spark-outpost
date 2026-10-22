@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { artifactPortFor } from '@spark-outpost/contracts';
 import { createApp } from '../src/api/app.ts';
 import { startArtifactOrigin, type ArtifactOrigin } from '../src/artifacts/origin-server.ts';
+import { LINK_CLICKS } from '../src/artifacts/link-clicks.ts';
 import { findVersion } from '../src/artifacts/store.ts';
 import { chatArtifactsFolder } from '../src/chat-files/folders.ts';
 import { LOCAL_HEADERS, PORT, testAppOptions } from './app-support.ts';
@@ -79,7 +80,9 @@ describe('the artifact origin', { timeout: 30_000 }, () => {
     const response = await page(`/v/${key}`);
 
     expect(response.status).toBe(200);
-    expect(response.text).toBe(PAGE);
+    expect(response.text).toBe(
+      `<!doctype html>${LINK_CLICKS}${PAGE.slice('<!doctype html>'.length)}`,
+    );
     const policy = String(response.headers['content-security-policy']);
     expect(policy.split('; ')).toEqual(
       expect.arrayContaining([

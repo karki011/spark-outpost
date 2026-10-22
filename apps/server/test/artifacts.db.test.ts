@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ARTIFACT_HTML_MIME, ARTIFACT_MAX_BYTES, artifactUri } from '@spark-outpost/contracts';
@@ -157,5 +157,30 @@ describe('spark_artifact', { timeout: 30_000 }, () => {
     const saved = read.result.content[1] as { text: string };
     expect(saved.text).not.toContain('sk-live-0123456789abcdef');
     expect(saved.text).toContain('[redacted');
+  });
+
+  it('removes a version file it could not record, so the next update can use that version', async () => {
+    await h.start('auto');
+    const first = await h.call({
+      action: 'publish',
+      title: 'Notes',
+      kind: 'markdown',
+      content: '# One',
+    });
+    const id = first.facts.id as string;
+    await t.db.query(`
+      CREATE FUNCTION refuse_version() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'database away'; END $$;
+      CREATE TRIGGER refuse_version BEFORE INSERT ON artifact_page_versions
+        FOR EACH ROW EXECUTE FUNCTION refuse_version();`);
+
+    const failed = await h.call({ action: 'update', id, content: '# Two' });
+    expect(failed.result.isError).toBe(true);
+    const folder = join(chatArtifactsFolder(h.base, h.chat.conversationId), id);
+    expect(await readdir(folder)).toEqual(['1']);
+
+    await t.db.query('DROP TRIGGER refuse_version ON artifact_page_versions');
+    const retried = await h.call({ action: 'update', id, content: '# Two' });
+    expect(retried.facts).toMatchObject({ outcome: 'done', version: 2 });
   });
 });

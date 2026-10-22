@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { artifactOrigin } from '../../packages/contracts/src/artifact-pages.ts';
 import { openChats } from './navigation.ts';
 import { permissionChip, pickMode } from './permissions-kit.ts';
 import { resetWithAgents } from './project-chat-kit.ts';
@@ -156,4 +157,37 @@ test('in Manual an artifact waits for Show it, then its card appears without a r
     'Artifact · Markdown · version 1',
     { timeout: 30_000 },
   );
+});
+
+test('a clicked link asks Spark to open it, and a script can open nothing', async ({ page }) => {
+  await openChats(page);
+  await page.getByRole('button', { name: 'New chat' }).first().click();
+  await permissionChip(page).click();
+  await pickMode(page, 'Auto');
+  await page.keyboard.press('Escape');
+
+  await send(
+    page,
+    artifactCall({
+      action: 'publish',
+      title: 'Links',
+      kind: 'html',
+      content:
+        '<!doctype html><a href="https://links.example/report?q=1" target="_blank">Report</a><button onclick="window.open(\'https://links.example/popup\')">Pop</button>',
+    }),
+  );
+  await page
+    .getByRole('group', { name: 'Artifact Links' })
+    .getByRole('button', { name: 'Open' })
+    .click({ timeout: 30_000 });
+  const inside = page.frameLocator('iframe.art-frame');
+  await inside.getByRole('button', { name: 'Pop' }).click();
+  expect(page.context().pages()).toHaveLength(1);
+
+  const asked = page.waitForRequest((request) => new URL(request.url()).pathname === '/open');
+  await inside.getByRole('link', { name: 'Report' }).click();
+  const address = new URL((await asked).url());
+  expect(address.origin).toBe(artifactOrigin(API_PORT));
+  expect(address.searchParams.get('to')).toBe('https://links.example/report?q=1');
+  expect(page.context().pages()).toHaveLength(1);
 });

@@ -6,6 +6,8 @@ export const ARTIFACT_ACTIVITY = 'artifact';
 export const ARTIFACT_URI_PREFIX = 'ui://spark/';
 export const ARTIFACT_HTML_MIME = 'text/html;profile=mcp-app';
 export const ARTIFACT_PORT_OFFSET = 10_000;
+export const ARTIFACT_OPEN_PATH = '/open';
+export const ARTIFACT_OPEN_PARAM = 'to';
 
 export const artifactPageKindSchema = z.enum(['html', 'markdown', 'svg']);
 export type ArtifactPageKind = z.infer<typeof artifactPageKindSchema>;

@@ -6,7 +6,7 @@ order: 618
 summary: What agents can look up about Spark, the confirm card they show before acting for you, and what they never see.
 ---
 
-Agents get the `spark_*` tools their chat can use; some need a connector or project.
+Agents get the `spark_*` tools their chat can use.
 
 ## Tools that read
 

@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { Queryable } from '../persistence/db.ts';
 import { readVersionFile } from './files.ts';
+import { withLinkClicks } from './link-clicks.ts';
 import { sendArtifactPage } from './page-headers.ts';
 import { versionByViewKey } from './store.ts';
 
@@ -37,7 +38,7 @@ export function artifactHandler(options: ArtifactOriginOptions, host: () => stri
     if (!stored || stored.kind !== 'html') return refuse(res, 404);
     const html = await readVersionFile(options.chatFolders, stored);
     if (html === null) return refuse(res, 404);
-    sendArtifactPage(res, html, options.frameAncestors);
+    sendArtifactPage(res, withLinkClicks(html), options.frameAncestors);
   };
 }
 
