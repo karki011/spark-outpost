@@ -9,6 +9,7 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
 const SPARK_TRIGGER = /#spark (\w+)(?: (\{.*?\}))?/g;
 const SCRIPT_TRIGGER = /#sparkscript (\[.*\])/;
+const INSTRUCTIONS_TRIGGER = '#sparkinstructions';
 
 type ScriptStep =
   { say: string } | { tool: string; args?: Record<string, unknown> } | { waitFor: string };
@@ -61,6 +62,25 @@ function fromCodexConfig(raw: string | undefined): SparkEndpoint | null {
   return null;
 }
 
+async function sparkClient(endpoint: SparkEndpoint): Promise<Client> {
+  const client = new Client({ name: 'fake-acp-agent', version: '1.0.0' });
+  await client.connect(
+    new StreamableHTTPClientTransport(new URL(endpoint.url), {
+      requestInit: { headers: { Authorization: endpoint.authorization } },
+    }) as Transport,
+  );
+  return client;
+}
+
+async function sayInstructions(endpoint: SparkEndpoint, say: (chunk: string) => Promise<void>) {
+  const client = await sparkClient(endpoint);
+  try {
+    await say(`spark instructions=${client.getInstructions() ?? ''}`);
+  } finally {
+    await client.close();
+  }
+}
+
 async function callSpark(
   endpoint: SparkEndpoint,
   call: { id: string; tool: string; args: Record<string, unknown> },
@@ -74,12 +94,7 @@ async function callSpark(
     status: 'in_progress',
     rawInput: call.args,
   });
-  const client = new Client({ name: 'fake-acp-agent', version: '1.0.0' });
-  await client.connect(
-    new StreamableHTTPClientTransport(new URL(endpoint.url), {
-      requestInit: { headers: { Authorization: endpoint.authorization } },
-    }) as Transport,
-  );
+  const client = await sparkClient(endpoint);
   try {
     const result = (await client.callTool({ name: call.tool, arguments: call.args })) as {
       content: { type: string; text?: string }[];
@@ -123,13 +138,18 @@ export async function sparkTurn(
 ): Promise<acp.StopReason | null> {
   const script = SCRIPT_TRIGGER.exec(text)?.[1];
   const match = [...text.matchAll(SPARK_TRIGGER)].at(-1);
-  if (!script && !match) return null;
+  const instructions = !match && text.includes(INSTRUCTIONS_TRIGGER);
+  if (!script && !match && !instructions) return null;
   const endpoint =
     fromAcp(session?.mcpServers) ??
     fromClaudeOptions(session?.meta) ??
     fromCodexConfig(process.env.CODEX_CONFIG);
   if (!endpoint) {
     await say('spark=missing');
+    return 'end_turn';
+  }
+  if (instructions) {
+    await sayInstructions(endpoint, say);
     return 'end_turn';
   }
   if (script) {

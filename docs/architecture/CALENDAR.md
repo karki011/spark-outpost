@@ -1,6 +1,6 @@
 # Calendar
 
-> **Status: Phase 1a built (2026-10-16): see and join, from macOS Calendar and, directly, from Google Calendar accounts. Phase 1b's agent tools built (2026-10-18):** `spark_calendar` and `spark_calendar_edit`, **Let agents read my calendar** and **Agents can edit** ([Agent tools](#agent-tools)). A connector (Connections → Connectors) that brings every calendar synced to the Mac, and each Google account the user adds, into the Mac app: **Today** beside the user's chats, **Upcoming** on Home, one-click **Join**, island nudges and quiet focus time. **Protect this free block**, the `alert` and `focus` actions, changing events from the event popover, Ask Spark's island card for the reader (1b) and **meeting prep** (1c) are designed below and not built. 1a names a running chat or one that needs you in the wrap-up line (Spark has no cheap unpushed-work signal), and the Ask Spark fast path is not built. Mock: [`docs/design/mocks/calendar-mock.html`](../design/mocks/calendar-mock.html). The owner's defaults are in [Decided](#decided).
+> **Status: Phase 1a built (2026-10-16): see and join, from macOS Calendar and, directly, from Google Calendar accounts. Phase 1b's agent tools built (2026-10-18):** `spark_calendar` and `spark_calendar_edit`, **Let agents read my calendar** (on by default since 2026-10-22) and **Agents can edit** ([Agent tools](#agent-tools)); Ask Spark gets both tools since 2026-10-22. A connector (Connections → Connectors) that brings every calendar synced to the Mac, and each Google account the user adds, into the Mac app: **Today** beside the user's chats, **Upcoming** on Home, one-click **Join**, island nudges and quiet focus time. **Protect this free block**, the `alert` and `focus` actions, changing events from the event popover, **meeting prep** (1c) is designed below and not built. 1a names a running chat or one that needs you in the wrap-up line (Spark has no cheap unpushed-work signal), and the Ask Spark fast path is not built. Mock: [`docs/design/mocks/calendar-mock.html`](../design/mocks/calendar-mock.html). The owner's defaults are in [Decided](#decided).
 
 ## Pieces
 
@@ -165,10 +165,10 @@ Before a meeting, the **Spark assistant** (the hidden, persistent Ask Spark sess
 
 ## Agent tools
 
-| Tool                  | Actions                                                | `acts` | Offered when                                        |
-| --------------------- | ------------------------------------------------------ | ------ | --------------------------------------------------- |
-| `spark_calendar`      | `calendars`, `events` (range, search), `event`, `free` | no     | **Let agents read my calendar** on (off by default) |
-| `spark_calendar_edit` | `create`, `update`, `delete`, `alert`, `focus`         | yes    | Some calendar has **Agents can edit** on            |
+| Tool                  | Actions                                                | `acts` | Offered when                                       |
+| --------------------- | ------------------------------------------------------ | ------ | -------------------------------------------------- |
+| `spark_calendar`      | `calendars`, `events` (range, search), `event`, `free` | no     | **Let agents read my calendar** on (on by default) |
+| `spark_calendar_edit` | `create`, `update`, `delete`, `alert`, `focus`         | yes    | Some calendar has **Agents can edit** on           |
 
 | Call                                                                                     | Decision                              |
 | ---------------------------------------------------------------------------------------- | ------------------------------------- |
@@ -177,13 +177,13 @@ Before a meeting, the **Spark assistant** (the hidden, persistent Ask Spark sess
 | A write to a calendar without **Agents can edit**, or not `writable`                     | Refused, with the reason              |
 | Inviting, RSVP, adding attendees                                                         | Not offered; the Google API, if added |
 
-The mode works as for every Spark action: at once in Auto, Bypass permissions, Approve for me and Full access, and in Accept edits when the user's message asked; otherwise a card showing the change before and after ("When 11:00–12:30 → 17:00–18:00, this occurrence only"). A Terminal session with no turn to show a card on refuses such a call, as in [Mac control](MAC_CONTROL.md#built-in-phase-1). Ask Spark gets the reader only, its card in the island's Ask view, remembered for the session; prep turns, child runs and runs from a paired device get neither.
+The mode works as for every Spark action: at once in Auto, Bypass permissions, Approve for me and Full access, and in Accept edits when the user's message asked; otherwise a card showing the change before and after ("When 11:00–12:30 → 17:00–18:00, this occurrence only"). A Terminal session with no turn to show a card on refuses such a call, as in [Mac control](MAC_CONTROL.md#built-in-phase-1). Ask Spark gets both, as a chat does, with **When Ask Spark acts** in place of the mode (Manual: the card; Act: at once); the read card is answered in the island's Ask view and remembered for the assistant chat, the edit card in Spark (**Review in Spark**). Prep turns, child runs and runs from a paired device get neither.
 
 Results are untrusted `calendar_evidence`; lists carry no notes or names. A read is a `calendar` observation for the send note, and a write to a synced calendar is a send. Each call is audited (`spark/calendar`), marked ran without review when no card approved it.
 
 **Built in 1b (2026-10-18).**
 
-- **Offered** (`spark-mcp/tools/calendar/offered.ts`): both need the calendar connected (EventKit with the Mac host, or a Google account) and a run that is not from a paired device and not a child run, checked at grant and at every call. The reader needs **Let agents read my calendar**; the editor needs some writable calendar with **Agents can edit** and a turn that may act. Ask turns get the reader only. The Spark assistant's session (Ask Spark) gets neither until its island card is built. `calendars` lists only included calendars and those with **Agents can edit**.
+- **Offered** (`spark-mcp/tools/calendar/offered.ts`): both need the calendar connected (EventKit with the Mac host, or a Google account) and a run that is not from a paired device and not a child run, checked at grant and at every call. The reader needs **Let agents read my calendar**; the editor needs some writable calendar with **Agents can edit** and a turn that may act. Ask turns get the reader only. Ask Spark (the Spark assistant's session) gets both since 2026-10-22, its read-only provider mode notwithstanding. When a tool is missing, the session's instructions name the exact step (`CALENDAR_HOW_TO`: connect a calendar, turn on **Let agents read my calendar**, turn on **Agents can edit**, or ask from the Mac). `calendars` lists only included calendars and those with **Agents can edit**.
 - **The read card** is `calendar_read`, **Allow for this chat**, remembered for the chat like `read_page`; the mode can skip it as for any Spark action.
 - **The edit card** is `calendar_edit`, a `proposeAction` card with the change before and after, the calendar, "This occurrence only" or "This and future", and the floor reasons (`others`, `shared`); a floor reason sets `alwaysAsk`. A delete follows the mode since 2026-10-19 (owner decision); its result line names the event, and for Google says Google keeps deleted events in its trash. Older cards may still carry the `delete` reason. The follow-through re-reads the event before writing and changes nothing if its title, times or people changed since the card ("The event changed after the card was shown"), or if a floor reason appears that the card did not show. The card stores the change it shows (titles, times, a notes excerpt) in the approval, as other cards do; the audit holds only ids, the calendar key and the names of the fields changed.
 - **Both processes reach the calendar**: the chat worker and the API (Terminal sessions) each connect the EventKit bridge and a non-polling Google client (`calendar/agent/google-client.ts`) built from the keychain token, `oauth.ts` refresh and `api.ts`; it never marks an account **Sign in again** itself. A Google write notifies `calendar_written`, and the API's Google source then polls at once.
@@ -191,7 +191,7 @@ Results are untrusted `calendar_evidence`; lists carry no notes or names. A read
 - **Paired devices** can't answer a calendar card (`macOnlyCard`); a device following the chat sees the card's text, as it sees the chat.
 - **Sends**: a write to a synced calendar after a read is noted as `spark/egress` with the subject "a change on <calendar>", never the event's title.
 - **Accept edits** counts the message as asking for `calendar_edit` when an edit verb comes near a calendar noun, today, tomorrow or a time ("create Spark 1b test tomorrow at 15:00"); a vague message ("move it", "move the standup to 11") still shows a card. This is deliberate: a card costs one click, and a write the user did not clearly ask for would touch a real calendar.
-- **Not built**: `calendars` filtering by search beyond titles, `alert` and `focus` as separate actions (an alarm is a field of `create` and `update`), Ask Spark's island card for the reader.
+- **Not built**: `calendars` filtering by search beyond titles, `alert` and `focus` as separate actions (an alarm is a field of `create` and `update`).
 
 ## Nudges and focus
 
@@ -323,7 +323,7 @@ The owner's defaults, 2026-10-16:
 4. **Phone pushes** are held during focus, like chimes.
 5. **Outlook SafeLinks** are unwrapped only to an allowlisted Teams host, and the unwrapped host is shown.
 6. **Google Calendar** is a direct source from Phase 1a (owner, 2026-10-16), pure Node so it could run on Windows later; several accounts; the defaults are in [Google Calendar source](#google-calendar-source).
-7. **Let agents read my calendar** is off by default.
+7. **Let agents read my calendar** is on by default (owner, 2026-10-22; was off). `calendar_connection.agents_read` is NULL until the user sets it and NULL follows `CALENDAR_DEFAULT_SETTINGS.agentsRead` in `packages/contracts/src/calendar-api.ts`; migration 0201 keeps every stored `false`, since the column could not tell "never set" from "turned off", so a workspace connected before keeps it off until the user turns it on.
 8. **No phone calendar view** in Phase 1.
 9. **A new calendar** is included with nudges on (changed 2026-10-17: saved calendars were turned on, and the busy switch was removed).
 10. **A shared or delegated calendar that can't be classified** asks, as written.

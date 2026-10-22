@@ -123,9 +123,12 @@ describe('calendar status and connect', () => {
     expect(status400.status).toBe(400);
   });
 
-  it('saves Let agents read my calendar, off by default, and Agents can edit per calendar', async () => {
+  it('saves Let agents read my calendar, on by default, and Agents can edit per calendar', async () => {
     const connected = await connect();
-    expect(connected.settings.agentsRead).toBe(false);
+    expect(connected.settings.agentsRead).toBe(true);
+    const off = await client.send('patch', '/api/calendar/settings', { agentsRead: false });
+    expect(off.body).toMatchObject({ agentsRead: false });
+    expect((await status()).settings.agentsRead).toBe(false);
     const saved = await client.send('patch', '/api/calendar/settings', { agentsRead: true });
     expect(saved.body).toMatchObject({ agentsRead: true });
     const work = connected.accounts[0]!.calendars[0]!;
@@ -217,7 +220,7 @@ describe('the day, the planner and marks', () => {
       holdRule: 'meetings',
       focusNames: ['Heads down'],
       phoneAlerts: true,
-      agentsRead: false,
+      agentsRead: true,
     });
   });
 });
