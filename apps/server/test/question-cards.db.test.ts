@@ -122,7 +122,7 @@ describe('an agent’s question card', () => {
         },
       },
     });
-    expect((await getRun(t.db, runId))?.status).toBe('awaiting_approval');
+    await eventually(async () => (await getRun(t.db, runId))?.status === 'awaiting_approval');
     const list = await request(api()).get('/api/conversations').set(LOCAL_HEADERS);
     expect(list.body.find((chat: ConversationSummary) => chat.id === conversationId)).toMatchObject(
       {
