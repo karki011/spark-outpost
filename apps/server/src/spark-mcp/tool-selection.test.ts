@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EVERYTHING_AVAILABLE, unavailableNote, type SparkAvailability } from './availability.ts';
 import { sparkInstructionsFor, sparkToolsFor } from './server.ts';
+import { CALENDAR_HOW_TO } from './tools/calendar/offered.ts';
 
 const NOTHING: SparkAvailability = {
   tickets: false,
@@ -126,6 +127,19 @@ describe('what a session is told about tools it was not offered', () => {
     expect(sparkInstructionsFor({ ...NOTHING, outpost_draft: true })).toContain('spark_outpost*');
     expect(sparkInstructionsFor(NOTHING)).not.toContain('spark_outpost*');
     expect(unavailableNote(NOTHING)).not.toContain('outpost');
+  });
+
+  it('uses the exact setting the session reported for a missing tool', () => {
+    const note = unavailableNote({
+      ...EVERYTHING_AVAILABLE,
+      calendar_read: false,
+      howTo: { calendar_read: CALENDAR_HOW_TO.read },
+    });
+    expect(note).toContain(
+      'turn on Let agents read my calendar on the Calendar card in Settings → Connectors → Calendar',
+    );
+    expect(note).toContain('never a guess');
+    expect(unavailableNote({ ...EVERYTHING_AVAILABLE, calendar_read: false })).toBe('');
   });
 
   it('mentions the Browser pane only when its tools are offered', () => {

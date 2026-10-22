@@ -276,11 +276,24 @@ function reply(raw: unknown) {
   });
 }
 
+interface FakePort {
+  postMessage: (raw: unknown) => void;
+  on: (event: 'message', listener: Listener) => void;
+}
+
+const otherHost = (process as { parentPort?: FakePort }).parentPort;
+
 process.env[BROWSER_HOST_ENV] = '1';
 Object.defineProperty(process, 'parentPort', {
   configurable: true,
   value: {
-    postMessage: reply,
-    on: (_event: 'message', listener: Listener) => listeners.add(listener),
+    postMessage: (raw: unknown) => {
+      reply(raw);
+      otherHost?.postMessage(raw);
+    },
+    on: (event: 'message', listener: Listener) => {
+      listeners.add(listener);
+      otherHost?.on(event, listener);
+    },
   },
 });

@@ -108,7 +108,12 @@ function Exchange({ row, last, props }: { row: ExchangeRow; last: boolean; props
         ))}
       {chatId &&
         (props.cards.byRun.get(row.runId ?? '') ?? []).map((approval) => (
-          <AskCard key={approval.id} approval={approval} conversationId={chatId} />
+          <AskCard
+            key={approval.id}
+            approval={approval}
+            conversationId={chatId}
+            onOpen={() => props.links.onOpenChat(chatId)}
+          />
         ))}
     </div>
   );

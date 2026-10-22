@@ -172,7 +172,11 @@ export function IslandHome({ home, calendar, now, onOpenChat }: IslandHomeProps)
           {askCards.map((approval) => (
             <div key={approval.id} className="isl-inbox-ask">
               <span className="isl-inbox-ask-from">Ask Spark</span>
-              <AskCard approval={approval} conversationId={askId!} />
+              <AskCard
+                approval={approval}
+                conversationId={askId!}
+                onOpen={() => onOpenChat(askId!)}
+              />
             </div>
           ))}
         </section>

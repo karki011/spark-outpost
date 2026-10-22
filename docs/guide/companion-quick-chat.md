@@ -32,15 +32,17 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 3. Scroll up for earlier questions; **New topic** starts fresh.
 4. **Open in Spark** shows the whole conversation.
 
-Every question, typed or spoken, goes to the [Spark assistant model](settings.md#spark-assistant), which looks up live state with Spark's tools.
+Every question, typed or spoken, goes to the [Spark assistant model](settings.md#spark-assistant).
 
 Answers link to the chats they name; **Review** opens a waiting card in place.
 
 ## Let Ask Spark act
 
-Ask it to act on [chats, tickets, outposts, Inbox items, meetings or cards](spark-tools.md#ask-spark-tools). Each shows **Do it** and **Don’t** first, in **Needs you** too, unless [When Ask Spark acts](settings.md#spark-assistant) is **Act**.
+It has a chat's [Spark tools](spark-tools.md#ask-spark-tools); if a switch is off, it names it.
 
-In **Act**, it answers a card only when you ask and name its chat. Hold-to-confirm, Mac, calendar, Terminal and spoken-question cards stay with you. Its messages never authorize a push; it never sees meeting details.
+Each action shows **Do it** and **Don’t** first, in **Needs you** too, unless [When Ask Spark acts](settings.md#spark-assistant) is **Act**. Cards with more to check show **Review in Spark**.
+
+In **Act**, it answers a card only when you ask and name its chat. Hold-to-confirm, Mac, calendar, Terminal and spoken-question cards stay with you. Its messages never authorize a push.
 
 ## Change a shortcut
 
