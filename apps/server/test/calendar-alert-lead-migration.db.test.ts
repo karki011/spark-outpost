@@ -5,7 +5,7 @@ import { runMigrations } from '../src/persistence/migrate.ts';
 import type { Db } from '../src/persistence/db.ts';
 import { migratedUpTo } from './migration-support.ts';
 
-const ALERT_AT_START_MIGRATION = '0205_calendar_alert_at_start.sql';
+const ALERT_AT_START_MIGRATION = '0206_calendar_alert_at_start.sql';
 
 async function leadAfterUpgrade(db: Db, stored: number | null): Promise<number> {
   const workspaceId = await ensureLocalWorkspace(db);
