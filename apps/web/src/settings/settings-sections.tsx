@@ -19,6 +19,12 @@ import { ResetSection, KEEP_KEYS_LABEL } from '../reset/ResetSection.tsx';
 import { HelpSection, helpRows } from '../help/HelpSection.tsx';
 import { AUTO_CONTINUE_LABEL } from './AutoContinueSetting.tsx';
 import { BUSY_ENTER_LABEL } from './BusyEnterSetting.tsx';
+import {
+  BrowserSection,
+  SIGNED_IN_SITES_LABEL,
+  SIGN_OUT_ALL_LABEL,
+  browserSettingsAvailable,
+} from './BrowserSection.tsx';
 import { ChatsSection } from './ChatsSection.tsx';
 import { COMPANION_LABEL } from './CompanionSetting.tsx';
 import { islandRows } from './DesktopCompanionSetting.tsx';
@@ -233,6 +239,15 @@ export const SETTINGS_SECTIONS = [
     available: macControlAvailable,
     rows: () => [MAC_CONTROL_LABEL],
     render: ({ setup }) => setup && <MacControlSection profile={setup.profile} />,
+  },
+  {
+    id: 'browser',
+    group: 'mac',
+    label: 'Browser pane',
+    icon: icons.BROWSER_ICON,
+    available: browserSettingsAvailable,
+    rows: () => [SIGNED_IN_SITES_LABEL, SIGN_OUT_ALL_LABEL],
+    render: () => <BrowserSection />,
   },
   {
     id: 'notifications',

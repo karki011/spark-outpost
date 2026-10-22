@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runBrowserOp } from './agent-ops.ts';
 import { net, type FakeContents } from './electron.fixture.ts';
 import { BrowserPanes } from './panes.ts';
-import { partitionFor, projectPartition } from './request-guard.ts';
+import { BROWSER_PARTITION } from './request-guard.ts';
 import { loginDom } from './sign-in-dom.fixture.ts';
 
 vi.mock('electron', async () => (await import('./electron.fixture.ts')).fakeElectron);
@@ -13,10 +13,10 @@ vi.mock('./cdp.ts', () => ({
 const CHAT = '11111111-2222-4333-8444-555555555555';
 const PROJECT = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const API_PORT = 32682;
-const USER = projectPartition(PROJECT);
+const USER = BROWSER_PARTITION;
 const SITE = 'https://docs.example.com';
 const LOCAL = 'http://localhost:5173/';
-const home = { projectId: PROJECT, keepSignIns: true, roots: ['/Users/me/app'] };
+const home = { projectId: PROJECT, roots: ['/Users/me/app'] };
 const signal = new AbortController().signal;
 
 let panes: BrowserPanes;
@@ -139,26 +139,6 @@ describe('where an agent tab keeps its cookies', () => {
     expect(partitionOf(mine.id)).toBe(USER);
     expect(mine.owner).toBe('user');
   });
-
-  it('uses the chat’s own in-memory storage for a chat without a project', async () => {
-    const opened = (await runBrowserOp(
-      panes,
-      {
-        op: 'open',
-        chatId: CHAT,
-        runId: null,
-        url: `${SITE}/guide`,
-        tab: undefined,
-        projectId: null,
-        keepSignIns: true,
-        roots: [],
-      },
-      signal,
-    )) as { tabId: string };
-    const chatOnly = partitionFor({ chatId: CHAT, projectId: null, keepSignIns: true });
-    expect(partitionOf(opened.tabId)).toBe(chatOnly);
-    expect([...net.sessions.keys()]).toEqual([chatOnly]);
-  });
 });
 
 describe('a saved sign-in typed into an agent tab', () => {
@@ -214,13 +194,15 @@ describe('a saved sign-in typed into an agent tab', () => {
 
 describe('the guards on the storage agent tabs share', () => {
   it('blocks Spark’s ports, denies permissions, cancels downloads and strips the token', async () => {
-    await agentOpens(`${SITE}/guide`);
+    const opened = await agentOpens(`${SITE}/guide`);
+    const page = contentsOf(opened.tabId);
     const session = net.sessions.get(USER)!;
-    expect(session.requestCancelled(`http://127.0.0.1:${API_PORT}/api/health`)).toBe(true);
-    expect(session.requestCancelled(`ws://rebind.example.com:${API_PORT}/`)).toBe(true);
-    expect(session.requestCancelled('file:///etc/passwd')).toBe(true);
-    expect(session.requestCancelled('file:///Users/me/app/index.html')).toBe(false);
-    expect(session.requestCancelled(`${SITE}/app.js`)).toBe(false);
+    expect(session.requestCancelled(`http://127.0.0.1:${API_PORT}/api/health`, page)).toBe(true);
+    expect(session.requestCancelled(`ws://rebind.example.com:${API_PORT}/`, page)).toBe(true);
+    expect(session.requestCancelled('file:///etc/passwd', page)).toBe(true);
+    expect(session.requestCancelled('file:///Users/me/app/index.html', page)).toBe(false);
+    expect(session.requestCancelled('file:///Users/me/app/index.html')).toBe(true);
+    expect(session.requestCancelled(`${SITE}/app.js`, page)).toBe(false);
     for (const permission of ['media', 'geolocation', 'notifications', 'clipboard-read']) {
       expect(session.permissionGranted(permission), permission).toBe(false);
     }

@@ -12,7 +12,7 @@ import {
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
 import { CLIPBOARD_WRITE, pagePermissionAllowed, type InputMarks } from './clipboard-permission.ts';
-import { partitionFor, requestAllowed, type GuardFacts } from './request-guard.ts';
+import { requestAllowed, type GuardFacts } from './request-guard.ts';
 import type { SendsTo } from './selection-menu.ts';
 import { browserSession, devtoolsSession } from './sessions.ts';
 import { PaneTab } from './tab.ts';
@@ -33,7 +33,6 @@ export interface PanesOptions {
 
 export interface ChatHome {
   projectId: string | null;
-  keepSignIns: boolean;
   roots: readonly string[];
 }
 
@@ -56,7 +55,7 @@ const CLOSED_KEPT = 20;
 
 export class BrowserPanes {
   private readonly chats = new Map<string, ChatPane>();
-  private readonly rootsByPartition = new Map<string, Set<string>>();
+  private readonly rootsByChat = new Map<string, Set<string>>();
   private readonly driving = new Map<string, NodeJS.Timeout>();
   private readonly byContents = new Map<number, PaneTab>();
   private placement: BrowserPlacement | null = null;
@@ -72,7 +71,7 @@ export class BrowserPanes {
       pane = {
         chatId,
         tabs: [],
-        home: home ?? { projectId: null, keepSignIns: true, roots: [] },
+        home: home ?? { projectId: null, roots: [] },
         sendsTo: 'chat',
         idle: null,
         notify: false,
@@ -87,25 +86,18 @@ export class BrowserPanes {
     return pane;
   }
 
-  private partitionOf(pane: ChatPane): string {
-    return partitionFor({
-      chatId: pane.chatId,
-      projectId: pane.home.projectId,
-      keepSignIns: pane.home.keepSignIns,
-    });
+  private allowRoots(pane: ChatPane): void {
+    const roots = this.rootsByChat.get(pane.chatId) ?? new Set<string>();
+    for (const root of pane.home.roots) roots.add(root);
+    this.rootsByChat.set(pane.chatId, roots);
   }
 
-  private allowRoots(pane: ChatPane): void {
-    const partition = this.partitionOf(pane);
-    const roots = this.rootsByPartition.get(partition) ?? new Set<string>();
-    for (const root of pane.home.roots) roots.add(root);
-    this.rootsByPartition.set(partition, roots);
+  private rootsOf(chatId: string | null): string[] {
+    return chatId ? [...(this.rootsByChat.get(chatId) ?? [])] : [];
   }
 
   guardFacts(chatId: string): GuardFacts {
-    const pane = this.chats.get(chatId);
-    const roots = pane ? (this.rootsByPartition.get(this.partitionOf(pane)) ?? []) : [];
-    return { blockedPorts: this.options.blockedPorts(), roots: [...roots] };
+    return { blockedPorts: this.options.blockedPorts(), roots: this.rootsOf(chatId) };
   }
 
   sendsTo(chatId: string): SendsTo {
@@ -163,15 +155,14 @@ export class BrowserPanes {
   ): PaneTab | null {
     const pane = this.chat(chatId, home);
     if (pane.tabs.length >= BROWSER_TABS_MAX) return null;
-    const projectId = pane.home.keepSignIns ? pane.home.projectId : null;
     const tab: PaneTab = new PaneTab(
       { id: randomUUID().slice(0, 8), chatId, ...init },
       {
         allowed: (url) => requestAllowed(url, this.guardFacts(pane.chatId)),
         session: () =>
-          browserSession(this.partitionOf(pane), {
+          browserSession({
             blockedPorts: this.options.blockedPorts,
-            roots: (name) => [...(this.rootsByPartition.get(name) ?? [])],
+            roots: (contents) => this.rootsOf(this.tabOfContents(contents)?.chatId ?? null),
             log: this.options.log,
             inputMarks: (contents) => this.inputMarks(contents),
           }),
@@ -180,7 +171,7 @@ export class BrowserPanes {
         viewCreated: (view) => this.attach(view, tab),
         viewClosed: (view) => this.detach(view, tab),
         gone: (owner) => this.close(chatId, owner.id),
-        visited: (url) => this.visited(pane, projectId, url),
+        visited: (url) => this.visited(pane, url),
         contextMenu: (owner, params) => this.options.contextMenu(owner, params),
         addShortcut: (owner) => this.options.addShortcut(owner),
         paneShortcut: (owner, shortcut) => this.options.paneShortcut(owner, shortcut),
@@ -195,7 +186,8 @@ export class BrowserPanes {
     return tab;
   }
 
-  private visited(pane: ChatPane, projectId: string | null, url: string): void {
+  private visited(pane: ChatPane, url: string): void {
+    const projectId = pane.home.projectId;
     const origin = browserOrigin(url);
     if (projectId && origin && classifyBrowserUrl(url) === 'local') {
       this.options.localOriginSeen(projectId, origin);
@@ -335,7 +327,7 @@ export class BrowserPanes {
 
   async place(next: BrowserPlacement): Promise<void> {
     const before = this.placement;
-    const home = { projectId: next.projectId, keepSignIns: next.keepSignIns, roots: next.roots };
+    const home = { projectId: next.projectId, roots: next.roots };
     const pane = this.chat(next.chatId, home);
     pane.sendsTo = next.sendsTo;
     if (next.covered && before?.chatId === next.chatId && !before.covered) {
@@ -416,6 +408,7 @@ export class BrowserPanes {
     if (pane.idle) clearTimeout(pane.idle);
     for (const tab of pane.tabs) tab.close();
     this.chats.delete(chatId);
+    this.rootsByChat.delete(chatId);
   }
 
   dispose(): void {

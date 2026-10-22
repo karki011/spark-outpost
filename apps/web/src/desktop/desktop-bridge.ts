@@ -63,8 +63,8 @@ export interface DesktopBrowser {
   place(placement: BrowserPlacement): Promise<unknown>;
   command(chatId: string, command: BrowserCommand): Promise<unknown>;
   start(placement: BrowserPlacement): Promise<BrowserPaneState | null>;
-  sites(projectId: string): Promise<SignedInSite[] | null>;
-  signOut(projectId: string, origin: string | null): Promise<SignedInSite[] | null>;
+  sites(): Promise<SignedInSite[] | null>;
+  signOut(origin: string | null): Promise<SignedInSite[] | null>;
   onState(callback: (state: BrowserPaneState) => void): Unsubscribe;
   onSnapshot(callback: (snapshot: BrowserSnapshot) => void): Unsubscribe;
   onPicked(callback: (pick: BrowserPick) => void): Unsubscribe;

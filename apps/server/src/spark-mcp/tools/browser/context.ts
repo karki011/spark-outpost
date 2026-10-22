@@ -37,13 +37,12 @@ export function browserSession(context: SparkToolContext): BrowserSession {
 
 export interface ChatHome {
   projectId: string | null;
-  keepSignIns: boolean;
   roots: string[];
 }
 
 export async function chatHome(db: Queryable, conversationId: string): Promise<ChatHome> {
-  const { rows } = await db.query<{ id: string; root_path: string; keep: boolean }>(
-    `SELECT p.id, p.root_path, p.browser_keep_sign_ins AS keep
+  const { rows } = await db.query<{ id: string; root_path: string }>(
+    `SELECT p.id, p.root_path
      FROM conversation_projects cp JOIN projects p ON p.id = cp.project_id
      WHERE cp.conversation_id = $1 ORDER BY cp.position, cp.created_at`,
     [conversationId],
@@ -55,7 +54,6 @@ export async function chatHome(db: Queryable, conversationId: string): Promise<C
   const first = rows[0];
   return {
     projectId: first?.id ?? null,
-    keepSignIns: first?.keep ?? true,
     roots: [...rows.map((row) => row.root_path), ...worktrees.rows.map((row) => row.path)].slice(
       0,
       16,

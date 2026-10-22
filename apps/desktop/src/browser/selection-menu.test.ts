@@ -17,7 +17,7 @@ vi.mock('./cdp.ts', () => ({
 }));
 
 const CHAT = '11111111-2222-4333-8444-555555555555';
-const home = { projectId: null, keepSignIns: true, roots: [] };
+const home = { projectId: null, roots: [] };
 const key = (change: Partial<Parameters<typeof isAddShortcut>[0]>) => ({
   type: 'keyDown',
   code: 'KeyA',
