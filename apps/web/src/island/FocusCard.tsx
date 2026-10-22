@@ -2,7 +2,7 @@ import { useEffect, useRef, type RefObject } from 'react';
 import type { ApprovalOption } from '@spark-outpost/contracts';
 import { isCheckpoint } from '../chat/checkpoints/checkpoint-model.ts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
-import { pickDecision } from './asked-question.ts';
+import { askedPrompt, pickDecision } from './asked-question.ts';
 import { cardHeading, QuestionChoices, Target } from './CardView.tsx';
 import { answerable, cardLine } from './inbox-model.ts';
 import type { Card } from './island-model.ts';
@@ -133,7 +133,7 @@ export function FocusCard(props: FocusCardProps) {
   const question = card.kind === 'question' && approval && isCheckpoint(approval) ? approval : null;
   const asks = question ? 'question' : 'permission';
   const title = question
-    ? (question.payload.checkpoint.question ?? cardLine(card).text)
+    ? (askedPrompt(question) ?? cardLine(card).text)
     : approval
       ? cardHeading(card, agent)
       : cardLine(card).text;

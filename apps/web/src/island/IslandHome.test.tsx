@@ -74,7 +74,12 @@ const colour: AgentForm = {
 
 function agentQuestion() {
   const base = checkpoint(
-    { kind: 'clarify', agent: 'Claude', questions: formQuestions(colour) },
+    {
+      kind: 'clarify',
+      agent: 'Claude',
+      question: 'Claude needs your input to continue',
+      questions: formQuestions(colour),
+    },
     {
       title: 'Which colour do you want?',
       options: [
@@ -256,6 +261,9 @@ describe('the island home', () => {
     expect(cardHeading(found!, 'Claude')).toBe('Claude has a question');
     show(home({ chats: [asking], cards: [found!] }), calendar({ upcoming: [] }));
     await armed();
+    expect(
+      screen.getByText('Which colour do you want?', { selector: '.isl-focus-title' }),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Red' }));
     await flush();
     expect(decide).toHaveBeenCalledWith(question.id, {

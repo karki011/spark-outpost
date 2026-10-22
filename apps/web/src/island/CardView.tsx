@@ -10,7 +10,7 @@ import {
 import { useAutoContinue } from '../chat/checkpoints/use-auto-continue.ts';
 import { attentionLine } from '../conversations/row-state.ts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
-import { pickDecision, questionPicks, type QuestionPick } from './asked-question.ts';
+import { askedPrompt, pickDecision, questionPicks, type QuestionPick } from './asked-question.ts';
 import { approvalHunk, baseName } from './island-diff.ts';
 import { IslandDiff } from './IslandDiff.tsx';
 import type { Card } from './island-model.ts';
@@ -317,9 +317,7 @@ export function CardView({
         )}
       {card.kind === 'question' && approval && isCheckpoint(approval) && (
         <>
-          {approval.payload.checkpoint.question && (
-            <p className="isl-hint">{approval.payload.checkpoint.question}</p>
-          )}
+          {askedPrompt(approval) && <p className="isl-hint">{askedPrompt(approval)}</p>}
           <QuestionChoices
             approval={approval}
             armed={armed}

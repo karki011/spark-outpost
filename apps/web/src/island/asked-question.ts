@@ -22,6 +22,13 @@ export function askedChoices(approval: Approval | null): string[] | null {
   return [...question.options];
 }
 
+export function askedPrompt(approval: Approval): string | null {
+  const checkpoint = approval.payload.checkpoint;
+  if (!checkpoint) return null;
+  const asked = checkpoint.questions.length === 1 ? checkpoint.questions[0]!.question : '';
+  return asked || checkpoint.question || null;
+}
+
 function askedPick(approval: Approval, label: string): QuestionPick {
   const questions = approval.payload.checkpoint?.questions ?? [];
   const given = [{ picks: [label], text: '' }];
