@@ -12,6 +12,7 @@ import {
   FORCE_PUSH_DENY_RULES,
   secretRules,
 } from './agents.ts';
+import { CLAUDE_DO_TOOLS, CLAUDE_GATED_TOOLS, CLAUDE_READ_TOOLS } from './claude-tools.ts';
 import { CODEX_DO_MODE, codexPermissionProfiles } from './codex-permissions.ts';
 import { zaiEnvironment, zaiModelId } from './zai.ts';
 
@@ -46,11 +47,9 @@ describe('Claude session options', () => {
         disableBypassPermissionsMode: 'disable',
       });
     }
-    expect(project.tools).toEqual(['Read', 'Glob', 'Grep', 'AskUserQuestion']);
+    expect(project.tools).toEqual([...CLAUDE_READ_TOOLS, 'AskUserQuestion']);
     expect(optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true)).tools).toEqual([
-      'Read',
-      'Glob',
-      'Grep',
+      ...CLAUDE_READ_TOOLS,
       'Write',
       'ExitPlanMode',
       'AskUserQuestion',
@@ -87,39 +86,36 @@ describe('Claude session options', () => {
 
   it('matches claudeSessionMeta for the project tools', () => {
     expect(agentDefinitions.claude.projectSessionMeta?.([])).toEqual(
-      claudeSessionMeta(['Read', 'Glob', 'Grep', 'AskUserQuestion'], []),
+      claudeSessionMeta([...CLAUDE_READ_TOOLS, 'AskUserQuestion'], []),
     );
   });
 
   it('gives Ask turns a shell and leaves asking to the agent, but for git config', () => {
     const asking = optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true, true));
     expect(asking.tools).toEqual([
-      'Read',
-      'Glob',
-      'Grep',
-      'Bash',
+      ...CLAUDE_READ_TOOLS,
+      ...CLAUDE_GATED_TOOLS,
       'Write',
       'ExitPlanMode',
       'AskUserQuestion',
     ]);
-    expect(asking.settings.permissions.ask).toEqual([GIT_CONFIG_ASK_RULE]);
+    expect(asking.settings.permissions.ask).toEqual(['WebFetch', 'Monitor', GIT_CONFIG_ASK_RULE]);
+    expect(project.settings.permissions).not.toHaveProperty('ask');
+    expect(project.tools).not.toContain('WebFetch');
+    expect(chat.settings.permissions).not.toHaveProperty('ask');
   });
 
   it('gives Do runs the edit, shell and todo tools and asks only for the safety floor', () => {
     const options = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
-    expect(options.tools).toEqual([
-      'Read',
-      'Glob',
-      'Grep',
-      'Edit',
-      'Write',
-      'Bash',
-      'TodoWrite',
-      'EnterPlanMode',
-      'ExitPlanMode',
-      'AskUserQuestion',
+    expect(options.tools).toEqual([...CLAUDE_DO_TOOLS]);
+    for (const tool of ['Edit', 'Write', 'NotebookEdit', 'Bash', 'Monitor', 'WebSearch']) {
+      expect(options.tools).toContain(tool);
+    }
+    expect(options.settings.permissions.ask).toEqual([
+      'WebFetch',
+      'Monitor',
+      ...floorAskRules(options.tools, []),
     ]);
-    expect(options.settings.permissions.ask).toEqual(floorAskRules(options.tools, []));
     expect(bashAsks(options)).toEqual([GIT_CONFIG_ASK_RULE]);
     expect(options.settings.permissions).toMatchObject({
       blockReadsOutsideWorkingDirectories: true,
@@ -158,7 +154,6 @@ describe('Codex launch', () => {
         skill_mcp_dependency_install: false,
         apps: false,
       },
-      web_search: 'disabled',
       default_permissions: 'read-only',
       permissions: codexPermissionProfiles(),
     });
@@ -166,9 +161,9 @@ describe('Codex launch', () => {
     expect(project).toMatchObject({ INITIAL_AGENT_MODE: 'read-only' });
     expect(JSON.parse(project.CODEX_CONFIG ?? '{}')).toMatchObject({
       features: { shell_tool: true, unified_exec: false, skill_mcp_dependency_install: false },
-      web_search: 'disabled',
       default_permissions: 'read-only',
     });
+    expect(JSON.parse(project.CODEX_CONFIG ?? '{}')).not.toHaveProperty('web_search');
   });
 
   it('does Do in the patched ask-every-action mode, opening only the primary repo', () => {

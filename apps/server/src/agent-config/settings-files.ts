@@ -27,6 +27,7 @@ export interface SettingsFileSummary {
 const COMMAND_SETTINGS = [...REDIRECT_COMMANDS, 'statusLine', 'fileSuggestion'] as const;
 
 const PREVIEW_MAX = 200;
+const APPLIED_PERMISSION_KEYS = new Set(['allow', 'deny', 'ask']);
 
 export function preview(text: string): string {
   const oneLine = text.replace(/\s+/g, ' ').trim();
@@ -116,7 +117,7 @@ function readIgnored(settings: Record<string, unknown>, source: string): Ignored
       !(COMMAND_SETTINGS as readonly string[]).includes(key),
   );
   const permissionKeys = Object.keys(permissions)
-    .filter((key) => key !== 'allow')
+    .filter((key) => !APPLIED_PERMISSION_KEYS.has(key))
     .map((key) => `permissions.${key}`);
   const settingItems = [...other.filter((key) => key !== 'permissions'), ...permissionKeys];
   if (settingItems.length > 0) ignored.push({ source, kind: 'setting', items: settingItems });

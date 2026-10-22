@@ -1,6 +1,11 @@
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { secretFileValues } from '../audit/secret-values.ts';
+import { browserOrigin } from '@spark-outpost/contracts';
+import {
+  projectSecretValues,
+  secretFileValues,
+  withoutSecretValues,
+} from '../audit/secret-values.ts';
 import { isSecretPath } from '../projects/path-policy.ts';
 import { runGit } from '../ship/git.ts';
 import { argumentWords, commandTree, type CommandTree } from './command-tree.ts';
@@ -144,6 +149,33 @@ export async function pushedSecretFiles(root: string, branch: string): Promise<s
   return pushed.unreadable ? [] : filesIn(pushed.text, await secretSources([root]));
 }
 
+export async function turnSecretValues(roots: readonly string[]): Promise<string[]> {
+  const nested = (await secretSources(roots)).flatMap((source) => source.values);
+  const values = [...(await projectSecretValues(roots)), ...nested];
+  const encoded = values.flatMap((value) => [value, encodeURIComponent(value)]);
+  return [...new Set(encoded)].sort((a, b) => b.length - a.length);
+}
+
+export async function withoutSentSecrets(
+  request: ApprovalRequest,
+  sent: SecretSend,
+): Promise<ApprovalRequest> {
+  if (!request.address || sent.kind !== 'found') return request;
+  const origin = browserOrigin(request.address) ?? 'about:blank';
+  const values = await turnSecretValues(request.roots.map((root) => root.path));
+  const address = request.address;
+  const atOrigin = (text: string) => text.replaceAll(address, origin);
+  const hidden = withoutSecretValues(
+    {
+      ...request,
+      title: atOrigin(request.title),
+      ...(request.agentReason ? { agentReason: atOrigin(request.agentReason) } : {}),
+    },
+    values,
+  );
+  return { ...hidden, address: origin };
+}
+
 export async function secretFilesIn(text: string, roots: readonly string[]): Promise<string[]> {
   if (text.length < MIN_MIXED_LENGTH || roots.length === 0) return [];
   return filesIn(text, await secretSources(roots));
@@ -186,7 +218,26 @@ function seenPrograms(command: string): Seen {
   return { programs, unreadable: read.includes(null) };
 }
 
+function decoded(address: string): string {
+  try {
+    return decodeURIComponent(address);
+  } catch {
+    return address;
+  }
+}
+
+async function addressSecretSend(address: string, roots: readonly string[]): Promise<SecretSend> {
+  const files = await secretFilesIn(`${address}\n${decoded(address)}`, roots);
+  return files.length > 0 ? { kind: 'found', files } : { kind: 'clean' };
+}
+
 export async function secretSend(request: ApprovalRequest): Promise<SecretSend> {
+  if (request.address) {
+    return addressSecretSend(
+      request.address,
+      request.roots.map((root) => root.path),
+    );
+  }
   if (!request.command || !sendsContent(request.command)) return { kind: 'clean' };
   const seen = seenPrograms(request.command);
   const cwd = commandCwd(request);

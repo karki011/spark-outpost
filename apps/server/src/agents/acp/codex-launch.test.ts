@@ -83,7 +83,8 @@ describe('Codex config shape per version', () => {
     const config = shape(launch.profiles);
     expect(config).not.toHaveProperty('default_permissions');
     expect(config).not.toHaveProperty('permissions');
-    expect(config).toMatchObject({ features: { shell_tool: true }, web_search: 'disabled' });
+    expect(config).toMatchObject({ features: { shell_tool: true } });
+    expect(config).not.toHaveProperty('web_search');
   });
 
   it('never sets a default without its table', () => {

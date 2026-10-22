@@ -10,7 +10,7 @@ import type { AgentDefinition } from './agents.ts';
 import { askQuestion } from './questions.ts';
 import {
   reviewPermission,
-  runsCommand,
+  readingTurnReviews,
   writeWithApproval,
   type DoWorkspace,
 } from './do-handlers.ts';
@@ -79,7 +79,7 @@ export function turnHandlers(facts: HandlerFacts): TurnHandlers {
       if (signal.aborted) return { outcome: { outcome: 'cancelled' } };
       if (doing) return reviewPermission(params, requestId, doing);
       const plan = policy ? nativePlan(params, definition.id, mapper.shownPlan()) : [];
-      if (gated && plan.length === 0 && runsCommand(params)) {
+      if (gated && plan.length === 0 && readingTurnReviews(params)) {
         return reviewPermission(params, requestId, gated);
       }
       const decision = declineInConversation(params, policy !== null);

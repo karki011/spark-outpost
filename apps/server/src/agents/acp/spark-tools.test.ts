@@ -81,7 +81,7 @@ describe('Spark tools for agent sessions', () => {
   it('adds the server to CODEX_CONFIG next to the hidden user servers, approved without asking', async () => {
     const env = {
       CODEX_CONFIG: JSON.stringify({
-        web_search: 'disabled',
+        project_doc_max_bytes: 0,
         mcp_servers: { notes: { enabled: false } },
       }),
     };
@@ -92,7 +92,7 @@ describe('Spark tools for agent sessions', () => {
       ).CODEX_CONFIG!,
     );
     expect(config).toEqual({
-      web_search: 'disabled',
+      project_doc_max_bytes: 0,
       mcp_servers: {
         notes: { enabled: false },
         spark: {

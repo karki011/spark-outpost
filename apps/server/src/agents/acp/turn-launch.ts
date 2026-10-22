@@ -1,6 +1,12 @@
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import {
+  claudeConfigDir,
+  loadPermissionRules,
+  NO_PERMISSION_RULES,
+  type PermissionRules,
+} from '../../agent-config/permission-rules.ts';
 import { ProviderError, type ProviderTurn } from '../../providers/provider.ts';
 import { resolveUserMcp } from '../../mcp/launch.ts';
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
@@ -44,6 +50,7 @@ export interface Workspace {
   repo: RepoSession | null;
   mcpServers: NamedMcpServer[];
   spark: SparkToolsHint | null;
+  rules: PermissionRules;
 }
 
 export interface LaunchPlan {
@@ -107,6 +114,13 @@ export async function planLaunch(
         )
       : null;
   const mcpServers = repo?.mcpServers ?? namedMcpServers([], userMcp, reserved);
+  const rules =
+    definition.repoStyle === 'claude'
+      ? await loadPermissionRules(
+          policy?.roots.map((root) => root.path) ?? [],
+          claudeConfigDir(options.env ?? process.env),
+        )
+      : NO_PERMISSION_RULES;
   const notes = roots.length > 0 && !browsing ? [noFolderAccessNote(definition)] : [];
   if (roots.length < linked.length) notes.push(primaryOnlyNote(definition, roots[0]!));
   const changing = policy !== null && turn.mode === 'do';
@@ -128,6 +142,7 @@ export async function planLaunch(
     sparkTools: spark,
     session: [turn.changesProject === true, turn.planning === true],
     codexServers: own,
+    rules,
   });
   return {
     workspace: {
@@ -140,6 +155,7 @@ export async function planLaunch(
       repo,
       mcpServers,
       spark,
+      rules,
     },
     key,
     browsing,
