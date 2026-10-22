@@ -34,7 +34,7 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 
 Every question, typed or spoken, goes to the [Spark assistant model](settings.md#spark-assistant).
 
-Answers link to the chats they name; **Review** opens a waiting card in place.
+Answers link to the chats they name; **Review** opens a waiting card in place. It never sleeps until a wakeup.
 
 ## Let Ask Spark act
 
