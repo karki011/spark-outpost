@@ -10,9 +10,10 @@ What changed recently, newest first.
 
 ## October 2026
 
-| What changed                                                                   | What to do                            |
-| ------------------------------------------------------------------------------ | ------------------------------------- |
-| Spark Island answers one-pick questions; its card count skips set-aside cards. | See [Cards](cards.md#approval-cards). |
+| What changed                                                                                                                 | What to do                                        |
+| ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Outposts show a card per request, an **Overview** of threads, files and pull requests, a thread pane, and **Instructions…**. | See [Send a request](outposts.md#send-a-request). |
+| Spark Island answers one-pick questions; its card count skips set-aside cards.                                               | See [Cards](cards.md#approval-cards).             |
 
 | **Add folder…** ends every project picker. | See [Link a project](start-a-chat.md#link-a-project). || Agents are signed in wherever you are in the Browser pane. Sign in again once. | See [Use the browser](use-the-browser.md#let-the-agent-look-and-browse). |
 | Meeting lines: on-time countdowns, wrap-ups name the chat, joined meetings drop. Card at start; **Alert at** sets earlier. | See [Use it](calendar.md#use-it). |

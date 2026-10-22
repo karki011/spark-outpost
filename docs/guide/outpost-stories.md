@@ -25,7 +25,7 @@ First messages are the proposing chat's, [not yours](outpost-permissions.md), so
 
 ## Follow the story
 
-The **Story** bar under the outpost's chats reads like **Checkout · 1 of 3 answered · 2 PRs**. Open it for each sub-task's order, state, pull request and warnings.
+In **Overview**, a **Story** row reads like **Checkout · 1 of 3 answered · 2 PRs**. Open it for each sub-task's order, state, pull request and warnings.
 
 | You see                  | Means                                                                                                                    |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
