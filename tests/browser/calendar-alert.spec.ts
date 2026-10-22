@@ -152,6 +152,17 @@ test('Bubble from Scout keeps the island bubble and sends no centre alert', asyn
   expect(await page.evaluate(() => (window as unknown as AlertWindow).alertShows)).toEqual([]);
 });
 
+function landing(page: Page): Promise<number> {
+  return page.evaluate(
+    () =>
+      document
+        .getAnimations()
+        .filter((animation) => animation.playState === 'running')
+        .map((animation) => (animation as CSSAnimation).animationName)
+        .filter((name) => name.startsWith('ma-') && name !== 'ma-bob').length,
+  );
+}
+
 test('the hanging card offers Join, Snooze and Dismiss, and Esc dismisses once clicked', async ({
   page,
 }) => {
@@ -165,6 +176,7 @@ test('the hanging card offers Join, Snooze and Dismiss, and Esc dismisses once c
   await expect
     .poll(() => alertWindow(page, (window) => window.alertRegions.at(-1)?.boxes.length ?? 0))
     .toBe(2);
+  await expect.poll(() => landing(page)).toBe(0);
 
   await card.getByRole('button', { name: 'Snooze 1 min' }).click({ force: true });
   expect(await alertWindow(page, (window) => window.alertFocus)).toBe(0);
