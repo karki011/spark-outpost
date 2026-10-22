@@ -1,10 +1,10 @@
 import { useId, useState, type ReactNode } from 'react';
-import type { CheckpointPayload } from '@spark-outpost/contracts';
+import type { CheckpointPayload, QuestionAnswerInput } from '@spark-outpost/contracts';
 import { autoLabel, offers, type CheckpointApproval } from './checkpoint-model.ts';
 import type { Countdown } from './use-auto-continue.ts';
 
 export interface Decide {
-  (optionId: string, note?: string): void;
+  (optionId: string, note?: string, answers?: QuestionAnswerInput[]): void;
   busy: boolean;
   countdown: Countdown | null;
   hold(): void;

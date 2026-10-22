@@ -97,8 +97,10 @@ describe('what a Spark tools session can use', () => {
       pull_request_create: false,
       browser: false,
       mac: false,
+      meetings: false,
       outpost: false,
       outpost_draft: false,
+      outpost_start: false,
       calendar_read: false,
       calendar_edit: false,
       jira: false,
@@ -118,10 +120,12 @@ describe('what a Spark tools session can use', () => {
     expect(await sparkAvailability(deps(), turn)).toMatchObject({
       outpost: true,
       outpost_draft: true,
+      outpost_start: true,
     });
     expect(await sparkAvailability(deps(), scopeOf(chat.conversationId))).toMatchObject({
       outpost: false,
       outpost_draft: false,
+      outpost_start: false,
     });
   });
 

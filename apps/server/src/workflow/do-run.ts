@@ -3,11 +3,17 @@ import type { Db } from '../persistence/db.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
 import { saveSnapshot, type RunSnapshot } from '../persistence/run-snapshots.ts';
 import { backupBeforeEdit, snapshotRun } from '../projects/run-changes.ts';
-import type { PermissionGate } from '../providers/provider.ts';
+import type { QuestionGate } from '../providers/provider.ts';
 import type { Append } from './agent-turn.ts';
-import { createApprovalGate, type EditObserver, type PlanModeHooks } from './approval-gate.ts';
+import {
+  createApprovalGate,
+  type ApprovalGate,
+  type EditObserver,
+  type PlanModeHooks,
+} from './approval-gate.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { askTurnAutoWhy } from './ask-auto.ts';
+import { createQuestionGate } from './question-gate.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
 
 export interface AskRunOptions {
@@ -67,7 +73,7 @@ function gateBasics(options: AskRunOptions) {
   };
 }
 
-export function prepareAskRun(options: AskTurnOptions): PermissionGate {
+export function prepareAskRun(options: AskTurnOptions): ApprovalGate {
   return createApprovalGate({
     ...gateBasics(options),
     posture: 'read_only',
@@ -83,7 +89,7 @@ export function prepareAskRun(options: AskTurnOptions): PermissionGate {
   });
 }
 
-export async function prepareDoRun(options: DoRunOptions): Promise<PermissionGate | undefined> {
+export async function prepareDoRun(options: DoRunOptions): Promise<ApprovalGate | undefined> {
   const root = options.projectRoots[0];
   if (!root) return undefined;
   const snapshot = options.snapshot ?? (await takeSnapshot(options.db, options.runId, root));
@@ -100,4 +106,13 @@ export async function prepareDoRun(options: DoRunOptions): Promise<PermissionGat
       }
     },
   });
+}
+
+export function prepareQuestions(
+  options: AskRunOptions,
+  approvals: ApprovalGate | undefined,
+): QuestionGate {
+  const gate =
+    approvals ?? createApprovalGate({ ...gateBasics(options), backup: async () => undefined });
+  return createQuestionGate(options.db, options.runId, gate);
 }

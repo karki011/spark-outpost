@@ -96,7 +96,9 @@ const CLAUDE_DO_TOOLS = [
   'TodoWrite',
   'EnterPlanMode',
   'ExitPlanMode',
+  'AskUserQuestion',
 ] as const;
+const CLAUDE_QUESTION_TOOLS = ['AskUserQuestion'];
 const CLAUDE_READ_TOOLS = ['Read', 'Glob', 'Grep'];
 const CLAUDE_COMMAND_TOOLS = ['Bash'];
 const CLAUDE_PLAN_TOOLS = ['Write', 'ExitPlanMode'];
@@ -257,7 +259,7 @@ const claudeSessions = {
   windowAtResult: true,
   readsProjectFolders: true,
   conversationSessionMeta: (repo?: ClaudeRepoOptions | null) =>
-    claudeSessionMeta([], [], repo ?? null),
+    claudeSessionMeta(CLAUDE_QUESTION_TOOLS, [], repo ?? null),
   probeSessionMeta: claudeSessionMeta([], [], null, false, true),
   projectSessionMeta: (
     extraRoots: readonly string[],
@@ -270,6 +272,7 @@ const claudeSessions = {
         ...CLAUDE_READ_TOOLS,
         ...(commands ? CLAUDE_COMMAND_TOOLS : []),
         ...(planning ? CLAUDE_PLAN_TOOLS : []),
+        ...CLAUDE_QUESTION_TOOLS,
       ],
       extraRoots,
       repo ?? null,
