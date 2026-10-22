@@ -6,7 +6,7 @@ order: 614
 summary: Every card Spark or an agent can show, what it means, its buttons, and whether it waits for you.
 ---
 
-Cards appear in the chat, under the reply, and on [Spark Island](desktop-companion.md#answer-a-card). The line above the message box says **Waiting for you** while one waits.
+Cards appear under the reply and on [Spark Island](desktop-companion.md#answer-a-card). The line above the message box says **Waiting for you** while one waits.
 
 ## Approval cards
 
