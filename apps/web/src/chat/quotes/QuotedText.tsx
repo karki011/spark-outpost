@@ -4,7 +4,7 @@ import { splitQuoted } from './quote-text.ts';
 
 export function QuotedText({ text }: { text: string }) {
   const segments = splitQuoted(text);
-  if (!segments.some((segment) => segment.kind === 'quote')) return <Markdown text={text} typed />;
+  if (segments[0]?.kind !== 'lead') return <Markdown text={text} typed />;
   return (
     <>
       {segments.map((segment, index) =>

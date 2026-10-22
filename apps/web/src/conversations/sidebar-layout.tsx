@@ -106,7 +106,7 @@ function useEdgeSwipe(narrow: boolean, drawer: boolean, setDrawer: (open: boolea
 function isSidebarShortcut(event: KeyboardEvent): boolean {
   const modifiers = MAC
     ? event.ctrlKey && event.metaKey && !event.altKey
-    : event.ctrlKey && event.altKey && !event.metaKey;
+    : event.ctrlKey && event.altKey && !event.metaKey && !event.getModifierState('AltGraph');
   return modifiers && !event.shiftKey && event.code === 'KeyS';
 }
 

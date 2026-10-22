@@ -270,3 +270,50 @@ test('/ commands and @ mentions still open from the Markdown box', async ({ page
   await input.press('Enter');
   await expect(input).toHaveValue(/^\*\*Ask\*\* @Pip /);
 });
+
+test('a quote keeps its Markdown and a > line inside a code block stays code', async ({ page }) => {
+  const input = await newChat(page);
+  await input.fill('> **from** the review\n\n```sh\n> npm test\n```\nafter');
+  await input.press('ControlOrMeta+End');
+  await input.press('Enter');
+  const bubble = page.locator('.msg.me .bubble').last();
+  await expect(bubble.locator('blockquote strong')).toHaveText('from');
+  await expect(bubble.locator('pre')).toHaveCount(1);
+  await expect(bubble.locator('pre')).toContainText('> npm test');
+  await expect(bubble).not.toContainText('**');
+});
+
+test('IME composition shows in the styled layer and Enter while composing does not send', async ({
+  page,
+}) => {
+  const bodies = sentBodies(page);
+  const input = await newChat(page);
+  await input.pressSequentially('**');
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Input.imeSetComposition', { text: 'にほん', selectionStart: 3, selectionEnd: 3 });
+  await expect(mirror(page)).toContainText('**にほん');
+  await cdp.send('Input.insertText', { text: '日本' });
+  await input.pressSequentially('**');
+  await expect(input).toHaveValue('**日本**');
+  await expect(mirror(page).locator('.mdm-strong')).toHaveText('日本');
+  expect(bodies).toEqual([]);
+});
+
+test('a long draft updates the styled layer quickly', async ({ page }) => {
+  const input = await newChat(page);
+  const line = 'Some **bold** and _italic_ with `code` and [a link](https://x.example) here';
+  await input.fill(Array.from({ length: 3_000 }, () => line).join('\n'));
+  await expect(mirror(page).locator('.mdl')).toHaveCount(3_000);
+  const elapsed = await input.evaluate(async (element) => {
+    const textarea = element as HTMLTextAreaElement;
+    const lines = () => document.querySelectorAll('.composer .mdf-mirror .mdl').length;
+    const before = lines();
+    const started = performance.now();
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    document.execCommand('insertText', false, '\nnew **line**');
+    while (lines() === before) await new Promise((resolve) => requestAnimationFrame(resolve));
+    return performance.now() - started;
+  });
+  expect(elapsed).toBeLessThan(250);
+});
