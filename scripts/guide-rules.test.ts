@@ -117,6 +117,11 @@ describe('tables', () => {
     expect(tableProblems(`${header}\n| One \\| two | Do it |\n| Three | Do that |`)).toEqual([]);
   });
 
+  it('ignores table-like lines in fenced code and accepts CRLF line endings', () => {
+    expect(tableProblems('```\n| Two | Do it || Three |\n```')).toEqual([]);
+    expect(tableProblems(`${header}\n| One | Do it |`.replace(/\n/g, '\r\n'))).toEqual([]);
+  });
+
   it('flags a table split by a blank line and rows fused onto one line', () => {
     const split = `${header}\n| One | Do it |\n\n| Two | Do it || Three | Do that |`;
     expect(tableProblems(split)).toEqual([

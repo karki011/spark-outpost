@@ -67,11 +67,24 @@ function tableCells(row: string): number {
     .split(/(?<!\\)\|/).length;
 }
 
+function tableBlocks(body: string): string[][] {
+  const tables: string[][] = [];
+  let current: string[] = [];
+  for (const { line, code } of markdownLines(body)) {
+    if (!code && line.trim().startsWith('|')) {
+      current.push(line);
+      continue;
+    }
+    if (current.length > 0) tables.push(current);
+    current = [];
+  }
+  if (current.length > 0) tables.push(current);
+  return tables;
+}
+
 export function tableProblems(body: string): string[] {
   const problems: string[] = [];
-  for (const block of body.split(/\n\s*\n/)) {
-    const rows = block.split('\n').filter((line) => line.trim().startsWith('|'));
-    if (rows.length === 0 || !block.trim().startsWith('|')) continue;
+  for (const rows of tableBlocks(body)) {
     if (!TABLE_RULE.test(rows[1] ?? '')) {
       problems.push(`a table starts without a header row: ${rows[0]!.trim().slice(0, 40)}`);
       continue;
