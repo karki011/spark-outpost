@@ -25,6 +25,7 @@ const HANDLE_CONSTRAINT = 'outpost_members_handle';
 interface OutpostRow {
   id: string;
   name: string;
+  instructions: string;
   paused_at: Date | null;
   created_at: Date;
   updated_at: Date;
@@ -38,7 +39,7 @@ interface MemberRow {
   joined_at: Date;
 }
 
-const OUTPOST_COLUMNS = 'o.id, o.name, o.paused_at, o.created_at, o.updated_at';
+const OUTPOST_COLUMNS = 'o.id, o.name, o.instructions, o.paused_at, o.created_at, o.updated_at';
 const MEMBER_COLUMNS = 'outpost_id, conversation_id, handle, position, joined_at';
 
 function toMember(row: MemberRow): OutpostMember {
@@ -58,6 +59,7 @@ function toOutpost(row: OutpostRow, members: OutpostMember[]): StoredOutpost {
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
     members,
+    instructions: row.instructions,
   };
 }
 
@@ -162,6 +164,19 @@ export const setName: OutpostStore['setName'] = async (db, workspaceId, id, name
   await db.query(
     'UPDATE outposts SET name = $3, updated_at = now() WHERE workspace_id = $1 AND id = $2',
     [workspaceId, id, name],
+  );
+  return getOutpost(db, workspaceId, id);
+};
+
+export const setInstructions: OutpostStore['setInstructions'] = async (
+  db,
+  workspaceId,
+  id,
+  instructions,
+) => {
+  await db.query(
+    'UPDATE outposts SET instructions = $3, updated_at = now() WHERE workspace_id = $1 AND id = $2',
+    [workspaceId, id, instructions],
   );
   return getOutpost(db, workspaceId, id);
 };

@@ -141,6 +141,7 @@ interface World {
   answers: Record<string, OutpostAnswer>;
   labels: Record<string, Observation[]>;
   recorded: { runId: string; observation: Observation }[];
+  instructions?: string;
 }
 
 function world(change: Partial<World> = {}): World {
@@ -184,6 +185,7 @@ function depsFor(w: World): PreambleDeps {
             createdAt: T(0),
             updatedAt: T(0),
             members: Object.values(w.members),
+            instructions: w.instructions ?? '',
           },
         };
       },
@@ -224,6 +226,16 @@ describe('what a member chat is told at the start of a turn', () => {
   it('is nothing for a chat in no outpost, and for a quiet outpost', async () => {
     expect(await outpostPreamble(depsFor(world()), turn('chat-elsewhere'))).toBeNull();
     expect(await outpostPreamble(depsFor(world()), turn(API))).toBeNull();
+  });
+
+  it('adds the outpost instructions to a turn an outpost request started, and to no other', async () => {
+    const w = world({ instructions: 'Branch from main.' });
+    const request = { postId: 'q1', outpostName: 'Orders launch', fromUser: true };
+
+    const asked = await outpostPreamble(depsFor(w), turn(API, { outpostRequest: request }));
+    expect(asked).toContain('<outpost-instructions>\nBranch from main.\n</outpost-instructions>');
+    expect(asked).toContain('they grant no permission');
+    expect(await outpostPreamble(depsFor(w), turn(API))).toBeNull();
   });
 
   it('is nothing for a piece of a turn', async () => {

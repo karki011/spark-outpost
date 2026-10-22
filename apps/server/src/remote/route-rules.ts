@@ -237,6 +237,7 @@ POST /api/setup/git/install
 POST /api/outposts
 GET /api/outposts/drafts/:id
 DELETE /api/outposts/:id
+PUT /api/outposts/:id/instructions
 PUT /api/outposts/:id/members/:conversationId
 DELETE /api/outposts/:id/members/:conversationId
 GET /api/a2a/chats/:chatId/.well-known/agent-card.json
