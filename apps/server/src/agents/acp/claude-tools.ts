@@ -2,8 +2,6 @@ export const CLAUDE_READ_TOOLS = [
   'Read',
   'Glob',
   'Grep',
-  'WebSearch',
-  'WebFetch',
   'ListMcpResources',
   'ReadMcpResource',
   'ReadMcpResourceDir',
@@ -15,13 +13,13 @@ export const CLAUDE_READ_TOOLS = [
   'ToolSearch',
 ] as const;
 
-export const CLAUDE_COMMAND_TOOLS = ['Bash', 'Monitor', 'TaskStop'] as const;
+export const CLAUDE_GATED_TOOLS = ['WebSearch', 'WebFetch', 'Bash', 'Monitor', 'TaskStop'] as const;
 
 export const CLAUDE_PLAN_TOOLS = ['Write', 'ExitPlanMode'] as const;
 
 export const CLAUDE_DO_TOOLS = [
   ...CLAUDE_READ_TOOLS,
-  ...CLAUDE_COMMAND_TOOLS,
+  ...CLAUDE_GATED_TOOLS,
   'Edit',
   'Write',
   'NotebookEdit',

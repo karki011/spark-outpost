@@ -180,7 +180,7 @@ describe('repo agent config reaches the agent over ACP', { timeout: 20_000 }, ()
       'Bash(npm test:*)',
       'WebFetch(domain:docs.example.com)',
     ]);
-    expect(settings.permissions.ask).toEqual(['WebFetch']);
+    expect(settings.permissions).not.toHaveProperty('ask');
     expect(received.meta!.claudeCode.options.settingSources).toEqual([]);
     expect(received.mcpServers.map((server) => server.name)).toEqual(['echo', 'remote']);
     expect(steps).toContain("Claude can't use the SSE MCP server stream; skipped it");

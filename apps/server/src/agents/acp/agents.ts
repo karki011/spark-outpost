@@ -9,8 +9,8 @@ import { EXACT_PROTECTED_GLOBS } from '../../projects/path-policy.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
 import type { AgentCli } from './agent-cli.ts';
 import {
-  CLAUDE_COMMAND_TOOLS,
   CLAUDE_DO_TOOLS,
+  CLAUDE_GATED_TOOLS,
   CLAUDE_PLAN_TOOLS,
   CLAUDE_READ_TOOLS,
   gatedAskRules,
@@ -269,7 +269,7 @@ const claudeSessions = {
     claudeSessionMeta(
       [
         ...CLAUDE_READ_TOOLS,
-        ...(commands ? CLAUDE_COMMAND_TOOLS : []),
+        ...(commands ? CLAUDE_GATED_TOOLS : []),
         ...(planning ? CLAUDE_PLAN_TOOLS : []),
       ],
       extraRoots,

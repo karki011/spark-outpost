@@ -139,7 +139,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     toolCallId: request.toolCallId,
     rpcId: request.rpcId,
     kind: request.kind,
-    title: displayTitle(request),
+    title: displayTitle(request, asking),
     payload: approvalPayload(request, asking),
     options: askedOptions(request.options, asking),
     reason,

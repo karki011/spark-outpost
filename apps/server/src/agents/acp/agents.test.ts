@@ -12,7 +12,7 @@ import {
   FORCE_PUSH_DENY_RULES,
   secretRules,
 } from './agents.ts';
-import { CLAUDE_DO_TOOLS, CLAUDE_READ_TOOLS } from './claude-tools.ts';
+import { CLAUDE_DO_TOOLS, CLAUDE_GATED_TOOLS, CLAUDE_READ_TOOLS } from './claude-tools.ts';
 import { CODEX_DO_MODE, codexPermissionProfiles } from './codex-permissions.ts';
 import { zaiEnvironment, zaiModelId } from './zai.ts';
 
@@ -93,14 +93,13 @@ describe('Claude session options', () => {
     const asking = optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true, true));
     expect(asking.tools).toEqual([
       ...CLAUDE_READ_TOOLS,
-      'Bash',
-      'Monitor',
-      'TaskStop',
+      ...CLAUDE_GATED_TOOLS,
       'Write',
       'ExitPlanMode',
     ]);
     expect(asking.settings.permissions.ask).toEqual(['WebFetch', 'Monitor', GIT_CONFIG_ASK_RULE]);
-    expect(project.settings.permissions.ask).toEqual(['WebFetch']);
+    expect(project.settings.permissions).not.toHaveProperty('ask');
+    expect(project.tools).not.toContain('WebFetch');
     expect(chat.settings.permissions).not.toHaveProperty('ask');
   });
 

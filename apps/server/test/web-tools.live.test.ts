@@ -31,7 +31,7 @@ describe('live Claude web tools in a Do turn', () => {
     const outputs: ProviderOutput[] = [];
     for await (const output of provider.run({
       prompt:
-        'Do these three steps, one tool call each, and do not retry or work around a refusal: 1) Use your WebSearch tool to search for "Agent Client Protocol Zed". 2) Use your WebFetch tool on http://127.0.0.1:9/status. 3) Use your WebFetch tool on http://127.0.0.2:9/status. Then reply with one short line per step.',
+        'Do these four steps, one tool call each, and do not retry or work around a refusal: 1) Use your WebSearch tool to search for "Agent Client Protocol Zed". 2) Use your WebFetch tool on https://example.com/ and say what the page is for. 3) Use your WebFetch tool on http://127.0.0.1:9/status. 4) Use your WebFetch tool on http://127.0.0.2:9/status. Then reply with one short line per step.',
       history: [],
       settings: { method: 'cli', model: 'haiku', modelLabel: null, effort: 'low', mode: 'default' },
       signal: new AbortController().signal,
@@ -60,7 +60,8 @@ describe('live Claude web tools in a Do turn', () => {
       text: text.slice(0, 400),
     });
     expect(steps).toContain('Searched the web');
-    expect(reads).toContain('web search');
+    expect(steps).toContain('Fetched example.com');
+    expect(reads).toEqual(expect.arrayContaining(['web search', 'web page https://example.com']));
     expect(reads.some((label) => label.includes('127.0.0'))).toBe(false);
     const loopback = asked.find((request) => request.address === 'http://127.0.0.2:9/status');
     expect(loopback && answer(loopback)).toMatchObject({ allowed: false });

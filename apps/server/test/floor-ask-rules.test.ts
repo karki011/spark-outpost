@@ -135,7 +135,7 @@ describe('the ask rules Spark gives a Claude session that can change files', () 
 
   it('give a session only the rules for the tools it has', () => {
     expect(sessionAskRules(agentDefinitions.claude.conversationSessionMeta?.())).toEqual([]);
-    expect(sessionAskRules(agentDefinitions.claude.projectSessionMeta?.([]))).toEqual(['WebFetch']);
+    expect(sessionAskRules(agentDefinitions.claude.projectSessionMeta?.([]))).toEqual([]);
     expect(
       sessionAskRules(agentDefinitions.claude.projectSessionMeta?.([], null, true, true)),
     ).toEqual([...CLAUDE_GATED_ASK_RULES, GIT_CONFIG_ASK_RULE]);

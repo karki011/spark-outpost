@@ -60,6 +60,7 @@ async function received(definition: AgentDefinition, projectRoots: string[]): Pr
     settings: { method: 'cli', model: null, modelLabel: null, effort: null },
     projectRoots,
     signal: new AbortController().signal,
+    approvals: { review: async () => ({ outcome: 'cancelled' as const, note: 'not used' }) },
   })) {
     outputs.push(output);
   }

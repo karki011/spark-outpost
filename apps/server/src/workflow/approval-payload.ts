@@ -1,5 +1,5 @@
 import path from 'node:path';
-import type { ApprovalPayload } from '@spark-outpost/contracts';
+import { browserOrigin, type ApprovalPayload } from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
 import type { Asking } from './approval-options.ts';
 
@@ -15,8 +15,14 @@ function relativeLabel(request: ApprovalRequest, target: string): string {
   return target;
 }
 
-export function displayTitle(request: ApprovalRequest): string {
-  const title = request.title.trim() || 'an action';
+function withoutSentAddress(title: string, request: ApprovalRequest, asking: Asking): string {
+  if (!request.address || !asking.secretSend) return title;
+  const origin = browserOrigin(request.address) ?? 'an address';
+  return title.replaceAll(request.address, origin);
+}
+
+export function displayTitle(request: ApprovalRequest, asking: Asking = {}): string {
+  const title = withoutSentAddress(request.title.trim() || 'an action', request, asking);
   return request.paths.reduce(
     (text, target) => text.replaceAll(target, relativeLabel(request, target)),
     title,
