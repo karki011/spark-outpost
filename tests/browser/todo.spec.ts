@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { allowEdit, chatRepo, projectChat, resetWithAgents, turnDone } from './project-chat-kit.ts';
 
 const PR_TITLE = 'spark-outpost/demo#42';
 const WIDE = { width: 2000, height: 1100 };
@@ -160,4 +161,27 @@ test('on a phone the work panel opens as a bottom sheet on the to-do', async ({ 
     .toEqual([true, 800]);
   await page.keyboard.press('Escape');
   await expect(panel(page)).toBeHidden();
+});
+
+test('a chat with approvals but no list shows them as Recorded, not as a to-do', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await resetWithAgents();
+  const repo = chatRepo();
+  try {
+    await projectChat(page, repo, 'Ask before edits');
+    await send(page, 'Fix the divider #build');
+    await allowEdit(page);
+    await turnDone(page, 60_000);
+    await expect(page.locator('.todo-card, .todo-line')).toHaveCount(0);
+    const show = page.getByRole('button', { name: 'Show work panel' }).first();
+    if (await show.isVisible()) await show.click();
+    await expect(panel(page).getByRole('tab', { name: 'To-do' })).toHaveCount(0);
+    await panel(page).getByRole('tab', { name: 'Recorded' }).click();
+    await expect(panel(page).getByRole('heading', { name: 'Recorded by Spark' })).toBeVisible();
+    await expect(panel(page).getByRole('heading', { name: 'Latest list' })).toHaveCount(0);
+  } finally {
+    repo.remove();
+  }
 });

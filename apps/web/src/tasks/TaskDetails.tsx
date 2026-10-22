@@ -186,7 +186,7 @@ export function TaskDetails({
             onClick={() => setTab(id)}
             onKeyDown={onTabKey}
           >
-            {tabNames[id]}
+            {id === 'todo' && !listed ? 'Recorded' : tabNames[id]}
           </button>
         ))}
       </div>
