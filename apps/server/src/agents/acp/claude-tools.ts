@@ -17,6 +17,8 @@ export const CLAUDE_GATED_TOOLS = ['WebSearch', 'WebFetch', 'Bash', 'Monitor', '
 
 export const CLAUDE_PLAN_TOOLS = ['Write', 'ExitPlanMode'] as const;
 
+export const CLAUDE_QUESTION_TOOLS = ['AskUserQuestion'] as const;
+
 export const CLAUDE_DO_TOOLS = [
   ...CLAUDE_READ_TOOLS,
   ...CLAUDE_GATED_TOOLS,
@@ -27,11 +29,10 @@ export const CLAUDE_DO_TOOLS = [
   'ReportFindings',
   'EnterPlanMode',
   'ExitPlanMode',
+  ...CLAUDE_QUESTION_TOOLS,
 ] as const;
 
 export const CLAUDE_REPO_TOOLS = ['Skill', 'Agent'] as const;
-
-export const CLAUDE_UNTOUCHED_TOOLS = ['AskUserQuestion'] as const;
 
 export const CLAUDE_OFF_TOOLS: Readonly<Record<string, string>> = {
   EnterWorktree: 'moves the session out of the folder Spark placed the chat in',

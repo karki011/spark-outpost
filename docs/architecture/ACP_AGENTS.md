@@ -326,7 +326,7 @@ Live check, October 6, 2026, in a throwaway repo under the temp folder with the 
 ## Next
 
 1. **Codex Do upstream.** Filed as codex-acp issues #555 and #556, draft PRs #557 and #558; see [PATCHES.md](PATCHES.md) for status.
-2. **Elicitation.** Advertise `elicitation.form` and show `elicitation/create` as a card that answers `accept`, `decline`, or `cancel`. The spec forbids form mode for secrets.
+2. **URL elicitation.** Form elicitation is built (question cards, [PROTOCOL_ALIGNMENT.md](PROTOCOL_ALIGNMENT.md)); URL mode and `elicitation/complete` are not advertised.
 3. **Richer activity.** Show diffs and file locations from tool-call content, failed and cancelled steps, and the plan as a checklist.
 4. **A warm agent process per provider** (F-18) is still deferred: resume works across new processes, so it would only save process start.
 5. **API-key runs.**

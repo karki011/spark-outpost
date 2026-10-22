@@ -12,6 +12,7 @@ import {
   CLAUDE_DO_TOOLS,
   CLAUDE_GATED_TOOLS,
   CLAUDE_PLAN_TOOLS,
+  CLAUDE_QUESTION_TOOLS,
   CLAUDE_READ_TOOLS,
   gatedAskRules,
   toolDenyRules,
@@ -258,7 +259,7 @@ const claudeSessions = {
   windowAtResult: true,
   readsProjectFolders: true,
   conversationSessionMeta: (repo?: ClaudeRepoOptions | null) =>
-    claudeSessionMeta([], [], repo ?? null),
+    claudeSessionMeta(CLAUDE_QUESTION_TOOLS, [], repo ?? null),
   probeSessionMeta: claudeSessionMeta([], [], null, false, true),
   projectSessionMeta: (
     extraRoots: readonly string[],
@@ -271,6 +272,7 @@ const claudeSessions = {
         ...CLAUDE_READ_TOOLS,
         ...(commands ? CLAUDE_GATED_TOOLS : []),
         ...(planning ? CLAUDE_PLAN_TOOLS : []),
+        ...CLAUDE_QUESTION_TOOLS,
       ],
       extraRoots,
       repo ?? null,

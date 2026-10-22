@@ -76,7 +76,6 @@ describe('live Claude Do run with approvals', () => {
       db: t.db,
       providers: createProviders('acp'),
       leaseSeconds: 30,
-      concurrency: 1,
       pollMs: 100,
       approvalPollMs: 200,
     });

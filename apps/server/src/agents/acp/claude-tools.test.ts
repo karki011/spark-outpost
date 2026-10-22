@@ -8,7 +8,6 @@ import {
   CLAUDE_OFF_TOOL_NAMES,
   CLAUDE_READ_TOOLS,
   CLAUDE_REPO_TOOLS,
-  CLAUDE_UNTOUCHED_TOOLS,
   WEB_FETCH_LOCAL_DENY_RULES,
 } from './claude-tools.ts';
 import { withPermissionRules, type ClaudeRepoOptions } from './repo-session.ts';
@@ -43,7 +42,6 @@ describe('Claude built-in tools', () => {
     const classified = new Set<string>([
       ...CLAUDE_DO_TOOLS,
       ...CLAUDE_REPO_TOOLS,
-      ...CLAUDE_UNTOUCHED_TOOLS,
       ...CLAUDE_OFF_TOOL_NAMES,
     ]);
     const declared = sdkToolNames();
@@ -59,7 +57,7 @@ describe('Claude built-in tools', () => {
       expect(options.tools.filter((tool) => CLAUDE_OFF_TOOL_NAMES.includes(tool))).toEqual([]);
       expect(options.disallowedTools).toEqual(expect.arrayContaining(CLAUDE_OFF_TOOL_NAMES));
       expect(options.disallowedTools).toEqual(expect.arrayContaining(WEB_FETCH_LOCAL_DENY_RULES));
-      expect(options.tools).not.toContain('AskUserQuestion');
+      expect(options.tools).toContain('AskUserQuestion');
     }
     expect(doing.tools).toEqual(expect.arrayContaining(['WebSearch', 'WebFetch', 'NotebookEdit']));
     expect(asking.tools).not.toContain('Edit');
@@ -67,10 +65,10 @@ describe('Claude built-in tools', () => {
     expect(CLAUDE_READ_TOOLS).not.toContain('Bash');
   });
 
-  it('keeps a chat with no project free of built-in tools', () => {
+  it('keeps a chat with no project to its question tool', () => {
     const chat = optionsOf(agentDefinitions.claude.conversationSessionMeta?.());
-    expect(chat.tools).toEqual([]);
-    expect(chat.disallowedTools.filter((rule) => CLAUDE_OFF_TOOL_NAMES.includes(rule))).toEqual([]);
+    expect(chat.tools).toEqual(['AskUserQuestion']);
+    expect(chat.disallowedTools).toEqual(expect.arrayContaining(CLAUDE_OFF_TOOL_NAMES));
   });
 });
 

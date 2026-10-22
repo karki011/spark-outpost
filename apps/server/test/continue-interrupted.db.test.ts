@@ -72,7 +72,6 @@ function start(recoveryEveryMs = 40): void {
     db: t.db,
     providers: new Map([['claude', fakeClaude()]]),
     leaseSeconds: 30,
-    concurrency: 2,
     pollMs: 20,
     cancelPollMs: 20,
     recoveryEveryMs,

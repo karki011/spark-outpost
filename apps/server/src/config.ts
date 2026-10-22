@@ -50,7 +50,6 @@ const configSchema = z.object({
     .string()
     .default('http://localhost:5173,http://127.0.0.1:5173')
     .transform((value) => value.split(',').map((origin) => origin.trim())),
-  WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(2),
   LEASE_SECONDS: z.coerce.number().int().min(5).default(30),
   SESSION_IDLE_MINUTES: z.coerce.number().int().min(1).default(240),
   ASSISTANT_IDLE_COMPACT_SECONDS: z.coerce

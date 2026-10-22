@@ -44,6 +44,7 @@ describe('chatPrompt', () => {
         '- If the request is unclear, ask one question and stop.',
         '',
         'Engineering',
+        '- Change files with your file-editing tools, not shell commands such as heredocs, cat > or sed -i, so the user sees each change as a diff.',
         "- The repo's own instructions (AGENTS.md, CLAUDE.md) take priority over these.",
         '- Read the code your change touches before deciding anything.',
         "- Before writing code, stop at the first of these that works: it doesn't need to exist · the codebase already has it · the standard library has it · the platform has it · an installed dependency has it · it can be one line · otherwise write the minimum that works.",
@@ -74,6 +75,14 @@ describe('chatPrompt', () => {
     expect(prompt).not.toContain('spark_outpost_draft');
     expect(prompt).not.toContain('sub-chats');
     expect(prompt).toContain(text.SPLIT_UNCLEAR);
+  });
+
+  it('asks a Do turn to ask with its question tool, and leaves other turns as they were', () => {
+    const doing = build({ asksWithTool: true });
+    expect(doing).toContain(text.SPLIT_ASK_WITH_TOOL);
+    expect(doing).not.toContain(text.SPLIT_UNCLEAR);
+    expect(build({})).toContain(text.SPLIT_UNCLEAR);
+    expect(build({})).not.toContain('AskUserQuestion');
   });
 
   it('offers starting sub-chats only when the run has the start tool', () => {

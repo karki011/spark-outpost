@@ -97,7 +97,7 @@ describe("the user's and project's Claude deny and ask rules", { timeout: 20_000
 
   it('reach a chat with no project too, from the user file alone', async () => {
     const options = await received(claude, []);
-    expect(options.tools).toEqual([]);
+    expect(options.tools).toEqual(['AskUserQuestion']);
     expect(options.disallowedTools).toContain('WebSearch');
     expect(options.disallowedTools).not.toContain('mcp__spark__spark_slack_post');
   });

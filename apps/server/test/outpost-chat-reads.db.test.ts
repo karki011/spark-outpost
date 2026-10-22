@@ -87,6 +87,7 @@ describe('the runs of a member chat', () => {
       fromUser: true,
       fromSpark: false,
       userStarted: false,
+      agentStarted: false,
     });
   });
 

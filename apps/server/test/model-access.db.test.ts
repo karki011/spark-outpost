@@ -69,7 +69,6 @@ function startCodex(rejects: string[] = [SOL_61]) {
     db: t.db,
     providers: new Map([['codex', provider]]),
     leaseSeconds: 30,
-    concurrency: 2,
     pollMs: 20,
     cancelPollMs: 20,
   });

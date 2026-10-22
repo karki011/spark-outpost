@@ -47,13 +47,14 @@ describe('Claude session options', () => {
         disableBypassPermissionsMode: 'disable',
       });
     }
-    expect(project.tools).toEqual([...CLAUDE_READ_TOOLS]);
+    expect(project.tools).toEqual([...CLAUDE_READ_TOOLS, 'AskUserQuestion']);
     expect(optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true)).tools).toEqual([
       ...CLAUDE_READ_TOOLS,
       'Write',
       'ExitPlanMode',
+      'AskUserQuestion',
     ]);
-    expect(chat.tools).toEqual([]);
+    expect(chat.tools).toEqual(['AskUserQuestion']);
   });
 
   it('passes extra repos only as deny-rule anchors, never as directories in _meta', () => {
@@ -85,7 +86,7 @@ describe('Claude session options', () => {
 
   it('matches claudeSessionMeta for the project tools', () => {
     expect(agentDefinitions.claude.projectSessionMeta?.([])).toEqual(
-      claudeSessionMeta(CLAUDE_READ_TOOLS, []),
+      claudeSessionMeta([...CLAUDE_READ_TOOLS, 'AskUserQuestion'], []),
     );
   });
 
@@ -96,6 +97,7 @@ describe('Claude session options', () => {
       ...CLAUDE_GATED_TOOLS,
       'Write',
       'ExitPlanMode',
+      'AskUserQuestion',
     ]);
     expect(asking.settings.permissions.ask).toEqual(['WebFetch', 'Monitor', GIT_CONFIG_ASK_RULE]);
     expect(project.settings.permissions).not.toHaveProperty('ask');

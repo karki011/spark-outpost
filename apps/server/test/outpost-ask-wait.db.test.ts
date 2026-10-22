@@ -8,7 +8,6 @@ import { createFakeProvider } from '../src/providers/fake.ts';
 import type { Provider } from '../src/providers/provider.ts';
 import type { SparkToolDeps } from '../src/spark-mcp/deps.ts';
 import { outpostAskTool } from '../src/spark-mcp/tools/outpost-ask-tool.ts';
-import { ParkedTurns } from '../src/workflow/parked-turns.ts';
 import { drainQueue } from '../src/workflow/queue-drain.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { addMemberChat, createOutpostRow, postRunId } from './outpost-fixtures.ts';
@@ -63,17 +62,14 @@ function askingProvider(deps: SparkToolDeps): Provider {
   };
 }
 
-function start(concurrency: number): void {
-  const parked = new ParkedTurns();
-  const deps = { db: t.db, outposts: { wakes, parked } } as unknown as SparkToolDeps;
+function start(): void {
+  const deps = { db: t.db, outposts: { wakes } } as unknown as SparkToolDeps;
   const provider = askingProvider(deps);
   worker = startWorker({
     db: t.db,
     providers: new Map([[provider.name, provider]]),
     leaseSeconds: 30,
-    concurrency,
     pollMs: 20,
-    parked,
   });
 }
 
@@ -113,27 +109,16 @@ async function answersWhileTheAskerWaits(asking: string): Promise<void> {
 }
 
 describe('a turn that waits for another chat', () => {
-  it('lets the asked chat start when the worker runs one turn at a time', async () => {
-    start(1);
+  it('lets the asked chat start while the asker waits', async () => {
+    start();
     await answersWhileTheAskerWaits(await send(web, ASK));
   });
 
-  it('lets the asked chat start beside one long turn when the worker runs two', async () => {
-    start(2);
+  it('lets the asked chat start beside a long turn in a third chat', async () => {
+    start();
     const long = await send(await addMemberChat(t, outpostId, 'docs'), HOLD);
     await eventually(async () => (await statusOf(long)) === 'running');
     await answersWhileTheAskerWaits(await send(web, ASK));
     expect(await statusOf(long)).toBe('running');
-  });
-
-  it('still starts no more turns than its slots while nothing waits', async () => {
-    start(1);
-    const long = await send(web, HOLD);
-    await eventually(async () => (await statusOf(long)) === 'running');
-    const next = await send(api, 'Hello');
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(await statusOf(next)).toBe('queued');
-    held.open();
-    await eventually(async () => (await statusOf(next)) === 'succeeded');
   });
 });

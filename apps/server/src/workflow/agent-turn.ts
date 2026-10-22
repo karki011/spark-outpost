@@ -32,7 +32,7 @@ import {
 } from './approval-gate.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { createAuditRecorder } from './audit-recorder.ts';
-import { prepareAskRun, prepareDoRun } from './do-run.ts';
+import { prepareAskRun, prepareDoRun, prepareQuestions } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
 import { publishGrant, publishScope, startBasis } from './publish-context.ts';
 import { openMemberInbox } from './member-inbox.ts';
@@ -235,7 +235,7 @@ export async function runAgentTurn(
         append,
       });
   const redaction = createRedactionFilter(secretValues);
-  const parking = backgroundParking(deps.parked, lease.runId, () => control.stop('quit'));
+  const parking = backgroundParking(deps.parked, () => control.stop('quit'));
   const watch = { ...input, db: deps.db, runId: lease.runId, observations };
   const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
@@ -292,6 +292,8 @@ export async function runAgentTurn(
         : asking
           ? prepareAskRun({ ...gateOptions, conversationId: input.identity.threadId })
           : undefined;
+    const asksUser = input.parentRunId === null && !input.assistant;
+    const questions = asksUser ? prepareQuestions(gateOptions, approvals) : undefined;
     const rails =
       input.mode === 'do'
         ? await startRailFlags({ ...input, db: deps.db, runId: lease.runId, audit })
@@ -357,6 +359,7 @@ export async function runAgentTurn(
       ...(plansThisTurn(input) ? { planning: true } : {}),
       ...(input.plansFirst ? { plansFirst: true } : {}),
       ...(approvals ? { approvals } : {}),
+      ...(questions ? { questions } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
       ...(inbox ? { steering: inbox } : {}),
       ...(inbox ? { inbox } : {}),

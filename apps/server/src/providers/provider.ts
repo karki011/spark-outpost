@@ -1,5 +1,7 @@
 import type {
   AgentCommand,
+  AgentContent,
+  AgentForm,
   AgentModeOption,
   ConfigOptionInfo,
   ConfigValues,
@@ -103,6 +105,7 @@ export interface ProviderTurn {
   steering?: SteerRequests;
   inbox?: TurnInbox;
   approvals?: PermissionGate;
+  questions?: QuestionGate;
   askTitle?: boolean;
   session?: SessionTarget;
   preamble?: string;
@@ -128,6 +131,24 @@ export type GateAnswer =
 
 export interface PermissionGate {
   review(request: ApprovalRequest, signal: AbortSignal): Promise<GateAnswer>;
+}
+
+export interface AgentQuestion {
+  toolCallId: string;
+  rpcId: string | null;
+  agent: string;
+  form: AgentForm;
+}
+
+export type QuestionReply =
+  { action: 'accept'; content: AgentContent } | { action: 'decline' } | { action: 'cancel' };
+
+export interface QuestionGate {
+  ask(
+    question: AgentQuestion,
+    signal: AbortSignal,
+    agentCancel: AbortSignal,
+  ): Promise<QuestionReply>;
 }
 
 export interface AuditMarks {

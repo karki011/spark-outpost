@@ -293,7 +293,7 @@ Run statuses: `queued → running ⇄ awaiting_approval → succeeded | failed |
 - **Approvals** (M2). A request the gate decides to ask about waits on a card; see [M2 status](#m2-status-september-26-2026).
 - **Recovery.** A crashed run becomes `outcome_unknown`, and its pending approvals expire. If it was waiting, the message says the action never ran. The plan and every other artifact written so far stay readable. Nothing is replayed. The user can then continue the turn by hand: see [Continue from here](#continue-from-here-after-an-interruption).
 - **No run budgets** (October 5, 2026, migration `0134_no_budgets.sql`). The time, tool-call and cost limits, the fix-round and per-Builder budgets, the "Continue past the budget?" card and the Spend cap per task setting are removed: a run goes on until it finishes, the user stops it or another rule stops it. Active time (approval waits don't count), tool calls and cost are still measured (`orchestration/active-time.ts`, `orchestrations.active_ms` and `tool_calls`, run costs) and shown. Old budget cards stay readable as answered records; one still waiting at upgrade is answered Continue.
-- **Concurrency** (M4). 2 jobs at a time by default (`WORKER_CONCURRENCY`). "One Do run per project" was planned here but never enforced at claim time; since round 10 a second Do task on the same repo builds in a worktree copy instead. Ask and Chat runs run in parallel.
+- **Concurrency** (M4). Was 2 jobs at a time by default (`WORKER_CONCURRENCY`); since October 22, 2026 there is no limit and every queued job starts at once. "One Do run per project" was planned here but never enforced at claim time; since round 10 a second Do task on the same repo builds in a worktree copy instead. Ask and Chat runs run in parallel.
 
 ### M2 status (September 26, 2026)
 
@@ -533,7 +533,7 @@ Still open in code:
 - **Sessions (M6):** `session/delete`. Compaction is built; its gaps are in [COMPACTION.md](COMPACTION.md#gaps).
 - **Tickets:** a Jira Server and Data Center source (personal access token); `ticket_events` are not hash-chained and not in a run's audit log.
 - **Thresholds:** the `plan_agreed` 0.85 and 0.6 lines are unmeasured, and every Jev threshold is provisional until tuned on labelled rows (see the history-audit items above).
-- **One Do run per repo** is not enforced at claim time (`WORKER_CONCURRENCY` defaults to 2); worktrees are how two tasks share a repo.
+- **One Do run per repo** is not enforced at claim time, and the worker has no run limit; worktrees are how two tasks share a repo.
 - **Coordinator:** see [COORDINATOR_PLAN.md](COORDINATOR_PLAN.md) "Open items"; its story benchmark has not run although `parallel` is the default.
 
 ## Open questions

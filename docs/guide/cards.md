@@ -10,7 +10,7 @@ Cards appear in the chat, under the reply, and on [Spark Island](desktop-compani
 
 ## Approval cards
 
-These come from the agent's mode or a [protected path](protected-paths.md). They never go on by themselves and expire after 30 minutes.
+These come from the agent's mode, a [protected path](protected-paths.md) or the agent's question. They never go on by themselves and expire after 30 minutes.
 
 | Card                                         | Means                                                                 | Buttons                                                                 |
 | -------------------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------- |
@@ -20,6 +20,7 @@ These come from the agent's mode or a [protected path](protected-paths.md). They
 | **Change git hooks or config?**              | An edit to `.git/hooks`, `.git/config` or `git config`.               | **Hold to allow once**, **Deny**                                        |
 | **Force push?**                              | A push that rewrites remote history.                                  | **Hold to force push**, **Deny**                                        |
 | **Send a secret value?**                     | A push, upload or text typed into a site holds a secret file's value. | **Hold to allow once**, **Deny** or **Don't**                           |
+| **Claude has a question**                    | The agent asks instead of guessing. Pick with 1–9; ⌘Enter sends.      | **Send**, **Skip**                                                      |
 
 Spark asks nothing of its own before or after a build; the agent's [plan card](plan-card.md) is an approval card.
 
