@@ -186,7 +186,26 @@ function seenPrograms(command: string): Seen {
   return { programs, unreadable: read.includes(null) };
 }
 
+function decoded(address: string): string {
+  try {
+    return decodeURIComponent(address);
+  } catch {
+    return address;
+  }
+}
+
+async function addressSecretSend(address: string, roots: readonly string[]): Promise<SecretSend> {
+  const files = await secretFilesIn(`${address}\n${decoded(address)}`, roots);
+  return files.length > 0 ? { kind: 'found', files } : { kind: 'clean' };
+}
+
 export async function secretSend(request: ApprovalRequest): Promise<SecretSend> {
+  if (request.address) {
+    return addressSecretSend(
+      request.address,
+      request.roots.map((root) => root.path),
+    );
+  }
   if (!request.command || !sendsContent(request.command)) return { kind: 'clean' };
   const seen = seenPrograms(request.command);
   const cwd = commandCwd(request);

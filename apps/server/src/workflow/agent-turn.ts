@@ -417,6 +417,9 @@ export async function runAgentTurn(
       if (output.kind === 'secret_read') {
         for (const label of output.paths) observations.record({ source: 'secret_file', label });
       }
+      if (output.kind === 'web_read') {
+        for (const label of output.labels) observations.record({ source: 'web_page', label });
+      }
       if (output.kind === 'account') {
         await recordAccount(deps.db, input.workspaceId, input.provider, output.account);
       }

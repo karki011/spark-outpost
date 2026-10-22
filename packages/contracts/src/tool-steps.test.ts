@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { friendlyStep, humanizeToolName, parseMcpTool } from './tool-steps.ts';
+import { friendlyStep, humanizeToolName, isWebToolTitle, parseMcpTool } from './tool-steps.ts';
 
 describe('friendlyStep', () => {
   it('names Spark tools in plain words, from Claude and Codex', () => {
@@ -33,15 +33,23 @@ describe('friendlyStep', () => {
     expect(friendlyStep('grep --include="*.ts" "useQuery"')).toBe('Search for `useQuery`');
   });
 
-  it('shortens fetches to the site', () => {
-    expect(friendlyStep('Fetch https://docs.github.com/en/rest?x=1')).toBe('Fetch docs.github.com');
+  it('names web reads in the past tense, fetches by their site', () => {
+    expect(friendlyStep('Fetch https://docs.github.com/en/rest?x=1')).toBe(
+      'Fetched docs.github.com',
+    );
+    expect(friendlyStep('Open page: https://user@example.com/a')).toBe('Fetched example.com');
+    for (const title of ['Search "react 20 release"', 'Web search', 'Web search: react 20']) {
+      expect(friendlyStep(title)).toBe('Searched the web');
+      expect(isWebToolTitle(title)).toBe(true);
+    }
+    expect(isWebToolTitle('Read `table.tsx`')).toBe(false);
   });
 
   it('leaves titles that already read well alone', () => {
     for (const title of [
       'Read `table.tsx`',
       'Thinking',
-      'Search "react 20 release"',
+      'Searched the web',
       'Continued session',
       '`pnpm test`',
       'Looking at projects',

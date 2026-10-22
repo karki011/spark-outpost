@@ -121,7 +121,7 @@ describe('user-level MCP servers reach the agent', { timeout: 20_000 }, () => {
     expect(received.mcpServers[1]!.headers).toEqual([
       { name: 'Authorization', value: 'Bearer docs-token' },
     ]);
-    expect(received.meta!.claudeCode.options.settings.permissions).not.toHaveProperty('ask');
+    expect(received.meta!.claudeCode.options.settings.permissions.ask).toEqual(['WebFetch']);
   });
 
   it('sends user servers in a chat without a project', async () => {

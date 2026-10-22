@@ -9,6 +9,14 @@ import { EXACT_PROTECTED_GLOBS } from '../../projects/path-policy.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
 import type { AgentCli } from './agent-cli.ts';
 import {
+  CLAUDE_COMMAND_TOOLS,
+  CLAUDE_DO_TOOLS,
+  CLAUDE_PLAN_TOOLS,
+  CLAUDE_READ_TOOLS,
+  gatedAskRules,
+  toolDenyRules,
+} from './claude-tools.ts';
+import {
   CODEX_DO_MODE,
   CODEX_READ_ONLY_MODE,
   codexPermissionProfiles,
@@ -86,20 +94,6 @@ export interface AgentDefinition {
   resumesAcrossFolders?: boolean;
 }
 
-const CLAUDE_DO_TOOLS = [
-  'Read',
-  'Glob',
-  'Grep',
-  'Edit',
-  'Write',
-  'Bash',
-  'TodoWrite',
-  'EnterPlanMode',
-  'ExitPlanMode',
-] as const;
-const CLAUDE_READ_TOOLS = ['Read', 'Glob', 'Grep'];
-const CLAUDE_COMMAND_TOOLS = ['Bash'];
-const CLAUDE_PLAN_TOOLS = ['Write', 'ExitPlanMode'];
 const CLAUDE_DO_MODE = 'default';
 export const PUBLISH_ASK_RULES = ['Bash(git push:*)', 'Bash(gh:*)'] as const;
 
@@ -141,6 +135,10 @@ export function floorAskRules(
   return [...edits, ...(tools.includes('Bash') ? [GIT_CONFIG_ASK_RULE] : [])];
 }
 
+function unique(rules: readonly string[]): string[] {
+  return [...new Set(rules)];
+}
+
 function repoTools(repo: ClaudeRepoOptions | null): string[] {
   if (!repo) return [];
   return [...(repo.skillTool ? ['Skill'] : []), ...(repo.agentTool ? ['Agent'] : [])];
@@ -154,15 +152,19 @@ export function claudeSessionMeta(
   allowBypass = false,
   gitControlGlobs: readonly string[] = [],
 ): Record<string, unknown> {
-  const ask = [
+  const ask = unique([
+    ...(repo?.askRules ?? []),
+    ...gatedAskRules(tools),
     ...floorAskRules(tools, extraRoots, gitControlGlobs),
     ...(changesProject ? PUBLISH_ASK_RULES : []),
-  ];
-  const deny = [
+  ]);
+  const deny = unique([
+    ...(repo?.denyRules ?? []),
+    ...toolDenyRules(tools),
     ...secretRules(extraRoots),
     ...FORCE_PUSH_DENY_RULES,
     ...(changesProject ? CHAT_RUN_DENY_RULES : []),
-  ];
+  ]);
   const allowRules = [...(repo?.allowRules ?? [])];
   const plugins = repo?.plugins ?? [];
   return {
@@ -212,7 +214,6 @@ export function codexConfig(
       skill_mcp_dependency_install: false,
       apps: false,
     },
-    web_search: 'disabled',
     ...(profiles
       ? { default_permissions: CODEX_READ_ONLY_MODE, permissions: codexPermissionProfiles() }
       : {}),

@@ -46,7 +46,7 @@ describe('user-level Codex MCP servers', () => {
       github: { enabled: false },
       'team docs': { enabled: false },
     });
-    expect(config).toHaveProperty('web_search', 'disabled');
+    expect(config).not.toHaveProperty('web_search');
   });
 
   it('leaves Claude alone', async () => {
