@@ -55,15 +55,27 @@ test.beforeEach(async ({ page }) => {
   await resetTestDatabase({ onboarded: true, connected: ['claude'], catalog: true });
   const connected = await page.request.post('/api/calendar/connect', { data: {} });
   expect(connected.ok()).toBe(true);
-  await askActs();
 });
 
 test.afterAll(() => {
   rmSync(FAKE_CALENDAR_STATE, { force: true });
 });
 
+test('in Manual, Ask Spark asks on a card in the island, then reads tomorrow', async ({ page }) => {
+  test.setTimeout(60_000);
+  const ask = await openAsk(page);
+  await ask.fill(`What do I have in calendar tomorrow? ${readTomorrow()}`);
+  await page.keyboard.press('Enter');
+  const card = log(page).getByRole('group', { name: /read your calendar/ });
+  await expect(card).toBeVisible({ timeout: 20_000 });
+  await expect(log(page)).not.toContainText('Demo day');
+  await card.getByRole('button', { name: 'Allow for this chat' }).click();
+  await expect(log(page)).toContainText('Demo day', { timeout: 20_000 });
+});
+
 test('Ask Spark reads tomorrow’s calendar with the switch on, its default', async ({ page }) => {
   test.setTimeout(60_000);
+  await askActs();
   const ask = await openAsk(page);
   await ask.fill(`What do I have in calendar tomorrow? ${readTomorrow()}`);
   await page.keyboard.press('Enter');
@@ -74,6 +86,7 @@ test('with the switch off, Ask Spark is told the exact setting and where it is',
   page,
 }) => {
   test.setTimeout(60_000);
+  await askActs();
   await setAgentsRead(page, false);
   const ask = await openAsk(page);
   await ask.fill('What do I have in calendar tomorrow? #build #sparkinstructions');
