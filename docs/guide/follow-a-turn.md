@@ -12,7 +12,7 @@ You'll follow, stop and queue a turn. About 2 minutes.
 
 1. Read the header, like **Reading api.ts · 3 steps**.
 2. Select the step count, then **Thinking**.
-3. The agent's to-do ticks off in the turn, then folds to **To-do · 3 of 3 done**.
+3. The agent's to-do ticks off in the turn, then folds to one line.
 4. **Show work panel** has the to-do, files and cost; **Agent TV** is under **…**.
 5. Sub-agents share one line; **View** shows a card each.
 
@@ -26,7 +26,7 @@ When it needs you, select **Waiting for you** or press **⌘⇧Y**.
 
 ## Background work
 
-While background agents run, the chat shows **Waiting on 1 background agent**, then **Writing up results**. **Enter** reaches it; **Stop background tasks** ends them.
+While background agents run, the chat shows **Waiting on 1 background agent**, then **Writing up results**. A sleeping Claude agent shows **Sleeping until 10:48**, then wakes in that turn. **Stop background tasks** or **Stop waiting** ends the wait.
 
 The agent stays running up to 30 idle minutes. A turn it starts itself shows **Continued on its own**; after Quit, **Stopped by Quit**.
 
@@ -36,13 +36,12 @@ Other chats never wait; each starts when you send.
 
 1. While a turn runs, **Enter** queues a message.
 2. **⌘Enter** sends it now.
-3. While the agent waits on sub-agents, **Enter** sends now.
+3. While the agent waits, **Enter** sends now.
 4. Use **Edit**, **Move up**, **Move down**, **Remove** or **Send now** on a queued message.
 
 | When                           | Spark                                |
 | ------------------------------ | ------------------------------------ |
 | The turn finishes              | Sends queued messages in order.      |
-| You send one now               | Shows its status.                    |
 | You stop the turn, or it fails | Pauses the queue until **Send now**. |
 | You reload or restart          | Keeps the queue.                     |
 

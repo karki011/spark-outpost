@@ -65,10 +65,20 @@ describe('Claude built-in tools', () => {
     expect(CLAUDE_READ_TOOLS).not.toContain('Bash');
   });
 
-  it('keeps a chat with no project to its question tool', () => {
+  it('keeps a chat with no project, and Ask Spark, to its question tool', () => {
     const chat = optionsOf(agentDefinitions.claude.conversationSessionMeta?.());
     expect(chat.tools).toEqual(['AskUserQuestion']);
     expect(chat.disallowedTools).toEqual(expect.arrayContaining(CLAUDE_OFF_TOOL_NAMES));
+  });
+
+  it('lets every chat turn with tools schedule a wakeup', () => {
+    const claude = agentDefinitions.claude;
+    const asking = optionsOf(claude.projectSessionMeta?.([], null, false, false));
+    const doing = optionsOf(claude.doSessionMeta?.([]));
+    for (const options of [asking, doing]) {
+      expect(options.tools).toEqual(expect.arrayContaining(['ScheduleWakeup', 'ToolSearch']));
+    }
+    expect(CLAUDE_OFF_TOOL_NAMES).not.toContain('ScheduleWakeup');
   });
 });
 

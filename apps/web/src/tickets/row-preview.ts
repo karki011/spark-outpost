@@ -1,5 +1,6 @@
 import { ticketSourceNames } from '@spark-outpost/contracts';
 import type { RichTip, TipItem } from '../ui/Tooltip.tsx';
+import { runStep } from '../chat/wait-label.ts';
 import { pullBadge } from './row-links.ts';
 import type { LiveTicket } from './ticket-flow.ts';
 import { ageTitle } from './ticket-model.ts';
@@ -13,7 +14,7 @@ export function rowPreview({ ticket, line, chat }: LiveTicket, now: number): Ric
     { label: 'Status', text: `${ticket.statusName} in ${ticketSourceNames[ticket.source]}` },
   ];
   if (ticket.chat) {
-    const step = chat?.latestRun?.status === 'running' ? chat.latestRun.step : null;
+    const step = chat?.latestRun?.status === 'running' ? runStep(chat.latestRun) : null;
     items.push({ label: 'Chat', text: [ticket.chat.title, step].filter(Boolean).join(' · ') });
   }
   if (ticket.pullRequest) {

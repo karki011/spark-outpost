@@ -8,16 +8,16 @@ summary: One-line definitions of the words you see in Spark Outpost - agent, mod
 
 | Term                      | Means                                                                                    |
 | ------------------------- | ---------------------------------------------------------------------------------------- |
-| **Agent**                 | The AI that reads and writes code: Claude Code, Codex or Z.ai.                           |
+| **Agent**                 | The AI that writes code: Claude Code, Codex or Z.ai.                                     |
 | **Agent mode**            | The provider's own [permission setting](modes-and-levels.md#agent-modes).                |
 | **Agent TV**              | A [live view](follow-a-turn.md#see-whats-happening) of a chat's agent.                   |
 | **Artifact**              | An agent's page, shown beside the chat; links ask first.                                 |
 | **Approval card**         | A [card asking](answer-approvals.md) before a command or edit.                           |
-| **Area**                  | A group of related files on the Map: **Core**, **Shared** or **Feature**.                |
+| **Area**                  | Related files on the Map: **Core**, **Shared** or **Feature**.                           |
 | **Compaction**            | [Replacing](compaction.md) a long chat's context with a summary.                         |
 | **Effort**                | How hard the agent thinks: Low to Max.                                                   |
 | **Jev**                   | An [optional advisor](jev.md) from TypeSafe, used outside chats.                         |
-| **MCP server**            | An external tool server an agent can call, added in **Settings → MCP servers**.          |
+| **MCP server**            | A tool server agents call, added in **Settings → MCP servers**.                          |
 | **Outpost**               | A [thread](outposts.md) where you ask several chats for work.                            |
 | **Story**                 | A job a chat [split into sub-tasks](outpost-stories.md), one chat each.                  |
 | **Stacked**               | A sub-task whose branch and pull request [build on another's](stacked-pull-requests.md). |
@@ -28,9 +28,9 @@ summary: One-line definitions of the words you see in Spark Outpost - agent, mod
 | **Ship**                  | [Commit, push or open a pull request](ship-and-pull-requests.md).                        |
 | **Spark**                 | The assistant layer around the agents. Also a [named teammate](sparks.md) you make.      |
 | **Spark autonomy**        | What Spark does with finished work: **Automatic** or **Full auto → PR**.                 |
-| **Spark Island**          | The Mac app's [panel](desktop-companion.md) at the top of the screen.                    |
+| **Spark Island**          | The Mac app's [panel](desktop-companion.md) atop the screen.                             |
 | **Sub-agent**             | A [helper](follow-a-turn.md#see-whats-happening) the agent starts itself.                |
 | **Standing instructions** | What a Spark follows in every chat.                                                      |
 | **To-do**                 | The agent's own checklist for a turn.                                                    |
 | **Work panel**            | The chat's side panel: to-do, plan, changes, cost.                                       |
-| **Worktree**              | A separate copy of the repo on its own branch, one per chat.                             |
+| **Worktree**              | A copy of the repo on its own branch, one per chat.                                      |

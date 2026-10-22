@@ -1,6 +1,7 @@
 import type { ConversationDetail, ConversationSummary } from '@spark-outpost/contracts';
 import { agentCounts, type AgentCounts } from '../chat/subagents/agent-cards.ts';
 import { hideSecrets } from '../chat/status/status-text.ts';
+import { runStep } from '../chat/wait-label.ts';
 import { sessionState, type Card } from './island-model.ts';
 import { waitingTitle } from './island-rest-line.ts';
 
@@ -47,7 +48,8 @@ export function runningRows(
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .map((chat) => {
       const agents = agentsOf(chat, details.get(chat.id));
-      const step = chat.latestRun?.step ? hideSecrets(chat.latestRun.step) : null;
+      const shown = chat.latestRun ? runStep(chat.latestRun) : null;
+      const step = shown ? hideSecrets(shown) : null;
       return { chat, agents, detail: agents ? agentsText(agents) : (step ?? 'working') };
     });
 }

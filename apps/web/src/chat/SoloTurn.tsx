@@ -1,6 +1,5 @@
 import {
   isTerminalRunStatus,
-  waitingOnLabel,
   STOPPED_BY_QUIT,
   type Approval,
   type ConversationDetail,
@@ -12,6 +11,7 @@ import {
 import { CacheRebuildNote } from '../usage/CacheRebuildNote.tsx';
 import { RunUsageMeta } from '../usage/RunUsageMeta.tsx';
 import { AiTurn, type TurnState } from './AiTurn.tsx';
+import { waitLabel } from './wait-label.ts';
 import { ApprovalCard } from './approvals/ApprovalCard.tsx';
 import { decidedFirst, hasPending } from './approvals/approval-events.ts';
 import { BrowserCheckMeta } from '../browser/BrowserCheckMeta.tsx';
@@ -154,7 +154,7 @@ export function SoloTurn({ run, detail, assistantMessage, laterMessages, repo }:
   useShowAgents(run.id, run.createdAt, subagents, working);
   const waitingOn = working && !waiting ? stream.subagents.waitingOn : 0;
   const waitingText =
-    waitingOn > 0 ? waitingOnLabel(waitingOn, stream.subagents.background).toLowerCase() : null;
+    waitingOn > 0 ? waitLabel(waitingOn, stream.subagents.background).toLowerCase() : null;
   const label = waitingText ?? status.label;
 
   const persistedSteps = detail.activity[run.id]?.length
