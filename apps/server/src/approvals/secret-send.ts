@@ -1,6 +1,6 @@
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { secretFileValues } from '../audit/secret-values.ts';
+import { projectSecretValues, secretFileValues } from '../audit/secret-values.ts';
 import { isSecretPath } from '../projects/path-policy.ts';
 import { runGit } from '../ship/git.ts';
 import { argumentWords, commandTree, type CommandTree } from './command-tree.ts';
@@ -142,6 +142,13 @@ function filesIn(text: string, sources: readonly SecretSource[]): string[] {
 export async function pushedSecretFiles(root: string, branch: string): Promise<string[]> {
   const pushed = await pushedText(root, [branch]);
   return pushed.unreadable ? [] : filesIn(pushed.text, await secretSources([root]));
+}
+
+export async function turnSecretValues(roots: readonly string[]): Promise<string[]> {
+  const nested = (await secretSources(roots)).flatMap((source) => source.values);
+  const values = [...(await projectSecretValues(roots)), ...nested];
+  const encoded = values.flatMap((value) => [value, encodeURIComponent(value)]);
+  return [...new Set(encoded)].sort((a, b) => b.length - a.length);
 }
 
 export async function secretFilesIn(text: string, roots: readonly string[]): Promise<string[]> {

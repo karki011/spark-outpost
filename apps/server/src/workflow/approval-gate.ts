@@ -45,7 +45,7 @@ import type { Append } from './agent-turn.ts';
 import { waitForApproval, type ApprovalWaiters, type WaitResult } from './approval-waiters.ts';
 import { chosenModeWhy } from './ask-auto.ts';
 import { runEvents } from './run-events.ts';
-import { approvalPayload, displayTitle, subject } from './approval-payload.ts';
+import { approvalPayload, displayTitle, subject, withoutSentAddress } from './approval-payload.ts';
 import { parseShell } from '../approvals/shell-parse.ts';
 import { blockedNote, policyDenial } from '../approvals/policy-blocked.ts';
 import {
@@ -139,7 +139,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     toolCallId: request.toolCallId,
     rpcId: request.rpcId,
     kind: request.kind,
-    title: displayTitle(request, asking),
+    title: displayTitle(request),
     payload: approvalPayload(request, asking),
     options: askedOptions(request.options, asking),
     reason,
@@ -346,9 +346,11 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
   };
 
   const decideRequest = async (
-    request: ApprovalRequest,
+    asked: ApprovalRequest,
     signal: AbortSignal,
   ): Promise<GateAnswer> => {
+    const sent = await secretSend(asked);
+    const request = withoutSentAddress(asked, sent);
     const what = subject(request);
     await afterQueuedUpdates();
     if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
@@ -372,7 +374,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       defaultBranch: await forcePushDefault(request),
       observed: (await deps.observations?.labels()) ?? [],
       own: await ownRepoFor(deps.db, deps.runId, request),
-      secretSend: await secretSend(request),
+      secretSend: sent,
       instructionGrants,
       shell: request.kind === 'execute' ? await parseShell(request.command) : null,
       agentAsks: Boolean(request.agentReason),
