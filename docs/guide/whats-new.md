@@ -12,7 +12,7 @@ What changed recently, newest first.
 
 | What changed                                                                                                                                 | What to do                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Mac app: **Settings…** (⌘,), **View › Hide Sidebar** (⌃⌘S), a right-click edit menu; no Developer Tools.                                     | See [Keys](keyboard-shortcuts.md#chats).                                 |
+| Mac app: **Settings…** (⌘,) opens its own window; **View › Hide Sidebar** (⌃⌘S); a right-click edit menu.                                    | See [Keys](keyboard-shortcuts.md#chats).                                 |
 | One-answer questions show round buttons. Text is at least 12px.                                                                              | See [Cards](cards.md#approval-cards).                                    |
 | Spark Island answers one-pick questions; its card count skips set-aside cards.                                                               | See [Cards](cards.md#approval-cards).                                    |
 | **Add folder…** ends every project picker.                                                                                                   | See [Link a project](start-a-chat.md#link-a-project).                    |

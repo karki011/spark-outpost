@@ -6,7 +6,7 @@ order: 610
 summary: Every Settings section by group, its rows and defaults, and the page that explains each one.
 ---
 
-Select **Settings** at the bottom of the rail, or press **⌘,** in the Mac app. **Search settings** finds a section or row; Enter opens it.
+Select **Settings** on the rail or press **⌘,**; the Mac app opens a window. **Search settings** finds a section or row; Enter opens it.
 
 ## General
 
