@@ -17,6 +17,7 @@ export interface ChatPromptFacts {
   outpostStartTool?: boolean;
   level: InvolvementLevel;
   followUpRound?: boolean;
+  asksWithTool?: boolean;
   customInstructions: string | null;
 }
 
@@ -46,7 +47,7 @@ function splitSection(facts: ChatPromptFacts): string {
     text.SPLIT_ALONE,
     text.SPLIT_SUB_AGENTS,
     ...subChatLines(facts),
-    text.SPLIT_UNCLEAR,
+    facts.asksWithTool ? text.SPLIT_ASK_WITH_TOOL : text.SPLIT_UNCLEAR,
   ].join('\n');
 }
 

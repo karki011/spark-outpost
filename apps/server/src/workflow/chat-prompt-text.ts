@@ -9,6 +9,8 @@ export const SPLIT_SUB_CHATS =
 export const SPLIT_SUB_CHATS_START =
   '- Work that spans repos, needs separate branches or pull requests, or has parts that can run in parallel chats: split it into sub-chats and say why. Start them with spark_outpost_start when the user asked for it or the work needs it; propose them with spark_outpost_draft when the user should review the split first.';
 export const SPLIT_UNCLEAR = '- If the request is unclear, ask one question and stop.';
+export const SPLIT_ASK_WITH_TOOL =
+  '- When the user should choose, or a detail you need is missing, call AskUserQuestion (Codex: request_user_input) with the options instead of writing them in your reply, and use the answer it returns.';
 
 export const ENGINEERING = [
   'Engineering',

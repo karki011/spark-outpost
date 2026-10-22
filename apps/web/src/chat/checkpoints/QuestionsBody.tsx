@@ -121,13 +121,18 @@ export function QuestionsBody({
     focusActive.current = true;
     setActive(index);
   };
+  const asked = approval.payload.form !== undefined;
+  const canSend = asked || reply !== '';
   const send = () => {
-    if (reply && !decide.busy) decide(CHECKPOINT_OPTION.answer, reply);
+    if (!canSend || decide.busy) return;
+    if (!asked) return decide(CHECKPOINT_OPTION.answer, reply);
+    const sent = answers.map((given) => ({ picks: [...given.picks], text: given.text }));
+    decide(CHECKPOINT_OPTION.answer, reply || undefined, sent);
   };
   const pick = (index: number) => {
     const question = questions[active];
     const picked = question && quickPicks(question)[index];
-    if (picked) answer(active, togglePick(answers[active] ?? NO_ANSWER, picked));
+    if (picked) answer(active, togglePick(answers[active] ?? NO_ANSWER, picked, question));
     return picked !== undefined;
   };
   const keys = (event: KeyboardEvent<HTMLFormElement>) => {
@@ -189,11 +194,11 @@ export function QuestionsBody({
           ))}
         </ol>
       </div>
-      {offers(approval, CHECKPOINT_OPTION.answer) && (
+      {offers(approval, CHECKPOINT_OPTION.answer) && !asked && (
         <OwnWords value={ownWords} onChange={setOwnWords} hold={decide.hold} />
       )}
       <div className="appr-acts ck-foot">
-        <button type="submit" className="btn primary sm" disabled={decide.busy || !reply}>
+        <button type="submit" className="btn primary sm" disabled={decide.busy || !canSend}>
           Send
         </button>
         <ClarifyFoot approval={approval} decide={decide} />

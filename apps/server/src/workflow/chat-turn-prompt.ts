@@ -43,6 +43,7 @@ export async function chatPromptFacts(db: Queryable, input: RunInput): Promise<C
     outpostStartTool: needs.outpost_start,
     level: input.level,
     followUpRound: input.followUpRound === true,
+    asksWithTool: input.mode === 'do' && input.plansFirst !== true,
     customInstructions: prefs.agentInstructions ?? null,
   };
 }

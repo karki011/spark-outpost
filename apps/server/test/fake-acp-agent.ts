@@ -5,6 +5,7 @@ import { buildTurn } from './fake-acp-build.ts';
 import { pushAuthStatus, rejectedTurn, signedOut } from './fake-acp-access.ts';
 import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
+import { questionTurn } from './fake-acp-questions.ts';
 import { modeTurn } from './fake-acp-modes.ts';
 import { railCrossings } from './fake-acp-rails.ts';
 import { floorTurn } from './fake-acp-floor.ts';
@@ -243,6 +244,8 @@ async function turn(
   const commanded = await commandTurn(params.prompt, update, say);
   if (commanded) return commanded;
   if (text.includes('#silent')) return 'end_turn';
+  const questioned = await questionTurn(text, client, sessionId, say);
+  if (questioned) return questioned;
   const limited = await rateLimitTurn(text, update, say);
   if (limited) return limited;
   const windowed = await windowTurn(text, update, say, signal);
