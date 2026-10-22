@@ -15,7 +15,7 @@
   "agent-method:session/new": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/acp-provider.ts, apps/server/src/agents/acp/probe.ts",
-    "note": "cwd is the primary linked repo. A chat without a project gets a private folder per conversation and agent key under $TMPDIR/spark-outpost-sessions so a resumed session keeps its cwd; a child run without a resumeKey gets a new temp folder. additionalDirectories carries the other linked repos when the agent advertises the capability. mcpServers carries the user-level servers enabled for the chat and the project .mcp.json servers the user turned on (see REPO_AGENT_CONFIG.md). Vendor _meta comes from agents.ts."
+    "note": "cwd is the primary linked repo. A chat without a project uses its own folder (<data>/<channel>/chats/<chat>/work) as cwd, and a chat-mode turn (such as Ask Spark's hidden chat) gets a private folder per conversation and agent key under $TMPDIR/spark-outpost-sessions, so a resumed session keeps its cwd; a child run without a resumeKey gets a new temp folder. additionalDirectories carries the other linked repos when the agent advertises the capability. mcpServers carries the user-level servers enabled for the chat and the project .mcp.json servers the user turned on (see REPO_AGENT_CONFIG.md). Vendor _meta comes from agents.ts."
   },
   "agent-method:session/load": {
     "status": "supported",

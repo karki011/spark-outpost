@@ -95,7 +95,7 @@ Terminals live in the API process and Spark tools run in the worker, so the API 
 
 `spark_mcp_servers` (`tools/mcp-tool.ts`) lists the user's own MCP servers from `mcp_servers` and `mcp_server_enablements`: id, name, where it came from, transport, the exact command and arguments or URL, the names of its environment variables and headers, which names still have no saved value (`valuesMissing`), where it is on (all chats, this chat, projects), whether it changed since it was reviewed, and the last connection test. Secret values are never read.
 
-Four action tools (`actions/mcp-actions.ts`, performed by `actions/mcp-perform.ts`) follow the same policy as every Spark action (`actionPath`): Spark does it at once in Auto, Bypass/Full access or Full auto → PR, and in Accept edits when the user's message asked for it; otherwise, or after the run read secrets or private data, the tool returns `waiting_for_user` and the user confirms a card.
+Four action tools (`actions/mcp-actions.ts`, performed by `actions/mcp-perform.ts`) follow the same policy as every Spark action (`actionPath`): Spark does it at once in Auto, Bypass permissions, Approve for me or Full access, and in Accept edits when the user's message asked for it; otherwise the tool returns `waiting_for_user` and the user confirms a card.
 
 | Tool                      | Action              | Does                                                                                                                                 |
 | ------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |

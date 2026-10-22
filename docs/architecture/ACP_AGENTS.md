@@ -13,7 +13,7 @@ message → run (Postgres) → worker claims job → ACP provider
   → stop reason → run finished, failed, or cancelled
 ```
 
-- **Processes and sessions.** The worker starts `claude-agent-acp` or `codex-acp` from the server's dependencies, over stdio. A chat without a project works in a folder under `$TMPDIR/spark-outpost-sessions` (`SESSION_WORKDIR_ROOT`), and a later turn resumes the chat's agent session when it can (M6, `workflow/session-decision.ts`).
+- **Processes and sessions.** The worker starts `claude-agent-acp` or `codex-acp` from the server's dependencies, over stdio. A chat without a project works in its own folder (see Projects for a new chat below); a chat-mode turn (such as Ask Spark's hidden chat) works in a folder under `$TMPDIR/spark-outpost-sessions` (`SESSION_WORKDIR_ROOT`), and a later turn resumes the chat's agent session when it can (M6, `workflow/session-decision.ts`).
 - **Context.** A fresh session gets the conversation from Postgres, the source of truth; a resumed session gets only the new message. Up to 36 KB of the newest messages are included, and the prompt says how many older ones were left out. Messages are not summarized yet. A chat's conversation session that has to be replaced gets a handoff instead of the raw history (`workflow/session-brief.ts`).
 - **Settings.** The run first forces the chat mode, then applies the connection's model and effort through config options. Model and effort are matched by value first, then by display name. If a value isn't offered, the run adds a visible step saying the agent's default is used. If the chat mode can't be applied, the run stops before the prompt is sent.
 - **Permissions.** Every permission request is declined with the agent's reject-once option, and the work log records a "Declined: …" step. A request that arrives after Stop is answered with the `cancelled` outcome, as the spec requires.
@@ -222,7 +222,7 @@ The mockup's work log ("Worked for 18s", a list of steps) is built from ACP sess
 
 Steps are stored as AG-UI `STEP_STARTED` / `STEP_FINISHED` run events. The conversation detail returns each run's step names (`activity`), so finished turns keep a collapsed "Worked for Ns", "Stopped after N steps", or "Failed after N steps" log. The live turn shows it open, with a spinner on the running step.
 
-In a chat with no project there is little to show: Claude's built-in tools are off, so a Claude chat usually has no steps beyond the `spark` MCP server's own tool calls (see [REPO_AGENT_CONFIG.md](REPO_AGENT_CONFIG.md#sparks-own-tools-spark-mcp-server)). Codex shows thinking and sometimes a plan. Most activity arrives with the project-folder path.
+In a chat-mode turn (such as Ask Spark's hidden chat) there is little to show: Claude gets only AskUserQuestion of its built-in tools, so a Claude turn usually has no steps beyond the `spark` MCP server's own tool calls (see [REPO_AGENT_CONFIG.md](REPO_AGENT_CONFIG.md#sparks-own-tools-spark-mcp-server)). Codex shows thinking and sometimes a plan. Most activity arrives with the project-folder path.
 
 ## Spike findings (claude-agent-acp 0.81.2, codex-acp 1.13.1, SDK 1.5.0)
 
@@ -252,7 +252,9 @@ No resume call failed and no transcript repair was needed. One oddity on Claude:
 
 ## Chat lockdown and known limits
 
-- **Claude:** built-in tools are turned off (`_meta.claudeCode.options.tools: []`, `strictMcpConfig`), so a chat cannot read or write files or run commands beyond the `spark` MCP server every session gets (see REPO_AGENT_CONFIG.md). Without a note in the prompt, Claude wrote fake tool-call markup as text. The prompt now says the chat has no project folder and no tools of its own.
+Chat mode now applies only to Ask Spark's hidden chat, Terminal sessions (`runMode` in `persistence/conversations.ts`) and a Spark handed a job in a chat without a project (`orchestration/spark-handoff.ts`); a chat with no project runs as an Ask or Do turn in its own folder (above).
+
+- **Claude:** built-in tools are turned off except AskUserQuestion (`_meta.claudeCode.options.tools: ['AskUserQuestion']`, `strictMcpConfig`; `conversationSessionMeta` in `agents.ts`), so a chat cannot read or write files or run commands beyond the `spark` MCP server every session gets (see REPO_AGENT_CONFIG.md). Without a note in the prompt, Claude wrote fake tool-call markup as text. The prompt now says the chat has no project folder and may call only the tools the session offers (`CHAT_TOOLS_NOTE`).
 - **Codex:** chats use the patched `read-only` mode, a real `readOnly` sandbox with no network (see "Session (Codex)" above and [PATCHES.md](PATCHES.md)). For chats, Spark Outpost also:
   - sets `INITIAL_AGENT_MODE=read-only`
   - points `TMPDIR` at the run's private folder
