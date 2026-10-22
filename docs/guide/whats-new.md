@@ -12,6 +12,7 @@ What changed recently, newest first.
 
 | What changed                                                                                                                                 | What to do                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| An outpost no longer shows the last chat's Browser pane on its left.                                                                         | See [Outposts](outposts.md).                                             |
 | Spark Island answers one-pick questions; its card count skips set-aside cards.                                                               | See [Cards](cards.md#approval-cards).                                    |
 | **Add folder…** ends every project picker.                                                                                                   | See [Link a project](start-a-chat.md#link-a-project).                    |
 | Agents are signed in wherever you are in the Browser pane. Sign in again once.                                                               | See [Use the browser](use-the-browser.md#let-the-agent-look-and-browse). |
