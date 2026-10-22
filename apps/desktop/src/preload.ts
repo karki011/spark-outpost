@@ -137,9 +137,8 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     command: (chatId: string, command: unknown) =>
       ipcRenderer.invoke(IPC.browserCommand, chatId, command),
     start: (placement: unknown) => ipcRenderer.invoke(IPC.browserStart, placement),
-    sites: (projectId: string) => ipcRenderer.invoke(IPC.browserSites, projectId),
-    signOut: (projectId: string, origin: string | null) =>
-      ipcRenderer.invoke(IPC.browserSignOut, { projectId, origin }),
+    sites: () => ipcRenderer.invoke(IPC.browserSites),
+    signOut: (origin: string | null) => ipcRenderer.invoke(IPC.browserSignOut, { origin }),
     onState: (callback: (state: unknown) => void) => listen(IPC.browserStateChanged, callback),
     onSnapshot: (callback: (snapshot: unknown) => void) => listen(IPC.browserSnapshot, callback),
     onPicked: (callback: (pick: unknown) => void) => listen(IPC.browserPicked, callback),

@@ -22,7 +22,7 @@ A ready update installs when you next quit. While a chat runs or waits, the blob
 ## Stable or Beta
 
 1. Open **Settings → Updates**.
-2. Under **Channel**, pick **Stable** (the default) or **Beta** (new features earlier, rougher).
+2. Under **Channel**, pick **Stable** (default) or **Beta** (new features earlier, rougher).
 
 ![Settings, Updates: Version, Update ready, Channel, Download updates automatically and Check for updates](images/updates-section-light.png)
 

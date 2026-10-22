@@ -15,6 +15,10 @@ export async function withDesktopBrowser(page: Page) {
     const shortcutListeners = new Set<(event: unknown) => void>();
     const foundListeners = new Set<(found: unknown) => void>();
     const noop = () => () => undefined;
+    let signedIn = [
+      { origin: 'http://localhost', cookies: 2 },
+      { origin: 'https://docs.example.com', cookies: 1 },
+    ];
     const tab = (id: string, change: Record<string, unknown>) => ({
       id,
       title: '',
@@ -65,10 +69,11 @@ export async function withDesktopBrowser(page: Page) {
             calls.push({ kind: 'start', payload: placement });
             return { chatId: placement.chatId, tabs: [tab('t1', { active: true })] };
           },
-          sites: async () => [{ origin: 'http://localhost', cookies: 2 }],
-          signOut: async (projectId: string, origin: string | null) => {
-            calls.push({ kind: 'signOut', payload: { projectId, origin } });
-            return [];
+          sites: async () => signedIn,
+          signOut: async (origin: string | null) => {
+            calls.push({ kind: 'signOut', payload: { origin } });
+            signedIn = origin === null ? [] : signedIn.filter((site) => site.origin !== origin);
+            return signedIn;
           },
           onState: (listener: (state: unknown) => void) => {
             stateListeners.add(listener);

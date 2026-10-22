@@ -132,7 +132,6 @@ describe('projects', () => {
       createdAt: expect.any(String),
       commandAllowlist: [],
       workPlace: 'checkout',
-      browserKeepSignIns: true,
       preview: null,
     });
     const again = await post('/api/projects', { rootPath: root }).expect(200);

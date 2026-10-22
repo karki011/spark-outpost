@@ -12,7 +12,7 @@ vi.mock('./cdp.ts', () => ({
 
 const CHAT = '11111111-2222-4333-8444-555555555555';
 const LOCAL = 'http://localhost:5173/';
-const home = { projectId: null, keepSignIns: false, roots: [] };
+const home = { projectId: null, roots: [] };
 const signal = new AbortController().signal;
 const where = { chatId: CHAT, runId: null, tab: undefined };
 

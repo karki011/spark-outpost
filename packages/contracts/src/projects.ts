@@ -14,7 +14,6 @@ export const projectSchema = z.object({
   lastUsedAt: z.string().optional(),
   commandAllowlist: z.array(z.string()),
   workPlace: workPlaceSchema.optional(),
-  browserKeepSignIns: z.boolean().optional(),
   preview: previewConfigSchema.nullable().optional(),
 });
 export type Project = z.infer<typeof projectSchema>;

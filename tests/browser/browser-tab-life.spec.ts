@@ -76,3 +76,29 @@ test('the toolbar and Alt+Cmd+I open developer tools for the shown tab', async (
   expect(sent).toHaveLength(before + 1);
   expect(sent.at(-1)).toEqual({ chatId, command: { command: 'devtools', tabId: 't1' } });
 });
+
+test('Settings signs out of one site or of everything in the one Browser pane profile', async ({
+  page,
+}) => {
+  await withDesktopBrowser(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Browser pane' }).click();
+  const settings = page.getByRole('dialog', { name: 'Browser pane' });
+  const sites = settings.getByRole('group', { name: 'Signed-in sites' });
+  await expect(sites.getByText('http://localhost')).toBeVisible();
+  await sites.getByRole('button', { name: 'Sign out of http://localhost' }).click();
+  await expect(sites.getByText('http://localhost')).toHaveCount(0);
+  await expect(sites.getByText('https://docs.example.com')).toBeVisible();
+  await sites.getByRole('button', { name: 'Sign out of everything' }).click();
+  await expect(settings.getByText('No signed-in sites.')).toBeVisible();
+  expect(await calls(page, 'signOut')).toEqual([{ origin: 'http://localhost' }, { origin: null }]);
+  await expect(settings.getByRole('switch', { name: /Keep sign-ins/ })).toHaveCount(0);
+});
+
+test('Settings has no Browser pane section without the Mac app', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.getByRole('dialog', { name: 'Profile & personality' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Browser pane' })).toHaveCount(0);
+});

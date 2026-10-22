@@ -7,25 +7,19 @@ import {
   pagePermissionAllowed,
   type InputMarks,
 } from './clipboard-permission.ts';
-import {
-  isBrowserPartition,
-  projectPartition,
-  requestAllowed,
-  withoutSparkToken,
-} from './request-guard.ts';
+import { BROWSER_PARTITION, requestAllowed, withoutSparkToken } from './request-guard.ts';
 
 export interface SessionGuards {
   blockedPorts(): ReadonlySet<number>;
-  roots(partition: string): readonly string[];
+  roots(contents: WebContents | null): readonly string[];
   log(line: string): void;
   inputMarks(contents: WebContents | null): InputMarks | null;
 }
 
 const configured = new WeakSet<Session>();
 
-export function browserSession(partition: string, guards: SessionGuards): Session {
-  if (!isBrowserPartition(partition)) throw new Error('Not a browser partition.');
-  const target = session.fromPartition(partition);
+export function browserSession(guards: SessionGuards): Session {
+  const target = session.fromPartition(BROWSER_PARTITION);
   if (target === session.defaultSession) {
     throw new Error('The browser pane never uses the app session.');
   }
@@ -47,7 +41,7 @@ export function browserSession(partition: string, guards: SessionGuards): Sessio
   target.webRequest.onBeforeRequest((details, callback) => {
     const allowed = requestAllowed(details.url, {
       blockedPorts: guards.blockedPorts(),
-      roots: guards.roots(partition),
+      roots: guards.roots(details.webContents ?? null),
     });
     if (!allowed)
       guards.log('Blocked a page request to a Spark port or a file outside the project.');
@@ -103,8 +97,8 @@ function cookieOrigin(domain: string, secure: boolean): string {
   return `${secure ? 'https' : 'http'}://${host}`;
 }
 
-export async function signedInSites(projectId: string): Promise<SignedInSite[]> {
-  const target = session.fromPartition(projectPartition(projectId));
+export async function signedInSites(): Promise<SignedInSite[]> {
+  const target = session.fromPartition(BROWSER_PARTITION);
   const cookies = await target.cookies.get({});
   const counts = new Map<string, number>();
   for (const cookie of cookies) {
@@ -116,8 +110,8 @@ export async function signedInSites(projectId: string): Promise<SignedInSite[]> 
     .sort((a, b) => a.origin.localeCompare(b.origin));
 }
 
-export async function signOut(projectId: string, origin: string | null): Promise<void> {
-  const target = session.fromPartition(projectPartition(projectId));
+export async function signOut(origin: string | null): Promise<void> {
+  const target = session.fromPartition(BROWSER_PARTITION);
   if (origin === null) {
     await target.clearStorageData();
     return;
