@@ -164,6 +164,7 @@ export function IslandApp() {
     note: note !== null,
     panel,
     cards: allCards,
+    aside: attention.aside,
     review,
     hoverLine: hover && hoverLine,
   });

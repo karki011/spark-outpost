@@ -2,13 +2,21 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ConversationDetail } from '@spark-outpost/contracts';
+import {
+  CHECKPOINT_OPTION,
+  formQuestions,
+  type AgentForm,
+  type ConversationDetail,
+} from '@spark-outpost/contracts';
+import { checkpoint } from '../crew/test-orchestration.ts';
 import { approvalsApi } from '../api/approvals.ts';
 import { at, event, link } from '../calendar/test-fixtures.ts';
 import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
 import { homeApi } from '../home/home-api.ts';
 import { ARMING_MS } from './island-parts.tsx';
 import { IslandHome, type HomeBundle } from './IslandHome.tsx';
+import { cardHeading } from './CardView.tsx';
+import { pendingCards } from './island-model.ts';
 import { approval, card, chat, CHAT_B, run } from './inbox-test-fixtures.ts';
 
 const standup = event('Standup', at(10, 8), at(10, 23), { link: link('zoom') });
@@ -37,6 +45,50 @@ function calendar(overrides: Partial<IslandCalendar> = {}): IslandCalendar {
     onJoined: vi.fn(),
     ...overrides,
   };
+}
+
+const colour: AgentForm = {
+  message: 'Which colour do you want?',
+  fields: [
+    {
+      key: 'question_0',
+      kind: 'one',
+      question: 'Which colour do you want?',
+      options: [
+        { label: 'Red', value: 'Red' },
+        { label: 'Blue', value: 'Blue' },
+      ],
+      required: false,
+      noteKey: 'question_0_custom',
+      otherValue: null,
+      minimum: null,
+      maximum: null,
+      minLength: null,
+      maxLength: null,
+      minItems: null,
+      maxItems: null,
+      default: null,
+    },
+  ],
+};
+
+function agentQuestion() {
+  const base = checkpoint(
+    {
+      kind: 'clarify',
+      agent: 'Claude',
+      question: 'Claude needs your input to continue',
+      questions: formQuestions(colour),
+    },
+    {
+      title: 'Which colour do you want?',
+      options: [
+        { optionId: CHECKPOINT_OPTION.answer, name: 'Send', kind: 'allow_once' },
+        { optionId: CHECKPOINT_OPTION.finish, name: 'Skip', kind: 'reject_once' },
+      ],
+    },
+  );
+  return { ...base, payload: { ...base.payload, form: colour } };
 }
 
 const working = chat(CHAT_B, { title: 'Telemetry ingest', latestRun: run('running') });
@@ -178,5 +230,48 @@ describe('the island home', () => {
     expect(screen.getByRole('list', { name: 'Meetings left today' }).textContent).toContain(
       'Standup',
     );
+  });
+
+  it('heads a Spark action card with its own title', () => {
+    const action = card('open', {
+      approval: approval({
+        kind: 'spark_action',
+        title: 'Let the agent read your calendar?',
+        payload: {
+          command: null,
+          cwd: null,
+          paths: [],
+          diffs: [],
+          truncated: false,
+          sparkAction: { what: 'calendar_read', action: {} } as never,
+        },
+      }),
+    });
+    expect(cardHeading(action, 'Claude')).toBe('Let the agent read your calendar?');
+  });
+
+  it('offers an agent question’s choices and sends the pick as the chat would', async () => {
+    const asking = chat(CHAT_B, { needsInput: true, title: 'Colour chat' });
+    const question = agentQuestion();
+    const approvals = new Map([
+      [CHAT_B, [{ ...question, runId: asking.latestRun?.id ?? question.runId }]],
+    ]);
+    const [found] = pendingCards([asking], approvals);
+    expect(found?.kind).toBe('question');
+    expect(cardHeading(found!, 'Claude')).toBe('Claude has a question');
+    show(home({ chats: [asking], cards: [found!] }), calendar({ upcoming: [] }));
+    await armed();
+    expect(
+      screen.getByText('Which colour do you want?', { selector: '.isl-focus-title' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Red' }));
+    await flush();
+    expect(decide).toHaveBeenCalledWith(question.id, {
+      optionId: CHECKPOINT_OPTION.answer,
+      scope: 'once',
+      payloadHash: question.payloadHash,
+      note: 'Which colour do you want? → Red',
+      answers: [{ picks: ['Red'], text: '' }],
+    });
   });
 });

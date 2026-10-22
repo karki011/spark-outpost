@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import {
-  clarifyOptionId,
-  type Approval,
-  type ApprovalOption,
-  type ApprovalScope,
-} from '@spark-outpost/contracts';
+import { type Approval, type ApprovalOption, type ApprovalScope } from '@spark-outpost/contracts';
 import { projectAllowOption } from '../chat/approvals/approval-outcome.ts';
-import { isCheckpoint, type CheckpointApproval } from '../chat/checkpoints/checkpoint-model.ts';
+import {
+  asksQuestions,
+  checkpointTitle,
+  isCheckpoint,
+  type CheckpointApproval,
+} from '../chat/checkpoints/checkpoint-model.ts';
 import { useAutoContinue } from '../chat/checkpoints/use-auto-continue.ts';
 import { attentionLine } from '../conversations/row-state.ts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
+import { askedPrompt, pickDecision, questionPicks, type QuestionPick } from './asked-question.ts';
 import { approvalHunk, baseName } from './island-diff.ts';
 import { IslandDiff } from './IslandDiff.tsx';
 import type { Card } from './island-model.ts';
@@ -45,6 +46,9 @@ export function cardHeading(card: Card, who: string): string {
       ? `${who} wants to change files`
       : `${who} wants to change a file`;
   }
+  if (approval.payload.sparkAction) return approval.title;
+  const checkpoint = approval.payload.checkpoint;
+  if (checkpoint && asksQuestions(checkpoint)) return checkpointTitle(checkpoint);
   return `${who} wants to ${approval.title}`;
 }
 
@@ -162,10 +166,10 @@ export function QuestionChoices({
   approval: CheckpointApproval;
   armed: boolean;
   busy: boolean;
-  onPick: (optionId: string, label: string) => void;
+  onPick: (pick: QuestionPick) => void;
 }) {
   const auto = useAutoContinue(approval);
-  const choices = approval.payload.checkpoint.choices;
+  const picks = questionPicks(approval);
   const [paused, setPaused] = useState(false);
   const total = approval.autoContinueAt
     ? Math.max(
@@ -182,16 +186,16 @@ export function QuestionChoices({
       }}
     >
       <div className="isl-opts">
-        {choices.map((choice, index) => (
+        {picks.map((pick, index) => (
           <button
-            key={choice}
+            key={pick.label}
             type="button"
             className={index === 0 ? 'isl-btn opt def' : 'isl-btn opt'}
             data-arming={!armed || undefined}
             disabled={!armed || busy}
-            onClick={() => onPick(clarifyOptionId(index), choice)}
+            onClick={() => onPick(pick)}
           >
-            {choice}
+            {pick.label}
           </button>
         ))}
       </div>
@@ -313,20 +317,12 @@ export function CardView({
         )}
       {card.kind === 'question' && approval && isCheckpoint(approval) && (
         <>
-          {approval.payload.checkpoint.question && (
-            <p className="isl-hint">{approval.payload.checkpoint.question}</p>
-          )}
+          {askedPrompt(approval) && <p className="isl-hint">{askedPrompt(approval)}</p>}
           <QuestionChoices
             approval={approval}
             armed={armed}
             busy={decide.isPending}
-            onPick={(optionId, label) =>
-              decide.mutate({
-                option: { optionId, name: label, kind: 'allow_once' },
-                scope: 'once',
-                said: { title: `Got it, using ${label}`, sub: `${agent.name} carries on.` },
-              })
-            }
+            onPick={(pick) => decide.mutate(pickDecision(pick, agent.name))}
           />
         </>
       )}
