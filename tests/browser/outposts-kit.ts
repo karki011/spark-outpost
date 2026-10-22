@@ -31,7 +31,7 @@ export const asksLine = (page: Page) =>
 export const thread = (page: Page) => page.getByRole('list', { name: 'Outpost thread' });
 export const post = (page: Page, text: string) =>
   thread(page).locator('.op-post', { hasText: text });
-export const stateOf = (item: Locator) => item.locator('.op-card .op-pill');
+export const stateOf = (item: Locator) => item.locator('.op-pill');
 export const cardOf = (item: Locator) => item.locator('.op-card');
 export const threadPane = (page: Page, handle: string) =>
   page.getByRole('complementary', { name: `Thread with @${handle}` });
