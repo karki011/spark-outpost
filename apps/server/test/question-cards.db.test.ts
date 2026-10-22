@@ -8,7 +8,11 @@ import {
   getConversationDetail,
   sendUserMessage,
 } from '../src/persistence/conversations.ts';
-import { getApproval, insertApproval } from '../src/persistence/approvals.ts';
+import {
+  approvalAnswerContent,
+  getApproval,
+  insertApproval,
+} from '../src/persistence/approvals.ts';
 import { claimNextJob } from '../src/persistence/jobs.ts';
 import { getRun, requestCancel } from '../src/persistence/runs.ts';
 import type { Provider, QuestionReply } from '../src/providers/provider.ts';
@@ -145,6 +149,22 @@ describe('an agent’s question card', () => {
       decidedBy: 'user',
       note: answer.note,
     });
+  });
+
+  it('sends the agent’s defaults when the user picks nothing, with no note', async () => {
+    const { runId } = await chatTurn();
+    const defaults = agentForm({
+      sessionId: 's',
+      mode: 'form',
+      message: 'A few details',
+      requestedSchema: {
+        type: 'object',
+        properties: { notify: { type: 'boolean', title: 'Notify the team?', default: true } },
+      },
+    });
+    const card = await insertApproval(t.db, questionCard(runId, { ...question, form: defaults }));
+    await decide(card.id, { optionId: 'answer', answers: [{ picks: [], text: '' }] }).expect(200);
+    expect(await approvalAnswerContent(t.db, card.id)).toEqual({ notify: true });
   });
 
   it('declines when the user skips', async () => {

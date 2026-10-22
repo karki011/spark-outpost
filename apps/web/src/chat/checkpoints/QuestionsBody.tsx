@@ -122,11 +122,12 @@ export function QuestionsBody({
     setActive(index);
   };
   const asked = approval.payload.form !== undefined;
+  const canSend = asked || reply !== '';
   const send = () => {
-    if (!reply || decide.busy) return;
+    if (!canSend || decide.busy) return;
     if (!asked) return decide(CHECKPOINT_OPTION.answer, reply);
     const sent = answers.map((given) => ({ picks: [...given.picks], text: given.text }));
-    decide(CHECKPOINT_OPTION.answer, reply, sent);
+    decide(CHECKPOINT_OPTION.answer, reply || undefined, sent);
   };
   const pick = (index: number) => {
     const question = questions[active];
@@ -197,7 +198,7 @@ export function QuestionsBody({
         <OwnWords value={ownWords} onChange={setOwnWords} hold={decide.hold} />
       )}
       <div className="appr-acts ck-foot">
-        <button type="submit" className="btn primary sm" disabled={decide.busy || !reply}>
+        <button type="submit" className="btn primary sm" disabled={decide.busy || !canSend}>
           Send
         </button>
         <ClarifyFoot approval={approval} decide={decide} />

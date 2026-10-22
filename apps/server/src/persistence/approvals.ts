@@ -282,7 +282,8 @@ function validateDecision(approval: Approval, decision: UserDecision): ApprovalO
   if (decision.answers && !approval.payload.form) {
     throw new ApprovalInputError('Only an agent question takes answers.');
   }
-  if (isCheckpointKind(approval.kind) && NOTE_OPTIONS.includes(option.optionId)) {
+  const needsNote = NOTE_OPTIONS.includes(option.optionId) && !approval.payload.form;
+  if (isCheckpointKind(approval.kind) && needsNote) {
     if (!decision.note?.trim()) throw new ApprovalInputError('This answer needs a note.');
   }
   return option;
