@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 
 export interface NativeWindow {
+  isDestroyed(): boolean;
   getNativeWindowHandle(): Buffer;
 }
 
@@ -45,6 +46,7 @@ export function noActivate(
   }
   let warned = false;
   return (window) => {
+    if (window.isDestroyed()) return;
     const result = addon.preventActivation(window.getNativeWindowHandle());
     if (result === 'applied' || warned) return;
     warned = true;

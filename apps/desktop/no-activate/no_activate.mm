@@ -1,6 +1,7 @@
 #import <AppKit/AppKit.h>
 #include <node_api.h>
 #include <objc/message.h>
+#include <string.h>
 
 static NSWindow* WindowFromHandle(napi_env env, napi_value handle) {
   bool isBuffer = false;
@@ -8,10 +9,14 @@ static NSWindow* WindowFromHandle(napi_env env, napi_value handle) {
   void* data = nullptr;
   size_t length = 0;
   if (napi_get_buffer_info(env, handle, &data, &length) != napi_ok) return nil;
-  if (length < sizeof(void*)) return nil;
-  NSView* view = *reinterpret_cast<NSView* __unsafe_unretained*>(data);
-  if (view == nil || ![view isKindOfClass:[NSView class]]) return nil;
-  return view.window;
+  if (data == nullptr || length != sizeof(void*)) return nil;
+  void* raw = nullptr;
+  memcpy(&raw, data, sizeof(void*));
+  if (raw == nullptr) return nil;
+  for (NSWindow* window in [NSApp windows]) {
+    if ((__bridge void*)window.contentView == raw) return window;
+  }
+  return nil;
 }
 
 static napi_value Result(napi_env env, const char* text) {
