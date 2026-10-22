@@ -11,6 +11,7 @@ import {
   MoveIcon,
   PenIcon,
   PinIcon,
+  PlusIcon,
   RestoreIcon,
   SparkleIcon,
   TrashIcon,
@@ -22,6 +23,7 @@ import {
   OutpostPick,
   type AddToOutpostActions,
 } from './AddToOutpost.tsx';
+import type { PickerAction } from '../ui/ChoicePicker.tsx';
 import { MenuItem as Item, MenuShell, type MenuAnchor } from './MenuShell.tsx';
 
 type Page = 'main' | 'move' | 'outposts' | 'handle';
@@ -49,6 +51,7 @@ interface ChatMenuProps extends ChatMenuActions {
   anchor: MenuAnchor;
   projects: readonly Project[];
   outposts?: AddToOutpostActions | undefined;
+  folderActions?: readonly PickerAction[];
   onClose: () => void;
 }
 
@@ -57,6 +60,7 @@ export function ChatMenu({
   anchor,
   projects,
   outposts,
+  folderActions = [],
   onClose,
   onMoveUp,
   onMoveDown,
@@ -169,7 +173,7 @@ export function ChatMenu({
         <span>Move to project</span>
       </button>
       <hr />
-      {projects.length === 0 && <p className="lab">No projects yet. Add one with the + button.</p>}
+      {projects.length === 0 && <p className="lab">No projects yet.</p>}
       {projects.map((project) => (
         <Item
           key={project.id}
@@ -185,6 +189,17 @@ export function ChatMenu({
         checked={primary === null}
         onSelect={run(() => actions.onMove(null))}
       />
+      {folderActions.length > 0 && <hr />}
+      {folderActions.map((action) => (
+        <Item
+          key={action.id}
+          icon={<PlusIcon />}
+          label={action.label}
+          disabled={action.disabled ?? false}
+          title={action.description ?? ''}
+          onSelect={run(action.onSelect)}
+        />
+      ))}
     </>
   );
 

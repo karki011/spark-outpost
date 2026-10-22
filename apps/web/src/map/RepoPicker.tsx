@@ -2,7 +2,8 @@ import { useEffect, useId } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { Project } from '@spark-outpost/contracts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
-import { ChevronIcon } from '../ui/icons.tsx';
+import { useAddFolder } from '../projects/use-add-folder.tsx';
+import { ChevronIcon, PlusIcon } from '../ui/icons.tsx';
 import { usePopover } from '../ui/use-popover.ts';
 
 interface RepoPickerProps {
@@ -12,13 +13,22 @@ interface RepoPickerProps {
 }
 
 const TINTS = 4;
+const MENU_ITEMS = '[role="menuitemcheckbox"], [role="menuitem"]:not(:disabled)';
 
 function tint(index: number): string {
   return `var(--map-tint-${(index % TINTS) + 1})`;
 }
 
 export function RepoPicker({ projects, selected, onChange }: RepoPickerProps) {
-  const { open, toggle, anchorRef, panelRef } = usePopover<HTMLButtonElement, HTMLDivElement>();
+  const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
+    HTMLButtonElement,
+    HTMLDivElement
+  >();
+  const adder = useAddFolder({
+    onAdded: (project) => {
+      if (!selected.includes(project.id)) onChange([...selected, project.id]);
+    },
+  });
   const menuId = useId();
   const chosen = selected
     .map((id) => projects.find((project) => project.id === id))
@@ -33,7 +43,7 @@ export function RepoPicker({ projects, selected, onChange }: RepoPickerProps) {
   const branch = git.data && 'branch' in git.data ? git.data.branch : null;
 
   useEffect(() => {
-    if (open) panelRef.current?.querySelector<HTMLElement>('[role="menuitemcheckbox"]')?.focus();
+    if (open) panelRef.current?.querySelector<HTMLElement>(MENU_ITEMS)?.focus();
   }, [open, panelRef]);
 
   const flip = (id: string) => {
@@ -78,10 +88,7 @@ export function RepoPicker({ projects, selected, onChange }: RepoPickerProps) {
           onKeyDown={(event) => {
             if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
             event.preventDefault();
-            const items = [
-              ...(panelRef.current?.querySelectorAll<HTMLElement>('[role="menuitemcheckbox"]') ??
-                []),
-            ];
+            const items = [...(panelRef.current?.querySelectorAll<HTMLElement>(MENU_ITEMS) ?? [])];
             const index = items.indexOf(document.activeElement as HTMLElement);
             items[
               (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
@@ -109,8 +116,29 @@ export function RepoPicker({ projects, selected, onChange }: RepoPickerProps) {
             );
           })}
           <p className="map-pop-note">Pick two or more to see how they connect.</p>
+          {adder.actions.map((action) => (
+            <button
+              key={action.id}
+              type="button"
+              role="menuitem"
+              className="map-pop-item map-pop-add"
+              disabled={adder.busy || action.disabled}
+              onClick={() => {
+                setOpen(false);
+                anchorRef.current?.focus();
+                action.onSelect();
+              }}
+            >
+              <PlusIcon />
+              <span>
+                {action.label}
+                {action.description && <small>{action.description}</small>}
+              </span>
+            </button>
+          ))}
         </div>
       )}
+      {adder.flow}
     </div>
   );
 }

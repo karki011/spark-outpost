@@ -51,7 +51,6 @@ async function openSizedIsland(page: Page) {
           onEscape: none,
           sparkFocused: async () => false,
           onSparkFocus: none,
-          pickFolder: async () => null,
           pathForFile: () => null,
           setInteractive: () => undefined,
           setFocusable: () => undefined,

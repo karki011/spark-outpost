@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { McpEnableRequest, Project, UserMcpServer } from '@spark-outpost/contracts';
 import { SetupSwitch } from '../../chat/project/SetupCard.tsx';
+import { useAddFolder } from '../../projects/use-add-folder.tsx';
 import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
 
 interface McpProjectOverridesProps {
@@ -17,6 +18,7 @@ export function McpProjectOverrides({
   onChange,
 }: McpProjectOverridesProps) {
   const [picked, setPicked] = useState('');
+  const adder = useAddFolder({ onAdded: (project) => setPicked(project.id) });
   const nameOf = (id: string) =>
     projects.find((project) => project.id === id)?.name ?? 'Removed project';
   const free = projects.filter(
@@ -28,8 +30,6 @@ export function McpProjectOverrides({
         ? { scope: 'project', scopeId: projectId, enabled: true, fingerprint: server.fingerprint }
         : { scope: 'project', scopeId: projectId, enabled },
     );
-
-  if (server.projects.length === 0 && free.length === 0) return null;
 
   return (
     <div className="mcp-line mcp-projects">
@@ -61,28 +61,28 @@ export function McpProjectOverrides({
             ))}
           </ul>
         )}
-        {free.length > 0 && (
-          <div className="mcp-project-add">
-            <ChoicePicker
-              label="Different in a project"
-              placeholder="Choose a project"
-              choices={free.map((project) => ({ id: project.id, label: project.name }))}
-              value={picked}
-              onChange={setPicked}
-            />
-            <button
-              type="button"
-              className="btn line sm"
-              disabled={!picked || busy}
-              onClick={() => {
-                set(picked, !(server.global?.enabled ?? false));
-                setPicked('');
-              }}
-            >
-              {server.global?.enabled ? 'Turn off there' : 'Turn on there'}
-            </button>
-          </div>
-        )}
+        <div className="mcp-project-add">
+          <ChoicePicker
+            label="Different in a project"
+            placeholder="Choose a project"
+            choices={free.map((project) => ({ id: project.id, label: project.name }))}
+            value={picked}
+            actions={adder.actions}
+            onChange={setPicked}
+          />
+          <button
+            type="button"
+            className="btn line sm"
+            disabled={!picked || busy}
+            onClick={() => {
+              set(picked, !(server.global?.enabled ?? false));
+              setPicked('');
+            }}
+          >
+            {server.global?.enabled ? 'Turn off there' : 'Turn on there'}
+          </button>
+          {adder.flow}
+        </div>
       </div>
     </div>
   );

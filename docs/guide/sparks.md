@@ -15,7 +15,7 @@ A Spark has a face, a role, a **home chat**, defaults and **standing instruction
 1. Open **Home** and find **Your Sparks**.
 2. Select **New Spark**, or **Add** on a suggested one such as **Pip · Code reviewer**.
 3. Type a **Name** and a **Role**. **Change look** picks the blob.
-4. Under **Defaults for its chats**, pick the **Provider**, **Model**, **Mode**, **Spark autonomy** and **Default project**. **Choose folder…** adds any folder.
+4. Under **Defaults for its chats**, pick the **Provider**, **Model**, **Mode**, **Spark autonomy** and **Default project**.
 5. Write **Standing instructions**, or select **Use a file…**.
 6. Select **Create Spark**.
 

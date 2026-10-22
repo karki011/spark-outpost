@@ -181,6 +181,8 @@ export function activityLine(entry: RemoteAuditEntry): string {
       return notificationLine(entry);
     case 'push_contact_changed':
       return 'The notification sender contact was changed';
+    case 'folder_created':
+      return `${device} made a new folder`;
     case 'request':
       return `${device} made a change`;
     case 'refused':
@@ -189,6 +191,9 @@ export function activityLine(entry: RemoteAuditEntry): string {
 }
 
 export function activityDetail(entry: RemoteAuditEntry): string | null {
+  if (entry.action === 'folder_created' && typeof entry.detail.folder === 'string') {
+    return entry.detail.folder;
+  }
   if (!entry.method || !entry.path) return null;
   const status = entry.status === null ? '' : ` · ${entry.status}`;
   return `${entry.method} ${entry.path}${status}`;

@@ -46,16 +46,72 @@ export type RemovedProject = z.infer<typeof removedProjectSchema>;
 export const folderEntrySchema = z.object({ name: z.string(), path: z.string() });
 export type FolderEntry = z.infer<typeof folderEntrySchema>;
 
+export const FOLDER_NAME_MAX_BYTES = 255;
+
+function utf8Length(text: string): number {
+  let bytes = 0;
+  for (const character of text) {
+    const code = character.codePointAt(0) ?? 0;
+    bytes += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
+  }
+  return bytes;
+}
+
+function hasControlCharacter(text: string): boolean {
+  return [...text].some((character) => {
+    const code = character.charCodeAt(0);
+    return code < 32 || code === 127;
+  });
+}
+
+export function folderNameProblem(name: string): string | null {
+  const trimmed = name.trim();
+  if (trimmed === '') return 'Name the folder.';
+  if (/[/:]/.test(trimmed) || hasControlCharacter(trimmed)) {
+    return 'Folder names can’t contain / or :.';
+  }
+  if (trimmed.startsWith('.')) return 'Folder names can’t start with a dot.';
+  if (utf8Length(trimmed) > FOLDER_NAME_MAX_BYTES) {
+    return 'That name is too long.';
+  }
+  return null;
+}
+
+export const folderNameSchema = z
+  .string()
+  .max(1024)
+  .transform((name) => name.trim())
+  .superRefine((name, context) => {
+    const problem = folderNameProblem(name);
+    if (problem) context.addIssue({ code: 'custom', message: problem });
+  });
+
+export const createFolderRequestSchema = z.object({
+  parent: z.string().trim().min(1).max(4096),
+  name: folderNameSchema,
+});
+export type CreateFolderRequest = z.infer<typeof createFolderRequestSchema>;
+
+export const createdFolderSchema = z.object({ path: z.string() });
+export type CreatedFolder = z.infer<typeof createdFolderSchema>;
+
 export const folderFileSchema = folderEntrySchema.extend({
   sizeBytes: z.number().int().nonnegative(),
 });
 export type FolderFile = z.infer<typeof folderFileSchema>;
 
+export const folderListingEntrySchema = folderEntrySchema.extend({
+  repository: z.boolean().default(false),
+});
+export type FolderListingEntry = z.infer<typeof folderListingEntrySchema>;
+
 export const folderListingSchema = z.object({
   path: z.string(),
   parent: z.string().nullable(),
-  folders: z.array(folderEntrySchema),
+  folders: z.array(folderListingEntrySchema),
   files: z.array(folderFileSchema).default([]),
+  places: z.array(folderEntrySchema).default([]),
+  denied: z.string().nullable().default(null),
 });
 export type FolderListing = z.infer<typeof folderListingSchema>;
 
@@ -83,5 +139,9 @@ export const projectFileContentSchema = z.object({
 });
 export type ProjectFileContent = z.infer<typeof projectFileContentSchema>;
 
-export const projectGitSchema = z.object({ branch: z.string().nullable() });
+export const projectGitSchema = z.object({
+  branch: z.string().nullable(),
+  repository: z.boolean().nullable(),
+  problem: z.string().nullable().default(null),
+});
 export type ProjectGit = z.infer<typeof projectGitSchema>;

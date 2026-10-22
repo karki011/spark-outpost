@@ -22,7 +22,6 @@ export const IPC = {
   islandEscape: 'island:escape',
   islandSparkFocused: 'island:spark-focused',
   islandSparkFocus: 'island:spark-focus',
-  islandPickFolder: 'island:pick-folder',
   islandReady: 'island:ready',
   islandOpenSettings: 'island:open-settings',
   meetingAlertShow: 'meeting-alert:show',
