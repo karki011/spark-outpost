@@ -12,7 +12,7 @@ What changed recently, newest first.
 
 | What changed                                                                                                                                 | What to do                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Agents are now signed in wherever you are in the Browser pane. Sign in again once.                                                           | See [Use the browser](use-the-browser.md#let-the-agent-look-and-browse). |
+| Agents are signed in wherever you are in the Browser pane. Sign in again once.                                                               | See [Use the browser](use-the-browser.md#let-the-agent-look-and-browse). |
 | Agents ask with a question card.                                                                                                             | See [Cards](cards.md#approval-cards).                                    |
 | One shared inbox, cleared everywhere; answer or set aside in place; flags never count. Meeting **Dismiss** sticks; **Refresh now** on Today. | See [Spark Island](desktop-companion.md#open-it).                        |
 | Ask Spark has a chat’s tools. **Let agents read my calendar** is now on; had it off? Turn it off again.                                      | See [Ask Spark](companion-quick-chat.md#ask-spark).                      |

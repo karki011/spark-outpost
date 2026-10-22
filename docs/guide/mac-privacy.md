@@ -11,7 +11,7 @@ You'll set the three privacy choices only the Mac app has. About 2 minutes.
 ## Anonymous heartbeat
 
 1. Open **Settings → Help**.
-2. Turn **Send anonymous heartbeat** off or on (on by default).
+2. Turn **Send anonymous heartbeat** off (on by default).
 
 About 30 seconds after starting, then daily, the app sends this to the Spark Outpost team:
 
