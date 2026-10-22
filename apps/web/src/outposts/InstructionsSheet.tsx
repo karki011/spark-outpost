@@ -11,7 +11,8 @@ interface InstructionsSheetProps {
   onClose: () => void;
 }
 
-const FOCUSABLE = 'button:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE =
+  'button:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function InstructionsSheet({ initial, canEdit, onSave, onClose }: InstructionsSheetProps) {
   const ids = useId();

@@ -78,15 +78,27 @@ export function LibraryTab({ members, onOpenChat }: LibraryTabProps) {
   if (library.artifacts.length === 0 && library.files.length === 0) {
     return (
       <p className="op-pane-empty" aria-busy={loading}>
-        {loading ? 'Gathering the chats’ files…' : 'No files yet. Pages and files the chats make show here.'}
+        {loading
+          ? 'Gathering the chats’ files…'
+          : 'No files yet. Pages and files the chats make show here.'}
       </p>
     );
   }
   return (
     <div className="op-groups">
       <p className="op-pane-note">Files and pages the member chats made. Open one in its chat.</p>
-      <Section title="Artifacts" items={library.artifacts} icon={<ArtifactIcon />} onOpenChat={onOpenChat} />
-      <Section title="Chat files" items={library.files} icon={<FileIcon />} onOpenChat={onOpenChat} />
+      <Section
+        title="Artifacts"
+        items={library.artifacts}
+        icon={<ArtifactIcon />}
+        onOpenChat={onOpenChat}
+      />
+      <Section
+        title="Chat files"
+        items={library.files}
+        icon={<FileIcon />}
+        onOpenChat={onOpenChat}
+      />
     </div>
   );
 }

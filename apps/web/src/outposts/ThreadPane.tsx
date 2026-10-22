@@ -89,7 +89,11 @@ export function ThreadPane({
 
   const needsYou = post.state === 'needs_you' && answerable;
   return (
-    <aside className="op-pane op-thread-pane" aria-label={`Thread with ${to}`} onKeyDown={onKeyDown}>
+    <aside
+      className="op-pane op-thread-pane"
+      aria-label={`Thread with ${to}`}
+      onKeyDown={onKeyDown}
+    >
       <div className="op-thread-head">
         <button
           ref={backRef}

@@ -26,9 +26,9 @@ describe('MemberStrip', () => {
   it('shows each chat with its handle and its state as text', () => {
     render(<MemberStrip members={MEMBERS} onOpen={vi.fn()} />);
     expect(chips().map((chip) => chip.textContent)).toEqual([
-      expect.stringContaining('@feNeeds youweb · main'),
-      expect.stringContaining('@apiIdle'),
-      expect.stringContaining('@docsArchived'),
+      expect.stringContaining('@fe, Needs you'),
+      expect.stringContaining('@api, Idle'),
+      expect.stringContaining('@docs, Archived'),
     ]);
   });
 

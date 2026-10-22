@@ -24,6 +24,7 @@ export interface CardHandlers {
 interface RequestCardProps extends CardHandlers {
   card: ThreadCard;
   selected: boolean;
+  answering?: boolean | undefined;
   answerable: boolean;
   story?: string | null | undefined;
 }
@@ -44,6 +45,7 @@ export function metaLine(card: ThreadCard): string | null {
 export function RequestCard({
   card,
   selected,
+  answering = false,
   answerable,
   story,
   onOpenThread,
@@ -81,6 +83,7 @@ export function RequestCard({
             type="button"
             className="btn sm primary"
             aria-label={`Answer ${to}`}
+            aria-pressed={answering}
             onClick={() => onAnswer(post.id)}
           >
             Answer

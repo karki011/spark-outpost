@@ -52,6 +52,8 @@ export function outpostLibrary(chats: readonly LibraryChat[]): OutpostLibrary {
         handle: chat.handle,
       })),
     ),
-    files: chats.flatMap((chat) => (chat.detail?.chatFiles ?? []).map((file) => fileOf(file, chat))),
+    files: chats.flatMap((chat) =>
+      (chat.detail?.chatFiles ?? []).map((file) => fileOf(file, chat)),
+    ),
   };
 }

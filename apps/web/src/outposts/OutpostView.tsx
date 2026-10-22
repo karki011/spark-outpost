@@ -192,6 +192,7 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
         items={items}
         cards={cardsById}
         selectedId={layout.threadId}
+        answeringId={answering?.postId ?? null}
         jumpTo={jumpTo ?? null}
         approvalChats={approvalChats}
         storyTags={storyTags}

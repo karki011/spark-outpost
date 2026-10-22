@@ -1,13 +1,9 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { OutpostDetail } from '@spark-outpost/contracts';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { api, queryKeys } from '../api/client.ts';
-import { projectKeys } from '../api/projects.ts';
-import { OutpostView } from './OutpostView.tsx';
 import { phoneKeys } from '../phone/phone-api.ts';
-import { outpostKeys } from './outposts-api.ts';
+import { SENT, calls, client, show, useOutpostViewHarness, view } from './outpost-view-harness.tsx';
 import {
   API_CHAT,
   FE_CHAT,
@@ -20,74 +16,7 @@ import {
 } from './test-fixtures.ts';
 import { stackedStory } from './story-fixtures.ts';
 
-interface Call {
-  method: string;
-  path: string;
-  body: unknown;
-}
-
-class QuietResizeObserver {
-  observe(): void {}
-  disconnect(): void {}
-}
-
-const SENT = {} as Awaited<ReturnType<typeof api.sendMessage>>;
-
-let client: QueryClient;
-let calls: Call[];
-let served: OutpostDetail | null;
-
-function json(payload: unknown, status = 200): Response {
-  return new Response(JSON.stringify(payload), { status });
-}
-
-beforeEach(() => {
-  client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
-  client.setQueryData(queryKeys.conversations, [
-    chat(FE_CHAT, { title: 'Usage page' }),
-    chat(API_CHAT, { title: 'Usage endpoint' }),
-  ]);
-  client.setQueryData(projectKeys.all, []);
-  calls = [];
-  served = null;
-  vi.stubGlobal('ResizeObserver', QuietResizeObserver);
-  vi.stubGlobal(
-    'fetch',
-    vi.fn((url: string, init?: RequestInit) => {
-      const method = init?.method ?? 'GET';
-      if (method !== 'GET') {
-        const body = JSON.parse(String(init?.body ?? 'null')) as { id?: string };
-        calls.push({ method, path: url, body });
-        if (served && body.id && url.endsWith('/posts')) {
-          const stored = post(9, { id: body.id, body: 'add the filter' });
-          served = { ...served, posts: [...served.posts, stored] };
-        }
-        return Promise.resolve(json({}));
-      }
-      if (url === `/api/outposts/${OUTPOST_ID}` && served) return Promise.resolve(json(served));
-      return Promise.resolve(json({ error: 'Outpost not found.' }, 404));
-    }),
-  );
-});
-
-afterEach(() => {
-  cleanup();
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
-});
-
-function view(onOpenChat = vi.fn<(id: string) => void>(), onGone = vi.fn<() => void>()) {
-  return render(
-    <QueryClientProvider client={client}>
-      <OutpostView id={OUTPOST_ID} onOpenChat={onOpenChat} onGone={onGone} />
-    </QueryClientProvider>,
-  );
-}
-
-function show(data: OutpostDetail): void {
-  served = data;
-  client.setQueryData(outpostKeys.detail(OUTPOST_ID), data);
-}
+useOutpostViewHarness();
 
 describe('OutpostView', () => {
   it('shows the name, the chats, the thread and one message box', () => {
@@ -100,17 +29,20 @@ describe('OutpostView', () => {
     );
     view();
     expect(screen.getByRole('heading', { level: 1, name: 'Usage by user' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /You and 2 chats/ })).toBeTruthy();
+    expect(screen.getByText('You and 2 chats')).toBeTruthy();
     expect(within(screen.getByRole('toolbar')).getAllByRole('button')).toHaveLength(2);
-    expect(within(screen.getByRole('list')).getAllByRole('listitem')).toHaveLength(3);
+    expect(
+      within(screen.getByRole('list', { name: 'Outpost thread' })).getAllByRole('listitem'),
+    ).toHaveLength(3);
     expect(screen.getAllByRole('combobox')).toHaveLength(1);
   });
 
-  it('opens a chat from the strip and from a request', () => {
+  it('opens a chat from the strip and from a request’s thread', () => {
     show(detail([post(1)]));
     const onOpenChat = vi.fn<(id: string) => void>();
     view(onOpenChat);
     fireEvent.click(within(screen.getByRole('toolbar')).getAllByRole('button')[0]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Open the thread with @api' }));
     fireEvent.click(screen.getByRole('button', { name: 'Open @api in chat' }));
     expect(onOpenChat.mock.calls).toEqual([[FE_CHAT], [API_CHAT]]);
   });
@@ -122,7 +54,8 @@ describe('OutpostView', () => {
     const box = screen.getByRole('combobox');
     fireEvent.change(box, { target: { value: '@api add the filter' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send request' }));
-    expect(await screen.findByText('add the filter')).toBeTruthy();
+    const thread = screen.getByRole('list', { name: 'Outpost thread' });
+    expect(await within(thread).findAllByText('add the filter')).not.toHaveLength(0);
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]).toMatchObject({
       method: 'POST',
@@ -135,7 +68,7 @@ describe('OutpostView', () => {
     const sendMessage = vi.spyOn(api, 'sendMessage').mockResolvedValue(SENT);
     show(detail([post(1, { state: 'needs_you', reason: 'Light or dark theme?' })]));
     view();
-    fireEvent.click(screen.getByRole('button', { name: 'Answer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Answer @api' }));
     expect(screen.getByText('Answering').textContent).toBe('Answering @api');
     const box = screen.getByRole('combobox');
     expect(document.activeElement).toBe(box);
@@ -176,16 +109,16 @@ describe('OutpostView', () => {
     );
     view();
     expect(screen.getByText('@api is waiting for your approval')).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: 'Answer' })).toHaveLength(1);
-    expect(screen.getByRole('button', { name: 'Open @api in chat' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Answer' }));
+    expect(screen.getAllByRole('button', { name: /^Answer @/ })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Open the thread with @api' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Answer @fe' }));
     expect(screen.getByText('Answering').textContent).toBe('Answering @fe');
   });
 
   it('stops answering when the request is no longer waiting for the user', async () => {
     show(detail([post(1, { state: 'needs_you' })]));
     view();
-    fireEvent.click(screen.getByRole('button', { name: 'Answer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Answer @api' }));
     expect(screen.getByText('Answering')).toBeTruthy();
     show(detail([post(1, { state: 'working' })]));
     await waitFor(() => expect(screen.queryByText('Answering')).toBeNull());
@@ -195,7 +128,8 @@ describe('OutpostView', () => {
   it('cancels a request and pauses the outpost', async () => {
     show(detail([post(1, { state: 'working' })]));
     view();
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel request to @api' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Stop the request to @api…' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }));
     fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
     await waitFor(() => expect(calls).toHaveLength(2));
     expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
@@ -263,7 +197,8 @@ describe('OutpostView', () => {
     view();
     expect(screen.getByText('Chats are added on your Mac.')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Add chats' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Edit outpost' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Usage by user' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename…' }));
     const dialog = within(screen.getByRole('dialog', { name: 'Edit outpost' }));
     expect(dialog.getAllByRole('textbox')).toHaveLength(1);
     expect(dialog.queryByRole('button', { name: /Hold to delete outpost/ })).toBeNull();

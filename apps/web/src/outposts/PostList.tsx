@@ -17,6 +17,7 @@ interface PostListProps extends CardHandlers {
   items: readonly ThreadItem[];
   cards: ReadonlyMap<string, ThreadCard>;
   selectedId: string | null;
+  answeringId?: string | null | undefined;
   jumpTo?: string | null | undefined;
   approvalChats?: ReadonlySet<string> | undefined;
   storyTags?: ReadonlyMap<string, string> | undefined;
@@ -70,6 +71,7 @@ export function PostList({
   items,
   cards,
   selectedId,
+  answeringId,
   jumpTo,
   approvalChats,
   storyTags,
@@ -93,6 +95,7 @@ export function PostList({
         key={postId}
         card={card}
         selected={postId === selectedId}
+        answering={postId === answeringId}
         answerable={!approvalChats?.has(card.post.toConversationId ?? '')}
         story={storyTags?.get(postId)}
         {...handlers}
