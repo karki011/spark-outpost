@@ -230,7 +230,9 @@ describe('the island home', () => {
   it('offers an agent question’s choices and sends the pick as the chat would', async () => {
     const asking = chat(CHAT_B, { needsInput: true, title: 'Colour chat' });
     const question = agentQuestion();
-    const approvals = new Map([[CHAT_B, [{ ...question, runId: asking.latestRun?.id ?? question.runId }]]]);
+    const approvals = new Map([
+      [CHAT_B, [{ ...question, runId: asking.latestRun?.id ?? question.runId }]],
+    ]);
     const [found] = pendingCards([asking], approvals);
     expect(found?.kind).toBe('question');
     expect(cardHeading(found!, 'Claude')).toBe('Claude has a question');

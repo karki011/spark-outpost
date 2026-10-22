@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import {
-  type Approval,
-  type ApprovalOption,
-  type ApprovalScope,
-} from '@spark-outpost/contracts';
+import { type Approval, type ApprovalOption, type ApprovalScope } from '@spark-outpost/contracts';
 import { projectAllowOption } from '../chat/approvals/approval-outcome.ts';
 import {
   asksQuestions,
