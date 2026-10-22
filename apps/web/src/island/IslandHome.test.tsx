@@ -227,6 +227,24 @@ describe('the island home', () => {
     );
   });
 
+  it('heads a Spark action card with its own title', () => {
+    const action = card('open', {
+      approval: approval({
+        kind: 'spark_action',
+        title: 'Let the agent read your calendar?',
+        payload: {
+          command: null,
+          cwd: null,
+          paths: [],
+          diffs: [],
+          truncated: false,
+          sparkAction: { what: 'calendar_read', action: {} } as never,
+        },
+      }),
+    });
+    expect(cardHeading(action, 'Claude')).toBe('Let the agent read your calendar?');
+  });
+
   it('offers an agent question’s choices and sends the pick as the chat would', async () => {
     const asking = chat(CHAT_B, { needsInput: true, title: 'Colour chat' });
     const question = agentQuestion();
