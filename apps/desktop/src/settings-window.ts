@@ -7,9 +7,10 @@ import { themeArgs } from './theme-arg.ts';
 import { guardNavigation } from './window.ts';
 
 export const SETTINGS_PATH = '/settings';
-export const DEFAULT_SETTINGS_ROUTE = '#/settings/spark';
+const DEFAULT_SETTINGS_ROUTE = '#/settings/spark';
 
 const SETTINGS_ROUTE = /^#\/settings\/[a-z][a-z0-9-]{0,40}(\/[a-z0-9-]{1,40})?$/;
+const CHAT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DOC_LINK = /^#\/docs(\/[^\s]{1,200})?$/;
 const FOCUS_LABEL_MAX = 200;
 const SIZE = { width: 900, height: 680, minWidth: 720, minHeight: 480 } as const;
@@ -23,6 +24,14 @@ export function settingsTarget(route: unknown, focus: unknown): SettingsTarget |
   if (typeof route !== 'string' || !SETTINGS_ROUTE.test(route)) return null;
   const label = typeof focus === 'string' && focus.length <= FOCUS_LABEL_MAX ? focus : null;
   return { route, focus: label };
+}
+
+export function routeOf(url: string): string | null {
+  try {
+    return settingsTarget(new URL(url).hash, null)?.route ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function isDocLink(value: unknown): value is string {
@@ -50,6 +59,8 @@ function createWindow(options: SettingsWindowOptions, route: string): BrowserWin
     ...SIZE,
     title: 'Settings',
     show: false,
+    minimizable: false,
+    maximizable: false,
     fullscreenable: false,
     webPreferences: {
       preload: options.preload,
@@ -69,6 +80,7 @@ function createWindow(options: SettingsWindowOptions, route: string): BrowserWin
 export function startSettingsWindow(options: SettingsWindowOptions): SettingsWindow {
   let window: BrowserWindow | null = null;
   let pending: SettingsTarget | null = null;
+  let lastRoute = DEFAULT_SETTINGS_ROUTE;
 
   const focusOpen = (): boolean => {
     if (!window || window.isDestroyed()) return false;
@@ -80,6 +92,9 @@ export function startSettingsWindow(options: SettingsWindowOptions): SettingsWin
 
   const create = (route: string) => {
     const created = createWindow(options, route);
+    created.on('close', () => {
+      lastRoute = routeOf(created.webContents.getURL()) ?? lastRoute;
+    });
     created.on('closed', () => {
       if (window === created) window = null;
     });
@@ -93,7 +108,7 @@ export function startSettingsWindow(options: SettingsWindowOptions): SettingsWin
   };
 
   const show = () => {
-    if (!focusOpen()) open({ route: DEFAULT_SETTINGS_ROUTE, focus: null });
+    if (!focusOpen()) open({ route: lastRoute, focus: null });
   };
 
   const fromSettingsWindow = (event: IpcMainEvent | IpcMainInvokeEvent) =>
@@ -107,7 +122,9 @@ export function startSettingsWindow(options: SettingsWindowOptions): SettingsWin
     if (options.trusted(event) && target) open(target);
   };
   const onOpenChat = (event: IpcMainEvent, id: unknown) => {
-    if (fromSettingsWindow(event) && typeof id === 'string') options.openChat(id);
+    if (fromSettingsWindow(event) && typeof id === 'string' && CHAT_ID.test(id)) {
+      options.openChat(id);
+    }
   };
   const onOpenDoc = (event: IpcMainEvent, link: unknown) => {
     if (!fromSettingsWindow(event) || !isDocLink(link)) return;

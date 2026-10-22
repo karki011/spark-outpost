@@ -34,6 +34,7 @@ describe('settings routes', () => {
     expect(parseSettingsRoute('#/settings/providers/claude')).toBe('ai');
     expect(parseSettingsRoute('#/settings/nope')).toBeNull();
     expect(parseSettingsRoute('#/docs/settings')).toBeNull();
+    expect(parseSettingsRoute('#/settings/%E0')).toBeNull();
   });
 
   it('writes a section route, keeping a provider below AI providers', () => {

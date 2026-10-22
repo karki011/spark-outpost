@@ -11,7 +11,7 @@ const PREFIX = '#/settings/';
 export function parseSettingsRoute(hash: string): SettingsSection | null {
   if (parseProviderRoute(hash)) return 'ai';
   if (!hash.startsWith(PREFIX)) return null;
-  const id = decodeURIComponent(hash.slice(PREFIX.length)).replace(/\/$/, '');
+  const id = hash.slice(PREFIX.length).replace(/\/$/, '');
   return availableSections().find((entry) => entry.id === id)?.id ?? null;
 }
 

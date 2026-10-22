@@ -11,7 +11,8 @@ const native = vi.hoisted(() => {
     destroyed = false;
     minimized = false;
     events = new Map<string, () => void>();
-    webContents = { id: this.id, send: vi.fn() };
+    url = '';
+    webContents = { id: this.id, send: vi.fn(), getURL: () => this.url };
     loadURL = vi.fn(async () => undefined);
     show = vi.fn();
     focus = vi.fn();
@@ -56,6 +57,7 @@ vi.mock('./context-menu.ts', () => ({ attachContextMenu: vi.fn() }));
 vi.mock('./hour-cycle.ts', () => ({ systemHourCycle: () => null }));
 
 const ORIGIN = 'http://127.0.0.1:4000';
+const CHAT = '0f8e2a4c-1b3d-4e5f-8a9b-0c1d2e3f4a5b';
 
 function start(change: { trusted?: boolean } = {}) {
   const mainSend = vi.fn();
@@ -120,6 +122,8 @@ describe('the Settings window', () => {
     expect(native.options[0]).toMatchObject({
       title: 'Settings',
       show: false,
+      minimizable: false,
+      maximizable: false,
       webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
     });
   });
@@ -149,6 +153,20 @@ describe('the Settings window', () => {
     expect(native.windows[0]!.webContents.send).not.toHaveBeenCalled();
   });
 
+  it('reopens on the pane that was showing when the window closed', () => {
+    const { host } = start();
+    host.show();
+    const first = native.windows[0]!;
+    first.url = `${ORIGIN}/settings#/settings/notifications`;
+    first.events.get('close')!();
+    first.destroyed = true;
+    first.events.get('closed')!();
+    host.show();
+    expect(native.windows[1]!.loadURL).toHaveBeenCalledWith(
+      `${ORIGIN}/settings#/settings/notifications`,
+    );
+  });
+
   it('opens a new window after the old one closed', () => {
     const { host } = start();
     host.open({ route: '#/settings/chats', focus: null });
@@ -174,13 +192,14 @@ describe('the Settings window', () => {
     host.open({ route: '#/settings/chats', focus: null });
     const openChat = native.listeners.get(IPC.settingsWindowOpenChat)!;
     const openDoc = native.listeners.get(IPC.settingsWindowOpenDoc)!;
-    openChat(fromElsewhere, 'chat-1');
+    openChat(fromElsewhere, CHAT);
+    openChat(fromWindow(), 'not-a-chat');
     openDoc(fromElsewhere, '#/docs/settings');
     openDoc(fromWindow(), 'https://example.com');
     expect(did).toEqual([]);
-    openChat(fromWindow(), 'chat-1');
+    openChat(fromWindow(), CHAT);
     openDoc(fromWindow(), '#/docs/settings');
-    expect(did).toEqual(['open chat chat-1', 'show spark']);
+    expect(did).toEqual([`open chat ${CHAT}`, 'show spark']);
     expect(mainSend).toHaveBeenCalledWith(IPC.settingsWindowDoc, '#/docs/settings');
   });
 
