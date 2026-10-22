@@ -9,6 +9,7 @@ import {
   longestParagraph,
   PARAGRAPH_WORDS_MAX,
   proseWords,
+  tableProblems,
   WORD_CAPS,
 } from './guide-rules.ts';
 
@@ -106,5 +107,28 @@ describe('images and reference entries', () => {
       { page: 'tools', message: 'no entry for the Spark tool `spark_find`' },
     ]);
     expect(checkCoverage(undefined, 'tools', 'Spark tool', [])).toHaveLength(1);
+  });
+});
+
+describe('tables', () => {
+  const header = '| What changed | What to do |\n| --- | --- |';
+
+  it('accepts a whole table, escaped pipes included', () => {
+    expect(tableProblems(`${header}\n| One \\| two | Do it |\n| Three | Do that |`)).toEqual([]);
+  });
+
+  it('ignores table-like lines in fenced code and accepts CRLF line endings', () => {
+    expect(tableProblems('```\n| Two | Do it || Three |\n```')).toEqual([]);
+    expect(tableProblems(`${header}\n| One | Do it |`.replace(/\n/g, '\r\n'))).toEqual([]);
+  });
+
+  it('flags a table split by a blank line and rows fused onto one line', () => {
+    const split = `${header}\n| One | Do it |\n\n| Two | Do it || Three | Do that |`;
+    expect(tableProblems(split)).toEqual([
+      'a table starts without a header row: | Two | Do it || Three | Do that |',
+    ]);
+    expect(tableProblems(`${header}\n| Two | Do it || Three | Do that |`)).toEqual([
+      'a table row has 5 cells; its header has 2: | Two | Do it || Three | Do that |',
+    ]);
   });
 });
