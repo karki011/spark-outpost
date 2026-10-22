@@ -45,6 +45,13 @@ describe('cardRefusal', () => {
     ).toBe(ASK_SPARK_REFUSALS.macOnly);
   });
 
+  it('leaves an agent’s question card for the user to answer', () => {
+    const form = { message: 'Which store?', fields: [] };
+    expect(
+      cardRefusal(card({ payload: { ...card().payload, form } as never }), chat('c'), 'a'),
+    ).toBe(ASK_SPARK_REFUSALS.question);
+  });
+
   it('refuses its own cards, answered cards and cards without Allow once and Deny', () => {
     expect(cardRefusal(card(), chat('assistant'), 'assistant')).toBe(ASK_SPARK_REFUSALS.ownCard);
     expect(cardRefusal(card({ status: 'allowed' }), chat('c'), 'a')).toBe(

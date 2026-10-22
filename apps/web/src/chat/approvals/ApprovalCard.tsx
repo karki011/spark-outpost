@@ -6,6 +6,7 @@ import {
   holdsToConfirm,
   humanizeToolName,
   isCheckApproval,
+  isWebToolTitle,
   parseMcpTool,
   sparkActionLabels,
   sparkActionQuestion,
@@ -128,7 +129,8 @@ function subject(approval: Approval): string | null {
   if (approval.payload.plan) return null;
   if (approval.payload.command) return approval.payload.command;
   if (approval.payload.paths.length > 0) return approval.payload.paths.join(', ');
-  return approval.kind === 'edit' ? null : friendlyStep(approval.title);
+  if (approval.kind === 'edit') return null;
+  return isWebToolTitle(approval.title) ? approval.title : friendlyStep(approval.title);
 }
 
 function retired(approval: Approval): boolean {

@@ -26,6 +26,7 @@ export * from './chat-settings.ts';
 export * from './chat-workspace.ts';
 export * from './checks.ts';
 export * from './checkpoints.ts';
+export * from './agent-questions.ts';
 export * from './compaction.ts';
 export * from './command-runs.ts';
 export * from './conversations.ts';

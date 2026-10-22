@@ -10,6 +10,7 @@ import {
 function handlers(name: string): TurnHandlers {
   return {
     permission: async () => ({ outcome: { outcome: 'selected', optionId: name } }),
+    question: async () => ({ action: 'cancel' }),
     write: async () => ({}),
     read: async () => ({ content: name }),
     account: () => undefined,

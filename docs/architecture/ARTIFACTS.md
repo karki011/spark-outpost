@@ -18,7 +18,7 @@ Before the card, the content is checked and stored:
 
 - **Boundary checks:** the content is at most 2 MB of UTF-8 (`ARTIFACT_MAX_BYTES`), an SVG must be one `<svg>` document, and the title is cleaned to 120 characters.
 - **Scrubbing:** the content is scrubbed of saved sign-in values for the chat's project and of values from the secret files in the chat's projects and its own folder, as the browser tools do.
-- **Storage:** it is written once (`wx`, 0600) to `<data>/<channel>/chats/<chat>/artifacts/<id>/<version>`, beside the chat's work folder and never inside it, so the safety floor keeps the agent from changing it. Each version gets a row in `artifact_page_versions` (migration 0203) with its sha256 and a random 256-bit view key.
+- **Storage:** it is written once (`wx`, 0600) to `<data>/<channel>/chats/<chat>/artifacts/<id>/<version>`, beside the chat's work folder and never inside it, so the safety floor keeps the agent from changing it. Each version gets a row in `artifact_page_versions` (migration 0204) with its sha256 and a random 256-bit view key.
 
 The version is shown, and gets `published_at`, only when the action runs. A declined card leaves an unshown version that nothing serves, and keeps its number, so the picker can skip one (v1, v3). The audit holds the action with the artifact id, version, size and sha256, never the content. Deleting the chat removes the folder, and the rows go with the chat.
 

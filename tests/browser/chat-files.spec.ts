@@ -34,7 +34,11 @@ test('a chat with no project shows the files its agent made with the turn', asyn
   await files.getByRole('link', { name: 'Download cpi.csv' }).click();
   expect((await download).suggestedFilename()).toBe('cpi.csv');
 
-  await files.getByRole('button', { name: 'View chart.png' }).click();
+  await expect(files.getByRole('link', { name: 'Download chart.png' })).toHaveAttribute(
+    'download',
+    'chart.png',
+  );
+  await files.getByRole('button', { name: /^View chart\.png, \d+ B$/ }).click();
   const viewer = page.getByRole('dialog', { name: 'chart.png' });
   await expect(viewer.getByRole('img', { name: 'chart.png' })).toBeVisible();
   await viewer.getByRole('button', { name: 'Close' }).click();

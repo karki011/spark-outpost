@@ -22,6 +22,7 @@ import {
   sessionOutput,
   type OpenedSession,
 } from './session-open.ts';
+import { withPermissionRules } from './repo-session.ts';
 import { newSessionRequest } from './session-request.ts';
 import { extraRoots, sessionMeta } from './session-start.ts';
 import { slashPrompt } from './slash-commands.ts';
@@ -34,6 +35,7 @@ import type { Workspace } from './turn-launch.ts';
 import { createRequestLog, runPrompts } from './turn-loop.ts';
 import { createTurnTokens } from './turn-tokens.ts';
 import { updateSink } from './update-sink.ts';
+import { createWebReadWatch } from './web-reads.ts';
 
 export interface TurnContext {
   connection: LiveConnection;
@@ -69,7 +71,7 @@ async function startSession(context: TurnContext, gates: TurnGates): Promise<Ses
   assertProtocolVersion(definition.name, init);
   const spark = sparkAcpServer(tools, definition, init);
   const claude = withClaudeSpark(
-    workspace.repo?.claude ?? null,
+    withPermissionRules(workspace.repo?.claude ?? null, workspace.rules),
     turn.spark,
     policy !== null,
     spark ? workspace.spark : null,
@@ -205,6 +207,7 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
         commands: createCommandTracker(definition.streamsCommandOutput === true),
         rails: gates.rails,
         flagsRails: gates.doing !== null,
+        webReads: createWebReadWatch(),
         push,
       }),
       background: connection.background,

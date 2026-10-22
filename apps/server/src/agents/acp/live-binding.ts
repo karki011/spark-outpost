@@ -7,6 +7,11 @@ export interface TurnHandlers {
     params: acp.RequestPermissionRequest,
     requestId: string | number | null | undefined,
   ): Promise<acp.RequestPermissionResponse>;
+  question(
+    params: acp.CreateElicitationRequest,
+    requestId: string | number | null | undefined,
+    agentCancel: AbortSignal,
+  ): Promise<acp.CreateElicitationResponse>;
   write(params: acp.WriteTextFileRequest): Promise<acp.WriteTextFileResponse>;
   read(params: acp.ReadTextFileRequest): Promise<acp.ReadTextFileResponse>;
   account(account: ProviderAccount): void;

@@ -76,7 +76,7 @@ const sparkDeps: SparkToolDeps = {
     fetch,
     client: googleClientConfig(config),
   }),
-  outposts: { wakes: outpostWakes, parked: parkedTurns, stackGit },
+  outposts: { wakes: outpostWakes, stackGit },
   agentRuntime: config.AGENT_RUNTIME,
   chatFolders: chatFoldersBase(sparkDataDir(config), config.BRANCH_PREFIX),
 };
@@ -99,7 +99,6 @@ const worker = startWorker({
   sessionLimits: {
     idleMs: config.SESSION_IDLE_MINUTES * 60_000,
   },
-  concurrency: config.WORKER_CONCURRENCY,
   assistantIdleLimits: {
     idleMs: config.ASSISTANT_IDLE_COMPACT_SECONDS * 1000,
     minTokens: config.ASSISTANT_IDLE_COMPACT_TOKENS,
@@ -159,9 +158,7 @@ const outpostListener = await keepListening(
   },
   { onBack: () => outpostWakes.wakeAll() },
 );
-console.log(
-  `Worker running with concurrency ${config.WORKER_CONCURRENCY} and ${config.AGENT_RUNTIME} agents.`,
-);
+console.log(`Worker running with ${config.AGENT_RUNTIME} agents.`);
 
 const shutdown = async () => {
   stopLagMonitor();

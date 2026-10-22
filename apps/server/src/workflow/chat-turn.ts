@@ -54,7 +54,7 @@ async function afterReply(
 async function runAgentCycle(start: Start, input: RunInput): Promise<void> {
   const { deps, lease, append, control, hooks } = start;
   const reply = await runAgentTurn(deps, lease, input, append, control);
-  await keepChatFiles(deps.db, deps.chatFolders, input);
+  await keepChatFiles(deps.db, deps.chatFolders, input, lease);
   const result = await afterReply({ deps, lease, input, append, control }, hooks, reply);
   await finishRun(append, input.identity, result, true);
 }
@@ -87,17 +87,17 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
     input = ready;
     const prompted = await withChatPrompt(deps, input);
     const reply = await runAgentTurn(prompted, lease, input, append, control);
-    await keepChatFiles(deps.db, deps.chatFolders, input);
+    await keepChatFiles(deps.db, deps.chatFolders, input, lease);
     if (reply.outcome === 'succeeded') await reverted.delivered();
     const turn = { deps: prompted, lease, input, append, control };
     const result = await afterReply(turn, hooks, reply);
     await finishRun(append, input.identity, result, true);
   } catch (error) {
     if (error instanceof LeaseLostError || control.reason() === 'lease_lost') return;
+    await keepChatFiles(deps.db, deps.chatFolders, input, lease);
     await failSafely(append, error);
   } finally {
     control.dispose();
-    await keepChatFiles(deps.db, deps.chatFolders, input);
     if (input.mode === 'do' && !input.chatFolder) {
       await recordKeptChanges(deps.db, input.workspaceId, lease.runId);
     }

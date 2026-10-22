@@ -74,6 +74,7 @@ export const SPEC_GROUPS = {
     'approvals',
     'permission-modes',
     'plan-line',
+    'question-cards',
     'rail-flags',
     'read-then-send',
   ],

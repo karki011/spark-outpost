@@ -2,10 +2,12 @@ import { basename } from 'node:path';
 import { ATTACHMENT_IMAGE_TYPES, type ChatFile } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 
+export const CHAT_FILE_PATH_MAX = 1024;
+
 export interface KnownFile {
   path: string;
   size: number;
-  modifiedMs: number;
+  changedMs: number;
   sha256: string;
 }
 
@@ -44,43 +46,41 @@ export async function knownChatFiles(
   const { rows } = await db.query<{
     path: string;
     size: string;
-    modified_ms: number;
+    changed_ms: number;
     sha256: string;
   }>(
-    `SELECT DISTINCT ON (path) path, size, modified_ms, sha256 FROM chat_files
+    `SELECT DISTINCT ON (path) path, size, changed_ms, sha256 FROM chat_files
      WHERE conversation_id = $1 ORDER BY path, created_at DESC, id DESC`,
     [conversationId],
   );
   return new Map(
     rows.map((row) => [
       row.path,
-      { path: row.path, size: Number(row.size), modifiedMs: row.modified_ms, sha256: row.sha256 },
+      { path: row.path, size: Number(row.size), changedMs: row.changed_ms, sha256: row.sha256 },
     ]),
   );
 }
 
-export async function insertChatFiles(
+export async function insertChatFile(
   db: Queryable,
   conversationId: string,
   runId: string,
-  files: readonly NewChatFile[],
+  file: NewChatFile,
 ): Promise<void> {
-  for (const file of files) {
-    await db.query(
-      `INSERT INTO chat_files (id, conversation_id, run_id, path, size, modified_ms, sha256, media_type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        file.id,
-        conversationId,
-        runId,
-        file.path,
-        file.size,
-        file.modifiedMs,
-        file.sha256,
-        file.mediaType,
-      ],
-    );
-  }
+  await db.query(
+    `INSERT INTO chat_files (id, conversation_id, run_id, path, size, changed_ms, sha256, media_type)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [
+      file.id,
+      conversationId,
+      runId,
+      file.path,
+      file.size,
+      file.changedMs,
+      file.sha256,
+      file.mediaType,
+    ],
+  );
 }
 
 export async function listChatFiles(db: Queryable, conversationId: string): Promise<ChatFile[]> {

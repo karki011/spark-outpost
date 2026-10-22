@@ -18,6 +18,19 @@
   text-decoration: none;
   border-radius: var(--r-sm);
 }
+.chat-file-open {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.chat-file-thumb {
+  width: 20px;
+  height: 20px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+}
 .chat-file-open small {
   color: var(--muted);
 }

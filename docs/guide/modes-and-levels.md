@@ -34,6 +34,12 @@ The agent's mode is the provider's own setting, shown with the provider's names.
 | A mode Spark doesn't recognise                              | Lets the agent decide when to ask.                                                                |
 | Every mode                                                  | Enforces the [protected paths](protected-paths.md).                                               |
 
+## Agent tools
+
+Agents use their own tools, such as web search, per mode. Web tools never open this computer's addresses.
+
+Turn one off with `permissions.deny` in `~/.claude/settings.json`, a project's `.claude/settings.json` or managed settings; Codex: `config.toml`. Spark reads only `deny` and `ask` there.
+
 ## Autonomy levels
 
 | Level                        | Plans                         | Keeping changes | Shipping                        |
@@ -42,5 +48,3 @@ The agent's mode is the provider's own setting, shown with the provider's names.
 | **Full auto → PR** (default) | Only the agent's own approval | Kept by itself  | The agent pushes and opens a PR |
 
 The level doesn't choose [where the chat works](where-spark-works.md).
-
-Both levels keep **Revert to before this run**, and neither ever merges.

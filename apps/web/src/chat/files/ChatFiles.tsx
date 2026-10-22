@@ -12,14 +12,34 @@ function fileUrl(file: ChatFile, download = false): string {
   return `/api${chatFileContentPath(file.id)}${download ? '?download=1' : ''}`;
 }
 
-function FileChip({ file }: { file: ChatFile }) {
-  return (
-    <span className="chip att-chip chat-file">
-      <a className="chat-file-open" href={fileUrl(file)} target="_blank" rel="noopener noreferrer">
-        <FileIcon />
+function FileOpen({ file, onView }: { file: ChatFile; onView: (file: ChatFile) => void }) {
+  if (file.kind === 'image') {
+    return (
+      <button
+        type="button"
+        className="chat-file-open"
+        aria-label={`View ${file.name}, ${formatBytes(file.size)}`}
+        onClick={() => onView(file)}
+      >
+        <img className="chat-file-thumb" src={fileUrl(file)} alt="" loading="lazy" />
         <span className="att-name">{file.name}</span>
         <small>{formatBytes(file.size)}</small>
-      </a>
+      </button>
+    );
+  }
+  return (
+    <a className="chat-file-open" href={fileUrl(file)} target="_blank" rel="noopener noreferrer">
+      <FileIcon />
+      <span className="att-name">{file.name}</span>
+      <small>{formatBytes(file.size)}</small>
+    </a>
+  );
+}
+
+function FileChip({ file, onView }: { file: ChatFile; onView: (file: ChatFile) => void }) {
+  return (
+    <span className="chip att-chip chat-file">
+      <FileOpen file={file} onView={onView} />
       <a
         className="chat-file-save"
         href={fileUrl(file, true)}
@@ -58,21 +78,9 @@ export function ChatFiles({ files }: { files: readonly ChatFile[] }) {
   }
   return (
     <div className="chat-files" role="group" aria-label="Files from this turn">
-      {files.map((file) =>
-        file.kind === 'image' ? (
-          <button
-            key={file.id}
-            type="button"
-            className="msg-att-img"
-            aria-label={`View ${file.name}`}
-            onClick={() => setViewing(file)}
-          >
-            <img src={fileUrl(file)} alt={file.name} loading="lazy" />
-          </button>
-        ) : (
-          <FileChip key={file.id} file={file} />
-        ),
-      )}
+      {files.map((file) => (
+        <FileChip key={file.id} file={file} onView={setViewing} />
+      ))}
       {viewing && (
         <ImageLightbox
           name={viewing.name}

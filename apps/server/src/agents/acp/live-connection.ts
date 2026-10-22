@@ -90,6 +90,9 @@ export async function startLiveConnection(spec: ConnectionSpec): Promise<LiveCon
     .onRequest(acp.methods.client.session.requestPermission, (ctx) =>
       handle((handlers) => handlers.permission(ctx.params, ctx.requestId)),
     )
+    .onRequest(acp.methods.client.elicitation.create, (ctx) =>
+      handle((handlers) => handlers.question(ctx.params, ctx.requestId, ctx.signal)),
+    )
     .onRequest(acp.methods.client.fs.writeTextFile, (ctx) =>
       handle((handlers) => handlers.write(ctx.params)),
     )

@@ -100,6 +100,10 @@ const AGENT_TOOL_STEPS: Readonly<Record<string, string>> = {
   Grep: 'Searching files',
   WebFetch: 'Fetching a page',
   WebSearch: 'Searching the web',
+  Monitor: 'Watching a command',
+  TaskStop: 'Stopping a background task',
+  ListMcpResources: 'Listing MCP resources',
+  ReadMcpResource: 'Reading an MCP resource',
   TodoWrite: 'Updating the to-do list',
   ToolSearch: 'Loading tools',
   Skill: 'Loading a skill',
@@ -153,11 +157,18 @@ function grepStep(title: string): string | null {
   return `Search for \`${match[1]}\`${where}`;
 }
 
-const FETCH_TITLE = /^Fetch https?:\/\/(?:[^@/?#\s]*@)?([^/?#:\s]+)\S*$/;
+const FETCH_TITLE = /^(?:Fetch|Open page:) https?:\/\/(?:[^@/?#\s]*@)?([^/?#:\s]+)\S*$/;
+const WEB_SEARCH_STEP = 'Searched the web';
+const WEB_SEARCH_TITLE = /^(?:Search ".*"|Web search(?:: .*)?)$/s;
 
-function fetchStep(title: string): string | null {
+function webStep(title: string): string | null {
+  if (WEB_SEARCH_TITLE.test(title)) return WEB_SEARCH_STEP;
   const host = FETCH_TITLE.exec(title)?.[1];
-  return host ? `Fetch ${host}` : null;
+  return host ? `Fetched ${host}` : null;
+}
+
+export function isWebToolTitle(title: string): boolean {
+  return webStep(title.trim()) !== null;
 }
 
 export function friendlyStep(title: string): string {
@@ -166,7 +177,7 @@ export function friendlyStep(title: string): string {
   if (mcp) return mcpStep(mcp);
   const named = SPARK_TOOL_STEPS[trimmed] ?? AGENT_TOOL_STEPS[trimmed];
   if (named) return named;
-  return grepStep(trimmed) ?? fetchStep(trimmed) ?? snakeStep(trimmed);
+  return grepStep(trimmed) ?? webStep(trimmed) ?? snakeStep(trimmed);
 }
 
 const SNAKE_NAME = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$/;

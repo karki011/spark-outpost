@@ -45,7 +45,6 @@ async function finished(runId: string): Promise<void> {
     db: t.db,
     providers: new Map([['fake', recording]]),
     leaseSeconds: 30,
-    concurrency: 1,
     pollMs: 20,
   });
   await eventually(async () => ((await getRun(t.db, runId))?.finishedAt ? true : null));

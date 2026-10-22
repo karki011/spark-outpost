@@ -4,7 +4,7 @@ import {
   remoteSwitchSchema,
   type RemoteSwitches,
 } from '@spark-outpost/contracts';
-import { blockedFieldIn, cardSwitch, remoteDecision } from './policy.ts';
+import { blockedFieldIn, cardSwitch, macOnlyCard, remoteDecision } from './policy.ts';
 import { ROUTE_RULES } from './route-rules.ts';
 
 const ID = '0198c0de-0000-7000-8000-000000000001';
@@ -249,6 +249,29 @@ describe('remote policy', () => {
     expect(cardSwitch({ ...base, paths: ['config/.env'] })).toBe('highRiskCards');
     expect(cardSwitch({ ...base, fullPaths: ['/repo/.env.local'] })).toBe('highRiskCards');
     expect(cardSwitch({ unexpected: true })).toBe('highRiskCards');
+  });
+
+  it('lets a paired device answer an agent’s question like an ordinary card', () => {
+    const base = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
+    const field = {
+      key: 'name',
+      kind: 'text',
+      question: 'What should the cache be called?',
+      options: [],
+      required: true,
+      noteKey: null,
+      otherValue: null,
+      minimum: null,
+      maximum: null,
+      minLength: null,
+      maxLength: null,
+      minItems: null,
+      maxItems: null,
+      default: null,
+    };
+    const question = { ...base, form: { message: 'Codex needs your input.', fields: [field] } };
+    expect(cardSwitch(question)).toBeNull();
+    expect(macOnlyCard(question)).toBe(false);
   });
 
   it('keeps Jira and Confluence deletes behind the high-risk switch and other changes ordinary', () => {

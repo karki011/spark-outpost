@@ -86,7 +86,6 @@ describe('a late answer on the way to the chat that asked', () => {
       db: t.db,
       providers: new Map([[recording.name, recording]]),
       leaseSeconds: 30,
-      concurrency: 1,
       pollMs: 20,
     });
 

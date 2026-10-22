@@ -1,6 +1,7 @@
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { describe, expect, it } from 'vitest';
-import { createUpdateMapper, opensPullRequest } from './session-updates.ts';
+import { createUpdateMapper } from './session-updates.ts';
+import { opensPullRequest } from './tool-titles.ts';
 
 const link = (uri: string, name: string): SessionUpdate => ({
   sessionUpdate: 'agent_message_chunk',
