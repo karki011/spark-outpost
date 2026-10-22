@@ -45,6 +45,13 @@ describe('askKeyAction', () => {
     expect(askKeyAction(press('ArrowUp', { target: 'own-words', caretAtStart: true }))).toBeNull();
   });
 
+  it('moves between options with Left and Right too, but leaves them to a text field', () => {
+    expect(askKeyAction(press('ArrowRight'))).toEqual({ kind: 'move', by: 1 });
+    expect(askKeyAction(press('ArrowLeft'))).toEqual({ kind: 'move', by: -1 });
+    expect(askKeyAction(press('ArrowLeft', { target: 'answer', caretAtStart: true }))).toBeNull();
+    expect(askKeyAction(press('ArrowRight', { target: 'other' }))).toBeNull();
+  });
+
   it('picks by number outside text fields only', () => {
     expect(askKeyAction(press('2'))).toEqual({ kind: 'pick', index: 1 });
     expect(askKeyAction(press('2', { target: 'other' }))).toEqual({ kind: 'pick', index: 1 });

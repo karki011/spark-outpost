@@ -36,11 +36,18 @@ function caretAtStart(target: EventTarget): boolean {
   );
 }
 
+function sameRadioGroup(from: EventTarget, next: HTMLElement): boolean {
+  if (!(from instanceof HTMLElement) || next.getAttribute('role') !== 'radio') return false;
+  return next.closest('[role="radiogroup"]') === from.closest('[role="radiogroup"]');
+}
+
 function moveFocus(form: HTMLFormElement, from: EventTarget, by: number): boolean {
   const rows = [...form.querySelectorAll<HTMLElement>(`[${ASK_ROW}]`)];
   const next = rows[rows.indexOf(from as HTMLElement) + by];
-  next?.focus();
-  return next !== undefined;
+  if (!next) return false;
+  next.focus();
+  if (sameRadioGroup(from, next)) next.click();
+  return true;
 }
 
 function OwnWords({

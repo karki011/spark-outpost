@@ -77,6 +77,25 @@
   border-color: var(--accent);
   background: var(--accent);
 }
+.ask-radio {
+  border-radius: 50%;
+}
+.ask-radio::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-ink);
+  transform: scale(0);
+  transition: transform 0.15s;
+}
+.ask-opt[aria-checked='true'] .ask-radio {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.ask-opt[aria-checked='true'] .ask-radio::after {
+  transform: scale(1);
+}
 .ask-opt-text {
   min-width: 0;
   overflow-wrap: anywhere;
