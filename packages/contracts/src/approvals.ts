@@ -202,7 +202,6 @@ export const updateProjectRequestSchema = z
     name: projectNameSchema.optional(),
     commandAllowlist: commandAllowlistSchema.optional(),
     workPlace: workPlaceSchema.optional(),
-    browserKeepSignIns: z.boolean().optional(),
   })
   .refine((body) => Object.values(body).some((value) => value !== undefined));
 export type UpdateProjectRequest = z.input<typeof updateProjectRequestSchema>;

@@ -220,6 +220,7 @@ export const remoteAuditActionSchema = z.enum([
   'passkey_sign_in_failed',
   'notification_sent',
   'push_contact_changed',
+  'folder_created',
   'request',
   'refused',
 ]);

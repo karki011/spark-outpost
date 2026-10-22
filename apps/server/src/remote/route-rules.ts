@@ -308,7 +308,9 @@ PUT /api/tickets/connections/:source
 `,
   projects: `
 GET /api/folders
+POST /api/folders
 POST /api/projects
+POST /api/projects/:id/git-init
 POST /api/projects/restore
 POST /api/project-clones
 POST /api/project-clones/:id/cancel

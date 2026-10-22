@@ -8,6 +8,7 @@ import {
   nextStreak,
   pendingCards,
   quickShortcutTarget,
+  shortcutClosesPanel,
   viewWidth,
   runStatuses,
   sessionState,
@@ -70,6 +71,7 @@ const quiet: IslandInputs = {
   note: false,
   panel: null,
   cards: [],
+  aside: [],
   review: null,
   hoverLine: false,
 };
@@ -99,6 +101,11 @@ describe('island state machine', () => {
     expect(hoverOpensHome(line, true)).toBe(false);
     expect(quickShortcutTarget(null, line, card)).toEqual({ kind: 'review', chatId: 'a' });
     expect(quickShortcutTarget(null, line)).toEqual({ kind: 'quick' });
+    expect(quickShortcutTarget('home', line, null, 'user')).toEqual({ kind: 'close' });
+    expect(quickShortcutTarget('home', line, null, 'hover')).toEqual({ kind: 'quick' });
+    expect(shortcutClosesPanel('home', 'user')).toBe(true);
+    expect(shortcutClosesPanel('home', 'hover')).toBe(false);
+    expect(shortcutClosesPanel(null, 'user')).toBe(false);
     expect(islandView({ ...quiet, cards: [card], hoverLine: true, review: 'a' }).kind).toBe('card');
     expect(islandView({ ...quiet, hoverLine: true, panel: 'home' }).kind).toBe('panel');
   });
@@ -121,6 +128,12 @@ describe('island state machine', () => {
       total: 2,
     });
     expect(islandView({ ...quiet, cards, review: 'gone' }).kind).toBe('peek');
+    expect(islandView({ ...quiet, cards, aside: [first], review: second.chat.id })).toEqual({
+      kind: 'card',
+      card: second,
+      index: 1,
+      total: 1,
+    });
     expect(islandView({ ...quiet, panel: 'quick', note: true }).kind).toBe('note');
   });
 

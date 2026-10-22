@@ -56,12 +56,12 @@ function nowWith(meeting: CalendarEvent = standup): CalendarNow {
   };
 }
 
-function mount() {
-  const home = { open: false, show: () => undefined, note: () => undefined };
+function mount(minute?: number, open = false) {
+  const home = { open, show: () => undefined, note: () => undefined };
   const client = new QueryClient();
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(QueryClientProvider, { client }, children);
-  return renderHook(() => useIslandCalendar(Date.now(), 0, [], () => undefined, home), {
+  return renderHook(() => useIslandCalendar(minute ?? Date.now(), 0, [], () => undefined, home), {
     wrapper,
   });
 }
@@ -71,7 +71,7 @@ const marked = vi.spyOn(calendarApi, 'mark');
 beforeEach(() => {
   marked.mockResolvedValue({ ok: true });
   vi.useFakeTimers();
-  vi.setSystemTime(at(10, 29, 10));
+  vi.setSystemTime(at(10, 30, 10));
   calendarState.now = nowWith();
   calendarState.updatedAt = Date.now();
 });
@@ -181,5 +181,51 @@ describe('useIslandCalendar meeting alert', () => {
     expect(again.shown.filter(Boolean)).toEqual([]);
     await act(async () => vi.advanceTimersByTimeAsync(61_000));
     expect(again.shown.at(-1)?.key).toBe(standup.key);
+  });
+});
+
+describe('useIslandCalendar island line', () => {
+  it('counts down each minute even when the island clock lags a minute behind', async () => {
+    vi.setSystemTime(at(10, 26, 30));
+    fakeBridge();
+    const hook = mount(at(10, 26));
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    expect(hook.result.current.line?.text).toBe('Standup in 4 min');
+    await act(async () => vi.advanceTimersByTimeAsync(40_000));
+    expect(hook.result.current.line?.text).toBe('Standup in 3 min');
+    await act(async () => vi.advanceTimersByTimeAsync(60_000));
+    expect(hook.result.current.line?.text).toBe('Standup in 2 min');
+  });
+
+  it('drops the line for a meeting once it is joined', async () => {
+    vi.setSystemTime(at(10, 26));
+    fakeBridge();
+    const hook = mount();
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    expect(hook.result.current.line?.event?.key).toBe(standup.key);
+    act(() => hook.result.current.onJoined(standup.key));
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    expect(hook.result.current.line).toBeNull();
+  });
+
+  it('takes dismissed and snoozed meetings out of Choose', async () => {
+    vi.setSystemTime(at(10, 26));
+    const design = event('Design sync', at(10, 30), at(10, 50), { link: link('meet') });
+    calendarState.now = {
+      ...nowWith(),
+      upcoming: [standup, design],
+      nudge: { ...nowWith().nudge!, group: [standup, design] } as CalendarNow['nudge'],
+    };
+    fakeBridge();
+    const hook = mount(undefined, true);
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    act(() => hook.result.current.onChoose(hook.result.current.line!));
+    expect(hook.result.current.choosing).toHaveLength(2);
+    act(() => hook.result.current.onDismissNudge(standup));
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    expect(hook.result.current.choosing?.map((meeting) => meeting.key)).toEqual([design.key]);
+    act(() => hook.result.current.onSnoozeAlert(design));
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    expect(hook.result.current.choosing).toBeNull();
   });
 });

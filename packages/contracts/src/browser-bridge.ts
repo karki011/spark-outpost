@@ -61,7 +61,6 @@ export const browserHostRequestSchema = z.discriminatedUnion('op', [
     url: z.string().min(1).max(BROWSER_URL_MAX),
     tab,
     projectId: z.uuid().nullable(),
-    keepSignIns: z.boolean(),
     roots: z.array(z.string().max(4096)).max(16),
   }),
   z.object({ op: z.literal('tabs'), ...chat }),

@@ -106,7 +106,6 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
               Object.assign(window, { sparkFocus: callback });
               return () => undefined;
             },
-            pickFolder: async () => null,
             pathForFile: () => null,
             setInteractive: (on: boolean) => {
               const view = document.querySelector<HTMLElement>('.isl')?.dataset.view;

@@ -33,6 +33,7 @@ export const SHOTS_SPECS = [
 export const SPEC_GROUPS = {
   chat: [
     'agent-continues',
+    'agent-sleep',
     'artifacts',
     'attachments',
     'chat',
@@ -119,6 +120,7 @@ export const SPEC_GROUPS = {
     'sign-ins',
   ],
   'sidebar-projects': [
+    'add-folder',
     'archive-current',
     'compact-chrome',
     'project-clone',
@@ -295,6 +297,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/web/src/chat/tickets/', groups: ['tickets'] },
   { prefix: 'apps/web/src/chat/today/', groups: ['home'] },
   { prefix: 'apps/web/src/chat/project/', groups: ['sidebar-projects'] },
+  { prefix: 'apps/web/src/projects/', groups: ['sidebar-projects', 'island-desktop'] },
   { prefix: 'apps/web/src/companion/', groups: ['home', 'island-desktop'] },
   {
     prefix: 'apps/web/src/connectors/',

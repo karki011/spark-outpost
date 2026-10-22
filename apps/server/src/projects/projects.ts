@@ -20,13 +20,12 @@ export interface ProjectRow {
   created_at: Date;
   command_allowlist: string[];
   work_place: string;
-  browser_keep_sign_ins: boolean;
   preview: unknown;
   last_used_at?: Date;
 }
 
 export const PROJECT_COLUMNS =
-  'id, name, root_path, created_at, command_allowlist, work_place, browser_keep_sign_ins, preview';
+  'id, name, root_path, created_at, command_allowlist, work_place, preview';
 
 export class ProjectNotFoundError extends Error {
   constructor() {
@@ -55,7 +54,6 @@ export function toProject(row: ProjectRow, home: string): Project {
     ...(row.last_used_at ? { lastUsedAt: row.last_used_at.toISOString() } : {}),
     commandAllowlist: row.command_allowlist,
     workPlace: workPlaceSchema.catch(DEFAULT_WORK_PLACE).parse(row.work_place),
-    browserKeepSignIns: row.browser_keep_sign_ins,
     preview: storedPreview(row.preview),
   };
 }
@@ -134,7 +132,6 @@ export interface ProjectChange {
   name?: string | undefined;
   commandAllowlist?: readonly string[] | undefined;
   workPlace?: WorkPlace | undefined;
-  browserKeepSignIns?: boolean | undefined;
 }
 
 export async function updateProject(
@@ -146,8 +143,7 @@ export async function updateProject(
   const { rows } = await db.query<ProjectRow>(
     `UPDATE projects
      SET name = COALESCE($3, name), command_allowlist = COALESCE($4, command_allowlist),
-         work_place = COALESCE($5, work_place),
-         browser_keep_sign_ins = COALESCE($6, browser_keep_sign_ins)
+         work_place = COALESCE($5, work_place)
      WHERE id = $1 AND workspace_id = $2
      RETURNING ${PROJECT_COLUMNS}`,
     [
@@ -156,7 +152,6 @@ export async function updateProject(
       change.name ?? null,
       change.commandAllowlist ?? null,
       change.workPlace ?? null,
-      change.browserKeepSignIns ?? null,
     ],
   );
   if (!rows[0]) throw new ProjectNotFoundError();

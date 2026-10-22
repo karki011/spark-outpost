@@ -2,7 +2,6 @@ import path from 'node:path';
 import {
   app,
   BrowserWindow,
-  dialog,
   globalShortcut,
   ipcMain,
   Menu,
@@ -28,7 +27,9 @@ import { isSize } from './island-geometry.ts';
 import { trayTemplate } from './island-options.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
 import { appLayout } from './layout.ts';
+import { noActivate } from './no-activate.ts';
 import { startMeetingAlertHost } from './meeting-alert-host.ts';
+import { watchSparkFocus } from './spark-focus.ts';
 import { startViewingHost } from './viewing-host.ts';
 import { watchHourCycle } from './hour-cycle.ts';
 import { startVoiceHost, type VoiceHost } from './voice/host.ts';
@@ -119,6 +120,13 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       .catch((error: Error) => console.error(`[companion] Could not save: ${error.message}`));
   };
 
+  const layout = appLayout({
+    isPackaged: app.isPackaged,
+    appPath: app.getAppPath(),
+    resourcesPath: process.resourcesPath,
+  });
+  const preventActivation = noActivate(layout.noActivateAddon, options.log);
+
   const companion = createCompanion(initial, {
     supported: process.platform === 'darwin',
     openIsland: (onGone) => {
@@ -129,6 +137,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         size: () => companion.status().islandSize,
         hideInShare: () => companion.status().hideInShare,
         savePosition: (position) => companion.setPosition(position),
+        preventActivation,
         log: options.log,
         onGone: () => {
           if (island === opened) island = null;
@@ -169,20 +178,8 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       focused = next;
       island?.sparkFocus(next);
     });
-  app.on('browser-window-focus', reportFocus);
-  app.on('browser-window-blur', reportFocus);
-  app.on('did-become-active', reportFocus);
+  const stopFocusWatch = watchSparkFocus(app, BrowserWindow.getAllWindows(), reportFocus);
   ipcMain.handle(IPC.islandSparkFocused, (event) => fromIsland(event) && sparkFocused());
-  ipcMain.handle(IPC.islandPickFolder, async (event) => {
-    if (!fromIsland(event)) return null;
-    app.focus({ steal: true });
-    const picked = await dialog.showOpenDialog({
-      title: 'Choose a project folder',
-      buttonLabel: 'Use this folder',
-      properties: ['openDirectory', 'createDirectory'],
-    });
-    return picked.canceled ? null : (picked.filePaths[0] ?? null);
-  });
 
   ipcMain.handle(IPC.companionGet, (event) => (fromSpark(event) ? companion.status() : null));
   ipcMain.handle(IPC.companionSetEnabled, (event, on: unknown) =>
@@ -299,14 +296,10 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     islandCenter: () => island?.center() ?? null,
     sendToIsland: (channel, payload) => island?.post(channel, payload),
     hideInShare: () => companion.status().hideInShare,
+    preventActivation,
     log: options.log,
   });
 
-  const layout = appLayout({
-    isPackaged: app.isPackaged,
-    appPath: app.getAppPath(),
-    resourcesPath: process.resourcesPath,
-  });
   const voice: VoiceHost | null = await startVoiceHost({
     helperPath: layout.voiceBin,
     modelsDir: layout.voiceModels,
@@ -355,7 +348,6 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.companionSetNotify,
         IPC.islandGeometry,
         IPC.islandSparkFocused,
-        IPC.islandPickFolder,
         IPC.pendingChat,
         IPC.pendingSettings,
       ]) {
@@ -374,9 +366,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       ]) {
         ipcMain.removeAllListeners(channel);
       }
-      app.off('browser-window-focus', reportFocus);
-      app.off('browser-window-blur', reportFocus);
-      app.off('did-become-active', reportFocus);
+      stopFocusWatch();
       tray.destroy();
     },
   };

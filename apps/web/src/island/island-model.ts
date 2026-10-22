@@ -11,6 +11,7 @@ import {
   terminalTurnFinished,
 } from '../terminal/turn-done.ts';
 import { needsInput, rowState } from '../conversations/row-state.ts';
+import { askedChoices } from './asked-question.ts';
 
 export type Panel = 'home' | 'quick' | 'ask';
 
@@ -33,6 +34,7 @@ export interface IslandInputs {
   note: boolean;
   panel: Panel | null;
   cards: readonly Card[];
+  aside: readonly Card[];
   review: string | null;
   hoverLine: boolean;
 }
@@ -44,26 +46,36 @@ export type IslandView =
   | { kind: 'now' }
   | { kind: 'peek' };
 
+function queuePlace(card: Card, inputs: IslandInputs): { index: number; total: number } {
+  const queue = inputs.cards.filter((candidate) => !inputs.aside.includes(candidate));
+  const index = queue.indexOf(card);
+  return index < 0 ? { index: 1, total: 1 } : { index: index + 1, total: queue.length };
+}
+
 export function islandView(inputs: IslandInputs): IslandView {
   if (inputs.note) return { kind: 'note' };
   if (inputs.panel) return { kind: 'panel', panel: inputs.panel };
-  const total = inputs.cards.length;
-  const reviewed = inputs.cards.findIndex((card) => card.chat.id === inputs.review);
-  if (reviewed >= 0) {
-    return { kind: 'card', card: inputs.cards[reviewed]!, index: reviewed + 1, total };
-  }
+  const card = inputs.cards.find((candidate) => candidate.chat.id === inputs.review);
+  if (card) return { kind: 'card', card, ...queuePlace(card, inputs) };
   return inputs.hoverLine ? { kind: 'now' } : { kind: 'peek' };
 }
 
 export type QuickShortcutTarget =
   { kind: 'review'; chatId: string } | { kind: 'close' } | { kind: 'quick' };
 
+export type PanelOpener = 'hover' | 'user';
+
+export function shortcutClosesPanel(panel: Panel | null, opener: PanelOpener): boolean {
+  return panel !== null && opener === 'user';
+}
+
 export function quickShortcutTarget(
   panel: Panel | null,
   view: IslandView,
   pending: Card | null = null,
+  opener: PanelOpener = 'user',
 ): QuickShortcutTarget {
-  if (panel) return { kind: 'close' };
+  if (shortcutClosesPanel(panel, opener)) return { kind: 'close' };
   const card = view.kind === 'card' ? view.card : view.kind === 'note' ? null : pending;
   if (!card) return { kind: 'quick' };
   if (card.loading || card.kind === 'approval' || card.kind === 'force') {
@@ -155,7 +167,8 @@ function cardKind(chat: ConversationSummary, approval: Approval | null): CardKin
   const checkpoint = approval.payload.checkpoint;
   if (checkpoint) {
     const simple = checkpoint.kind === 'clarify' && checkpoint.questions.length === 0;
-    return simple && checkpoint.choices.length > 0 ? 'question' : 'open';
+    if (simple && checkpoint.choices.length > 0) return 'question';
+    return askedChoices(approval) ? 'question' : 'open';
   }
   if (approval.payload.sparkAction || approval.payload.plan) return 'open';
   if (chat.attention?.kind !== 'permission') return 'open';

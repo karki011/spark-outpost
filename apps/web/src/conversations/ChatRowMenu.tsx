@@ -1,4 +1,5 @@
 import type { ConversationSummary, Project } from '@spark-outpost/contracts';
+import type { PickerAction } from '../ui/ChoicePicker.tsx';
 import { useOutpostSeam } from '../chat/outpost/outpost-seam.ts';
 import { ChatMenu } from './ChatMenu.tsx';
 import type { MenuAnchor } from './MenuShell.tsx';
@@ -13,6 +14,7 @@ interface ChatRowMenuProps {
   projects: readonly Project[];
   actions: ChatActions;
   toaster: Toaster;
+  folderActions: readonly PickerAction[];
   onClose: () => void;
   onRename: () => void;
 }
@@ -24,6 +26,7 @@ export function ChatRowMenu({
   projects,
   actions,
   toaster,
+  folderActions,
   onClose,
   onRename,
 }: ChatRowMenuProps) {
@@ -37,6 +40,7 @@ export function ChatRowMenu({
       chat={chat}
       anchor={anchor}
       projects={projects}
+      folderActions={folderActions}
       outposts={
         outpostSeam?.canManage
           ? {

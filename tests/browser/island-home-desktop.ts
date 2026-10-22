@@ -104,7 +104,6 @@ export async function fakeHomeDesktop(page: Page, theme = 'graphite', sparkFocus
             },
             sparkFocused: async () => sparkFocused,
             onSparkFocus: none,
-            pickFolder: async () => null,
             pathForFile: () => null,
             setInteractive: () => undefined,
             setFocusable: () => undefined,

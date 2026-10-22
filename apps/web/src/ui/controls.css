@@ -385,6 +385,19 @@
 .choice-menu button:disabled small {
   white-space: normal;
 }
+.choice-sep {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--line);
+}
+.choice-menu .choice-action > svg {
+  flex-shrink: 0;
+  color: var(--accent-text);
+}
+.choice-menu .choice-action:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
 .choice-menu .warn small {
   color: var(--warn);
 }

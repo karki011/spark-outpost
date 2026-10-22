@@ -6,7 +6,7 @@ order: 417
 summary: Pair a device over Tailscale and choose what it may do.
 ---
 
-You'll use Spark on another device; work stays on the Mac. About 5 minutes. Needs Tailscale on both, HTTPS certificates on.
+Use Spark from another device; work stays on the Mac. About 5 minutes. Needs Tailscale on both, HTTPS certificates on.
 
 1. Open **Remote control**, above **Settings**, and turn on **Remote control**.
 2. Select **Pair a device**, then scan the code, or open the address and type it.
@@ -16,13 +16,15 @@ You'll use Spark on another device; work stays on the Mac. About 5 minutes. Need
 
 **Devices** renames or revokes a device, passkeys included; **Remove old entry** clears a duplicate. **What paired devices can do** holds the switches. On a phone, **More** holds **Pause Spark**, Remote control and Settings; Map and Mac-only tools are hidden.
 
-Creating or deleting an [outpost](outposts.md) and changing its chats stay on the Mac. A proposed story's **Start** works here, as proposed.
+Creating, deleting or changing an [outpost](outposts.md) stays on the Mac. A proposed story's **Start** works here, as proposed.
 
-A paired device can answer browser cards; the Browser pane stays on the Mac. **Open artifacts** (off) shows artifacts.
+**Link a new folder or clone a repo** also allows **New folder**.
+
+Devices answer browser cards; the Browser pane stays on the Mac. **Open artifacts** (off) shows artifacts.
 
 **Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages and steps, with a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both start off.
 
-**Send now** stops the turn first. **Deny** takes an optional reason. Claude's terminal shows **Spark · phone connected**.
+**Send now** stops the turn first. Claude's terminal shows **Spark · phone connected**.
 
 Messages shown aren't stored.
 

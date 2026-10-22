@@ -79,7 +79,6 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     onEscape: (callback: () => void) => listen(IPC.islandEscape, callback),
     onPointer: (callback: (point: unknown) => void) => listen(IPC.islandPointer, callback),
     sparkFocused: () => ipcRenderer.invoke(IPC.islandSparkFocused),
-    pickFolder: () => ipcRenderer.invoke(IPC.islandPickFolder),
     pathForFile: (file: File) => webUtils.getPathForFile(file) || null,
     onSparkFocus: (callback: (focused: unknown) => void) => listen(IPC.islandSparkFocus, callback),
     setInteractive: (on: boolean) => ipcRenderer.send(IPC.islandInteractive, on),
@@ -138,9 +137,8 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     command: (chatId: string, command: unknown) =>
       ipcRenderer.invoke(IPC.browserCommand, chatId, command),
     start: (placement: unknown) => ipcRenderer.invoke(IPC.browserStart, placement),
-    sites: (projectId: string) => ipcRenderer.invoke(IPC.browserSites, projectId),
-    signOut: (projectId: string, origin: string | null) =>
-      ipcRenderer.invoke(IPC.browserSignOut, { projectId, origin }),
+    sites: () => ipcRenderer.invoke(IPC.browserSites),
+    signOut: (origin: string | null) => ipcRenderer.invoke(IPC.browserSignOut, { origin }),
     onState: (callback: (state: unknown) => void) => listen(IPC.browserStateChanged, callback),
     onSnapshot: (callback: (snapshot: unknown) => void) => listen(IPC.browserSnapshot, callback),
     onPicked: (callback: (pick: unknown) => void) => listen(IPC.browserPicked, callback),

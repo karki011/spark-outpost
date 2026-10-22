@@ -22,6 +22,7 @@ import {
   parsePayload,
   parsePlace,
   rigFor,
+  shortcutJoin,
 } from './alert-model.ts';
 
 const CLIMB_MS = 600;
@@ -33,12 +34,14 @@ function useAlertFeed() {
   const [payload, setPayload] = useState<MeetingAlertPayload | null>(null);
   const [place, setPlace] = useState<MeetingAlertPlace | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [receivedAt, setReceivedAt] = useState(0);
   useEffect(() => {
     if (!bridge) return;
     const offPayload = bridge.onPayload((value) => {
       const next = parsePayload(value);
       if (!next) return;
       setPayload(next);
+      setReceivedAt(Date.now());
       setLeaving(false);
     });
     const offPlace = bridge.onPlace((value) => setPlace(parsePlace(value)));
@@ -54,7 +57,7 @@ function useAlertFeed() {
     setPayload(null);
     setLeaving(false);
   };
-  return { payload, place, leaving, clear };
+  return { payload, place, leaving, receivedAt, clear };
 }
 
 function useNow(active: boolean): number {
@@ -111,8 +114,9 @@ export function MeetingAlertApp() {
   useThemeSync();
   const reduced = useReducedMotion();
   const bridge = sparkDesktop()?.meetingAlert;
-  const { payload, place, leaving, clear } = useAlertFeed();
-  const at = useNow(payload !== null && !leaving);
+  const { payload, place, leaving, receivedAt, clear } = useAlertFeed();
+  const ticked = useNow(payload !== null && !leaving);
+  const at = Math.max(ticked, receivedAt);
   const cardRef = useRef<HTMLDivElement>(null);
   const clearRef = useRef(clear);
   useEffect(() => {
@@ -170,10 +174,12 @@ export function MeetingAlertApp() {
     }
     if (key.key.toLowerCase() === 'j' && key.metaKey) {
       key.preventDefault();
-      const joinable = payload.events.find((event) => joinState(event, at) === 'open');
+      const joinable = shortcutJoin(payload.events, at);
       if (joinable?.link) {
         openJoin(joinable.link.url);
         act('joined', joinable.key);
+      } else {
+        cardRef.current?.querySelector<HTMLButtonElement>('.ma-btn.primary')?.focus();
       }
     }
   };

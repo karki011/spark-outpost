@@ -115,6 +115,9 @@ export function StepChats({ draft, data, hidden, focusSignal, onChange }: StepCh
             onKind={(kind) => onChange((current) => withKind(current, chat.key, kind))}
             onPick={(chatId) => pick(chat.key, chatId)}
             onProject={(projectId) => chooseProject(chat.key, projectId)}
+            onAddedProject={(project) =>
+              onChange((current) => withProject(current, chat.key, project))
+            }
             onPatch={(changes) => onChange((current) => patchChat(current, chat.key, changes))}
             onHandle={(typed) => onChange((current) => withHandle(current, chat.key, typed))}
             onFiles={(files, pending) =>

@@ -31,7 +31,7 @@ Select **Settings** at the bottom of the rail. **Search settings** finds a secti
 
 ## Work
 
-**Projects**: linked folders. Open one for trust, **Where Spark works**, **Keep sign-ins in the browser**, **Saved sign-ins** and **Preview**. See [Where a chat works](where-spark-works.md).
+**Projects**: linked folders and **Add folder…**. Open one for trust, **Where Spark works**, **Saved sign-ins** and **Preview**. See [Where a chat works](where-spark-works.md).
 
 **Chats & autonomy**:
 
@@ -45,7 +45,7 @@ Select **Settings** at the bottom of the rail. **Search settings** finds a secti
 | **On wide windows**                          | **Context rail**       | Rail, panel or nothing                                         |
 | **Record Terminal sessions like chats**      | Off                    | [Record Terminal sessions](#record-terminal-sessions)          |
 
-**Custom instructions** takes text or a UTF-8 file on your Mac (16 KB at most); select **Save instructions**. Unreadable files are skipped.
+**Custom instructions** takes text or a UTF-8 file on your Mac (16 KB at most); select **Save instructions**.
 
 ### Record Terminal sessions
 
@@ -78,18 +78,20 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 
 **Mac control** (Mac app): **Let agents control other Mac apps** and the Accessibility permission. See [Let agents use Mac apps](mac-control.md).
 
+**Browser pane** (Mac app): signed-in sites and **Sign out of everything**.
+
 **Notifications**:
 
-| Row                                                                                                                                                                                                                     | Default                                                                             | Read more                                                      |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| **Morning brief**                                                                                                                                                                                                       | 7:00                                                                                | A daily summary on **Home**                                    |
-| **Status companion**                                                                                                                                                                                                    | **Show**                                                                            | [Spark Island](desktop-companion.md#inside-the-app)            |
-| Mac app: **Show Spark Island**, **Spark Island size**                                                                                                                                                                   | On, **Full**                                                                        | [Spark Island](desktop-companion.md)                           |
-| **Dock badge and notifications**                                                                                                                                                                                        | On                                                                                  | [Spark Island](desktop-companion.md#when-spark-island-is-off)  |
-| **Open requests by themselves**, **Island chimes**                                                                                                                                                                      | On, off                                                                             | [Spark Island](desktop-companion.md#answer-a-card)             |
-| **Hide in screen sharing**                                                                                                                                                                                              | On                                                                                  | [Spark Island](desktop-companion.md#turn-it-on-and-size-it)    |
-| **Quick chat shortcut**, **Inbox shortcut**                                                                                                                                                                             | ⌥Space, ⌥⇧Space                                                                     | [Change a shortcut](companion-quick-chat.md#change-a-shortcut) |
-| Mac app: **Add today’s calendar to the brief**, **Meetings**, **Meeting alerts**, **Alert at**, **Join meetings automatically**, **Hold chimes during**, **Calendars that nudge**, **Meeting alerts on paired devices** | On, 10 min, **Center of the screen**, 1 min before, off, **Focus blocks**, all, off | [See your day](calendar.md)                                    |
+| Row                                                                                                                                                                                                                     | Default                                                                         | Read more                                                      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **Morning brief**                                                                                                                                                                                                       | 7:00                                                                            | A daily summary on **Home**                                    |
+| **Status companion**                                                                                                                                                                                                    | **Show**                                                                        | [Spark Island](desktop-companion.md#inside-the-app)            |
+| Mac app: **Show Spark Island**, **Spark Island size**                                                                                                                                                                   | On, **Full**                                                                    | [Spark Island](desktop-companion.md)                           |
+| **Dock badge and notifications**                                                                                                                                                                                        | On                                                                              | [Spark Island](desktop-companion.md#when-spark-island-is-off)  |
+| **Open requests by themselves**, **Island chimes**                                                                                                                                                                      | On, off                                                                         | [Spark Island](desktop-companion.md#answer-a-card)             |
+| **Hide in screen sharing**                                                                                                                                                                                              | On                                                                              | [Spark Island](desktop-companion.md#turn-it-on-and-size-it)    |
+| **Quick chat shortcut**, **Inbox shortcut**                                                                                                                                                                             | ⌥Space, ⌥⇧Space                                                                 | [Change a shortcut](companion-quick-chat.md#change-a-shortcut) |
+| Mac app: **Add today’s calendar to the brief**, **Meetings**, **Meeting alerts**, **Alert at**, **Join meetings automatically**, **Hold chimes during**, **Calendars that nudge**, **Meeting alerts on paired devices** | On, 10 min, **Center of the screen**, at start, off, **Focus blocks**, all, off | [See your day](calendar.md)                                    |
 
 ## App
 

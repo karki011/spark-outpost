@@ -143,7 +143,6 @@ export type BrowserBounds = z.infer<typeof browserBoundsSchema>;
 export const browserPlacementSchema = z.object({
   chatId: z.uuid(),
   projectId: z.uuid().nullable(),
-  keepSignIns: z.boolean(),
   roots: z.array(z.string().max(4096)).max(16),
   bounds: browserBoundsSchema.nullable(),
   covered: z.boolean(),
@@ -238,7 +237,6 @@ export type BrowserSelectedText = z.infer<typeof browserSelectedTextSchema>;
 export const browserIdSchema = z.uuid();
 
 export const browserSignOutSchema = z.object({
-  projectId: z.uuid(),
   origin: z.url().max(300).nullable(),
 });
 

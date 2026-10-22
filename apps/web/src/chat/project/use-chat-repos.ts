@@ -9,8 +9,6 @@ const GIT_STALE_MS = 30_000;
 export const chatReposMutationKey = (conversationId: string) =>
   ['chat-projects', conversationId] as const;
 
-export type RepoRequest = RepoChange | { type: 'add'; rootPath: string };
-
 export function useProjects() {
   return useQuery({ queryKey: projectKeys.all, queryFn: projectsApi.list });
 }
@@ -33,19 +31,12 @@ export function useProjectBranch(projectId: string | null): string | null {
   return projectId ? (git.data?.branch ?? null) : null;
 }
 
-async function resolveChange(request: RepoRequest): Promise<RepoChange> {
-  if (request.type !== 'add' || !('rootPath' in request)) return request;
-  const project = await projectsApi.create(request.rootPath);
-  return { type: 'add', projectId: project.id };
-}
-
 export function useChatRepos(conversationId: string) {
   const queryClient = useQueryClient();
   const detailKey = queryKeys.conversation(conversationId);
   return useMutation({
     mutationKey: chatReposMutationKey(conversationId),
-    mutationFn: async (request: RepoRequest) => {
-      const change = await resolveChange(request);
+    mutationFn: async (change: RepoChange) => {
       const current =
         queryClient.getQueryData<ConversationDetail>(detailKey)?.conversation.projectIds ?? [];
       const projectIds = applyRepoChange(current, change);

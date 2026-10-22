@@ -102,12 +102,14 @@ function open(saved: IslandPosition = { docked: true }) {
     hideInShare: () => hideInShare,
     savePosition,
     onGone: vi.fn(),
+    preventActivation,
     log,
   });
   return { handle, savePosition };
 }
 
 const log = vi.fn<(line: string) => void>();
+const preventActivation = vi.fn();
 const sentGeometry = () =>
   native.window.webContents.send.mock.calls
     .filter(([channel]) => channel === IPC.islandGeometryChanged)
@@ -127,9 +129,10 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe('native island window', () => {
-  it('appears on all Spaces and full-screen workspaces without taking focus', () => {
+  it('appears on all Spaces and full-screen workspaces without taking focus or activating Spark', () => {
     const { handle } = open();
     expect(native.window.setAlwaysOnTop).toHaveBeenCalledWith(true, ISLAND_LEVEL);
+    expect(preventActivation).toHaveBeenCalledWith(native.window);
     expect(native.window.setVisibleOnAllWorkspaces).toHaveBeenCalledWith(true, {
       visibleOnFullScreen: true,
       skipTransformProcessType: true,

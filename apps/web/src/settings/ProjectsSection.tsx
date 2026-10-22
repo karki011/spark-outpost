@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { agentConfigApi, agentConfigKey, projectTrustKey } from '../api/agent-config.ts';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
+import { useAddFolder } from '../projects/use-add-folder.tsx';
+import { PlusIcon } from '../ui/icons.tsx';
 import { countLabel, filterProjects } from './project-filter.ts';
 import { ProjectRow } from './ProjectRow.tsx';
 
@@ -13,6 +15,7 @@ export function ProjectsSection() {
   const trust = useQuery({ queryKey: projectTrustKey, queryFn: agentConfigApi.trustList });
   const [filter, setFilter] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
+  const adder = useAddFolder({ onAdded: (project) => setOpenId(project.id) });
   const revoke = useMutation({
     mutationFn: (projectId: string) => agentConfigApi.setTrust(projectId, { trusted: false }),
     onSuccess: (config) => {
@@ -31,6 +34,22 @@ export function ProjectsSection() {
         Folders you linked, whether you trust their hooks, allow rules and MCP servers, and where
         Spark works in them. To trust a folder, open Agent setup in a chat that uses it.
       </p>
+      <div className="set-projects-add" role="group" aria-label="Add a project">
+        {adder.actions.map((action) => (
+          <button
+            key={action.id}
+            type="button"
+            className="btn line sm"
+            disabled={adder.busy || action.disabled}
+            title={action.description}
+            onClick={action.onSelect}
+          >
+            <PlusIcon />
+            {action.label}
+          </button>
+        ))}
+      </div>
+      {adder.flow}
       {error && (
         <p className="set-hint" role="alert">
           {error.message}

@@ -17,11 +17,10 @@ import { PICK_PROJECT_HINT } from '../chat/project/repo-list.ts';
 import { providerName } from '../chat/provider-name.ts';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
-import { FolderDialog } from '../chat/project/FolderDialog.tsx';
 import { ProjectMenu } from './ProjectMenu.tsx';
 import { AttachmentChips } from '../chat/attachments/AttachmentChips.tsx';
 import type { AttachmentsState } from '../chat/attachments/use-attachments.ts';
-import type { useAddProject } from './use-add-project.ts';
+import type { AddFolder } from '../projects/use-add-folder.tsx';
 import { ticketsApi } from '../tickets/tickets-api.ts';
 import type { TicketRef } from '../voice/commands.ts';
 import { MicButton } from '../voice/MicButton.tsx';
@@ -38,7 +37,7 @@ export interface QuickDraft {
 
 export interface Compose {
   attachments: AttachmentsState;
-  adder: ReturnType<typeof useAddProject>;
+  adder: AddFolder;
   added: { project: Project; signal: number } | null;
   note: string | null;
 }
@@ -180,21 +179,8 @@ export function QuickChat(props: QuickChatProps) {
     onDraft({ ...draft, level: AUTONOMY_LEVELS[(index + 1) % AUTONOMY_LEVELS.length]!.id });
   };
 
-  if (adder.browsing) {
-    return (
-      <div className="isl-panel isl-picker">
-        <FolderDialog
-          inline
-          linking={adder.adding}
-          error={adder.error}
-          onUse={adder.linkFolder}
-          onClose={adder.close}
-          fallback={
-            adder.pickNative && { label: 'Use the Mac folder dialog', onPick: adder.pickNative }
-          }
-        />
-      </div>
-    );
+  if (adder.showing) {
+    return <div className="isl-panel isl-picker">{adder.flow}</div>;
   }
 
   return (
@@ -340,13 +326,15 @@ export function QuickChat(props: QuickChatProps) {
         <ProjectMenu
           projects={projects}
           selected={draft.projectId}
-          adding={adder.adding}
+          busy={adder.busy}
           error={adder.error}
+          actions={adder.actions}
           chipRef={chipRef}
           onPick={pick}
-          onAdd={() => {
+          onAction={(action) => {
             setMenu(false);
-            adder.start();
+            chipRef.current?.focus();
+            action.onSelect();
           }}
           onClose={() => setMenu(false)}
         />
