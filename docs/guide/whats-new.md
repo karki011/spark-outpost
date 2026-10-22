@@ -21,7 +21,7 @@ What changed recently, newest first.
 | Sub-agents: one line, work-panel cards; Agent TV in chat; most edits show diffs.                                                             | See [Follow a turn](follow-a-turn.md#see-whats-happening).        |
 | Agents can start sub-chats themselves; phones can **Start** a draft.                                                                         | See [Start it](outpost-stories.md#start-it-from-a-chat).          |
 | Model picker: no **Auto**; chats show their model or **No file tools without a project**.                                                    | See [Pick a model](agent-mode.md#pick-a-model).                   |
-| Agents stay running between messages: **Continued on its own**, **Waiting on…**, **Stopped by Quit**.                                        | See [Background work](follow-a-turn.md#background-work).          |
+| Agents stay running between messages: **Continued on its own**, **Waiting on…**, **Stopped by Quit**. Every chat starts at once.             | See [Background work](follow-a-turn.md#background-work).          |
 | Nothing chimes for the chat you're viewing. Spark Island opens from Scout; **Hide in screen sharing**.                                       | See [Spark Island](desktop-companion.md#answer-a-card).           |
 | **Atlassian** replaces Jira. Agent deletes in Jira, Confluence and Calendar follow your mode.                                                | See [Connect](tickets-and-github.md#connect-atlassian-or-linear). |
 | **Today** from macOS or Google: **Month**, nudges, early **Join**, **Choose**, agent access; optional **Join meetings automatically**.       | See [Use it](calendar.md#use-it).                                 |

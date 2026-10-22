@@ -78,7 +78,6 @@ export async function startStack(t: TestDb, options: StackOptions = {}): Promise
     db: t.db,
     providers: new Map([[provider.name, provider]]),
     leaseSeconds: 30,
-    concurrency: 2,
     pollMs: 20,
     queueTarget: async () => ({ provider: provider.name }),
   });

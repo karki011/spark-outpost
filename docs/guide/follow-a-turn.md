@@ -10,14 +10,14 @@ You'll follow, stop and queue a turn. About 2 minutes.
 
 ## See what's happening
 
-1. Read the reply's header, such as **Reading api.ts · 3 steps**.
-2. Select the step count, then **Thinking** to read it.
-3. **Show work panel** has the plan, files and cost; **Agent TV** is in the **…** menu.
+1. Read the header, like **Reading api.ts · 3 steps**.
+2. Select the step count, then **Thinking**.
+3. **Show work panel** has the plan, files and cost; **Agent TV** is under **…**.
 4. Sub-agents share one line; **View** shows a card each.
 
-When the agent needs you, select **Waiting for you** or press **⌘⇧Y**.
+When it needs you, select **Waiting for you** or press **⌘⇧Y**.
 
-Failed command output stays open in the reply. **Open in terminal** shows it in a [dock tab](terminals.md#watch-an-agents-command).
+Failed output stays open; **Open in terminal** shows it in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 
@@ -25,11 +25,13 @@ Failed command output stays open in the reply. **Open in terminal** shows it in 
 
 ## Background work
 
-While Claude's background agents run, the chat shows **Waiting on 1 background agent**, then **Writing up results**. **Enter** reaches it; **Stop background tasks** ends them.
+While background agents run, the chat shows **Waiting on 1 background agent**, then **Writing up results**. **Enter** reaches it; **Stop background tasks** ends them.
 
 The agent stays running between messages, up to 30 idle minutes. A turn it starts itself shows **Continued on its own**. Quit shows **Stopped by Quit**; your next message picks up.
 
 ## Queue messages
+
+Other chats never wait; each starts when you send.
 
 1. While a turn runs, **Enter** queues a message.
 2. **⌘Enter** sends it now.

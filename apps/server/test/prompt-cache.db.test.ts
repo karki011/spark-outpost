@@ -161,7 +161,6 @@ describe('a Claude chat turn that reports its requests', { timeout: 60_000 }, ()
       db: t.db,
       providers: new Map([['claude', provider]]),
       leaseSeconds: 30,
-      concurrency: 2,
       pollMs: 20,
       cancelPollMs: 20,
     });

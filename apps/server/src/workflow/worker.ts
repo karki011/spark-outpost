@@ -15,7 +15,6 @@ import { chatTarget, drainQueue, drainWaiting, type ResolveTarget } from './queu
 import { watchLiveSessions } from './live-sessions.ts';
 
 export interface WorkerOptions extends ChatTurnDeps {
-  concurrency: number;
   pollMs?: number;
   recoveryEveryMs?: number;
   activeWork?: ActiveWork;
@@ -75,10 +74,8 @@ export function startWorker(given: WorkerOptions): Worker {
       };
     });
 
-  const working = () => active.size - (options.parked?.size ?? 0);
-
-  const fillSlots = async (db: Db) => {
-    while (!stopped && working() < options.concurrency) {
+  const startQueued = async (db: Db) => {
+    while (!stopped) {
       const lease = await claimNextJob(db, options.leaseSeconds);
       if (!lease) return;
       const done = options.activeWork?.begin(`run ${lease.runId}`);
@@ -93,7 +90,6 @@ export function startWorker(given: WorkerOptions): Worker {
     }
   };
 
-  options.parked?.onChange(wake);
   const live = watchLiveSessions(options.db, options.providers, queueTarget(options), wake);
 
   const loop = (async () => {
@@ -114,7 +110,7 @@ export function startWorker(given: WorkerOptions): Worker {
             done?.();
           }
         }
-        await fillSlots(options.db);
+        await startQueued(options.db);
       } catch (error) {
         console.error('Worker loop error', error);
       }

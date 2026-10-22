@@ -41,7 +41,6 @@ beforeEach(async () => {
     db: t.db,
     providers,
     leaseSeconds: 30,
-    concurrency: 4,
     pollMs: 20,
     cancelPollMs: 20,
     recoveryEveryMs: 60 * 60_000,

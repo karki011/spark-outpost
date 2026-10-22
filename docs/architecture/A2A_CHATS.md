@@ -680,7 +680,7 @@ A check with real Claude and Codex sessions found the problems below. Each fix w
 
 ### 15.2 A waiting turn and the worker's slots
 
-`startWorker` started a turn only while fewer than `WORKER_CONCURRENCY` (default 2) were running, and a turn blocked inside `spark_outpost_ask` counted. `ParkedTurns` (`workflow/parked-turns.ts`) is shared by the worker and the Spark tools: `hold` parks the chat's top-level run around `waitForRequest`, the worker counts `active - parked`, and parking wakes it. When the wait ends the turn goes on, so for a moment one more turn than the setting can run.
+`startWorker` started a turn only while fewer than `WORKER_CONCURRENCY` (default 2) were running, and a turn blocked inside `spark_outpost_ask` counted. The fix parked the waiting run so the worker did not count it. Since October 22, 2026 the worker has no limit on running turns (`WORKER_CONCURRENCY` is gone), so a waiting ask holds nothing and `hold` no longer parks; the asked chat's turn starts as soon as its request is delivered (`outpost-ask-wait.db.test.ts`).
 
 ### 15.3 A stacked sub-chat and its parent's uncommitted work
 
