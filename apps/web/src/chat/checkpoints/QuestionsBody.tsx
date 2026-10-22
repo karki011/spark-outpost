@@ -25,7 +25,8 @@ function askTarget(target: EventTarget): AskTarget {
   if (!(target instanceof HTMLElement)) return 'other';
   if (target.hasAttribute(OWN_WORDS)) return 'own-words';
   const row = target.getAttribute(ASK_ROW);
-  return row === 'option' || row === 'answer' ? row : 'other';
+  if (row === 'option') return target.getAttribute('role') === 'radio' ? 'radio' : 'option';
+  return row === 'answer' ? row : 'other';
 }
 
 function caretAtStart(target: EventTarget): boolean {
@@ -36,18 +37,26 @@ function caretAtStart(target: EventTarget): boolean {
   );
 }
 
-function sameRadioGroup(from: EventTarget, next: HTMLElement): boolean {
-  if (!(from instanceof HTMLElement) || next.getAttribute('role') !== 'radio') return false;
-  return next.closest('[role="radiogroup"]') === from.closest('[role="radiogroup"]');
+function checkNextRadio(from: HTMLElement, by: number): boolean {
+  const group = from.closest('[role="radiogroup"]');
+  if (!group) return false;
+  const radios = [...group.querySelectorAll<HTMLElement>('[role="radio"]')];
+  const at = radios.indexOf(from);
+  const next = radios[(at + by + radios.length) % radios.length];
+  if (!next) return false;
+  next.focus();
+  next.click();
+  return true;
 }
 
 function moveFocus(form: HTMLFormElement, from: EventTarget, by: number): boolean {
+  if (from instanceof HTMLElement && from.getAttribute('role') === 'radio') {
+    return checkNextRadio(from, by);
+  }
   const rows = [...form.querySelectorAll<HTMLElement>(`[${ASK_ROW}]`)];
   const next = rows[rows.indexOf(from as HTMLElement) + by];
-  if (!next) return false;
-  next.focus();
-  if (sameRadioGroup(from, next)) next.click();
-  return true;
+  next?.focus();
+  return next !== undefined;
 }
 
 function OwnWords({

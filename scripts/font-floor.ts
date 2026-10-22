@@ -1,7 +1,10 @@
 export const FONT_FLOOR_PX = 12;
 
 const ROOT_FONT_PX = 16;
-const LENGTH = /^(\d*\.?\d+)(px|rem)(?:\/|$)/;
+const LENGTH = /^(\d*\.?\d+)(px|rem)(?:\/|$)/i;
+const IMPORTANT = /!\s*important\s*$/i;
+const COMMENT = /\/\*[\s\S]*?\*\//g;
+const QUOTED = /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g;
 
 export interface SmallFont {
   line: number;
@@ -57,11 +60,11 @@ function lengthPx(token: string): number | null {
   const match = LENGTH.exec(token);
   if (!match) return null;
   const size = Number(match[1]);
-  return match[2] === 'rem' ? size * ROOT_FONT_PX : size;
+  return match[2]!.toLowerCase() === 'rem' ? size * ROOT_FONT_PX : size;
 }
 
 export function declaredFontPx(property: string, value: string): number | null {
-  const tokens = value.trim().split(/\s+/);
+  const tokens = value.replace(IMPORTANT, '').trim().split(/\s+/);
   if (property === 'font-size') return tokens.length === 1 ? lengthPx(tokens[0]!) : null;
   if (property !== 'font') return null;
   for (const token of tokens) {
@@ -94,14 +97,20 @@ export function isDecorative(file: string, selector: string): boolean {
   return DECORATIVE_FONTS.some((entry) => entry.file === file && entry.selector === selector);
 }
 
+function blankOut(match: string): string {
+  return match.replace(/[^\n]/g, ' ');
+}
+
 export function findSmallFonts(text: string): SmallFont[] {
+  const uncommented = text.replace(COMMENT, blankOut);
+  const masked = uncommented.replace(QUOTED, blankOut);
   const small: SmallFont[] = [];
   const selectors: string[] = [];
   let segmentStart = 0;
   for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
+    const char = masked[index];
     if (char !== '{' && char !== '}') continue;
-    const segment = text.slice(segmentStart, index);
+    const segment = masked.slice(segmentStart, index);
     const check = (body: string, selector: string) => {
       for (const declaration of declarations(body, segmentStart)) {
         const px = declaredFontPx(declaration.property, declaration.value);
@@ -114,8 +123,8 @@ export function findSmallFonts(text: string): SmallFont[] {
       const lastBreak = segment.lastIndexOf(';');
       check(segment.slice(0, lastBreak + 1), selectors.at(-1) ?? '');
       selectors.push(
-        segment
-          .slice(lastBreak + 1)
+        uncommented
+          .slice(segmentStart + lastBreak + 1, index)
           .trim()
           .replace(/\s+/g, ' '),
       );

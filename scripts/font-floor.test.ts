@@ -10,6 +10,13 @@ describe('declaredFontPx', () => {
     expect(declaredFontPx('font', ' 13px/1.4 var(--font-sans)')).toBe(13);
   });
 
+  it('reads sizes marked !important and units in capitals', () => {
+    expect(declaredFontPx('font-size', ' 11px !important')).toBe(11);
+    expect(declaredFontPx('font-size', '10PX')).toBe(10);
+    expect(declaredFontPx('font-size', '0.5REM!important')).toBe(8);
+    expect(declaredFontPx('font', ' 600 9PX Geist !important')).toBe(9);
+  });
+
   it('leaves relative and computed sizes alone', () => {
     expect(declaredFontPx('font-size', '0.8em')).toBeNull();
     expect(declaredFontPx('font-size', 'max(12px, 0.92em)')).toBeNull();
@@ -41,6 +48,23 @@ describe('findSmallFonts', () => {
     expect(findSmallFonts(css)).toEqual([
       { line: 7, selector: '.tag, .chip', px: 11 },
       { line: 11, selector: '.badge', px: 9 },
+    ]);
+  });
+
+  it('ignores braces and semicolons inside strings and comments', () => {
+    const css = [
+      '.a::after {',
+      '  content: "{ ; }";',
+      '  font-size: 9px;',
+      '}',
+      '/* .b { font-size: 8px; } */',
+      ".c[data-x='}'] {",
+      '  font-size: 10px;',
+      '}',
+    ].join('\n');
+    expect(findSmallFonts(css)).toEqual([
+      { line: 3, selector: '.a::after', px: 9 },
+      { line: 7, selector: ".c[data-x='}']", px: 10 },
     ]);
   });
 
