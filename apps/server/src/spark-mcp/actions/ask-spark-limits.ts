@@ -29,6 +29,7 @@ export const ASK_SPARK_REFUSALS = {
   instructions:
     'This card changes an agent instruction file, so it stays with you. Answer it yourself in the chat.',
   macOnly: 'Mac control, calendar and browser sign-in cards stay with you. Answer it yourself.',
+  question: 'An agent’s question needs your own answer. Answer it yourself in the chat.',
   notWaiting: 'That card is no longer waiting for an answer.',
   noOption: 'This card has no Allow once or Deny answer, so it stays with you.',
   terminal: 'Ask Spark does not act on Terminal sessions. Use the session itself.',
@@ -99,6 +100,7 @@ export function cardRefusal(
   if (cardChat.terminal) return ASK_SPARK_REFUSALS.terminal;
   if (holdsToConfirm(approval.payload)) return ASK_SPARK_REFUSALS.held;
   if (approval.payload.instructionFiles !== undefined) return ASK_SPARK_REFUSALS.instructions;
+  if (approval.payload.form) return ASK_SPARK_REFUSALS.question;
   if (macOnlyCard(approval.payload)) return ASK_SPARK_REFUSALS.macOnly;
   if (approval.payload.sparkAction?.action === 'browser_sign_in') return ASK_SPARK_REFUSALS.macOnly;
   const answers = new Set(approval.options.map((option) => option.kind));

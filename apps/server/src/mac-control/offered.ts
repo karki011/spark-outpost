@@ -39,10 +39,15 @@ export async function spokenRun(db: Queryable, runId: string): Promise<boolean> 
 export async function macRunRefusal(db: Queryable, scope: MacScope): Promise<MacRefusedRun | null> {
   if (scope.readOnly && !scope.assistant) return 'read_only';
   if (!scope.conversationId) return 'no_chat';
+  const runRefusal = scope.runId ? await refusedRun(db, scope.runId) : null;
+  if (runRefusal) return runRefusal;
   if (!(await switchedOn(db, scope.conversationId))) return 'off';
-  if (!scope.runId) return null;
-  if (await runFromDevice(db, scope.runId)) return 'remote';
-  if (await childRun(db, scope.runId)) return 'child';
-  if (await spokenRun(db, scope.runId)) return 'voice';
+  return null;
+}
+
+async function refusedRun(db: Queryable, runId: string): Promise<MacRefusedRun | null> {
+  if (await runFromDevice(db, runId)) return 'remote';
+  if (await childRun(db, runId)) return 'child';
+  if (await spokenRun(db, runId)) return 'voice';
   return null;
 }

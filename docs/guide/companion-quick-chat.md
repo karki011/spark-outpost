@@ -38,7 +38,7 @@ Answers link to the chats they name; **Review** opens a waiting card in place.
 
 ## Let Ask Spark act
 
-It has a chat's [Spark tools](spark-tools.md#ask-spark-tools) and its own; if a switch is off, it names it.
+It has a chat's [Spark tools](spark-tools.md#ask-spark-tools); if a switch is off, it names it.
 
 Each action shows **Do it** and **Don’t** first, in **Needs you** too, unless [When Ask Spark acts](settings.md#spark-assistant) is **Act**. Cards with more to check show **Review in Spark**.
 

@@ -28,7 +28,7 @@ A minute before a meeting, Scout lowers a card mid-screen: **Join**, **Snooze 1 
 
 ## Let agents use it
 
-1. On the Calendar card, **Let agents read my calendar** starts on for new connections.
+1. On the Calendar card, **Let agents read my calendar** is on by default.
 2. Turn on **Agents can edit** per calendar; Google asks first.
 
 Agents follow their [mode](spark-tools.md#when-actions-ask-first). In **Accept edits**, a vague request still shows a card. Events with guests and shared calendars always ask.

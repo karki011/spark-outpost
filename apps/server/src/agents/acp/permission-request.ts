@@ -24,10 +24,37 @@ export interface RequestContext {
 
 const EDIT_KINDS = new Set(['edit', 'delete', 'move']);
 
-function kindOf(toolKind: string | null): ApprovalKind {
-  if (toolKind === 'execute') return 'execute';
+export function toolNameOf(toolCall: acp.ToolCallUpdate): string | null {
+  const named = objectFields(toolCall).name;
+  if (typeof named === 'string' && named.trim()) return named.trim();
+  const meta = objectFields(objectFields(toolCall._meta).claudeCode).toolName;
+  return typeof meta === 'string' && meta.trim() ? meta.trim() : null;
+}
+
+function monitorCommand(toolName: string | null, rawInput: Record<string, unknown>) {
+  if (toolName !== 'Monitor') return null;
+  return typeof rawInput.command === 'string' && rawInput.command.trim() ? rawInput.command : null;
+}
+
+function kindOf(
+  toolKind: string | null,
+  toolName: string | null,
+  rawInput: Record<string, unknown>,
+): ApprovalKind {
+  if (toolName === 'NotebookEdit') return 'edit';
+  if (toolKind === 'execute' || monitorCommand(toolName, rawInput)) return 'execute';
   if (toolKind && EDIT_KINDS.has(toolKind)) return 'edit';
   return 'other';
+}
+
+function addressOf(toolName: string | null, rawInput: Record<string, unknown>): string | null {
+  const address =
+    toolName === 'WebFetch'
+      ? rawInput.url
+      : toolName === 'Monitor'
+        ? objectFields(rawInput.ws).url
+        : null;
+  return typeof address === 'string' ? address : null;
 }
 
 function quotedScript(command: string): string | null {
@@ -118,8 +145,10 @@ export function approvalRequestFrom(
 ): ApprovalRequest {
   const { toolCall } = params;
   const toolKind = toolCall.kind ?? null;
-  const kind = kindOf(toolKind);
+  const toolName = toolNameOf(toolCall);
   const rawInput = objectFields(toolCall.rawInput);
+  const kind = kindOf(toolKind, toolName, rawInput);
+  const address = addressOf(toolName, rawInput);
   const title = toolCall.title?.trim() || 'an action';
   const cwdInput = rawInput.cwd;
   const cwd = typeof cwdInput === 'string' && path.isAbsolute(cwdInput) ? cwdInput : context.cwd;
@@ -144,6 +173,7 @@ export function approvalRequestFrom(
     roots: context.roots,
     home: context.home,
     ...(plan ? { plan } : {}),
+    ...(address !== null ? { address } : {}),
     ...(mcpServer ? { mcpServer } : {}),
     ...(agentReason ? { agentReason } : {}),
     ...(context.subagent ? { subagent: context.subagent } : {}),

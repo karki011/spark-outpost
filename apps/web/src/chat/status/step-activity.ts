@@ -4,7 +4,7 @@ import { clipText, commandFull, commandSummary, fileName, hideSecrets } from './
 export type StepKind = 'read' | 'edit' | 'run' | 'search' | 'think' | 'other';
 
 const KINDS: [StepKind, RegExp][] = [
-  ['read', /^(read|reading|view|viewing|cat|open|opening)$/i],
+  ['read', /^(read|reading|view|viewing|cat|open|opening|fetched)$/i],
   [
     'edit',
     /^(edit|editing|edited|write|writing|wrote|modify|modifying|modified|update|updating|create|creating|patch|patching|multiedit|apply|applying)$/i,
@@ -12,7 +12,7 @@ const KINDS: [StepKind, RegExp][] = [
   ['run', /^(run|running|ran|bash|terminal|execute|executing|exec)$/i],
   [
     'search',
-    /^(search|searching|grep|glob|find|finding|list|listing|ls|fetch|fetching|websearch|webfetch)$/i,
+    /^(search|searching|searched|grep|glob|find|finding|list|listing|ls|fetch|fetching|websearch|webfetch)$/i,
   ],
   ['think', /^(think|thinking|thought)$/i],
 ];

@@ -271,6 +271,9 @@ export function egressOf(
   own: OwnRepo | null = null,
 ): Egress | null {
   if (request.mcpServer) return { via: `the ${request.mcpServer} MCP server`, hosts: [] };
+  if (request.address) {
+    return asEgress({ via: 'a web request', hosts: [urlHost(request.address) ?? UNKNOWN_HOST] });
+  }
   if (request.toolKind === 'fetch') {
     const hosts = codeHosts(request.title);
     return asEgress({ via: 'a web request', hosts: hosts.length > 0 ? hosts : [UNKNOWN_HOST] });

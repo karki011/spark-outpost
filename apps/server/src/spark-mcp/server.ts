@@ -168,6 +168,7 @@ export async function callSparkTool(
 export const CHAT_TURN_ONLY: ReadonlySet<string> = new Set([
   'spark_push',
   'spark_pull_request',
+  'spark_pr_follow_up',
   'spark_pr_follow_up_round',
   'spark_terminal_run',
   'spark_outpost_ask',

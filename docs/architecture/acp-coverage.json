@@ -95,8 +95,9 @@
     "note": "No terminal support."
   },
   "client-method:elicitation/create": {
-    "status": "missing",
-    "note": "Elicitation isn't advertised, so agents must not send it."
+    "status": "supported",
+    "where": "elicitation-form.ts, questions.ts, apps/server/src/workflow/question-gate.ts, apps/server/src/persistence/approvals.ts",
+    "note": "Form mode only. The restricted schema is validated at the boundary (flat object; string, enum and oneOf strings, number, integer, boolean, enum and anyOf string arrays; at most 20 fields and 50 options) and shown as a question card (a clarify approval with the form in its payload): the run waits as awaiting_approval and the chat needs you. Claude's and Codex's companion free-text fields (_meta._askUserQuestionCustomAnswer, _meta.codex.role user_note) become the question's own text box. Send answers accept with content checked against the schema, Skip answers decline, Stop answers cancel, the agent's $/cancel_request closes the card and answers cancel, a run with no place to ask (a Spark handed a job, Ask Spark) answers decline so the agent carries on, and a card left by a restart expires. A malformed form, url mode or a Codex isSecret field answers invalid_params -32602 (the spec forbids secrets in form mode). pattern and format are not checked; the agent validates its own answer. Covered with claude-agent-acp 0.81.2's own AskUserQuestion request and response mapping and a codex-acp 1.13.1 request_user_input fixture."
   },
   "client-method:_*": {
     "status": "not_applicable",
@@ -109,7 +110,7 @@
   },
   "agent-notification:elicitation/complete": {
     "status": "missing",
-    "note": "Elicitation isn't advertised."
+    "note": "Only form elicitation is advertised; complete belongs to URL mode."
   },
   "agent-notification:_*": {
     "status": "partial",
@@ -309,12 +310,13 @@
     "note": "Not advertised. Settings can't run an agent's terminal login."
   },
   "client-capability:elicitation.form": {
-    "status": "missing",
-    "note": "Not advertised."
+    "status": "supported",
+    "where": "client-info.ts",
+    "note": "Advertised as {} in every turn's initialize, never in the probe. It makes claude-agent-acp 0.81.2 allow AskUserQuestion (also in Spark's tool lists) and forward MCP form elicitations and its refusal-fallback prompt, and codex-acp 1.13.1 send request_user_input and MCP form elicitations instead of answering them empty."
   },
   "client-capability:elicitation.url": {
     "status": "missing",
-    "note": "Not advertised."
+    "note": "Not advertised. A url-mode request answers invalid_params."
   },
   "stop-reason:end_turn": {
     "status": "supported",

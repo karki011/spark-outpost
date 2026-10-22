@@ -323,7 +323,7 @@ The owner's defaults, 2026-10-16:
 4. **Phone pushes** are held during focus, like chimes.
 5. **Outlook SafeLinks** are unwrapped only to an allowlisted Teams host, and the unwrapped host is shown.
 6. **Google Calendar** is a direct source from Phase 1a (owner, 2026-10-16), pure Node so it could run on Windows later; several accounts; the defaults are in [Google Calendar source](#google-calendar-source).
-7. **Let agents read my calendar** is on by default (owner, 2026-10-22; was off). `calendar_connection.agents_read` is NULL until the user sets it and NULL follows `CALENDAR_DEFAULT_SETTINGS.agentsRead` in `packages/contracts/src/calendar-api.ts`; migration 0201 keeps every stored `false`, since the column could not tell "never set" from "turned off", so a workspace connected before keeps it off until the user turns it on.
+7. **Let agents read my calendar** is on by default (owner, 2026-10-22; was off). `calendar_connection.agents_read` is NULL until the user sets it and NULL follows `CALENDAR_DEFAULT_SETTINGS.agentsRead` in `packages/contracts/src/calendar-api.ts`; migration 0202 also set every stored `false` to NULL (owner, 2026-10-22), since the column could not tell "never set" from "turned off": every existing connection reads as on, and anyone who had turned it off has to turn it off again.
 8. **No phone calendar view** in Phase 1.
 9. **A new calendar** is included with nudges on (changed 2026-10-17: saved calendars were turned on, and the busy switch was removed).
 10. **A shared or delegated calendar that can't be classified** asks, as written.

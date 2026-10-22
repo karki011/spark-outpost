@@ -92,6 +92,8 @@ export const checkpointQuestionSchema = z.object({
   question: z.string(),
   options: z.array(z.string()).default([]),
   default: z.string(),
+  pick: z.enum(['one', 'many']).optional(),
+  freeText: z.boolean().optional(),
 });
 export type CheckpointQuestion = z.infer<typeof checkpointQuestionSchema>;
 

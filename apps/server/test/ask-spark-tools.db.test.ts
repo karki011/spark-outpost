@@ -114,6 +114,10 @@ describe('the other Spark tools Ask Spark gets', () => {
     const off = await sparkAvailability(deps(mac), askScope());
     expect(off.mac).toBe(false);
     expect(off.howTo?.mac).toContain('Let agents control other Mac apps in Settings → Mac control');
+    await askSpark('What app is in front?', 'voice');
+    const spokenOff = await sparkAvailability(deps(mac), askScope());
+    expect(spokenOff.howTo?.mac).toContain('spoken');
+    await askSpark('What app is in front?');
     await macOn();
     expect((await sparkAvailability(deps(mac), askScope())).mac).toBe(true);
     await askSpark('What app is in front?', 'voice');

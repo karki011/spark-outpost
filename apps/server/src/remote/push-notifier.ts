@@ -13,7 +13,6 @@ import {
   quietDevice,
   SentKeys,
   TerminalWaits,
-  unseenPushes,
   type QueuedPush,
 } from './push-plan.ts';
 import { pushSubject } from './push-contact.ts';
@@ -58,6 +57,7 @@ interface WaitingRow {
   detail: string;
   generation: number;
   since: Date;
+  seen: boolean;
 }
 
 export function startPushNotifier(
@@ -82,35 +82,32 @@ export function startPushNotifier(
 
   async function waiting(conversationId: string): Promise<QueuedPush[]> {
     const { rows } = await db.query<WaitingRow>(
-      `SELECT 'approval' AS kind, a.id::text AS id, a.kind AS detail, 0 AS generation,
-         a.created_at AS since
-       FROM approvals a JOIN runs r ON r.id = a.run_id
-       WHERE r.conversation_id = $1 AND a.status = 'pending' AND a.created_at >= $2
-       UNION ALL
-       SELECT 'terminal', t.id::text, t.state, t.generation,
-         COALESCE(t.waiting_since, t.updated_at)
-       FROM native_terminal_sessions t
-       WHERE t.conversation_id = $1 AND COALESCE(t.waiting_since, t.updated_at) >= $2`,
-      [conversationId, since],
+      `SELECT w.kind, w.id, w.detail, w.generation, w.since,
+         COALESCE(c.seen_at >= w.since, false) AS seen
+       FROM (
+         SELECT 'approval' AS kind, a.id::text AS id, a.kind AS detail, 0 AS generation,
+           a.created_at AS since
+         FROM approvals a JOIN runs r ON r.id = a.run_id
+         WHERE r.conversation_id = $1 AND a.status = 'pending' AND a.created_at >= $2
+         UNION ALL
+         SELECT 'terminal', t.id::text, t.state, t.generation,
+           COALESCE(t.waiting_since, t.updated_at)
+         FROM native_terminal_sessions t
+         WHERE t.conversation_id = $1 AND COALESCE(t.waiting_since, t.updated_at) >= $2
+       ) w
+       LEFT JOIN conversations c ON c.id = $1 AND c.workspace_id = $3`,
+      [conversationId, since, workspaceId],
     );
     return rows.flatMap((row): QueuedPush[] => {
-      const at = row.since.getTime();
+      const { detail, seen } = row;
       if (row.kind === 'approval') {
         const source = `approval:${row.id}`;
-        return [{ key: source, source, kind: 'approval', detail: row.detail, at }];
+        return [{ key: source, source, kind: 'approval', detail, seen }];
       }
       const key = terminals.key(row.id, row.generation, row.detail);
       const source = terminalAttentionKey(row.id, row.generation, row.since);
-      return key ? [{ key, source, kind: 'terminal', detail: row.detail, at }] : [];
+      return key ? [{ key, source, kind: 'terminal', detail, seen }] : [];
     });
-  }
-
-  async function seenAt(conversationId: string): Promise<Date | null> {
-    const { rows } = await db.query<{ seen_at: Date | null }>(
-      'SELECT seen_at FROM conversations WHERE id = $1 AND workspace_id = $2',
-      [conversationId, workspaceId],
-    );
-    return rows[0]?.seen_at ?? null;
   }
 
   async function sendTo(target: PushTarget, payload: string, sender: Sender): Promise<void> {
@@ -179,8 +176,8 @@ export function startPushNotifier(
   }
 
   async function alertingSources(conversationId: string): Promise<Set<string>> {
-    const waitingNow = unseenPushes(await waiting(conversationId), await seenAt(conversationId));
-    const sources = waitingNow.map((item) => item.source);
+    const unseen = (await waiting(conversationId)).filter((item) => !item.seen);
+    const sources = unseen.map((item) => item.source);
     const read = await readAttentionKeys(db, workspaceId, sources);
     return new Set(sources.filter((source) => !read.has(source)));
   }

@@ -38,7 +38,7 @@ describe('checkpoint wording', () => {
     expect(checkpointTitle({ ...payload, agent: null })).toBe('Jev has a question');
   });
 
-  it('titles the crew’s clarifying questions as Spark’s', () => {
+  it('titles a crew member’s clarifying questions with its name', () => {
     const payload = checkpoint({
       kind: 'clarify',
       agent: 'Pip',
@@ -46,12 +46,12 @@ describe('checkpoint wording', () => {
       questions: [{ question: 'Which report?', options: [], default: 'Spend' }],
     }).payload.checkpoint!;
     const second = { question: 'Which period?', options: [], default: 'This month' };
-    expect(checkpointTitle(payload)).toBe('Spark has a question');
+    expect(checkpointTitle(payload)).toBe('Pip has a question');
     expect(checkpointTitle({ ...payload, questions: [...payload.questions, second] })).toBe(
-      'Spark has a few questions',
+      'Pip has questions',
     );
     expect(checkpointQuestion(payload)).toBeNull();
-    expect(waitingLabel(payload)).toBe('Answer Spark’s questions');
+    expect(waitingLabel(payload)).toBe('Answer Pip’s questions');
   });
 
   it('offers the best guess first among the quick answers', () => {
@@ -91,6 +91,32 @@ describe('checkpoint wording', () => {
     expect(clarifyAnswer(questions, [togglePick(both, 'Pulse'), NO_ANSWER], 'go')).toBe(
       'Which area? → Explorer\ngo',
     );
+  });
+
+  it('keeps one pick on a single-choice question and offers no blank best guess', () => {
+    const question = { question: 'Which store?', options: ['Postgres', 'Redis'], default: '' };
+    const single = { ...question, pick: 'one' as const };
+    expect(quickPicks(question)).toEqual(['Postgres', 'Redis']);
+    expect(togglePick(togglePick(NO_ANSWER, 'Postgres', single), 'Redis', single).picks).toEqual([
+      'Redis',
+    ]);
+    expect(
+      togglePick(togglePick(NO_ANSWER, 'Postgres', question), 'Redis', question).picks,
+    ).toEqual(['Postgres', 'Redis']);
+  });
+
+  it('names the agent that asks the questions', () => {
+    const payload = checkpoint({ kind: 'clarify', agent: 'Claude' }).payload.checkpoint!;
+    const asked = {
+      ...payload,
+      questions: [{ question: 'Which store?', options: [], default: '' }],
+    };
+    expect(checkpointTitle(asked)).toBe('Claude has a question');
+    expect(checkpointTitle({ ...asked, questions: [...asked.questions, ...asked.questions] })).toBe(
+      'Claude has questions',
+    );
+    expect(waitingLabel(asked)).toBe('Answer Claude’s questions');
+    expect(checkpointTitle({ ...asked, agent: null })).toBe('Spark has a question');
   });
 
   it('reads the sent answers back per question, leaving the own words', () => {

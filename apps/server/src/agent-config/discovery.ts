@@ -7,6 +7,7 @@ import { listProjectFiles } from '../codescan/git.ts';
 import { fingerprintOf } from './fingerprint.ts';
 import { parseFrontmatter } from './frontmatter.ts';
 import { readMcpJson, type McpServerConfig } from './mcp-json.ts';
+import { PROJECT_SETTINGS_FILES } from './permission-rules.ts';
 import type { RedirectSetting } from './redirects.ts';
 import {
   emptySummary,
@@ -48,7 +49,6 @@ const ROOT_INSTRUCTION_FILES = [
 ] as const;
 const NESTED_INSTRUCTION = /(?:^|\/)(?:CLAUDE|AGENTS)\.md$/;
 const CURSOR_RULES = '.cursor/rules';
-const SETTINGS_FILES = ['.claude/settings.json', '.claude/settings.local.json'] as const;
 const MCP_FILE = '.mcp.json';
 const CODEX_CONFIG = '.codex/config.toml';
 const SKILL_DIRS = ['.claude/skills', '.agents/skills', '.codex/skills'] as const;
@@ -185,7 +185,7 @@ async function scan(root: string, stamps: Stamp[], nested: Stamp[]): Promise<Rep
     ...nested.map((stamp) => ({ path: stamp.path, bytes: stamp.size, nested: true })),
   ];
   const settings = emptySummary();
-  for (const path of SETTINGS_FILES) {
+  for (const path of PROJECT_SETTINGS_FILES) {
     const stamp = byPath.get(path);
     const text = stamp ? await readText(root, stamp) : null;
     if (text !== null) readSettingsFile(text, path, settings);
@@ -216,7 +216,7 @@ async function scan(root: string, stamps: Stamp[], nested: Stamp[]): Promise<Rep
 }
 
 async function candidateStamps(root: string): Promise<Stamp[]> {
-  const singles = [...ROOT_INSTRUCTION_FILES, ...SETTINGS_FILES, MCP_FILE, CODEX_CONFIG];
+  const singles = [...ROOT_INSTRUCTION_FILES, ...PROJECT_SETTINGS_FILES, MCP_FILE, CODEX_CONFIG];
   const direct = await Promise.all(singles.map((path) => stampOf(root, path)));
   const walked = await Promise.all(DEFINITION_DIRS.map((dir) => walk(root, dir)));
   return [...direct.filter((stamp): stamp is Stamp => stamp !== null), ...walked.flat()];

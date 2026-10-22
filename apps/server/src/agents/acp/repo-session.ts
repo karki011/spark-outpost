@@ -4,6 +4,7 @@ import type { RepoLaunch } from '../../agent-config/launch.ts';
 import { expandReferences, type McpServerConfig } from '../../agent-config/mcp-json.ts';
 import { pluginFiles, pluginName, writePluginDir } from '../../agent-config/plugin-dir.ts';
 import type { RedirectSettings } from '../../agent-config/redirects.ts';
+import type { PermissionRules } from '../../agent-config/permission-rules.ts';
 import type { HooksConfig } from '../../agent-config/settings-files.ts';
 import { childEnvironment } from '../../setup/environment.ts';
 
@@ -16,7 +17,25 @@ export interface ClaudeRepoOptions {
   skillTool: boolean;
   agentTool: boolean;
   allowRules?: readonly string[];
+  denyRules?: readonly string[];
+  askRules?: readonly string[];
   redirects?: RedirectSettings | null;
+}
+
+export const NO_CLAUDE_REPO: ClaudeRepoOptions = {
+  appendPrompt: null,
+  plugins: [],
+  hooks: null,
+  skillTool: false,
+  agentTool: false,
+};
+
+export function withPermissionRules(
+  repo: ClaudeRepoOptions | null,
+  rules: PermissionRules,
+): ClaudeRepoOptions | null {
+  if (rules.deny.length === 0 && rules.ask.length === 0) return repo;
+  return { ...(repo ?? NO_CLAUDE_REPO), denyRules: rules.deny, askRules: rules.ask };
 }
 
 export interface CodexRepoOptions {

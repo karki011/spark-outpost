@@ -1,7 +1,8 @@
 import type { SessionUpdate, ToolCallContent } from '@agentclientprotocol/sdk';
 import { mentionsSecretFile } from '../../audit/redact.ts';
 import type { ProviderOutput } from '../../providers/provider.ts';
-import { describeTool, type UpdateMapper } from './session-updates.ts';
+import type { UpdateMapper } from './session-updates.ts';
+import { describeTool } from './tool-titles.ts';
 
 interface OpenCall {
   input: unknown;

@@ -101,7 +101,7 @@ ACP limits to plan around:
 - Per-run AG-UI stream for the open chat, replayed from a saved cursor. The browser-side agent implements AG-UI `connect()` for reconnects; the default `HttpAgent` does not.
 - App-wide status stream with each chat's current status, from a Postgres projection. It drives the sidebar rows, Home, the rail badge, the Blob Scout mood, and the favicon. AG-UI covers one run at a time, so this stream is our own.
 
-Use a single local worker initially. Bound concurrent runs and provider processes. Use a small PostgreSQL-backed job queue with transactional claiming (`FOR UPDATE SKIP LOCKED`), lease expiry, and attempt records. Handwrite it or adopt `graphile-worker` or `pg-boss` (both MIT, Postgres-only); decide during bootstrap. Do not add Redis, Kubernetes, or a general workflow engine in the first milestone.
+Use a single local worker initially. Every chat's turn starts as soon as it is sent, with no limit on concurrent runs; turns within one chat run in order through the chat's queue. Use a small PostgreSQL-backed job queue with transactional claiming (`FOR UPDATE SKIP LOCKED`), lease expiry, and attempt records. Handwrite it or adopt `graphile-worker` or `pg-boss` (both MIT, Postgres-only); decide during bootstrap. Do not add Redis, Kubernetes, or a general workflow engine in the first milestone.
 
 ### User-visible A2A collaboration
 
@@ -326,7 +326,7 @@ Proposed targets, not achieved results:
 - A separate review run evaluates the exact output revision; a failure cannot be rewritten into a pass by the authoring agent.
 - Stress 10 open conversations with long transcripts and concurrent streams; initially target 10,000 messages per long-history fixture and 100,000 retained activity events in the backend.
 - On a documented reference machine, target p95 cached conversation switching below 200 ms and no sustained interaction-blocking main-thread work. Measure streaming latency, memory, scroll stability, and event backlog separately.
-- Cap live concurrent provider processes independently of the number of open conversations. Validate cancellation, permission waits, offline mode, missing sessions, and restart under load.
+- Measure live provider processes and memory against the number of open conversations; do not cap how many chats run. Validate cancellation, permission waits, offline mode, missing sessions, and restart under load.
 - Run provider-free tests routinely. Keep live-provider tests explicit, bounded, and separately reported because they consume usage.
 
 Record hardware, dataset, versions, concurrency, failures, and measured results. Adjust targets transparently after an initial baseline; never relabel an untested target as passed.

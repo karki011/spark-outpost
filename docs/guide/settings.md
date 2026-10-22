@@ -69,10 +69,10 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 
 ## Connections
 
-| Section         | Holds                                                                                                                     | Read more                             |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **Connectors**  | GitHub, Atlassian, Linear, [Slack](connect-slack.md), Calendar (**Let agents read my calendar**: on for new connections). | [Connect them](tickets-and-github.md) |
-| **MCP servers** | Off until turned on for all chats, a project or one chat.                                                                 | [Glossary](glossary.md)               |
+| Section         | Holds                                                                                                 | Read more                             |
+| --------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **Connectors**  | GitHub, Atlassian, Linear, [Slack](connect-slack.md), Calendar (**Let agents read my calendar**: on). | [Connect them](tickets-and-github.md) |
+| **MCP servers** | Off until turned on for all chats, a project or one chat.                                             | [Glossary](glossary.md)               |
 
 ## Mac
 

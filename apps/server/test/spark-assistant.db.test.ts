@@ -81,7 +81,6 @@ describe('Ask Spark', () => {
       db: t.db,
       providers: new Map([['codex', recordingProvider('codex')]]),
       leaseSeconds: 30,
-      concurrency: 1,
       pollMs: 20,
       cancelPollMs: 20,
     });
