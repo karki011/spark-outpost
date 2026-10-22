@@ -48,8 +48,6 @@ function app(name: string, bundleId: string, pid: number): MacApp {
   };
 }
 
-const CONVERSATION_MODES: Record<string, string> = { claude: 'default', codex: 'read-only' };
-
 export const CALCULATOR = app('Calculator', 'com.apple.calculator', 700);
 export const NOTES = app('Notes', 'com.apple.Notes', 701);
 export const SETTINGS = app('System Settings', 'com.apple.systempreferences', 702);
@@ -170,7 +168,7 @@ export class MacHarness {
     this.chat = await startChat(this.t, 'Work out 7 times 6');
     await this.t.db.query(
       `UPDATE runs SET provider = $2, agent_mode = $3, used_mode = $4 WHERE id = $1`,
-      [this.chat.runId, provider, mode, CONVERSATION_MODES[provider]],
+      [this.chat.runId, provider, mode, mode],
     );
   }
 

@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from 'react';
+import { PICK_PROJECT_HINT } from './repo-list.ts';
 import { useQuery } from '@tanstack/react-query';
 import type { ConversationDetail, Project } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../../api/client.ts';
@@ -133,7 +134,7 @@ export function ContextBar({
 
   return (
     <ProjectFolders conversationId={conversationId} repos={repos} popover={popover} lead={lead}>
-      {!primary && <span className="ctx-unlinked">Not linked, so the agent has no file tools</span>}
+      {!primary && <span className="ctx-unlinked">{PICK_PROJECT_HINT}</span>}
       {branchChip}
       {placeMenu}
       <TalkToChip conversationId={conversationId} />

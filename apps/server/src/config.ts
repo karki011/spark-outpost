@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { z } from 'zod';
 import { connectableIdSchema } from '@spark-outpost/contracts';
 import { DEFAULT_BRANCH_PREFIX } from './projects/worktrees.ts';
@@ -142,4 +143,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     );
   }
   return result.data;
+}
+
+export const LOCAL_DATA_DIR = resolve(import.meta.dirname, '../../..', '.local');
+
+export function sparkDataDir(config: Pick<Config, 'SPARK_DATA_DIR'>): string {
+  return config.SPARK_DATA_DIR ?? LOCAL_DATA_DIR;
 }

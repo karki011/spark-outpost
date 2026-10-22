@@ -13,6 +13,7 @@ import { followedFiles } from '../agent-config/instructions.ts';
 import { fakeApprovalTurn, wantsApproval } from './fake-approvals.ts';
 import { fakePublishTurn, wantsPublish } from './fake-publish.ts';
 import { editStreamPlan, fakeEditStream } from './fake-edit-stream.ts';
+import { fakeFilesTurn, wantsFiles } from './fake-files.ts';
 import { commandPlan, fakeCommandTurn } from './fake-commands.ts';
 import { asFinalMessage, fakeCommentary } from './fake-phases.ts';
 import { ZAI_EFFORTS, ZAI_MODELS } from '../agents/acp/zai.ts';
@@ -327,6 +328,10 @@ async function* fakeTurn(
     yield* fakeCommandTurn(turn, commands);
     return;
   }
+  if (wantsFiles(turn.prompt)) {
+    yield* fakeFilesTurn(turn);
+    return;
+  }
   const editStream = editStreamPlan(turn.prompt);
   if (editStream) {
     yield* fakeEditStream(turn, editStream);
@@ -346,7 +351,7 @@ async function* fakeTurn(
   const outputs = (
     turn.prompt.includes(FAKE_DIGEST_TRIGGER)
       ? replyOutputs(fakeDigestReply(turn.prompt))
-      : fakeProviderPlan(turn.prompt, turn.attachments, turn.projectRoots)
+      : fakeProviderPlan(turn.prompt, turn.attachments, turn.chatFolder ? [] : turn.projectRoots)
   ).map((output) => withFakeContext(turn, output));
   if (titled) outputs.push({ kind: 'text_delta', delta: `\n\nTitle: ${FAKE_TITLE}` });
   for (const output of outputs) {

@@ -31,6 +31,7 @@ export interface RunInput {
   history: ConversationTurn[];
   settings: AgentSettings;
   projectRoots: string[];
+  chatFolder?: boolean;
   mode: RunMode | null;
   level: InvolvementLevel;
   agentMode: string | null;

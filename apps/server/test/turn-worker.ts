@@ -97,6 +97,7 @@ export interface TurnWorkerOptions extends FakeAgentOptions {
   shipAccess?: WorkerOptions['shipAccess'];
   providers?: ReadonlyMap<string, Provider>;
   cancelPollMs?: number;
+  chatFolders?: string;
 }
 
 export function startTurnWorker(t: TestDb, options: TurnWorkerOptions = {}): Worker {
@@ -108,5 +109,6 @@ export function startTurnWorker(t: TestDb, options: TurnWorkerOptions = {}): Wor
     cancelPollMs: options.cancelPollMs ?? 20,
     approvalPollMs: 20,
     ...(options.shipAccess ? { shipAccess: options.shipAccess } : {}),
+    ...(options.chatFolders ? { chatFolders: options.chatFolders } : {}),
   });
 }

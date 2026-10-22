@@ -42,6 +42,13 @@ export function doProjectNote(roots: readonly string[]): string {
   return `You are working in a Spark Outpost chat linked to the project folder ${primary} (your working directory) in Do mode. You may read and change files and run commands inside the linked folders. Spark Outpost asks the user before each action their settings require, so a request may wait or be denied; if an action is denied, do not retry it another way, explain what you could not do. Do not read or change files outside the linked folders.${extra} Reply in plain text and Markdown.`;
 }
 
+export function chatFolderNote(folder: string, changes: boolean): string {
+  const may = changes
+    ? 'You may read and change files and run commands inside it.'
+    : 'You may read files inside it; you must not create, change, or delete files.';
+  return `You are working in a Spark Outpost chat with no project. Your working directory ${folder} is this chat's own private folder, not the user's code. ${may} Files you create there are shown to the user as attachments of this turn, so save anything they asked for (a CSV, an image, a document) as a file. It is not a git repository and nothing in it is pushed. Spark Outpost asks the user before each action their settings require. Do not read or change files outside this folder. Reply in plain text and Markdown.`;
+}
+
 export interface PromptSupport {
   image: boolean;
   embeddedContext: boolean;
@@ -52,6 +59,7 @@ export interface PromptOptions {
   support?: PromptSupport;
   budget?: number;
   projectRoots?: readonly string[];
+  chatFolder?: boolean;
   changesAllowed?: boolean;
   commandsAllowed?: boolean;
   toolsAvailable?: boolean;
@@ -172,9 +180,11 @@ export function conversationBlocks(
   const currentParts = current.flatMap((attachment) => attachmentParts(attachment, support));
   const { kept, omitted } = keptHistory(history, budget);
   const roots = options.projectRoots ?? [];
-  const projectIntro = options.changesAllowed
-    ? doProjectNote(roots)
-    : projectNote(roots, options.commandsAllowed === true);
+  const projectIntro = options.chatFolder
+    ? chatFolderNote(roots[0] ?? '', options.changesAllowed === true)
+    : options.changesAllowed
+      ? doProjectNote(roots)
+      : projectNote(roots, options.commandsAllowed === true);
   const chatIntro = options.toolsAvailable ? CHAT_TOOLS_NOTE : CHAT_ONLY_NOTE;
   const intro = roots.length > 0 ? projectIntro : chatIntro;
   if (kept.length === 0 && omitted === 0) {

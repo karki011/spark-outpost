@@ -7,6 +7,7 @@ import { attentionRoutes } from './attention-routes.ts';
 import { sparkRulesRoutes } from './spark-rules-routes.ts';
 import { adoptPullRoutes } from './adopt-pull-routes.ts';
 import { attachmentRoutes } from './attachment-routes.ts';
+import { chatFileRoutes } from './chat-file-routes.ts';
 import { jsonBody } from './json-body.ts';
 import { auditRoutes } from './audit-routes.ts';
 import { chatShareRoutes, type ChatShareRouteDeps } from './chat-share-routes.ts';
@@ -71,7 +72,7 @@ export interface AppOptions
     Pick<ChatWorkspaceDeps, 'openFolder'>,
     Pick<OutcomeRouteDeps, 'outcomeSampleRate'>,
     Pick<McpRouteDeps, 'probeMcp'>,
-    Pick<ConversationActionDeps, 'deleteSettleMs'>,
+    Pick<ConversationActionDeps, 'deleteSettleMs' | 'chatFolders'>,
     Pick<CloneRouteDeps, 'clones' | 'cloneTest' | 'reservedFolders'>,
     Pick<ChatShareRouteDeps, 'linkScheme'> {
   terminals: TerminalSessions;
@@ -114,6 +115,7 @@ export function createAppParts(options: AppOptions) {
     ]),
   );
   app.use('/api', attachmentRoutes(options));
+  app.use('/api', chatFileRoutes(options));
   app.use(jsonBody());
   app.use(remote.bodyGuard);
   app.use('/api', remote.routes);

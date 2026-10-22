@@ -55,15 +55,13 @@ test('the Home composer keeps its mode and project across a reload and after a s
   const failed = failedApiCalls(page);
   await page.reload();
   await expect(box.getByRole('button', { name: 'Choose project' })).toBeVisible();
-  await expect(permissionChip(page)).toHaveAccessibleName(
-    'Permissions: No file tools without a project',
-  );
+  await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Plan');
   expect(failed).toEqual([]);
 
   await permissionChip(page).click();
   await pickMode(page, 'Manual');
   await expect(pickerPanel(page)).toContainText(
-    'Your mode still decides whether Spark’s own tools ask first.',
+    'Agent asks before edits and commands · files stay with this chat',
   );
   await page.keyboard.press('Escape');
 
@@ -104,23 +102,20 @@ test('the Home composer keeps its mode and project across a reload and after a s
   await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Manual');
 });
 
-test('a chat with no project says the agent has no file tools', async ({ page }) => {
+test('a chat with no project shows the picked mode and points to projects', async ({ page }) => {
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await expect(page.locator('.ctx-unlinked')).toHaveText(
-    'Not linked, so the agent has no file tools',
-  );
+  await expect(page.locator('.ctx-unlinked')).toHaveText('Pick a project to work in your code.');
   const chip = permissionChip(page);
-  await expect(chip).toHaveAccessibleName('Permissions: No file tools without a project');
-  await expect(chip).toHaveText('No file tools without a project');
-  await chip.hover();
-  await expect(page.getByRole('tooltip')).toContainText('can’t read or change files');
-  await page.mouse.move(0, 0);
+  await expect(chip).not.toHaveText(/No file tools/);
 
   await chip.click();
   await pickMode(page, 'Auto');
   const tab = pickerPanel(page).getByRole('tab', { name: /Permissions/ });
-  await expect(tab).toHaveText(/No file tools without a project$/);
+  await expect(tab).toHaveText(/Auto$/);
+  await expect(pickerPanel(page).locator('.mode-line')).toHaveText(
+    'Agent decides what to ask · files stay with this chat',
+  );
   await page.keyboard.press('Escape');
-  await expect(chip).toHaveAccessibleName('Permissions: No file tools without a project');
+  await expect(chip).toHaveAccessibleName('Permissions: Auto');
 });

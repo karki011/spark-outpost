@@ -17,6 +17,7 @@ import {
   conversationWorkdirs,
 } from '../persistence/provider-sessions.ts';
 import { removeWorkdirs } from '../workflow/turn-session.ts';
+import { removeChatFolder } from '../chat-files/folders.ts';
 import { finishArchive } from '../workflow/archive-chat.ts';
 import { releaseConversation } from '../projects/chat-worktree-cleanup.ts';
 import { allowedCommands } from '../agents/acp/slash-commands.ts';
@@ -33,6 +34,7 @@ export interface ConversationActionDeps {
   terminals: Pick<TerminalSessions, 'endChat'>;
   deleteSettleMs?: number;
   nativeTerminals?: NativeRuntime;
+  chatFolders?: string;
 }
 
 export function conversationActionRoutes({
@@ -41,6 +43,7 @@ export function conversationActionRoutes({
   terminals,
   nativeTerminals,
   deleteSettleMs = DEFAULT_SETTLE_MS,
+  chatFolders,
 }: ConversationActionDeps): Router {
   const router = Router();
 
@@ -91,6 +94,7 @@ export function conversationActionRoutes({
     await releaseConversation(db, id, 'deleted');
     await deleteConversation(db, workspaceId, id);
     await removeWorkdirs(workdirs);
+    if (chatFolders) await removeChatFolder(chatFolders, id);
     res.status(204).end();
   });
 

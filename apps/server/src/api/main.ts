@@ -1,6 +1,7 @@
 import { join, resolve } from 'node:path';
 import { DEV_API_TOKEN_FILE, isKeepTerminalsStop } from '@spark-outpost/contracts';
-import { loadConfig } from '../config.ts';
+import { LOCAL_DATA_DIR, loadConfig, sparkDataDir } from '../config.ts';
+import { chatFoldersBase } from '../chat-files/folders.ts';
 import { startMorningBrief } from '../digest/morning.ts';
 import { ensureLocalWorkspace } from '../persistence/conversations.ts';
 import { seedModelStats } from '../model-cards/ingest.ts';
@@ -173,8 +174,9 @@ const cloneDeps = {
       : null,
   reservedFolders: [config.SPARK_DATA_DIR, config.SPARK_LOG_DIR, config.BACKUP_DIR],
 };
-const localDir = resolve(import.meta.dirname, '../../../..', '.local');
-const nativeDataDir = config.SPARK_DATA_DIR ?? localDir;
+const localDir = LOCAL_DATA_DIR;
+const nativeDataDir = sparkDataDir(config);
+const chatFolders = chatFoldersBase(nativeDataDir, config.BRANCH_PREFIX);
 const nativeSessionsDir = join(nativeDataDir, config.BRANCH_PREFIX, 'terminal-sessions');
 const perInstance = config.SPARK_DATA_DIR ? '' : `-${config.API_PORT}`;
 const terminalTmux = chooseTmux(
@@ -273,6 +275,7 @@ const { app, reconcileRemote } = createAppParts({
   }),
   agentRuntime: config.AGENT_RUNTIME,
   loginShell,
+  chatFolders,
   terminals,
   nativeTerminals,
   previews,
@@ -325,7 +328,12 @@ const morningBrief = config.MORNING_BRIEF
 
 const server = app.listen(config.API_PORT, config.API_HOST, () => {
   console.log(`API listening on http://${config.API_HOST}:${config.API_PORT}`);
-  void pruneOldRows({ db, workspaceId, auditRetentionDays: config.AUDIT_RETENTION_DAYS });
+  void pruneOldRows({
+    db,
+    workspaceId,
+    auditRetentionDays: config.AUDIT_RETENTION_DAYS,
+    chatFolders,
+  });
   void slackSocket.refresh();
   outposts.start();
   reconcileRemote().catch((error: unknown) => {

@@ -50,7 +50,13 @@ export function BrowserCheckMeta({ detail, run, taskId, runIds }: BrowserCheckMe
         <img src={attachmentUrl(shot.attachment.id)} alt="" loading="lazy" />
         <span>Checked in browser</span>
       </button>
-      {open && <ImageLightbox attachment={shot.attachment} onClose={() => setOpen(false)} />}
+      {open && (
+        <ImageLightbox
+          name={shot.attachment.name}
+          src={attachmentUrl(shot.attachment.id)}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -251,9 +251,9 @@ export interface CombinationFacts {
 }
 
 export function combinationLine(facts: CombinationFacts): string {
-  if (!facts.hasRepos) return 'Plain chat: no project folder, so nothing can change';
   const posture = modePosture(facts.provider, facts.mode, facts.kind);
   if (isReadOnlyPosture(posture)) return `${POSTURE_LINES.read_only} · nothing changes`;
+  if (!facts.hasRepos) return `${POSTURE_LINES[posture]} · files stay with this chat`;
   const parts = [POSTURE_LINES[posture], AUTONOMY_LINES[facts.level]];
   if (facts.level === 'full-auto') parts.push('in a worktree copy');
   parts.push('Revert available');
@@ -261,7 +261,6 @@ export function combinationLine(facts: CombinationFacts): string {
 }
 
 export function combinationWarning(facts: CombinationFacts): string | null {
-  if (!facts.hasRepos) return null;
   const posture = modePosture(facts.provider, facts.mode, facts.kind);
   if (isReadOnlyPosture(posture)) return null;
   if (modeSkipsGate(facts.provider, facts.mode, facts.kind)) {

@@ -1,7 +1,8 @@
 import { loginShellEnv, loginShellPath } from '../setup/login-path.ts';
 import type { IntakeDeps } from '../advisor/jev-types.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
-import { loadConfig } from '../config.ts';
+import { loadConfig, sparkDataDir } from '../config.ts';
+import { chatFoldersBase } from '../chat-files/folders.ts';
 import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { configuredBackup } from '../persistence/startup-backup.ts';
@@ -103,6 +104,7 @@ const worker = startWorker({
   },
   parked: parkedTurns,
   branchPrefix: config.BRANCH_PREFIX,
+  chatFolders: chatFoldersBase(sparkDataDir(config), config.BRANCH_PREFIX),
   shipAccess: {
     secrets,
     runCommand,

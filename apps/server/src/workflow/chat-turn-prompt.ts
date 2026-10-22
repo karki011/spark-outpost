@@ -13,7 +13,7 @@ import type { RunInput } from './run-input.ts';
 
 async function projectFacts(db: Queryable, input: RunInput): Promise<ChatPromptProject | null> {
   const folder = input.projectRoots[0];
-  if (!folder) return null;
+  if (!folder || input.chatFolder) return null;
   const worktree = await chatWorktreeAt(db, folder);
   const [found, gitRepo] = await Promise.all([
     remotes(folder).catch(() => []),
