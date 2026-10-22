@@ -262,7 +262,7 @@ function nudgeLine(now: CalendarNow, shown: CalendarNudge, input: CalendarLineIn
     key: `${nudge.kind}:${nudge.eventKey}`,
     eventKey: nudge.eventKey,
     text,
-    event: nudged,
+    event: nudge.kind === 'wrap_up' ? null : nudged,
     join: nudged?.link ? nudged : joinTarget(stillOn(now.upcoming, input.at), input.at),
     choose: null,
     capture: null,

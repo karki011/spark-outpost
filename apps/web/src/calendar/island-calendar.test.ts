@@ -107,6 +107,19 @@ describe('a wrap-up about a chat', () => {
     );
   });
 
+  it('stays a line about the chat when the meeting is on the calendar, not a meeting card', () => {
+    const review = event('Design review', at(10, 5), at(10, 30), { link: link('zoom') });
+    const running = chatStates([chat(CHAT, { latestRun: { status: 'running' } as never })]);
+    const calendar = now({
+      upcoming: [review],
+      nudge: { ...wrapUp(), eventKey: review.key, startsAt: review.start },
+    });
+    const line = calendarLine(input(calendar, { chats: running }));
+    expect(line?.event).toBeNull();
+    expect(line?.meeting?.sub).toContain('dashboards');
+    expect(line?.text).toBe('Meeting in 15 min · the dashboards chat is still running');
+  });
+
   it('goes away once the chat has finished', () => {
     const finished = chatStates([chat(CHAT, { latestRun: { status: 'succeeded' } as never })]);
     expect(calendarLine(input(now({ nudge: wrapUp() }), { chats: finished }))).toBeNull();
