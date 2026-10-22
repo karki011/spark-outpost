@@ -209,12 +209,18 @@ function catchUpLine(text: string): CalendarLine {
   };
 }
 
-function liveNudge(now: CalendarNow, nudge: CalendarNudge, at: number): CalendarNudge | null {
+function liveNudge(
+  now: CalendarNow,
+  nudge: CalendarNudge,
+  input: CalendarLineInput,
+): CalendarNudge | null {
   if (nudge.kind === 'wrap_up') return nudge;
   const fallback = meetingOf(now, nudge.eventKey);
   const members = nudge.group.length > 0 ? nudge.group : fallback ? [fallback] : [];
   if (members.length === 0) return nudge;
-  const group = stillOn(members, at);
+  const group = stillOn(members, input.at).filter(
+    (event) => !nudgeHidden(input.marks, event.key, input.at),
+  );
   if (group.length === 0) return null;
   const lead = group.find((event) => event.key === nudge.eventKey) ?? group[0]!;
   return { ...nudge, eventKey: lead.key, title: lead.title, startsAt: lead.start, group };
@@ -222,7 +228,7 @@ function liveNudge(now: CalendarNow, nudge: CalendarNudge, at: number): Calendar
 
 function nudgeLine(now: CalendarNow, shown: CalendarNudge, input: CalendarLineInput) {
   const current = liveWrapUp(shown, input.chats);
-  const nudge = current ? liveNudge(now, current, input.at) : null;
+  const nudge = current ? liveNudge(now, current, input) : null;
   if (!nudge) return null;
   const group = nudgeGroupOf(nudge);
   const text = nudgeText(nudge, input.at, input.waiting);

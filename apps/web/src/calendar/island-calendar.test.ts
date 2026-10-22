@@ -273,6 +273,20 @@ describe('calendarLine', () => {
       expect(calendarLine(input(single, { at: at(9, 52), marks: snoozed }))).not.toBeNull();
     });
 
+    it('leaves a snoozed or dismissed meeting out of the Choose line', () => {
+      const grouped = now({
+        upcoming: [standup, design],
+        nudge: beforeNudge(standup, [standup, design]),
+      });
+      const end = Date.parse(standup.end);
+      const snoozed = snoozeNudge(NO_NUDGE_MARKS, standup.key, end, at(9, 50));
+      const line = calendarLine(input(grouped, { at: at(9, 51), marks: snoozed }));
+      expect(line?.choose).toBeNull();
+      expect(line?.event?.key).toBe(design.key);
+      const both = dismissNudge(snoozed, design.key, Date.parse(design.end));
+      expect(calendarLine(input(grouped, { at: at(9, 51), marks: both }))).toBeNull();
+    });
+
     it('never brings a snoozed meeting back after it ended', () => {
       const end = Date.parse(standup.end);
       const snoozed = snoozeNudge(NO_NUDGE_MARKS, standup.key, end, at(10, 14));

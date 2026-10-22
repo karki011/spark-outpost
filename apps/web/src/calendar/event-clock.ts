@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { spanOf, type CalendarEvent } from '@spark-outpost/contracts';
 
 const LATE_MS = 50;
+const MINUTE_MS = 60_000;
+export const COUNTDOWN_LEAD_MS = 60 * MINUTE_MS;
 
 export function nextBoundary(times: readonly number[], now: number): number | null {
   const ahead = times.filter((time) => time > now);
@@ -10,6 +12,16 @@ export function nextBoundary(times: readonly number[], now: number): number | nu
 
 export function eventEnds(events: readonly CalendarEvent[]): number[] {
   return events.map((event) => spanOf(event).end);
+}
+
+export function minuteMarks(events: readonly CalendarEvent[]): number[] {
+  return events.flatMap((event) => {
+    if (event.allDay) return [];
+    const { start, end } = spanOf(event);
+    const marks: number[] = [];
+    for (let mark = start - COUNTDOWN_LEAD_MS; mark < end; mark += MINUTE_MS) marks.push(mark);
+    return marks;
+  });
 }
 
 export function hasEnded(event: CalendarEvent, now: number): boolean {
