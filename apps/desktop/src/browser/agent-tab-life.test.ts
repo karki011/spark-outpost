@@ -11,7 +11,7 @@ vi.mock('./cdp.ts', () => ({
 const CHAT = '11111111-2222-4333-8444-555555555555';
 const RUN = '99999999-2222-4333-8444-555555555555';
 const PROJECT = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
-const home = { projectId: PROJECT, keepSignIns: true, roots: ['/Users/me/app'] };
+const home = { projectId: PROJECT, roots: ['/Users/me/app'] };
 const signal = new AbortController().signal;
 
 let panes: BrowserPanes;

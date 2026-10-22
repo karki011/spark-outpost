@@ -2,7 +2,6 @@ import { useId } from 'react';
 import type { Project, ProjectTrust } from '@spark-outpost/contracts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { ChevronIcon } from '../ui/icons.tsx';
-import { ProjectBrowser } from './ProjectBrowser.tsx';
 import { ProjectPreview } from './ProjectPreview.tsx';
 import { ProjectSignIns } from './ProjectSignIns.tsx';
 import { ProjectWorkPlace } from './ProjectWorkPlace.tsx';
@@ -63,7 +62,6 @@ export function ProjectRow({ project, trust, open, busy, onToggle, onRevoke }: P
         >
           <p className="set-project-root">{project.rootPath}</p>
           <ProjectWorkPlace project={project} />
-          {!remote && <ProjectBrowser project={project} />}
           <ProjectSignIns project={project} />
           {!remote && <ProjectPreview project={project} />}
         </div>

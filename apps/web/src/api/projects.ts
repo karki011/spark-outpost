@@ -20,7 +20,7 @@ import {
 } from '@spark-outpost/contracts';
 import { request } from './client.ts';
 
-export type ProjectSettings = Pick<UpdateProjectRequest, 'workPlace' | 'browserKeepSignIns'>;
+export type ProjectSettings = Pick<UpdateProjectRequest, 'workPlace'>;
 
 export interface FolderPick {
   files: 'instructions' | null;

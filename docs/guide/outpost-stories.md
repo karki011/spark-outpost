@@ -10,7 +10,7 @@ You'll have one chat split a job across several chats. About 3 minutes.
 
 ## Start it from a chat
 
-1. In a chat with a project, ask, for example, "split this into two parallel sub-chats and start them".
+1. In a chat with a project, ask "split this into two parallel sub-chats and start them".
 2. In **Auto**, **Bypass permissions**, **Approve for me** or **Full access** the agent starts them. Otherwise confirm its **Start these sub-chats?** card: **Start**, **Edit** or **Discard**.
 3. The reply shows **Started outpost Docs split with 2 chats**. Select **Open**.
 
@@ -25,7 +25,7 @@ First messages are the proposing chat's, [not yours](outpost-permissions.md), so
 
 ## Follow the story
 
-The **Story** bar under the outpost's chats reads, for example, **Checkout · 1 of 3 answered · 2 PRs**. Open it for each sub-task's order, state, pull request and warnings.
+The **Story** bar under the outpost's chats reads like **Checkout · 1 of 3 answered · 2 PRs**. Open it for each sub-task's order, state, pull request and warnings.
 
 | You see                  | Means                                                                                                                    |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------ |

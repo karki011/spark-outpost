@@ -126,7 +126,7 @@ test('fifteen projects fit a compact list that filters and opens one at a time',
   await expect(design).toHaveAttribute('aria-expanded', 'true');
   const open = dialog.getByRole('group', { name: 'Settings for design-system' });
   await expect(open.getByRole('group', { name: 'Work place in design-system' })).toBeVisible();
-  await expect(open.getByRole('group', { name: 'Browser in design-system' })).toBeVisible();
+  await expect(open.getByRole('switch', { name: /Keep sign-ins/ })).toHaveCount(0);
   await expect(
     open.getByRole('button', { name: 'Set up the preview of design-system' }),
   ).toBeVisible();

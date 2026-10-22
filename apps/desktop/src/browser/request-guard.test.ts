@@ -3,16 +3,11 @@ import {
   AGENT_OPEN_REFUSALS,
   agentOpenProblem,
   insideRoots,
-  isBrowserPartition,
   navigationAllowed,
-  partitionFor,
-  projectPartition,
   requestAllowed,
   withoutSparkToken,
 } from './request-guard.ts';
 
-const CHAT = '11111111-2222-4333-8444-555555555555';
-const PROJECT = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const facts = { blockedPorts: new Set([32682, 55050, 61884]), roots: ['/Users/me/app'] };
 
 describe('what a page in the pane may request', () => {
@@ -134,29 +129,5 @@ describe('where a page may take a tab, by link, script or redirect', () => {
     ]) {
       expect(requestAllowed(hop, facts), hop).toBe(false);
     }
-  });
-});
-
-describe('browser partitions', () => {
-  it('keeps sign-ins per project and never names the app session', () => {
-    const kept = partitionFor({ chatId: CHAT, projectId: PROJECT, keepSignIns: true });
-    expect(kept).toBe(`persist:spark-browser-${PROJECT}`);
-    expect(kept).toBe(projectPartition(PROJECT));
-    expect(isBrowserPartition(kept)).toBe(true);
-    expect(isBrowserPartition('')).toBe(false);
-    expect(isBrowserPartition('persist:main')).toBe(false);
-  });
-
-  it('uses an in-memory partition per chat without a project or with sign-ins off', () => {
-    const none = partitionFor({ chatId: CHAT, projectId: null, keepSignIns: true });
-    const off = partitionFor({ chatId: CHAT, projectId: PROJECT, keepSignIns: false });
-    expect(none).toBe(`spark-browser-chat-${CHAT}`);
-    expect(off).toBe(none);
-    expect(none.startsWith('persist:')).toBe(false);
-  });
-
-  it('refuses ids that are not ids', () => {
-    expect(() => partitionFor({ chatId: '', projectId: null, keepSignIns: true })).toThrow();
-    expect(() => projectPartition('../default')).toThrow();
   });
 });

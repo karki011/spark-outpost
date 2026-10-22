@@ -100,7 +100,7 @@ test('the Mac app opens the Browser pane and tells the shell where it is', async
     .toEqual([0, 0]);
   await expect
     .poll(async () => (await calls(page, 'place')).at(-1))
-    .toMatchObject({ covered: false, projectId: null, keepSignIns: true });
+    .toMatchObject({ covered: false, projectId: null });
   await expect(page.locator('#work-panel .wp-in')).toHaveCSS('opacity', '1');
 
   const axe = await new AxeBuilder({ page }).include('#work-panel').analyze();

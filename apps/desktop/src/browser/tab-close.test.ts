@@ -12,7 +12,7 @@ vi.mock('./cdp.ts', () => ({
 
 const CHAT = '11111111-2222-4333-8444-555555555555';
 const RUN = '99999999-2222-4333-8444-555555555555';
-const home = { projectId: null, keepSignIns: true, roots: [] };
+const home = { projectId: null, roots: [] };
 const signal = new AbortController().signal;
 const handoff = {
   agent: 'Claude',
