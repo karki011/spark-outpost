@@ -60,7 +60,7 @@ A chat in an [outpost](outposts.md) gets these.
 | The agent wants to                               | Tool                  |
 | ------------------------------------------------ | --------------------- |
 | Read the outpost: members, requests, answers     | `spark_outpost`       |
-| Ask another chat, and wait for its answer or not | `spark_outpost_ask`   |
+| Ask another chat, waiting or not                 | `spark_outpost_ask`   |
 | Leave a note for the other chats                 | `spark_outpost_note`  |
 | Propose sub-task chats that you review and start | `spark_outpost_draft` |
 | Start sub-task chats now                         | `spark_outpost_start` |
@@ -69,7 +69,7 @@ Sub-chats and Sparks' jobs get no `spark_outpost_start`. Another chat's text is 
 
 ## Ask Spark tools
 
-[Ask Spark](companion-quick-chat.md#let-ask-spark-act) gets these too, minus pushes, pull requests, terminal runs, sign-ins. Its own:
+[Ask Spark](companion-quick-chat.md#let-ask-spark-act) gets these too, minus publishing, follow-up, terminal runs, sign-ins, outpost asks and starts, artifacts. Its own:
 
 | It can                                        | Tool                                                                                                                   |
 | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
