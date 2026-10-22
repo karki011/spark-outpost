@@ -21,7 +21,7 @@ export function AskedList({ approval }: { approval: CheckpointApproval }) {
         return (
           <li key={question.question}>
             {question.question} {answer && <b>→ {answer}</b>}
-            {!answer && guessed && <span>Best guess: {question.default}</span>}
+            {!answer && guessed && question.default && <span>Best guess: {question.default}</span>}
           </li>
         );
       })}

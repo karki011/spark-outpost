@@ -46,15 +46,16 @@ describe('Claude session options', () => {
         disableBypassPermissionsMode: 'disable',
       });
     }
-    expect(project.tools).toEqual(['Read', 'Glob', 'Grep']);
+    expect(project.tools).toEqual(['Read', 'Glob', 'Grep', 'AskUserQuestion']);
     expect(optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true)).tools).toEqual([
       'Read',
       'Glob',
       'Grep',
       'Write',
       'ExitPlanMode',
+      'AskUserQuestion',
     ]);
-    expect(chat.tools).toEqual([]);
+    expect(chat.tools).toEqual(['AskUserQuestion']);
   });
 
   it('passes extra repos only as deny-rule anchors, never as directories in _meta', () => {
@@ -86,13 +87,21 @@ describe('Claude session options', () => {
 
   it('matches claudeSessionMeta for the project tools', () => {
     expect(agentDefinitions.claude.projectSessionMeta?.([])).toEqual(
-      claudeSessionMeta(['Read', 'Glob', 'Grep'], []),
+      claudeSessionMeta(['Read', 'Glob', 'Grep', 'AskUserQuestion'], []),
     );
   });
 
   it('gives Ask turns a shell and leaves asking to the agent, but for git config', () => {
     const asking = optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true, true));
-    expect(asking.tools).toEqual(['Read', 'Glob', 'Grep', 'Bash', 'Write', 'ExitPlanMode']);
+    expect(asking.tools).toEqual([
+      'Read',
+      'Glob',
+      'Grep',
+      'Bash',
+      'Write',
+      'ExitPlanMode',
+      'AskUserQuestion',
+    ]);
     expect(asking.settings.permissions.ask).toEqual([GIT_CONFIG_ASK_RULE]);
   });
 
@@ -108,6 +117,7 @@ describe('Claude session options', () => {
       'TodoWrite',
       'EnterPlanMode',
       'ExitPlanMode',
+      'AskUserQuestion',
     ]);
     expect(options.settings.permissions.ask).toEqual(floorAskRules(options.tools, []));
     expect(bashAsks(options)).toEqual([GIT_CONFIG_ASK_RULE]);

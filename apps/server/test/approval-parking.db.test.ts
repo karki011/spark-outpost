@@ -1,10 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, STOPPED_BY_QUIT, type Approval } from '@spark-outpost/contracts';
-import {
-  ApprovalConflictError,
-  decideApproval,
-  getApproval,
-} from '../src/persistence/approvals.ts';
+import request from 'supertest';
+import { decideApproval, getApproval } from '../src/persistence/approvals.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import { userWaitParking } from '../src/workflow/background-parking.ts';
@@ -13,6 +10,7 @@ import { ParkedTurns } from '../src/workflow/parked-turns.ts';
 import { WAITING_OUTCOME_MESSAGE, recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import { stopRun } from '../src/workflow/stop-run.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
+import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
 import { doRun, recordingAppend } from './approval-support.ts';
 import { expireLeases } from './interruption-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
@@ -24,6 +22,7 @@ import {
   removeRepo,
   repliesOf,
   sendMessage,
+  type MessageOptions,
 } from './turn-support.ts';
 import { connectAgents, fakeAgents } from './turn-worker.ts';
 
@@ -59,9 +58,48 @@ afterEach(async () => {
   await removeRepo(root);
 });
 
-async function askingRun() {
+interface UserWait {
+  card: string;
+  message: string;
+  options: MessageOptions;
+  method: string;
+  answer: (card: Approval) => object;
+  reply: string;
+  answered: Partial<Approval>;
+}
+
+const QUESTION_NOTE = 'What should the cache be called? → hot-cache';
+
+const WAITS: readonly UserWait[] = [
+  {
+    card: 'approval card',
+    message: 'Run it #command',
+    options: { permission: 'do' },
+    method: 'session/request_permission',
+    answer: (card) => ({
+      optionId: card.options.find((each) => each.kind === 'allow_once')!.optionId,
+    }),
+    reply: 'permission=yes',
+    answered: { status: 'allowed', decidedBy: 'user' },
+  },
+  {
+    card: 'question card',
+    message: 'Set up the cache #askcodex',
+    options: { provider: 'codex' },
+    method: 'elicitation/create',
+    answer: () => ({
+      optionId: 'answer',
+      note: QUESTION_NOTE,
+      answers: [{ picks: [], text: 'hot-cache' }],
+    }),
+    reply: 'asked={"action":"accept","content":{"name":"hot-cache"}}',
+    answered: { status: 'allowed', decidedBy: 'user', note: QUESTION_NOTE },
+  },
+];
+
+async function waitingRun(wait: UserWait) {
   const conversationId = await openChat(t, { root });
-  const runId = await sendMessage(t, conversationId, 'Run it #command', { permission: 'do' });
+  const runId = await sendMessage(t, conversationId, wait.message, wait.options);
   const card = await eventually(async () => {
     const pending = (await cardsOf(t, conversationId)).find((each) => each.status === 'pending');
     return pending ?? null;
@@ -83,17 +121,17 @@ async function settled(runId: string) {
   }, 20_000);
 }
 
-const allow = (card: Approval) => decideApproval(t.db, t.workspaceId, card.id, allowOnce(card));
-
-function allowOnce(card: Approval) {
-  const option = card.options.find((each) => each.kind === 'allow_once')!;
-  return { optionId: option.optionId, scope: 'once' as const };
+async function answerStatus(wait: UserWait, card: Approval): Promise<number> {
+  const response = await request(createTestApp(t))
+    .post(`/api/approvals/${card.id}/decision`)
+    .set(LOCAL_HEADERS)
+    .set('Origin', ORIGIN)
+    .send({ scope: 'once', ...wait.answer(card) });
+  return response.status;
 }
 
-async function permissionExchange(runId: string) {
-  const entries = (await auditOf(t, runId)).filter(
-    (entry) => entry.method === 'session/request_permission',
-  );
+async function agentExchange(wait: UserWait, runId: string) {
+  const entries = (await auditOf(t, runId)).filter((entry) => entry.method === wait.method);
   return entries.map((entry) => ({ direction: entry.direction, kind: entry.kind }));
 }
 
@@ -104,35 +142,35 @@ const ANSWERED_ONCE = [
 
 const cardOf = (card: Approval) => getApproval(t.db, card.id);
 
-describe('a turn waiting on your approval card', { timeout: 60_000 }, () => {
-  it('frees its worker slot, then resumes and answers the agent once when you allow', async () => {
+describe.each(WAITS)('a turn waiting on your $card', { timeout: 60_000 }, (wait) => {
+  it('frees its worker slot, then resumes and answers the agent once', async () => {
     begin();
-    const waiting = await askingRun();
-    expect((await getRun(t.db, waiting.runId))?.status).toBe('awaiting_approval');
+    const waiting = await waitingRun(wait);
 
     const other = await chatRun('Hi');
     expect((await settled(other)).status).toBe('succeeded');
     expect((await getRun(t.db, waiting.runId))?.status).toBe('awaiting_approval');
 
-    const answers = await Promise.allSettled([allow(waiting.card), allow(waiting.card)]);
-    expect(answers.map((answer) => answer.status).toSorted()).toEqual(['fulfilled', 'rejected']);
-    const refused = answers.find((answer) => answer.status === 'rejected');
-    expect(refused?.reason).toBeInstanceOf(ApprovalConflictError);
+    const statuses = await Promise.all([
+      answerStatus(wait, waiting.card),
+      answerStatus(wait, waiting.card),
+    ]);
+    expect(statuses.toSorted()).toEqual([200, 409]);
 
     expect((await settled(waiting.runId)).status).toBe('succeeded');
-    expect(await repliesOf(t, waiting.runId)).toEqual(['permission=yes']);
-    expect(await permissionExchange(waiting.runId)).toEqual(ANSWERED_ONCE);
-    expect(await cardOf(waiting.card)).toMatchObject({ status: 'allowed', decidedBy: 'user' });
+    expect(await repliesOf(t, waiting.runId)).toEqual([wait.reply]);
+    expect(await agentExchange(wait, waiting.runId)).toEqual(ANSWERED_ONCE);
+    expect(await cardOf(waiting.card)).toMatchObject(wait.answered);
     expect(parked.size).toBe(0);
   });
 
   it('takes its slot back on resume, so no new turn starts until one frees', async () => {
     begin();
-    const waiting = await askingRun();
+    const waiting = await waitingRun(wait);
     const busy = await chatRun('Keep going #slow');
     await eventually(async () => (await getRun(t.db, busy))?.status === 'running');
 
-    await allow(waiting.card);
+    expect(await answerStatus(wait, waiting.card)).toBe(200);
     expect((await settled(waiting.runId)).status).toBe('succeeded');
     const later = await chatRun('Hi');
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -145,13 +183,13 @@ describe('a turn waiting on your approval card', { timeout: 60_000 }, () => {
 
   it('stops while parked, cancels the card, and refuses an answer that arrives after', async () => {
     begin();
-    const waiting = await askingRun();
+    const waiting = await waitingRun(wait);
 
     await stopRun(t.db, waiting.runId);
     expect((await settled(waiting.runId)).status).toBe('cancelled');
     expect(await cardOf(waiting.card)).toMatchObject({ status: 'cancelled', decidedBy: 'stop' });
-    await expect(allow(waiting.card)).rejects.toBeInstanceOf(ApprovalConflictError);
-    expect(await permissionExchange(waiting.runId)).toEqual(ANSWERED_ONCE);
+    expect(await answerStatus(wait, waiting.card)).toBe(409);
+    expect(await agentExchange(wait, waiting.runId)).toEqual(ANSWERED_ONCE);
     expect(parked.size).toBe(0);
 
     const other = await chatRun('Hi');
@@ -160,7 +198,7 @@ describe('a turn waiting on your approval card', { timeout: 60_000 }, () => {
 
   it('ends at once on Quit, as a turn waiting on background work does', async () => {
     begin();
-    const waiting = await askingRun();
+    const waiting = await waitingRun(wait);
 
     const started = Date.now();
     await worker?.stop();
@@ -176,7 +214,7 @@ describe('a turn waiting on your approval card', { timeout: 60_000 }, () => {
 
   it('is recovered as interrupted while waiting when Spark died, and ignores the dead turn after', async () => {
     begin(3);
-    const waiting = await askingRun();
+    const waiting = await waitingRun(wait);
 
     await expireLeases(t, waiting.runId);
     expect(await recoverExpiredLeases(t.db)).toBe(1);
@@ -188,7 +226,7 @@ describe('a turn waiting on your approval card', { timeout: 60_000 }, () => {
       status: 'expired',
       decidedBy: 'recovery',
     });
-    await expect(allow(waiting.card)).rejects.toBeInstanceOf(ApprovalConflictError);
+    expect(await answerStatus(wait, waiting.card)).toBe(409);
 
     await eventually(async () => parked.size === 0, 20_000);
     expect(await getRun(t.db, waiting.runId)).toMatchObject({

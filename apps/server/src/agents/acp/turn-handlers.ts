@@ -1,7 +1,13 @@
 import * as acp from '@agentclientprotocol/sdk';
 import type { PathPolicy } from '../../projects/path-policy.ts';
-import type { ProtocolObserver, ProviderOutput, ProviderTurn } from '../../providers/provider.ts';
+import type {
+  ProtocolObserver,
+  ProviderOutput,
+  ProviderTurn,
+  QuestionGate,
+} from '../../providers/provider.ts';
 import type { AgentDefinition } from './agents.ts';
+import { askQuestion } from './questions.ts';
 import {
   reviewPermission,
   runsCommand,
@@ -19,6 +25,7 @@ export interface TurnGates {
   gated: DoWorkspace | null;
   doing: DoWorkspace | null;
   rails: RailWatch | null;
+  questions: QuestionGate | null;
 }
 
 export function turnGates(
@@ -46,7 +53,7 @@ export function turnGates(
       : null;
   const doing = changing ? gated : null;
   const rails = gated ? createRailWatch({ roots: gated.policy.roots, cwd: gated.cwd }) : null;
-  return { gated, doing, rails };
+  return { gated, doing, rails, questions: turn.questions ?? null };
 }
 
 export interface HandlerFacts {
@@ -62,7 +69,7 @@ export interface HandlerFacts {
 
 export function turnHandlers(facts: HandlerFacts): TurnHandlers {
   const { definition, policy, signal, mapper, push } = facts;
-  const { gated, doing, rails } = facts.gates;
+  const { gated, doing, rails, questions } = facts.gates;
   const report = (name: string) => push(mapper.clientAction(name));
   const secretRead = (label: string) => push([{ kind: 'secret_read', paths: [label] }]);
   return {
@@ -79,6 +86,15 @@ export function turnHandlers(facts: HandlerFacts): TurnHandlers {
       push(plan.length > 0 ? plan : mapper.clientAction(decision.note));
       return decision.response;
     },
+    question: (params, requestId, agentCancel) =>
+      askQuestion(params, {
+        gate: questions,
+        agent: definition.name,
+        requestId,
+        signal,
+        agentCancel,
+        note: (text) => push(mapper.note(text)),
+      }),
     write: (params) =>
       doing ? writeWithApproval(params, doing) : refuseWrite(params, policy !== null, report),
     read: (params) => {
