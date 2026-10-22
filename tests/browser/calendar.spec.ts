@@ -124,7 +124,7 @@ test('connects from Today through the Calendar connector card', async ({ page })
   await expect(card.getByText('shared')).toBeVisible();
   const agents = card.getByRole('switch', { name: 'Let agents read my calendar' });
   await expect(agents).toBeEnabled();
-  await expect(agents).toHaveAttribute('aria-checked', 'false');
+  await expect(agents).toHaveAttribute('aria-checked', 'true');
   await expect(card.getByRole('switch', { name: 'Nudge, Spark Work' })).toHaveAttribute(
     'aria-checked',
     'true',

@@ -27,7 +27,7 @@ interface ConnectionRow {
   focus_names: string[];
   phone_alerts: boolean;
   brief_block: boolean;
-  agents_read: boolean;
+  agents_read: boolean | null;
   alert_style: string;
   alert_lead: number;
   auto_join: boolean;
@@ -43,7 +43,7 @@ function settingsOf(row: ConnectionRow): CalendarSettings {
     focusNames: row.focus_names,
     phoneAlerts: row.phone_alerts,
     briefBlock: row.brief_block,
-    agentsRead: row.agents_read,
+    agentsRead: row.agents_read ?? CALENDAR_DEFAULT_SETTINGS.agentsRead,
     alertStyle: row.alert_style,
     alertLead: row.alert_lead,
     autoJoin: row.auto_join,

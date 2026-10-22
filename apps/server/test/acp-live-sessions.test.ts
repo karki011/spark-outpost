@@ -12,6 +12,9 @@ import type {
   ProviderOutput,
   SessionTarget,
 } from '../src/providers/provider.ts';
+import type { SparkToolsAccess } from '../src/agents/acp/spark-tools.ts';
+import type { SparkScope } from '../src/spark-mcp/deps.ts';
+import type { SparkGrant } from '../src/spark-mcp/host.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 import { methodLog, sessionOf, waitFor } from './live-session-support.ts';
@@ -23,10 +26,26 @@ const CAPABILITIES = { resume: {}, close: {} };
 const settings: AgentSettings = { method: 'cli', model: null, modelLabel: null, effort: null };
 const providers: Provider[] = [];
 
-function providerFor(base: AgentDefinition, log: string, liveIdleMs?: number): Provider {
+function sparkToolsOffering(offered: () => string): SparkToolsAccess {
+  const grant = async (): Promise<SparkGrant> => ({
+    url: 'http://127.0.0.1:9/mcp',
+    token: 'token',
+    offered: offered(),
+    revoke: () => undefined,
+  });
+  return { grant, rebind: grant, browser: false };
+}
+
+function providerFor(
+  base: AgentDefinition,
+  log: string,
+  liveIdleMs?: number,
+  sparkTools?: SparkToolsAccess,
+): Provider {
   const provider = createAcpProvider({
     definition: { ...base, name: 'Fake', ...FAKE_AGENT_MODES },
     launch,
+    ...(sparkTools ? { sparkTools } : {}),
     cancelGraceMs: 2_000,
     ...(liveIdleMs ? { liveIdleMs } : {}),
     env: {
@@ -69,6 +88,7 @@ interface Send {
   project?: string;
   signal?: AbortSignal;
   onOutput?: (output: ProviderOutput) => void;
+  sparkScope?: SparkScope;
 }
 
 async function send(target: Chat, send: Send = {}) {
@@ -84,6 +104,7 @@ async function send(target: Chat, send: Send = {}) {
       ...(send.continuation ? { continuation: true } : {}),
     },
     ...(send.approvals ? { approvals: send.approvals } : {}),
+    ...(send.sparkScope ? { sparkScope: send.sparkScope } : {}),
     ...(send.project ? { projectRoots: [send.project], mode: 'do' as const } : {}),
   })) {
     outputs.push(output);
@@ -164,6 +185,29 @@ describe('ACP provider with one live session per chat', { timeout: 30_000 }, () 
       'session/resume',
       'session/prompt',
     ]);
+  });
+
+  it('reopens with a resume when the Spark tools offered change between messages', async () => {
+    const log = methodLog(store);
+    let offered = 'calendar off';
+    const target = chat(
+      providerFor(
+        claude,
+        log.file,
+        undefined,
+        sparkToolsOffering(() => offered),
+      ),
+    );
+    const sparkScope = { workspaceId: crypto.randomUUID(), conversationId: null, runId: null };
+
+    await send(target, { sparkScope });
+    await send(target, { sparkScope });
+    offered = 'calendar on';
+    const after = await send(target, { prompt: 'after', sparkScope });
+
+    expect(after.text).toContain('prompt=after');
+    expect(log.count('initialize')).toBe(2);
+    expect(log.count('session/resume')).toBe(1);
   });
 
   it('reopens with a resume after the live process exits between messages', async () => {

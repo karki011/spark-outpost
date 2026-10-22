@@ -1,4 +1,9 @@
-import { modePosture, type ModePosture, type SparkActionName } from '@spark-outpost/contracts';
+import {
+  modePosture,
+  type AssistantActs,
+  type ModePosture,
+  type SparkActionName,
+} from '@spark-outpost/contracts';
 import { userText, type UserTextInput } from '../../outposts/user-asked.ts';
 import type { Queryable } from '../../persistence/db.ts';
 
@@ -98,6 +103,10 @@ export function explicitlyAsked(action: SparkActionName, request: string): boole
   return REQUESTS[action]?.test(request) ?? false;
 }
 
+export function assistantPosture(acts: AssistantActs): ModePosture {
+  return acts === 'act' ? 'auto' : 'asks';
+}
+
 export function actionPath(facts: ActionFacts): ActionPath {
   if (PERFORMING_POSTURES.has(facts.posture)) return 'perform';
   if (facts.posture === 'edits' && facts.requested) return 'perform';
@@ -112,6 +121,7 @@ interface RunFacts {
   from_user: boolean | null;
   spark_rule_retry?: boolean | null;
   assistant_sent?: boolean | null;
+  assistant_acts?: AssistantActs | null;
 }
 
 async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
@@ -127,6 +137,9 @@ async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
               = 'spark_rule' AS spark_rule_retry,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'assistant' AS assistant_sent,
+            (SELECT pf.assistant_acts FROM profiles pf
+             WHERE pf.workspace_id = c.workspace_id
+               AND pf.assistant_conversation_id = c.id) AS assistant_acts,
             (SELECT post.from_user FROM outpost_posts post
              WHERE post.id = r.user_message_id) AS from_user
      FROM runs r JOIN conversations c ON c.id = r.conversation_id
@@ -155,7 +168,9 @@ export async function actionFacts(
 ): Promise<ActionFacts> {
   const run = await runFacts(db, runId);
   return {
-    posture: modePosture(run.provider, run.mode),
+    posture: run.assistant_acts
+      ? assistantPosture(run.assistant_acts)
+      : modePosture(run.provider, run.mode),
     requested: explicitlyAsked(action, userText(runText(run))),
   };
 }

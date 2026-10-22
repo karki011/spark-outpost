@@ -6,7 +6,7 @@ order: 610
 summary: Every Settings section by group, its rows and defaults, and the page that explains each one.
 ---
 
-Select **Settings** at the bottom of the rail. **Search settings** finds a section or row: ↑, ↓ and Enter open it at that row, Esc clears.
+Select **Settings** at the bottom of the rail. **Search settings** finds a section or row; Enter opens it.
 
 ## General
 
@@ -69,10 +69,10 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 
 ## Connections
 
-| Section         | Holds                                                           | Read more                             |
-| --------------- | --------------------------------------------------------------- | ------------------------------------- |
-| **Connectors**  | GitHub, Atlassian, Linear, [Slack](connect-slack.md), Calendar. | [Connect them](tickets-and-github.md) |
-| **MCP servers** | Off until turned on for all chats, a project or one chat.       | [Glossary](glossary.md)               |
+| Section         | Holds                                                                                                 | Read more                             |
+| --------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **Connectors**  | GitHub, Atlassian, Linear, [Slack](connect-slack.md), Calendar (**Let agents read my calendar**: on). | [Connect them](tickets-and-github.md) |
+| **MCP servers** | Off until turned on for all chats, a project or one chat.                                             | [Glossary](glossary.md)               |
 
 ## Mac
 

@@ -1,7 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { EVERYTHING_AVAILABLE, type SparkAvailability } from '../src/spark-mcp/availability.ts';
-import type { SparkToolDeps } from '../src/spark-mcp/deps.ts';
+import type { SparkScope, SparkToolDeps } from '../src/spark-mcp/deps.ts';
 import { SPARK_TOOLS, sparkMcpServer } from '../src/spark-mcp/server.ts';
 
 const NOTHING_AVAILABLE: SparkAvailability = {
@@ -63,6 +63,8 @@ export interface AdvertisedSize {
 
 const SCOPE = { workspaceId: 'budget', conversationId: 'budget', runId: null };
 
+export const ASK_SPARK_SCOPE = { ...SCOPE, readOnly: true, assistant: true };
+
 function groupOf(name: string): string {
   const tool = SPARK_TOOLS.find((candidate) => candidate.name === name);
   if (tool?.needs) return tool.needs;
@@ -74,8 +76,11 @@ function groupOf(name: string): string {
 
 export const estimatedTokens = (chars: number) => Math.ceil(chars / 4);
 
-export async function advertisedSize(available: SparkAvailability): Promise<AdvertisedSize> {
-  const server = sparkMcpServer({} as SparkToolDeps, SCOPE, available);
+export async function advertisedSize(
+  available: SparkAvailability,
+  scope: SparkScope = SCOPE,
+): Promise<AdvertisedSize> {
+  const server = sparkMcpServer({} as SparkToolDeps, scope, available);
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'spark-tool-sizes', version: '1.0.0' });
   await server.connect(serverSide);

@@ -167,15 +167,21 @@ export async function callSparkTool(
   }
 }
 
-const ASSISTANT_ACTIONS: ReadonlySet<string> = new Set([
-  'spark_comment_ticket',
-  'spark_transition_ticket',
+export const CHAT_TURN_ONLY: ReadonlySet<string> = new Set([
+  'spark_push',
+  'spark_pull_request',
+  'spark_pr_follow_up',
+  'spark_pr_follow_up_round',
+  'spark_terminal_run',
+  'spark_outpost_ask',
+  'spark_outpost_start',
+  'spark_browser_sign_in',
 ]);
 
 function offeredTo(tool: SparkTool, scope: Pick<SparkScope, 'readOnly' | 'assistant'>): boolean {
   if (tool.assistantOnly) return scope.assistant === true;
+  if (scope.assistant) return !CHAT_TURN_ONLY.has(tool.name);
   if (!tool.acts) return true;
-  if (scope.assistant) return ASSISTANT_ACTIONS.has(tool.name);
   return !scope.readOnly;
 }
 

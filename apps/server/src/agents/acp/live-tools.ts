@@ -7,6 +7,7 @@ export interface LiveTools {
   hint: SparkToolsHint;
   key: string;
   grant: SparkGrant;
+  offered: string | null;
 }
 
 type Rebinding = SparkToolsAccess & Required<Pick<SparkToolsAccess, 'rebind'>>;
@@ -17,7 +18,7 @@ export function rebinds(access: SparkToolsAccess | undefined): access is Rebindi
 
 export function liveTools(tools: SparkTools): LiveTools {
   const { grant, ...hint } = tools;
-  return { hint, key: sparkGrantKey(grant.token), grant };
+  return { hint, key: sparkGrantKey(grant.token), grant, offered: grant.offered ?? null };
 }
 
 export async function regrant(

@@ -50,10 +50,13 @@ export async function liveReuse(
     await pool.close(conversationId);
     return null;
   }
-  return {
-    connection: live,
-    tools: await regrant(options.sparkTools, live.tools, turn.sparkScope),
-  };
+  const tools = await regrant(options.sparkTools, live.tools, turn.sparkScope);
+  if ((tools.grant.offered ?? null) !== live.tools.offered) {
+    console.log(`Reopening the agent session of chat ${conversationId}: spark tools`);
+    await pool.close(conversationId);
+    return null;
+  }
+  return { connection: live, tools };
 }
 
 const KEPT_STOPS = new Set<acp.StopReason>(['end_turn', 'max_tokens']);

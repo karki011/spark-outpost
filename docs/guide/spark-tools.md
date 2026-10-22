@@ -69,7 +69,7 @@ Sub-chats and Sparks' jobs get no `spark_outpost_start`. Another chat's text is 
 
 ## Ask Spark tools
 
-Only for [Ask Spark](companion-quick-chat.md#let-ask-spark-act).
+[Ask Spark](companion-quick-chat.md#let-ask-spark-act) gets these too, minus pushes, pull requests, terminal runs, sign-ins. Its own:
 
 | It can                                        | Tool                                                                                                                   |
 | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -91,11 +91,11 @@ Edit, then confirm or select **Don't**; the card shows the result or **Try again
 
 ## Commands after the turn
 
-`spark_terminal_run` runs a command, such as a dev server, outside the sandbox. Modes that don't ask start it, marked ran without review; others show **Allow once** or **Reject**.
+`spark_terminal_run` runs a command, like a dev server, outside the sandbox. Modes that don't ask start it, marked ran without review; others show **Allow once** or **Reject**.
 
 [Protected paths](protected-paths.md) and push rules hold in every mode. Read-only and no-project turns are refused.
 
-Stopping the turn or quitting Spark stops it.
+Stopping the turn or quitting stops it.
 
 ## What the tools never return
 

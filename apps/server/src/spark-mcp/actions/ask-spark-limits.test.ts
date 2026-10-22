@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Approval } from '@spark-outpost/contracts';
 import { EVERYTHING_AVAILABLE } from '../availability.ts';
-import { sparkToolsFor } from '../server.ts';
+import { CHAT_TURN_ONLY, sparkToolsFor } from '../server.ts';
 import { ASK_SPARK_REFUSALS, askedToAnswer, cardRefusal, namesChat } from './ask-spark-limits.ts';
 
 const TITLE = 'deploy';
@@ -70,28 +70,34 @@ describe('the tools Ask Spark is offered', () => {
   const names = (scope: { readOnly?: boolean; assistant?: boolean }) =>
     sparkToolsFor(scope, EVERYTHING_AVAILABLE).map((tool) => tool.name);
 
-  it('gives Ask Spark its own actions and the ticket comment and move, nothing else that acts', () => {
+  it('gives Ask Spark every Spark tool a chat gets, plus its own, except the chat-turn ones', () => {
     const offered = names({ readOnly: true, assistant: true });
+    const chat = names({});
+    for (const name of chat) {
+      if (CHAT_TURN_ONLY.has(name)) expect(offered).not.toContain(name);
+      else expect(offered).toContain(name);
+    }
     expect(offered).toEqual(
       expect.arrayContaining([
+        'spark_calendar',
+        'spark_calendar_edit',
+        'spark_slack_post',
+        'spark_create_ticket',
+        'spark_jira_edit',
+        'spark_mac_act',
+        'spark_browser_act',
         'spark_start_chat',
-        'spark_send_to_chat',
-        'spark_stop_chat',
-        'spark_archive_chat',
         'spark_answer_card',
-        'spark_pause',
-        'spark_start_ticket',
-        'spark_comment_ticket',
-        'spark_transition_ticket',
+        'spark_meeting',
       ]),
     );
-    for (const other of [
-      'spark_slack_post',
-      'spark_create_ticket',
+    for (const kept of [
       'spark_push',
-      'spark_mac_act',
+      'spark_pull_request',
+      'spark_pr_follow_up',
+      'spark_terminal_run',
     ]) {
-      expect(offered).not.toContain(other);
+      expect(offered).not.toContain(kept);
     }
   });
 

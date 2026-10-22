@@ -26,10 +26,11 @@ export interface MacSession {
 }
 
 const RUN_REFUSALS: Record<MacRefusedRun, string> = {
-  off: 'Mac control is turned off. The user can turn it on in Settings → Mac control on their Mac.',
+  off: 'Mac control is turned off. The user can turn on Let agents control other Mac apps in Settings → Mac control on their Mac.',
   remote:
     'Mac control is not available in a turn started from a paired device. It works only from the Mac.',
   child: 'Mac control belongs to the chat’s own turn; a child run gets none.',
+  voice: 'Mac control is never used for a spoken question. Ask by typing instead.',
   read_only: 'Mac control is not available in this read-only session.',
   no_chat: 'Mac control belongs to a chat, and this session has none.',
 };
