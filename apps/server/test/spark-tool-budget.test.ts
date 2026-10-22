@@ -5,13 +5,20 @@ const PLAIN_CHAT_MAX_CHARS = 27_000;
 const INSTRUCTIONS_MAX_CHARS = 1_700;
 const BROWSER_GROUP_MAX_CHARS = 7_500;
 const ATLASSIAN_GROUPS_MAX_CHARS = 4_600;
+const ARTIFACT_TOOL_MAX_CHARS = 1_500;
 
 describe('the size of the Spark tool list a session is sent', () => {
   it('stays within the budget for a plain chat with nothing connected', async () => {
     const size = await advertisedSize(SESSION_CASES['plain chat, nothing connected']);
     expect(size.chars).toBeLessThanOrEqual(PLAIN_CHAT_MAX_CHARS);
     expect(size.instructionChars).toBeLessThanOrEqual(INSTRUCTIONS_MAX_CHARS);
-    expect(Object.keys(size.groups).sort()).toEqual(['mcp_servers', 'other', 'sparks']);
+    expect(Object.keys(size.groups).sort()).toEqual([
+      'artifacts',
+      'mcp_servers',
+      'other',
+      'sparks',
+    ]);
+    expect(size.groups.artifacts).toBeLessThanOrEqual(ARTIFACT_TOOL_MAX_CHARS);
   });
 
   it('adds the outpost tools only for a chat that can use them', async () => {

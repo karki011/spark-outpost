@@ -1,0 +1,100 @@
+.wp-body.browser:has(> .art) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.art {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.art-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 8px 6px 10px;
+}
+.art-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.art-version {
+  flex: 0 0 auto;
+}
+.art-badge {
+  align-self: flex-end;
+  margin: 0 12px 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--raise);
+  color: var(--muted);
+  font-size: 11px;
+}
+.art-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0 10px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: auto;
+  background: var(--panel);
+}
+.art-frame {
+  flex: 1 1 auto;
+  width: 100%;
+  border: 0;
+  background: var(--qr-paper);
+}
+.art-doc {
+  padding: 16px 20px;
+}
+.art-svg {
+  max-width: 100%;
+  margin: auto;
+  padding: 16px;
+}
+.art-note {
+  margin: auto;
+  color: var(--muted);
+  font-size: 13px;
+}
+.art-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+}
+.art-card-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.art-card-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.art-card-text b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.art-card-text small {
+  color: var(--muted);
+}

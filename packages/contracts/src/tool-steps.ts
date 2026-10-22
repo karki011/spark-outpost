@@ -73,6 +73,7 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_browser_sign_in: 'Signing in with a saved sign-in',
   spark_slack: 'Reading Slack',
   spark_slack_post: 'Posting to Slack',
+  spark_artifact: 'Making an artifact',
   spark_outpost: 'Reading the outpost',
   spark_outpost_ask: 'Asking another chat',
   spark_outpost_note: 'Leaving a note in the outpost',

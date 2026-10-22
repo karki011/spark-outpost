@@ -23,6 +23,7 @@ import {
 } from './atlassian-perform.ts';
 import type { Performed } from './performed.ts';
 import { performAskSpark } from './ask-spark-perform.ts';
+import { performPublishArtifact } from './artifact-actions.ts';
 import { performStartOutpost } from './outpost-actions.ts';
 import type { StartedBy } from '../../outposts/start-outpost.ts';
 
@@ -117,5 +118,7 @@ export function performSparkAction(
       return Promise.reject(new Error('PR feedback is pushed by the follow-up round.'));
     case 'ask_spark':
       return performAskSpark(context, action);
+    case 'publish_artifact':
+      return performPublishArtifact(context, action);
   }
 }

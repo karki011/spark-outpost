@@ -1,7 +1,8 @@
 import { join, resolve } from 'node:path';
-import { DEV_API_TOKEN_FILE, isKeepTerminalsStop } from '@spark-outpost/contracts';
+import { DEV_API_TOKEN_FILE, artifactPortFor, isKeepTerminalsStop } from '@spark-outpost/contracts';
 import { LOCAL_DATA_DIR, loadConfig, sparkDataDir } from '../config.ts';
 import { chatFoldersBase } from '../chat-files/folders.ts';
+import { startArtifactOrigin } from '../artifacts/origin-server.ts';
 import { startMorningBrief } from '../digest/morning.ts';
 import { ensureLocalWorkspace } from '../persistence/conversations.ts';
 import { seedModelStats } from '../model-cards/ingest.ts';
@@ -219,6 +220,7 @@ const nativeMcp = await startSparkMcpHost(
     codeScan: createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) }),
     browser: desktopBrowser?.host,
     mac: desktopBrowser?.mac,
+    chatFolders,
     calendar: agentCalendarHosts(desktopCalendar, {
       db,
       secrets,
@@ -252,7 +254,20 @@ const nativeTerminals = await createNativeRuntime({
     appEvents.publish(JSON.stringify({ kind: 'terminal_start', conversationId, runId: null })),
 });
 await nativeTerminals.recover();
-desktopBrowser?.blockPorts([nativeMcp.port, nativeTerminals.port]);
+const artifactPages = await startArtifactOrigin({
+  db,
+  chatFolders,
+  port: artifactPortFor(config.API_PORT),
+  frameAncestors: [`http://127.0.0.1:${config.API_PORT}`, ...config.ALLOWED_ORIGINS],
+}).catch((error: unknown) => {
+  console.error('Could not start the artifact page server', (error as Error).message);
+  return null;
+});
+desktopBrowser?.blockPorts([
+  nativeMcp.port,
+  nativeTerminals.port,
+  artifactPortFor(config.API_PORT),
+]);
 const clones = cloneJobsFor(cloneDeps);
 await clones.recover();
 const { app, reconcileRemote } = createAppParts({
@@ -276,6 +291,7 @@ const { app, reconcileRemote } = createAppParts({
   agentRuntime: config.AGENT_RUNTIME,
   loginShell,
   chatFolders,
+  artifactOriginDown: artifactPages === null,
   terminals,
   nativeTerminals,
   previews,
@@ -356,6 +372,7 @@ const shutdown = async (keepTerminals = false) => {
   terminals.killAll();
   if (terminalTmux.host && !keepTerminals) killTmuxServer(terminalTmux.host);
   await nativeMcp.close();
+  await artifactPages?.close();
   await nativeApprovalListener.close();
   await calendarWrittenListener.close();
   await previews.stopAll('shutdown').catch(() => undefined);

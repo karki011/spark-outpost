@@ -8,8 +8,19 @@ export interface SparkToolContext {
   callId?: string;
 }
 
+export interface SparkResourceLink {
+  type: 'resource_link';
+  uri: string;
+  name: string;
+  title?: string;
+  mimeType?: string;
+  _meta?: Record<string, unknown>;
+}
+
 export type SparkBlock =
-  { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };
+  | { type: 'text'; text: string }
+  | { type: 'image'; data: string; mimeType: string }
+  | SparkResourceLink;
 
 export class SparkBlocks {
   readonly blocks: readonly SparkBlock[];

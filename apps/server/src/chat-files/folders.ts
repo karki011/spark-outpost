@@ -20,6 +20,10 @@ export function chatKeptFolder(base: string, conversationId: string): string {
   return join(chatHome(base, conversationId), 'kept');
 }
 
+export function chatArtifactsFolder(base: string, conversationId: string): string {
+  return join(chatHome(base, conversationId), 'artifacts');
+}
+
 export function isChatWorkFolder(base: string, folder: string): boolean {
   const parts = relative(resolve(base), resolve(folder)).split(sep);
   return parts.length === 2 && UUID.test(parts[0] ?? '') && parts[1] === 'work';

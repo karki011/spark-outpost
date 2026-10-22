@@ -28,6 +28,7 @@ import {
 import { browserActionLabels, browserActionSchemas, browserQuestion } from './browser-actions.ts';
 import { startOutpostActionSchema, startOutpostLabels } from './outpost-start-action.ts';
 import { askSparkActionSchema, askSparkLabels } from './ask-spark-action.ts';
+import { publishArtifactActionSchema, publishArtifactLabels } from './artifact-pages.ts';
 
 export const SPARK_ACTION_KIND = 'spark_action' as const;
 
@@ -225,6 +226,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   ...atlassianActionSchemas,
   startOutpostActionSchema,
   askSparkActionSchema,
+  publishArtifactActionSchema,
 ]);
 export type SparkAction = z.infer<typeof sparkActionSchema>;
 export type SparkActionName = SparkAction['action'];
@@ -275,6 +277,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   confluence_edit: [],
   start_outpost: [],
   ask_spark: [],
+  publish_artifact: [],
 };
 
 export function editableFields(action: SparkActionName): readonly (keyof SparkActionEdits)[] {
@@ -396,6 +399,7 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
   ...browserActionLabels,
   ...startOutpostLabels,
   ...askSparkLabels,
+  ...publishArtifactLabels,
 };
 
 const SLACK_POST_AS_YOU_QUESTION = 'Post this to Slack as you?';

@@ -296,6 +296,7 @@ export type ProviderOutput =
       live?: boolean;
     }
   | { kind: 'link'; url: string; title: string; source: Exclude<TaskLinkSource, 'user'> }
+  | { kind: 'artifact_link'; conversationId: string; artifactId: string }
   | { kind: 'commands'; commands: AgentCommand[] }
   | { kind: 'instructions'; files: string[] }
   | { kind: 'rail_flag'; flag: ObservedRail }

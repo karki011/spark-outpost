@@ -141,6 +141,30 @@ Limits, which bound any claim:
 - **No outside agent has been tried.** The only client that has called the endpoint is the SDK's own, in our tests and in Spark's dispatcher. "Compatible with A2A agents" is not claimed.
 - **What the tests prove.** In the contract tests the state of the receiving run is set in the database, not produced by an agent. `outposts-e2e.db.test.ts` runs real turns with the fake provider, which echoes the message. No live provider has run an outpost request.
 
+## MCP Apps: Spark's own artifacts (October 22, 2026)
+
+`spark_artifact` on Spark's MCP server (`@modelcontextprotocol/sdk` 1.30.1) returns an MCP `resource_link` per [SEP-1865](https://modelcontextprotocol.io/seps/1865-mcp-apps-interactive-user-interfaces-for-mcp):
+
+- `uri` is `ui://spark/<chat>/<id>`.
+- `mimeType` is `text/html;profile=mcp-app` for HTML.
+- `_meta.ui.csp` names no connect, resource or frame domains, with `prefersBorder: true`.
+
+On the ACP side (`@agentclientprotocol/sdk` 1.5.0), a `resource_link` content block with that URI, in a tool call update or an agent message, maps to an `artifact` `ACTIVITY_SNAPSHOT` once Spark has checked that the artifact is the chat's own. The card is drawn from Spark's stored versions.
+
+Not implemented:
+
+- `resources/read` for `ui://` URIs.
+- The MCP Apps postMessage bridge and tool calls from a page.
+- Rendering another server's UI resources.
+
+Design and security model: [ARTIFACTS.md](ARTIFACTS.md).
+
+| Claim                                                            | Status                                                                       | Evidence                                                                     |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Tool result carries the MCP Apps `resource_link` with `_meta.ui` | Implemented                                                                  | `artifacts.db.test.ts`                                                       |
+| ACP `resource_link` to `ui://spark/…` becomes the artifact card  | Implemented (fake agent); not checked against a live Claude or Codex adapter | `artifact-links.test.ts`, `artifacts.spec.ts`                                |
+| Page served on its own origin under the sandbox and CSP          | Implemented                                                                  | `artifact-origin.db.test.ts`, `artifacts.spec.ts`, `artifact-frames.test.ts` |
+
 ## Deviations from the AG-UI client model
 
 - The browser uses `EventSource` and our own reducer, not `@ag-ui/client`. Runs start with `POST /api/conversations/:id/messages`, not with an AG-UI `RunAgentInput` request, because the worker owns execution. Evaluating an `AbstractAgent` with `connect()` is task F-17.

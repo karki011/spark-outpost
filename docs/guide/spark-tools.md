@@ -46,6 +46,7 @@ Agents get the `spark_*` tools their chat can use.
 | Sign in, or hand you the tab (always asks)  | `spark_browser_sign_in`                                                                                 |
 | Use a [Mac app](mac-control.md)             | `spark_mac_apps`, `spark_mac_read`, `spark_mac_act`                                                     |
 | Keep one command running after the turn     | `spark_terminal_run`                                                                                    |
+| Show a page beside the chat                 | `spark_artifact`                                                                                        |
 | Change a calendar event                     | `spark_calendar_edit`                                                                                   |
 | Change or delete Jira issues                | `spark_jira_edit`                                                                                       |
 | Change Confluence pages                     | `spark_confluence_edit`                                                                                 |
@@ -86,13 +87,13 @@ Sub-chats and Sparks' jobs get no `spark_outpost_start`. Another chat's text is 
 
 ![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
 
-Edit, then confirm or select **Don't**. The card shows the result, or the failure with **Try again**.
+Edit, then confirm or select **Don't**; the card shows the result or **Try again**.
 
 ## Commands after the turn
 
 `spark_terminal_run` runs a command, like a dev server, outside the sandbox. Modes that don't ask start it, marked ran without review; others show **Allow once** or **Reject**.
 
-[Protected paths](protected-paths.md) and push rules hold in every mode. Read-only turns and turns with no project are refused.
+[Protected paths](protected-paths.md) and push rules hold in every mode. Read-only and no-project turns are refused.
 
 Stopping the turn or quitting stops it.
 

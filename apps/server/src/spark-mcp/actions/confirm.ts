@@ -90,6 +90,7 @@ function cardTitle(action: SparkAction): string {
     return `${question} ${action.after?.title ?? action.before?.title ?? ''}`.trim();
   }
   if (action.action === 'create_ticket') return `${question} ${action.title}`;
+  if (action.action === 'publish_artifact') return `${question} ${action.title}`;
   if (action.action === 'start_outpost') return `${question} ${action.outpostName}`;
   if (action.action === 'open_pr') return `${question} ${action.title}`;
   if (action.action === 'post_slack') return `${question} #${action.channel.name}`;

@@ -51,6 +51,7 @@ import { setupTools } from './tools/setup-tools.ts';
 import { taskTool } from './tools/task-tool.ts';
 import { teammatesTool } from './tools/teammates-tool.ts';
 import { terminalRunTool } from './tools/terminal-run-tool.ts';
+import { artifactTool } from './tools/artifact-tool.ts';
 import { terminalTool } from './tools/terminal-tool.ts';
 import { usageTools } from './tools/usage-tools.ts';
 import { workTools } from './tools/work-tools.ts';
@@ -84,6 +85,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   prFollowUpRoundTool,
   ...publishTools,
   terminalRunTool,
+  artifactTool,
   createTeammateTool,
   updateTeammateTool,
   ...mcpActionTools,
@@ -174,6 +176,7 @@ export const CHAT_TURN_ONLY: ReadonlySet<string> = new Set([
   'spark_outpost_ask',
   'spark_outpost_start',
   'spark_browser_sign_in',
+  'spark_artifact',
 ]);
 
 function offeredTo(tool: SparkTool, scope: Pick<SparkScope, 'readOnly' | 'assistant'>): boolean {

@@ -3,7 +3,7 @@ import type { AuditSummary } from '@spark-outpost/contracts';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { auditApi } from './audit-api.ts';
-import { ExportButton } from './ExportButton.tsx';
+import { ExportButton } from '../ui/ExportButton.tsx';
 
 const PREVIEW_LINES = 6;
 

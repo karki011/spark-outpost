@@ -24,6 +24,8 @@ import { BrowserPane } from '../browser/BrowserPane.tsx';
 import { ChatLinks } from '../browser/ChatLinks.tsx';
 import { usePreviewDockTab } from '../browser/use-chat-preview.ts';
 import { useBrowserPane } from '../browser/pane-open.ts';
+import { useArtifactPane } from './artifacts/artifact-pane-store.ts';
+import { artifactTab } from './artifacts/artifact-tab.tsx';
 import { useBrowserInput } from '../browser/use-browser-input.ts';
 import { TerminalDock } from '../terminal/dock/TerminalDock.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
@@ -145,6 +147,10 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
       : null;
   const { remote } = useRemoteClient();
   const browserPane = useBrowserPane(conversationId);
+  const artifactPane = useArtifactPane(conversationId);
+  const artifactPage = detail.data?.artifactPages?.find(
+    (page) => page.id === artifactPane?.current.id,
+  );
   const hasBrowser = browserPane !== null;
   const mainRef = useRef<HTMLElement>(null);
   const roomy = useRoomy(mainRef);
@@ -155,6 +161,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     autonomyLevel !== null || detail.data?.conversation.sessionType === 'terminal' || agents.has,
     panelOpensByDefault(roomy, wideLayout),
     browserPane,
+    artifactPane,
   );
   const [railCollapsed, setRailCollapsed] = useRailCollapsed();
   const rail = railState({
@@ -469,6 +476,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   )
                 : null
             }
+            artifact={artifactPane && artifactPage ? artifactTab(artifactPage, artifactPane) : null}
             {...(openAudit ? { onAudit: openAudit } : {})}
           />
         )}

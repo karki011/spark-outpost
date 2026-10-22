@@ -96,6 +96,7 @@ describe('the tools Ask Spark is offered', () => {
       'spark_pull_request',
       'spark_pr_follow_up',
       'spark_terminal_run',
+      'spark_artifact',
     ]) {
       expect(offered).not.toContain(kept);
     }

@@ -1,4 +1,5 @@
 import {
+  ARTIFACT_ACTIVITY,
   BROWSER_SCREENSHOT_ACTIVITY,
   EventType,
   MEMBER_MESSAGE_ACTIVITY,
@@ -14,6 +15,7 @@ const CHAT_ACTIVITIES: ReadonlySet<string> = new Set([
   MEMBER_MESSAGE_ACTIVITY,
   BROWSER_SCREENSHOT_ACTIVITY,
   OUTPOST_DRAFT_ACTIVITY,
+  ARTIFACT_ACTIVITY,
 ]);
 
 export function refreshesChat(event: RunEvent): boolean {

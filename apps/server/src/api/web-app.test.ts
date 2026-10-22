@@ -4,14 +4,16 @@ import path from 'node:path';
 import express from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
-import { APP_CONTENT_SECURITY_POLICY } from '@spark-outpost/contracts';
+import { appContentSecurityPolicy, artifactOrigin } from '@spark-outpost/contracts';
 import { webApp } from './web-app.ts';
+
+const APP_CONTENT_SECURITY_POLICY = appContentSecurityPolicy(artifactOrigin(4318));
 
 function appServing(root = mkdtempSync(path.join(tmpdir(), 'spark-web-'))) {
   writeFileSync(path.join(root, 'index.html'), '<title>Spark Outpost</title>');
   writeFileSync(path.join(root, 'theme.css'), 'body {}');
   const app = express();
-  app.use(webApp(root));
+  app.use(webApp(root, APP_CONTENT_SECURITY_POLICY));
   app.use((_req, res) => {
     res.status(404).json({ error: 'Not found.' });
   });
@@ -36,6 +38,7 @@ describe('webApp', () => {
     expect(directives).toContain("script-src 'self'");
     expect(directives).toContain("frame-ancestors 'none'");
     expect(directives).toContain("object-src 'none'");
+    expect(directives).toContain("frame-src 'self' http://127.0.0.1:14318");
     expect(directives).toContain("base-uri 'self'");
     expect(APP_CONTENT_SECURITY_POLICY).not.toContain('unsafe-eval');
     const missing = await request(app).get('/api/missing');

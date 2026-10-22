@@ -68,6 +68,7 @@ export const ASK_SPARK_SCOPE = { ...SCOPE, readOnly: true, assistant: true };
 function groupOf(name: string): string {
   const tool = SPARK_TOOLS.find((candidate) => candidate.name === name);
   if (tool?.needs) return tool.needs;
+  if (name === 'spark_artifact') return 'artifacts';
   if (name.includes('mcp_server')) return 'mcp_servers';
   if (/_sparks?$/.test(name)) return 'sparks';
   return 'other';

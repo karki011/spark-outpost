@@ -267,6 +267,10 @@ export function DownloadIcon() {
   return <StrokeIcon path="M12 4v12M7 11l5 5 5-5M5 20h14" />;
 }
 
+export function ArtifactIcon() {
+  return <StrokeIcon path="M4 5h16v14H4zM4 9h16M9 9v10" />;
+}
+
 export function CopyIcon() {
   return (
     <StrokeIcon path="M9 9h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1ZM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />

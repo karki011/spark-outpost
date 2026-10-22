@@ -20,7 +20,7 @@ What changed recently, newest first.
 | Browser: shared sign-ins, copy buttons, keys, find, developer tools, network log, SSO handoff.                                               | See [Keys](keyboard-shortcuts.md#browser-pane-mac-app).           |
 | Sub-agents: one line, work-panel cards; Agent TV in chat; most edits show diffs.                                                             | See [Follow a turn](follow-a-turn.md#see-whats-happening).        |
 | Agents can start sub-chats themselves; phones can **Start** a draft.                                                                         | See [Start it](outpost-stories.md#start-it-from-a-chat).          |
-| Picker: no **Auto**, shows the model; no-project chats get a folder. Agents search the web.                                                  | See [Agent tools](modes-and-levels.md#agent-tools).               |
+| Picker: no **Auto**, shows the model; no-project chats get a folder. Agents search the web, show artifacts; links ask first.                 | See [Agent tools](modes-and-levels.md#agent-tools).               |
 | Agents stay running between messages: **Continued on its own**, **Waiting on…**, **Stopped by Quit**. Every chat starts at once.             | See [Background work](follow-a-turn.md#background-work).          |
 | Nothing chimes for the chat you're viewing. Spark Island opens from Scout; **Hide in screen sharing**.                                       | See [Spark Island](desktop-companion.md#answer-a-card).           |
 | **Atlassian** replaces Jira. Agent deletes in Jira, Confluence and Calendar follow your mode.                                                | See [Connect](tickets-and-github.md#connect-atlassian-or-linear). |
