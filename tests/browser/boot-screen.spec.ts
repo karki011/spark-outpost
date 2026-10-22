@@ -48,6 +48,7 @@ const bootBackground = (page: Page) =>
 
 test.describe('boot screen', () => {
   test('wakes up in the default theme and follows the startup steps', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
     await fakeBootBridge(page);
     await page.goto('/boot.html');
     const status = page.getByRole('status');
@@ -94,10 +95,17 @@ test.describe('boot screen', () => {
     await page.goto('/boot.html?theme=system');
     expect(await bootBackground(page)).toBe('rgb(244, 245, 247)');
     await page.emulateMedia({ colorScheme: 'dark' });
+    await page.goto('/boot.html?theme=auto.graphite.system');
     expect(await bootBackground(page)).toBe(GRAPHITE_BG);
+    await page.goto('/boot.html?theme=auto.sage.system');
+    expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('loam');
+    await page.emulateMedia({ colorScheme: 'dark', contrast: 'more' });
+    await page.goto('/boot.html?theme=auto.sage.system');
+    expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('contrast-dark');
+    await page.emulateMedia({ colorScheme: 'light', contrast: 'no-preference' });
 
     await page.goto('/boot.html?theme=%3Cscript%3E');
-    expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('graphite');
+    expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('light');
   });
 
   test('shows a still, awake face when motion is reduced', async ({ page }) => {
@@ -320,6 +328,8 @@ test.describe('boot party', () => {
       ...SKINS.map((skin) => ({ skin, scheme: 'dark' as const })),
       { skin: 'system', scheme: 'light' as const },
       { skin: 'system', scheme: 'dark' as const },
+      { skin: 'dark.sage.system', scheme: 'dark' as const },
+      { skin: 'dark.graphite.always', scheme: 'dark' as const },
     ];
     for (const { skin, scheme } of looks) {
       await page.emulateMedia({ colorScheme: scheme });
@@ -395,11 +405,11 @@ test.describe('first paint', () => {
       .click();
     await page.getByRole('button', { name: 'New chat' }).first().click();
     await page.getByRole('button', { name: 'Theme' }).click();
-    await page.getByRole('menuitemradio', { name: 'Fjord' }).click();
+    await page.getByRole('menuitemradio', { name: 'Fjord · Void' }).click();
     await expect(page.locator('html')).toHaveAttribute('data-skin', 'fjord');
     expect(
       await page.evaluate(() => (window as unknown as { desktopCalls: string[] }).desktopCalls),
-    ).toEqual(['rendered', 'save:fjord']);
+    ).toEqual(['rendered', 'save:light.fjord.system']);
   });
 
   test('the island reports ready once its blob has drawn and fades the blob in', async ({

@@ -22,6 +22,8 @@ describe('saved theme', () => {
     const file = appearanceFile(folder());
     await saveTheme(file, 'fjord');
     expect(await readSavedTheme(file)).toBe('fjord');
+    await saveTheme(file, 'auto.sage.system');
+    expect(await readSavedTheme(file)).toBe('auto.sage.system');
   });
 
   it('has no theme before one is saved or when the file is damaged', async () => {
@@ -44,7 +46,19 @@ describe('theme handed to the window', () => {
 
   it('accepts only plain theme names', () => {
     expect(isThemeName('graphite')).toBe(true);
-    for (const value of ['', 'Fjord', 'a b', '<script>', 'x'.repeat(25), 7, null]) {
+    expect(isThemeName('dark.lagoon.always')).toBe(true);
+    for (const value of [
+      '',
+      'Fjord',
+      'a b',
+      '<script>',
+      'x'.repeat(25),
+      'a.b.c.d',
+      'auto..system',
+      '../etc',
+      7,
+      null,
+    ]) {
       expect(isThemeName(value)).toBe(false);
     }
     expect(themeFromArgs(['--spark-theme=<img>'])).toBeNull();

@@ -10,12 +10,12 @@ You'll go from first launch to your first chat. About 5 minutes.
 
 Only your name and one provider are required. Change the rest later in **Settings**.
 
-## Meet Spark and pick a theme
+## Meet Spark and pick a look
 
 1. Type your name under **What should Spark call you?**.
 2. Pick a **Personality**: **Playful**, **Friendly** (default) or **Just the facts**.
 3. Select **Continue**.
-4. Select a theme card, then **Continue**. **Graphite** is the default.
+4. Pick a **Tint**, then **Continue**. **Automatic** follows your Mac's light or dark mode.
 
 ![The Meet Spark step with a name typed in and the Friendly personality selected](images/getting-started-meet-spark-light.png)
 
@@ -36,7 +36,7 @@ Spark needs Git to change code. The Mac app adds an optional **Mac access** step
 3. Select **Choose project** and pick a folder.
 4. Type a small task, such as `Add a dark mode toggle to the dashboard`, and press **Enter**.
 
-![The final step summarising name, theme, provider and tools](images/getting-started-done-light.png)
+![The final step summarising name, appearance, provider and tools](images/getting-started-done-light.png)
 
 The agent works in its own copy of the project; you can revert.
 
