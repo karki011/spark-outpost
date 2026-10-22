@@ -17,6 +17,7 @@ import { systemHourCycle } from './hour-cycle.ts';
 import type { Point } from './island-geometry.ts';
 import { ISLAND_LEVEL } from './island-options.ts';
 import { IPC } from './ipc-channels.ts';
+import type { PreventActivation } from './no-activate.ts';
 import { regionPointer, type RegionPointer } from './region-pointer.ts';
 import { guardNavigation } from './window.ts';
 
@@ -32,6 +33,7 @@ interface MeetingAlertHostOptions {
   islandCenter: () => Point | null;
   sendToIsland: (channel: string, payload: unknown) => void;
   hideInShare: () => boolean;
+  preventActivation: PreventActivation;
   log: (line: string) => void;
 }
 
@@ -99,6 +101,7 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
   const ensure = (): BrowserWindow => {
     if (window && !window.isDestroyed()) return window;
     const created = overlayWindow(options.preload);
+    options.preventActivation(created);
     created.setContentProtection(options.hideInShare());
     guardNavigation(created, options.origin);
     void created.loadURL(`${options.origin}${MEETING_ALERT_PATH}`);
