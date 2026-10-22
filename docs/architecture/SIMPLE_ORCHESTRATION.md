@@ -203,6 +203,20 @@ Publishing
 
 The block holds no safety rules, no role names and nothing about when to plan. It grants nothing: the gate and the publish rules decide, and the Publishing line only tells the agent what to expect.
 
+In a Do turn (not a Plan-first turn) the last How to split work line reads instead: "- When the user should choose, or a detail you need is missing, call AskUserQuestion (Codex: request_user_input) with the options instead of writing them in your reply, and use the answer it returns." Ask, read-only and Plan turns keep "ask one question and stop". This line was added on October 22, 2026 for question cards (ACP form elicitation) and needs the owner's confirmation.
+
+Why, measured with real Claude Opus 5.5 through the whole Spark path (worker, Spark tools, a Manual Do chat in a repo; `apps/server/test/ask-tool-choice-app.live.test.ts`), 3 runs per prompt, counting turns that raised a question card. The prompts: "ask me which rounding approach … give me 3 options" (askWhich), "give me a few options … let me pick one" (letMePick), "ask me which currency format …, then update" (askMe), "make the prices nicer" (unclear) and the owner's own test prompt (verbatim). "AGENTS.md" copies this repo's AGENTS.md into the test repo, as a real project has one.
+
+| Claude Opus 5.5, Do turn                   | askWhich | letMePick | askMe | unclear | verbatim | Total |
+| ------------------------------------------ | -------: | --------: | ----: | ------: | -------: | ----: |
+| "ask one question and stop" (before)       |      1/3 |       3/3 |   3/3 |     1/3 |      2/3 | 10/15 |
+| "ask one question and stop", AGENTS.md     |      0/3 |       3/3 |   3/3 |     0/3 |      0/3 |  6/15 |
+| "ask with your tool for asking", AGENTS.md |      3/3 |       3/3 |   3/3 |     0/3 |      2/3 | 11/15 |
+| The line above (shipped), AGENTS.md        |      3/3 |       3/3 |   3/3 |     0/3 |      3/3 | 12/15 |
+| The line above (shipped)                   |      3/3 |       3/3 |   3/3 |     1/3 |      3/3 | 13/15 |
+
+Before the change, a turn that didn't ask with the tool wrote the options as prose and ended, as the owner saw. Plain Claude over ACP without Spark's block asked in 10 of 12 provider-only runs (`claude -p` can't be compared: it has no AskUserQuestion tool). The unclear prompt rarely asks with any wording; Claude makes a small change instead. Codex never called request_user_input in a Do turn (0 of 15 with the old line, 0 of 15 with the new one, 0 of 12 with no block): codex-acp 1.13.1 offers it in Plan turns, where a live run asked and got the answer back (`questions.live.test.ts`).
+
 | Case                                                      | What the block says                                                                                          |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | No project                                                | No Folder line and no Publishing section                                                                     |

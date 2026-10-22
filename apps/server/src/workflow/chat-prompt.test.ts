@@ -76,6 +76,14 @@ describe('chatPrompt', () => {
     expect(prompt).toContain(text.SPLIT_UNCLEAR);
   });
 
+  it('asks a Do turn to ask with its question tool, and leaves other turns as they were', () => {
+    const doing = build({ asksWithTool: true });
+    expect(doing).toContain(text.SPLIT_ASK_WITH_TOOL);
+    expect(doing).not.toContain(text.SPLIT_UNCLEAR);
+    expect(build({})).toContain(text.SPLIT_UNCLEAR);
+    expect(build({})).not.toContain('AskUserQuestion');
+  });
+
   it('offers starting sub-chats only when the run has the start tool', () => {
     const prompt = build({ outpostStartTool: true });
     expect(prompt).toContain(text.SPLIT_SUB_CHATS_START);
