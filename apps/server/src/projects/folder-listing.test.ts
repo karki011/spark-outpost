@@ -2,7 +2,7 @@ import { chmod, mkdir, mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { listFolders } from './folders.ts';
+import { accessProblem, listFolders } from './folders.ts';
 
 let base: string;
 let home: string;
@@ -53,8 +53,14 @@ describe('the folder picker listing', () => {
   it('says how to allow access when the folder cannot be read, keeping the places', async () => {
     const listing = await listFolders(join(home, 'Locked'), { home });
     expect(listing.folders).toEqual([]);
-    expect(listing.denied).toContain('Privacy & Security');
+    expect(listing.denied).toContain('permission');
     expect(listing.parent).toBe(home);
     expect(listing.places[0]).toEqual({ name: 'Home', path: home });
+  });
+
+  it('points to macOS privacy settings only when macOS refused the folder', () => {
+    expect(accessProblem('EPERM')).toContain('Privacy & Security');
+    expect(accessProblem('EACCES')).toContain('permission');
+    expect(accessProblem('EIO')).toBeNull();
   });
 });

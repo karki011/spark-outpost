@@ -136,7 +136,7 @@ export function FolderDialog({
   const projectRoots = new Set((projects.data ?? []).map((project) => project.rootPath));
   const privacy = remote ? null : (sparkDesktop()?.privacy ?? null);
   const picked = current?.files.find((entry) => entry.path === file)?.path ?? null;
-  const chosen = picksFile ? picked : (current?.path ?? null);
+  const chosen = picksFile ? picked : current && !current.denied ? current.path : null;
   const empty = current ? emptyNote(current, picksFile) : null;
   const open = (next: string) => {
     setFile(null);

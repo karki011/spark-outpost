@@ -288,7 +288,8 @@ test('the folder picker has places, a typed path, keys, marks and says when acce
     );
     await goTo.fill(locked);
     await goTo.press('Enter');
-    await expect(dialog.getByRole('alert')).toContainText('Privacy & Security');
+    await expect(dialog.getByRole('alert')).toContainText('permission to open this folder');
+    await expect(dialog.getByRole('button', { name: 'Use this folder' })).toBeDisabled();
     await expect(places.getByRole('button', { name: 'Home' })).toBeVisible();
     await places.getByRole('button', { name: 'Home' }).click();
     await expect(dialog.getByRole('list', { name: 'Folders' })).toBeVisible();

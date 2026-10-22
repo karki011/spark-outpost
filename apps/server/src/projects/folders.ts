@@ -14,6 +14,8 @@ export class FolderError extends Error {}
 
 const NO_ACCESS =
   'macOS didn’t let Spark Outpost open this folder. Allow it in System Settings → Privacy & Security (Files and Folders, or Full Disk Access), then open it again.';
+const NO_PERMISSION =
+  'You don’t have permission to open this folder. Choose another one, or change its permissions in Finder.';
 const QUICK_PLACES = ['Desktop', 'Documents', 'Downloads'];
 const VOLUMES = '/Volumes';
 
@@ -87,8 +89,14 @@ function parentOf(real: string): string | null {
   return parent === real ? null : parent;
 }
 
-function deniedListing(real: string, places: FolderEntry[]): FolderListing {
-  return { path: real, parent: parentOf(real), folders: [], files: [], places, denied: NO_ACCESS };
+export function accessProblem(code: string | undefined): string | null {
+  if (code === 'EPERM') return NO_ACCESS;
+  if (code === 'EACCES') return NO_PERMISSION;
+  return null;
+}
+
+function deniedListing(real: string, places: FolderEntry[], denied: string): FolderListing {
+  return { path: real, parent: parentOf(real), folders: [], files: [], places, denied };
 }
 
 async function startFolder(home: string): Promise<string> {
@@ -134,7 +142,8 @@ export async function listFolders(
     entries = await readdir(real, { withFileTypes: true });
   } catch (error) {
     const code = errorCode(error);
-    if (code === 'EPERM' || code === 'EACCES') return deniedListing(real, places);
+    const denied = accessProblem(code);
+    if (denied) return deniedListing(real, places, denied);
     throw new FolderError("Spark Outpost can't open that folder.");
   }
   const shown = entries.filter((entry) => options.hidden || !entry.name.startsWith('.'));
