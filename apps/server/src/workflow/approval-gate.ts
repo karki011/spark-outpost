@@ -42,6 +42,7 @@ import { LeaseLostError, type AppendOptions } from '../persistence/run-events.ts
 import type { GateAnswer, PermissionGate } from '../providers/provider.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
 import type { Append } from './agent-turn.ts';
+import type { ParkForUser } from './background-parking.ts';
 import { waitForApproval, type ApprovalWaiters, type WaitResult } from './approval-waiters.ts';
 import { chosenModeWhy } from './ask-auto.ts';
 import { runEvents } from './run-events.ts';
@@ -104,6 +105,7 @@ export interface GateDeps {
   plans?: PlanModeHooks;
   observations?: RunObservations | undefined;
   publish?: PublishGrant | undefined;
+  park?: ParkForUser | undefined;
 }
 
 export async function forcePushDefault(request: ApprovalRequest): Promise<string | null> {
@@ -306,6 +308,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     const pending = await insertApproval(deps.db, card);
     asked(pending.id);
     waiting += 1;
+    const unpark = deps.park?.();
     let result: WaitResult;
     try {
       await emit(runEvents.approvalRequested(pending), {
@@ -314,6 +317,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       result = await waitForDecision(pending.id, signal);
     } finally {
       waiting -= 1;
+      unpark?.();
     }
     return settle(pending, result, request);
   };

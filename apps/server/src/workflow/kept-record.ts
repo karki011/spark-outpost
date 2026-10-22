@@ -15,6 +15,7 @@ import {
 import type { Db } from '../persistence/db.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
 import type { Append } from './agent-turn.ts';
+import type { ParkForUser } from './background-parking.ts';
 import { waitForApproval, type ApprovalWaiters } from './approval-waiters.ts';
 import { runEvents } from './run-events.ts';
 
@@ -103,6 +104,7 @@ export interface CheckpointDeps {
   timeoutMs: number;
   pollMs: number;
   autoContinueMs?: number | null;
+  park?: ParkForUser | undefined;
 }
 
 export type CheckpointAnswer =
@@ -155,10 +157,11 @@ export async function askCheckpoint(
     transition: { status: 'awaiting_approval' },
   });
   const autoOption = pending.autoContinueAt ? card.payload.autoOption : null;
+  const unpark = deps.park?.();
   const result = await waitForApproval(pending.id, {
     ...deps,
     settleDue: autoOption ? () => settleIfDue(deps.db, pending.id, autoOption) : undefined,
-  });
+  }).finally(unpark);
   if (result === 'aborted' || result === 'timeout') {
     const settled = await settlePending(deps.db, pending.id, {
       status: result === 'aborted' ? 'cancelled' : 'expired',

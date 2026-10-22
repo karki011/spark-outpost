@@ -1,3 +1,4 @@
+import { STOPPED_BY_QUIT } from '@spark-outpost/contracts';
 import { newId } from '../persistence/ids.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
@@ -26,7 +27,7 @@ async function settle(
   lease: Lease,
   input: RunInput,
   append: Append,
-  control: Pick<RunControl, 'signal'>,
+  control: Pick<RunControl, 'signal' | 'stop' | 'reason'>,
 ): Promise<BeforeTurn> {
   try {
     return await compactBeforeTurn(deps, lease, input, append, control);
@@ -43,7 +44,7 @@ export async function prepareTurn(
   lease: Lease,
   input: RunInput,
   append: Append,
-  control: Pick<RunControl, 'signal'>,
+  control: Pick<RunControl, 'signal' | 'stop' | 'reason'>,
 ): Promise<RunInput | null> {
   const before = await settle(deps, lease, input, append, control);
   if (before.kind === 'continue') return before.input;
@@ -51,6 +52,9 @@ export async function prepareTurn(
     await finishMoved(append, input, before.chat);
     return null;
   }
-  await append(runEvents.cancelled(input.identity), { transition: { status: 'cancelled' } });
+  const error = control.reason() === 'quit' ? { error: STOPPED_BY_QUIT } : {};
+  await append(runEvents.cancelled(input.identity), {
+    transition: { status: 'cancelled', ...error },
+  });
   return null;
 }

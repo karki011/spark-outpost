@@ -8,21 +8,21 @@ summary: Allow or deny a command or file change an agent asks about, hold to con
 
 You'll answer an agent that's waiting for your permission. About 1 minute.
 
-1. Select **Waiting for you** above the message box, or press **⌘⇧Y**, to jump to the card.
+1. Select **Waiting for you** above the message box, or press **⌘⇧Y**.
 2. Read the command or diff, where it runs, and why it asks. A sub-agent's card names it.
 
    ![An approval card asking to run a command](images/approvals-command-light.png)
 
-3. Select a button; labels vary a little by agent.
+3. Select a button; labels vary by agent.
 
-| Button                           | Does                                                  |
-| -------------------------------- | ----------------------------------------------------- |
-| **Allow**                        | Runs it this once.                                    |
-| **Always allow**                 | Allows this kind of request for the rest of this run. |
-| **Always allow in this project** | Adds the command to the project's list.               |
-| **Deny**                         | Doesn't run it; the agent tries another way.          |
+| Button                           | Does                                         |
+| -------------------------------- | -------------------------------------------- |
+| **Allow**                        | Runs it this once.                           |
+| **Always allow**                 | Allows this kind of request for this run.    |
+| **Always allow in this project** | Adds the command to the project's list.      |
+| **Deny**                         | Doesn't run it; the agent tries another way. |
 
-An unanswered card is declined after 30 minutes and says **Expired**.
+Other chats run while a card waits; unanswered, it's declined after 30 minutes and says **Expired**.
 
 ## Hold to confirm
 
@@ -48,6 +48,6 @@ A listed command covers longer forms too: `pnpm test` allows `pnpm test -- api`.
 
 Cards wait in the chat, on **Home** under **What needs you today**, in the chat list as a **Waiting for you** dot, and on [Spark Island](desktop-companion.md#answer-a-card).
 
-To see what was allowed, select **Audit this chat** in the chat's **…** menu.
+**Audit this chat** in the chat's **…** menu shows what was allowed.
 
 **Next:** [Plan before building](plan-card.md)

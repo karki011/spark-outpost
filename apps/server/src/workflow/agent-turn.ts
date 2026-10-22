@@ -1,4 +1,4 @@
-import { backgroundParking } from './background-parking.ts';
+import { backgroundParking, userWaitParking } from './background-parking.ts';
 import type { ParkedTurns } from './parked-turns.ts';
 import type { RunSnapshot } from '../persistence/run-snapshots.ts';
 import { STOPPED_BY_QUIT, type RunEvent } from '@spark-outpost/contracts';
@@ -234,7 +234,9 @@ export async function runAgentTurn(
         append,
       });
   const redaction = createRedactionFilter(secretValues);
-  const parking = backgroundParking(deps.parked, lease.runId, () => control.stop('quit'));
+  const quit = () => control.stop('quit');
+  const parking = backgroundParking(deps.parked, lease.runId, quit);
+  const parkForUser = userWaitParking(deps.parked, lease.runId, quit);
   const watch = { ...input, db: deps.db, runId: lease.runId, observations };
   const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
@@ -273,6 +275,7 @@ export async function runAgentTurn(
       timeoutMs: deps.approvalTimeoutMs,
       onTimeout: () => control.stop('approval_timeout'),
       observations,
+      park: parkForUser,
     };
     const changesProject = input.mode === 'do' && input.parentRunId === null;
     const asking = input.mode === 'ask' && input.role === null && input.projectRoots.length > 0;
@@ -384,6 +387,7 @@ export async function runAgentTurn(
           onTimeout: () => control.stop('approval_timeout'),
           audit,
           replySoFar,
+          park: parkForUser,
         },
       },
     })) {

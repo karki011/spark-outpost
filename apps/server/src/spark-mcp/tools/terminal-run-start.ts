@@ -117,6 +117,7 @@ async function decided(run: StartRun, review: Passed): Promise<Decided> {
     timeoutMs: run.hooks.timeoutMs,
     onTimeout: run.hooks.onTimeout ?? (() => undefined),
     backup: async () => undefined,
+    park: run.hooks.park,
   });
   const answer = await gate.raise(review.card, review.request, run.signal, (approvalId) =>
     sparkCommandAsked(run.scope, review, approvalId),

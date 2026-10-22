@@ -24,6 +24,7 @@ import type { Append, RunControl, TurnDeps } from '../workflow/agent-turn.ts';
 import { APPROVAL_POLL_MS, APPROVAL_TIMEOUT_MS } from '../workflow/approval-gate.ts';
 import { startsWithCommand, withAgentNote } from '../workflow/agent-note.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
+import { userWaitParking } from '../workflow/background-parking.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { SESSION_IDLE_MS, decideResume } from '../workflow/session-decision.ts';
@@ -120,7 +121,7 @@ async function askFirst(
   lease: Lease,
   input: RunInput,
   append: Append,
-  control: Pick<RunControl, 'signal'>,
+  control: Pick<RunControl, 'signal' | 'stop'>,
   reading: ContextReading,
   thresholds: CompactionThresholds,
 ) {
@@ -135,6 +136,7 @@ async function askFirst(
       timeoutMs: deps.checkpointTimeoutMs ?? deps.approvalTimeoutMs ?? APPROVAL_TIMEOUT_MS,
       pollMs: deps.approvalPollMs ?? APPROVAL_POLL_MS,
       autoContinueMs: seconds === null ? null : seconds * 1000,
+      park: userWaitParking(deps.parked, lease.runId, () => control.stop('quit')),
     },
     compactCard(cardReason(reading, thresholds), reaskPercent(thresholds.compactPercent)),
     1,
@@ -258,7 +260,7 @@ export async function compactBeforeTurn(
   lease: Lease,
   input: RunInput,
   append: Append,
-  control: Pick<RunControl, 'signal'>,
+  control: Pick<RunControl, 'signal' | 'stop'>,
 ): Promise<BeforeTurn> {
   const keep: BeforeTurn = { kind: 'continue', input };
   if (input.parentRunId !== null) return keep;

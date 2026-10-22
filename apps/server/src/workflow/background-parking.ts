@@ -6,6 +6,8 @@ export interface BackgroundParking {
   release(): void;
 }
 
+export type ParkForUser = () => () => void;
+
 export function backgroundParking(
   parked: Pick<ParkedTurns, 'park'> | undefined,
   runId: string,
@@ -25,4 +27,12 @@ export function backgroundParking(
     },
     release,
   };
+}
+
+export function userWaitParking(
+  parked: Pick<ParkedTurns, 'park'> | undefined,
+  runId: string,
+  onQuit: () => void,
+): ParkForUser {
+  return () => parked?.park(runId, onQuit) ?? (() => undefined);
 }

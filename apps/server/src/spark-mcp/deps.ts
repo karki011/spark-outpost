@@ -18,6 +18,7 @@ import type { InboxDeps } from '../tickets/inbox.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
 import type { StackGit } from '../outposts/ports.ts';
 import type { RequestWakes } from '../outposts/request-wait.ts';
+import type { ParkForUser } from '../workflow/background-parking.ts';
 import type { ParkedTurns } from '../workflow/parked-turns.ts';
 
 export interface OutpostToolDeps {
@@ -61,6 +62,7 @@ export interface SparkActionHooks {
   onTimeout?: () => void;
   audit?: ProtocolObserver | undefined;
   replySoFar?: () => ReplySoFar;
+  park?: ParkForUser;
 }
 
 export interface SparkScope {

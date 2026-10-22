@@ -8,6 +8,7 @@ import type { Append } from './agent-turn.ts';
 import { createApprovalGate, type EditObserver, type PlanModeHooks } from './approval-gate.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { askTurnAutoWhy } from './ask-auto.ts';
+import type { ParkForUser } from './background-parking.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
 
 export interface AskRunOptions {
@@ -23,6 +24,7 @@ export interface AskRunOptions {
   timeoutMs?: number | undefined;
   onTimeout: () => void;
   observations?: RunObservations | undefined;
+  park?: ParkForUser | undefined;
 }
 
 export interface AskTurnOptions extends AskRunOptions {
@@ -64,6 +66,7 @@ function gateBasics(options: AskRunOptions) {
     ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
     onTimeout: options.onTimeout,
     ...(options.observations ? { observations: options.observations } : {}),
+    ...(options.park ? { park: options.park } : {}),
   };
 }
 
