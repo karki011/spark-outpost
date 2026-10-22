@@ -105,6 +105,7 @@ describe('what a Spark tools session can use', () => {
       calendar_edit: false,
       jira: false,
       confluence: false,
+      howTo: {},
     });
   });
 

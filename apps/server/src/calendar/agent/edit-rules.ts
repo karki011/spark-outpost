@@ -21,7 +21,7 @@ export interface EditRefusalFacts {
 
 export function editRefusal({ choice, googleCanEdit, span }: EditRefusalFacts): string | null {
   if (!choice.agentsEdit) {
-    return `Agents can’t change ${choice.title}. The user can turn on Agents can edit for it on the Calendar card (Connections → Connectors).`;
+    return `Agents can’t change ${choice.title}. The user can turn on Agents can edit for it on the Calendar card in Settings → Connectors → Calendar.`;
   }
   if (!choice.writable) return `${choice.title} is read-only, so nothing can change it.`;
   if (choice.sourceKind !== 'google') return null;

@@ -212,6 +212,7 @@ export const SPEC_GROUPS = {
     'island-ask',
     'island-ask-history',
     'island-ask-acts',
+    'island-ask-calendar',
     'island-click-regions',
     'island-code',
     'island-drop',

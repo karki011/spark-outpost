@@ -47,12 +47,15 @@ test.afterAll(() => {
   rmSync(FAKE_CALENDAR_STATE, { force: true });
 });
 
-test('turns on agent reading and editing per calendar, off by default, and keeps them', async ({
+test('keeps agent reading on by default, editing off per calendar, and saves both', async ({
   page,
 }) => {
   await openCard(page);
   const read = card(page).getByRole('switch', { name: 'Let agents read my calendar' });
   await expect(read).toBeEnabled();
+  await expect(read).toHaveAttribute('aria-checked', 'true');
+  await read.focus();
+  await page.keyboard.press('Space');
   await expect(read).toHaveAttribute('aria-checked', 'false');
   await editCalendars(page, 'Mac Calendar');
   const work = card(page).getByRole('switch', { name: 'Agents can edit, Spark Work' });

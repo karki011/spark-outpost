@@ -101,9 +101,15 @@ const serverEnv = {
 
 const node = JSON.stringify(process.execPath);
 const serverCommand = (entry: string) => `${node} --import tsx ${entry}`;
+const workerFakes = [
+  process.env.SPARK_FAKE_BROWSER === '1' ? 'fake-browser-host.ts' : null,
+  process.env.SPARK_FAKE_CALENDAR === '1' ? 'fake-calendar-host.ts' : null,
+]
+  .filter((fake) => fake !== null)
+  .map((fake) => `--import ../../tests/browser/${fake}`);
 const workerCommand =
-  process.env.SPARK_FAKE_BROWSER === '1'
-    ? `${node} --import tsx --import ../../tests/browser/fake-browser-host.ts src/workflow/main.ts`
+  workerFakes.length > 0
+    ? `${node} --import tsx ${workerFakes.join(' ')} src/workflow/main.ts`
     : serverCommand('src/workflow/main.ts');
 const apiCommand =
   process.env.SPARK_FAKE_CALENDAR === '1'

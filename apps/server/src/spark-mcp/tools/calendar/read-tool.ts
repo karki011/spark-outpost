@@ -13,6 +13,7 @@ import {
   calendarSession,
   choiceByKey,
 } from './context.ts';
+import { CALENDAR_CARD } from './offered.ts';
 import { DECLINED_CALENDAR, WAITING_FOR_CALENDAR, clearCalendarRead } from './gate.ts';
 import {
   calendarRow,
@@ -106,7 +107,7 @@ async function readingAllowed(calendar: AgentCalendar): Promise<void> {
   if (!settings.agentsRead) {
     throw new CalendarToolError(
       'off',
-      'Let agents read my calendar is off. The user can turn it on on the Calendar card.',
+      `Let agents read my calendar is off. The user can turn it on on the Calendar card in ${CALENDAR_CARD}.`,
     );
   }
 }

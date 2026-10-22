@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { SPARK_ACTION_OPTION, type Approval } from '@spark-outpost/contracts';
+import { holdsToConfirm, SPARK_ACTION_OPTION, type Approval } from '@spark-outpost/contracts';
 import { approvalsApi } from '../api/approvals.ts';
 import { queryKeys } from '../api/client.ts';
 
@@ -14,12 +14,28 @@ function outcome(approval: Approval): string {
   return 'Doing it…';
 }
 
+const ANSWERED_HERE: ReadonlySet<string> = new Set([
+  'ask_spark',
+  'calendar_read',
+  'atlassian_read',
+  'read_page',
+  'open_page',
+  'comment_ticket',
+  'transition_ticket',
+]);
+
+export function answeredInIsland(approval: Approval): boolean {
+  const action = approval.payload.sparkAction?.action;
+  return action !== undefined && ANSWERED_HERE.has(action) && !holdsToConfirm(approval.payload);
+}
+
 interface AskCardProps {
   approval: Approval;
   conversationId: string;
+  onOpen: () => void;
 }
 
-export function AskCard({ approval, conversationId }: AskCardProps) {
+export function AskCard({ approval, conversationId, onOpen }: AskCardProps) {
   const queryClient = useQueryClient();
   const decide = useMutation({
     mutationFn: (optionId: string) =>
@@ -37,7 +53,13 @@ export function AskCard({ approval, conversationId }: AskCardProps) {
   return (
     <div className="isl-ask-card" role="group" aria-label={approval.title}>
       <p className="isl-ask-card-title">{approval.title}</p>
-      {pending ? (
+      {pending && !answeredInIsland(approval) ? (
+        <div className="isl-acts">
+          <button type="button" className="isl-btn primary" onClick={onOpen}>
+            Review in Spark
+          </button>
+        </div>
+      ) : pending ? (
         <div className="isl-acts">
           {confirm && (
             <button

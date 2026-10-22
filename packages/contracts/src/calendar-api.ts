@@ -51,7 +51,7 @@ export const CALENDAR_DEFAULT_SETTINGS: CalendarSettings = {
   focusNames: ['Focus', 'Deep work', 'Heads down'],
   phoneAlerts: false,
   briefBlock: true,
-  agentsRead: false,
+  agentsRead: true,
   alertStyle: 'center',
   alertLead: 1,
   autoJoin: false,
