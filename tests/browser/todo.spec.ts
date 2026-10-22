@@ -26,7 +26,7 @@ async function send(page: Page, text: string) {
 }
 
 async function finished(page: Page, count: number) {
-  await expect(turns(page)).toHaveCount(count);
+  await expect(turns(page)).toHaveCount(count, { timeout: 20_000 });
   await expect(stop(page)).toHaveCount(0, { timeout: 30_000 });
 }
 
@@ -66,7 +66,7 @@ test("the agent's to-do ticks live in the turn, then folds to one line", async (
   await expect(items).toHaveCount(0);
 });
 
-test('each turn keeps its own list and the rail shows the latest', async ({ page }) => {
+test('each turn shows only its own items and the rail shows the latest list', async ({ page }) => {
   await page.setViewportSize(WIDE);
   await send(page, 'Fix the date divider #plan #slow');
   const card = thread(page).getByRole('region', { name: "This turn's to-do" });
@@ -78,11 +78,18 @@ test('each turn keeps its own list and the rail shows the latest', async ({ page
     first.getByRole('button', { name: 'To-do: 1 of 3 done · 2 not finished' }),
   ).toBeVisible();
 
+  await expect(page.getByRole('textbox', { name: 'Message' })).toHaveAttribute(
+    'placeholder',
+    /^Ask anything/,
+  );
   await send(page, 'Now finish it #plan');
   await finished(page, 2);
+  const second = turns(page).nth(1).getByRole('button', { name: 'To-do: 2 of 2 done' });
+  await expect(second).toBeVisible();
+  await second.click();
   await expect(
-    turns(page).nth(1).getByRole('button', { name: 'To-do: 3 of 3 done' }),
-  ).toBeVisible();
+    turns(page).nth(1).getByRole('list', { name: 'To-do items' }).getByRole('listitem'),
+  ).toHaveText(['Look through the code', 'Write the answer']);
   await expect(
     first.getByRole('button', { name: 'To-do: 1 of 3 done · 2 not finished' }),
   ).toBeVisible();

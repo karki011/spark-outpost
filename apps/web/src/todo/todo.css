@@ -64,6 +64,7 @@
 
 .todo-line {
   display: inline-flex;
+  min-height: 28px;
   align-items: center;
   gap: 7px;
   max-width: 100%;
@@ -111,4 +112,10 @@
 
 .wsec .todo-list {
   padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .todo-list .ic.spin {
+    animation: none;
+  }
 }

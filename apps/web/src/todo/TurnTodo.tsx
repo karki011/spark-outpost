@@ -14,8 +14,9 @@ function LiveTodo({ entries }: { entries: readonly PlanEntry[] }) {
     <section className="todo-card" aria-label="This turn's to-do">
       <div className="todo-head">
         <b>To-do</b>
-        <span className="todo-count">
+        <span className="todo-count" aria-live="polite">
           {doneCount(entries)} of {entries.length}
+          <span className="sr-only"> done</span>
         </span>
       </div>
       <TodoList rows={todoRows(entries, true)} />

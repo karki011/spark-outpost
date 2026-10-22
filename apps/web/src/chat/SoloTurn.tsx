@@ -56,7 +56,7 @@ import { shownSubagents } from './subagents/subagent-view.ts';
 import { runSeconds } from './turns.ts';
 import { useRunStream } from './use-run-stream.ts';
 import { StepList, StepToggle, turnHeading, useStepLog } from './WorkLog.tsx';
-import { currentTodo, shownTodo } from '../todo/todo-model.ts';
+import { currentTodo, shownTodo, turnTodo } from '../todo/todo-model.ts';
 import { TurnTodo } from '../todo/TurnTodo.tsx';
 
 const liveStates: Record<LiveRunStatus, TurnState> = {
@@ -268,7 +268,7 @@ export function SoloTurn({ run, detail, assistantMessage, laterMessages, repo }:
           <Markdown text={part} streaming={last && leads && active && !publishing} />
         )}
       </TurnReply>
-      <TurnTodo entries={todo} live={working} />
+      <TurnTodo entries={turnTodo(detail.runs, run.id, todo)} live={working} />
       <BackgroundWork
         runId={run.id}
         background={working && !waiting ? stream.subagents.background : null}
