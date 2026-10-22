@@ -5,7 +5,7 @@ import type { PickerAction } from '../ui/ChoicePicker.tsx';
 export const ADD_FOLDER_LABEL = 'Add folder…';
 export const CLONE_LABEL = 'Clone a repository…';
 
-export type FolderPlace = 'native' | 'this-mac' | 'remote';
+export type FolderPlace = 'this-mac' | 'remote';
 
 export function defaultFolderPath(projects: readonly Project[]): string | null {
   const newest = projects.reduce<Project | null>(
@@ -18,9 +18,8 @@ export function defaultFolderPath(projects: readonly Project[]): string | null {
 }
 
 const ADD_NOTES: Record<FolderPlace, string> = {
-  native: 'Pick or make a folder on this Mac',
-  'this-mac': 'Browse folders on this Mac',
-  remote: 'Browse folders on your Mac',
+  'this-mac': 'Pick or make a folder on this Mac',
+  remote: 'Pick or make a folder on your Mac',
 };
 
 export interface FolderActionHandlers {

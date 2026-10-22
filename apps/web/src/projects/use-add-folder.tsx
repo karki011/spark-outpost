@@ -4,7 +4,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Project } from '@spark-outpost/contracts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { FolderDialog } from '../chat/project/FolderDialog.tsx';
-import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import type { PickerAction } from '../ui/ChoicePicker.tsx';
 import { defaultFolderPath, folderActions, type FolderPlace } from './add-folder.ts';
@@ -15,10 +14,12 @@ type Opener = HTMLElement | null;
 interface OpenDialog {
   mode: 'browse' | 'clone';
   opener: Opener;
+  startPath: string | null;
 }
 
 interface PlainFolder {
   project: Project;
+  problem: string | null;
   opener: Opener;
 }
 
@@ -30,7 +31,6 @@ interface LinkRequest {
 
 interface AddFolderOptions {
   onAdded: (project: Project) => void;
-  onError?: () => void;
   inline?: boolean;
 }
 
@@ -55,12 +55,11 @@ function focusBack(opener: Opener): void {
   if (opener?.isConnected) opener.focus();
 }
 
-export function useAddFolder({ onAdded, onError, inline = false }: AddFolderOptions): AddFolder {
+export function useAddFolder({ onAdded, inline = false }: AddFolderOptions): AddFolder {
   const queryClient = useQueryClient();
   const { remote, allows } = useRemoteClient();
   const allowed = allows('projects');
-  const picker = remote ? null : (sparkDesktop()?.folders ?? null);
-  const place: FolderPlace = remote ? 'remote' : picker ? 'native' : 'this-mac';
+  const place: FolderPlace = remote ? 'remote' : 'this-mac';
   const [dialog, setDialog] = useState<OpenDialog | null>(null);
   const [plain, setPlain] = useState<PlainFolder | null>(null);
 
@@ -73,40 +72,22 @@ export function useAddFolder({ onAdded, onError, inline = false }: AddFolderOpti
     onAdded(project);
     if (!offerGit) return;
     const git = await projectsApi.git(project.id).catch(() => null);
-    if (git && !git.repository) setPlain({ project, opener });
+    if (git && git.repository !== true) setPlain({ project, problem: git.problem, opener });
     else focusBack(opener);
   };
 
   const link = useMutation({
     mutationFn: (request: LinkRequest) => projectsApi.create(request.rootPath),
     onSuccess: (project, request) => void added(project, request.opener, request.offerGit),
-    onError: (_error, request) => {
-      if (dialog) return;
-      focusBack(request.opener);
-      onError?.();
-    },
   });
-
-  const pickNative = async (pick: (defaultPath: string | null) => Promise<string | null>) => {
-    const opener = activeElement();
-    const projects = queryClient.getQueryData<Project[]>(projectKeys.all) ?? [];
-    const rootPath = await pick(defaultFolderPath(projects));
-    if (rootPath) link.mutate({ rootPath, opener, offerGit: true });
-    else focusBack(opener);
-  };
 
   const open = (mode: OpenDialog['mode']) => {
     if (!allowed) return;
     link.reset();
-    setDialog({ mode, opener: activeElement() });
+    const projects = queryClient.getQueryData<Project[]>(projectKeys.all) ?? [];
+    setDialog({ mode, opener: activeElement(), startPath: defaultFolderPath(projects) });
   };
-
-  const addFolder = () => {
-    if (!allowed) return;
-    link.reset();
-    if (picker) void pickNative(picker.pick);
-    else open('browse');
-  };
+  const addFolder = () => open('browse');
 
   const closeDialog = () => {
     focusBack(dialog?.opener ?? null);
@@ -126,6 +107,7 @@ export function useAddFolder({ onAdded, onError, inline = false }: AddFolderOpti
           <FolderDialog
             key={`add-folder-${dialog.mode}`}
             initialMode={dialog.mode}
+            startPath={dialog.startPath}
             stacked
             inline={inline}
             linking={link.isPending}
@@ -136,7 +118,14 @@ export function useAddFolder({ onAdded, onError, inline = false }: AddFolderOpti
           />
         )}
       </AnimatePresence>
-      {plain && <NotGitDialog project={plain.project} inline={inline} onDone={closePlain} />}
+      {plain && (
+        <NotGitDialog
+          project={plain.project}
+          problem={plain.problem}
+          inline={inline}
+          onDone={closePlain}
+        />
+      )}
     </>
   );
 

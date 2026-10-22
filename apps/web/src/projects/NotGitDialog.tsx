@@ -12,11 +12,12 @@ const FOCUSABLE = 'button:not(:disabled)';
 
 interface NotGitDialogProps {
   project: Project;
+  problem: string | null;
   inline: boolean;
   onDone: () => void;
 }
 
-export function NotGitDialog({ project, inline, onDone }: NotGitDialogProps) {
+export function NotGitDialog({ project, problem, inline, onDone }: NotGitDialogProps) {
   const ids = useId();
   const queryClient = useQueryClient();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -65,17 +66,21 @@ export function NotGitDialog({ project, inline, onDone }: NotGitDialogProps) {
         <h3 id={`${ids}title`}>Added {project.name}</h3>
       </div>
       <p className="fdlg-lede" id={`${ids}lede`}>
-        {project.name} isn’t a git repository, so chats in it open no pull request.
+        {problem
+          ? `Spark couldn’t tell whether ${project.name} is a git repository: ${problem}`
+          : `${project.name} isn’t a git repository, so chats in it open no pull request.`}
       </p>
-      <label className="notgit-choice">
-        <BlobToggle
-          size="sm"
-          label="Make it a git repository"
-          checked={makeRepository}
-          onChange={setMakeRepository}
-        />
-        <span aria-hidden="true">Make it a git repository</span>
-      </label>
+      {!problem && (
+        <label className="notgit-choice">
+          <BlobToggle
+            size="sm"
+            label="Make it a git repository"
+            checked={makeRepository}
+            onChange={setMakeRepository}
+          />
+          <span aria-hidden="true">Make it a git repository</span>
+        </label>
+      )}
       {init.isError && (
         <p className="fdlg-error" role="alert">
           {init.error.message}

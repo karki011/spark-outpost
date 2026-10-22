@@ -195,8 +195,3 @@
   opacity: 0.6;
   cursor: default;
 }
-
-.map-pop-note.bad {
-  border-top: 0;
-  color: var(--danger);
-}

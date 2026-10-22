@@ -1,7 +1,7 @@
 import { isRemote, remoteDeviceOf } from '../remote/principal.ts';
 import { recordRemoteAudit } from '../remote/store.ts';
 import { isGitInternalPath } from '../remote/redaction.ts';
-import { realpath } from 'node:fs/promises';
+import { mkdir, realpath } from 'node:fs/promises';
 import { Router, type Request } from 'express';
 import {
   ATTACHMENT_TEXT_MAX_BYTES,
@@ -20,7 +20,7 @@ import { saveAttachment } from '../persistence/attachments.ts';
 import { AttachmentError, UNSUPPORTED_ATTACHMENT } from '../persistence/attachment-content.ts';
 import { createFolder, listFolders } from '../projects/folders.ts';
 import { readInstructionsFile } from '../projects/instructions-file.ts';
-import { currentBranch, initRepository, isRepository } from '../projects/git.ts';
+import { currentBranch, initRepository, repositoryState } from '../projects/git.ts';
 import { listProjectFiles } from '../projects/project-files.ts';
 import { projectPolicy, readProjectFile } from '../projects/project-fs.ts';
 import { PathRefusedError, type PathPolicy, type RefusalReason } from '../projects/path-policy.ts';
@@ -92,12 +92,17 @@ export function projectRoutes({
   secrets,
   cloneTest = null,
 }: ProjectRouteDeps): Router {
-  const folderHome = async () => (cloneTest ? await realpath(cloneTest.root) : await realHome());
+  const folderHome = async () => {
+    if (!cloneTest) return realHome();
+    await mkdir(cloneTest.root, { recursive: true });
+    return realpath(cloneTest.root);
+  };
   const router = Router();
 
   router.get('/folders', async (req, res) => {
     res.json(
       await listFolders(queryText(req, 'path') || undefined, {
+        home: await folderHome(),
         instructionFiles: queryText(req, 'files') === 'instructions',
         hidden: queryText(req, 'hidden') === '1',
       }),
@@ -169,16 +174,14 @@ export function projectRoutes({
   router.get('/projects/:id/git', async (req, res) => {
     const policy = await openProject(db, workspaceId, paramId(req));
     const root = policy.roots[0]!.path;
-    res.json({ branch: await currentBranch(root), repository: await isRepository(root) });
+    res.json({ branch: await currentBranch(root), ...(await repositoryState(root)) });
   });
 
   router.post('/projects/:id/git-init', async (req, res) => {
     const policy = await openProject(db, workspaceId, paramId(req));
     const root = policy.roots[0]!.path;
-    if (!(await initRepository(root))) {
-      throw new BadRequestError('This folder is already a git repository.');
-    }
-    res.json({ branch: await currentBranch(root), repository: true });
+    await initRepository(root);
+    res.json({ branch: await currentBranch(root), repository: true, problem: null });
   });
 
   router.get('/projects/:id/files', async (req, res) => {

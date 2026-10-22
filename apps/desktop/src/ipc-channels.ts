@@ -67,7 +67,6 @@ export const IPC = {
   helpOpen: 'help:open',
   helpPending: 'help:pending',
   privacyOpenFullDiskAccess: 'privacy:open-full-disk-access',
-  pickFolder: 'folders:pick',
   browserState: 'browser:state',
   browserPlace: 'browser:place',
   browserCommand: 'browser:command',

@@ -58,7 +58,6 @@ async function openResting(page: Page) {
             onEscape: none,
             sparkFocused: async () => true,
             onSparkFocus: none,
-            pickFolder: async () => null,
             pathForFile: (file: File) => (file.name === 'my-repo' ? folderPath : null),
             setInteractive: () => undefined,
             setFocusable: () => undefined,

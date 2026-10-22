@@ -398,9 +398,6 @@
   cursor: default;
   opacity: 0.6;
 }
-.choice-picker .note.bad {
-  color: var(--danger);
-}
 .choice-menu .warn small {
   color: var(--warn);
 }

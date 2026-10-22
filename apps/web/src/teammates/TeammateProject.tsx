@@ -28,7 +28,6 @@ export function TeammateProject({ projectIds, onChange }: TeammateProjectProps) 
         choices={choices}
         value={projectIds[0] ?? NO_PROJECT}
         actions={adder.actions}
-        error={adder.error}
         onChange={(id) => onChange(id ? [id] : [])}
       />
       {adder.flow}

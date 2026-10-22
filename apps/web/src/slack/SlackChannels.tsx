@@ -143,7 +143,6 @@ export function SlackChannels({
                   value={mapped}
                   placeholder="No project"
                   actions={actionsFor(channel.id)}
-                  error={addingFor === channel.id ? adder.error : null}
                   onChange={(projectId) => setProject(channel.id, projectId)}
                 />
               )}

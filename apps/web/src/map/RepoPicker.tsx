@@ -28,9 +28,7 @@ export function RepoPicker({ projects, selected, onChange }: RepoPickerProps) {
     onAdded: (project) => {
       if (!selected.includes(project.id)) onChange([...selected, project.id]);
     },
-    onError: () => setOpen(true),
   });
-  const addError = adder.error;
   const menuId = useId();
   const chosen = selected
     .map((id) => projects.find((project) => project.id === id))
@@ -138,11 +136,6 @@ export function RepoPicker({ projects, selected, onChange }: RepoPickerProps) {
               </span>
             </button>
           ))}
-          {addError && (
-            <p className="map-pop-note bad" role="alert">
-              {addError}
-            </p>
-          )}
         </div>
       )}
       {adder.flow}

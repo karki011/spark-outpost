@@ -105,9 +105,6 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
   privacy: {
     openFullDiskAccess: () => ipcRenderer.invoke(IPC.privacyOpenFullDiskAccess),
   },
-  folders: {
-    pick: (defaultPath: string | null) => ipcRenderer.invoke(IPC.pickFolder, defaultPath),
-  },
   macControl: {
     status: () => ipcRenderer.invoke(IPC.macControlStatus),
     prompt: () => ipcRenderer.invoke(IPC.macControlPrompt),

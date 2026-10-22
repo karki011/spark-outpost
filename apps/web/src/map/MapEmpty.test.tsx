@@ -39,8 +39,9 @@ describe('projectListView', () => {
 });
 
 describe('MapEmpty', () => {
-  it('explains the map and opens the folder picker from Add a project', () => {
-    renderWithClient(<MapEmpty />);
+  it('explains the map and asks to add a project from Add a project', () => {
+    const onAdd = vi.fn();
+    renderWithClient(<MapEmpty canAdd onAdd={onAdd} />);
     expect(screen.getByRole('heading', { level: 1, name: 'Your code, as a night sky' }));
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
       'See the shape of a repo',
@@ -51,7 +52,12 @@ describe('MapEmpty', () => {
     expect(screen.getByText(/never slow down chats/)).toBeTruthy();
     expect(screen.queryByRole('dialog')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Add a project' }));
-    expect(screen.getByRole('dialog', { name: 'Choose a project folder' })).toBeTruthy();
+    expect(onAdd).toHaveBeenCalledOnce();
+  });
+
+  it('shows Add a project disabled when a paired device may not add folders', () => {
+    renderWithClient(<MapEmpty canAdd={false} onAdd={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Add a project' })).toHaveProperty('disabled', true);
   });
 });
 

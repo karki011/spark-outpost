@@ -111,25 +111,17 @@ test('with no projects the menu says so and Add folder links a folder and select
   await expect(island(page).getByRole('button', { name: 'picked-repo' })).toBeVisible();
 });
 
-test('in the desktop app Add folder opens the Mac folder dialog and selects the folder', async ({
+test('in the desktop app Add folder opens Spark’s picker, which goes to a typed path', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
   const folder = path.join(base, 'docs-site');
-  await page.addInitScript((folder) => {
+  await page.addInitScript(() => {
     const none = () => () => undefined;
-    const picks: (string | null)[] = [];
     Object.assign(window, {
-      folderPicks: picks,
       sparkDesktop: {
         platform: 'darwin',
         companion: { get: async () => null, onChange: none },
-        folders: {
-          pick: async (defaultPath: string | null) => {
-            picks.push(defaultPath);
-            return picks.length === 1 ? null : folder;
-          },
-        },
         island: {
           geometry: async () => ({
             notch: false,
@@ -156,24 +148,23 @@ test('in the desktop app Add folder opens the Mac folder dialog and selects the 
         onOpenChat: none,
       },
     });
-  }, folder);
+  });
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/island');
   await expect(island(page)).toBeVisible();
   await page.evaluate(() =>
     (window as unknown as { islandCommand: (action: string) => void }).islandCommand('quick'),
   );
-  const chip = island(page).getByRole('button', { name: 'Choose project' });
-  await chip.click();
+  await island(page).getByRole('button', { name: 'Choose project' }).click();
   await island(page).getByRole('menuitem', { name: 'Add folder…' }).click();
-  await expect(chip).toBeFocused();
-  await expect(island(page).getByRole('dialog')).toHaveCount(0);
-
-  await chip.click();
-  await island(page).getByRole('menuitem', { name: 'Add folder…' }).click();
+  const dialog = island(page).getByRole('dialog', { name: 'Choose a project folder' });
+  await expect(dialog.getByRole('navigation', { name: 'Places' })).toBeVisible();
+  await expectInside(page, '.fdlg');
+  const goTo = dialog.getByRole('textbox', { name: 'Go to folder' });
+  await goTo.fill(folder);
+  await goTo.press('Enter');
+  await expect(dialog.locator('.fdlg-path')).toHaveText(folder);
+  await dialog.getByRole('button', { name: 'Use this folder' }).click();
   await keepPlainFolder(page, 'docs-site');
   await expect(island(page).getByRole('button', { name: 'docs-site' })).toBeVisible();
-  expect(
-    await page.evaluate(() => (window as unknown as { folderPicks: unknown[] }).folderPicks),
-  ).toEqual([null, null]);
 });

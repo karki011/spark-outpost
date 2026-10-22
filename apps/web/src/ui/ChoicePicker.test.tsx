@@ -51,17 +51,4 @@ describe('ChoicePicker trailing actions', () => {
     expect(action).toHaveProperty('disabled', true);
     expect(action.textContent).toContain('On this Mac');
   });
-
-  it('shows an error under the trigger', () => {
-    render(
-      <ChoicePicker
-        label="Project folder"
-        choices={CHOICES}
-        value=""
-        error="Choose a project folder, not your whole disk or home folder."
-        onChange={vi.fn()}
-      />,
-    );
-    expect(screen.getByRole('alert').textContent).toContain('not your whole disk');
-  });
 });

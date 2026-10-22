@@ -160,7 +160,6 @@ export function ChatForm(props: ChatFormProps) {
               choices={projectChoices}
               value={chat.projectId ?? NOTHING}
               actions={adder.actions}
-              error={adder.error}
               onChange={props.onProject}
             />
             {adder.flow}

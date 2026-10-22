@@ -11,3 +11,12 @@ export function breadcrumbs(path: string): Crumb[] {
   });
   return crumbs;
 }
+
+export function typedFolderPath(typed: string, home: string | null): string | null {
+  const trimmed = typed.trim();
+  if (trimmed.startsWith('/')) return trimmed;
+  if (!home) return null;
+  if (trimmed === '~') return home;
+  if (trimmed.startsWith('~/')) return `${home}/${trimmed.slice(2)}`;
+  return null;
+}

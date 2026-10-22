@@ -28,3 +28,63 @@
   margin-left: auto;
   flex-shrink: 0;
 }
+.fdlg-places {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.fdlg-places nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.fdlg-place {
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.fdlg-place:hover,
+.fdlg-place[aria-current='location'] {
+  color: var(--text);
+  background: var(--raise);
+}
+.fdlg-goto {
+  flex: 1;
+  min-width: 160px;
+}
+.fdlg-goto .inp {
+  width: 100%;
+}
+.fdlg-places .fdlg-note {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 0;
+}
+.fdlg-row .fdlg-tags {
+  flex: none;
+  display: flex;
+  gap: 4px;
+}
+.fdlg-tag {
+  padding: 1px 6px;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 11.5px;
+  font-style: normal;
+}
+.fdlg-denied {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+.fdlg-list ul:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}

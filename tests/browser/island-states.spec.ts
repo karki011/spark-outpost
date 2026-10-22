@@ -51,7 +51,6 @@ async function fakeDesktop(page: Page, setup: Setup) {
           onEscape: none,
           sparkFocused: async () => true,
           onSparkFocus: none,
-          pickFolder: async () => null,
           pathForFile: () => null,
           setInteractive: () => undefined,
           setFocusable: () => undefined,

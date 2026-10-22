@@ -176,7 +176,6 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
               choices={projectChoices}
               value={projectId}
               actions={adder.actions}
-              error={adder.error}
               onChange={setProjectId}
             />
             <label className="check-row">

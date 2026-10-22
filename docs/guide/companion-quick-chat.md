@@ -23,7 +23,7 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 2. Files join a new chat. Secret files such as `.env` are skipped.
 3. For a folder, pick **Start a chat here** or **Add as project**. **Esc** cancels.
 
-**Add folder…** under **Choose project** opens the Mac folder dialog.
+**Add folder…** under **Choose project** opens Spark's folder picker.
 
 ## Ask Spark
 

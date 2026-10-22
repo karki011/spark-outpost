@@ -419,7 +419,6 @@ async function launch(): Promise<void> {
     settingsPath: settingsFile(paths.userData),
     trayIcon: icons.tray,
     showSpark,
-    mainWindow: () => spark?.window ?? null,
     quit: () => app.quit(),
     log: mainLog,
   });

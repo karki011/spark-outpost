@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {
@@ -87,7 +87,7 @@ test('the composer menu ends with Add folder and Clone, keeps the draft and retu
   const rows = menu.locator('button.mopt');
   await expect(rows.nth(-2)).toHaveAccessibleName(ADD_FOLDER);
   await expect(rows.nth(-1)).toHaveAccessibleName(CLONE_REPO);
-  await expect(rows.nth(-2)).toContainText('Browse folders on this Mac');
+  await expect(rows.nth(-2)).toContainText('Pick or make a folder on this Mac');
 
   await rows.nth(-2).focus();
   await page.keyboard.press('Enter');
@@ -209,7 +209,7 @@ test('on a paired device Add folder browses the Mac and can make a folder there'
   await composer.getByRole('button', { name: 'Choose project' }).click();
   const menu = page.getByRole('dialog', { name: 'Project folders' });
   const add = menu.getByRole('button', { name: ADD_FOLDER });
-  await expect(add).toContainText('Browse folders on your Mac');
+  await expect(add).toContainText('Pick or make a folder on your Mac');
   await add.click();
   const dialog = page.getByRole('dialog', { name: 'Choose a project folder' });
   await browseTo(dialog, base);
@@ -237,4 +237,82 @@ test('on a paired device with the switch off the rows stay, disabled, with the r
     await expect(row).toBeDisabled();
     await expect(row).toContainText('Turned off for remote control on your Mac');
   }
+});
+
+test('the folder picker has places, a typed path, keys, marks and says when access is refused', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  const repo = gitRepo('shop');
+  mkdirSync(path.join(base, 'plain'));
+  const locked = path.join(base, 'locked');
+  mkdirSync(locked);
+  chmodSync(locked, 0o000);
+  try {
+    const linked = await page.request.post('/api/projects', { data: { rootPath: repo } });
+    expect(linked.ok()).toBe(true);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await page
+      .getByRole('dialog', { name: 'Profile & personality' })
+      .getByRole('tab', { name: 'Projects' })
+      .click();
+    await page
+      .getByRole('group', { name: 'Add a project' })
+      .getByRole('button', { name: 'Add folder…' })
+      .click();
+    const dialog = page.getByRole('dialog', { name: 'Choose a project folder' });
+    await expect(dialog.locator('.fdlg-path')).toHaveText(base);
+    const places = dialog.getByRole('navigation', { name: 'Places' });
+    await expect(places.getByRole('button', { name: 'Home' })).toBeVisible();
+
+    const shop = dialog.getByRole('button', { name: 'shop', exact: true });
+    await expect(shop).toHaveAccessibleDescription('Project Git');
+    await expect(dialog.getByRole('button', { name: 'plain', exact: true })).not.toHaveAttribute(
+      'aria-describedby',
+    );
+
+    await dialog.getByRole('button', { name: 'locked', exact: true }).focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(dialog.getByRole('button', { name: 'plain', exact: true })).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(dialog.locator('.fdlg-path')).toHaveText(path.join(base, 'plain'));
+    await page.keyboard.press('ArrowLeft');
+    await expect(dialog.locator('.fdlg-path')).toHaveText(base);
+
+    const goTo = dialog.getByRole('textbox', { name: 'Go to folder' });
+    await goTo.fill('relative/path');
+    await goTo.press('Enter');
+    await expect(dialog.getByRole('alert')).toHaveText(
+      'Type a full path, like /Volumes/Work or ~/Code.',
+    );
+    await goTo.fill(locked);
+    await goTo.press('Enter');
+    await expect(dialog.getByRole('alert')).toContainText('Privacy & Security');
+    await expect(places.getByRole('button', { name: 'Home' })).toBeVisible();
+    await places.getByRole('button', { name: 'Home' }).click();
+    await expect(dialog.getByRole('list', { name: 'Folders' })).toBeVisible();
+  } finally {
+    chmodSync(locked, 0o755);
+  }
+});
+
+test('the empty Map keeps the git choice open after its first project appears', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  const folder = path.join(base, 'first-map');
+  mkdirSync(folder);
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Map/ })
+    .click();
+  await expect(page.getByRole('heading', { name: 'Your code, as a night sky' })).toBeVisible();
+  await page.getByRole('button', { name: 'Add a project' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Choose a project folder' });
+  await browseTo(dialog, folder);
+  await dialog.getByRole('button', { name: 'Use this folder' }).click();
+  await expect(page.getByRole('heading', { name: 'Your code, as a night sky' })).toHaveCount(0);
+  await keepPlainFolder(page, 'first-map');
 });

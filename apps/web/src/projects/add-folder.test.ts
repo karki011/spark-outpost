@@ -33,7 +33,7 @@ describe('default folder for the Mac dialog', () => {
 describe('picker actions', () => {
   it('ends every picker with Add folder and Clone a repository', () => {
     const actions = folderActions({
-      place: 'native',
+      place: 'this-mac',
       allowed: true,
       onAddFolder: noop,
       onClone: noop,
@@ -50,7 +50,7 @@ describe('picker actions', () => {
       onAddFolder: noop,
       onClone: noop,
     });
-    expect(add!.description).toBe('Browse folders on your Mac');
+    expect(add!.description).toBe('Pick or make a folder on your Mac');
     expect(clone!.description).toBe('Spark clones it on your Mac');
   });
 

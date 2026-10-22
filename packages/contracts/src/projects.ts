@@ -101,11 +101,18 @@ export const folderFileSchema = folderEntrySchema.extend({
 });
 export type FolderFile = z.infer<typeof folderFileSchema>;
 
+export const folderListingEntrySchema = folderEntrySchema.extend({
+  repository: z.boolean().default(false),
+});
+export type FolderListingEntry = z.infer<typeof folderListingEntrySchema>;
+
 export const folderListingSchema = z.object({
   path: z.string(),
   parent: z.string().nullable(),
-  folders: z.array(folderEntrySchema),
+  folders: z.array(folderListingEntrySchema),
   files: z.array(folderFileSchema).default([]),
+  places: z.array(folderEntrySchema).default([]),
+  denied: z.string().nullable().default(null),
 });
 export type FolderListing = z.infer<typeof folderListingSchema>;
 
@@ -135,6 +142,7 @@ export type ProjectFileContent = z.infer<typeof projectFileContentSchema>;
 
 export const projectGitSchema = z.object({
   branch: z.string().nullable(),
-  repository: z.boolean(),
+  repository: z.boolean().nullable(),
+  problem: z.string().nullable().default(null),
 });
 export type ProjectGit = z.infer<typeof projectGitSchema>;

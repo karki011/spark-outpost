@@ -62,7 +62,6 @@ export function ProjectFolders({
   const apply = (request: RepoChange) => change.mutate(request);
   const adder = useAddFolder({
     onAdded: (project) => apply({ type: 'add', projectId: project.id }),
-    onError: () => setOpen(true),
   });
 
   const startAdding = (start: () => void) => {
@@ -72,7 +71,7 @@ export function ProjectFolders({
     start();
   };
 
-  const error = adder.error ?? (change.isError ? change.error.message : null);
+  const error = change.isError ? change.error.message : null;
 
   const folderChip = (
     <>

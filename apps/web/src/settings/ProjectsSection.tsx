@@ -49,11 +49,6 @@ export function ProjectsSection() {
           </button>
         ))}
       </div>
-      {adder.error && (
-        <p className="set-hint bad" role="alert">
-          {adder.error}
-        </p>
-      )}
       {adder.flow}
       {error && (
         <p className="set-hint" role="alert">

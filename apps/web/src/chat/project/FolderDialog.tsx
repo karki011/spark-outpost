@@ -1,4 +1,5 @@
 import './project.css';
+import '../../projects/add-folder.css';
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
@@ -11,10 +12,14 @@ import { FileIcon } from '../attachments/attachment-icons.tsx';
 import { ClonePanel } from './clone/ClonePanel.tsx';
 import { useCloneNeedsAttention } from './clone/use-clone-jobs.ts';
 import { breadcrumbs } from './folder-path.ts';
+import { FolderPlaces } from './FolderPlaces.tsx';
+import { FolderRows } from './FolderRows.tsx';
 import { NewFolderField } from './NewFolderField.tsx';
+import { useProjects } from './use-chat-repos.ts';
+import { sparkDesktop } from '../../desktop/desktop-bridge.ts';
 import { wrapTabFocus } from '../../ui/focus-trap.ts';
 import { useRemoteClient } from '../../phone/use-remote-client.ts';
-import { ChevronIcon, FolderIcon, ParentFolderIcon, PlusIcon } from '../../ui/icons.tsx';
+import { ParentFolderIcon, PlusIcon } from '../../ui/icons.tsx';
 import { Segmented } from '../../ui/Segmented.tsx';
 import { reveal } from '../../ui/transitions.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
@@ -66,7 +71,7 @@ const COPY: Record<FolderPurpose, { title: string; lede: string; use: string }> 
 };
 
 function emptyNote(listing: FolderListing, picksFile: boolean): string | null {
-  if (listing.folders.length > 0) return null;
+  if (listing.denied || listing.folders.length > 0) return null;
   if (!picksFile) return 'No folders inside.';
   return listing.files.length === 0 ? 'No folders or instruction files here.' : null;
 }
@@ -126,7 +131,10 @@ export function FolderDialog({
     queryFn: () => projectsApi.folders(path, pick),
     placeholderData: keepPreviousData,
   });
-  const current = listing.data;
+  const current = listing.isError ? undefined : listing.data;
+  const projects = useProjects();
+  const projectRoots = new Set((projects.data ?? []).map((project) => project.rootPath));
+  const privacy = remote ? null : (sparkDesktop()?.privacy ?? null);
   const picked = current?.files.find((entry) => entry.path === file)?.path ?? null;
   const chosen = picksFile ? picked : (current?.path ?? null);
   const empty = current ? emptyNote(current, picksFile) : null;
@@ -207,6 +215,11 @@ export function FolderDialog({
           </button>
         )}
       </div>
+      <FolderPlaces
+        places={listing.data?.places ?? []}
+        current={current?.path ?? null}
+        onOpen={open}
+      />
       {naming && current && (
         <NewFolderField parent={current.path} onCreated={open} onCancel={stopNaming} />
       )}
@@ -218,17 +231,31 @@ export function FolderDialog({
         )}
         {listing.isPending && <Skeleton label="Opening the folder" shape="list" rows={6} />}
         {empty && <p className="fdlg-note">{empty}</p>}
-        <ul aria-label="Folders">
-          {current?.folders.map((folder) => (
-            <li key={folder.path}>
-              <button type="button" className="fdlg-row" onClick={() => open(folder.path)}>
-                <FolderIcon />
-                <span>{folder.name}</span>
-                <ChevronIcon />
+        {current?.denied && (
+          <div className="fdlg-denied">
+            <p className="fdlg-note bad" role="alert">
+              {current.denied}
+            </p>
+            {privacy && (
+              <button
+                type="button"
+                className="btn line sm"
+                onClick={() => void privacy.openFullDiskAccess()}
+              >
+                Open Privacy & Security
               </button>
-            </li>
-          ))}
-        </ul>
+            )}
+          </div>
+        )}
+        {current && (
+          <FolderRows
+            path={current.path}
+            folders={current.folders}
+            projectRoots={projectRoots}
+            onOpen={open}
+            onParent={() => current.parent && open(current.parent)}
+          />
+        )}
         {picksFile && current && current.files.length > 0 && (
           <ul aria-label="Files">
             {current.files.map((entry) => (

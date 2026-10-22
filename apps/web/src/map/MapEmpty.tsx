@@ -1,10 +1,7 @@
 import './map-empty.css';
 import type { ReactNode } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { projectKeys } from '../api/projects.ts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
-import { useAddFolder } from '../projects/use-add-folder.tsx';
 import { useVoice } from '../spark/use-voice.ts';
 import { mapIntro } from '../spark/voice.ts';
 import { PlusIcon } from '../ui/icons.tsx';
@@ -70,12 +67,13 @@ function Shell({ children }: { children: ReactNode }) {
   );
 }
 
-export function MapEmpty() {
+interface MapEmptyProps {
+  canAdd: boolean;
+  onAdd: () => void;
+}
+
+export function MapEmpty({ canAdd, onAdd }: MapEmptyProps) {
   const voice = useVoice();
-  const client = useQueryClient();
-  const adder = useAddFolder({
-    onAdded: () => void client.invalidateQueries({ queryKey: projectKeys.all }),
-  });
   return (
     <Shell>
       <SkyDoodle />
@@ -92,12 +90,7 @@ export function MapEmpty() {
           </li>
         ))}
       </ul>
-      <button
-        type="button"
-        className="btn primary mh-add"
-        disabled={!adder.allowed}
-        onClick={adder.openDialog}
-      >
+      <button type="button" className="btn primary mh-add" disabled={!canAdd} onClick={onAdd}>
         <PlusIcon />
         Add a project
       </button>
@@ -106,7 +99,6 @@ export function MapEmpty() {
         areas, never secret files.
         <InfoTip topic="what Jev reads" text={PRIVACY} doc={{ page: 'sparkignore' }} />
       </p>
-      {adder.flow}
     </Shell>
   );
 }

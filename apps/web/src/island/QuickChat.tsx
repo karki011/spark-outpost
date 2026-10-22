@@ -339,11 +339,6 @@ export function QuickChat(props: QuickChatProps) {
           onClose={() => setMenu(false)}
         />
       )}
-      {adder.error && !menu && (
-        <p className="isl-err" role="alert">
-          {adder.error}
-        </p>
-      )}
       {send.isError && (
         <p className="isl-err" role="alert">
           {send.error.message}

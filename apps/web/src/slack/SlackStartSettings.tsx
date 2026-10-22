@@ -114,7 +114,6 @@ function StartFromLink({ onStarted }: { onStarted: () => void }) {
         choices={projectChoices}
         value={projectId}
         actions={adder.actions}
-        error={adder.error}
         onChange={setProjectId}
       />
       <label className="sr-only" htmlFor={`${id}-note`}>

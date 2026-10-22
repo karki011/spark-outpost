@@ -26,7 +26,6 @@ interface ChoicePickerProps {
   value: string;
   placeholder?: string;
   actions?: readonly PickerAction[];
-  error?: string | null;
   onChange: (id: string) => void;
 }
 
@@ -40,7 +39,6 @@ export function ChoicePicker({
   value,
   placeholder = 'Choose',
   actions = [],
-  error = null,
   onChange,
 }: ChoicePickerProps) {
   const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
@@ -92,11 +90,6 @@ export function ChoicePicker({
       </button>
       {current?.description && (
         <small className={current.risky ? 'note warn' : 'note'}>{current.description}</small>
-      )}
-      {error && (
-        <small className="note bad" role="alert">
-          {error}
-        </small>
       )}
       {createPortal(
         <div
