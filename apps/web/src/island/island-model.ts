@@ -11,6 +11,7 @@ import {
   terminalTurnFinished,
 } from '../terminal/turn-done.ts';
 import { needsInput, rowState } from '../conversations/row-state.ts';
+import { askedChoices } from './asked-question.ts';
 
 export type Panel = 'home' | 'quick' | 'ask';
 
@@ -155,7 +156,8 @@ function cardKind(chat: ConversationSummary, approval: Approval | null): CardKin
   const checkpoint = approval.payload.checkpoint;
   if (checkpoint) {
     const simple = checkpoint.kind === 'clarify' && checkpoint.questions.length === 0;
-    return simple && checkpoint.choices.length > 0 ? 'question' : 'open';
+    if (simple && checkpoint.choices.length > 0) return 'question';
+    return askedChoices(approval) ? 'question' : 'open';
   }
   if (approval.payload.sparkAction || approval.payload.plan) return 'open';
   if (chat.attention?.kind !== 'permission') return 'open';

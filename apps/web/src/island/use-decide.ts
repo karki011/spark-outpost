@@ -1,5 +1,10 @@
 import { useMutation } from '@tanstack/react-query';
-import type { Approval, ApprovalOption, ApprovalScope } from '@spark-outpost/contracts';
+import type {
+  Approval,
+  ApprovalOption,
+  ApprovalScope,
+  QuestionAnswerInput,
+} from '@spark-outpost/contracts';
 import { approvalsApi } from '../api/approvals.ts';
 import { shownOptions } from '../chat/approvals/approval-outcome.ts';
 
@@ -21,15 +26,21 @@ export function useDecide(
     mutationFn: ({
       option,
       scope,
+      note,
+      answers,
     }: {
       option: ApprovalOption;
       scope: ApprovalScope;
       said?: Decided;
+      note?: string;
+      answers?: QuestionAnswerInput[];
     }) =>
       approvalsApi.decide(approval!.id, {
         optionId: option.optionId,
         scope,
         payloadHash: approval!.payloadHash,
+        ...(note === undefined ? {} : { note }),
+        ...(answers === undefined ? {} : { answers }),
       }),
     onSuccess: (_result, { option, scope, said }) => {
       const allowed = option.kind.startsWith('allow');
