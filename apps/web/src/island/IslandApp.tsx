@@ -37,6 +37,8 @@ import {
   islandView,
   sessionState,
   quickShortcutTarget,
+  shortcutClosesPanel,
+  type PanelOpener,
   type Card,
   type Panel,
 } from './island-model.ts';
@@ -70,7 +72,6 @@ const MINUTE_MS = 60_000;
 const WAVE_MS = 1_400;
 const NO_IDS: string[] = [];
 const IN_PLACE = '[data-in-place]';
-type Opener = 'hover' | 'user';
 
 function isRunningChat(chat: ConversationSummary): boolean {
   return !chat.archivedAt && sessionState(chat) === 'working';
@@ -93,7 +94,7 @@ export function IslandApp() {
   useChatListAttentionReport();
   const sparkFocused = useSparkFocus();
   const [panel, setPanel] = useState<Panel | null>(null);
-  const [opener, setOpener] = useState<Opener>('user');
+  const [opener, setOpener] = useState<PanelOpener>('user');
   const [note, setNote] = useState<Decided | null>(null);
   const [review, setReview] = useState<string | null>(null);
   const [selfOpened, setSelfOpened] = useState<string | null>(null);
@@ -124,7 +125,7 @@ export function IslandApp() {
     },
   });
 
-  const openPanel = (next: Panel, by: Opener = 'user') => {
+  const openPanel = (next: Panel, by: PanelOpener = 'user') => {
     setPanel(next);
     setOpener(by);
     setAnnouncement(PANEL_ANNOUNCEMENTS[next]);
@@ -221,11 +222,11 @@ export function IslandApp() {
 
   const command = (action: IslandAction) => {
     if (action === 'sessions') {
-      if (panel === 'home') closePanel();
+      if (panel === 'home' && shortcutClosesPanel(panel, opener)) closePanel();
       else openPanel('home');
       return;
     }
-    const target = quickShortcutTarget(panel, view, cards[0] ?? null);
+    const target = quickShortcutTarget(panel, view, cards[0] ?? null, opener);
     if (target.kind === 'review') reviewCard(target.chatId);
     else if (target.kind === 'close') closePanel();
     else openPanel('quick');

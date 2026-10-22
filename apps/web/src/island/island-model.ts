@@ -58,12 +58,19 @@ export function islandView(inputs: IslandInputs): IslandView {
 export type QuickShortcutTarget =
   { kind: 'review'; chatId: string } | { kind: 'close' } | { kind: 'quick' };
 
+export type PanelOpener = 'hover' | 'user';
+
+export function shortcutClosesPanel(panel: Panel | null, opener: PanelOpener): boolean {
+  return panel !== null && opener === 'user';
+}
+
 export function quickShortcutTarget(
   panel: Panel | null,
   view: IslandView,
   pending: Card | null = null,
+  opener: PanelOpener = 'user',
 ): QuickShortcutTarget {
-  if (panel) return { kind: 'close' };
+  if (shortcutClosesPanel(panel, opener)) return { kind: 'close' };
   const card = view.kind === 'card' ? view.card : view.kind === 'note' ? null : pending;
   if (!card) return { kind: 'quick' };
   if (card.loading || card.kind === 'approval' || card.kind === 'force') {

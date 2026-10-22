@@ -71,7 +71,7 @@ const marked = vi.spyOn(calendarApi, 'mark');
 beforeEach(() => {
   marked.mockResolvedValue({ ok: true });
   vi.useFakeTimers();
-  vi.setSystemTime(at(10, 29, 10));
+  vi.setSystemTime(at(10, 30, 10));
   calendarState.now = nowWith();
   calendarState.updatedAt = Date.now();
 });
