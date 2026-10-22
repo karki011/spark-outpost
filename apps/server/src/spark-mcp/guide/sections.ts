@@ -198,7 +198,7 @@ Agents: spark_providers. Connectors: spark_connectors. Slack: spark_slack. MCP s
     id: 'compaction',
     title: 'When a chat gets full: compaction',
     keywords: ['compact', 'compaction', 'context', 'full', 'ring', 'summary', 'tokens'],
-    text: `The ring warns at 60%; Spark compacts at 80% between turns (both in Settings → Spark, spark_settings). Spark uses the agent's /compact or a Spark summary; with automatic compaction off it asks: Compact now, a fresh chat with a summary, or Keep going. A divider shows it. spark_chat_history reads earlier turns.`,
+    text: `The ring warns at 60%; Spark compacts at 80% between turns (both in Settings → Chats & autonomy, spark_settings). Spark uses the agent's /compact or a Spark summary; with automatic compaction off it asks: Compact now, a fresh chat with a summary, or Keep going. A divider shows it. spark_chat_history reads earlier turns.`,
   },
   {
     id: 'settings-spark',

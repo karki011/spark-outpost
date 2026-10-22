@@ -342,6 +342,23 @@ describe('Ask Spark acts', () => {
     expect((await getApproval(t.db, waiting.id))?.status).toBe('pending');
   });
 
+  it('follows When Ask Spark acts for a spoken question like a typed one', async () => {
+    const { conversationId, runId } = await startChat(t, 'Build the thing');
+    await t.db.query(`UPDATE runs SET status = 'running' WHERE id = $1`, [runId]);
+    const spoken = await assistantRun('stop Build the thing', 'voice');
+
+    const manual = await open(spoken);
+    const asked = await manual.call('spark_stop_chat', { chat: conversationId });
+    expect(asked.json()).toMatchObject({ outcome: 'waiting_for_user' });
+    await manual.close();
+    tools = null;
+
+    await setActs('act');
+    const acting = await open(spoken);
+    const stopped = await acting.call('spark_stop_chat', { chat: conversationId });
+    expect(stopped.json()).toMatchObject({ outcome: 'done' });
+  });
+
   it('from a paired device follows that device’s switches', async () => {
     await setActs('act');
     const device = randomUUID();
