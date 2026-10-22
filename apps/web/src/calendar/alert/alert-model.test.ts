@@ -8,6 +8,7 @@ const design = event('Design sync', at(10), at(10, 30));
 describe('alert card', () => {
   it('says when the meeting starts, then how long ago it started', () => {
     expect(alertTitle([standup], at(9, 59))).toBe('Standup starts in 1 min');
+    expect(alertTitle([standup], at(10))).toBe('Standup starts now');
     expect(alertTitle([standup], at(10, 0, 30))).toBe('Standup starts now');
     expect(alertTitle([standup], at(10, 3))).toBe('Standup started 3 min ago');
     expect(alertTitle([standup, design], at(9, 59))).toBe('2 meetings start in 1 min');
