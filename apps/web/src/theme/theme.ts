@@ -105,10 +105,22 @@ export function syncThemeColor(): void {
   });
 }
 
-export function applyTheme(id: ThemeId): void {
+function paintTheme(id: ThemeId): void {
   if (id === 'system') delete document.documentElement.dataset.skin;
   else document.documentElement.dataset.skin = id;
   syncThemeColor();
+}
+
+export function followSavedTheme(): () => void {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY) paintTheme(readTheme());
+  };
+  window.addEventListener('storage', onStorage);
+  return () => window.removeEventListener('storage', onStorage);
+}
+
+export function applyTheme(id: ThemeId): void {
+  paintTheme(id);
   sparkDesktop()?.theme?.save(id);
   try {
     localStorage.setItem(STORAGE_KEY, id);

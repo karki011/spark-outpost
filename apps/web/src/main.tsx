@@ -48,7 +48,13 @@ const MeetingAlertApp = lazy(() =>
     default: module.MeetingAlertApp,
   })),
 );
+const SettingsWindowApp = lazy(() =>
+  import('./settings/SettingsWindowApp.tsx').then((module) => ({
+    default: module.SettingsWindowApp,
+  })),
+);
 const island = window.location.pathname === '/island';
+const settingsWindow = window.location.pathname === '/settings' && 'sparkDesktop' in window;
 const meetingAlert = window.location.pathname === '/meeting-alert';
 const macIndicator = window.location.pathname === '/mac-indicator';
 
@@ -64,6 +70,13 @@ function Root() {
     return (
       <Suspense fallback={null}>
         <MeetingAlertApp />
+      </Suspense>
+    );
+  }
+  if (settingsWindow) {
+    return (
+      <Suspense fallback={null}>
+        <SettingsWindowApp />
       </Suspense>
     );
   }

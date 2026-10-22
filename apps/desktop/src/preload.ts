@@ -151,19 +151,19 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     info: () => ipcRenderer.invoke(IPC.helpInfo),
     exportDiagnostics: () => ipcRenderer.invoke(IPC.helpExportDiagnostics),
     showLogs: () => ipcRenderer.invoke(IPC.helpShowLogs),
-    onOpenFeedback: (callback: () => void) => {
-      const take = () =>
-        void ipcRenderer.invoke(IPC.helpPending).then((pending: unknown) => {
-          if (pending === true) callback();
-        });
-      take();
-      return listen(IPC.helpOpen, take);
-    },
   },
   menu: {
-    onOpenSettings: (callback: () => void) => listen(IPC.menuOpenSettings, callback),
     onToggleSidebar: (callback: () => void) => listen(IPC.menuToggleSidebar, callback),
     reportSidebar: (shown: boolean) => ipcRenderer.send(IPC.menuSidebarShown, shown),
+  },
+  settingsWindow: {
+    open: (route: string, focus: string | null) =>
+      ipcRenderer.send(IPC.settingsWindowOpen, route, focus),
+    take: () => ipcRenderer.invoke(IPC.settingsWindowTake),
+    onChange: (callback: () => void) => listen(IPC.settingsWindowChanged, callback),
+    openChat: (id: string) => ipcRenderer.send(IPC.settingsWindowOpenChat, id),
+    openDoc: (link: string) => ipcRenderer.send(IPC.settingsWindowOpenDoc, link),
+    onDoc: (callback: (link: string) => void) => listen(IPC.settingsWindowDoc, callback),
   },
   onOpenSettings: (callback: (target: string) => void) => {
     const take = () =>
