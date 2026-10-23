@@ -25,7 +25,7 @@ import { appLayout } from './layout.ts';
 import { freePort, LOOPBACK, portIsFree } from './ports.ts';
 import { DUMP_TOOL_DIRS } from './data-backup.ts';
 import { guardDownloads } from './downloads.ts';
-import { FileLog } from './file-log.ts';
+import { FileLog, sourceLogger } from './file-log.ts';
 import { scheduleHeartbeat, type HeartbeatTimer } from './heartbeat.ts';
 import { startHelp, type Help } from './help.ts';
 import { aboutVersion } from './help-menu.ts';
@@ -105,12 +105,7 @@ let storage: StorageSync | null = null;
 let browser: AgentHosts | null = null;
 const fileLog = new FileLog({ dir: paths.logs });
 
-function log(source: string) {
-  return (line: string) => {
-    console.log(`[${source}] ${line}`);
-    fileLog.write(source, line);
-  };
-}
+const log = (source: string) => sourceLogger(fileLog, source);
 
 const mainLog = log('main');
 const bootTeasers = startBootTeasers({
@@ -372,6 +367,9 @@ async function launch(): Promise<void> {
     token,
     trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
     showSpark,
+    openChat: (id) => companionHost?.openChat(id),
+    preload,
+    theme: () => savedTheme,
     mainWindow: () => spark?.window ?? null,
     paneShortcut: (shortcut) => browserHost.menuShortcut(shortcut),
     log: log('help'),

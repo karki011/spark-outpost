@@ -6,27 +6,21 @@ const TOGGLE_SIDEBAR_COMMAND = 'toggle-sidebar';
 interface AppMenuActions {
   sidebarShown: boolean;
   toggleSidebar: () => void;
-  openSettings: () => void;
 }
 
-export function useAppMenu({ sidebarShown, toggleSidebar, openSettings }: AppMenuActions): void {
-  const latest = useRef({ toggleSidebar, openSettings });
+export function useAppMenu({ sidebarShown, toggleSidebar }: AppMenuActions): void {
+  const latest = useRef(toggleSidebar);
   useEffect(() => {
-    latest.current = { toggleSidebar, openSettings };
+    latest.current = toggleSidebar;
   });
 
-  useEffect(() => {
-    const menu = sparkDesktop()?.menu;
-    if (!menu) return;
-    const stopToggle = menu.onCommand((command) => {
-      if (command === TOGGLE_SIDEBAR_COMMAND) latest.current.toggleSidebar();
-    });
-    const stopSettings = menu.onOpenSettings(() => latest.current.openSettings());
-    return () => {
-      stopToggle();
-      stopSettings();
-    };
-  }, []);
+  useEffect(
+    () =>
+      sparkDesktop()?.menu?.onCommand((command) => {
+        if (command === TOGGLE_SIDEBAR_COMMAND) latest.current();
+      }),
+    [],
+  );
 
   useEffect(() => {
     sparkDesktop()?.menu?.reportSidebar(sidebarShown);

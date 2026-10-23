@@ -14,7 +14,7 @@ What changed recently, newest first.
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | Keyboard-reachable meeting cards; **⌃⌥⌘M**.                                                                                                  | See [Calendar](calendar.md#use-it).                        |
 | Appearance follows the system; pick a **Tint**.                                                                                              | Had a theme? It stays. [Settings](settings.md#general).    |
-| Mac app: **Settings…** (⌘,), **Hide Sidebar** (⌃⌘S), right-click editing; one-answer questions use round buttons.                            | See [Keys](keyboard-shortcuts.md#chats).                   |
+| Mac app: **Settings…** window (⌘,), **Hide Sidebar** (⌃⌘S), right-click editing; one-answer questions show radios.                           | See [Keys](keyboard-shortcuts.md#chats).                   |
 | A sent spoken question acts like a typed one (**When Ask Spark acts**).                                                                      | See [Talk to Spark](voice.md#turn-it-on).                  |
 | Claude agents can sleep: **Sleeping until 10:48**; the turn then picks up.                                                                   | See [Background work](follow-a-turn.md#background-work).   |
 | Outposts no longer show the last chat's Browser pane.                                                                                        | See [Outposts](outposts.md).                               |
