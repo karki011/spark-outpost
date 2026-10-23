@@ -10,8 +10,13 @@ const stateNames: Record<TaskItemState, string> = {
   failed: 'Not finished',
 };
 
-export function TaskStateIcon({ state }: { state: TaskItemState }) {
-  const label = stateNames[state];
+export function TaskStateIcon({
+  state,
+  label = stateNames[state],
+}: {
+  state: TaskItemState;
+  label?: string;
+}) {
   if (state === 'done') {
     return (
       <span className="ic" role="img" aria-label={label}>

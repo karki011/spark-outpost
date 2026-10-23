@@ -95,15 +95,8 @@ test.describe('a waiting card', () => {
     }
     await page.setViewportSize({ width: 1440, height: 900 });
     await expect(rail(page)).toBeVisible();
-    const tasks = rail(page).getByRole('region', { name: 'Tasks' });
-    await expect(tasks.getByRole('listitem')).toHaveCount(3);
-    await expect(tasks.locator('li[aria-current="step"]').first()).toBeVisible();
-    await expect(thread(page).getByRole('button', { name: /^Task: / })).toHaveCount(0);
-    await tasks.getByRole('button', { name: /tasks done\. Open the work panel$/ }).click();
-    await expect(workPanel(page).getByRole('tab', { name: 'Tasks' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    await expect(rail(page).getByRole('region', { name: 'To-do' })).toHaveCount(0);
+    await expect(thread(page).locator('.todo-card, .todo-line')).toHaveCount(0);
   });
 });
 
@@ -136,7 +129,7 @@ test.describe('one status', () => {
     await expect(turnHead.locator('.mood')).toHaveText('stopped');
   });
 
-  test('a finished task lists in the rail on a roomy window, and keeps one line in the thread without it', async ({
+  test('a finished to-do lists in the rail on a roomy window, and keeps one line in the thread', async ({
     page,
   }) => {
     test.setTimeout(60_000);
@@ -145,16 +138,17 @@ test.describe('one status', () => {
     await page.getByRole('button', { name: 'New chat' }).first().click();
     await send(page, 'Fix the date divider #plan');
     await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 20_000 });
-    const tasks = rail(page).getByRole('region', { name: 'Tasks' });
-    await expect(tasks.getByRole('listitem')).toHaveCount(6);
-    await expect(tasks).toContainText('6 of 6');
-    await expect(tasks.getByRole('listitem').first()).toContainText('Done:');
-    await expect(thread(page).locator('.taskc')).toHaveCount(0);
+    const todo = rail(page).getByRole('region', { name: 'To-do' });
+    await expect(todo.getByRole('listitem')).toHaveCount(3);
+    await expect(todo).toContainText('3 of 3');
+    await expect(todo.getByRole('listitem').first()).toContainText('Done:');
+    const line = thread(page).getByRole('button', { name: 'To-do: 3 of 3 done' });
+    await expect(line).toBeVisible();
     await shot(page, 'status-tasks-rail');
 
     await rail(page).getByRole('button', { name: 'Hide context rail' }).click();
-    await expect(thread(page).locator('.taskc')).toContainText('Task 6/6 · Done');
+    await expect(line).toBeVisible();
     await page.setViewportSize({ width: 1280, height: 900 });
-    await expect(thread(page).locator('.taskc')).toContainText('Task 6/6 · Done');
+    await expect(line).toBeVisible();
   });
 });

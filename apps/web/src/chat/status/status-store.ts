@@ -14,6 +14,7 @@ export interface Worker {
   provider: string;
   kind: WorkerKind;
   doing?: string;
+  todo?: string;
 }
 
 export interface LiveInput extends Worker {
@@ -60,6 +61,7 @@ function sameReport(a: LiveReport | undefined, b: LiveInput): boolean {
     a.kind === b.kind &&
     a.provider === b.provider &&
     a.doing === b.doing &&
+    a.todo === b.todo &&
     a.working === b.working &&
     a.step === b.step
   );

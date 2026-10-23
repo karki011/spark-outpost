@@ -128,7 +128,7 @@ async function planPhase(chosenMode: string) {
     ).length;
   const decisionRows = async () =>
     (await taskOverviews(t.db, chat.conversationId))
-      .flatMap((task) => task.items)
+      .flatMap((task) => task.recorded)
       .filter((item) => item.id.startsWith('waiting:'));
   return { ask, records, cards, notes, decisionRows };
 }

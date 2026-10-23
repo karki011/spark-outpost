@@ -12,12 +12,13 @@ You'll follow, stop and queue a turn. About 2 minutes.
 
 1. Read the header, like **Reading api.ts · 3 steps**.
 2. Select the step count, then **Thinking**.
-3. **Show work panel** has the plan, files and cost; **Agent TV** is under **…**.
-4. Sub-agents share one line; **View** shows a card each.
+3. The to-do ticks off.
+4. **Show work panel** has the to-do, files and cost; **Agent TV** is under **…**.
+5. Sub-agents share one line; **View** shows a card each.
 
 When it needs you, select **Waiting for you** or press **⌘⇧Y**.
 
-Failed output stays open; **Open in terminal** shows it in a [dock tab](terminals.md#watch-an-agents-command).
+**Open in terminal** shows failed output in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 
@@ -27,7 +28,7 @@ Failed output stays open; **Open in terminal** shows it in a [dock tab](terminal
 
 While background agents run, the chat shows **Waiting on 1 background agent**, then **Writing up results**. A sleeping Claude agent shows **Sleeping until 10:48**, then wakes in that turn. **Stop background tasks** or **Stop waiting** ends the wait.
 
-The agent stays running between messages, up to 30 idle minutes. A turn it starts itself shows **Continued on its own**. Quit shows **Stopped by Quit**; your next message picks up.
+The agent stays running up to 30 idle minutes. A turn it starts itself shows **Continued on its own**; after Quit, **Stopped by Quit**.
 
 ## Queue messages
 

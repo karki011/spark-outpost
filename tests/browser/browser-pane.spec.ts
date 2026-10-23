@@ -403,7 +403,7 @@ test('closing the pane keeps it closed when the chat gets work', async ({ page }
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
   await input.press('Enter');
-  await expect(page.locator('.taskc')).toContainText('Task 6/6', { timeout: 20_000 });
+  await expect(page.locator('.todo-line')).toContainText('3 of 3 done', { timeout: 20_000 });
   await expect(pane).toBeHidden();
   const panel = page.getByRole('complementary', { name: 'Work panel' });
   await expect(panel.getByRole('tab', { name: 'Work' })).toHaveAttribute('aria-selected', 'true');

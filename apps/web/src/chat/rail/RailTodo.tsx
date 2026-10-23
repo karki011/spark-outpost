@@ -17,29 +17,28 @@ function StateMark({ state }: { state: TaskItemState }) {
   return <i className="crail-task-dot" />;
 }
 
-interface RailTasksProps {
+interface RailTodoProps {
   task: TaskOverview;
   onOpen(): void;
 }
 
-export const RailTasks = memo(function RailTasks({ task, onOpen }: RailTasksProps) {
+export const RailTodo = memo(function RailTodo({ task, onOpen }: RailTodoProps) {
   const { done, total } = task.summary;
   return (
-    <section className="crail-tasks" aria-label="Tasks">
+    <section className="crail-tasks" aria-label="To-do">
       <div className="crail-tasks-head">
-        <h3 className="crail-title">Tasks</h3>
+        <h3 className="crail-title">To-do</h3>
         <button
           type="button"
           className="crail-tasks-count"
-          aria-label={`${done} of ${total} tasks done. Open the work panel`}
-          title={task.title}
+          aria-label={`${done} of ${total} to-do items done. Open the work panel`}
           onClick={onOpen}
         >
           {done} of {total}
         </button>
       </div>
-      <ol tabIndex={0} aria-label="Task steps">
-        {task.items.map((item) => {
+      <ol tabIndex={0} aria-label="To-do items">
+        {task.todo.map((item) => {
           const current = item.state === 'active' || item.state === 'waiting';
           return (
             <li key={item.id} data-state={item.state} aria-current={current ? 'step' : undefined}>

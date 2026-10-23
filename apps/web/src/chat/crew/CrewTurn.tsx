@@ -1,5 +1,4 @@
 import './crew-turn.css';
-import type { ReactNode } from 'react';
 import {
   isCheckApproval,
   isTerminalRunStatus,
@@ -9,6 +8,8 @@ import {
   type Project,
   type Run,
 } from '@spark-outpost/contracts';
+import { turnTodo } from '../../todo/todo-model.ts';
+import { TurnTodo } from '../../todo/TurnTodo.tsx';
 import { agentAnchor } from '../../crew/conversation-crew.ts';
 import { crewTotals, totalsLine } from '../../crew/crew-model.ts';
 import { crewAgents, runAgent } from '../../crew/crew-projection.ts';
@@ -63,12 +64,11 @@ interface CrewTurnProps {
   detail: ConversationDetail;
   orchestration: Orchestration;
   repo: Project | null;
-  taskCard: ReactNode;
 }
 
 const NO_STEPS: RunStep[] = [];
 
-export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTurnProps) {
+export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
   const runsById = new Map(detail.runs.map((candidate) => [candidate.id, candidate]));
   const handedOffAt = handOffAt(orchestration.crew, run.id);
   const textByRun = memberTexts(detail.messages, run.id, handedOffAt);
@@ -150,6 +150,12 @@ export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTur
         repo={repo}
         waited={waitedOn([member.runId])}
         changes={changedBy(member.runId)}
+        todo={
+          <TurnTodo
+            entries={turnTodo(detail.runs, member.runId, runsById.get(member.runId)?.todo ?? [])}
+            live={!isTerminalRunStatus(member.status)}
+          />
+        }
         after={item.checkpoints.map(checkpointCard)}
       />
     );
@@ -193,7 +199,6 @@ export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTur
           anchor={agentAnchor(orchestration.runId, 'jev')}
           status={jevStatus}
         />
-        {taskCard}
       </div>
       {steeredAfter(-1)}
       {items.flatMap((item, index) => [itemBlock(item, index), ...steeredAfter(index)])}

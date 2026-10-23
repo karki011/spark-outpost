@@ -25,15 +25,24 @@ function openStep(steps: readonly RunStep[]): string | null {
 }
 
 export function useLiveReport(
-  { id, name, provider, kind, doing }: Worker,
+  { id, name, provider, kind, doing, todo }: Worker,
   working: boolean,
   steps: readonly RunStep[],
 ): void {
   const store = use(StatusContext);
   const step = working ? openStep(steps) : null;
   useEffect(() => {
-    store?.report({ id, name, provider, kind, working, step, ...(doing ? { doing } : {}) });
-  }, [store, id, name, provider, kind, doing, working, step]);
+    store?.report({
+      id,
+      name,
+      provider,
+      kind,
+      working,
+      step,
+      ...(doing ? { doing } : {}),
+      ...(todo ? { todo } : {}),
+    });
+  }, [store, id, name, provider, kind, doing, todo, working, step]);
   useEffect(() => () => store?.forget(id), [store, id]);
 }
 
