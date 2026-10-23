@@ -259,14 +259,15 @@ export async function changeSettings(
   settings: UpdateTicketSettingsRequest,
 ): Promise<TicketConnections> {
   const { jiraOn, confluenceOn, serviceNowTypes, recheck, ...ticketSettings } = settings;
+  if (source !== 'servicenow' && (recheck || serviceNowTypes)) {
+    throw new TicketConflictError('Record types and Check connection are for ServiceNow only.');
+  }
   if (jiraOn !== undefined || confluenceOn !== undefined) {
     await switchProducts(deps, source, { jiraOn, confluenceOn });
   }
   if (source === 'servicenow' && recheck) await recheckServiceNow(deps);
-  if (source === 'servicenow' && serviceNowTypes)
+  if (source === 'servicenow' && serviceNowTypes) {
     await switchServiceNowTypes(deps, serviceNowTypes);
-  if (source !== 'servicenow' && (recheck || serviceNowTypes)) {
-    throw new TicketConflictError('Record types and Check connection are for ServiceNow only.');
   }
   const changesTickets = Object.values(ticketSettings).some((value) => value !== undefined);
   const changed =

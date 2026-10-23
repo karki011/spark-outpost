@@ -38,19 +38,33 @@ export function tableUrl(instanceUrl: string, request: ServiceNowRequest): strin
   return url.toString();
 }
 
+const isRedirect = (answer: JsonAnswer) =>
+  answer.status === 0 || (answer.status >= 300 && answer.status < 400);
+
+function redirected(instanceUrl: string): TicketApiError {
+  return new TicketApiError(
+    502,
+    `${new URL(instanceUrl).host} sent Spark to another address. Spark sends your ServiceNow sign-in only to the instance itself, so it stopped. Check the instance address.`,
+  );
+}
+
 export function serviceNowClient(
   access: ServiceNowAccess,
   fetchImpl: typeof fetch,
 ): ServiceNowClient {
   const headers = serviceNowHeaders(access);
-  const raw = (request: ServiceNowRequest) =>
-    callJson(fetchImpl, SERVICENOW_NAME, {
+  const raw = async (request: ServiceNowRequest) => {
+    const answer = await callJson(fetchImpl, SERVICENOW_NAME, {
       method: request.method,
       url: tableUrl(access.instanceUrl, request),
       headers,
+      redirect: 'manual',
       body: request.body,
       ...(request.timeoutMs ? { timeoutMs: request.timeoutMs } : {}),
     });
+    if (isRedirect(answer)) throw redirected(access.instanceUrl);
+    return answer;
+  };
   return {
     instanceUrl: access.instanceUrl,
     raw,

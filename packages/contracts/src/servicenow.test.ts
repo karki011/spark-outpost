@@ -22,6 +22,7 @@ describe('ServiceNow instance address', () => {
     expect(serviceNowInstanceUrl('https://acme.service-now.com/now/nav')).toBeNull();
     expect(serviceNowInstanceUrl('https://acme.service-now.com?x=1')).toBeNull();
     expect(serviceNowInstanceUrl('javascript:alert(1)')).toBeNull();
+    expect(serviceNowInstanceUrl('https://acme.example:99999')).toBeNull();
     expect(serviceNowInstanceUrl('')).toBeNull();
   });
 
