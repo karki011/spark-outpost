@@ -42,6 +42,8 @@ export async function withDesktopBrowser(page: Page) {
       ...change,
     });
     const viewStates = new Map<string, unknown>();
+    let downloadList: unknown[] = [];
+    const downloadListeners = new Set<(list: unknown) => void>();
     Object.assign(window, {
       browserCalls: calls,
       browserPush: (chatId: string, tabs: Record<string, unknown>[]) => {
@@ -67,6 +69,10 @@ export async function withDesktopBrowser(page: Page) {
         };
         viewStates.set(profile, state);
         viewStateListeners.forEach((listener) => listener(state));
+      },
+      browserDownloadsPush: (list: unknown[]) => {
+        downloadList = list;
+        downloadListeners.forEach((listener) => listener(list));
       },
       browserViewShortcut: (event: unknown) =>
         viewShortcutListeners.forEach((listener) => listener(event)),
@@ -97,6 +103,15 @@ export async function withDesktopBrowser(page: Page) {
           handToChat: async (request: unknown) => {
             calls.push({ kind: 'view-hand', payload: request });
             return { ok: true };
+          },
+          downloads: async () => downloadList,
+          downloadAct: async (request: unknown) => {
+            calls.push({ kind: 'download-act', payload: request });
+            return true;
+          },
+          onDownloads: (listener: (list: unknown) => void) => {
+            downloadListeners.add(listener);
+            return () => downloadListeners.delete(listener);
           },
           pageText: async (profile: string, tabId: string) => {
             calls.push({ kind: 'view-page-text', payload: { profile, tabId } });

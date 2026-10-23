@@ -305,3 +305,96 @@
   width: 16px;
   height: 16px;
 }
+
+.bv-dls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.bv-dl-toggle {
+  align-self: flex-start;
+  min-height: 28px;
+}
+
+.bv-dl-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 12px;
+  text-align: center;
+  background: var(--raise);
+}
+
+.bv-dl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.bv-dl {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 6px;
+  border-radius: var(--r-sm);
+}
+
+.bv-dl-icon {
+  display: inline-flex;
+  color: var(--muted);
+}
+
+.bv-dl-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.bv-dl[data-tone='ok'] .bv-dl-icon {
+  color: var(--success);
+}
+
+.bv-dl[data-tone='refused'] .bv-dl-icon {
+  color: var(--warn);
+}
+
+.bv-dl-main {
+  display: grid;
+  min-width: 0;
+}
+
+.bv-dl-name,
+.bv-dl-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bv-dl-name {
+  font-size: 13px;
+}
+
+.bv-dl-status {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.bv-dl-act {
+  width: 28px;
+  height: 28px;
+}
+
+.bv-dl-empty {
+  padding: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}

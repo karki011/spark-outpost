@@ -4,6 +4,7 @@ import type {
   BrowserPaneState,
   BrowserPick,
   BrowserPlacement,
+  BrowserDownloadAction,
   BrowserProfile,
   BrowserViewPlacement,
   BrowserHandToChat,
@@ -86,6 +87,9 @@ export interface DesktopBrowserView {
   handToChat(request: BrowserHandToChat): Promise<unknown>;
   fromChat(request: BrowserToView): Promise<unknown>;
   pageText(profile: BrowserProfile, tabId: string): Promise<unknown>;
+  downloads(): Promise<unknown>;
+  downloadAct(request: BrowserDownloadAction): Promise<unknown>;
+  onDownloads(callback: (list: unknown) => void): Unsubscribe;
   onIntent(callback: (intent: unknown) => void): Unsubscribe;
   onState(callback: (state: unknown) => void): Unsubscribe;
   onSnapshot(callback: (snapshot: unknown) => void): Unsubscribe;

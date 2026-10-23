@@ -1,4 +1,4 @@
-import { session, type Session, type WebContents } from 'electron';
+import { session, type DownloadItem, type Session, type WebContents } from 'electron';
 import type { BrowserProfile, SignedInSite } from '@spark-outpost/contracts';
 import { MEDIA_GUARD_ID, mediaGuardPreload } from '../media-guard.ts';
 import {
@@ -19,6 +19,7 @@ export interface SessionGuards {
   roots(contents: WebContents | null): readonly string[];
   log(line: string): void;
   inputMarks(contents: WebContents | null): InputMarks | null;
+  download?(item: DownloadItem, contents: WebContents | null): boolean;
 }
 
 const configured = new WeakSet<Session>();
@@ -59,7 +60,9 @@ export function browserSession(partition: string, guards: SessionGuards): Sessio
   target.webRequest.onBeforeSendHeaders((details, callback) => {
     callback({ requestHeaders: withoutSparkToken(details.requestHeaders) });
   });
-  target.on('will-download', (event) => event.preventDefault());
+  target.on('will-download', (event, item, contents) => {
+    if (!guards.download?.(item, contents ?? null)) event.preventDefault();
+  });
   return target;
 }
 

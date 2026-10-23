@@ -16,27 +16,31 @@ Your own tabs, apart from every chat. About 1 minute. Mac app only.
 
 ## Pick a profile
 
-| Profile      | Who reaches it                                                   |
-| ------------ | ---------------------------------------------------------------- |
-| **Personal** | Only you: no agent, Ask Spark or phone can open or list its tabs |
-| **Work**     | You; chats' agents share its sign-ins but not these tabs         |
+| Profile      | Who reaches it                                           |
+| ------------ | -------------------------------------------------------- |
+| **Personal** | Only you; no agent or phone opens or lists its tabs      |
+| **Work**     | You; chats' agents share its sign-ins but not these tabs |
 
 ## Find a page
 
-**⌘T** or **⌘L** opens the command bar: tabs, favorites and this profile's history. **⌘Enter** opens a new tab. History stays on this Mac; clear it in **Settings → Browser pane**.
+**⌘T** or **⌘L** opens the command bar: tabs, favorites and this profile's history. History stays on this Mac; **Settings → Browser pane** clears it.
 
 ## Keep and share tabs
 
-- **+** under **Favorites** saves the page; **Pin** keeps a tab above **Today**. Tabs come back after a relaunch.
+- **+** under **Favorites** saves the page; **Pin** keeps a tab above **Today**; tabs survive a relaunch.
 - **Hand to chat** gives a chat the page: a **Work** tab moves there; from **Personal** only the address goes.
 - In a chat's pane, **Open in Browser view (Work)** moves the tab here.
 
 ## Start a chat from a page
 
-**New chat** (**⌘⇧O**), or right-click a selection or link: a chat at **Automatic** opens beside the tab. The page goes as an untrusted attachment, read when you send; only what you type is your message.
+**New chat** (**⌘⇧O**) or a right-click opens a chat at **Automatic** beside the tab. The page goes as an untrusted attachment when you send; only what you type is your message.
 
 ## Ask Spark about your tabs
 
-**Ask Spark** (**⌥⌘A**) opens beside the tab; type **@** to add tabs. Spark reads them once, as text, when you send. That question's actions are cards, even in **Act**, and it answers no other chat's card.
+**Ask Spark** (**⌥⌘A**) opens beside the tab; type **@** to add tabs. Spark reads them once, as text, when sent; its actions are cards, even in **Act**, and it answers no other chat's card.
+
+## Save a file
+
+A file saves only after your own click; Spark asks where. One an agent or page started is cancelled; **Downloads** lists both.
 
 **Next:** [Use the browser](use-the-browser.md)

@@ -100,6 +100,7 @@ export class PaneTab {
   handoff: BrowserHandoff | null = null;
   handoffRun: string | null = null;
   agentBusy = 0;
+  downloadRefused = false;
   agentDoneAt: number | null = null;
   private userInputAt: number | null = null;
   active = false;
@@ -371,6 +372,7 @@ export class PaneTab {
     this.title = '';
     this.error = null;
     this.status = null;
+    this.downloadRefused = false;
     this.touch();
     const contents = view.webContents;
     const stop = () => contents.stop();
