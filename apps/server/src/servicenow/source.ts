@@ -27,7 +27,7 @@ import {
 } from './records.ts';
 import { fromTables, recordStore, type Located, type RecordConnection } from './record-store.ts';
 import { readStates } from './state-list.ts';
-import { isFinalState, serviceNowSettings, stateOf } from './states.ts';
+import { isClosingState, serviceNowSettings, stateOf } from './states.ts';
 
 const PAGE_SIZE = 100;
 const MOVE_FIELDS = ['sys_id', 'number', 'state', 'sys_class_name'];
@@ -92,7 +92,7 @@ export function serviceNowSource(
       settings: serviceNowSettings(connection, found.table),
     });
     const next = plan.to ? (states.find((state) => state.name === plan.to) ?? null) : null;
-    if (plan.to && isFinalState(plan.to)) {
+    if (plan.to && next && isClosingState(found.table, next)) {
       return { plan: finalRefusal(plan, key, plan.to), found, next: null };
     }
     return { plan, found, next };

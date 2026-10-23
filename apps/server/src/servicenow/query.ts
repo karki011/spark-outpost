@@ -100,8 +100,8 @@ export function agentQuery({ query, mine }: AgentQuery): string {
   if (/[\r\n]/.test(text)) throw new AgentQueryError('Put the query on one line.');
   const ordered = /ORDERBY/.test(text) ? '' : NEWEST_FIRST;
   if (!mine) return joined([text, ordered]);
-  if (/\^NQ/.test(text)) {
-    throw new AgentQueryError('Pass mine or a query with ^NQ, not both.');
+  if (/\^(?:NQ|OR(?!DERBY))/.test(text)) {
+    throw new AgentQueryError('Pass mine or a query with ^OR or ^NQ, not both.');
   }
   const groups = mine.groups.map(safeSysId);
   const branches = [

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { parseJournalText } from './journal.ts';
 import { isoTime, priorityRankOf, recordSchema, recordUrl, summaryOf } from './records.ts';
-import { isFinalState, serviceNowSettings, serviceNowStatus, stateKind } from './states.ts';
+import {
+  isClosingState,
+  isFinalState,
+  serviceNowSettings,
+  serviceNowStatus,
+  stateKind,
+} from './states.ts';
 
 const settings = serviceNowSettings({ statusMap: {}, moveStatuses: {} }, 'incident');
 const both = (value: string, display = value) => ({ value, display_value: display });
@@ -74,6 +80,19 @@ describe('ServiceNow states', () => {
       expect(isFinalState(label)).toBe(false);
     }
     expect(stateKind('Resolved')).toBe('started');
+  });
+
+  it('counts renamed closing states by word or by the stock final value', () => {
+    const closing = (table: string, name: string, value: string) =>
+      isClosingState(table, { name, value });
+    expect(closing('incident', 'Done', '9')).toBe(true);
+    expect(closing('sc_req_item', 'Withdrawn', '9')).toBe(true);
+    expect(closing('sc_task', 'Closed - Cancelled', '9')).toBe(true);
+    expect(closing('sc_req_item', 'Fulfilled', '9')).toBe(true);
+    expect(closing('incident', 'Fixed', '6')).toBe(true);
+    expect(closing('problem', 'Root Cause Analysis', '107')).toBe(true);
+    expect(closing('incident', 'In Progress', '2')).toBe(false);
+    expect(closing('incident', 'Awaiting Completion', '5')).toBe(false);
   });
 });
 

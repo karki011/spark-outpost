@@ -16,6 +16,25 @@ export function isFinalState(label: string): boolean {
   return FINAL.test(label.trim());
 }
 
+const CLOSING_WORDS =
+  /\b(?:resolved?|closed?|cancel(?:l?ed)?|completed?|done|withdrawn|fulfilled|rejected|abandoned|duplicate|retired)\b/i;
+
+const FINAL_VALUES: Readonly<Record<string, readonly string[]>> = {
+  incident: ['6', '7', '8'],
+  problem: ['106', '107'],
+  sc_req_item: ['3', '4', '7'],
+  sc_task: ['3', '4', '7'],
+  change_request: ['3', '4'],
+};
+
+export function isClosingState(table: string, state: { name: string; value: string }): boolean {
+  return (
+    isFinalState(state.name) ||
+    CLOSING_WORDS.test(state.name) ||
+    (FINAL_VALUES[table] ?? []).includes(state.value)
+  );
+}
+
 export function stateKind(label: string): StateKind {
   const name = label.trim();
   if (isFinalState(name) && !RESOLVED.test(name)) return 'done';

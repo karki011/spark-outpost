@@ -43,7 +43,7 @@ function Changes({ action }: { action: ServiceNowEditAction }) {
       />
       <Swap label="Urgency" before={before.urgency} after={after.urgency} />
       <Swap label="Impact" before={before.impact} after={after.impact} />
-      {before.description !== after.description && (
+      {action.changes.description !== undefined && (
         <>
           <Text label="Description now" text={before.description} />
           <Text label="Description after" text={after.description} />

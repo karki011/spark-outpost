@@ -80,5 +80,11 @@ describe('ServiceNow encoded queries', () => {
       AgentQueryError,
     );
     expect(() => agentQuery({ query: '', mine: { me: ME, groups: ['g^NQ'] } })).toThrow();
+    expect(() =>
+      agentQuery({ query: 'priority=1^ORactive=true', mine: { me: ME, groups: [] } }),
+    ).toThrow(AgentQueryError);
+    expect(agentQuery({ query: 'priority=1^ORDERBYnumber', mine: { me: ME, groups: [] } })).toBe(
+      `assigned_to=${ME}^priority=1^ORDERBYnumber`,
+    );
   });
 });

@@ -17,7 +17,7 @@ import { DETAIL_FIELDS, recordUrl, shownOf, valueOf } from '../../../servicenow/
 import type { Located } from '../../../servicenow/record-store.ts';
 import { openServiceNow, type ServiceNowSession } from '../../../servicenow/session.ts';
 import { readChoices, readStates } from '../../../servicenow/state-list.ts';
-import { isFinalState } from '../../../servicenow/states.ts';
+import { isClosingState } from '../../../servicenow/states.ts';
 import { ACTION_NOTE } from '../../actions/action-note.ts';
 import { proposeAction } from '../../actions/confirm.ts';
 import { ticketDepsFor } from '../../deps.ts';
@@ -40,11 +40,16 @@ interface EditArgs {
 
 const LEVEL_WORDS: Record<Level, string> = { '1': '1 - High', '2': '2 - Medium', '3': '3 - Low' };
 
+function cardText(text: string): string {
+  if (text.length <= SERVICENOW_CARD_TEXT_MAX) return text;
+  return `${text.slice(0, SERVICENOW_CARD_TEXT_MAX - 1)}…`;
+}
+
 function factsOf(found: Located): ServiceNowRecordFacts {
   const { record } = found;
   return {
     shortDescription: shownOf(record.short_description),
-    description: shownOf(record.description).slice(0, SERVICENOW_CARD_TEXT_MAX),
+    description: cardText(shownOf(record.description)),
     urgency: shownOf(record.urgency),
     impact: shownOf(record.impact),
   };
@@ -62,7 +67,8 @@ function changesOf(args: EditArgs): ServiceNowChanges {
 function afterOf(before: ServiceNowRecordFacts, changes: ServiceNowChanges): ServiceNowRecordFacts {
   return {
     shortDescription: changes.short_description ?? before.shortDescription,
-    description: (changes.description ?? before.description).slice(0, SERVICENOW_CARD_TEXT_MAX),
+    description:
+      changes.description === undefined ? before.description : cardText(changes.description),
     urgency: changes.urgency ? LEVEL_WORDS[changes.urgency] : before.urgency,
     impact: changes.impact ? LEVEL_WORDS[changes.impact] : before.impact,
   };
@@ -138,7 +144,7 @@ async function moveOf(session: ServiceNowSession, found: Located, args: EditArgs
   if (valueOf(found.record.state) === next.value) {
     throw new SparkToolError(`${valueOf(found.record.number)} is already ${from}.`);
   }
-  const final = isFinalState(next.name);
+  const final = isClosingState(found.table, next);
   if (final && !args.closeNotes) {
     throw new SparkToolError('Pass closeNotes: the caller usually sees them.');
   }
