@@ -36,6 +36,7 @@ import { TaskWakes } from '../a2a/task-wakes.ts';
 import { stackGit } from '../outposts/stack-git.ts';
 
 const config = loadConfig();
+const chatFolders = chatFoldersBase(sparkDataDir(config), config.BRANCH_PREFIX);
 const db = createDb(config.DATABASE_URL, { max: POOL_MAX.worker });
 await migrateOrExit(db, { backup: configuredBackup(config) });
 
@@ -78,7 +79,7 @@ const sparkDeps: SparkToolDeps = {
   }),
   outposts: { wakes: outpostWakes, stackGit },
   agentRuntime: config.AGENT_RUNTIME,
-  chatFolders: chatFoldersBase(sparkDataDir(config), config.BRANCH_PREFIX),
+  chatFolders,
 };
 const sparkTools = await startSparkMcpHost(sparkDeps);
 desktopBrowser?.blockPorts([sparkTools.port]);
@@ -105,7 +106,7 @@ const worker = startWorker({
   },
   parked: parkedTurns,
   branchPrefix: config.BRANCH_PREFIX,
-  chatFolders: chatFoldersBase(sparkDataDir(config), config.BRANCH_PREFIX),
+  chatFolders,
   shipAccess: {
     secrets,
     runCommand,
