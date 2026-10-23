@@ -15,6 +15,7 @@ import {
   resetSlackFake,
   slackOAuth,
 } from './slack-seed.ts';
+import { animationsSettled } from './settle.ts';
 
 const SHOTS = process.env.SPARK_SLACK_SHOTS;
 
@@ -39,6 +40,7 @@ async function neverReachSlack(context: BrowserContext): Promise<string[]> {
 }
 
 async function axe(page: Page): Promise<void> {
+  await animationsSettled(page);
   const results = await new AxeBuilder({ page })
     .include('.cx-card[data-connector="slack"]')
     .analyze();

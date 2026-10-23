@@ -3,7 +3,6 @@ import { resetTestDatabase } from './database.ts';
 import { useSystemTheme } from './docs-seed.ts';
 import {
   COLUMN,
-  INDENT,
   columnEdges,
   header,
   longChat,
@@ -19,9 +18,7 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
 });
 
-test('replies sit under the agent name in one centred column the bubble and composer share', async ({
-  page,
-}) => {
+test('replies fill one centred column the bubble and composer share', async ({ page }) => {
   test.setTimeout(120_000);
   await longChat(page);
   await widenSecondReply(page);
@@ -29,15 +26,11 @@ test('replies sit under the agent name in one centred column the bubble and comp
     const edges = await columnEdges(page);
     const { column } = edges;
     expect(Math.abs(edges.bubbleRight - column.right)).toBeLessThan(1);
-    for (const part of [edges.head, edges.composer]) {
+    for (const part of [edges.composer, edges.prose, edges.table]) {
       expect(Math.abs(part.left - column.left)).toBeLessThan(1);
       expect(Math.abs(part.right - column.right)).toBeLessThan(1);
     }
-    expect(Math.abs(edges.name.left - column.left - INDENT)).toBeLessThan(1);
-    for (const part of [edges.prose, edges.foot, edges.table]) {
-      expect(Math.abs(part.left - edges.name.left)).toBeLessThan(1);
-      expect(Math.abs(part.right - column.right)).toBeLessThan(1);
-    }
+    expect(Math.abs(edges.meta.right - column.right)).toBeLessThan(1);
     expect(await pageScroll(page)).toBe(0);
     return edges;
   };
@@ -81,7 +74,7 @@ test('replies sit under the agent name in one centred column the bubble and comp
   await page.setViewportSize({ width: 390, height: 800 });
   await expect(workPanel(page)).toBeHidden();
   const phone = await columnEdges(page);
-  for (const part of [phone.prose, phone.foot, phone.table]) {
+  for (const part of [phone.prose, phone.table]) {
     expect(Math.abs(part.left - phone.column.left)).toBeLessThan(1);
   }
   expect(await pageScroll(page)).toBe(0);
