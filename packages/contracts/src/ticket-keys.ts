@@ -7,16 +7,11 @@ const keyShapes = {
     inText: '[A-Z][A-Z0-9_]{1,9}-[1-9]\\d{0,6}',
     example: 'ENG-12',
   },
-  record: {
-    exact: '[A-Za-z]{2,8}\\d{4,12}',
-    inText: '[A-Z]{2,8}\\d{4,12}',
-    example: 'INC0010023',
-  },
 } as const;
 
-export type TicketKeyShape = keyof typeof keyShapes;
+type TicketKeyShape = keyof typeof keyShapes;
 
-export const ticketKeyShapeOf: Record<TicketSourceId, TicketKeyShape> = {
+const ticketKeyShapeOf: Record<TicketSourceId, TicketKeyShape> = {
   linear: 'dashed',
   jira: 'dashed',
 };
@@ -28,10 +23,6 @@ function shapesFor(source: TicketSourceId | undefined): TicketKeyShape[] {
 
 function alternatives(parts: readonly string[]): string {
   return parts.length === 1 ? parts[0]! : `(?:${parts.join('|')})`;
-}
-
-export function keyShapePattern(shape: TicketKeyShape): RegExp {
-  return new RegExp(`^${keyShapes[shape].exact}$`);
 }
 
 export function ticketKeyPattern(source?: TicketSourceId): RegExp {

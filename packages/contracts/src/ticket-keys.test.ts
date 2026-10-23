@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { linkChatTicketRequestSchema } from './chat-tickets.ts';
 import {
   isTicketKey,
-  keyShapePattern,
   ticketKeyHint,
   ticketKeySchema,
   ticketKeySchemaFor,
@@ -11,16 +10,6 @@ import {
 } from './ticket-keys.ts';
 
 describe('ticket key shapes', () => {
-  it('tells a dashed key from a record number', () => {
-    expect(keyShapePattern('dashed').test('ENG-12')).toBe(true);
-    expect(keyShapePattern('dashed').test('INC0010023')).toBe(false);
-    expect(keyShapePattern('record').test('INC0010023')).toBe(true);
-    expect(keyShapePattern('record').test('SCTASK0010051')).toBe(true);
-    expect(keyShapePattern('record').test('ENG-12')).toBe(false);
-    expect(keyShapePattern('record').test('INC12')).toBe(false);
-    expect(keyShapePattern('record').test('X0010023')).toBe(false);
-  });
-
   it('keeps Jira and Linear on the dashed key', () => {
     for (const source of ['jira', 'linear'] as const) {
       expect(isTicketKey('ENG-12', source)).toBe(true);
