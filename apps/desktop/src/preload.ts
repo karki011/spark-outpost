@@ -59,6 +59,7 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     gone: () => ipcRenderer.send(IPC.meetingAlertGone),
     ready: () => ipcRenderer.send(IPC.meetingAlertReady),
     focus: () => ipcRenderer.send(IPC.meetingAlertFocus),
+    onTakeFocus: (callback: () => void) => listen(IPC.meetingAlertTakeFocus, callback),
     setRegions: (regions: unknown) => ipcRenderer.send(IPC.meetingAlertRegions, regions),
     pointerMoved: () => ipcRenderer.send(IPC.meetingAlertPointerMoved),
   },
@@ -151,26 +152,26 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     info: () => ipcRenderer.invoke(IPC.helpInfo),
     exportDiagnostics: () => ipcRenderer.invoke(IPC.helpExportDiagnostics),
     showLogs: () => ipcRenderer.invoke(IPC.helpShowLogs),
-    onOpenFeedback: (callback: () => void) => {
-      const take = () =>
-        void ipcRenderer.invoke(IPC.helpPending).then((pending: unknown) => {
-          if (pending === true) callback();
-        });
-      take();
-      return listen(IPC.helpOpen, take);
-    },
   },
   menu: {
-    onOpenSettings: (callback: () => void) => {
-      const take = () =>
-        void ipcRenderer.invoke(IPC.menuSettingsPending).then((pending: unknown) => {
-          if (pending === true) callback();
-        });
-      take();
-      return listen(IPC.menuOpenSettings, take);
-    },
     onCommand: (callback: (command: unknown) => void) => listen(IPC.menuCommand, callback),
     reportSidebar: (shown: boolean) => ipcRenderer.send(IPC.menuSidebarShown, shown),
+  },
+  settingsWindow: {
+    open: (route: string, focus: string | null) =>
+      ipcRenderer.send(IPC.settingsWindowOpen, route, focus),
+    take: () => ipcRenderer.invoke(IPC.settingsWindowTake),
+    onChange: (callback: () => void) => listen(IPC.settingsWindowChanged, callback),
+    openChat: (id: string) => ipcRenderer.send(IPC.settingsWindowOpenChat, id),
+    openDoc: (link: string) => ipcRenderer.send(IPC.settingsWindowOpenDoc, link),
+    onDoc: (callback: (link: string) => void) => {
+      const take = () =>
+        void ipcRenderer.invoke(IPC.settingsWindowTakeDoc).then((link: unknown) => {
+          if (typeof link === 'string') callback(link);
+        });
+      take();
+      return listen(IPC.settingsWindowDoc, take);
+    },
   },
   onOpenSettings: (callback: (target: string) => void) => {
     const take = () =>

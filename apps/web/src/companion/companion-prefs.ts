@@ -60,8 +60,17 @@ function update(next: Partial<CompanionPrefs>) {
 }
 
 function subscribe(listener: () => void) {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== STORAGE_KEY) return;
+    prefs = readPrefs();
+    listener();
+  };
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  window.addEventListener('storage', onStorage);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener('storage', onStorage);
+  };
 }
 
 export function useCompanionPrefs(): CompanionPrefs {

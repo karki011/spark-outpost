@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { GracePeriodBar } from '../ui/GracePeriodBar.tsx';
+import { announceSettings } from '../settings/settings-sync.ts';
 import { reveal } from '../ui/transitions.tsx';
 import { clearLocalAppData, saveResetNotice, takeResetNotice } from './local-data.ts';
 import { resetSparkOutpost } from './reset-api.ts';
@@ -18,6 +19,7 @@ async function runReset(keepApiKeys: boolean): Promise<void> {
     const report = await resetSparkOutpost(keepApiKeys);
     clearLocalAppData();
     saveResetNotice(report.problems);
+    announceSettings('reset');
     window.location.reload();
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Something went wrong.';

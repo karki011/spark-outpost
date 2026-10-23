@@ -3,6 +3,7 @@ globalThis.__zod_globalConfig = { jitless: true };
   var root = document.documentElement;
   var island = location.pathname === '/island' || location.pathname === '/meeting-alert';
   if (island) root.dataset.island = '';
+  if (location.pathname === '/settings' && window.sparkDesktop) root.dataset.settingsWindow = '';
 
   function readStored() {
     try {
