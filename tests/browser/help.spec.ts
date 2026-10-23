@@ -1,18 +1,40 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import { FEEDBACK_SETTINGS_FOCUS } from '../../packages/contracts/src/desktop-help.ts';
 import { resetTestDatabase } from './database.ts';
 
 const SAVED = '/Users/tester/Downloads/spark-outpost-diagnostics-2026-10-01-120000.zip';
 const LOGS = '/Users/tester/Library/Application Support/Spark Outpost/logs';
 const SHOTS = path.resolve('test-results/auto-mode-prompts');
 
-async function fakeDesktop(page: Page, save: 'saved' | 'cancelled' = 'saved') {
+interface SettingsTarget {
+  route: string;
+  focus: string | null;
+}
+
+async function fakeDesktop(
+  page: Page,
+  save: 'saved' | 'cancelled' = 'saved',
+  settingsTarget: SettingsTarget | null = null,
+) {
   await page.addInitScript(
-    ({ saved, logs, outcome }) => {
+    ({ saved, logs, outcome, target }) => {
       const calls: string[] = [];
       const opened: string[] = [];
-      const feedbackListeners = new Set<() => void>();
       const noop = () => () => undefined;
+      let pending = target;
+      const settingsWindow = {
+        open: noop,
+        take: async () => {
+          const next = pending;
+          pending = null;
+          return next;
+        },
+        onChange: noop,
+        openChat: noop,
+        openDoc: noop,
+        onDoc: noop,
+      };
       window.open = ((url: string) => {
         opened.push(String(url));
         return null;
@@ -20,7 +42,6 @@ async function fakeDesktop(page: Page, save: 'saved' | 'cancelled' = 'saved') {
       Object.assign(window, {
         helpCalls: calls,
         openedUrls: opened,
-        fakeHelp: { openFeedback: () => feedbackListeners.forEach((listener) => listener()) },
         sparkDesktop: {
           platform: 'darwin',
           companion: { get: async () => null, onChange: noop },
@@ -38,10 +59,6 @@ async function fakeDesktop(page: Page, save: 'saved' | 'cancelled' = 'saved') {
             showLogs: async () => {
               calls.push('showLogs');
             },
-            onOpenFeedback: (listener: () => void) => {
-              feedbackListeners.add(listener);
-              return () => feedbackListeners.delete(listener);
-            },
           },
           privacy: {
             openFullDiskAccess: async () => {
@@ -49,10 +66,11 @@ async function fakeDesktop(page: Page, save: 'saved' | 'cancelled' = 'saved') {
             },
           },
           onOpenChat: noop,
+          ...(target ? { settingsWindow } : {}),
         },
       });
     },
-    { saved: SAVED, logs: LOGS, outcome: save },
+    { saved: SAVED, logs: LOGS, outcome: save, target: settingsTarget },
   );
 }
 
@@ -150,16 +168,17 @@ test('a cancelled diagnostics save opens no draft', async ({ page }) => {
   expect(await read<string[]>(page, 'openedUrls')).toEqual([]);
 });
 
-test('Help › Send Feedback in the menu bar opens the form ready to type', async ({ page }) => {
+test('Help › Send Feedback in the menu bar opens the Settings window ready to type', async ({
+  page,
+}) => {
   await resetTestDatabase({ onboarded: true });
-  await fakeDesktop(page);
-  await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
-  await page.evaluate(() =>
-    (window as unknown as { fakeHelp: { openFeedback(): void } }).fakeHelp.openFeedback(),
-  );
-  const help = page.getByRole('dialog', { name: 'Help' });
-  await expect(help.getByLabel('What happened?')).toBeFocused();
+  await fakeDesktop(page, 'saved', {
+    route: '#/settings/help',
+    focus: FEEDBACK_SETTINGS_FOCUS,
+  });
+  await page.goto('/settings');
+  await expect(page.getByLabel('What happened?')).toBeFocused();
+  await expect(page).toHaveTitle('Help');
 });
 
 test('in the browser, Export diagnostics downloads the zip from the server', async ({ page }) => {

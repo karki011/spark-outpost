@@ -93,9 +93,10 @@ interface ChatProps {
   approvals: Approval[];
   runs?: Run[];
   active?: string | null;
+  queued?: number;
 }
 
-function Chat({ store, approvals, runs = [], active = null }: ChatProps) {
+function Chat({ store, approvals, runs = [], active = null, queued = 0 }: ChatProps) {
   return (
     <StatusContext value={store}>
       <div data-testid="thread">
@@ -103,7 +104,13 @@ function Chat({ store, approvals, runs = [], active = null }: ChatProps) {
           <Card key={approval.id} approval={approval} />
         ))}
       </div>
-      <ComposerStatus store={store} runs={runs} activeRunId={active} provider="claude" />
+      <ComposerStatus
+        store={store}
+        runs={runs}
+        activeRunId={active}
+        provider="claude"
+        queued={queued}
+      />
       <div className="composer">
         <textarea aria-label="Message" />
       </div>
@@ -151,6 +158,12 @@ describe('waiting for you', () => {
     expect(within(status()).getByRole('status').textContent).toBe(
       "Waiting for you: approve git grep -l -i 'AI_USER' …",
     );
+  });
+
+  it('keeps the count of queued messages on the waiting line', () => {
+    show({ approvals: [command], queued: 3 });
+    const line = status().querySelector('.cs-line')!;
+    expect(line.querySelector('.cs-queued')?.textContent).toBe('3 queued');
   });
 
   it('shows the full command on hover', async () => {

@@ -88,7 +88,11 @@ export async function startChatRecord(
   });
   const snapshot = roots[0] ? await snapshotRun(db, runId, roots[0]) : null;
   const rails = await startRailFlags({ db, runId, projectRoots: roots, audit });
-  const watch = createRailWatch({ roots: roots.map((path) => ({ path, ignore: [] })), cwd });
+  const watch = createRailWatch({
+    roots: roots.map((path) => ({ path, ignore: [] })),
+    cwd,
+    cli: 'claude',
+  });
   const mapper = createTurnMapper(AGENT_NAME, false);
   const tracker = createCommandTracker(false);
   const reply = createReplyText(append);

@@ -215,6 +215,7 @@ test('points standing instructions at a file with the themed picker @packaged', 
   );
   await expect(picker.locator('.fdlg-path')).toHaveText(path.join(roles, 'reviewer.md'));
   await page.screenshot({ path: `${SHOTS}/spark-sheet-file-picker.png` });
+  await animationsSettled(page);
   const scan = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
     .include('.fdlg')

@@ -48,7 +48,7 @@ export const tints = [
     description: 'Cool blue and pure black',
     light: 'fjord',
     dark: 'void',
-    swatch: { accent: '#2f6fe4', background: '#07070a' },
+    swatch: { accent: '#2866d4', background: '#07070a' },
   },
   {
     id: 'sage',
