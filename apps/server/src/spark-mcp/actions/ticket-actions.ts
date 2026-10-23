@@ -3,6 +3,8 @@ import {
   SPARK_LABELS_MAX,
   SPARK_TEXT_MAX,
   SPARK_TITLE_MAX,
+  isTicketKey,
+  ticketKeyHint,
   ticketKeySchema,
   ticketPriorityNameSchema,
   ticketSourceIdSchema,
@@ -36,6 +38,7 @@ export async function pickSource(deps: TicketDeps, requested: TicketSourceId | u
 }
 
 async function ticketOf(deps: TicketDeps, source: TicketSourceId, key: string) {
+  if (!isTicketKey(key, source)) throw new SparkToolError(ticketKeyHint(source));
   const open = await requireSource(deps, source);
   const summary = await open.source.getSummary(key);
   return {

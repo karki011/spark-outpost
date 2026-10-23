@@ -7,13 +7,15 @@ import {
   seenTicketNoticeRequestSchema,
   snoozeTicketRequestSchema,
   startTicketRequestSchema,
-  ticketKeySchema,
+  ticketKeyHint,
+  ticketKeySchemaFor,
   ticketListQuerySchema,
   ticketSearchQuerySchema,
   ticketSourceIdSchema,
   transitionTicketRequestSchema,
   updateAttentionSettingsSchema,
   updateTicketSettingsRequestSchema,
+  type TicketSourceId,
 } from '@spark-outpost/contracts';
 import {
   getAttentionSettings,
@@ -66,8 +68,12 @@ function parseOr400<T>(result: { success: true; data: T } | { success: false }, 
 
 const sourceParam = (req: Request) =>
   parseOr400(ticketSourceIdSchema.safeParse(req.params.source), 'Unknown ticket source.');
-const keyParam = (req: Request) =>
-  parseOr400(ticketKeySchema.safeParse(req.params.key), 'Use a ticket key such as ENG-12.');
+const keyParam = (req: Request, source: TicketSourceId) =>
+  parseOr400(ticketKeySchemaFor(source).safeParse(req.params.key), ticketKeyHint(source));
+const ticketRef = (req: Request) => {
+  const source = sourceParam(req);
+  return { source, key: keyParam(req, source) };
+};
 
 export function ticketRoutes(routeDeps: TicketRouteDeps): Router {
   const deps: TicketDeps = {
@@ -138,20 +144,23 @@ export function ticketRoutes(routeDeps: TicketRouteDeps): Router {
 
   router.post('/tickets/:source/:key/assign', async (req, res) => {
     const request = parseBody(assignTicketRequestSchema, req);
-    res.json(await assignTicket(deps, sourceParam(req), keyParam(req), request));
+    const { source, key } = ticketRef(req);
+    res.json(await assignTicket(deps, source, key, request));
   });
 
   router.get('/tickets/:source/:key', async (req, res) => {
     const github = gitHubDepsOf(routeDeps);
-    res.json(await ticketView({ ...deps, github }, sourceParam(req), keyParam(req)));
+    const { source, key } = ticketRef(req);
+    res.json(await ticketView({ ...deps, github }, source, key));
   });
 
   router.post('/tickets/:source/:key/start', async (req, res) => {
     const request = parseBody(startTicketRequestSchema, req);
+    const { source, key } = ticketRef(req);
     const started = await startTicket(
       { ...deps, runTarget, offersSparkTools },
-      sourceParam(req),
-      keyParam(req),
+      source,
+      key,
       request,
     );
     res.status(201).json(started);
@@ -159,44 +168,44 @@ export function ticketRoutes(routeDeps: TicketRouteDeps): Router {
 
   router.post('/tickets/:source/:key/transition', async (req, res) => {
     const { status } = parseBody(transitionTicketRequestSchema, req);
-    const open = await requireSource(deps, sourceParam(req));
-    res.json(await moveTicket(deps, open, keyParam(req), { group: status }, null));
+    const source = sourceParam(req);
+    const open = await requireSource(deps, source);
+    res.json(await moveTicket(deps, open, keyParam(req, source), { group: status }, null));
   });
 
   router.put('/tickets/:source/:key/snooze', async (req, res) => {
     const request = parseBody(snoozeTicketRequestSchema, req);
     const problem = snoozeProblem(new Date(request.until), new Date());
     if (problem) throw new BadRequestError(problem);
-    await snoozeTicket(deps, { source: sourceParam(req), key: keyParam(req) }, request);
+    await snoozeTicket(deps, ticketRef(req), request);
     res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
   });
 
   router.delete('/tickets/:source/:key/snooze', async (req, res) => {
-    await snoozeTicket(deps, { source: sourceParam(req), key: keyParam(req) }, null);
+    await snoozeTicket(deps, ticketRef(req), null);
     res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
   });
 
   router.put('/tickets/:source/:key/dismiss', async (req, res) => {
     const { flags } = parseBody(dismissTicketRequestSchema, req);
-    await dismissFlags(deps, { source: sourceParam(req), key: keyParam(req) }, flags);
+    await dismissFlags(deps, ticketRef(req), flags);
     res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
   });
 
   router.delete('/tickets/:source/:key/dismiss', async (req, res) => {
-    await dismissFlags(deps, { source: sourceParam(req), key: keyParam(req) }, []);
+    await dismissFlags(deps, ticketRef(req), []);
     res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
   });
 
   router.put('/tickets/:source/:key/notice-seen', async (req, res) => {
     const { notice } = parseBody(seenTicketNoticeRequestSchema, req);
-    await markNoticeSeen(deps, { source: sourceParam(req), key: keyParam(req) }, notice);
+    await markNoticeSeen(deps, ticketRef(req), notice);
     res.json({ ok: true });
   });
 
   router.post('/tickets/:source/:key/comments', async (req, res) => {
     const { body } = parseBody(commentTicketRequestSchema, req);
-    const source = sourceParam(req);
-    const key = keyParam(req);
+    const { source, key } = ticketRef(req);
     const open = await requireSource(deps, source);
     await open.source.comment(key, body);
     await recordTicketEvent(deps.db, deps.workspaceId, {
