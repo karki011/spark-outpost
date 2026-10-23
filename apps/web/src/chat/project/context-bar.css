@@ -179,6 +179,11 @@
   .ctxbar > .ctx-branch .ctx-branch-name {
     display: none;
   }
+  .ctxbar,
+  .ctxbar > .ctx-repo,
+  .ctxbar > .ctx-branch {
+    flex-shrink: 0;
+  }
 }
 
 .ctx-details {
