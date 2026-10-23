@@ -20,18 +20,14 @@ const NOTHING: SparkAvailability = {
   meetings: false,
   jira: false,
   confluence: false,
+  servicenow: false,
+  ticket_create: false,
 };
 
 const GROUPS: [keyof SparkAvailability, string[]][] = [
   [
     'tickets',
-    [
-      'spark_tickets',
-      'spark_create_ticket',
-      'spark_comment_ticket',
-      'spark_transition_ticket',
-      'spark_assign_ticket',
-    ],
+    ['spark_tickets', 'spark_comment_ticket', 'spark_transition_ticket', 'spark_assign_ticket'],
   ],
   ['slack', ['spark_slack', 'spark_slack_post']],
   [
@@ -59,7 +55,9 @@ const GROUPS: [keyof SparkAvailability, string[]][] = [
   ['outpost', ['spark_outpost', 'spark_outpost_ask', 'spark_outpost_note']],
   ['outpost_draft', ['spark_outpost_draft']],
   ['outpost_start', ['spark_outpost_start']],
+  ['ticket_create', ['spark_create_ticket']],
   ['jira', ['spark_jira', 'spark_jira_edit']],
+  ['servicenow', ['spark_servicenow', 'spark_servicenow_edit']],
   ['confluence', ['spark_confluence', 'spark_confluence_edit']],
 ];
 

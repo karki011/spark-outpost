@@ -45,6 +45,12 @@ export const GROUP_NAMES: Record<string, string> = {
 
 export const MEMBERSHIPS: [user: string, group: string][] = [[SERVICENOW_ME, NETWORK_OPS]];
 
+export const CLOSE_CODES: [value: string, label: string][] = [
+  ['Solved (Permanently)', 'Solved (Permanently)'],
+  ['Solved (Work Around)', 'Solved (Work Around)'],
+  ['Not Solved (Not Reproducible)', 'Not Solved (Not Reproducible)'],
+];
+
 export const CHOICES: Record<string, [value: string, label: string][]> = {
   incident: [
     ['1', 'New'],

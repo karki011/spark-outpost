@@ -37,6 +37,8 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   meetings: true,
   jira: true,
   confluence: true,
+  servicenow: true,
+  ticket_create: true,
 };
 
 async function chatHasProject(deps: SparkToolDeps, scope: SparkScope): Promise<boolean> {
@@ -89,6 +91,8 @@ export async function sparkAvailability(
   const macHowTo = macRefused ? MAC_HOW_TO[macRefused] : undefined;
   return {
     tickets: sources.length > 0,
+    ticket_create: sources.some((open) => open.connection.source !== 'servicenow'),
+    servicenow: sources.some((open) => open.connection.source === 'servicenow'),
     slack: slack !== null,
     pull_requests: gitHub.connected,
     project,
@@ -125,6 +129,8 @@ const HOW_TO_GET: Record<
     | 'calendar_edit'
     | 'meetings'
     | 'jira'
+    | 'servicenow'
+    | 'ticket_create'
   >,
   string
 > = {

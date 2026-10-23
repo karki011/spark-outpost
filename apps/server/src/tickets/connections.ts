@@ -13,7 +13,8 @@ import {
   serviceNowAccessOf,
   switchServiceNowTypes,
 } from '../servicenow/connect.ts';
-import { liveTables, serviceNowSource } from '../servicenow/source.ts';
+import { liveTables } from '../servicenow/record-store.ts';
+import { serviceNowSource } from '../servicenow/source.ts';
 import { serviceNowView } from '../servicenow/view.ts';
 import type { Db } from '../persistence/db.ts';
 import {

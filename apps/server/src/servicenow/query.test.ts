@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { inboxQuery, numberQuery, plainQueryText, safeSysId, searchQuery } from './query.ts';
+import {
+  AgentQueryError,
+  agentQuery,
+  inboxQuery,
+  numberQuery,
+  plainQueryText,
+  safeSysId,
+  searchQuery,
+} from './query.ts';
 
 const ME = '6816f79cc0a8016401c5a33be04be441';
 const GROUP = '287ebd7da9fe198100f92cc8d1d2154e';
@@ -47,5 +55,36 @@ describe('ServiceNow encoded queries', () => {
     expect(() => inboxQuery({ me: ME, groups: ['g^NQ'], scope: 'groups' })).toThrow();
     expect(numberQuery(' ritm0010045 ')).toBe('number=RITM0010045');
     expect(() => numberQuery('INC001^NQ')).toThrow();
+  });
+
+  it('runs an agent query as given, or scoped to me and my groups', () => {
+    expect(agentQuery({ query: 'priority=1', mine: null })).toBe(
+      'priority=1^ORDERBYDESCsys_updated_on',
+    );
+    expect(agentQuery({ query: 'ORDERBYnumber', mine: null })).toBe('ORDERBYnumber');
+    expect(agentQuery({ query: 'active=true', mine: { me: ME, groups: [GROUP] } })).toBe(
+      `assigned_to=${ME}^active=true^NQassignment_groupIN${GROUP}^assigned_toISEMPTY^active=true^ORDERBYDESCsys_updated_on`,
+    );
+    expect(agentQuery({ query: '', mine: { me: ME, groups: [] } })).toBe(
+      `assigned_to=${ME}^ORDERBYDESCsys_updated_on`,
+    );
+  });
+
+  it('refuses javascript, line breaks and ^NQ with mine', () => {
+    expect(() => agentQuery({ query: 'sys_id=javascript:gs.getUserID()', mine: null })).toThrow(
+      AgentQueryError,
+    );
+    expect(() => agentQuery({ query: 'a=1^JavaScript :x', mine: null })).toThrow(AgentQueryError);
+    expect(() => agentQuery({ query: 'a=1\nb=2', mine: null })).toThrow(AgentQueryError);
+    expect(() => agentQuery({ query: 'a=1^NQb=2', mine: { me: ME, groups: [] } })).toThrow(
+      AgentQueryError,
+    );
+    expect(() => agentQuery({ query: '', mine: { me: ME, groups: ['g^NQ'] } })).toThrow();
+    expect(() =>
+      agentQuery({ query: 'priority=1^ORactive=true', mine: { me: ME, groups: [] } }),
+    ).toThrow(AgentQueryError);
+    expect(agentQuery({ query: 'priority=1^ORDERBYnumber', mine: { me: ME, groups: [] } })).toBe(
+      `assigned_to=${ME}^priority=1^ORDERBYnumber`,
+    );
   });
 });

@@ -145,6 +145,7 @@ export const SPEC_GROUPS = {
   tickets: [
     'atlassian-connector',
     'connectors',
+    'servicenow-cards',
     'servicenow-connector',
     'servicenow-tickets',
     'ticket-chat',

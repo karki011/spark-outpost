@@ -6,6 +6,8 @@ import {
   calendarAuditFacts,
   isAtlassianAction,
   isCalendarAction,
+  isServiceNowAction,
+  serviceNowAuditFacts,
   SPARK_ACTION_OPTION,
   sparkActionLabels,
   sparkActionQuestion,
@@ -45,6 +47,7 @@ const SENDS_TO: Partial<Record<SparkAction['action'], string>> = {
   post_slack: 'to Slack',
   jira_edit: 'to Jira',
   confluence_edit: 'to Confluence',
+  servicenow_edit: 'to ServiceNow',
 };
 
 export interface ActionRun {
@@ -82,7 +85,16 @@ function cardTitle(action: SparkAction): string {
   ) {
     return question;
   }
-  if (action.action === 'calendar_read' || action.action === 'atlassian_read') return question;
+  if (
+    action.action === 'calendar_read' ||
+    action.action === 'atlassian_read' ||
+    action.action === 'servicenow_read'
+  ) {
+    return question;
+  }
+  if (action.action === 'servicenow_edit') {
+    return `${question} ${action.record.number} ${action.record.title}`;
+  }
   if (action.action === 'jira_edit' || action.action === 'confluence_edit') {
     return `${question} ${atlassianCardSubject(action)}`;
   }
@@ -180,6 +192,9 @@ export function auditedAction(action: SparkAction): unknown {
     action.action === 'confluence_edit'
   ) {
     return atlassianAuditFacts(action);
+  }
+  if (action.action === 'servicenow_read' || action.action === 'servicenow_edit') {
+    return serviceNowAuditFacts(action);
   }
   return action;
 }
@@ -283,7 +298,9 @@ export async function proposeAction(
   auditAction(run, action, {
     outcome: 'performing',
     approvalId: card.id,
-    ...(isCalendarAction(action.action) || isAtlassianAction(action.action)
+    ...(isCalendarAction(action.action) ||
+    isAtlassianAction(action.action) ||
+    isServiceNowAction(action.action)
       ? { ranWithoutReview: true }
       : {}),
   });

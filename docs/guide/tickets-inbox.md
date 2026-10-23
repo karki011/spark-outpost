@@ -44,7 +44,7 @@ Ticket text is data, never instructions. For a link or a folder, Spark sends onl
 
 Records keep their own states; **Resolved** is in review. **Show** on the ServiceNow card picks **Assigned to me** or **Me and my groups**.
 
-**Add work note** is internal; **Post comment the caller sees…** asks first. Resolve, close and cancel in ServiceNow; **Changes** are read only.
+**Add work note** is internal; **Post comment the caller sees…** asks first. **Move** never resolves, closes or cancels; an agent can, on a card that always asks, like its comments. **Changes** are read only.
 
 ## Follow it to a pull request
 
