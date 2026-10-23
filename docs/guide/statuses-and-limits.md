@@ -20,21 +20,22 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 
 A dot marks changes since your last visit; point at it.
 
-| Shows                       | Means                                                           |
-| --------------------------- | --------------------------------------------------------------- |
-| **Working**: a pulsing ring | A turn, background agents or a Terminal session run.            |
-| **Waiting for you**: amber  | A card, question or Terminal session waits.                     |
-| **Done**: green             | A turn finished.                                                |
-| **Couldn't finish**: red    | A turn failed or was interrupted.                               |
-| **Flagged by Spark**        | An unreviewed action crossed a protected path; it never counts. |
+| Dot                         | Means                                                |
+| --------------------------- | ---------------------------------------------------- |
+| **Working**: a pulsing ring | A turn, background agents or a Terminal session run. |
+| **Waiting for you**: amber  | A card, question or Terminal session waits.          |
+| **Done**: green             | A turn finished.                                     |
+| **Couldn't finish**: red    | A turn failed or was interrupted.                    |
 
-## Chats and Sparks
+A row reading **Flagged by Spark**: an unreviewed action crossed a protected path; it never counts.
 
-| Spark card            | Means                                                         |
-| --------------------- | ------------------------------------------------------------- |
-| **Working**           | A request in one of its chats runs.                           |
-| **Needs you**         | A card in one of its chats waits.                             |
-| **Done** / **Failed** | Latest request finished within an hour / failed within a day. |
+## Spark cards
+
+| Status                | Means                                                              |
+| --------------------- | ------------------------------------------------------------------ |
+| **Working**           | A request in one of its chats runs.                                |
+| **Needs you**         | A card in one of its chats waits.                                  |
+| **Done** / **Failed** | Latest request finished in the last hour / failed in the last day. |
 
 ## Outpost requests
 
@@ -58,7 +59,7 @@ A dot marks changes since your last visit; point at it.
 | **Started**                | In progress in your tracker, no chat running. |
 | **Up next**                | Assigned to you, not started.                 |
 | **In review / PR open**    | Either, with a checks badge.                  |
-| **Done recently**          | Done or PR merged within 7 days.              |
+| **Done recently**          | Done or PR merged in the last 7 days.         |
 
 ## Map status
 
@@ -107,5 +108,5 @@ Turns have no time, tool-call or cost cap. A ring above **Pause** shows Claude p
 | Chats in an outpost                  | 50                                       |
 | A Spark's standing instructions      | 2,000 characters                         |
 | Diff shown before **Load full file** | 2,000 lines; files over 1 MB stay folded |
-| Hold-to-confirm                      | 1.5 seconds; 10-second undo              |
+| Hold-to-confirm                      | 1.5 seconds; undo window 10 seconds      |
 | App logs kept                        | About 8 MB                               |

@@ -30,4 +30,4 @@ Each answer lands under its request with its branch and PR.
 
 Only members can be asked; agents can [ask each other](outpost-asks.md), and a chat can [start or propose a story](outpost-stories.md) of sub-tasks.
 
-Set one up: [Work across chats in an outpost](outposts.md). See [What an outpost request may do](outpost-permissions.md).
+Set one up in [Outposts](outposts.md); see [what a request may do](outpost-permissions.md).
