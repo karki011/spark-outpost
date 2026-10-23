@@ -15,7 +15,7 @@ Newest first. Each release adds a section before packaging; the release script t
 - Agents ask with question cards. Spark Island answers one-pick questions, and its count skips cards you set aside.
 - Chats without a project get their own folder, and files a turn makes show as its attachments. Agents can show pages they make beside the chat; a link in one opens only after you confirm its address.
 - Every chat's turn starts as soon as you send it; there's no limit on how many chats run at once.
-- Chats idle for 2 days move to History (Archive inactive chats in Settings changes or stops it), and projects with no chats leave Projects.
+- Chats idle for 2 days, including ones from before this update, move to History (Archive inactive chats in Settings changes or stops it), and projects with no chats leave Projects.
 - Add folder… and Clone a repository… end every project picker.
 - Agents get their own tools: Claude agents can search the web, fetch pages and edit notebooks, following your mode. Turn tools off with Claude Code's or Codex's own settings. Most edits show as diffs.
 - Claude agents can sleep until a wakeup: the turn shows Sleeping until 10:48, then picks up.
