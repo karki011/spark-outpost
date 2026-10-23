@@ -11,7 +11,21 @@ export function Elapsed({ command }: { command: CommandView }) {
   return <>{shownDuration(commandSeconds(command, now))}</>;
 }
 
-export function CommandWord({ command, waiting }: { command: CommandView; waiting: boolean }) {
+interface CommandWordProps {
+  command: CommandView;
+  waiting: boolean;
+  denied?: boolean;
+}
+
+export function CommandWord({ command, waiting, denied = false }: CommandWordProps) {
+  if (denied && command.status !== 'running') {
+    return (
+      <span className="trow-word bad">
+        <XIcon />
+        denied
+      </span>
+    );
+  }
   if (command.status === 'running') {
     if (waiting) return <span className="trow-word">waiting for you</span>;
     return (

@@ -21,7 +21,7 @@ import { ChatFiles } from './files/ChatFiles.tsx';
 import { ArtifactCards } from './artifacts/ArtifactCards.tsx';
 import { CheckpointCard } from './checkpoints/CheckpointCard.tsx';
 import { turnAgentTerminals } from './commands/agent-terminal-model.ts';
-import { commandAnswers } from './commands/command-answers.ts';
+import { cardsLeft, commandAnswers } from './commands/command-answers.ts';
 import { hourCycle } from '../desktop/hour-cycle.ts';
 import { AgentTerminalsRunning } from './commands/AgentTerminalRow.tsx';
 import { runCommands, shownCommands } from './commands/command-model.ts';
@@ -201,6 +201,12 @@ export function SoloTurn({
     : null;
   const changes = useTurnChanges(changeTask?.id ?? null, changeRunIds);
   const todoEntries = turnTodo(detail.runs, run.id, todo);
+  const answers = commandAnswers(approvals, hourCycle());
+  const commandCalls = new Set(
+    [...commands.reply, ...commands.publish].flatMap((command) =>
+      command.toolCallId ? [command.toolCallId] : [],
+    ),
+  );
   const parts = turnRowParts({
     text,
     steps: viewSteps(steps),
@@ -235,7 +241,7 @@ export function SoloTurn({
           waiting,
           changes,
           todo: <TurnTodo entries={todoEntries} live={working} />,
-          answers: commandAnswers(approvals, hourCycle()),
+          answers,
         }}
       >
         {(part, last) => (
@@ -246,7 +252,7 @@ export function SoloTurn({
         runId={run.id}
         background={working && !waiting ? stream.subagents.background : null}
       />
-      {cards.decided.map(approvalCard)}
+      {cardsLeft(cards.decided, answers, commandCalls).map(approvalCard)}
       <ChatFiles files={(detail.chatFiles ?? []).filter((file) => file.runId === run.id)} />
       <ArtifactCards chatId={detail.conversation.id} runId={run.id} pages={detail.artifactPages} />
       <RailFlags detail={detail} runId={run.id} />

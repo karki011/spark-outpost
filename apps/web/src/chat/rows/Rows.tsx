@@ -180,10 +180,17 @@ function countOf(items: readonly CommandItem[], status: CommandItem['command']['
   return items.filter((item) => item.command.status === status).length;
 }
 
-function statusWords(group: RowGroup) {
-  const commands = groupCommands(group);
+function statusWords(group: RowGroup, answers: CommandAnswers) {
+  const isDenied = (item: CommandItem) =>
+    answers.get(item.command.toolCallId ?? '')?.denied === true;
+  const all = groupCommands(group);
+  const commands = all.filter((item) => !isDenied(item));
+  const deniedFailed = all.filter(
+    (item) => isDenied(item) && item.command.status === 'failed',
+  ).length;
   const words = [
-    { count: failedCount(group), word: 'failed', tone: 'bad', icon: <XIcon /> },
+    { count: failedCount(group) - deniedFailed, word: 'failed', tone: 'bad', icon: <XIcon /> },
+    { count: all.length - commands.length, word: 'denied', tone: 'bad', icon: <XIcon /> },
     { count: countOf(commands, 'interrupted'), word: 'interrupted', tone: '', icon: <PauseIcon /> },
     {
       count: countOf(commands, 'completed'),
@@ -222,8 +229,9 @@ function groupCounts(group: RowGroup, changes: TurnChanges | null) {
   return <Counts added={added} removed={removed} />;
 }
 
-function GroupEnd({ group, changes }: { group: RowGroup; changes: TurnChanges | null }) {
-  const words = statusWords(group);
+function GroupEnd({ group, context }: { group: RowGroup; context: RowContext }) {
+  const { changes } = context;
+  const words = statusWords(group, context.answers);
   const seconds = failedCount(group) > 0 ? null : groupSeconds(group);
   return (
     <>
@@ -264,7 +272,7 @@ function GroupRow({ group, context }: { group: RowGroup; context: RowContext }) 
           {words.rest}
         </span>
         <span className="trow-end">
-          <GroupEnd group={group} changes={context.changes} />
+          <GroupEnd group={group} context={context} />
           <ChevronIcon />
         </span>
       </button>

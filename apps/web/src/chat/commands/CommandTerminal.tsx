@@ -8,6 +8,7 @@ import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 import { useCopyFeedback } from '../../ui/use-copy-feedback.ts';
 import { commandOutputKey, fetchCommandOutput } from './command-api.ts';
 import { CommandDockContext } from './command-dock.ts';
+import type { CommandAnswer } from './command-answers.ts';
 import { commandOutcome, type CommandView } from './command-model.ts';
 import { CommandScreen } from './CommandScreen.tsx';
 import { CommandWord } from './CommandStatus.tsx';
@@ -63,14 +64,14 @@ function CommandTitle({ command, full }: { command: CommandView; full: boolean }
 interface CommandTerminalProps {
   command: CommandView;
   waiting?: boolean;
-  answer?: string | null;
+  answer?: CommandAnswer | null;
 }
 
 function sameTerminal(before: CommandTerminalProps, after: CommandTerminalProps): boolean {
   const [was, now] = [before.command, after.command];
   return (
     before.waiting === after.waiting &&
-    before.answer === after.answer &&
+    before.answer?.line === after.answer?.line &&
     was.id === now.id &&
     was.description === now.description &&
     was.runId === now.runId &&
@@ -134,7 +135,7 @@ export const CommandTerminal = memo(function CommandTerminal({
           <RowIcon name="run" />
           <CommandTitle command={command} full={tall && open} />
           <span className="trow-end run-cmd-state">
-            <CommandWord command={command} waiting={waiting} />
+            <CommandWord command={command} waiting={waiting} denied={answer?.denied ?? false} />
             <ChevronIcon />
           </span>
         </button>
@@ -230,7 +231,7 @@ export const CommandTerminal = memo(function CommandTerminal({
           </p>
         )}
         {open && note && <p className="run-cmd-note">{note}</p>}
-        {open && answer && <p className="run-cmd-note run-cmd-answer">{answer}</p>}
+        {open && answer && <p className="run-cmd-note run-cmd-answer">{answer.line}</p>}
       </div>
     </section>
   );

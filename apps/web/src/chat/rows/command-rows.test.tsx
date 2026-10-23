@@ -44,7 +44,10 @@ const context: RowContext = {
   waiting: false,
   changes: null,
   todo: null,
-  answers: new Map([['call-test', 'You allowed it once · 16:58']]),
+  answers: new Map([
+    ['call-test', { line: 'You allowed it once · 16:58', denied: false }],
+    ['call-rm', { line: 'You denied it · 16:59', denied: true }],
+  ]),
 };
 const client = new QueryClient();
 
@@ -126,5 +129,23 @@ describe('command rows', () => {
     expect(toggle(/Ran 2 commands/).getAttribute('aria-expanded')).toBe('false');
     expect(toggle(/pnpm build/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /pnpm lint/ })).toBeNull();
+  });
+
+  it('says a command was denied, in the step and in its group', () => {
+    render(
+      <Turn
+        commands={[
+          command('rm', 'failed', 0, { toolCallId: 'call-rm' }),
+          command('test', 'completed', 10),
+        ]}
+      />,
+    );
+    const group = toggle(/Ran 2 commands/);
+    expect(group.querySelector('.trow-end')?.textContent).toMatch(/^1 denied·1 passed/);
+    const denied = toggle(/pnpm rm/);
+    expect(denied.textContent).toContain('denied');
+    expect(denied.textContent).not.toContain('failed');
+    if (denied.getAttribute('aria-expanded') !== 'true') fireEvent.click(denied);
+    expect(screen.getByText('You denied it · 16:59')).toBeTruthy();
   });
 });
