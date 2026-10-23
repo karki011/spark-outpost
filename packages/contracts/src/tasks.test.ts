@@ -76,6 +76,7 @@ describe('taskSummary', () => {
       done: 1,
       total: 3,
       waiting: 0,
+      runState: 'working',
       text: '1 of 3 done · Codex working',
     });
   });
@@ -95,11 +96,20 @@ describe('taskSummary', () => {
     expect(taskSummary(items, [], [run({ status: 'succeeded' })]).text).toBe('1 of 3 done');
   });
 
+  it('keeps a failed or cancelled last run as stopped even when every entry is done', () => {
+    const done = todoItems({ entries: [{ ...entries[0]!, status: 'completed' }] }, []);
+    expect(taskSummary(done, [], [run({ status: 'failed' })]).runState).toBe('stopped');
+    expect(taskSummary(done, [], [run({ status: 'cancelled' })]).runState).toBe('stopped');
+    expect(taskSummary(done, [], [run({ status: 'succeeded' })]).runState).toBe('ended');
+    expect(taskSummary([], [], [run({ status: 'failed' }), run()]).runState).toBe('working');
+  });
+
   it('has no count when there is no list', () => {
     expect(taskSummary([], [], [run({ status: 'succeeded' })])).toEqual({
       done: 0,
       total: 0,
       waiting: 0,
+      runState: 'ended',
       text: '',
     });
   });

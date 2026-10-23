@@ -6,7 +6,7 @@ import type { Run } from '@spark-outpost/contracts';
 import { CrewTurn } from './CrewTurn.tsx';
 import { orchestrationSchema } from '@spark-outpost/contracts';
 import released from '../../../../../packages/contracts/src/stored-crew-turn.fixture.json' with { type: 'json' };
-import { CLOSING_REPLY, crewTurn } from './stored-turn-fixture.ts';
+import { BOLT, CLOSING_REPLY, TURN, crewTurn } from './stored-turn-fixture.ts';
 
 class QuietEventSource {
   onmessage: ((message: MessageEvent<string>) => void) | null = null;
@@ -26,8 +26,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function show(status: Run['status']) {
-  const turn = crewTurn(status);
+function show(status: Run['status'], memberRuns: Run[] = []) {
+  const base = crewTurn(status);
+  const turn = { ...base, detail: { ...base.detail, runs: [...base.detail.runs, ...memberRuns] } };
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const tree = (current: ReturnType<typeof crewTurn>) => (
     <QueryClientProvider client={client}>
@@ -78,6 +79,24 @@ describe('a stored crew turn', () => {
     expect(bolt.querySelector('.ah-meta')?.textContent).toContain('Sonnet 5');
     expect(bolt.querySelector('.ah-meta')?.textContent).toContain('$0.03');
     expect(messageButtons()).toEqual([]);
+  });
+
+  it("shows a helper's own to-do, folded once it finished", () => {
+    const todo = [
+      { content: 'Build the store', priority: 'medium', status: 'completed' },
+      { content: 'Export it', priority: 'medium', status: 'completed' },
+    ] as const;
+    const bolt = {
+      id: BOLT,
+      createdAt: '2026-09-26T10:03:00.000Z',
+      parentRunId: TURN,
+      status: 'succeeded',
+      todo,
+    } as unknown as Run;
+    const { view } = show('succeeded', [bolt]);
+    fireEvent.click(within(parallel('Worked')).getByRole('button', { name: /Bolt/ }));
+    const block = view.container.querySelector('.par-body [data-agent]')!;
+    expect(within(block as HTMLElement).getByRole('button', { name: 'To-do: 2 of 2 done' })).toBeTruthy();
   });
 
   it('keeps a message the user sent a helper during the turn and the saved plan line', () => {

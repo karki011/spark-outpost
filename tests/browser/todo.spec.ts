@@ -77,6 +77,7 @@ test('each turn shows only its own items and the rail shows the latest list', as
   await expect(
     first.getByRole('button', { name: 'To-do: 1 of 3 done · 2 not finished' }),
   ).toBeVisible();
+  await expect(panel(page).locator('.wt-h .spill')).toHaveText('Stopped');
 
   await expect(page.getByRole('textbox', { name: 'Message' })).toHaveAttribute(
     'placeholder',
@@ -86,6 +87,7 @@ test('each turn shows only its own items and the rail shows the latest list', as
   await finished(page, 2);
   const second = turns(page).nth(1).getByRole('button', { name: 'To-do: 2 of 2 done' });
   await expect(second).toBeVisible();
+  await expect(panel(page).locator('.wt-h .spill')).toHaveText('Done');
   await second.click();
   await expect(
     turns(page).nth(1).getByRole('list', { name: 'To-do items' }).getByRole('listitem'),

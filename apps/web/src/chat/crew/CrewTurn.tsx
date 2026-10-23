@@ -8,6 +8,8 @@ import {
   type Project,
   type Run,
 } from '@spark-outpost/contracts';
+import { turnTodo } from '../../todo/todo-model.ts';
+import { TurnTodo } from '../../todo/TurnTodo.tsx';
 import { agentAnchor } from '../../crew/conversation-crew.ts';
 import { crewTotals, totalsLine } from '../../crew/crew-model.ts';
 import { crewAgents, runAgent } from '../../crew/crew-projection.ts';
@@ -148,6 +150,12 @@ export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
         repo={repo}
         waited={waitedOn([member.runId])}
         changes={changedBy(member.runId)}
+        todo={
+          <TurnTodo
+            entries={turnTodo(detail.runs, member.runId, runsById.get(member.runId)?.todo ?? [])}
+            live={!isTerminalRunStatus(member.status)}
+          />
+        }
         after={item.checkpoints.map(checkpointCard)}
       />
     );
