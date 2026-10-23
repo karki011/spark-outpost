@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { CommandView } from '../commands/command-model.ts';
 import type { StepView } from '../run-projection.ts';
-import { groupSummary, spanSeconds, turnRowParts, type Row, type TurnRowPart } from './turn-rows.ts';
+import {
+  groupSummary,
+  spanSeconds,
+  turnRowParts,
+  type Row,
+  type TurnRowPart,
+} from './turn-rows.ts';
 
 const done = (name: string, extra: Partial<StepView> = {}): StepView => ({
   name,

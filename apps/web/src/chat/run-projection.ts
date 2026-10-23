@@ -74,8 +74,7 @@ function thinkingOf(step: RunStep): Pick<StepView, 'reasoningId' | 'thought'> {
 }
 
 function startedStep(event: Extract<RunEvent, { type: typeof EventType.STEP_STARTED }>): RunStep {
-  const { toolCallId, waits, textOffset, textBefore, textHeld, toolKind, target } =
-    stepMark(event);
+  const { toolCallId, waits, textOffset, textBefore, textHeld, toolKind, target } = stepMark(event);
   return {
     name: event.stepName,
     done: false,

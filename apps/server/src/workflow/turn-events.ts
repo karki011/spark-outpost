@@ -136,7 +136,8 @@ export function createTurnEvents({
     }
     if (!open) return;
     openSteps.delete(key);
-    const finished = kind.target && !open.mark.target ? { ...open.mark, target: kind.target } : open.mark;
+    const finished =
+      kind.target && !open.mark.target ? { ...open.mark, target: kind.target } : open.mark;
     await append(owned(runEvents.stepFinished(name, finished, now()), subagent));
   };
 

@@ -1,4 +1,9 @@
-import { SPARK_METADATA, friendlyStep, stepMark, type ActivityStep } from '@spark-outpost/contracts';
+import {
+  SPARK_METADATA,
+  friendlyStep,
+  stepMark,
+  type ActivityStep,
+} from '@spark-outpost/contracts';
 
 export interface StepEventRow {
   run_id: string;
