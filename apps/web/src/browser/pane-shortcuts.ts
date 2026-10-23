@@ -3,6 +3,7 @@ import {
   browserShortcut,
   browserShortcutEventSchema,
   shortcutTabIndex,
+  type BrowserCommand,
   type BrowserPaneTab,
   type BrowserShortcut,
 } from '@spark-outpost/contracts';
@@ -33,6 +34,18 @@ export const PANE_KEYS = {
   close: paneKeys('W'),
 };
 
+export interface PaneCommands {
+  send(command: BrowserCommand): void;
+  close(tabId: string): void;
+}
+
+export function chatPaneCommands(chatId: string): PaneCommands {
+  return {
+    send: (command) => sendBrowserCommand(chatId, command),
+    close: (tabId) => void closeBrowserTab(chatId, tabId),
+  };
+}
+
 export interface PaneShortcutUi {
   focusAddress(): void;
   openFind(): void;
@@ -47,7 +60,7 @@ const HISTORY: Partial<Record<BrowserShortcut, 'reload' | 'hard_reload' | 'back'
 };
 
 export function runPaneShortcut(
-  chatId: string,
+  commands: PaneCommands,
   tabs: readonly BrowserPaneTab[],
   shortcut: BrowserShortcut,
   ui: PaneShortcutUi,
@@ -56,23 +69,23 @@ export function runPaneShortcut(
   const tab = tabs[current] ?? null;
   const page = tab !== null && tab.url !== '';
   const history = HISTORY[shortcut];
-  if (shortcut === 'new_tab') sendBrowserCommand(chatId, { command: 'new_tab', url: null });
-  else if (shortcut === 'reopen_tab') sendBrowserCommand(chatId, { command: 'reopen' });
+  if (shortcut === 'new_tab') commands.send({ command: 'new_tab', url: null });
+  else if (shortcut === 'reopen_tab') commands.send({ command: 'reopen' });
   else if (shortcut === 'focus_address') ui.focusAddress();
   else if (shortcut === 'close_tab') {
-    if (tab) void closeBrowserTab(chatId, tab.id);
+    if (tab) commands.close(tab.id);
   } else if (shortcut === 'copy_url') {
     if (!page) return;
-    sendBrowserCommand(chatId, { command: 'copy_url', tabId: tab.id });
+    commands.send({ command: 'copy_url', tabId: tab.id });
     ui.copiedUrl();
   } else if (shortcut === 'find') {
     if (page && tab.error === null) ui.openFind();
   } else if (history) {
-    if (page) sendBrowserCommand(chatId, { command: history, tabId: tab.id });
+    if (page) commands.send({ command: history, tabId: tab.id });
   } else {
     const index = shortcutTabIndex(shortcut, current, tabs.length);
     const target = index === null ? null : tabs[index];
-    if (target) sendBrowserCommand(chatId, { command: 'select', tabId: target.id });
+    if (target) commands.send({ command: 'select', tabId: target.id });
   }
 }
 

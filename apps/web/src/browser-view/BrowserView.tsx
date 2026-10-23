@@ -1,0 +1,211 @@
+import '../browser/browser-pane.css';
+import './browser-view.css';
+import { useCallback, useEffect, useRef } from 'react';
+import {
+  browserViewShortcutEventSchema,
+  parseBrowserUrl,
+  type BrowserPaneTab,
+  type BrowserProfile,
+  type BrowserShortcut,
+} from '@spark-outpost/contracts';
+import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
+import { ExternalLinkIcon, LockIcon } from '../ui/icons.tsx';
+import { AddressBar } from '../browser/AddressBar.tsx';
+import {
+  DevtoolsIcon,
+  NavBackIcon,
+  NavForwardIcon,
+  ReloadIcon,
+  StopIcon,
+} from '../browser/BrowserIcons.tsx';
+import { defaultBrowserUrl, openInDefaultBrowser } from '../browser/chat-links.ts';
+import {
+  PANE_KEYS,
+  chromeShortcut,
+  runPaneShortcut,
+  type PaneCommands,
+} from '../browser/pane-shortcuts.ts';
+import { tabLabel } from '../browser/tab-label.ts';
+import { ToolButton } from '../browser/ToolButton.tsx';
+import { useNativePlacement, type PlaceView } from '../browser/use-view-placement.ts';
+import { ProfileBadge, ProfileSwitch, profileNote } from './ProfileSwitch.tsx';
+import { ViewTabs } from './ViewTabs.tsx';
+import {
+  acceptViewState,
+  chooseProfile,
+  sendViewCommand,
+  useChosenProfile,
+  useProfileTabs,
+} from './view-store.ts';
+
+function viewCommands(profile: BrowserProfile): PaneCommands {
+  return {
+    send: (command) => sendViewCommand(profile, command),
+    close: (tabId) => sendViewCommand(profile, { command: 'close', tabId }),
+  };
+}
+
+function useViewShortcuts(profile: BrowserProfile, run: (shortcut: BrowserShortcut) => void) {
+  const latest = useRef(run);
+  useEffect(() => {
+    latest.current = run;
+  });
+  useEffect(() => {
+    const view = desktopBrowserView();
+    if (!view) return;
+    return view.onShortcut((raw) => {
+      const event = browserViewShortcutEventSchema.safeParse(raw);
+      if (event.success && event.data.profile === profile) latest.current(event.data.shortcut);
+    });
+  }, [profile]);
+}
+
+function StartPage({ profile, tab }: { profile: BrowserProfile; tab: BrowserPaneTab | null }) {
+  if (tab?.error) {
+    return (
+      <div className="bp-start" role="status">
+        <b>This page didn’t load</b>
+        <p>{tab.error}</p>
+      </div>
+    );
+  }
+  return (
+    <div className="bp-start">
+      <b>{profile === 'personal' ? 'Personal browser' : 'Work browser'}</b>
+      <p>Type a web address on the left to open a page.</p>
+      <p>
+        {profile === 'personal'
+          ? 'No agent, Ask Spark or paired device can open, read or act in these tabs, and your sign-ins here stay out of every chat.'
+          : 'Work shares its sign-ins with every chat’s agent, so you can sign in for them or check what they see. Agents still can’t see these tabs until you hand one to a chat.'}
+      </p>
+    </div>
+  );
+}
+
+function PageHost({ url }: { url: string }) {
+  const parsed = parseBrowserUrl(url);
+  if (!parsed || url === '') return null;
+  return (
+    <span className="bv-host" title={url}>
+      {parsed.protocol === 'https:' && <LockIcon />}
+      {parsed.host || parsed.pathname}
+    </span>
+  );
+}
+
+export function BrowserView() {
+  const profile = useChosenProfile();
+  const { tabs, snapshot } = useProfileTabs(profile);
+  const tab = tabs.find((candidate) => candidate.active) ?? null;
+  const viewRef = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLDivElement>(null);
+  const commands = viewCommands(profile);
+
+  const place = useCallback<PlaceView>(
+    (bounds, covered) => void desktopBrowserView()?.place({ profile, bounds, covered }),
+    [profile],
+  );
+  useNativePlacement(viewRef, true, place);
+
+  useEffect(() => {
+    void desktopBrowserView()?.start(profile).then(acceptViewState);
+  }, [profile]);
+
+  const focusAddress = () => {
+    const address = root.current?.querySelector<HTMLInputElement>('input.bp-url');
+    address?.focus();
+    address?.select();
+  };
+  const runShortcut = (shortcut: BrowserShortcut) =>
+    runPaneShortcut(commands, tabs, shortcut, {
+      focusAddress,
+      openFind: () => undefined,
+      copiedUrl: () => undefined,
+    });
+  useViewShortcuts(profile, runShortcut);
+
+  const act = (command: 'back' | 'forward' | 'reload' | 'stop') => {
+    if (tab) sendViewCommand(profile, { command, tabId: tab.id });
+  };
+  const blank = !tab || tab.url === '' || tab.error !== null;
+  const outside = defaultBrowserUrl(tab?.url ?? null, window.location.origin);
+  const tabKey = `${profile}:${tab?.id ?? ''}:${tab?.url ?? ''}`;
+
+  return (
+    <div
+      ref={root}
+      className="bv"
+      onKeyDown={(event) => {
+        const shortcut = chromeShortcut(event);
+        if (!shortcut) return;
+        event.preventDefault();
+        event.stopPropagation();
+        runShortcut(shortcut);
+      }}
+    >
+      <nav className="bv-side" aria-label="Browser">
+        <div className="bv-nav">
+          <ToolButton
+            label="Back"
+            keys={PANE_KEYS.back}
+            disabled={!tab?.canGoBack}
+            onClick={() => act('back')}
+          >
+            <NavBackIcon />
+          </ToolButton>
+          <ToolButton
+            label="Forward"
+            keys={PANE_KEYS.forward}
+            disabled={!tab?.canGoForward}
+            onClick={() => act('forward')}
+          >
+            <NavForwardIcon />
+          </ToolButton>
+          {tab?.loading ? (
+            <ToolButton label="Stop loading" onClick={() => act('stop')}>
+              <StopIcon />
+            </ToolButton>
+          ) : (
+            <ToolButton
+              label="Reload"
+              keys={PANE_KEYS.reload}
+              disabled={blank}
+              onClick={() => act('reload')}
+            >
+              <ReloadIcon />
+            </ToolButton>
+          )}
+        </div>
+        <ProfileSwitch profile={profile} onChange={chooseProfile} />
+        <p className="bv-note">{profileNote(profile)}</p>
+        <AddressBar key={tabKey} commands={commands} tab={tab} placeholder="Type a web address" />
+        <ViewTabs profile={profile} tabs={tabs} />
+      </nav>
+      <main className="page bv-page" id="bv-page" aria-label={tab ? tabLabel(tab) : 'Browser'}>
+        <div className="bv-bar">
+          <ProfileBadge profile={profile} />
+          <PageHost url={tab?.url ?? ''} />
+          <span className="bv-title">{tab && tab.url !== '' ? tabLabel(tab) : ''}</span>
+          <ToolButton
+            label="Open developer tools (⌥⌘I)"
+            disabled={blank}
+            onClick={() => tab && sendViewCommand(profile, { command: 'devtools', tabId: tab.id })}
+          >
+            <DevtoolsIcon />
+          </ToolButton>
+          <ToolButton
+            label="Open in default browser"
+            disabled={outside === null}
+            onClick={() => outside && openInDefaultBrowser(outside)}
+          >
+            <ExternalLinkIcon />
+          </ToolButton>
+        </div>
+        <div className="bp-view bv-view" ref={viewRef}>
+          {blank && <StartPage profile={profile} tab={tab} />}
+          {!blank && snapshot && <img className="bp-snapshot" src={snapshot} alt="" />}
+        </div>
+      </main>
+    </div>
+  );
+}

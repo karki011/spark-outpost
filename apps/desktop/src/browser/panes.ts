@@ -12,9 +12,9 @@ import {
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
 import { CLIPBOARD_WRITE, pagePermissionAllowed, type InputMarks } from './clipboard-permission.ts';
-import { requestAllowed, type GuardFacts } from './request-guard.ts';
+import { BROWSER_PARTITION, requestAllowed, type GuardFacts } from './request-guard.ts';
 import type { SendsTo } from './selection-menu.ts';
-import { browserSession, devtoolsSession } from './sessions.ts';
+import { browserSession, devtoolsSession, type SessionGuards } from './sessions.ts';
 import { PaneTab } from './tab.ts';
 
 export interface PanesOptions {
@@ -29,6 +29,9 @@ export interface PanesOptions {
   found(tab: PaneTab, active: number, matches: number): void;
   log(line: string): void;
   idleMs?: number;
+  tabsMax?: number;
+  partition?(key: string): string;
+  guards?: SessionGuards;
 }
 
 export interface ChatHome {
@@ -145,18 +148,16 @@ export class BrowserPanes {
     home?: ChatHome,
   ): PaneTab | null {
     const pane = this.chat(chatId, home);
-    if (pane.tabs.length >= BROWSER_TABS_MAX) return null;
+    if (pane.tabs.length >= (this.options.tabsMax ?? BROWSER_TABS_MAX)) return null;
     const tab: PaneTab = new PaneTab(
       { id: randomUUID().slice(0, 8), chatId, ...init },
       {
         allowed: (url) => requestAllowed(url, this.guardFacts(pane.chatId)),
         session: () =>
-          browserSession({
-            blockedPorts: this.options.blockedPorts,
-            roots: (contents) => this.rootsOf(this.tabOfContents(contents)?.chatId ?? null),
-            log: this.options.log,
-            inputMarks: (contents) => this.inputMarks(contents),
-          }),
+          browserSession(
+            this.options.partition?.(pane.chatId) ?? BROWSER_PARTITION,
+            this.options.guards ?? this.ownGuards(),
+          ),
         changed: () => this.changed(pane),
         popup: (url, opener) => this.openPopup(pane, url, opener),
         viewCreated: (view) => this.attach(view, tab),
@@ -198,6 +199,19 @@ export class BrowserPanes {
       .load(url)
       .then(() => this.layout())
       .catch(() => undefined);
+  }
+
+  private ownGuards(): SessionGuards {
+    return {
+      blockedPorts: this.options.blockedPorts,
+      roots: (contents) => this.rootsOfContents(contents),
+      log: this.options.log,
+      inputMarks: (contents) => this.inputMarks(contents),
+    };
+  }
+
+  rootsOfContents(contents: WebContents | null): string[] {
+    return this.rootsOf(this.tabOfContents(contents)?.chatId ?? null);
   }
 
   tabOfContents(contents: WebContents | null): PaneTab | null {

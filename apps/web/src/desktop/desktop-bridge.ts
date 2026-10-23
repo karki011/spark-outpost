@@ -4,6 +4,8 @@ import type {
   BrowserPaneState,
   BrowserPick,
   BrowserPlacement,
+  BrowserProfile,
+  BrowserViewPlacement,
   BrowserSelectedText,
   DesktopHelpInfo,
   DiagnosticsExport,
@@ -69,6 +71,17 @@ export interface DesktopBrowser {
   onSnapshot(callback: (snapshot: BrowserSnapshot) => void): Unsubscribe;
   onPicked(callback: (pick: BrowserPick) => void): Unsubscribe;
   onSelectedText(callback: (selected: BrowserSelectedText) => void): Unsubscribe;
+  onShortcut(callback: (event: unknown) => void): Unsubscribe;
+  onFound(callback: (found: unknown) => void): Unsubscribe;
+}
+
+export interface DesktopBrowserView {
+  state(profile: BrowserProfile): Promise<unknown>;
+  place(placement: BrowserViewPlacement): Promise<unknown>;
+  command(profile: BrowserProfile, command: BrowserCommand): Promise<unknown>;
+  start(profile: BrowserProfile): Promise<unknown>;
+  onState(callback: (state: unknown) => void): Unsubscribe;
+  onSnapshot(callback: (snapshot: unknown) => void): Unsubscribe;
   onShortcut(callback: (event: unknown) => void): Unsubscribe;
   onFound(callback: (found: unknown) => void): Unsubscribe;
 }
@@ -181,6 +194,7 @@ export interface SparkDesktop {
     openFullDiskAccess(): Promise<void>;
   };
   browser?: DesktopBrowser;
+  browserView?: DesktopBrowserView;
   macControl?: DesktopMacControl;
   menu?: {
     onCommand(callback: (command: unknown) => void): Unsubscribe;
@@ -202,6 +216,10 @@ export function afterPaint(run: () => void): void {
 
 export function desktopBrowser(): DesktopBrowser | null {
   return sparkDesktop()?.browser ?? null;
+}
+
+export function desktopBrowserView(): DesktopBrowserView | null {
+  return sparkDesktop()?.browserView ?? null;
 }
 
 export function desktopMacControl(): DesktopMacControl | null {
