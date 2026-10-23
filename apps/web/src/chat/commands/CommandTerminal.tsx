@@ -1,4 +1,4 @@
-import { memo, use, useEffect, useId, useRef, useState } from 'react';
+import { memo, use, useId, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { plainOutput } from '@spark-outpost/contracts';
 import { openCommandTab } from '../../terminal/dock/shell-store.ts';
@@ -10,10 +10,10 @@ import { commandOutputKey, fetchCommandOutput } from './command-api.ts';
 import { CommandDockContext } from './command-dock.ts';
 import { commandOutcome, type CommandView } from './command-model.ts';
 import { CommandScreen } from './CommandScreen.tsx';
-import { Elapsed, stateText, StatusMark } from './CommandStatus.tsx';
+import { CommandWord } from './CommandStatus.tsx';
+import { RowIcon } from '../rows/RowIcon.tsx';
 import './command-terminal.css';
 
-const COLLAPSE_AFTER_MS = 1500;
 const KB = 1024;
 
 function sizeNote(command: CommandView, shown: number): string | null {
@@ -22,32 +22,15 @@ function sizeNote(command: CommandView, shown: number): string | null {
   return `Showing the last ${kb(shown)} of ${kb(command.outputChars)}.`;
 }
 
-function useOpenState(command: CommandView, waiting: boolean) {
-  const [wasRunning] = useState(command.status === 'running');
-  const [settled, setSettled] = useState(false);
+function useOpenState(command: CommandView) {
   const [choice, setChoice] = useState<boolean | null>(null);
-  const touched = useRef(false);
-  const lingers = command.status === 'completed' && wasRunning && command.live && !settled;
-
-  useEffect(() => {
-    if (!lingers) return;
-    const timer = setTimeout(() => {
-      if (!touched.current) setSettled(true);
-    }, COLLAPSE_AFTER_MS);
-    return () => clearTimeout(timer);
-  }, [lingers]);
-
-  const held = waiting && command.status === 'running';
-  const open = choice ?? (command.status === 'completed' ? lingers : !held);
+  const open = choice ?? (command.status === 'failed' || command.status === 'interrupted');
   return {
     open,
     touch: () => {
-      touched.current = true;
+      setChoice((current) => current ?? open);
     },
-    toggle: () => {
-      touched.current = true;
-      setChoice(!open);
-    },
+    toggle: () => setChoice(!open),
   };
 }
 
@@ -78,7 +61,7 @@ export const CommandTerminal = memo(function CommandTerminal({
 }: CommandTerminalProps) {
   const bodyId = useId();
   const dockChatId = use(CommandDockContext);
-  const { open, touch, toggle } = useOpenState(command, waiting);
+  const { open, touch, toggle } = useOpenState(command);
   const [tall, setTall] = useState(false);
   const { state: copyState, copy } = useCopyFeedback();
   const queryClient = useQueryClient();
@@ -108,28 +91,22 @@ export const CommandTerminal = memo(function CommandTerminal({
       <div className="run-cmd-head">
         <button
           type="button"
-          className="run-cmd-toggle"
+          className="run-cmd-toggle trow"
           aria-expanded={open}
           aria-controls={bodyId}
-          title={command.command}
+          title={command.cwd ? `${command.command}\n${command.cwd}` : command.command}
           onClick={toggle}
         >
-          <ChevronIcon />
-          <StatusMark command={command} waiting={waiting} />
-          <code className={tall && open ? 'run-cmd-line full' : 'run-cmd-line'}>
-            {command.command}
-          </code>
-          {command.cwd && <span className="run-cmd-cwd">{command.cwd}</span>}
-          <span className="run-cmd-state">
-            {running ? (
-              waiting ? (
-                'waiting for you'
-              ) : (
-                <Elapsed command={command} />
-              )
-            ) : (
-              stateText(command)
-            )}
+          <RowIcon name="run" />
+          <span className="trow-text">
+            <b>{running ? 'Running' : 'Ran'}</b>
+            <code className={tall && open ? 'run-cmd-line full' : 'run-cmd-line'}>
+              {command.command}
+            </code>
+          </span>
+          <span className="trow-end run-cmd-state">
+            <CommandWord command={command} waiting={waiting} />
+            <ChevronIcon />
           </span>
         </button>
         {open && !awaitsEnd && (
@@ -158,7 +135,7 @@ export const CommandTerminal = memo(function CommandTerminal({
             </svg>
           </button>
         )}
-        {dockChatId && (
+        {open && dockChatId && (
           <button
             type="button"
             className="icon-btn run-cmd-dock"
@@ -172,16 +149,18 @@ export const CommandTerminal = memo(function CommandTerminal({
             <TerminalIcon />
           </button>
         )}
-        <button
-          type="button"
-          className="icon-btn run-cmd-copy"
-          aria-label={copied ? 'Copied' : 'Copy output'}
-          title={copied ? 'Copied' : 'Copy output'}
-          disabled={awaitsEnd}
-          onClick={copyOutput}
-        >
-          {copied ? <CheckIcon className="run-cmd-ok" /> : <CopyIcon />}
-        </button>
+        {open && (
+          <button
+            type="button"
+            className="icon-btn run-cmd-copy"
+            aria-label={copied ? 'Copied' : 'Copy output'}
+            title={copied ? 'Copied' : 'Copy output'}
+            disabled={awaitsEnd}
+            onClick={copyOutput}
+          >
+            {copied ? <CheckIcon className="run-cmd-ok" /> : <CopyIcon />}
+          </button>
+        )}
       </div>
       <span className="sr-only" role="status">
         {running ? `Running ${command.command.slice(0, 120)}` : commandOutcome(command)}
@@ -204,6 +183,7 @@ export const CommandTerminal = memo(function CommandTerminal({
             appended={command.output === null ? text.length : command.appended}
             epoch={command.epoch}
             tall={tall}
+            fit={!running}
             onTouched={touch}
           />
         )}

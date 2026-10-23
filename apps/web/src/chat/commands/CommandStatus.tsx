@@ -11,6 +11,35 @@ export function Elapsed({ command }: { command: CommandView }) {
   return <>{shownDuration(commandSeconds(command, now))}</>;
 }
 
+export function CommandWord({ command, waiting }: { command: CommandView; waiting: boolean }) {
+  if (command.status === 'running') {
+    if (waiting) return <span className="trow-word">waiting for you</span>;
+    return (
+      <span className="trow-word">
+        <span className="spin trow-spin" aria-hidden="true" />
+        <Elapsed command={command} />
+      </span>
+    );
+  }
+  if (command.status === 'interrupted') return <span className="trow-word">interrupted</span>;
+  const ended = Date.parse(command.finishedAt ?? command.startedAt);
+  const took = shownDuration(commandSeconds(command, ended));
+  if (command.status === 'failed') {
+    const code = command.exitCode === null ? '' : ` · exit ${command.exitCode}`;
+    return (
+      <span className="trow-word bad">
+        <XIcon />
+        failed{code} · {took}
+      </span>
+    );
+  }
+  return (
+    <span className="trow-word ok">
+      <CheckIcon className="ok" />
+      passed · {took}
+    </span>
+  );
+}
 export function StatusMark({ command, waiting }: { command: CommandView; waiting: boolean }) {
   if (command.status === 'running') {
     return <span className={waiting ? 'run-cmd-wait' : 'spin'} aria-hidden="true" />;

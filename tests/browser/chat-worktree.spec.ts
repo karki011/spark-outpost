@@ -39,7 +39,7 @@ async function sendAndKeep(page: Page) {
   await input.fill('Add a line to the notes #edit #plan');
   await input.press('Enter');
   await page
-    .getByRole('group', { name: /Change a file\?/ })
+    .getByRole('group', { name: /^Edit .+\?$/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await expect(page.getByRole('region', { name: /^Kept · / })).toBeVisible({ timeout: 20_000 });

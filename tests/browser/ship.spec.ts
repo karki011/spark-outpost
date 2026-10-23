@@ -45,7 +45,7 @@ async function keptChange(page: Page, root: string) {
   await input.fill('Add a line to the notes #edit #plan');
   await input.press('Enter');
   await page
-    .getByRole('group', { name: /Change a file\?/ })
+    .getByRole('group', { name: /^Edit .+\?$/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await expect(page.getByRole('region', { name: /^Kept · / })).toBeVisible({ timeout: 20_000 });
@@ -190,7 +190,7 @@ test('Full auto runs to a PR: the reply and the result line show the PR link', a
   await input.press('Enter');
 
   await turnDone(page, 30_000);
-  await expect(page.getByRole('group', { name: /Change a file\?/ })).toHaveCount(0);
+  await expect(page.getByRole('group', { name: /^Edit .+\?$/ })).toHaveCount(0);
   await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toHaveCount(0);
   const kept = page.getByRole('region', { name: /^Kept · / });
   await expect(kept.locator('.result-note')).toHaveCount(0);

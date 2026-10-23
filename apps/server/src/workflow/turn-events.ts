@@ -1,6 +1,7 @@
 import type { RunEvent, StepMark } from '@spark-outpost/contracts';
 import { THINKING_STEP } from '../agents/acp/session-updates.ts';
 import { storableText } from '../audit/redact.ts';
+import { shotAnchor } from '../persistence/browser-screenshots.ts';
 import {
   createRedactionFilter,
   redactSecrets,
@@ -16,6 +17,13 @@ import { toolArguments, toolResult } from './tool-call-text.ts';
 export interface TurnEventsOptions {
   append: (event: RunEvent) => Promise<unknown>;
   secretValues: readonly string[];
+  replySoFar?: () => ReplySoFar;
+  now?: () => number;
+}
+
+interface ReplySoFar {
+  shown: string;
+  held: number;
 }
 
 export interface TurnEvents {
@@ -26,6 +34,12 @@ export interface TurnEvents {
 interface OpenStep {
   calls: number;
   mark: StepMark;
+}
+
+function anchorMark(reply: ReplySoFar | undefined): StepMark {
+  if (!reply) return {};
+  const { textOffset, textBefore, textHeld } = shotAnchor(reply.shown, reply.held);
+  return { textOffset, textBefore, textHeld };
 }
 
 interface Thought {
@@ -39,7 +53,12 @@ const stepKey = (name: string, subagent: string | undefined) =>
 const owned = (event: RunEvent, subagent: string | undefined): RunEvent =>
   (subagent ? attributed(event, subagent) : null) ?? event;
 
-export function createTurnEvents({ append, secretValues }: TurnEventsOptions): TurnEvents {
+export function createTurnEvents({
+  append,
+  secretValues,
+  replySoFar,
+  now = Date.now,
+}: TurnEventsOptions): TurnEvents {
   const subagents = createSubagentProgress({
     storable: (text) => storableText(redactSecrets(text, secretValues)),
   });
@@ -79,7 +98,8 @@ export function createTurnEvents({ append, secretValues }: TurnEventsOptions): T
     announced.delete(name);
     const mark: StepMark = { ...(toolCallId ? { toolCallId } : {}), ...(waits ? { waits } : {}) };
     openSteps.set(key, { calls: 1, mark });
-    await append(owned(runEvents.stepStarted(name, mark), subagent));
+    const anchor = subagent ? {} : anchorMark(replySoFar?.());
+    await append(owned(runEvents.stepStarted(name, { ...mark, ...anchor }, now()), subagent));
   };
 
   const finishStep = async (name: string, subagent?: string) => {
@@ -92,7 +112,7 @@ export function createTurnEvents({ append, secretValues }: TurnEventsOptions): T
     }
     if (!open) return;
     openSteps.delete(key);
-    await append(owned(runEvents.stepFinished(name, open.mark), subagent));
+    await append(owned(runEvents.stepFinished(name, open.mark, now()), subagent));
   };
 
   const startCall = async (id: string, name: string, subagent?: string) => {

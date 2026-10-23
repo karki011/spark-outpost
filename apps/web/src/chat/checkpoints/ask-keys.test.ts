@@ -12,10 +12,10 @@ const press = (key: string, change: Partial<AskKey> = {}): AskKey => ({
 });
 
 describe('askKeyAction', () => {
-  it('continues on Enter from an option or a question answer, and sends from the own-words box', () => {
+  it('continues on Enter from an option, a radio or the answer field', () => {
     expect(askKeyAction(press('Enter'))).toEqual({ kind: 'onward' });
+    expect(askKeyAction(press('Enter', { target: 'radio' }))).toEqual({ kind: 'onward' });
     expect(askKeyAction(press('Enter', { target: 'answer' }))).toEqual({ kind: 'onward' });
-    expect(askKeyAction(press('Enter', { target: 'own-words' }))).toEqual({ kind: 'send' });
   });
 
   it('leaves Enter to the button it is pressed on, and Shift+Enter to the text field', () => {
@@ -42,12 +42,17 @@ describe('askKeyAction', () => {
       by: -1,
     });
     expect(askKeyAction(press('ArrowDown', { target: 'answer', caretAtStart: true }))).toBeNull();
-    expect(askKeyAction(press('ArrowUp', { target: 'own-words', caretAtStart: true }))).toBeNull();
+  });
+
+  it('leaves the arrows to the browser on radios, which move and choose natively', () => {
+    expect(askKeyAction(press('ArrowDown', { target: 'radio' }))).toBeNull();
+    expect(askKeyAction(press('ArrowUp', { target: 'radio' }))).toBeNull();
   });
 
   it('picks by number outside text fields only', () => {
     expect(askKeyAction(press('2'))).toEqual({ kind: 'pick', index: 1 });
     expect(askKeyAction(press('2', { target: 'other' }))).toEqual({ kind: 'pick', index: 1 });
+    expect(askKeyAction(press('3', { target: 'radio' }))).toEqual({ kind: 'pick', index: 2 });
     expect(askKeyAction(press('2', { target: 'answer' }))).toBeNull();
     expect(askKeyAction(press('2', { modifier: true }))).toBeNull();
     expect(askKeyAction(press('0'))).toBeNull();

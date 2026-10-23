@@ -252,7 +252,7 @@ test('a finished turn says whether the change was checked in the browser', async
   await input.fill('Make the Save button wider #edit #build');
   await input.press('Enter');
   await page
-    .getByRole('group', { name: /Change a file\?/ })
+    .getByRole('group', { name: /^Edit .+\?$/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await expect(turns.nth(1).locator('.mood')).toHaveText('done', { timeout: 30_000 });

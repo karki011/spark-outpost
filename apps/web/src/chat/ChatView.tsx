@@ -68,6 +68,7 @@ import { useSparkPause } from '../app/pause/use-spark-pause.ts';
 import { useChatQueue } from './queue/use-chat-queue.ts';
 import { activeRun, latestReplyId } from './turns.ts';
 import { useStop } from './use-stop.ts';
+import { useEscapeStop } from './use-escape-stop.ts';
 import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
 import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
@@ -135,6 +136,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   });
 
   const running = activeRun(detail.data);
+  useEscapeStop(running !== null, stop.stop);
   const waitingOn = running ? (detail.data?.conversation.latestRun?.waitingOn ?? 0) : 0;
   usePreviewDockTab(conversationId);
   const queue = useChatQueue(conversationId, detail.data?.queue);

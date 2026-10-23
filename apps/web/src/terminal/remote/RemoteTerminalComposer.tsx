@@ -52,7 +52,6 @@ export function RemoteTerminalComposer({
           onSendAnyway={() => void send(lastNow.current)}
         />
       }
-      context={null}
       bar={
         <SendButton
           busy={working}

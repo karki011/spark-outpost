@@ -29,9 +29,12 @@ const edit = (paths: string[]): Approval => ({
 
 describe('askReason', () => {
   it('names the sub-agent that asked', () => {
-    const asked: Approval = { ...base, payload: { ...base.payload, subagent: 'Explore' } };
+    const asked: Approval = {
+      ...base,
+      payload: { ...base.payload, subagent: 'Explore', agentReason: 'to create the file' },
+    };
     expect(askReason(asked, 'Claude')).toBe(
-      "Claude's sub-agent Explore wants to run `touch notes.txt`.",
+      "Claude's sub-agent Explore asks because: to create the file",
     );
     expect(askerName(asked, 'Claude')).toBe("Claude's sub-agent Explore");
     expect(askerName(base, 'Claude')).toBe('Claude');
@@ -62,10 +65,10 @@ describe('askReason', () => {
     expect(askReason(sandbox, 'Codex')).toContain("couldn't run this inside its sandbox");
   });
 
-  it('says what the tool call does when the agent gives no reason', () => {
-    expect(askReason(base, 'Claude')).toBe('Claude wants to run `touch notes.txt`.');
-    expect(askReason(edit(['src/a.ts', 'src/b.ts']), 'Codex')).toBe('Codex wants to edit 2 files.');
-    expect(askReason(edit(['src/a.ts']), 'Codex')).toBe('Codex wants to edit `a.ts`.');
+  it('adds no line when the agent gives no reason, since the card title says what it does', () => {
+    expect(askReason(base, 'Claude')).toBeNull();
+    expect(askReason(edit(['src/a.ts', 'src/b.ts']), 'Codex')).toBeNull();
+    expect(askReason(edit(['src/a.ts']), 'Codex')).toBeNull();
   });
 
   it('leaves cards Spark explains itself alone', () => {

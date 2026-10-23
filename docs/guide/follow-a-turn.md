@@ -10,13 +10,13 @@ You'll follow, stop and queue a turn. About 2 minutes.
 
 ## See what's happening
 
-1. Read the header, like **Reading api.ts · 3 steps**.
-2. Select the step count, then **Thinking**.
-3. The agent's to-do ticks off, then folds.
-4. **Show work panel** has the to-do, files and cost; **Agent TV** is under **…**.
+1. Each tool call is a row, like **Read** `api.ts`; runs of reads fold into **Explored 2 files, 1 search**.
+2. Select **Thought for 4s** to read the thinking. A failed command opens its output.
+3. The agent's to-do ticks off, then folds to **To-do 3 of 3 done**.
+4. Hover a reply for its model, time, cost, **Copy** and ratings. **Show work panel** has the to-do, files and cost; **Agent TV** is under **…**.
 5. Sub-agents share one line; **View** shows a card each.
 
-When it needs you, select **Waiting for you** or press **⌘⇧Y**.
+A card waits at the end of the turn. Scrolled away? Select **Waiting for you** or press **⌘⇧Y**.
 
 **Open in terminal** shows failed output in a [dock tab](terminals.md#watch-an-agents-command).
 
@@ -54,7 +54,7 @@ Other chats never wait; each starts when you send.
 
 | Under a reply                                  | Use it to                                                   |
 | ---------------------------------------------- | ----------------------------------------------------------- |
-| **Good result** / **Bad result**               | Rate the reply locally.                                     |
+| **Good result** / **Bad result** (on hover)    | Rate the reply locally.                                     |
 | Selected text                                  | **Add to chat**, **Ask about this**, **Comment**, **Copy**. |
 | `/fresh`, or **Start fresh** in the **…** menu | Restart without the old context.                            |
 | Ticks left of the thread                       | Jump to a message.                                          |

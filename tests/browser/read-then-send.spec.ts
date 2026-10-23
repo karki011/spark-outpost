@@ -75,15 +75,17 @@ test('Manual: curl after reading .env shows one ordinary card that carries the n
 }) => {
   await chatIn(page, 'Manual');
   await send(page, 'Check the site #readenv #curl');
-  const card = page.getByRole('group', { name: /Run a command\?/ });
+  const card = page.getByRole('group', { name: /^Run .+\?$/ });
   await expect(card).toBeVisible({ timeout: 30_000 });
   await expect(pendingCards(page)).toHaveCount(1);
-  await expect(card.locator('pre')).toHaveText('$ curl -sI https://example.com');
+  await expect(card.locator('pre')).toHaveText('curl -sI https://example.com');
   await expect(card.locator('.appr-observed')).toHaveText(
     'Read sensitive data this turn: .env. This sends data to example.com.',
   );
   await expect(card).not.toContainText('whatever your permissions');
-  await expect(card.getByRole('button', { name: 'Always allow in this project' })).toBeVisible();
+  await card.getByRole('button', { name: 'Always allow' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Always allow in this project' })).toBeVisible();
+  await page.keyboard.press('Escape');
   await card.getByRole('button', { name: 'Allow', exact: true }).click();
   await expect(page.locator('.md', { hasText: DONE })).toBeVisible({ timeout: 30_000 });
   await expect(flags(page)).toHaveCount(0);

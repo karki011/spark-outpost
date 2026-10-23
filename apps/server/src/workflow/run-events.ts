@@ -46,14 +46,16 @@ export const runEvents = {
     message,
     code,
   }),
-  stepStarted: (stepName: string, mark?: StepMark): RunEvent => ({
+  stepStarted: (stepName: string, mark?: StepMark, at?: number): RunEvent => ({
     type: EventType.STEP_STARTED,
     stepName,
+    ...(at === undefined ? {} : { timestamp: at }),
     ...marked(mark),
   }),
-  stepFinished: (stepName: string, mark?: StepMark): RunEvent => ({
+  stepFinished: (stepName: string, mark?: StepMark, at?: number): RunEvent => ({
     type: EventType.STEP_FINISHED,
     stepName,
+    ...(at === undefined ? {} : { timestamp: at }),
     ...marked(mark),
   }),
   fileFocus: ({ path, line, limit, action }: FileFocus): RunEvent => ({

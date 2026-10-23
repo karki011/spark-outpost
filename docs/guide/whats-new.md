@@ -12,6 +12,7 @@ What changed recently, newest first.
 
 | What changed                                                                                                                                 | What to do                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Agents ask with a question card; cards ask in their title. ⏎ allows, Esc denies.                                                             | See [Cards](cards.md#approval-cards).                                    |
 | The agent's to-do ticks off in the turn; **To-do** replaces **Tasks**.                                                                       | See [Follow a turn](follow-a-turn.md#see-whats-happening).               |
 | Claude agents can sleep: **Sleeping until 10:48**; the turn then picks up.                                                                   | See [Background work](follow-a-turn.md#background-work).                 |
 | An outpost no longer shows the last chat's Browser pane on its left.                                                                         | See [Outposts](outposts.md).                                             |
@@ -19,7 +20,6 @@ What changed recently, newest first.
 | **Add folder…** ends every project picker.                                                                                                   | See [Link a project](start-a-chat.md#link-a-project).                    |
 | Agents are signed in wherever you are in the Browser pane. Sign in again once.                                                               | See [Use the browser](use-the-browser.md#let-the-agent-look-and-browse). |
 | Meeting lines: on-time countdowns, wrap-ups name the chat, joined meetings drop. Card at start; **Alert at** sets earlier.                   | See [Use it](calendar.md#use-it).                                        |
-| Agents ask with a question card.                                                                                                             | See [Cards](cards.md#approval-cards).                                    |
 | One shared inbox, cleared everywhere; answer or set aside in place; flags never count. Meeting **Dismiss** sticks; **Refresh now** on Today. | See [Spark Island](desktop-companion.md#open-it).                        |
 | Ask Spark has a chat’s tools. **Let agents read my calendar** is now on; had it off? Turn it off again.                                      | See [Ask Spark](companion-quick-chat.md#ask-spark).                      |
 | Browser: copy buttons, keys, find, developer tools, network log, SSO handoff.                                                                | See [Keys](keyboard-shortcuts.md#browser-pane-mac-app).                  |

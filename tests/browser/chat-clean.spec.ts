@@ -72,7 +72,8 @@ async function shots(page: Page, name: string) {
   await shoot(page, SHOTS, name, page.locator('.main'));
 }
 
-const head = (page: Page) => page.locator('.msg.ai .ai-head').last();
+const mood = (page: Page) => page.locator('.msg.ai .mood').last();
+const rows = (page: Page) => page.locator('.msg.ai .trows').last().locator('.trow');
 const status = (page: Page) => page.locator('.cstatus .cs-wrap');
 
 test.beforeEach(async ({ page }) => {
@@ -86,33 +87,25 @@ test('a running turn has one status, with steps in plain words', async ({ page }
   await step(runId, 'mcp__spark__spark_pull_requests', false);
   await openChats(page);
 
-  await expect(head(page).locator('.mood')).toHaveText('working');
-  const toggle = head(page).locator('.steps-head');
-  await expect(toggle).toHaveText('Checking pull requests · 4 steps');
-  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await expect(page.locator('.steps li').first()).toBeHidden();
-  const box = await page.locator('.col').boundingBox();
-  await toggle.click();
-  await expect(toggle).toHaveText('4 steps');
-  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  expect((await page.locator('.col').boundingBox())?.x).toBe(box?.x);
-  await expect(page.locator('.steps li')).toHaveText([
+  await expect(mood(page)).toHaveText('working');
+  await expect(rows(page)).toHaveText([
     'Using Opus 5.5 · medium effort',
     'Looking at projects',
     'Reading the project map',
     'Checking pull requests',
   ]);
+  await expect(rows(page).last().getByRole('img', { name: 'In progress' })).toBeVisible();
+  await expect(page.locator('.msg.ai .ai-head')).toHaveCount(0);
   await expect(page.locator('.thread')).not.toContainText('mcp__');
   await expect(page.locator('.thread .dots')).toHaveCount(0);
+  const working = page.locator('.turn-working');
+  await expect(working).toContainText('Working');
+  await expect(working).toContainText('Esc to stop');
   await expect(status(page)).toHaveCount(0);
   await expect(page.locator('.cstatus').getByRole('status')).toHaveText(
     'Claude is working: Checking pull requests',
   );
-  await expect(page.getByText(/^Working$/)).toHaveCount(0);
   await shots(page, 'running');
-
-  await toggle.click();
-  await expect(page.locator('.steps li').first()).toBeHidden();
 });
 
 test('a finished answer keeps one quiet meta row and no plan or Jev lines', async ({ page }) => {
@@ -132,13 +125,16 @@ test('a finished answer keeps one quiet meta row and no plan or Jev lines', asyn
   await page.setViewportSize({ width: 2000, height: 1100 });
   await openChats(page);
 
-  await expect(head(page).locator('.mood')).toHaveText('done');
-  await expect(head(page).getByRole('button', { name: 'worked for 19s' })).toBeVisible();
+  await expect(mood(page)).toHaveText('done');
+  await expect(page.locator('.msg.ai .ai-head')).toHaveCount(0);
+  await expect(page.locator('.turn-meta')).toContainText('Opus 5.5 · 19s');
   await expect(page.getByRole('button', { name: 'Save as agreed plan' })).toHaveCount(0);
   await expect(page.getByText(/^Jev:/)).toHaveCount(0);
   await expect(page.locator('.todo-card, .todo-line')).toHaveCount(0);
-  await expect(page.locator('.turn-foot .run-usage')).toContainText('61');
-  await expect(page.locator('.ctx-unlinked')).toHaveText('Pick a project to work in your code.');
+  await expect(page.locator('.turn-meta .run-usage')).toContainText('61');
+  await expect(
+    page.locator('.comp-bar').getByRole('button', { name: 'Choose project' }),
+  ).toBeVisible();
 
   const column = (await page.locator('.col').boundingBox())!;
   const composer = (await page.locator('.composer').boundingBox())!;
@@ -165,7 +161,7 @@ test('Agent TV is there for a plain answer and shows the agent that answered', a
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('What is a worktree?');
   await input.press('Enter');
-  await expect(head(page).locator('.mood')).toHaveText('done', { timeout: 20_000 });
+  await expect(mood(page)).toHaveText('done', { timeout: 20_000 });
   await toggleHeaderPane(page, 'Agent TV');
   const tv = page.getByRole('dialog', { name: 'Agent TV' });
   await expect(tv).toBeVisible();

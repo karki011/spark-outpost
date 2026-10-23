@@ -56,7 +56,7 @@ async function settled(page: Page) {
 async function waitingAgent(page: Page) {
   await projectChat(page, repo, 'Ask before edits');
   await send(page, `${BUILD_REQUEST} #build`);
-  const edit = card(page, /Change a file\?/);
+  const edit = card(page, /^Edit .+\?$/);
   await expect(edit).toBeVisible({ timeout: 30_000 });
   return edit;
 }

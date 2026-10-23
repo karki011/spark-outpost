@@ -185,3 +185,17 @@ const SNAKE_NAME = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$/;
 function snakeStep(title: string): string {
   return SNAKE_NAME.test(title) ? `Using ${humanizeToolName(title)}` : title;
 }
+
+export const WRITE_UP_STEP = 'Writing up results';
+
+const PLACE_NOTE = /^Working on \S+ in (?:this chat's worktree|your checkout)\./;
+
+export function placeNoteText(branch: string, inPlace: boolean): string {
+  return inPlace
+    ? `Working on ${branch} in your checkout.`
+    : `Working on ${branch} in this chat's worktree.`;
+}
+
+export function isSparkNote(name: string): boolean {
+  return name === WRITE_UP_STEP || PLACE_NOTE.test(name);
+}

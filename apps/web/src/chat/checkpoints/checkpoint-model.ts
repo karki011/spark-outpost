@@ -95,6 +95,24 @@ export function togglePick(
   return { ...answer, picks };
 }
 
+export function choosePick(pick: string): QuestionAnswer {
+  return { picks: [pick], text: '' };
+}
+
+export function typeAnswer(
+  answer: QuestionAnswer,
+  text: string,
+  question: CheckpointQuestion,
+): QuestionAnswer {
+  if (question.pick === 'one' && text.trim()) return { picks: [], text };
+  return { ...answer, text };
+}
+
+export function firstAnswer(question: CheckpointQuestion): QuestionAnswer {
+  if (question.pick !== 'one' || !question.default) return NO_ANSWER;
+  return choosePick(question.default);
+}
+
 export function answerText(question: CheckpointQuestion, answer: QuestionAnswer): string {
   const picked = quickPicks(question)
     .filter((pick) => answer.picks.includes(pick))

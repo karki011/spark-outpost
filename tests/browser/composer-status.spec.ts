@@ -93,17 +93,17 @@ test.describe('waiting for you', () => {
     expect(axe.violations).toEqual([]);
     await shots(page, 'waiting-approval');
 
-    const approval = card(page, /Run a command\?/);
+    const approval = card(page, /^Run .+\?$/);
     await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
     await expect(approval).not.toBeInViewport();
     await waiting(page).click();
     await expect(approval).toBeInViewport();
-    await expect(approval.getByRole('button', { name: 'Allow', exact: true })).toBeFocused();
+    await expect(approval.locator('.appr-h')).toBeFocused();
 
     await page.getByRole('textbox', { name: 'Message' }).focus();
     await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
     await page.keyboard.press('ControlOrMeta+Shift+Y');
-    await expect(approval.getByRole('button', { name: 'Allow', exact: true })).toBeFocused();
+    await expect(approval.locator('.appr-h')).toBeFocused();
     await expect(approval).toBeInViewport();
   });
 
@@ -127,8 +127,8 @@ test.describe('waiting for you', () => {
     ]);
     await shots(page, 'waiting-several');
     await list.getByRole('button', { name: 'approve edit monitors-table.tsx' }).click();
-    const change = card(page, /Change a file\?/);
-    await expect(change.getByRole('button', { name: 'Allow', exact: true })).toBeFocused();
+    const change = card(page, /^Edit .+\?$/);
+    await expect(change.locator('.appr-h')).toBeFocused();
     await expect(list).toHaveCount(0);
   });
 
@@ -142,9 +142,9 @@ test.describe('waiting for you', () => {
     expect(animation).toBe('none');
     await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
     await waiting(page).click();
-    const approval = card(page, /Run a command\?/);
+    const approval = card(page, /^Run .+\?$/);
     await expect(approval).toBeInViewport();
-    await expect(approval.getByRole('button', { name: 'Allow', exact: true })).toBeFocused();
+    await expect(approval.locator('.appr-h')).toBeFocused();
   });
 });
 

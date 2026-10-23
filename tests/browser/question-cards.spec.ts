@@ -33,27 +33,25 @@ test('answers an agent’s questions with keys and sends them back to the agent'
     timeout: 30_000,
   });
   await expect(questions.getByRole('button', { name: /Let the rules decide/ })).toHaveCount(0);
-  await expect(questions.getByRole('button', { name: 'Answer in your own words' })).toHaveCount(0);
+  await expect(questions.getByRole('textbox')).toHaveCount(1);
+  await expect(questions.getByRole('textbox')).toHaveAttribute('placeholder', 'Something else…');
 
-  const postgres = questions.getByRole('button', { name: /^Postgres/ });
-  const redis = questions.getByRole('button', { name: /^Redis/ });
+  const postgres = questions.getByRole('radio', { name: /^Postgres/ });
+  const redis = questions.getByRole('radio', { name: /^Redis/ });
   await postgres.focus();
   await page.keyboard.press('2');
-  await expect(redis).toHaveAttribute('aria-pressed', 'true');
+  await expect(redis).toBeChecked();
   await page.keyboard.press('1');
-  await expect(postgres).toHaveAttribute('aria-pressed', 'true');
-  await expect(redis).toHaveAttribute('aria-pressed', 'false');
+  await expect(postgres).toBeChecked();
+  await expect(redis).not.toBeChecked();
 
   await page.keyboard.press('Enter');
-  const lint = questions.getByRole('button', { name: /^Lint/ });
+  const lint = questions.getByRole('checkbox', { name: /^Lint/ });
   await expect(lint).toBeFocused();
   await page.keyboard.press('1');
   await page.keyboard.press('2');
-  await expect(lint).toHaveAttribute('aria-pressed', 'true');
-  await expect(questions.getByRole('button', { name: /^Types/ })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  await expect(lint).toBeChecked();
+  await expect(questions.getByRole('checkbox', { name: /^Types/ })).toBeChecked();
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown');

@@ -43,7 +43,7 @@ async function changeInChat(page: Page, root: string, text: string) {
   await input.fill(text);
   await input.press('Enter');
   await page
-    .getByRole('group', { name: /Change a file\?/ })
+    .getByRole('group', { name: /^Edit .+\?$/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await turnDone(page, 30_000);

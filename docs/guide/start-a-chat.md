@@ -13,7 +13,7 @@ You'll start a chat linked to your code. About 1 minute.
 1. Select **Chats** in the rail, then **New chat** (**⌘⇧O**).
 2. Leave **Chat** selected, type your message and press **Enter**.
 
-![A new chat with the message box and the context bar above it](images/chats-and-modes-new-chat-light.png)
+![A new chat with project and branch in the message box](images/chats-and-modes-new-chat-light.png)
 
 Or type in **Start a new chat** on **Home**.
 
@@ -23,12 +23,12 @@ Choose **Terminal** for native Claude Code or Codex: [Open a terminal](terminals
 
 Without one, the agent works in a private folder; files show under its reply.
 
-1. Above the message box, select **Choose project**.
+1. In the message box, select **Choose project**.
 2. Pick a folder under **Recent**, **Add folder…** to pick or make one, or **Clone a repository…**.
 
 Plain folders offer **Make it a git repository**.
 
-![The context bar with a linked project, its branch and agent setup](images/chats-and-modes-project-light.png)
+![The message box with a linked project, its branch and agent setup](images/chats-and-modes-project-light.png)
 
 To unlink, select **No project folder** in the menu.
 

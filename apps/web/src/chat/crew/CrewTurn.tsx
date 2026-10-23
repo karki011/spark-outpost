@@ -232,11 +232,11 @@ export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
         <ResultBlock
           approval={kept}
           variant={host.variant}
-          runId={run.id}
           runIds={crewRunIds}
           revertible={finished && run.mode === 'do' && run.snapshot ? run : null}
           taskId={run.mode === 'do' ? (changeTask?.id ?? null) : null}
           conversationId={detail.conversation.id}
+          onReview={null}
         />
       )}
       <div className="turn-foot">
@@ -252,7 +252,13 @@ export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
             runIds={crewRunIds}
           />
         )}
-        {finished && !kept && <TurnFeedback runId={run.id} variant="turn" />}
+        {finished && (
+          <TurnFeedback
+            key={host?.variant ?? 'turn'}
+            runId={run.id}
+            variant={kept ? (host?.variant ?? 'turn') : 'turn'}
+          />
+        )}
         {run.mode === 'do' && run.snapshot && finished && !kept && <RevertRun run={run} compact />}
       </div>
     </div>

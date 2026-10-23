@@ -115,4 +115,28 @@ describe('turn events', () => {
     expect(types(written).slice(-2)).toEqual(['REASONING_MESSAGE_END', 'REASONING_END']);
     expect(types(written).filter((type) => type === EventType.REASONING_END)).toHaveLength(1);
   });
+
+  it('marks where a step started in the reply and stamps its start and finish times', async () => {
+    const written: RunEvent[] = [];
+    let clock = 1_000;
+    const events = createTurnEvents({
+      append: async (event) => {
+        written.push(event);
+      },
+      secretValues: [],
+      replySoFar: () => ({ shown: 'First I look.', held: 2 }),
+      now: () => (clock += 500),
+    });
+    await events.observe({ kind: 'step_started', name: 'Read a.ts', tool: true });
+    await events.observe({ kind: 'step_finished', name: 'Read a.ts', tool: true });
+    const [started, finished] = written;
+    expect(stepMark(started!)).toEqual({
+      textOffset: 15,
+      textBefore: 'First I look.',
+      textHeld: 2,
+    });
+    expect(started!.timestamp).toBe(1_500);
+    expect(stepMark(finished!)).toEqual({});
+    expect(finished!.timestamp).toBe(2_000);
+  });
 });

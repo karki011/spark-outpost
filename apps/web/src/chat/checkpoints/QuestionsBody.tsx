@@ -1,31 +1,28 @@
 import './ask-card.css';
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
+import { Keys } from '../../ui/Keys.tsx';
 import type { Decide } from './card-parts.tsx';
 import { askKeyAction, type AskTarget } from './ask-keys.ts';
 import { ClarifyFoot, holdOnField } from './clarify-parts.tsx';
 import {
+  choosePick,
   clarifyAnswer,
+  firstAnswer,
   NO_ANSWER,
-  offers,
   quickPicks,
   togglePick,
   type CheckpointApproval,
   type QuestionAnswer,
 } from './checkpoint-model.ts';
-import { ASK_ROW, AnswerBox, QuestionLine, QuestionPanel } from './QuestionPanel.tsx';
+import { ASK_ROW, QuestionLine, QuestionPanel } from './QuestionPanel.tsx';
 
-const OWN_WORDS = 'data-ask-own';
-
-function focusOnMount(element: HTMLTextAreaElement | null) {
-  element?.focus();
-}
+const TARGETS: readonly AskTarget[] = ['option', 'radio', 'answer'];
 
 function askTarget(target: EventTarget): AskTarget {
   if (!(target instanceof HTMLElement)) return 'other';
-  if (target.hasAttribute(OWN_WORDS)) return 'own-words';
   const row = target.getAttribute(ASK_ROW);
-  return row === 'option' || row === 'answer' ? row : 'other';
+  return TARGETS.find((known) => known === row) ?? 'other';
 }
 
 function caretAtStart(target: EventTarget): boolean {
@@ -43,50 +40,8 @@ function moveFocus(form: HTMLFormElement, from: EventTarget, by: number): boolea
   return next !== undefined;
 }
 
-function OwnWords({
-  value,
-  onChange,
-  hold,
-}: {
-  value: string;
-  onChange(value: string): void;
-  hold(): void;
-}) {
-  const [open, setOpen] = useState(false);
-  const id = useId();
-  if (!open) {
-    return (
-      <button
-        type="button"
-        className="ask-line ask-own-words"
-        onClick={() => {
-          hold();
-          setOpen(true);
-        }}
-      >
-        Answer in your own words
-      </button>
-    );
-  }
-  return (
-    <>
-      <label htmlFor={id} className="sr-only">
-        Answer in your own words
-      </label>
-      <AnswerBox
-        ref={focusOnMount}
-        id={id}
-        className="ask-own-words"
-        placeholder="Answer in your own words"
-        value={value}
-        {...{ [OWN_WORDS]: '' }}
-        onChange={(event) => {
-          hold();
-          onChange(event.target.value);
-        }}
-      />
-    </>
-  );
+export function guessLabel(agent: string | null): string {
+  return `${agent ?? 'Spark'}’s best guess`;
 }
 
 export function QuestionsBody({
@@ -96,15 +51,15 @@ export function QuestionsBody({
   approval: CheckpointApproval;
   decide: Decide;
 }) {
-  const questions = approval.payload.checkpoint.questions;
-  const [answers, setAnswers] = useState<QuestionAnswer[]>(() => questions.map(() => NO_ANSWER));
+  const checkpoint = approval.payload.checkpoint;
+  const questions = checkpoint.questions;
+  const [answers, setAnswers] = useState<QuestionAnswer[]>(() => questions.map(firstAnswer));
   const [active, setActive] = useState(0);
-  const [ownWords, setOwnWords] = useState('');
   const form = useRef<HTMLFormElement>(null);
   const focusActive = useRef(false);
   const total = questions.length;
   const last = total - 1;
-  const reply = clarifyAnswer(questions, answers, ownWords);
+  const reply = clarifyAnswer(questions, answers, '');
 
   useEffect(() => {
     if (!focusActive.current) return;
@@ -132,8 +87,11 @@ export function QuestionsBody({
   const pick = (index: number) => {
     const question = questions[active];
     const picked = question && quickPicks(question)[index];
-    if (picked) answer(active, togglePick(answers[active] ?? NO_ANSWER, picked, question));
-    return picked !== undefined;
+    if (!picked) return false;
+    const current = answers[active] ?? NO_ANSWER;
+    const single = question.pick === 'one';
+    answer(active, single ? choosePick(picked) : togglePick(current, picked, question));
+    return true;
   };
   const keys = (event: KeyboardEvent<HTMLFormElement>) => {
     const action = askKeyAction({
@@ -179,6 +137,8 @@ export function QuestionsBody({
                   number={index + 1}
                   total={total}
                   answer={answers[index] ?? NO_ANSWER}
+                  guessLabel={guessLabel(checkpoint.agent)}
+                  titled={total === 1}
                   onAnswer={(value) => answer(index, value)}
                 />
               ) : (
@@ -194,12 +154,15 @@ export function QuestionsBody({
           ))}
         </ol>
       </div>
-      {offers(approval, CHECKPOINT_OPTION.answer) && !asked && (
-        <OwnWords value={ownWords} onChange={setOwnWords} hold={decide.hold} />
-      )}
       <div className="appr-acts ck-foot">
-        <button type="submit" className="btn primary sm" disabled={decide.busy || !canSend}>
+        <button
+          type="submit"
+          className="btn primary sm"
+          aria-keyshortcuts="Enter"
+          disabled={decide.busy || !canSend}
+        >
           Send
+          <Keys keys={['⏎']} className="key-hint" />
         </button>
         <ClarifyFoot approval={approval} decide={decide} />
       </div>

@@ -145,8 +145,8 @@ test('Approvals screenshots', async ({ page }) => {
   test.setTimeout(180_000);
   await seedDemo(page, repo, { claudeMode: 'default' });
   const cards: [string, string, RegExp, string][] = [
-    ['approvals-command', 'Run the tests #approve', /Run a command\?/, 'Allow'],
-    ['approvals-edit', 'Add today to the checklist #edit', /Change a file\?/, 'Deny'],
+    ['approvals-command', 'Run the tests #approve', /^Run .+\?$/, 'Allow'],
+    ['approvals-edit', 'Add today to the checklist #edit', /^Edit .+\?$/, 'Deny'],
     [
       'approvals-instructions',
       'Note the test command #instructions',

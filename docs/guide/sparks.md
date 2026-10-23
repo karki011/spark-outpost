@@ -23,11 +23,11 @@ A file replaces the typed text: Markdown or text, up to 256 KB, first 2,000 char
 
 ## Talk to it
 
-| To                         | Do                                                                              |
-| -------------------------- | ------------------------------------------------------------------------------- |
-| Open its home chat         | Select its card on **Home**.                                                    |
-| Start another chat with it | Select **Talk to…** in the bar above the message box, before the first message. |
-| See only its chats         | Search chats for `with:` and its name, such as `with:ada`.                      |
+| To                         | Do                                                                |
+| -------------------------- | ----------------------------------------------------------------- |
+| Open its home chat         | Select its card on **Home**.                                      |
+| Start another chat with it | Select **Talk to…** in the message box, before the first message. |
+| See only its chats         | Search chats for `with:` and its name, such as `with:ada`.        |
 
 A Spark sets a chat's starting defaults and adds its instructions, never changing approvals or protected paths.
 

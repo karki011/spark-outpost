@@ -10,7 +10,7 @@ const BOXED =
   '.head > *, .head-r > *, .ctxbar > *, .composer, .appr, .ai-head > *, .md pre, .cs-wrap';
 
 const thread = (page: Page) => page.locator('.thread');
-const waitingCard = (page: Page) => thread(page).getByRole('group', { name: /Change a file\?/ });
+const waitingCard = (page: Page) => thread(page).getByRole('group', { name: /^Edit .+\?$/ });
 const message = (page: Page) => page.getByRole('textbox', { name: 'Message' });
 const workPanel = (page: Page) => page.getByRole('complementary', { name: 'Work panel' });
 const rail = (page: Page) => page.getByRole('region', { name: 'Chat context' });

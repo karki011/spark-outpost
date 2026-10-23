@@ -10,7 +10,7 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 
 - **You see:** a chat that doesn't move.
 - **Why:** usually it waits for you or runs a long command.
-- **Fix:** read the line above the message box. **Waiting for you** jumps to the card; anything else is working.
+- **Fix:** read the end of the turn: a card waits there, or **Working** runs on. **⌘⇧Y** jumps to a card.
 - **Still stuck:** select **Stop**, then send a new message.
 
 ## A run stopped with the app
