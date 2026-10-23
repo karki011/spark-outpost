@@ -12,7 +12,7 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 
 | What changed                                                                                                                                                      | What to do                                                        |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Agents can't read, copy or change your browser profiles or history on disk, in any mode.                                                                          | See [Protected paths](protected-paths.md#what-is-always-refused). |
+| Spark refuses agents reading, copying or changing your browser profiles or history on disk.                                                                       | See [Protected paths](protected-paths.md#what-is-always-refused). |
 | **Browser** in the left bar: **Personal** tabs no agent can reach, **Work**, favorites, a ⌘T bar with history and web search; chat or **Ask Spark** about a page. | See [Browse on your own](browse-on-your-own.md).                  |
 | **ServiceNow**: connect it; records join Tickets; agents read and change them.                                                                                    | See [Connect](tickets-and-github.md#connect-a-ticket-tracker).    |
 | Chats idle 2 days, old ones too, move to **History** (**Archive inactive chats**). Empty projects leave **Projects**.                                             | See [Chat list](statuses-and-limits.md#chat-list).                |
