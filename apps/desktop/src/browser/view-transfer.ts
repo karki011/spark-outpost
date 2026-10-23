@@ -1,6 +1,5 @@
 import {
   BROWSER_TABS_MAX,
-  BROWSER_VIEW_TABS_MAX,
   classifyBrowserUrl,
   browserHandToChatSchema,
   browserToViewSchema,
@@ -11,6 +10,7 @@ import type { BrowserPanes } from './panes.ts';
 import type { BrowserViewHost } from './view-host.ts';
 
 const BLANK = 'about:blank';
+const IN_USE = 'This tab is in use. Try again when it is free.';
 
 export type TransferResult = { ok: true } | { ok: false; reason: string };
 
@@ -23,6 +23,7 @@ export async function handToChat(
   const tab = view.panes.tab(request.profile, request.tabId);
   const url = tab?.currentUrl() ?? BLANK;
   if (!tab || url === BLANK) return { ok: false, reason: 'Open a page first.' };
+  if (tab.handoff || tab.picking || tab.agentBusy > 0) return { ok: false, reason: IN_USE };
   if (chats.tabsOf(request.chatId).length >= BROWSER_TABS_MAX) {
     return { ok: false, reason: 'That chat has too many tabs. Close one there first.' };
   }
@@ -34,8 +35,13 @@ export async function handToChat(
   });
   if (!moved) return { ok: false, reason: 'That chat has too many tabs.' };
   chats.select(request.chatId, moved.id);
+  try {
+    await moved.load(url);
+  } catch {
+    chats.close(request.chatId, moved.id);
+    return { ok: false, reason: 'The page didn’t open in that chat, so the tab stayed here.' };
+  }
   if (request.profile === 'work') view.panes.close(request.profile, tab.id);
-  await moved.load(url);
   return { ok: true };
 }
 
@@ -48,17 +54,14 @@ export async function toView(
   const tab = chats.tab(request.chatId, request.tabId);
   const url = tab?.currentUrl() ?? BLANK;
   if (!tab || url === BLANK) return { ok: false, reason: 'Open a page first.' };
-  if (tab.handoff || tab.picking || tab.agentBusy > 0) {
-    return { ok: false, reason: 'This tab is in use. Try again when it is free.' };
-  }
+  if (tab.handoff || tab.picking || tab.agentBusy > 0) return { ok: false, reason: IN_USE };
   const kind = classifyBrowserUrl(url);
   if (kind !== 'local' && kind !== 'external') {
     return { ok: false, reason: 'Only web pages open in the Browser view.' };
   }
-  if (view.panes.tabsOf('work').length >= BROWSER_VIEW_TABS_MAX) {
+  if (!(await view.openTab('work', url))) {
     return { ok: false, reason: 'The Browser view has too many Work tabs. Close one first.' };
   }
   chats.closeByUser(request.chatId, tab.id);
-  await view.openTab('work', url);
   return { ok: true };
 }
