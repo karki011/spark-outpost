@@ -134,7 +134,7 @@ export function TicketBody({ view, loading, error, source }: TicketBodyProps) {
           </ul>
         </section>
       )}
-      {writable && <ServiceNowNotes ticket={ticket} />}
+      {writable && <ServiceNowNotes key={`${ticket.source}:${ticket.key}`} ticket={ticket} />}
     </>
   );
 }

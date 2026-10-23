@@ -129,7 +129,10 @@ function systemRows(fake: FakeServiceNow, table: string, url: URL): unknown[] | 
   if (table === 'sys_user_grmember') {
     const user = /^user=(.+)$/.exec(query)?.[1];
     return MEMBERSHIPS.filter(([member]) => member === user).map(([, group]) => ({
-      group: { link: `https://x/${group}`, value: group },
+      group:
+        url.searchParams.get('sysparm_exclude_reference_link') === 'true'
+          ? group
+          : { link: `https://x/${group}`, value: group },
     }));
   }
   if (table === 'sys_choice') {

@@ -88,6 +88,13 @@ test('the composer adds a work note at once and asks before a comment the caller
     { work_notes: 'Raised the idle timeout to 8 h.' },
     { comments: 'We found the cause.' },
   ]);
+
+  await composer.getByRole('radio', { name: 'Comment · caller sees it' }).click();
+  await composer.getByLabel('Comment the caller sees').fill('Draft for INC0010023 only.');
+  const other = await openRecord(page, 'INC0010027');
+  const otherComposer = other.getByRole('region', { name: 'Add a work note or comment' });
+  await expect(otherComposer.getByRole('radio', { name: 'Work note · internal' })).toBeChecked();
+  await expect(otherComposer.getByLabel('Work note')).toHaveValue('');
 });
 
 test('changes are read only and Start work opens the start dialog', async ({ page }) => {

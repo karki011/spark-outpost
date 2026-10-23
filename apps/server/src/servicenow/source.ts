@@ -47,7 +47,14 @@ import { isFinalState, serviceNowSettings, stateOf } from './states.ts';
 
 const PAGE_SIZE = 100;
 const groupsSchema = z.object({
-  result: z.array(z.object({ group: z.object({ value: z.string() }).nullable().catch(null) })),
+  result: z.array(
+    z.object({
+      group: z
+        .union([z.string(), z.object({ value: z.string() }).transform((group) => group.value)])
+        .nullable()
+        .catch(null),
+    }),
+  ),
 });
 const patchedSchema = z.object({ result: z.unknown() });
 
@@ -64,6 +71,20 @@ interface Located {
 }
 
 const located = new Map<string, ServiceNowTable>();
+
+const isDenied = (error: unknown) => error instanceof TicketApiError && error.status === 403;
+
+async function fromTables<T>(
+  wanted: readonly ServiceNowTable[],
+  read: (table: ServiceNowTable) => Promise<T[]>,
+): Promise<T[]> {
+  const settled = await Promise.allSettled(wanted.map(read));
+  const failed = settled.flatMap((entry) => (entry.status === 'rejected' ? [entry.reason] : []));
+  const fatal = failed.find((reason) => !isDenied(reason));
+  if (fatal !== undefined) throw fatal;
+  if (failed.length > 0 && failed.length === settled.length) throw failed[0];
+  return settled.flatMap((entry) => (entry.status === 'fulfilled' ? entry.value : []));
+}
 
 export function liveTables(types: ServiceNowTypeRows | null): ServiceNowTable[] {
   if (!types) return [];
@@ -149,11 +170,16 @@ export function serviceNowSource(
       {
         method: 'GET',
         path: '/api/now/table/sys_user_grmember',
-        query: { sysparm_query: groupsQuery(user), sysparm_fields: 'group', sysparm_limit: '100' },
+        query: {
+          sysparm_query: groupsQuery(user),
+          sysparm_fields: 'group',
+          sysparm_exclude_reference_link: 'true',
+          sysparm_limit: '100',
+        },
       },
       'reading your groups',
     );
-    return answer.result.flatMap((row) => (row.group ? [row.group.value] : []));
+    return answer.result.flatMap((row) => (row.group ? [row.group] : []));
   }
 
   const summary = (record: ServiceNowRecord, table: ServiceNowTable) =>
@@ -170,7 +196,10 @@ export function serviceNowSource(
     const order = [...new Set([known, ...tables].filter((table) => table !== null))];
     for (const table of order) {
       if (!tables.includes(table)) continue;
-      const [record] = await list(table, query, fields, 1);
+      const [record] = await list(table, query, fields, 1).catch((error: unknown) => {
+        if (isDenied(error) && order.length > 1) return [];
+        throw error;
+      });
       if (!record) continue;
       located.set(cacheKey(number), table);
       return { table, record };
@@ -235,16 +264,13 @@ export function serviceNowSource(
         status: filter.status,
       });
       const wanted = filter.project ? tables.filter((table) => table === filter.project) : tables;
-      const lists = await Promise.all(
-        wanted.map(async (table) =>
-          (await list(table, query, RECORD_FIELDS, PAGE_SIZE)).map((record) =>
-            summary(record, table),
-          ),
+      const tickets = await fromTables(wanted, async (table) =>
+        (await list(table, query, RECORD_FIELDS, PAGE_SIZE)).map((record) =>
+          summary(record, table),
         ),
       );
       const since = filter.doneWithinDays ? daysAgo(filter.doneWithinDays).toISOString() : null;
-      return lists
-        .flat()
+      return tickets
         .filter((ticket) => matchesFilter(ticket, filter))
         .filter((ticket) => !since || (ticket.doneAt ?? ticket.updatedAt) >= since);
     },
@@ -257,15 +283,12 @@ export function serviceNowSource(
         status: filter.status,
       });
       const wanted = filter.project ? tables.filter((table) => table === filter.project) : tables;
-      const lists = await Promise.all(
-        wanted.map(async (table) =>
-          (await list(table, query, RECORD_FIELDS, SEARCH_PAGE_SIZE)).map((record) =>
-            summary(record, table),
-          ),
+      const tickets = await fromTables(wanted, async (table) =>
+        (await list(table, query, RECORD_FIELDS, SEARCH_PAGE_SIZE)).map((record) =>
+          summary(record, table),
         ),
       );
-      return lists
-        .flat()
+      return tickets
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
         .slice(0, SEARCH_PAGE_SIZE);
     },

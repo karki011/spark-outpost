@@ -71,6 +71,16 @@ describe('ServiceNow tickets', () => {
     expect(keysOf(mine.tickets)).not.toContain('SCTASK0010051');
   });
 
+  it('keeps the inbox when one of the request tables is denied', async () => {
+    await connect();
+    stubs.servicenow.denied.add('sc_task');
+    const inbox = ticketInboxSchema.parse((await get('/api/tickets/inbox').expect(200)).body);
+    expect(inbox.errors).toEqual([]);
+    expect(keysOf(inbox.tickets)).toContain('INC0010023');
+    expect(keysOf(inbox.tickets)).not.toContain('SCTASK0010051');
+    await get('/api/tickets/servicenow/INC0010027').expect(200);
+  });
+
   it('leaves a type out of the inbox when its switch is off', async () => {
     await connect();
     await send('patch', '/api/tickets/connections/servicenow', {
