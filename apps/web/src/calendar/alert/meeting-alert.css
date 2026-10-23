@@ -171,7 +171,7 @@
 .ma-hint {
   margin: 12px 0 0;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .ma-root[data-leaving] .ma-rig {

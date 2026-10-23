@@ -1,15 +1,39 @@
 import { describe, expect, it } from 'vitest';
-import { aboutVersion, appMenuTemplate } from './help-menu.ts';
+import type { MenuItemConstructorOptions } from 'electron';
+import { aboutVersion, appMenuTemplate, type HelpActions } from './help-menu.ts';
+
+function actions(change: Partial<HelpActions> = {}): HelpActions {
+  return {
+    dev: false,
+    sidebarShown: true,
+    openSettings: () => undefined,
+    toggleSidebar: () => undefined,
+    sendFeedback: () => undefined,
+    exportDiagnostics: () => undefined,
+    showLogs: () => undefined,
+    paneShortcut: () => false,
+    ...change,
+  };
+}
+
+function submenu(template: MenuItemConstructorOptions[], name: string) {
+  const menu = template.find((item) => (item.role ?? item.label) === name);
+  return (menu?.submenu ?? []) as MenuItemConstructorOptions[];
+}
+
+const names = (items: MenuItemConstructorOptions[]) =>
+  items.map((item) => item.role ?? item.label ?? item.type);
 
 describe('appMenuTemplate', () => {
   it('keeps the standard menus and adds feedback, diagnostics and logs to Help', () => {
     const calls: string[] = [];
-    const template = appMenuTemplate({
-      sendFeedback: () => calls.push('feedback'),
-      exportDiagnostics: () => calls.push('diagnostics'),
-      showLogs: () => calls.push('logs'),
-      paneShortcut: () => false,
-    });
+    const template = appMenuTemplate(
+      actions({
+        sendFeedback: () => calls.push('feedback'),
+        exportDiagnostics: () => calls.push('diagnostics'),
+        showLogs: () => calls.push('logs'),
+      }),
+    );
     expect(template.map((item) => item.role ?? item.label)).toEqual([
       'appMenu',
       'File',
@@ -39,12 +63,7 @@ describe('Close Window, Reload and Force Reload', () => {
     click?: (...args: unknown[]) => void;
   };
   const items = (paneShortcut: (shortcut: string) => boolean) => {
-    const template = appMenuTemplate({
-      sendFeedback: () => undefined,
-      exportDiagnostics: () => undefined,
-      showLogs: () => undefined,
-      paneShortcut,
-    });
+    const template = appMenuTemplate(actions({ paneShortcut }));
     return template.flatMap((menu) => (Array.isArray(menu.submenu) ? menu.submenu : [])) as Item[];
   };
   const fakeWindow = (did: string[]) => ({
@@ -78,9 +97,66 @@ describe('Close Window, Reload and Force Reload', () => {
     expect(did).toEqual(['close', 'reload', 'hard_reload']);
     const registered = all.filter((item) => item.accelerator && item.registerAccelerator !== false);
     expect(registered.map((item) => item.accelerator)).toEqual([
+      'CommandOrControl+,',
       'CommandOrControl+W',
       'CommandOrControl+R',
       'Shift+CommandOrControl+R',
+    ]);
+  });
+});
+
+describe('the app menu', () => {
+  it('puts Settings… with ⌘, right under About, before Services, Hide and Quit', () => {
+    let opened = 0;
+    const app = submenu(appMenuTemplate(actions({ openSettings: () => (opened += 1) })), 'appMenu');
+    expect(names(app)).toEqual([
+      'about',
+      'separator',
+      'Settings…',
+      'separator',
+      'services',
+      'separator',
+      'hide',
+      'hideOthers',
+      'unhide',
+      'separator',
+      'quit',
+    ]);
+    const settings = app.find((item) => item.label === 'Settings…')!;
+    expect(settings.accelerator).toBe('CommandOrControl+,');
+    (settings.click as () => void)();
+    expect(opened).toBe(1);
+  });
+});
+
+describe('the View menu', () => {
+  const sidebarItem = (change: Partial<HelpActions>) =>
+    submenu(appMenuTemplate(actions(change)), 'View')[0]!;
+
+  it('starts with Show or Hide Sidebar on ⌃⌘S, named for what it will do', () => {
+    let toggled = 0;
+    const hide = sidebarItem({ sidebarShown: true, toggleSidebar: () => (toggled += 1) });
+    expect(hide.label).toBe('Hide Sidebar');
+    expect(hide.accelerator).toBe('Control+Command+S');
+    expect(hide.registerAccelerator).toBe(false);
+    (hide.click as () => void)();
+    expect(toggled).toBe(1);
+    expect(sidebarItem({ sidebarShown: false }).label).toBe('Show Sidebar');
+  });
+
+  it('offers Toggle Developer Tools only in a dev build', () => {
+    const view = (dev: boolean) => names(submenu(appMenuTemplate(actions({ dev })), 'View'));
+    expect(view(true)).toContain('toggleDevTools');
+    expect(view(false)).not.toContain('toggleDevTools');
+    expect(view(false)).toEqual([
+      'Hide Sidebar',
+      'separator',
+      'Reload',
+      'Force Reload',
+      'separator',
+      'resetZoom',
+      'zoomIn',
+      'zoomOut',
     ]);
   });
 });

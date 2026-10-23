@@ -36,6 +36,7 @@ import { ResetHost } from '../reset/ResetHost.tsx';
 import { SessionPaletteHost } from '../sessions/SessionPaletteHost.tsx';
 import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
 import { useSettingsRequests } from '../settings/settings-request.ts';
+import { useAppMenu } from '../desktop/use-app-menu.ts';
 import {
   currentProviderRoute,
   leaveProviderRoute,
@@ -158,6 +159,10 @@ function ChatShell({ entering }: { entering: boolean }) {
   const view: AppView = hiddenView ? 'home' : storedView;
   useAttentionTitle(waiting);
   useAttentionReport(conversations.data);
+  useAppMenu({
+    sidebarShown: !layout.hidden,
+    openSettings: () => setSettings('spark'),
+  });
   const finished = chats.some((chat) => rowState(chat, false).tone === 'done');
   const mood =
     waiting > 0 ? 'alert' : chats.some(isRunning) ? 'working' : finished ? 'happy' : null;

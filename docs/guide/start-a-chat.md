@@ -41,9 +41,7 @@ To unlink, select **No project folder** in the menu.
 | **/**                             | Run a command: `/plan`, `/review`, `/model`, `/effort`, `/mcp`, `/fresh` |
 | **+** (**Add files and context**) | **Upload a file**, **Add a screenshot**, **Add from repo**, another chat |
 
-Or paste or drag files into the box.
-
-Markdown styles as you type; select text or **Aa** to format.
+Paste or drag files into the box. Markdown styles as you type; select text or **Aa** to format.
 
 ## Share a chat with another chat
 

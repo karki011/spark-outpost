@@ -48,7 +48,7 @@
   padding-left: 8px;
   color: var(--faint);
   font:
-    11px/20px 'Geist Mono',
+    12px/20px 'Geist Mono',
     ui-monospace,
     monospace;
 }
@@ -76,6 +76,25 @@
 .ask-opt[aria-pressed='true'] .ask-box {
   border-color: var(--accent);
   background: var(--accent);
+}
+.ask-radio {
+  border-radius: 50%;
+}
+.ask-radio::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-ink);
+  transform: scale(0);
+  transition: transform 0.15s;
+}
+.ask-opt[aria-checked='true'] .ask-radio {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.ask-opt[aria-checked='true'] .ask-radio::after {
+  transform: scale(1);
 }
 .ask-opt-text {
   min-width: 0;

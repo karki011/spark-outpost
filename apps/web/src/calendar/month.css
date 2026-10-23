@@ -177,7 +177,7 @@
 .mo-wd {
   padding: 0 8px 6px;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -332,7 +332,7 @@
   padding: 0 3px;
   border-radius: 4px;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: var(--mo-ev-row);
 }
 
@@ -460,7 +460,7 @@
 
   .mo-more {
     height: auto;
-    font-size: 10px;
+    font-size: 12px;
     line-height: 1.2;
   }
 }
