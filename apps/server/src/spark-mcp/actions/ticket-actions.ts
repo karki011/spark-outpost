@@ -3,6 +3,10 @@ import {
   SPARK_LABELS_MAX,
   SPARK_TEXT_MAX,
   SPARK_TITLE_MAX,
+  isReadOnlyTable,
+  isTicketKey,
+  ticketSourceNames,
+  ticketKeyHint,
   ticketKeySchema,
   ticketPriorityNameSchema,
   ticketSourceIdSchema,
@@ -25,19 +29,34 @@ import type { Performed } from './performed.ts';
 const sourceInput = ticketSourceIdSchema.optional().describe('Defaults to the only connected one.');
 const keyInput = ticketKeySchema.describe('Ticket key, such as ENG-12.');
 
-export async function pickSource(deps: TicketDeps, requested: TicketSourceId | undefined) {
+export async function pickSource(
+  deps: TicketDeps,
+  requested: TicketSourceId | undefined,
+  key?: string,
+) {
   if (requested) return requested;
   const connected = await connectedSources(deps);
   if (connected.length === 1) return connected[0]!.connection.source;
   if (connected.length === 0) {
-    throw new SparkToolError('No ticket source is connected. Connect Jira or Linear in Settings.');
+    throw new SparkToolError(
+      'No ticket source is connected. Connect Jira, Linear or ServiceNow in Settings.',
+    );
   }
-  throw new SparkToolError('Both Jira and Linear are connected; pass source.');
+  const fitting = key
+    ? connected.filter((entry) => isTicketKey(key, entry.connection.source))
+    : connected;
+  if (fitting.length === 1) return fitting[0]!.connection.source;
+  const names = connected.map((entry) => ticketSourceNames[entry.connection.source]);
+  throw new SparkToolError(`${names.join(' and ')} are connected; pass source.`);
 }
 
 async function ticketOf(deps: TicketDeps, source: TicketSourceId, key: string) {
+  if (!isTicketKey(key, source)) throw new SparkToolError(ticketKeyHint(source));
   const open = await requireSource(deps, source);
   const summary = await open.source.getSummary(key);
+  if (source === 'servicenow' && isReadOnlyTable(summary.project)) {
+    throw new SparkToolError(`${summary.key} is a change request. Changes are read only in Spark.`);
+  }
   return {
     open,
     summary,
@@ -59,6 +78,11 @@ const createInput = {
 async function create(context: SparkToolContext, args: z.output<z.ZodObject<typeof createInput>>) {
   const deps = ticketDepsFor(context.deps, context.scope);
   const source = await pickSource(deps, args.source);
+  if (source === 'servicenow') {
+    throw new SparkToolError(
+      'ServiceNow records are opened in ServiceNow; Spark reads and updates them but does not create them.',
+    );
+  }
   await requireSource(deps, source);
   const action: SparkAction = {
     action: 'create_ticket',
@@ -96,7 +120,7 @@ async function comment(
   args: { source?: TicketSourceId | undefined; key: string; body: string },
 ) {
   const deps = ticketDepsFor(context.deps, context.scope);
-  const source = await pickSource(deps, args.source);
+  const source = await pickSource(deps, args.source, args.key);
   const { ref } = await ticketOf(deps, source, args.key);
   const action: SparkAction = { action: 'comment_ticket', ticket: ref, body: args.body };
   return proposeAction(context, action);
@@ -130,9 +154,15 @@ async function transition(
   args: { source?: TicketSourceId | undefined; key: string; status: string },
 ) {
   const deps = ticketDepsFor(context.deps, context.scope);
-  const source = await pickSource(deps, args.source);
+  const source = await pickSource(deps, args.source, args.key);
   const { open, ref } = await ticketOf(deps, source, args.key);
   const plan = await open.source.planMove(ref.key, moveRequest(args.status));
+  if (plan.stopped === 'refused') {
+    return {
+      outcome: 'refused',
+      message: `${plan.message} To resolve, close or cancel it, use spark_servicenow_edit with action move, which asks the user on a card.`,
+    };
+  }
   if (plan.stopped === 'unchanged') {
     return { outcome: 'unchanged', message: `${ref.key} stays at ${plan.from}. ${plan.message}` };
   }
@@ -177,7 +207,7 @@ async function assign(
   args: { source?: TicketSourceId | undefined; key: string; to: 'me' | 'nobody' },
 ) {
   const deps = ticketDepsFor(context.deps, context.scope);
-  const source = await pickSource(deps, args.source);
+  const source = await pickSource(deps, args.source, args.key);
   const { summary, ref } = await ticketOf(deps, source, args.key);
   const action: SparkAction = {
     action: 'assign_ticket',
@@ -213,7 +243,7 @@ export const ticketActionTools = [
     name: 'spark_create_ticket',
     title: 'Create a ticket',
     acts: true,
-    needs: 'tickets',
+    needs: 'ticket_create',
     description: `Create a Jira or Linear ticket. ${ACTION_NOTE} Returns the new key and URL, or that the user declined.`,
     input: createInput,
     run: (args, context) => create(context, args),
@@ -223,7 +253,7 @@ export const ticketActionTools = [
     title: 'Comment on a ticket',
     acts: true,
     needs: 'tickets',
-    description: `Post a comment on a Jira or Linear ticket. ${ACTION_NOTE}`,
+    description: `Post a comment on a Jira or Linear ticket; on a ServiceNow record it is an internal work note. ${ACTION_NOTE}`,
     input: {
       source: sourceInput,
       key: keyInput,
@@ -236,7 +266,7 @@ export const ticketActionTools = [
     title: 'Move a ticket',
     acts: true,
     needs: 'tickets',
-    description: `Move a Jira or Linear ticket. status is a group (todo, in_progress, in_review, done) or the exact name of one of the project's statuses. A group moves only when the project has one clear status for it; otherwise nothing moves and the result lists the status names to choose from. ${ACTION_NOTE}`,
+    description: `Move a Jira, Linear or ServiceNow ticket. status is a group (todo, in_progress, in_review, done) or the exact name of one of the project's statuses. A group moves only when the project has one clear status for it; otherwise nothing moves and the result lists the status names to choose from. ${ACTION_NOTE}`,
     input: {
       source: sourceInput,
       key: keyInput,
@@ -249,7 +279,7 @@ export const ticketActionTools = [
     title: 'Assign a ticket',
     acts: true,
     needs: 'tickets',
-    description: `Assign a Jira or Linear ticket to the user (me) or unassign it (nobody). The card names the current assignee, so taking someone else's ticket is confirmed explicitly. ${ACTION_NOTE}`,
+    description: `Assign a Jira, Linear or ServiceNow ticket to the user (me) or unassign it (nobody). The card names the current assignee, so taking someone else's ticket is confirmed explicitly. ${ACTION_NOTE}`,
     input: { source: sourceInput, key: keyInput, to: z.enum(['me', 'nobody']) },
     run: (args, context) => assign(context, args),
   }),

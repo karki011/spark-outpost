@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ATLASSIAN_QUERY_MAX, ticketKeySchema } from '@spark-outpost/contracts';
+import { ATLASSIAN_QUERY_MAX, ticketKeySchemaFor } from '@spark-outpost/contracts';
 import { openAtlassian } from '../../../atlassian/session.ts';
 import { ticketDepsFor } from '../../deps.ts';
 import { SparkBlocks, SparkToolError, sparkTool, type SparkToolContext } from '../../tool.ts';
@@ -85,7 +85,7 @@ export const jiraTool = sparkTool({
   input: {
     action: z.enum(['search', 'read']),
     jql: z.string().trim().min(1).max(ATLASSIAN_QUERY_MAX).optional(),
-    key: ticketKeySchema.optional(),
+    key: ticketKeySchemaFor('jira').optional(),
     limit: z.number().int().min(1).max(50).default(20),
     pageToken: z.string().max(2_000).optional(),
     descriptionOffset: z.number().int().min(0).default(0),
