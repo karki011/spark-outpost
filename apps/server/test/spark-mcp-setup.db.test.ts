@@ -269,6 +269,7 @@ describe('the Spark tools server', () => {
       'spark_activity',
       'spark_add_mcp_server',
       'spark_analytics',
+      'spark_artifact',
       'spark_assign_ticket',
       'spark_attention',
       'spark_audit',
@@ -327,6 +328,7 @@ describe('the Spark tools server', () => {
     const acting = listed.tools.filter((tool) => tool.annotations?.readOnlyHint === false);
     expect(acting.map((tool) => tool.name).sort()).toEqual([
       'spark_add_mcp_server',
+      'spark_artifact',
       'spark_assign_ticket',
       'spark_calendar_edit',
       'spark_comment_ticket',

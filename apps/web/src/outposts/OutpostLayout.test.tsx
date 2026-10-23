@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { api } from '../api/client.ts';
+import { api, queryKeys } from '../api/client.ts';
 import { phoneKeys } from '../phone/phone-api.ts';
 import { SENT, calls, client, show, setUpOutpostView, view } from './outpost-view-harness.tsx';
-import { API_CHAT, FE_CHAT, OUTPOST_ID, detail, post } from './test-fixtures.ts';
+import { API_CHAT, FE_CHAT, OUTPOST_ID, chat, detail, post } from './test-fixtures.ts';
 
 setUpOutpostView();
 
@@ -60,6 +60,7 @@ describe('the Overview pane', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Usage by user' }));
     const item = screen.getByRole('menuitemcheckbox', { name: 'Show Overview' });
     expect(item.getAttribute('aria-checked')).toBe('false');
+    expect(screen.getByRole('main').contains(item)).toBe(false);
     fireEvent.click(item);
     expect(overview()).toBeTruthy();
   });
@@ -158,6 +159,47 @@ describe('a thread in the side pane', () => {
     view();
     fireEvent.click(within(overview()).getByRole('button', { name: /Pick a region/ }));
     expect(within(pane()).getByRole('textbox', { name: 'Answer @api' })).toBeTruthy();
+  });
+
+  it('answers a question card in the thread, not by a message from the box', () => {
+    client.setQueryData(queryKeys.conversations, [
+      chat(FE_CHAT, { title: 'Usage page' }),
+      chat(API_CHAT, {
+        title: 'Usage endpoint',
+        latestRun: {
+          id: '0e000000-0000-4000-8000-000000000001',
+          status: 'awaiting_approval',
+          error: null,
+          step: null,
+          provider: null,
+          progress: null,
+        },
+        attention: {
+          kind: 'input',
+          title: 'Which region?',
+          agentName: 'Claude',
+          provider: 'claude',
+          approvalId: '0f000000-0000-4000-8000-000000000001',
+        },
+      }),
+    ]);
+    show(detail([post(1, { state: 'needs_you', reason: '@api has a question' })]));
+    view();
+    expect(screen.getByText('@api has a question')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Answer @api' }));
+    expect(within(pane()).queryByRole('textbox')).toBeNull();
+    expect(within(pane()).getByText('@api has a question above.')).toBeTruthy();
+    expect(within(pane()).getByRole('button', { name: 'Answer @api' })).toBeTruthy();
+    expect(screen.queryByText('Answering')).toBeNull();
+  });
+
+  it('goes back on Escape when the focused card went away and focus fell to the page', () => {
+    show(detail(threads()));
+    view();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open the thread with @api' })[0]!);
+    (document.activeElement as HTMLElement).blur();
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(screen.queryByRole('complementary', { name: 'Thread with @api' })).toBeNull();
   });
 
   it('on a paired device offers only Answer, never a message of its own', () => {

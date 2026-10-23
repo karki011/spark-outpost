@@ -102,13 +102,13 @@ describe('a turn that ended with a publish step', () => {
     reply('m2', PUBLISHED, '2026-10-10T10:00:12.000Z'),
   ];
 
-  it('shows the work reply, then the publish result, under one agent header', () => {
+  it('shows the work reply, then the publish result, in one turn with no agent header', () => {
     const view = show(messages);
     const text = view.container.textContent ?? '';
     expect(text).toContain(WORK);
     expect(text.indexOf(WORK)).toBeLessThan(text.indexOf(PUBLISHED));
-    expect(view.container.querySelectorAll('.ai-head')).toHaveLength(1);
-    expect(view.container.querySelectorAll('.provider-name')).toHaveLength(1);
+    expect(view.container.querySelectorAll('.msg.ai')).toHaveLength(1);
+    expect(view.container.querySelector('.ai-head')).toBeNull();
   });
 
   it('keeps the publish reply and its push command in the publish result', () => {

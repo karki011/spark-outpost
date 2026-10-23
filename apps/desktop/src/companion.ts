@@ -24,6 +24,7 @@ export interface CompanionStatus {
   hideInShare: boolean;
   notify: boolean;
   notifyBlocked: boolean;
+  menuBar: boolean;
 }
 
 export type ShortcutResult = { ok: true } | { ok: false; error: string };
@@ -49,6 +50,7 @@ export interface Companion {
   setAutoExpand(on: boolean): CompanionStatus;
   setHideInShare(on: boolean): CompanionStatus;
   setNotify(on: boolean): CompanionStatus;
+  setMenuBar(on: boolean): CompanionStatus;
   setNotifyBlocked(on: boolean): void;
   setPosition(position: IslandPosition): void;
   shutdown(): void;
@@ -80,6 +82,7 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
     hideInShare: settings.hideInShare,
     notify: settings.notify,
     notifyBlocked,
+    menuBar: effects.supported && settings.menuBar,
   });
 
   const publish = () => effects.changed(status());
@@ -180,6 +183,12 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
     },
     setNotify(on) {
       commit({ ...settings, notify: on });
+      publish();
+      return status();
+    },
+    setMenuBar(on) {
+      if (!effects.supported) return status();
+      commit({ ...settings, menuBar: on });
       publish();
       return status();
     },

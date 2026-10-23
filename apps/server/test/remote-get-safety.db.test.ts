@@ -20,7 +20,7 @@ beforeEach(async () => {
   t = await createTestDb();
   app = createTestApp(t);
   await turnRemoteOn(app);
-  await setSwitches(app, { terminal: true, terminalApprove: true });
+  await setSwitches(app, { terminal: true, terminalApprove: true, artifacts: true });
 });
 
 afterEach(async () => {

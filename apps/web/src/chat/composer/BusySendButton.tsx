@@ -5,9 +5,9 @@ import { usePopover } from '../../ui/use-popover.ts';
 import {
   SEND_CHOICES,
   SEND_CHOICE_ORDER,
+  busyButtonTitle,
   choiceKey,
   choiceNote,
-  choiceTitle,
 } from '../queue/send-choice.ts';
 
 interface BusySendButtonProps {
@@ -88,7 +88,7 @@ export function BusySendButton({
         type="button"
         className="send queue"
         aria-label={MAIN_LABELS[preferred]}
-        title={choiceTitle(preferred, preferred, MAC, waiting)}
+        title={busyButtonTitle(preferred, MAC, waiting)}
         disabled={disabled}
         onClick={() => onChoice(preferred)}
       >

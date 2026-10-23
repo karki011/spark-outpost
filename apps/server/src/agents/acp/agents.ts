@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import type { SessionConfigOption } from '@agentclientprotocol/sdk';
 import type { ProviderId } from '@spark-outpost/contracts';
+import { browserDataDir, browserDataRules } from '../../approvals/browser-data.ts';
 import { PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
 import { PLANS_DIR } from '../../plans/plan-mode.ts';
 import { EXACT_PROTECTED_GLOBS } from '../../projects/path-policy.ts';
@@ -163,6 +164,7 @@ export function claudeSessionMeta(
     ...(repo?.denyRules ?? []),
     ...toolDenyRules(tools),
     ...secretRules(extraRoots),
+    ...browserDataRules(browserDataDir()),
     ...FORCE_PUSH_DENY_RULES,
     ...(changesProject ? CHAT_RUN_DENY_RULES : []),
   ]);

@@ -7,6 +7,7 @@ export const IPC = {
   companionSetAutoExpand: 'companion:set-auto-expand',
   companionSetHideInShare: 'companion:set-hide-in-share',
   companionSetNotify: 'companion:set-notify',
+  companionSetMenuBar: 'companion:set-menu-bar',
   companionChanged: 'companion:changed',
   islandInteractive: 'island:interactive',
   islandRegions: 'island:regions',

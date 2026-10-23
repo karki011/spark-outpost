@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { friendlyStep } from '@spark-outpost/contracts';
-import type { TurnState } from './AiTurn.tsx';
+export type TurnState = 'working' | 'waiting' | 'done' | 'failed' | 'stopped';
 import { viewSteps, type RunStep, type StepView } from './run-projection.ts';
 import { StepThought, ThoughtToggle } from './StepThought.tsx';
 

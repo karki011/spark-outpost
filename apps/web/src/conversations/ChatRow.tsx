@@ -2,7 +2,11 @@ import { memo, useRef, useState, type MouseEvent, type PointerEvent } from 'reac
 import { motion } from 'motion/react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { categoryLabel, type ConversationSummary } from '@spark-outpost/contracts';
+import {
+  archivedInactiveLine,
+  categoryLabel,
+  type ConversationSummary,
+} from '@spark-outpost/contracts';
 import { DotsIcon, GripIcon, MergedIcon, PinIcon, RestoreIcon, TrashIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { reveal } from '../ui/transitions.tsx';
@@ -173,6 +177,8 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
     onPointerLeave: marquee.stop,
   };
   const terminal = chat.sessionType === 'terminal';
+  const autoArchived =
+    history && chat.autoArchivedDays ? archivedInactiveLine(chat.autoArchivedDays) : null;
   const tooltip = [
     chat.title,
     terminal ? 'Terminal session' : null,
@@ -183,6 +189,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
     state.label,
     chat.pullRequestMerged ? MERGED_LABEL : null,
     recencyLabel(chat.updatedAt),
+    autoArchived,
   ].filter(Boolean);
   const content = (
     <>
@@ -225,6 +232,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
             {terminal && <span className="sr-only">, Terminal session</span>}
             {chat.match && <MatchSnippet match={chat.match} />}
             {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}
+            {autoArchived && <span className="sr-only">, {autoArchived}</span>}
           </span>
           <ChatBlob kind={blob} />
         </button>

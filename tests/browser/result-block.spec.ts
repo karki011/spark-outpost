@@ -56,17 +56,20 @@ test('Full auto → PR ends in one result line with a PR reference and no publis
   await expect(block.getByRole('button', { name: /Bring changes into/ })).toHaveCount(0);
 
   const pull = block.getByRole('link', { name: 'Pull request #1, Open' });
-  await expect(pull).toHaveText('PR #1 · Open');
-  await expect(pull).toHaveAttribute('href', 'https://github.com/acme/widgets/pull/1');
+  await expect(pull).toHaveCount(0);
   await expect(page.locator('.pr-opened')).toContainText('Opened pull request');
   await expect(page.locator('.pr-opened')).toHaveCount(1);
 
-  const feedback = block.getByRole('group', { name: 'How did it go?' });
+  await expect(block.getByRole('group', { name: 'How did it go?' })).toHaveCount(0);
+  const feedback = page
+    .locator('section[data-turn]')
+    .last()
+    .locator('.turn-meta')
+    .getByRole('group', { name: 'How did it go?' });
   await expect(feedback.getByRole('button', { name: 'Good result' })).toBeVisible();
   const line = await block.locator('.result-line').boundingBox();
   const thumbs = await feedback.boundingBox();
-  expect(thumbs!.y).toBeGreaterThanOrEqual(line!.y);
-  expect(thumbs!.y + thumbs!.height).toBeLessThanOrEqual(line!.y + line!.height + 1);
+  expect(thumbs!.y).toBeGreaterThanOrEqual(line!.y + line!.height - 1);
   await expect(block.getByRole('button', { name: 'Revert to before this run' })).toBeVisible();
 
   await page.waitForTimeout(300);
@@ -81,6 +84,10 @@ test('Full auto → PR ends in one result line with a PR reference and no publis
   await expect(more).toContainText('Kept by Full auto → PR.');
   await expect(more.getByRole('button', { name: 'Open the diff of notes.txt' })).toBeVisible();
   await expect(more.getByRole('button', { name: 'Bring changes into main' })).toBeVisible();
+  await expect(more.getByRole('link', { name: 'Pull request #1, Open' })).toHaveText(
+    'PR #1 · Open',
+  );
+  await expect(pull).toHaveAttribute('href', 'https://github.com/acme/widgets/pull/1');
   await shoot(page, 'after-full-auto-pr-expanded');
 });
 
@@ -214,11 +221,12 @@ test.describe('result block screenshots', () => {
   test('a turn with a pull request, collapsed and expanded', async ({ page }) => {
     await fullAutoPr(page);
     const block = result(page);
-    await expect(block.getByRole('link', { name: /^Pull request #1/ })).toBeVisible();
+    await expect(page.locator('.pr-opened')).toBeVisible();
     await shootEverywhere(page, 'with-pr');
 
     await page.setViewportSize({ width: 1400, height: 900 });
     await block.getByRole('button', { name: /^Kept · 1 file/ }).click();
+    await expect(block.getByRole('link', { name: /^Pull request #1/ })).toBeVisible();
     await shootEverywhere(page, 'with-pr-expanded');
   });
 });
@@ -230,7 +238,8 @@ test('a Full auto → PR turn shows the work reply, then the publish result, und
   const turn = page.locator('section[data-turn]').last();
   const publish = turn.getByRole('group', { name: 'Publish result' });
   const shown = async () => {
-    await expect(turn.locator('.ai-head')).toHaveCount(1);
+    await expect(turn.locator('.msg.ai')).toHaveCount(1);
+    await expect(turn.locator('.agent-mark')).toHaveCount(0);
     await expect(turn.locator('.msg.ai > .md').first()).toContainText('fake-edit=allowed');
     await expect(publish).toContainText('published=');
     await expect(publish).not.toContainText('fake-edit=allowed');

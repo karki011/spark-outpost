@@ -16,17 +16,12 @@
 .tk-start .session-choice {
   margin: 0 0 18px;
 }
-.ctxbar .session-choice {
-  flex: none;
-  flex-wrap: nowrap;
-  margin-right: 4px;
+.composer-lead {
+  max-width: var(--chat-col, 700px);
+  margin: 0 auto 8px;
 }
-.ctxbar .session-choice > .seg {
+.composer-lead .session-choice > .seg {
   width: 168px;
-  background: color-mix(in srgb, var(--panel) 70%, transparent);
-}
-.ctxbar .session-choice > .seg button {
-  padding: 3px 0;
 }
 .native-intro {
   margin: auto;

@@ -8,19 +8,18 @@ summary: Allow or deny a command or file change an agent asks about, hold to con
 
 You'll answer an agent that's waiting for your permission. About 1 minute.
 
-1. Select **Waiting for you** above the message box, or press **⌘⇧Y**, to jump to the card.
-2. Read the command or diff, where it runs, and why it asks. A sub-agent's card names it.
+1. Find the card at the end of the turn, or press **⌘⇧Y** to jump to it.
+2. Read the command or diff; **Details** shows where it runs and why. A sub-agent's card names it.
 
    ![An approval card asking to run a command](images/approvals-command-light.png)
 
 3. Select a button; labels vary a little by agent.
 
-| Button                           | Does                                                  |
-| -------------------------------- | ----------------------------------------------------- |
-| **Allow**                        | Runs it this once.                                    |
-| **Always allow**                 | Allows this kind of request for the rest of this run. |
-| **Always allow in this project** | Adds the command to the project's list.               |
-| **Deny**                         | Doesn't run it; the agent tries another way.          |
+| Button           | Does                                                           |
+| ---------------- | -------------------------------------------------------------- |
+| **Allow** (⏎)    | Runs it this once.                                             |
+| **Always allow** | For the rest of this run, or **Always allow in this project**. |
+| **Deny** (Esc)   | Doesn't run it; the agent tries another way.                   |
 
 An unanswered card is declined after 30 minutes and says **Expired**.
 
@@ -36,7 +35,7 @@ An unanswered card is declined after 30 minutes and says **Expired**.
 
 ## Let a command run without asking
 
-1. Select the project name above the message box.
+1. Select the project name in the message box.
 2. Open **Commands that run without asking**.
 3. Type a command and select **Add**. Select **×** to remove one.
 

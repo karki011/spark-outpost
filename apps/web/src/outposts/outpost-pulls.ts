@@ -1,6 +1,7 @@
 import type { ConversationSummary, OutpostPost, OutpostStory } from '@spark-outpost/contracts';
 import { pullNumber, webLink } from './post-text.ts';
-import { pullMark, type PullMark } from './story-bar.ts';
+import type { PullMark } from './request-status.ts';
+import { pullMark } from './story-bar.ts';
 
 export interface OutpostPull {
   url: string;

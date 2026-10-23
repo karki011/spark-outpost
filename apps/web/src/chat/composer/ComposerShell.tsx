@@ -10,7 +10,7 @@ interface ComposerShellProps {
   error: string | null;
   warning: ReactNode;
   above?: ReactNode;
-  context: ReactNode;
+  lead?: ReactNode;
   children: ReactNode;
   bar: ReactNode;
 }
@@ -19,7 +19,7 @@ export function ComposerShell({
   error,
   warning,
   above = null,
-  context,
+  lead = null,
   children,
   bar,
 }: ComposerShellProps) {
@@ -32,7 +32,7 @@ export function ComposerShell({
       )}
       {warning}
       {above}
-      {context}
+      {lead && <div className="composer-lead">{lead}</div>}
       <div className="composer">
         {children}
         <div className="comp-bar">{bar}</div>
