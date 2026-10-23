@@ -1,0 +1,50 @@
+.sn-notes {
+  display: grid;
+  gap: 8px;
+}
+
+.sn-note-text {
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.sn-note-acts {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sn-vis {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sn-vis svg {
+  width: 12px;
+  height: 12px;
+}
+
+.sn-vis-customer {
+  color: var(--warn);
+}
+
+.tk-plain {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.tk-attach {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}

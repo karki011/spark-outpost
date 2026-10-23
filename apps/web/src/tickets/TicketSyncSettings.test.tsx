@@ -25,6 +25,7 @@ const jira: TicketConnection = {
     jira: { reach: 'reachable', on: true },
     confluence: { reach: 'denied', on: false },
   },
+  servicenow: null,
 };
 
 const steady = { choices: ['In Progress', 'In Review'], to: 'In Progress', problem: null };

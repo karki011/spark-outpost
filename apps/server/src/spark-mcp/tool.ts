@@ -46,7 +46,9 @@ export type SparkToolNeed =
   | 'calendar_edit'
   | 'meetings'
   | 'jira'
-  | 'confluence';
+  | 'confluence'
+  | 'servicenow'
+  | 'ticket_create';
 
 export interface SparkTool {
   name: string;

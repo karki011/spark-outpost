@@ -6,6 +6,7 @@ import { CALENDAR_PATH } from '../ui/icons.tsx';
 import { GitHubCard } from '../ship/GitHubCard.tsx';
 import { SLACK_DESCRIPTION, SlackCard } from '../slack/SlackCard.tsx';
 import { ATLASSIAN_DESCRIPTION, AtlassianCard } from '../tickets/AtlassianCard.tsx';
+import { SERVICENOW_DESCRIPTION, ServiceNowCard } from '../tickets/ServiceNowCard.tsx';
 import { TicketSourceCard } from '../tickets/TicketSourceCard.tsx';
 import { GitCheck } from './GitCheck.tsx';
 
@@ -80,6 +81,19 @@ export const connectors: Connector[] = [
       </ToolIcon>
     ),
   },
+  {
+    id: 'servicenow',
+    name: 'ServiceNow',
+    description: SERVICENOW_DESCRIPTION,
+    icon: (
+      <ToolIcon>
+        <path d="M4 18h16" />
+        <path d="M6 18a6 6 0 0 1 12 0" />
+        <path d="M12 12V9" />
+        <path d="M10 7h4" />
+      </ToolIcon>
+    ),
+  },
 ];
 
 const CALENDAR_ICON = (
@@ -110,6 +124,16 @@ export function ConnectorGrid() {
         if (connector.id === 'atlassian') {
           return (
             <AtlassianCard
+              key={connector.id}
+              icon={connector.icon}
+              open={openId === connector.id}
+              onToggle={() => toggle(connector.id)}
+            />
+          );
+        }
+        if (connector.id === 'servicenow') {
+          return (
+            <ServiceNowCard
               key={connector.id}
               icon={connector.icon}
               open={openId === connector.id}
@@ -153,8 +177,8 @@ export function ToolsStep() {
       <h2 id="onbTitle">Bring in your tools</h2>
       <p className="lede">
         Spark checks for Git first, since every Do chat works in its own git worktree. GitHub lets
-        Ship open pull requests. Atlassian and Linear bring your tickets into Spark. Slack notifies
-        you and shares threads.
+        Ship open pull requests. Atlassian, Linear and ServiceNow bring your tickets into Spark.
+        Slack notifies you and shares threads.
       </p>
       <GitCheck />
       <ConnectorGrid />

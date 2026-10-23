@@ -10,13 +10,19 @@ export interface DisconnectCopy {
 
 interface DisconnectDialogProps {
   copy: DisconnectCopy;
+  confirmLabel?: string;
   onCancel: () => void;
   onConfirm: () => void;
 }
 
 const FOCUSABLE = 'button:not([disabled])';
 
-export function DisconnectDialog({ copy, onCancel, onConfirm }: DisconnectDialogProps) {
+export function DisconnectDialog({
+  copy,
+  confirmLabel = 'Disconnect',
+  onCancel,
+  onConfirm,
+}: DisconnectDialogProps) {
   const titleId = useId();
   const textId = useId();
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -51,7 +57,7 @@ export function DisconnectDialog({ copy, onCancel, onConfirm }: DisconnectDialog
             Cancel
           </button>
           <button type="button" className="btn sm cx-danger" onClick={onConfirm}>
-            Disconnect
+            {confirmLabel}
           </button>
         </div>
       </div>

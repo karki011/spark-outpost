@@ -12,7 +12,7 @@ export type MoveRequest = { group: TicketStatus } | { name: string };
 
 export type MoveRule = 'project_setting' | 'setting' | 'name' | 'only_status' | 'exact';
 
-export type MoveStop = 'unchanged' | 'no_status' | 'blocked';
+export type MoveStop = 'unchanged' | 'no_status' | 'blocked' | 'refused';
 
 export interface MoveSettings {
   mapped: Partial<Record<TicketStatus, string>>;

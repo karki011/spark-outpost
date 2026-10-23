@@ -4,7 +4,7 @@ import {
   ATLASSIAN_CARD_TEXT_MAX,
   atlassianConfirm,
   jiraEditOpSchema,
-  ticketKeySchema,
+  ticketKeySchemaFor,
   type JiraChanges,
   type JiraEditAction,
   type JiraEditOp,
@@ -135,7 +135,7 @@ export const jiraEditTool = sparkTool({
   description: `Changes a Jira issue: update sets summary, description (plain text or Markdown), labels (replaces them) or priority by name; edit_comment and delete_comment change one of the user's own comments (commentId from spark_jira read); delete removes the issue (withSubtasks to remove its subtasks too). Create, comment, move and assign with the ticket tools. The card shows before and after. ${ACTION_NOTE}`,
   input: {
     action: jiraEditOpSchema,
-    key: ticketKeySchema,
+    key: ticketKeySchemaFor('jira'),
     summary: z.string().trim().min(1).max(255).optional(),
     description: z.string().max(ATLASSIAN_BODY_MAX).optional(),
     labels: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
