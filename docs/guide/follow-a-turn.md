@@ -10,7 +10,7 @@ You'll follow, stop and queue a turn. About 2 minutes.
 
 ## See what's happening
 
-1. Each tool call is a row; reads fold into **Explored 2 files**.
+1. A row per tool call, like **Read**; reads fold into **Explored 2 files**.
 2. **Thought for 4s** opens the thinking; a failed command opens itself.
 3. The to-do ticks off, then folds.
 4. Hover a reply for **Copy** and cost; **Agent TV** is under **…**.

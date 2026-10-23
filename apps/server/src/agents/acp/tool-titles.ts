@@ -1,4 +1,13 @@
+import type * as acp from '@agentclientprotocol/sdk';
 import { friendlyStep } from '@spark-outpost/contracts';
+import { objectFields } from './object-fields.ts';
+
+export function toolNameOf(toolCall: Pick<acp.ToolCallUpdate, '_meta'>): string | null {
+  const named = objectFields(toolCall).name;
+  if (typeof named === 'string' && named.trim()) return named.trim();
+  const meta = objectFields(objectFields(toolCall._meta).claudeCode).toolName;
+  return typeof meta === 'string' && meta.trim() ? meta.trim() : null;
+}
 
 const ABSOLUTE_PATH = /(^|[\s(])(\/[^\s`'")]+)/g;
 
