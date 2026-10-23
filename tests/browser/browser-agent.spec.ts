@@ -140,11 +140,12 @@ test('an agent opens a site, reads it and acts on it after the user allows, with
     ]),
   );
   await expect(page.getByText('typed it')).toBeVisible(WAIT);
+  const sent = /sent data to docs\.example\.com after reading private work data \(spark_chats\)/;
+  const line = page.locator('.flag-line');
+  await expect(line).toContainText(sent, WAIT);
+  await line.getByRole('button', { name: 'Details' }).click();
   const flag = page.getByRole('region', { name: 'Flagged by Spark' });
-  await expect(flag).toContainText(
-    /sent data to docs\.example\.com after reading private work data \(spark_chats\)/,
-    WAIT,
-  );
+  await expect(flag).toContainText(sent);
   await expect(card(page, /click and type on this site\?/)).toHaveCount(1);
 
   const audit = await browserAudit();
