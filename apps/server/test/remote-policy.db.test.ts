@@ -114,6 +114,7 @@ describe('never from a phone', () => {
     await phone.send('post', '/api/outposts', { id, name: 'Orders', members: [] }).expect(403);
     await phone.send('delete', `/api/outposts/${id}`).expect(403);
     await phone.send('put', `/api/outposts/${id}/members/${id}`, { handle: 'api' }).expect(403);
+    await phone.send('put', `/api/outposts/${id}/instructions`, { instructions: 'x' }).expect(403);
     await phone.send('delete', `/api/outposts/${id}/members/${id}`).expect(403);
 
     await phone.get('/api/outposts').expect(200, []);

@@ -35,6 +35,7 @@ export type ProposedDraft = z.infer<typeof proposedDraftSchema>;
 const outpostPaths = {
   list: '/outposts',
   one: (id: string) => `/outposts/${id}`,
+  instructions: (id: string) => `/outposts/${id}/instructions`,
   member: (id: string, conversationId: string) => `/outposts/${id}/members/${conversationId}`,
   posts: (id: string) => `/outposts/${id}/posts`,
   cancelPost: (id: string, postId: string) => `/outposts/${id}/posts/${postId}/cancel`,
@@ -57,6 +58,11 @@ export const outpostsApi = {
     }),
   update: (id: string, body: UpdateOutpostRequest): Promise<OutpostDetail> =>
     changed(outpostPaths.one(id), { method: 'PATCH', body: JSON.stringify(body) }),
+  setInstructions: (id: string, instructions: string): Promise<OutpostDetail> =>
+    changed(outpostPaths.instructions(id), {
+      method: 'PUT',
+      body: JSON.stringify({ instructions }),
+    }),
   remove: (id: string): Promise<null> =>
     request(z.null(), outpostPaths.one(id), { method: 'DELETE' }),
   putMember: (id: string, member: MemberRequest): Promise<OutpostDetail> =>

@@ -6,6 +6,7 @@ import type { ReadLabels } from './read-labels.ts';
 import {
   alsoAskedLine,
   answersPreamble,
+  instructionsPreamble,
   notesPreamble,
   stackLine,
   type PreambleAnswer,
@@ -171,7 +172,11 @@ export async function outpostPreamble(
   if (answers.length > 0) {
     await deps.labels.recordOutpostRead(deps.db, turn.identity.runId, 'answer');
   }
+  const brief = turn.outpostRequest
+    ? instructionsPreamble(found.outpost.name, found.outpost.instructions)
+    : null;
   const parts = [
+    brief,
     await stackNote(deps, chatId),
     alsoAsked(posts, turn),
     notesPreamble(notes),

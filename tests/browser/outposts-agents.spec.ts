@@ -10,11 +10,13 @@ import {
   TURN_TIMEOUT,
   chip,
   openOutpost,
+  openThread,
   outpostPage,
   post,
   stateOf,
   seeded,
   thread,
+  threadPane,
 } from './outposts-kit.ts';
 
 const SHOTS = process.env.SPARK_REVIEW_SHOTS;
@@ -89,12 +91,12 @@ test('an agent asks another member, waits for the answer, and both chats and the
   await inBothThemes(page, 'agent-thread', '.main.op', async () => {
     await expect(asked).toBeInViewport();
     await expect(asked.locator('.op-post-head').first()).toContainText('@fenot from youto@api');
-    await expect(asked.locator('.op-post-head .chat-face')).toHaveCount(3);
-    await expect(stateOf(asked)).toHaveText('Answered');
-    await expect(asked.locator('.op-reply .op-mood')).toHaveText('answered');
+    await expect(asked.locator('.chat-face')).toHaveCount(2);
+    await expect(stateOf(asked)).toHaveText('Idle');
   });
 
-  await asked.getByRole('button', { name: 'Open @api in chat' }).click();
+  await openThread(asked, 'api');
+  await threadPane(page, 'api').getByRole('button', { name: 'Open @api in chat' }).click();
   await expect(page.locator('.chat-title')).toHaveText('Orders API');
   const header = page.locator('.bubble.from', { hasText: ASK });
   await inBothThemes(page, 'agent-received', 'section[data-turn]', async () => {
@@ -117,7 +119,7 @@ test('an agent leaves a note in the thread, and it starts no work', async ({ pag
   const note = post(page, NOTE);
   await expect(note.locator('.op-post-head')).toContainText('@fe');
   await expect(note.locator('.op-kind')).toHaveText('note');
-  await expect(thread(page).locator('.op-state')).toHaveCount(0);
+  await expect(thread(page).locator('.op-pill')).toHaveCount(0);
   await expect(chip(page, 'api')).toContainText('Idle');
 });
 

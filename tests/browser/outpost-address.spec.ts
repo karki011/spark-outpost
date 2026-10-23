@@ -37,7 +37,7 @@ test.beforeEach(async ({ page }) => {
 const picker = (page: Page) => page.getByRole('listbox', { name: 'Chats in this outpost' });
 const asked = (page: Page) => asksLine(page).locator('.op-ask');
 const line = (message: Locator, handle: string) =>
-  message.getByRole('listitem', { name: handle, exact: true });
+  message.getByRole('article', { name: new RegExp(`^${handle}:`) });
 
 function sentTo(requests: ReturnType<typeof requestsTo>): unknown[] {
   return requests.map((request) => (request.postDataJSON() as { to?: string[] }).to);
@@ -78,13 +78,13 @@ test('two chats are asked from the middle of one message and answer under it', a
   await box(page).press('Enter');
   const message = post(page, 'list the order fields so that @fe can draw them?');
   await expect(message).toHaveCount(1);
-  await expect(message.locator('.op-post-head').first()).toContainText('Youto@api@fe');
+  await expect(message.locator('.op-post-head').first()).toContainText('Youto@api, @fe');
   expect(sentTo(posted)).toEqual([['api', 'fe']]);
 
   for (const handle of ['@api', '@fe']) {
     await expect(stateOf(line(message, handle))).toHaveText('Working', { timeout: TURN_TIMEOUT });
   }
-  const doing = line(message, '@api').locator('.op-activity');
+  const doing = line(message, '@api').locator('.op-card-meta');
   await expect(doing).toHaveText(STEPS);
   await expect(doing).toHaveText('Writing a reply', { timeout: TURN_TIMEOUT });
   await expect(chip(page, 'api')).toContainText('Working');
@@ -96,20 +96,20 @@ test('two chats are asked from the middle of one message and answer under it', a
 
   for (const handle of ['@api', '@fe']) {
     const own = line(message, handle);
-    await expect(stateOf(own)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
-    await expect(own.locator('.op-reply')).toContainText('This reply comes from the fake provider');
-    await expect(own.locator('.op-reply .op-post-head')).toHaveCount(0);
-    await expect(own.locator('.op-activity')).toHaveCount(0);
+    await expect(own.locator('.op-pill')).toHaveText('Idle', { timeout: TURN_TIMEOUT });
+    await expect(own.locator('.op-card-meta')).toContainText(
+      'This reply comes from the fake provider',
+    );
   }
   await expect(thread(page).locator('.op-post')).toHaveCount(1);
-  await expect(message.getByRole('button', { name: 'Cancel all' })).toHaveCount(0);
+  await expect(message.getByRole('button', { name: /^Cancel all/ })).toHaveCount(0);
   await inBothThemes(page, 'answers', async () => {
-    await expect(message.locator('.op-reply')).toHaveCount(2);
+    await expect(message.locator('.op-card')).toHaveCount(2);
   });
 
   await openChats(page);
   await openOutpost(page);
-  await expect(post(page, 'list the order fields').locator('.op-reply')).toHaveCount(2);
+  await expect(post(page, 'list the order fields').locator('.op-card')).toHaveCount(2);
 });
 
 test('a chat taken off the Asks line is only mentioned', async ({ page }) => {
@@ -131,7 +131,7 @@ test('a chat taken off the Asks line is only mentioned', async ({ page }) => {
   await page.keyboard.press('Enter');
   const request = post(page, 'draw what @api returns');
   await expect(request.locator('.op-post-head').first()).toContainText('Youto@fe');
-  await expect(stateOf(request)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
+  await expect(stateOf(request)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
   expect(sentTo(posted)).toEqual([['fe']]);
   await expect(chip(page, 'api')).toContainText('Idle');
   await expect(thread(page).locator('.op-post')).toHaveCount(1);
@@ -154,14 +154,16 @@ test('a failed request says why its turn failed', async ({ page }) => {
   await say(page, 'could @api try the import again #fail');
   const request = post(page, 'try the import again');
   await expect(stateOf(request)).toHaveText('Failed', { timeout: TURN_TIMEOUT });
-  await expect(request.locator('.op-reason.bad')).toHaveText(FAILED);
-  await expect(request.getByRole('button', { name: 'Open @api in chat' })).toBeVisible();
+  await expect(request.locator('.op-card-meta')).toHaveText(FAILED);
+  await expect(request.getByRole('button', { name: 'Open the thread with @api' })).toBeVisible();
   await inBothThemes(page, 'failed', async () => {
-    await expect(request.locator('.op-reason.bad')).toBeVisible();
+    await expect(request.locator('.op-card-meta')).toBeVisible();
   });
 });
 
-test('a long handle wraps in the member strip instead of being cut', async ({ page }) => {
+test('a long handle is read in full in the member stack and the header stays on screen', async ({
+  page,
+}) => {
   const [orders] = await seedChats([{ title: 'Customer orders' }]);
   if (!orders) throw new Error('The chat was not seeded.');
   await openChats(page);
@@ -174,24 +176,16 @@ test('a long handle wraps in the member strip instead of being cut', async ({ pa
   });
   expect(created.ok()).toBe(true);
   await openChats(page);
-  await openOutpost(page);
+  const main = await openOutpost(page);
   await page.setViewportSize({ width: 600, height: 780 });
 
-  const member = strip(page).getByRole('button', { name: new RegExp(`^@${LONG_HANDLE}`) });
-  const handle = member.locator('.op-member-top b');
-  await expect(handle).toHaveText(`@${LONG_HANDLE}`);
-  await expect(handle).toHaveCSS('text-overflow', 'clip');
-  await expect(handle).toHaveCSS('white-space', 'normal');
-  const fits = await handle.evaluate((node) => node.scrollWidth <= node.clientWidth + 1);
+  const member = strip(page).getByRole('button', { name: new RegExp(`^@${LONG_HANDLE}, Idle`) });
+  await expect(member).toHaveAttribute('title', new RegExp(`^@${LONG_HANDLE} · Idle`));
+  const header = main.locator('.op-head');
+  const fits = await header.evaluate((node) => node.scrollWidth <= node.clientWidth + 1);
   expect(fits).toBe(true);
-  const inside = await member.evaluate((button) => {
-    const outer = button.getBoundingClientRect();
-    const state = button.querySelector('.op-member-state')?.getBoundingClientRect();
-    return state !== undefined && state.right <= outer.right + 1 && state.left >= outer.left;
-  });
-  expect(inside).toBe(true);
   await inBothThemes(page, 'long-handle', async () => {
-    await expect(handle).toBeVisible();
+    await expect(member).toBeVisible();
   });
 });
 

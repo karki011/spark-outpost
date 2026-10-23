@@ -39,39 +39,31 @@ export function MemberStrip({ members, onOpen }: MemberStripProps) {
   };
 
   return (
-    <div className="op-strip-wrap">
-      <div
-        ref={stripRef}
-        className="op-strip"
-        role="toolbar"
-        aria-label="Chats in this outpost"
-        onKeyDown={onKeyDown}
-      >
-        {members.map((member, index) => (
-          <button
-            key={member.conversationId}
-            type="button"
-            className={member.archived ? 'op-member dim' : 'op-member'}
-            tabIndex={index === current ? 0 : -1}
-            title={`Open ${memberDetails(member)}`}
-            onFocus={() => setFocused(index)}
-            onClick={() => onOpen(member.conversationId)}
-          >
-            <MemberFace chatId={member.conversationId} state={member.state} size="strip" />
-            <span className="op-member-text">
-              <span className="op-member-top">
-                <b>@{member.handle}</b>
-                <span className={`op-member-state ${member.state}`}>{member.stateLabel}</span>
-              </span>
-              <small>{member.place || member.title}</small>
-              <span className="sr-only">
-                {member.place ? `, ${member.title}` : ''}
-                {member.agent ? `, ${member.agent}` : ''}, open chat
-              </span>
-            </span>
-          </button>
-        ))}
-      </div>
+    <div
+      ref={stripRef}
+      className="op-stack"
+      role="toolbar"
+      aria-label="Chats in this outpost"
+      onKeyDown={onKeyDown}
+    >
+      {members.map((member, index) => (
+        <button
+          key={member.conversationId}
+          type="button"
+          className={member.archived ? 'op-member dim' : 'op-member'}
+          tabIndex={index === current ? 0 : -1}
+          title={`@${member.handle} · ${member.stateLabel} · ${memberDetails(member)}`}
+          onFocus={() => setFocused(index)}
+          onClick={() => onOpen(member.conversationId)}
+        >
+          <MemberFace chatId={member.conversationId} state={member.state} size="post" />
+          <i className={`op-dot ${member.state}`} aria-hidden="true" />
+          <span className="sr-only">
+            @{member.handle}, {member.stateLabel}
+            {member.title ? `, ${member.title}` : ''}, open chat
+          </span>
+        </button>
+      ))}
     </div>
   );
 }

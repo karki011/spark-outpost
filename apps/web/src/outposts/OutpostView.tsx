@@ -1,23 +1,33 @@
 import './outposts.css';
+import './outpost-cards.css';
 import { useMemo, useState } from 'react';
 import { threadItems, type OutpostDetail, type OutpostPost } from '@spark-outpost/contracts';
 import { ApiError } from '../api/client.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
-import { PauseIcon, PenIcon, ResumeIcon } from '../ui/icons.tsx';
+import { Segmented } from '../ui/Segmented.tsx';
+import { PauseIcon, ResumeIcon } from '../ui/icons.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
+import { InstructionsSheet } from './InstructionsSheet.tsx';
 import { OutpostFaces } from './MemberFace.tsx';
 import { MemberStrip } from './MemberStrip.tsx';
 import { OutpostComposer, type ComposerFill } from './OutpostComposer.tsx';
 import { OutpostSheet } from './OutpostSheet.tsx';
+import { OutpostTitleMenu } from './OutpostTitleMenu.tsx';
+import { OverviewPane } from './OverviewPane.tsx';
+import { OverviewToggle } from './OverviewToggle.tsx';
 import { PostList } from './PostList.tsx';
-import { StoryBar } from './StoryBar.tsx';
+import { SuggestedThreads } from './SuggestedThreads.tsx';
+import { ThreadPane } from './ThreadPane.tsx';
 import type { Answering, ComposerTarget } from './composer-target.ts';
 import { chatActivity } from './chat-activity.ts';
 import { chatsOnApproval, memberViews, membersLabel } from './member-view.ts';
+import { outpostPulls } from './outpost-pulls.ts';
 import { formOf, hasChanges, sheetChanges, type SheetForm } from './sheet-draft.ts';
+import { requestsOf, threadCard, waitsOnYou } from './thread-cards.ts';
 import { useOutpostChats } from './use-outpost-chats.ts';
+import { useOutpostLayout, type PhoneView } from './use-outpost-layout.ts';
 import {
   useAnswer,
   useCancel,
@@ -25,6 +35,7 @@ import {
   useOutpost,
   usePause,
   usePost,
+  useSaveInstructions,
   useSaveOutpost,
   useStartNow,
 } from './use-outposts.ts';
@@ -69,16 +80,29 @@ function Gone({ onGone }: { onGone: () => void }) {
   );
 }
 
+function storyTagsOf(detail: OutpostDetail): ReadonlyMap<string, string> {
+  const tags = new Map<string, string>();
+  for (const story of detail.stories) {
+    for (const task of story.tasks) {
+      if (task.openingPostId && story.title) tags.set(task.openingPostId, story.title);
+    }
+  }
+  return tags;
+}
+
 interface LoadedProps extends OutpostViewProps {
   detail: OutpostDetail;
 }
+
+type Sheet = 'settings' | 'instructions' | null;
 
 function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
   const { outpost, posts, stories } = detail;
   const { chats, projectNames } = useOutpostChats();
   const { remote } = useRemoteClient();
+  const layout = useOutpostLayout();
   const [answeringId, setAnsweringId] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
+  const [sheet, setSheet] = useState<Sheet>(null);
   const [fill, setFill] = useState<ComposerFill | null>(null);
   const post = usePost(id);
   const answer = useAnswer(id);
@@ -86,6 +110,7 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
   const startNow = useStartNow(id);
   const pause = usePause(id);
   const save = useSaveOutpost(id);
+  const saveInstructions = useSaveInstructions(id);
   const remove = useDeleteOutpost(id);
   const items = useMemo(() => threadItems(posts), [posts]);
   const members = useMemo(
@@ -94,13 +119,32 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
   );
   const approvalChats = useMemo(() => chatsOnApproval(chats), [chats]);
   const activity = useMemo(() => chatActivity(chats), [chats]);
+  const pulls = useMemo(() => outpostPulls(posts, stories, chats), [posts, stories, chats]);
+  const cards = useMemo(
+    () =>
+      requestsOf(items).map((request) =>
+        threadCard(request, pulls, activity.get(request.toConversationId ?? '')),
+      ),
+    [items, pulls, activity],
+  );
+  const cardsById = useMemo(() => new Map(cards.map((card) => [card.post.id, card])), [cards]);
+  const storyTags = useMemo(() => storyTagsOf(detail), [detail]);
   const answering = answeringOf(posts, answeringId, approvalChats);
+  const waiting = waitsOnYou(cards);
   const paused = outpost.pausedAt !== null;
   const problem = cancel.error?.message ?? startNow.error?.message ?? pause.error?.message ?? null;
+  const picked = layout.threadId ? (cardsById.get(layout.threadId) ?? null) : null;
+  const thread = picked?.post.toConversationId ? picked : null;
 
   const fillBox = (text: string) => {
     setAnsweringId(null);
     setFill((last) => ({ id: (last?.id ?? 0) + 1, text }));
+    layout.showConversation();
+  };
+
+  const startAnswer = (postId: string) => {
+    setAnsweringId(postId);
+    layout.showConversation();
   };
 
   const send = async (target: ComposerTarget, text: string) => {
@@ -115,7 +159,7 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
   const saveEdit = async (form: SheetForm) => {
     const changes = sheetChanges(formOf(outpost), form);
     if (hasChanges(changes)) await save.mutateAsync(changes);
-    setEditing(false);
+    setSheet(null);
   };
 
   const deleteOutpost = async () => {
@@ -131,7 +175,7 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
         {remote ? (
           <p>Chats are added on your Mac.</p>
         ) : (
-          <button type="button" className="btn line sm" onClick={() => setEditing(true)}>
+          <button type="button" className="btn line sm" onClick={() => setSheet('settings')}>
             Add chats
           </button>
         )}
@@ -143,26 +187,89 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
       </div>
     );
 
+  const conversation = (
+    <section className="op-conversation" aria-label="Conversation">
+      <PostList
+        items={items}
+        cards={cardsById}
+        selectedId={layout.threadId}
+        answeringId={answering?.postId ?? null}
+        jumpTo={jumpTo ?? null}
+        approvalChats={approvalChats}
+        storyTags={storyTags}
+        empty={empty}
+        after={<SuggestedThreads outpostId={id} members={members} />}
+        onOpenThread={layout.openThread}
+        onAnswer={startAnswer}
+        onCancel={(postId) => cancel.mutate(postId)}
+        onStartNow={(postId) => startNow.mutate(postId)}
+      />
+      <OutpostComposer
+        members={members}
+        answering={answering}
+        paused={paused}
+        fill={fill}
+        onCancelAnswer={() => setAnsweringId(null)}
+        onSend={send}
+      />
+    </section>
+  );
+
+  const threadPane = thread && (
+    <ThreadPane
+      outpostId={id}
+      card={thread}
+      canSteer={!remote}
+      answerable={!approvalChats.has(thread.post.toConversationId ?? '')}
+      onBack={layout.backToOverview}
+      onOpenChat={onOpenChat}
+      onCancel={(postId) => cancel.mutate(postId)}
+    />
+  );
+
+  const overview = (
+    <OverviewPane
+      tab={layout.tab}
+      cards={cards}
+      pulls={pulls}
+      members={members}
+      stories={stories}
+      selectedId={layout.threadId}
+      sections={layout.phone}
+      onTab={layout.setTab}
+      onOpenThread={layout.openThread}
+      onOpenChat={onOpenChat}
+      onFill={fillBox}
+    />
+  );
+
+  let body;
+  if (layout.phone) {
+    body = threadPane ?? (layout.phoneView === 'overview' ? overview : conversation);
+  } else {
+    body = (
+      <>
+        {conversation}
+        {threadPane ?? (layout.overviewOpen ? overview : null)}
+      </>
+    );
+  }
+
   return (
     <OutpostFaces members={outpost.members}>
       <main className="main op" aria-label={`Outpost ${outpost.name}`}>
         <header className="head chat-head op-head">
           <SidebarToggle />
-          <h1 className="chat-title">{outpost.name}</h1>
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="Edit outpost"
-            onClick={() => setEditing(true)}
-          >
-            <PenIcon />
-          </button>
-          <button type="button" className="op-count" onClick={() => setEditing(true)}>
-            {membersLabel(members.length)}
-            <span className="sr-only">
-              {remote ? ', edit the name' : ', edit chats and handles'}
-            </span>
-          </button>
+          <OutpostTitleMenu
+            name={outpost.name}
+            overviewOpen={layout.phone ? null : layout.overviewOpen && thread === null}
+            onRename={() => setSheet('settings')}
+            onSettings={() => setSheet('settings')}
+            onInstructions={() => setSheet('instructions')}
+            onToggleOverview={layout.toggleOverview}
+          />
+          <MemberStrip members={members} onOpen={onOpenChat} />
+          <span className="op-count">{membersLabel(members.length)}</span>
           <div className="head-r">
             <button
               type="button"
@@ -173,10 +280,31 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
               {paused ? <ResumeIcon /> : <PauseIcon />}
               {paused ? 'Resume' : 'Pause'}
             </button>
+            {!layout.phone && (
+              <OverviewToggle
+                open={layout.overviewOpen && thread === null}
+                waiting={waiting}
+                onToggle={layout.toggleOverview}
+              />
+            )}
           </div>
         </header>
-        <MemberStrip members={members} onOpen={onOpenChat} />
-        <StoryBar stories={stories} onOpenChat={onOpenChat} onFill={fillBox} />
+        {layout.phone && !thread && (
+          <div className="op-phone-switch">
+            <Segmented
+              ariaLabel="Outpost view"
+              value={layout.phoneView}
+              options={[
+                { id: 'conversation', label: 'Conversation' },
+                {
+                  id: 'overview',
+                  label: waiting > 0 ? `Overview · ${waiting} waiting` : 'Overview',
+                },
+              ]}
+              onChange={(view) => layout.setPhoneView(view as PhoneView)}
+            />
+          </div>
+        )}
         {paused && (
           <p className="op-banner" role="status">
             Paused. New requests wait until you resume. Turns that are already running finish.
@@ -187,27 +315,8 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
             {problem}
           </p>
         )}
-        <PostList
-          items={items}
-          answeringId={answering?.postId ?? null}
-          jumpTo={jumpTo ?? null}
-          approvalChats={approvalChats}
-          activity={activity}
-          empty={empty}
-          onAnswer={(asked) => setAnsweringId(asked.id)}
-          onCancel={(postId) => cancel.mutate(postId)}
-          onStartNow={(postId) => startNow.mutate(postId)}
-          onOpenChat={onOpenChat}
-        />
-        <OutpostComposer
-          members={members}
-          answering={answering}
-          paused={paused}
-          fill={fill}
-          onCancelAnswer={() => setAnsweringId(null)}
-          onSend={send}
-        />
-        {editing && (
+        <div className="op-body">{body}</div>
+        {sheet === 'settings' && (
           <OutpostSheet
             initial={formOf(outpost)}
             joined={outpost.members}
@@ -217,7 +326,15 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
             canManage={!remote}
             onStart={saveEdit}
             onDelete={deleteOutpost}
-            onClose={() => setEditing(false)}
+            onClose={() => setSheet(null)}
+          />
+        )}
+        {sheet === 'instructions' && (
+          <InstructionsSheet
+            initial={outpost.instructions}
+            canEdit={!remote}
+            onSave={(text) => saveInstructions.mutateAsync(text)}
+            onClose={() => setSheet(null)}
           />
         )}
       </main>

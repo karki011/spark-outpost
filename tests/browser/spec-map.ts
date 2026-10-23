@@ -201,6 +201,7 @@ export const SPEC_GROUPS = {
     'outpost-address',
     'outpost-answers',
     'outpost-create',
+    'outpost-overview',
     'outpost-sidebar',
     'outpost-story-bar',
     'outposts',

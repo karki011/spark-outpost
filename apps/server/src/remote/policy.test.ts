@@ -58,6 +58,7 @@ describe('remote policy', () => {
     expect(remoteDecision('POST', '/api/outposts', ALL_ON).kind).toBe('refuse');
     expect(remoteDecision('DELETE', `/api/outposts/${ID}`, ALL_ON).kind).toBe('refuse');
     expect(remoteDecision('PUT', `/api/outposts/${ID}/members/${ID}`, ALL_ON).kind).toBe('refuse');
+    expect(remoteDecision('PUT', `/api/outposts/${ID}/instructions`, ALL_ON).kind).toBe('refuse');
   });
 
   it('lets a paired device answer a start-sub-chats card like other Spark action cards', () => {

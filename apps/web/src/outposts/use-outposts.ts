@@ -116,6 +116,14 @@ export function useAnswer(id: string) {
   });
 }
 
+export function useSaveInstructions(id: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (instructions: string) => outpostsApi.setInstructions(id, instructions),
+    onSuccess: (detail) => keep(client, detail),
+  });
+}
+
 export function useCancel(id: string) {
   const client = useQueryClient();
   return useMutation({

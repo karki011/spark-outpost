@@ -38,6 +38,7 @@ function outpost(id: string, members: [chatId: string, handle: string, position:
     createdAt: '2026-10-09T10:00:00Z',
     updatedAt: '2026-10-09T10:00:00Z',
     needsYou: 0,
+    instructions: '',
     members: members.map(([conversationId, handle, position]) => ({
       conversationId,
       handle,

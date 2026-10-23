@@ -3,6 +3,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  OUTPOST_INSTRUCTIONS_MAX,
   outpostDetailSchema,
   outpostSchema,
   type OutpostDetail,
@@ -129,6 +130,27 @@ async function postOf(postId: string): Promise<OutpostPost> {
 }
 
 describe('outposts', () => {
+  it('saves trimmed outpost instructions, clears them, and refuses ones over the limit', async () => {
+    expect((await detail()).outpost.instructions).toBe('');
+
+    const saved = await send('put', `/api/outposts/${outpostId}/instructions`, {
+      instructions: '  Branch from main.  ',
+    });
+    expect(saved.status).toBe(200);
+    expect(outpostDetailSchema.parse(saved.body).outpost.instructions).toBe('Branch from main.');
+
+    const tooLong = await send('put', `/api/outposts/${outpostId}/instructions`, {
+      instructions: 'x'.repeat(OUTPOST_INSTRUCTIONS_MAX + 1),
+    });
+    expect(tooLong.status).toBe(400);
+    await send('put', `/api/outposts/${outpostId}/instructions`, { instructions: '' });
+    expect((await detail()).outpost.instructions).toBe('');
+    const missing = await send('put', `/api/outposts/${randomUUID()}/instructions`, {
+      instructions: 'x',
+    });
+    expect(missing.status).toBe(404);
+  });
+
   it('creates an outpost with members and introduction lines, and lists it', async () => {
     const opened = await detail();
 

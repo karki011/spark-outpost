@@ -6,6 +6,7 @@ import { runStatusSchema } from './runs.ts';
 import { SPARK_TEXT_MAX } from './spark-actions.ts';
 import {
   OUTPOST_HANDLE_PATTERN,
+  OUTPOST_INSTRUCTIONS_MAX,
   OUTPOST_MEMBERS_MAX,
   OUTPOST_NAME_MAX,
   OUTPOST_STORY_TITLE_MAX,
@@ -13,6 +14,7 @@ import {
 
 export {
   OUTPOST_HANDLE_PATTERN,
+  OUTPOST_INSTRUCTIONS_MAX,
   OUTPOST_MEMBERS_MAX,
   OUTPOST_NAME_MAX,
   OUTPOST_STORY_TITLE_MAX,
@@ -76,6 +78,7 @@ export const outpostSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   members: z.array(outpostMemberSchema),
+  instructions: z.string().default(''),
   needsYou: z.number().int().nonnegative(),
 });
 export type Outpost = z.infer<typeof outpostSchema>;
@@ -280,6 +283,11 @@ export const updateOutpostRequestSchema = z
     message: 'Change the name or pause the outpost.',
   });
 export type UpdateOutpostRequest = z.infer<typeof updateOutpostRequestSchema>;
+
+export const outpostInstructionsRequestSchema = z.object({
+  instructions: z.string().trim().max(OUTPOST_INSTRUCTIONS_MAX),
+});
+export type OutpostInstructionsRequest = z.infer<typeof outpostInstructionsRequestSchema>;
 
 export const createPostRequestSchema = z.object({
   id: z.uuid(),
