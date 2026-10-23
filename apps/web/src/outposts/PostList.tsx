@@ -20,9 +20,19 @@ interface PostListProps extends CardHandlers {
   answeringId?: string | null | undefined;
   jumpTo?: string | null | undefined;
   approvalChats?: ReadonlySet<string> | undefined;
+  questionChats?: ReadonlySet<string> | undefined;
   storyTags?: ReadonlyMap<string, string> | undefined;
   empty: ReactNode;
   after?: ReactNode;
+}
+
+function answerableIn(
+  chatId: string | null,
+  approvalChats: ReadonlySet<string> | undefined,
+  questionChats: ReadonlySet<string> | undefined,
+): boolean {
+  const id = chatId ?? '';
+  return questionChats?.has(id) === true || approvalChats?.has(id) !== true;
 }
 
 interface Heard {
@@ -74,6 +84,7 @@ export function PostList({
   answeringId,
   jumpTo,
   approvalChats,
+  questionChats,
   storyTags,
   empty,
   after,
@@ -96,7 +107,7 @@ export function PostList({
         card={card}
         selected={postId === selectedId}
         answering={postId === answeringId}
-        answerable={!approvalChats?.has(card.post.toConversationId ?? '')}
+        answerable={answerableIn(card.post.toConversationId, approvalChats, questionChats)}
         story={storyTags?.get(postId)}
         {...handlers}
       />

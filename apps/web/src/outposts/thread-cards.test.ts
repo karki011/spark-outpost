@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { threadItems } from '@spark-outpost/contracts';
 import type { OutpostPull } from './outpost-pulls.ts';
-import { groupCards, requestTitle, requestsOf, threadCard, waitsOnYou } from './thread-cards.ts';
+import {
+  groupCards,
+  requestTitle,
+  requestsOf,
+  threadCard,
+  threadCards,
+  waitsOnYou,
+} from './thread-cards.ts';
 import { note, post } from './test-fixtures.ts';
 
 const URL = 'https://github.com/acme/shop/pull/7';
@@ -66,6 +73,21 @@ describe('a request card', () => {
     expect(card.summary).toBe('Which region?');
   });
 
+  it('keeps code arrows and tags in a summary, dropping only block marks at a line start', () => {
+    const text =
+      "> I added `app.get('/health', (req, res) => res.json({ ok: true }))`.\n# Then <h1>My list</h1> in PR #12.";
+    const card = threadCard(
+      post(1, {
+        state: 'answered',
+        answer: { text, branch: null, changes: [], pullRequests: [] },
+      }),
+      [],
+    );
+    expect(card.summary).toBe(
+      "I added app.get('/health', (req, res) => res.json({ ok: true })). Then <h1>My list</h1> in PR #12.",
+    );
+  });
+
   it('shows the live activity of a working request', () => {
     expect(threadCard(post(1, { state: 'working' }), [], 'Running tests').summary).toBe(
       'Running tests',
@@ -87,6 +109,18 @@ describe('the title of a request', () => {
     expect(requestTitle('Please, @api and @web: ship it', 'web')).toBe(
       'Please, @api and @web: ship it',
     );
+  });
+
+  it("is each chat's own part when one line asks several chats", () => {
+    const body =
+      '@api add a GET /health route. @web add an <h1>Todos</h1> heading. Reply with your handle.';
+    const batch = (n: number, handle: string) =>
+      post(n, { body, toHandle: handle, batchId: '9b2f0c1e-6f61-4c55-9a43-4f0c1e6f6155' });
+    const cards = threadCards(threadItems([batch(1, 'api'), batch(2, 'web')]), [], () => undefined);
+    expect(cards.map((card) => card.title)).toEqual([
+      'add a GET /health route.',
+      'add an <h1>Todos</h1> heading. Reply with your handle.',
+    ]);
   });
 
   it('skips empty lines, cuts a long line, and has a fallback', () => {

@@ -159,8 +159,9 @@ test('opening the chat in the app reads it everywhere, and the card stays pinned
     .click();
   await expect(app.locator('.chat-title')).toHaveText('Deploy the site');
   await expectCounts(app, isl, 0);
-  const pinned = app.getByRole('group', { name: 'Open items' });
-  await expect(pinned).toContainText('Waiting for you');
+  const pinned = app.getByRole('group', { name: /^Run .+\?$/ });
+  await expect(pinned).toBeVisible();
+  await expect(pinned.getByRole('button', { name: /^Allow/ })).toBeVisible();
   await openHome(isl);
   await expect(
     island(isl).getByRole('article', { name: 'Deploy the site needs you' }).getByText('Seen'),
@@ -198,11 +199,14 @@ test('a Spark flag never counts, chimes or shows in the island, and Got it clear
 
   await app.locator('.chat-title').waitFor();
   await expect(app.locator('.chat-title')).toHaveText('Send the report');
-  const flag = app.getByRole('group', { name: 'Open items' }).getByRole('region', {
-    name: 'Flagged by Spark',
-  });
+  const line = app.locator('.flag-line');
+  await expect(line).toContainText('Flag: Fake provider sent data to example.com');
+  await line.getByRole('button', { name: 'Details' }).click();
+  const flag = app.getByRole('region', { name: 'Flagged by Spark' });
   await expect(flag).toContainText('sent data to example.com after reading .env');
   await flag.getByRole('button', { name: 'Got it' }).click();
-  await expect(app.getByRole('group', { name: 'Open items' })).toHaveCount(0);
+  await expect(line).toHaveClass(/\bsettled\b/);
+  await expect(line).toContainText('Dismissed.');
+  await expect(flag.getByRole('button', { name: 'Got it' })).toHaveCount(0);
   await expectCounts(app, isl, 0);
 });

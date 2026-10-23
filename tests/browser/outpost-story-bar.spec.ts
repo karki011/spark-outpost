@@ -190,7 +190,7 @@ test('a sub-task waits for the one it starts after until Start anyway', async ({
   await expect(startAnyway).toHaveCount(0);
   await expect(stateOf(held)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
   expect(starts).toHaveLength(1);
-  await expect(rows.nth(1)).toContainText('Answered');
+  await expect(rows.nth(1)).toContainText('Idle');
   await expect(summary).toContainText(/[12] of 2 answered/);
 });
 

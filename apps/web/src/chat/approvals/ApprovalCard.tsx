@@ -1,38 +1,23 @@
 import './approval-card.css';
-import { Fragment, useId, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useId, useState } from 'react';
 import {
   friendlyStep,
-  holdsToConfirm,
-  humanizeToolName,
-  isCheckApproval,
   isWebToolTitle,
-  parseMcpTool,
   sparkActionLabels,
-  sparkActionQuestion,
   type Approval,
   type ApprovalDecidedValue,
-  type ApprovalScope,
   type Project,
 } from '@spark-outpost/contracts';
-import { approvalsApi } from '../../api/approvals.ts';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
-import { projectKeys } from '../../api/projects.ts';
-import { HoldToConfirm } from '../../ui/HoldToConfirm.tsx';
 import { CheckIcon, XIcon } from '../../ui/icons.tsx';
-import { Breakout } from '../breakout/Breakout.tsx';
-import { Markdown } from '../markdown/Markdown.tsx';
-import { providerName } from '../provider-name.ts';
 import { approvalSummary } from '../status/pending-summary.ts';
 import { Pending } from '../status/Pending.tsx';
 import { useActionReport } from '../status/status-context.ts';
-import { useProjectBranch } from '../project/use-chat-repos.ts';
+import { providerName } from '../provider-name.ts';
 import { mergeDecision } from './approval-events.ts';
-import { isAllow, outcome, projectAllowOption, shownOptions } from './approval-outcome.ts';
-import { CommandPreview } from './CommandPreview.tsx';
-import { DiffView } from './DiffView.tsx';
-import { askReason, askerName, fromSandbox } from './ask-reason.ts';
-import { ObservedNote } from './ObservedNote.tsx';
+import { outcome } from './approval-outcome.ts';
+import { cardTitle, titleText } from './approval-title.ts';
+import { PendingApproval } from './PendingApproval.tsx';
 import { RetryAction } from './RetryAction.tsx';
 import { SparkActionCard } from './SparkActionCard.tsx';
 import { SparkRuleCard } from './SparkRuleCard.tsx';
@@ -43,85 +28,6 @@ interface ApprovalCardProps {
   provider: string;
   agent?: string;
   repo: Project | null;
-}
-
-const WORKTREE_SEGMENT = '/.spark/worktrees/';
-
-function inWorktree(cwd: string | null): boolean {
-  return cwd?.includes(WORKTREE_SEGMENT) ?? false;
-}
-
-export function displayCwd(cwd: string | null, repo: Project | null): string | null {
-  if (!cwd) return repo?.displayPath ?? null;
-  if (repo && (cwd === repo.rootPath || cwd.startsWith(`${repo.rootPath}/`))) {
-    return `${repo.displayPath}${cwd.slice(repo.rootPath.length)}`;
-  }
-  return cwd;
-}
-
-function fullPath(approval: Approval, shown: string): string | undefined {
-  const index = approval.payload.paths.indexOf(shown);
-  return index < 0 ? undefined : approval.payload.fullPaths?.[index];
-}
-
-function heading(approval: Approval): string {
-  const action = approval.payload.sparkAction;
-  if (action) return sparkActionQuestion(action);
-  if (approval.payload.plan) return 'Approve the plan?';
-  if (approval.payload.forcePush) return 'Force push?';
-  if (approval.payload.secretSend) return 'Send a secret value?';
-  if (approval.payload.gitControl) return 'Change git hooks or config?';
-  if (approval.payload.instructionFiles) return 'Change agent instructions?';
-  if (isCheckApproval(approval)) return 'Run a check?';
-  if (approval.kind === 'execute') return 'Run a command?';
-  if (approval.kind === 'edit') {
-    return approval.payload.paths.length > 1 ? 'Change these files?' : 'Change a file?';
-  }
-  return 'Allow this action?';
-}
-
-function request(approval: Approval, agent: string) {
-  if (approval.payload.plan) return `${agent} wrote a plan and wants to start building.`;
-  if (isCheckApproval(approval)) return 'Jev wants to run a project check.';
-  if (approval.payload.forcePush) return `${agent} wants to rewrite history on the remote.`;
-  if (approval.payload.secretSend) {
-    return `${agent} wants to send something that holds a value from ${listed(approval.payload.secretSend)}.`;
-  }
-  if (approval.payload.gitControl)
-    return `${agent} wants to change ${listed(approval.payload.gitControl)}.`;
-  if (approval.payload.instructionFiles) {
-    return `${agent} wants to change ${listed(approval.payload.instructionFiles)}, which steer every agent in this project.`;
-  }
-  if (approval.kind === 'execute') return `${agent} wants to run a command.`;
-  if (approval.kind === 'edit') {
-    const paths = approval.payload.paths;
-    return paths.length === 0 ? `${agent} wants to change files.` : `${agent} wants to edit:`;
-  }
-  const mcp = parseMcpTool(approval.title);
-  if (mcp) return `${agent} wants to use ${humanizeToolName(mcp.tool)} (${mcp.server}).`;
-  return `${agent} wants to: ${approval.title}`;
-}
-
-function releasedHint(approval: Approval): string {
-  if (approval.payload.gitControl) return 'Released early. Nothing was changed.';
-  if (approval.payload.forcePush) return 'Released early. Nothing was pushed.';
-  return 'Released early. Nothing was sent.';
-}
-
-function listed(files: readonly string[]): string {
-  return files.join(', ');
-}
-
-function commandNote(approval: Approval): string | null {
-  if (approval.reason !== null) return null;
-  if (approval.payload.asksBecause) return `${approval.payload.asksBecause}.`;
-  if (approval.payload.agentReason) return null;
-  return "It isn't on the project's allowlist yet.";
-}
-
-function optionClass(allow: boolean, primary: boolean): string {
-  if (!allow) return 'btn ghost sm deny';
-  return primary ? 'btn primary sm' : 'btn line sm';
 }
 
 function subject(approval: Approval): string | null {
@@ -140,7 +46,8 @@ function retired(approval: Approval): boolean {
 function ResolvedApproval({ approval }: { approval: Approval }) {
   const headingId = useId();
   const result = outcome(approval);
-  const shown = subject(approval);
+  const title = cardTitle(approval);
+  const shown = title.code ? null : subject(approval);
   const denied = result.icon === 'no';
   const action = approval.payload.sparkAction;
   useActionReport(
@@ -163,7 +70,11 @@ function ResolvedApproval({ approval }: { approval: Approval }) {
         </span>
       )}
       <span id={headingId} className="appr-what">
-        <b>{heading(approval)}</b>
+        <b>
+          {title.before}
+          {title.code && <code>{title.code}</code>}
+          {title.after}
+        </b>
         {shown && <code title={shown}>{shown}</code>}
       </span>
       <span className="appr-res" role="status">
@@ -202,195 +113,19 @@ export function ApprovalCard({ approval: incoming, ...rest }: ApprovalCardProps)
   if (approval.status !== 'pending' || retired(approval)) {
     return <ResolvedApproval approval={approval} />;
   }
+  const agent = rest.agent ?? providerName(rest.provider);
   return (
     <Pending
       id={approval.id}
       order={approval.createdAt}
-      summary={approvalSummary(approval, heading(approval))}
+      summary={approvalSummary(approval, titleText(cardTitle(approval)))}
       pending
     >
       {approval.payload.sparkAction ? (
-        <SparkActionCard
-          approval={approval}
-          agent={rest.agent ?? providerName(rest.provider)}
-          onDecided={setLocal}
-        />
+        <SparkActionCard approval={approval} agent={agent} onDecided={setLocal} />
       ) : (
-        <PendingApproval approval={approval} onDecided={setLocal} {...rest} />
+        <PendingApproval approval={approval} agent={agent} repo={rest.repo} onDecided={setLocal} />
       )}
     </Pending>
-  );
-}
-
-function PendingApproval({
-  approval,
-  provider,
-  agent,
-  repo,
-  onDecided,
-}: ApprovalCardProps & { onDecided: (decided: ApprovalDecidedValue) => void }) {
-  const queryClient = useQueryClient();
-  const headingId = useId();
-  const checkoutBranch = useProjectBranch(repo?.id ?? null);
-  const branch = inWorktree(approval.payload.cwd) ? null : checkoutBranch;
-  const decide = useMutation({
-    mutationFn: ({ optionId, scope }: { optionId: string; scope: ApprovalScope }) =>
-      approvalsApi.decide(approval.id, { optionId, scope, payloadHash: approval.payloadHash }),
-    onSuccess: (decided, { scope }) => {
-      onDecided(decided);
-      if (scope === 'project') void queryClient.invalidateQueries({ queryKey: projectKeys.all });
-    },
-  });
-  const forced = approval.payload.forcePush !== undefined;
-  const gitControl = approval.payload.gitControl !== undefined;
-  const instructions = approval.payload.instructionFiles !== undefined;
-  const held = holdsToConfirm(approval.payload);
-  const holdOption = held ? approval.options.find((option) => option.kind === 'allow_once') : null;
-  const options = shownOptions(approval).filter((option) => !held || !isAllow(option));
-  const chatAllow = instructions
-    ? approval.options.find((option) => option.kind === 'allow_once')
-    : undefined;
-  const firstAllow = options.findIndex(isAllow);
-  const lastAllow = options.findLastIndex(isAllow);
-  const alwaysAsks = approval.reason !== null;
-  const agentReason = approval.payload.agentReason ?? null;
-  const agentName = agent ?? providerName(provider);
-  const reason = askReason(approval, agentName);
-  const command = approval.payload.command;
-  const plan = approval.payload.plan ?? null;
-  const cwd = displayCwd(approval.payload.cwd, repo);
-  const projectAllow =
-    !alwaysAsks && !plan && approval.kind === 'execute' && command
-      ? projectAllowOption(approval.options)
-      : undefined;
-
-  return (
-    <Breakout>
-      <div
-        className="appr"
-        role="group"
-        aria-labelledby={headingId}
-        id={approvalAnchor(approval.id)}
-      >
-        <div className="appr-top">
-          <div className="appr-h">
-            <span className="ic" aria-hidden="true">
-              <i className="appr-dia" />
-            </span>
-            <span id={headingId}>
-              <b>{heading(approval)}</b> {request(approval, askerName(approval, agentName))}
-            </span>
-          </div>
-          {holdOption && (
-            <HoldToConfirm
-              label={forced ? 'Hold to force push' : 'Hold to allow once'}
-              hint="Press and hold for 1.5 seconds, with the mouse or Space."
-              holdingHint="Keep holding. Let go now to cancel."
-              releasedHint={releasedHint(approval)}
-              disabled={decide.isPending}
-              onConfirm={() => decide.mutate({ optionId: holdOption.optionId, scope: 'once' })}
-            />
-          )}
-          <div className="appr-acts">
-            {options.map((option, index) => (
-              <Fragment key={option.optionId}>
-                <button
-                  type="button"
-                  className={optionClass(isAllow(option), index === firstAllow)}
-                  disabled={decide.isPending || Boolean(option.unavailableReason)}
-                  title={option.unavailableReason}
-                  onClick={() => decide.mutate({ optionId: option.optionId, scope: 'once' })}
-                >
-                  {instructions && isAllow(option) ? 'Allow once' : option.name}
-                </button>
-                {index === lastAllow && chatAllow && (
-                  <button
-                    type="button"
-                    className="btn line sm"
-                    disabled={decide.isPending}
-                    onClick={() => decide.mutate({ optionId: chatAllow.optionId, scope: 'chat' })}
-                  >
-                    Allow for this chat
-                  </button>
-                )}
-                {index === lastAllow && projectAllow && (
-                  <button
-                    type="button"
-                    className="btn line sm"
-                    disabled={decide.isPending}
-                    onClick={() =>
-                      decide.mutate({ optionId: projectAllow.optionId, scope: 'project' })
-                    }
-                  >
-                    Always allow in this project
-                  </button>
-                )}
-              </Fragment>
-            ))}
-          </div>
-          {decide.isError && (
-            <p className="appr-err" role="alert">
-              {decide.error.message}
-            </p>
-          )}
-        </div>
-        {command && <CommandPreview command={command} />}
-        {plan && (
-          <div className="appr-plan" role="region" tabIndex={0} aria-label="Proposed plan">
-            <Markdown text={plan} />
-          </div>
-        )}
-        {approval.kind === 'edit' && approval.payload.diffs.length > 0
-          ? approval.payload.diffs.map((diff) => (
-              <DiffView key={diff.path} diff={diff} fullPath={fullPath(approval, diff.path)} />
-            ))
-          : approval.kind === 'edit' && (
-              <ul className="appr-paths">
-                {approval.payload.paths.map((path) => (
-                  <li key={path}>
-                    <code title={fullPath(approval, path)}>{path}</code>
-                  </li>
-                ))}
-              </ul>
-            )}
-        {approval.payload.truncated && <p>The diff was cut to 64 KB.</p>}
-        {approval.kind === 'execute' && (cwd || commandNote(approval)) && (
-          <p>
-            {cwd && (
-              <>
-                Runs in <code>{cwd}</code>
-                {branch && (
-                  <>
-                    {' '}
-                    on <code>{branch}</code>
-                  </>
-                )}
-                .{' '}
-              </>
-            )}
-            {commandNote(approval)}
-          </p>
-        )}
-        {reason && (
-          <p className="appr-reason">
-            {reason}
-            {agentReason && fromSandbox(agentReason) && (
-              <span className="appr-agent-says"> {agentReason}</span>
-            )}
-          </p>
-        )}
-        {approval.kind === 'edit' && (
-          <p>The change lands in your working tree. You can revert this run afterwards.</p>
-        )}
-        {alwaysAsks && <p className="appr-reason">{approval.reason}, whatever your permissions.</p>}
-        <ObservedNote observed={approval.payload.observed} sendsTo={approval.payload.sendsTo} />
-        {gitControl && (
-          <p className="appr-reason">
-            Git runs hooks and settings from .git on every commit, outside Spark&apos;s control and
-            approvals. Allow this once only if you have read the change.
-          </p>
-        )}
-      </div>
-    </Breakout>
   );
 }

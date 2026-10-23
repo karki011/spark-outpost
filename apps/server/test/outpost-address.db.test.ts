@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { outpostDetailSchema, threadItems, type OutpostPost } from '@spark-outpost/contracts';
+import { ownRequestText } from '../src/persistence/outpost-own-request.ts';
 import { chatTurns } from './outpost-fixtures.ts';
 import {
   gate,
@@ -84,6 +85,8 @@ describe('a message that addresses two chats', () => {
     expect(fromWeb.answer?.text).toContain('name the page');
     expect(await typedIn(room.api, toApi!.id)).toBe(BOTH);
     expect(await typedIn(room.web, toWeb!.id)).toBe(BOTH);
+    expect(await ownRequestText(t.db, toApi!.id)).toBe('list the order fields');
+    expect(await ownRequestText(t.db, toWeb!.id)).toBe('name the page.');
     expect(await chatTurns(t.db, room.api)).toMatchObject([
       { source: 'outpost', status: 'succeeded', user_message_id: toApi!.id },
     ]);

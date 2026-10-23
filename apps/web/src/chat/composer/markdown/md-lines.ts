@@ -39,27 +39,33 @@ export function scanLines(text: string): Line[] {
   return lines;
 }
 
-function prefixed(text: string, pattern: RegExp, markerGroup: number, rest: Mark[] = []): Span[] {
+function prefixed(
+  text: string,
+  pattern: RegExp,
+  markerGroup: number,
+  mentionable: readonly string[] | undefined,
+  rest: Mark[] = [],
+): Span[] {
   const match = pattern.exec(text);
-  if (!match) return inlineSpans(text, rest);
+  if (!match) return inlineSpans(text, rest, mentionable);
   const groups = match.slice(1).map((group, index) => ({
     text: group,
     marks: index === markerGroup ? (['marker'] as const) : [],
   }));
   return [
     ...groups.filter((span) => span.text !== ''),
-    ...inlineSpans(text.slice(match[0].length), rest),
+    ...inlineSpans(text.slice(match[0].length), rest, mentionable),
   ];
 }
 
-export function lineSpans(text: string, block: Block): Span[] {
+export function lineSpans(text: string, block: Block, mentionable?: readonly string[]): Span[] {
   if (text === '') return [];
   if (block === 'fence-open' || block === 'fence-close') return [{ text, marks: ['marker'] }];
   if (block === 'code') return [{ text, marks: [] }];
-  if (block === 'quote') return prefixed(text, QUOTE, 0);
-  if (block === 'list') return prefixed(text, LIST, 1);
-  if (block === 'heading') return prefixed(text, HEADING, 0, ['strong']);
-  return inlineSpans(text);
+  if (block === 'quote') return prefixed(text, QUOTE, 0, mentionable);
+  if (block === 'list') return prefixed(text, LIST, 1, mentionable);
+  if (block === 'heading') return prefixed(text, HEADING, 0, mentionable, ['strong']);
+  return inlineSpans(text, [], mentionable);
 }
 
 export function lineAt(lines: readonly Line[], offset: number): number {

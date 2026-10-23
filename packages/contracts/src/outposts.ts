@@ -49,6 +49,7 @@ export const requestFactsSchema = z.object({
   queued: z.boolean(),
   runStatus: runStatusSchema.nullable(),
   runNeedsYou: z.string().nullable(),
+  runAsksQuestion: z.boolean().optional(),
   paused: z.boolean(),
   held: z.enum(['failed', 'stopped']).nullable(),
   chatDeleted: z.boolean(),

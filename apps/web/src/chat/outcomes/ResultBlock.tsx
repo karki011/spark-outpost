@@ -2,7 +2,7 @@ import './result-block.css';
 import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { Run } from '@spark-outpost/contracts';
-import { CheckIcon, ChevronIcon, RestoreIcon } from '../../ui/icons.tsx';
+import { ChevronIcon, RestoreIcon } from '../../ui/icons.tsx';
 import { RevertRun } from '../approvals/RevertRun.tsx';
 import { FilesChanged } from '../changes/FilesChanged.tsx';
 import {
@@ -11,19 +11,19 @@ import {
   type CheckpointApproval,
 } from '../checkpoints/checkpoint-model.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
+import { RowIcon } from '../rows/RowIcon.tsx';
 import { BringChanges } from './BringChanges.tsx';
 import type { KeepCardHost } from './feedback-host.ts';
 import { keptAtLine, keptLine, pullReferences } from './result-model.ts';
-import { TurnFeedback } from './TurnFeedback.tsx';
 
 interface ResultBlockProps {
   approval: CheckpointApproval;
   variant: KeepCardHost['variant'];
-  runId: string;
   runIds: readonly string[];
   revertible: Run | null;
   taskId: string | null;
   conversationId: string;
+  onReview: (() => void) | null;
 }
 
 function PullReferences({ conversationId }: { conversationId: string }) {
@@ -65,11 +65,11 @@ function StoredFiles({ approval }: { approval: CheckpointApproval }) {
 export function ResultBlock({
   approval,
   variant,
-  runId,
   runIds,
   revertible,
   taskId,
   conversationId,
+  onReview,
 }: ResultBlockProps) {
   const [open, setOpen] = useState(false);
   const moreId = useId();
@@ -82,8 +82,9 @@ export function ResultBlock({
   const said = saidNote(approval);
   return (
     <section className={kept ? 'result' : 'result reverted'} aria-label={kept ? line : 'Reverted'}>
-      <div className="result-line">
-        {kept && (
+      <div className="turn-line result-line">
+        <RowIcon name="files" />
+        {kept ? (
           <button
             type="button"
             className="result-toggle"
@@ -91,24 +92,21 @@ export function ResultBlock({
             aria-controls={open ? moreId : undefined}
             onClick={() => setOpen(!open)}
           >
-            <ChevronIcon />
-            <CheckIcon />
             <span>{line}</span>
+            <ChevronIcon />
+          </button>
+        ) : (
+          <p className="revert-done" role="status">
+            <RestoreIcon />
+            {who}
+          </p>
+        )}
+        {kept && onReview && (
+          <button type="button" className="linkish" onClick={onReview}>
+            Review
           </button>
         )}
-        {kept && commit && <code className="result-fact">{commit}</code>}
-        {kept && <PullReferences conversationId={conversationId} />}
-        <TurnFeedback key={variant} runId={runId} variant={variant} />
-        {revertible ? (
-          <RevertRun key="revert" run={revertible} compact />
-        ) : (
-          !kept && (
-            <p className="revert-done" role="status">
-              <RestoreIcon />
-              {who}
-            </p>
-          )
-        )}
+        {revertible && <RevertRun key="revert" run={revertible} compact />}
       </div>
       {kept && checkpoint.keptNote && <p className="result-note">{checkpoint.keptNote}</p>}
       {kept && open && (
@@ -122,6 +120,8 @@ export function ResultBlock({
               <code>{where}</code>
             </p>
           )}
+          {commit && <code className="result-fact">{commit}</code>}
+          <PullReferences conversationId={conversationId} />
           {taskId ? (
             <FilesChanged taskId={taskId} runIds={runIds} />
           ) : (
