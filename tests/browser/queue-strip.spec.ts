@@ -60,7 +60,7 @@ test('the queue strip edits, reorders, removes and keeps messages, then sends th
   await queue(page, 'Second queued');
   await queue(page, 'Third queued');
   await expect(strip(page)).toContainText('3 queued');
-  await expect(page.locator('.cstatus')).toContainText('3 queued');
+  await expect(page.locator('.cstatus')).toHaveAttribute('data-state', 'idle');
 
   const first = queued(page).nth(0);
   await first.getByRole('button', { name: 'Edit' }).click();

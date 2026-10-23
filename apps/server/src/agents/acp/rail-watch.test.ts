@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRailWatch } from './rail-watch.ts';
 
 const ROOT = '/work/app';
@@ -35,24 +35,65 @@ describe('watching actions the agent took without asking', () => {
         paths: ['~/x.txt'],
         inside: false,
         originals: [{ path: '~/x.txt', text: 'before' }],
+        stopped: false,
       },
     ]);
   });
 
-  it("flags an unasked copy of Spark's browser data from the folder the app gives the worker", async () => {
-    const saved = process.env.SPARK_BROWSER_DATA_DIR;
-    process.env.SPARK_BROWSER_DATA_DIR = '/nowhere/Spark Outpost';
-    try {
-      const rails = watch();
-      const command = 'cp -r "/nowhere/Spark Outpost/Partitions" /tmp/x';
-      await rails.observe(started('b1', { kind: 'execute', rawInput: { command } }));
-      expect((await rails.observe(done('b1'))).rails).toMatchObject([
-        { toolCallId: 'b1', rail: 'browser_data', paths: [] },
-      ]);
-    } finally {
+  describe("Spark's browser data", () => {
+    const DATA = '/nowhere/Spark Outpost';
+    const command = `cp -r "${DATA}/Partitions" /tmp/x`;
+    let saved: string | undefined;
+    beforeEach(() => {
+      saved = process.env.SPARK_BROWSER_DATA_DIR;
+      process.env.SPARK_BROWSER_DATA_DIR = DATA;
+    });
+    afterEach(() => {
       if (saved === undefined) delete process.env.SPARK_BROWSER_DATA_DIR;
       else process.env.SPARK_BROWSER_DATA_DIR = saved;
-    }
+    });
+    const finished = (status: string, text: string) => ({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'b1',
+      status,
+      content: [{ type: 'content', content: { type: 'text', text } }],
+    });
+    const watched = async (cli: 'claude' | 'codex', status: string, text: string) => {
+      const rails = createRailWatch({
+        roots: [{ path: ROOT, ignore: [] }],
+        cwd: ROOT,
+        home: '/Users/me',
+        cli,
+      });
+      await rails.observe(started('b1', { kind: 'execute', rawInput: { command } }));
+      return (await rails.observe(finished(status, text))).rails;
+    };
+
+    it('flags an unasked copy that ran', async () => {
+      expect(await watched('claude', 'completed', '```console\n\n```')).toMatchObject([
+        { toolCallId: 'b1', rail: 'browser_data', paths: [], stopped: false },
+      ]);
+      expect(await watched('codex', 'completed', 'copied')).toMatchObject([
+        { rail: 'browser_data', stopped: false },
+      ]);
+    });
+
+    it("marks a crossing Claude's own rule or Codex's sandbox stopped", async () => {
+      const denied = `\`\`\`\nPermission to use Bash with command ${command} has been denied.\n\`\`\``;
+      expect(await watched('claude', 'failed', denied)).toMatchObject([
+        { rail: 'browser_data', stopped: true },
+      ]);
+      expect(
+        await watched('codex', 'failed', `cp: ${DATA}/Partitions: Operation not permitted`),
+      ).toMatchObject([{ rail: 'browser_data', stopped: true }]);
+    });
+
+    it("doesn't take a command's own output for Claude's denial", async () => {
+      const printed = '```\nPermission to use Bash with command ls has been denied.\n```';
+      expect(await watched('claude', 'failed', printed)).toMatchObject([{ stopped: false }]);
+      const exited = `\`\`\`\nExit code 1\nPermission to use Bash with command ${command} has been denied.\n\`\`\``;
+      expect(await watched('claude', 'failed', exited)).toMatchObject([{ stopped: false }]);
+    });
   });
 
   it('leaves actions the agent asked about to the approval gate', async () => {

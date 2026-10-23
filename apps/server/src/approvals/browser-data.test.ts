@@ -62,6 +62,9 @@ describe("Spark's browser data is refused to chats in every mode", () => {
     `python3 -c "print(open('${DATA}/postgres-password').read())"`,
     `rm -rf "${DATA}/backups"`,
     `dd if="${DATA}/postgres-password" of=/tmp/x`,
+    `sqlite3 "${DATA}/Cookies" .dump`,
+    `cp -r "${DATA}/Local Storage" /tmp/x`,
+    `cat "${DATA}/Local State"`,
   ])('refuses %s', async (command) => {
     expect(await verdicts(request({ command }), [command.split(' ')[0]!])).toEqual(
       refusedEverywhere,
@@ -103,6 +106,9 @@ describe('browser data paths', () => {
     );
     expect(isBrowserData(`${DATA}/spark/chats/x/work/a`, DATA)).toBe(false);
     expect(isBrowserData(`${DATA}/logs/api.log`, DATA)).toBe(false);
+    expect(isBrowserData(`${DATA}/IndexedDB/http_127.0.0.1_0.indexeddb.leveldb/1.log`, DATA)).toBe(
+      true,
+    );
   });
 
   it('treats /tmp and /private/tmp as one place', () => {
