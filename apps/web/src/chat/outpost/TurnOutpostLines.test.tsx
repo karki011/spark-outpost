@@ -155,7 +155,7 @@ describe('TurnOutpostLines', () => {
     expect(screen.queryByRole('button', { name: 'Review and start' })).toBeNull();
   });
 
-  it('opens the first started thread after Start where chats cannot be edited', async () => {
+  it('reads the outpost again after Start and opens the first started thread', async () => {
     seedDrafts([draft()]);
     const story = {
       draftId: DRAFT_ID,
@@ -164,14 +164,19 @@ describe('TurnOutpostLines', () => {
       leadHandle: 'fe',
       tasks: [storyTask()],
     };
-    client.setQueryData(outpostKeys.detail(OUTPOST_ID), { ...detail([]), stories: [story] });
+    client.setQueryData(outpostKeys.detail(OUTPOST_ID), detail([]));
     vi.stubGlobal(
       'fetch',
-      vi.fn(() =>
+      vi.fn((_url: string, init?: RequestInit) =>
         Promise.resolve(
-          new Response(JSON.stringify({ outpostId: OUTPOST_ID, message: 'Started.' }), {
-            status: 200,
-          }),
+          new Response(
+            JSON.stringify(
+              init?.method === 'POST'
+                ? { outpostId: OUTPOST_ID, message: 'Started.' }
+                : { ...detail([]), stories: [story] },
+            ),
+            { status: 200 },
+          ),
         ),
       ),
     );
