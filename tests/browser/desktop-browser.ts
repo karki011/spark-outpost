@@ -16,6 +16,7 @@ export async function withDesktopBrowser(page: Page) {
     const foundListeners = new Set<(found: unknown) => void>();
     const viewStateListeners = new Set<(state: unknown) => void>();
     const viewShortcutListeners = new Set<(event: unknown) => void>();
+    const viewIntentListeners = new Set<(intent: unknown) => void>();
     const noop = () => () => undefined;
     let signedIn = [
       { origin: 'http://localhost', cookies: 2 },
@@ -67,6 +68,8 @@ export async function withDesktopBrowser(page: Page) {
       },
       browserViewShortcut: (event: unknown) =>
         viewShortcutListeners.forEach((listener) => listener(event)),
+      browserViewIntent: (intent: unknown) =>
+        viewIntentListeners.forEach((listener) => listener(intent)),
       sparkDesktop: {
         platform: 'darwin',
         companion: { get: async () => null, onChange: noop },
@@ -92,6 +95,19 @@ export async function withDesktopBrowser(page: Page) {
           handToChat: async (request: unknown) => {
             calls.push({ kind: 'view-hand', payload: request });
             return { ok: true };
+          },
+          pageText: async (profile: string, tabId: string) => {
+            calls.push({ kind: 'view-page-text', payload: { profile, tabId } });
+            return {
+              url: 'https://docs.example.com/deploying',
+              title: 'Deploying your app',
+              text: 'Promote the preview to production with acme deploy --prod.',
+              main: true,
+            };
+          },
+          onIntent: (listener: (intent: unknown) => void) => {
+            viewIntentListeners.add(listener);
+            return () => viewIntentListeners.delete(listener);
           },
           fromChat: async (request: unknown) => {
             calls.push({ kind: 'view-from-chat', payload: request });

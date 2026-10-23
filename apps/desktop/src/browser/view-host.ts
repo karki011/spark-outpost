@@ -20,6 +20,7 @@ import {
   type BrowserViewCommand,
   type BrowserShortcut,
   type BrowserViewFound,
+  type BrowserViewIntent,
   type BrowserViewShortcutEvent,
   type BrowserViewSnapshot,
   type BrowserViewState,
@@ -31,6 +32,7 @@ import { BrowserPanes } from './panes.ts';
 import { profilePartition, type SessionGuards } from './sessions.ts';
 import type { PaneTab } from './tab.ts';
 import { viewMenuItems, type ViewMenuItem } from './view-menu.ts';
+import { readViewPageText } from './view-page-text.ts';
 import type { SavedViewStore } from './view-saved.ts';
 
 export interface ViewHostOptions {
@@ -57,6 +59,7 @@ const CHANNELS = [
   IPC.browserViewPlace,
   IPC.browserViewCommand,
   IPC.browserViewStart,
+  IPC.browserViewPageText,
 ];
 
 function profileOf(tab: PaneTab): BrowserProfile {
@@ -140,6 +143,22 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     if (item.kind === 'copy_link') {
       return { label: item.label, click: () => clipboard.writeText(item.url) };
     }
+    if (item.kind === 'selection_chat' || item.kind === 'link_chat') {
+      const intent: BrowserViewIntent = {
+        profile: profileOf(tab),
+        tabId: tab.id,
+        kind: 'new_chat',
+        selection: item.kind === 'selection_chat' ? item.text : null,
+        link: item.kind === 'link_chat' ? item.url : null,
+      };
+      return {
+        label: item.label,
+        click: () => {
+          options.window()?.webContents.focus();
+          options.send(IPC.browserViewIntent, intent);
+        },
+      };
+    }
     const open = { command: 'new_tab', url: item.url } as const;
     return { label: item.label, click: () => void command(profileOf(tab), open) };
   };
@@ -197,6 +216,12 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
       const result = await viewCommand(browserProfileSchema.parse(rawProfile), action);
       return result ?? true;
     }),
+  );
+  ipcMain.handle(
+    IPC.browserViewPageText,
+    options.guarded((_event, rawProfile, rawTab) =>
+      readViewPageText(panes, browserProfileSchema.parse(rawProfile), String(rawTab)),
+    ),
   );
   ipcMain.handle(
     IPC.browserViewStart,

@@ -9,6 +9,8 @@ export interface ViewMenuFacts {
 
 export type ViewMenuItem =
   | { kind: 'open_link'; label: string; url: string }
+  | { kind: 'link_chat'; label: string; url: string }
+  | { kind: 'selection_chat'; label: string; text: string }
   | { kind: 'copy_link'; label: string; url: string }
   | { kind: 'copy'; label: string }
   | { kind: 'separator' };
@@ -24,12 +26,14 @@ export function viewMenuItems(facts: ViewMenuFacts): ViewMenuItem[] {
   const items: ViewMenuItem[] = [];
   const link = webLink(facts.linkURL);
   if (link) {
-    items.push({ kind: 'open_link', label: 'Open Link in New Tab', url: link });
-    items.push({ kind: 'copy_link', label: 'Copy Link', url: link });
+    items.push({ kind: 'open_link', label: 'Open link in new tab', url: link });
+    items.push({ kind: 'link_chat', label: 'Open link in new chat', url: link });
+    items.push({ kind: 'copy_link', label: 'Copy link', url: link });
   }
-  const selected = !facts.isEditable && selectedPageText(facts.selectionText) !== null;
+  const selected = facts.isEditable ? null : selectedPageText(facts.selectionText);
   if (selected) {
     if (items.length > 0) items.push({ kind: 'separator' });
+    items.push({ kind: 'selection_chat', label: 'New chat with this', text: selected });
     items.push({ kind: 'copy', label: 'Copy' });
   }
   return items;
