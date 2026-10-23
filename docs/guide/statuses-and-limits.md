@@ -27,6 +27,10 @@ A dot marks changes since your last visit; point at it.
 | **Done**: green             | A turn finished.                                     |
 | **Couldn't finish**: red    | A turn failed or was interrupted.                    |
 
+**History** holds archived chats; **Unarchive** brings one back. **Archive inactive chats** moves a chat there after 2 days with no message, turn or answered card. Pinned, working and waiting chats, running Terminal sessions and outposts with an open request stay.
+
+**Projects** lists a project only while it has an active chat; pick a hidden one under **Choose project**.
+
 A row reading **Flagged by Spark**: an unreviewed action crossed a protected path; it never counts.
 
 ## Spark cards

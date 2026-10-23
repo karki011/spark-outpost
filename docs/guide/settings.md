@@ -43,6 +43,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | **Compact automatically at**                 | 80%, on                | [Compaction](compaction.md#change-when-spark-compacts) |
 | **While the agent is working, Enter**        | **Queues the message** | [Queue](follow-a-turn.md#queue-messages)               |
 | **On wide windows**                          | **Context rail**       | Rail, panel or nothing                                 |
+| **Archive inactive chats**                   | **After 2 days**       | [Chat list](statuses-and-limits.md#chat-list)          |
 | **Record Terminal sessions like chats**      | Off                    | [Below](#record-terminal-sessions)                     |
 
 **Custom instructions**: text or a UTF-8 file from your Mac, up to 16 KB; then **Save instructions**.
