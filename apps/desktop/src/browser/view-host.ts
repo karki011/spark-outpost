@@ -15,7 +15,6 @@ import {
   browserProfileSchema,
   browserViewCommandSchema,
   browserViewPlacementSchema,
-  browserOrigin,
   type BrowserCommand,
   type BrowserProfile,
   type BrowserViewCommand,
@@ -119,8 +118,7 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
   const openFavorite = async (profile: BrowserProfile, id: string) => {
     const item = options.saved.get(profile).favorites.find((candidate) => candidate.id === id);
     if (!item) return;
-    const origin = browserOrigin(item.url);
-    const open = panes.tabsOf(profile).find((tab) => browserOrigin(tab.currentUrl()) === origin);
+    const open = panes.tabsOf(profile).find((tab) => sameFavoritePage(tab.currentUrl(), item.url));
     if (open) panes.select(profile, open.id);
     else await command(profile, { command: 'new_tab', url: item.url });
   };
