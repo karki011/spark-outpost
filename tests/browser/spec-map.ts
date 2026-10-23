@@ -169,6 +169,7 @@ export const SPEC_GROUPS = {
     'reset',
     'settings',
     'settings-groups',
+    'settings-sheet',
     'settings-lists',
     'spark-assistant-settings',
     'spark-rule-card',

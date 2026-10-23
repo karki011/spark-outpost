@@ -14,14 +14,17 @@ import {
   API_TOKEN_HEADER,
   DIAGNOSTICS_EXPORT_PATH,
   diagnosticsFileName,
+  FEEDBACK_SETTINGS_FOCUS,
   isBetaVersion,
   type DesktopHelpInfo,
   type DiagnosticsExport,
 } from '@spark-outpost/contracts';
 import { appMenuTemplate, type HelpActions } from './help-menu.ts';
 import { IPC } from './ipc-channels.ts';
+import { startSettingsWindow } from './settings-window.ts';
 
 const EXPORT_TIMEOUT_MS = 60_000;
+const HELP_ROUTE = '#/settings/help';
 const TOGGLE_SIDEBAR_COMMAND = 'toggle-sidebar';
 
 export interface HelpOptions {
@@ -31,6 +34,9 @@ export interface HelpOptions {
   token: string;
   trusted: (event: IpcMainInvokeEvent | IpcMainEvent) => boolean;
   showSpark: () => void;
+  openChat: (id: string) => void;
+  preload: string;
+  theme: () => string | null;
   mainWindow: () => BrowserWindow | null;
   paneShortcut: HelpActions['paneShortcut'];
   log: (line: string) => void;
@@ -89,13 +95,7 @@ async function exportFromMenu(options: HelpOptions): Promise<void> {
   }
 }
 
-const CHANNELS = [
-  IPC.helpInfo,
-  IPC.helpExportDiagnostics,
-  IPC.helpShowLogs,
-  IPC.helpPending,
-  IPC.menuSettingsPending,
-];
+const CHANNELS = [IPC.helpInfo, IPC.helpExportDiagnostics, IPC.helpShowLogs];
 
 export function startHelp(options: HelpOptions): Help {
   const info: DesktopHelpInfo = {
@@ -103,16 +103,9 @@ export function startHelp(options: HelpOptions): Help {
     beta: isBetaVersion(options.version),
     logsFolder: options.logsFolder,
   };
-  let feedbackPending = false;
-  let settingsPending = false;
-  const toMainWindow = (channel: string, payload?: string) => {
+  const toMainWindow = (channel: string, payload: string) => {
     const window = options.mainWindow();
     if (window && !window.isDestroyed()) window.webContents.send(channel, payload);
-  };
-  const sendFeedback = () => {
-    feedbackPending = true;
-    options.showSpark();
-    toMainWindow(IPC.helpOpen);
   };
   const handle = (channel: string, handler: () => Promise<unknown> | unknown) => {
     ipcMain.handle(channel, (event) => (options.trusted(event) ? handler() : null));
@@ -120,30 +113,26 @@ export function startHelp(options: HelpOptions): Help {
   handle(IPC.helpInfo, () => info);
   handle(IPC.helpExportDiagnostics, () => saveDiagnostics(options));
   handle(IPC.helpShowLogs, () => showLogs(options.logsFolder));
-  handle(IPC.helpPending, () => {
-    const pending = feedbackPending;
-    feedbackPending = false;
-    return pending;
-  });
-  handle(IPC.menuSettingsPending, () => {
-    const pending = settingsPending;
-    settingsPending = false;
-    return pending;
-  });
   let sidebarShown = true;
+  const settingsWindow = startSettingsWindow({
+    origin: options.apiUrl,
+    preload: options.preload,
+    theme: options.theme,
+    trusted: options.trusted,
+    mainWindow: options.mainWindow,
+    showSpark: options.showSpark,
+    openChat: options.openChat,
+  });
   const buildMenu = () =>
     Menu.setApplicationMenu(
       Menu.buildFromTemplate(
         appMenuTemplate({
           dev: !app.isPackaged,
           sidebarShown,
-          openSettings: () => {
-            settingsPending = true;
-            options.showSpark();
-            toMainWindow(IPC.menuOpenSettings);
-          },
+          openSettings: settingsWindow.show,
           toggleSidebar: () => toMainWindow(IPC.menuCommand, TOGGLE_SIDEBAR_COMMAND),
-          sendFeedback,
+          sendFeedback: () =>
+            settingsWindow.open({ route: HELP_ROUTE, focus: FEEDBACK_SETTINGS_FOCUS }),
           exportDiagnostics: () => void exportFromMenu(options),
           showLogs: () => void showLogs(options.logsFolder),
           paneShortcut: options.paneShortcut,
@@ -161,6 +150,7 @@ export function startHelp(options: HelpOptions): Help {
     dispose() {
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);
       ipcMain.off(IPC.menuSidebarShown, onSidebarShown);
+      settingsWindow.dispose();
     },
   };
 }
