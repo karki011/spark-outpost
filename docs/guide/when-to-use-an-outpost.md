@@ -6,7 +6,7 @@ order: 515
 summary: What an outpost is for, how it differs from one chat, an example, and what it can't do yet.
 ---
 
-An outpost is one thread where you direct several chats that each do their own work. Use it when a job spans repos or roles and you want every answer in one place.
+An outpost is one thread where you direct several chats, each doing its own work. Use it when a job spans repos or roles and you want every answer together.
 
 ## Outpost or one chat
 
@@ -17,17 +17,17 @@ An outpost is one thread where you direct several chats that each do their own w
 
 ## An example
 
-You are adding a usage page, with a frontend chat, an API chat and a docs chat in the outpost **Usage by user**.
+You add a usage page with frontend, API and docs chats in the outpost **Usage by user**.
 
-| You post                                      | What happens                                                  |
-| --------------------------------------------- | ------------------------------------------------------------- |
-| `@api add GET /usage and open a PR`           | The API chat builds on its branch and opens its pull request. |
-| `@fe build the page against the new endpoint` | The frontend chat builds in its own repo, under its own mode. |
-| `@docs describe the page`                     | The docs chat writes the page in the docs repo.               |
-| `The response is paged.`                      | A note: it starts no work and stays in the thread.            |
+| You post                                      | What happens                                                |
+| --------------------------------------------- | ----------------------------------------------------------- |
+| `@api add GET /usage and open a PR`           | The API chat builds on its branch and opens a pull request. |
+| `@fe build the page against the new endpoint` | The frontend chat builds in its repo, under its own mode.   |
+| `@docs describe the page`                     | The docs chat writes the page in the docs repo.             |
+| `The response is paged.`                      | A note: it starts no work and stays in the thread.          |
 
-Each answer lands under its request, with its branch and pull request.
+Each answer lands under its request with its branch and PR.
 
-Only members can be asked. Agents can [ask each other](outpost-asks.md), and a chat can [start or propose a story](outpost-stories.md) of sub-tasks.
+Only members can be asked; agents can [ask each other](outpost-asks.md), and a chat can [start or propose a story](outpost-stories.md) of sub-tasks.
 
 Set one up: [Work across chats in an outpost](outposts.md). See [What an outpost request may do](outpost-permissions.md).
