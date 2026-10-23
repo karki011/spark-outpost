@@ -29,7 +29,7 @@ Reading git config follows the mode. Where a mode runs commands unasked, other c
 - Pushing any branch, the base branch included, but the chat's `spark/` or [adopted pull request branch](where-spark-works.md#work-on-a-pull-request).
 - Plain `--force`, `+refspec`, mirror and default-branch force pushes.
 - Changing remotes.
-- Reading, copying or changing Spark's browser data: Browser profiles, **Personal** included, and the database holding history. Claude and Codex block it too.
+- Reading, copying or changing Spark's browser data: Browser profiles, **Personal** included, the app's own sign-in storage and the database holding history. Claude and Codex block it too.
 - Your ChatGPT or Claude account's own apps and connectors, in a chat (a [Terminal session](terminals.md) keeps them); add MCP servers in Spark instead.
 - Merging a pull request, approving or dismissing reviews, `--admin`, `gh api` writes and `gh auth`, even if added in [Spark rules](#spark-rules).
 

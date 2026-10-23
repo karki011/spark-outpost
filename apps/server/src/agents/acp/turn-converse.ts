@@ -110,7 +110,16 @@ function liveSession(connection: LiveConnection): SessionStart {
 export async function converse(context: TurnContext): Promise<acp.StopReason> {
   const { connection, definition, workspace, turn, signal, mapper, push } = context;
   const { policy } = workspace;
-  const gates = turnGates(policy, workspace.cwd, workspace.changing, turn, signal, mapper, push);
+  const gates = turnGates(
+    policy,
+    workspace.cwd,
+    workspace.changing,
+    turn,
+    signal,
+    mapper,
+    push,
+    definition.cli,
+  );
   const requests = createRequestLog();
   const unbind = connection.bind(
     turnHandlers({
