@@ -81,8 +81,34 @@ export function groupsQuery(me: string): string {
   return `user=${safeSysId(me)}`;
 }
 
-export function choicesQuery(table: string): string {
-  return `name=${table}^element=state^inactive=false^ORDERBYsequence`;
+export function choicesQuery(table: string, element = 'state'): string {
+  return `name=${table}^element=${element}^inactive=false^ORDERBYsequence`;
+}
+
+export class AgentQueryError extends Error {}
+
+export interface AgentQuery {
+  query: string;
+  mine: { me: string; groups: readonly string[] } | null;
+}
+
+export function agentQuery({ query, mine }: AgentQuery): string {
+  const text = query.trim();
+  if (/javascript/i.test(text)) {
+    throw new AgentQueryError('Spark does not run javascript: in a ServiceNow query.');
+  }
+  if (/[\r\n]/.test(text)) throw new AgentQueryError('Put the query on one line.');
+  const ordered = /ORDERBY/.test(text) ? '' : NEWEST_FIRST;
+  if (!mine) return joined([text, ordered]);
+  if (/\^NQ/.test(text)) {
+    throw new AgentQueryError('Pass mine or a query with ^NQ, not both.');
+  }
+  const groups = mine.groups.map(safeSysId);
+  const branches = [
+    `assigned_to=${safeSysId(mine.me)}`,
+    ...(groups.length > 0 ? [`assignment_groupIN${groups.join(',')}^assigned_toISEMPTY`] : []),
+  ];
+  return joined([branches.map((branch) => joined([branch, text])).join('^NQ'), ordered]);
 }
 
 export function journalQuery(sysId: string): string {

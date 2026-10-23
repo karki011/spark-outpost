@@ -12,7 +12,7 @@ What changed recently, newest first.
 
 | What changed                                                                                                                     | What to do                                                     |
 | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| **ServiceNow**: connect it; records join Tickets, work notes apart from comments.                                                | See [Connect](tickets-and-github.md#connect-a-ticket-tracker). |
+| **ServiceNow**: connect it; records join Tickets; agents read and change them.                                                   | See [Connect](tickets-and-github.md#connect-a-ticket-tracker). |
 | Keyboard-reachable meeting cards; **⌃⌥⌘M**.                                                                                      | See [Calendar](calendar.md#use-it).                            |
 | Appearance follows the system; pick a **Tint**.                                                                                  | Had a theme? It stays. [Settings](settings.md#general).        |
 | Mac app: **Settings…** window (⌘,), **Hide Sidebar** (⌃⌘S), right-click editing; one-answer questions show radios; Markdown box. | See [Keys](keyboard-shortcuts.md#chats).                       |
@@ -26,4 +26,3 @@ What changed recently, newest first.
 | Shared inbox: answer or set aside in place; flags never count; **Dismiss** sticks.                                               | See [Spark Island](desktop-companion.md#open-it).              |
 | Ask Spark has a chat’s tools. **Let agents read my calendar** is now on; turn it off if you had it off.                          | See [Ask Spark](companion-quick-chat.md#ask-spark).            |
 | Browser: copy buttons, keys, find, developer tools, network log, SSO handoff.                                                    | See [Keys](keyboard-shortcuts.md#browser-pane-mac-app).        |
-| Sub-agents: one line, work-panel cards; Agent TV in chat; most edits show diffs. **To-do** replaces **Tasks**.                   | See [Follow a turn](follow-a-turn.md#see-whats-happening).     |

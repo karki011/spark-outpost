@@ -323,6 +323,45 @@ describe('remote policy', () => {
     expect(cardSwitch(confluence('delete'))).toBe('highRiskCards');
   });
 
+  it('keeps a ServiceNow comment the caller sees and a final move behind the high-risk switch', () => {
+    const base = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
+    const serviceNowCard = (op: string, final: boolean) => ({
+      ...base,
+      sparkAction: {
+        action: 'servicenow_edit',
+        op,
+        record: {
+          table: 'incident',
+          number: 'INC0010023',
+          sysId: 'a1b2c3',
+          title: 'VPN drops',
+          url: 'https://acme.service-now.com/x',
+          caller: null,
+        },
+        updated: '2026-10-20 14:03:11',
+        changes: {},
+        before: null,
+        after: null,
+        note: op === 'move' ? null : 'Text',
+        move:
+          op === 'move'
+            ? {
+                from: 'New',
+                to: final ? 'Resolved' : 'In Progress',
+                value: '6',
+                final,
+                closeCode: null,
+                closeNotes: final ? 'Done' : null,
+              }
+            : null,
+      },
+    });
+    expect(cardSwitch(serviceNowCard('work_note', false))).toBeNull();
+    expect(cardSwitch(serviceNowCard('move', false))).toBeNull();
+    expect(cardSwitch(serviceNowCard('comment', false))).toBe('highRiskCards');
+    expect(cardSwitch(serviceNowCard('move', true))).toBe('highRiskCards');
+  });
+
   it('lets a paired device answer the browser’s site cards, and keeps saved sign-ins behind their switch', () => {
     const base = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
     const site = { origin: 'https://docs.example.com', path: '/guide' };

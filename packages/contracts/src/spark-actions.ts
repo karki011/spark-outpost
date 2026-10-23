@@ -25,6 +25,11 @@ import {
   atlassianActionSchemas,
   atlassianQuestion,
 } from './atlassian-actions.ts';
+import {
+  serviceNowActionLabels,
+  serviceNowActionSchemas,
+  serviceNowQuestion,
+} from './servicenow-actions.ts';
 import { browserActionLabels, browserActionSchemas, browserQuestion } from './browser-actions.ts';
 import { startOutpostActionSchema, startOutpostLabels } from './outpost-start-action.ts';
 import { askSparkActionSchema, askSparkLabels } from './ask-spark-action.ts';
@@ -224,6 +229,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   calendarReadActionSchema,
   calendarEditActionSchema,
   ...atlassianActionSchemas,
+  ...serviceNowActionSchemas,
   startOutpostActionSchema,
   askSparkActionSchema,
   publishArtifactActionSchema,
@@ -275,6 +281,8 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   atlassian_read: [],
   jira_edit: [],
   confluence_edit: [],
+  servicenow_read: [],
+  servicenow_edit: [],
   start_outpost: [],
   ask_spark: [],
   publish_artifact: [],
@@ -396,6 +404,7 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
     doing: 'Changing the event…',
   },
   ...atlassianActionLabels,
+  ...serviceNowActionLabels,
   ...browserActionLabels,
   ...startOutpostLabels,
   ...askSparkLabels,
@@ -412,7 +421,11 @@ export function sparkActionQuestion(action: SparkAction): string {
   if (action.action === 'mac_act') return `Let the agent press buttons and menus in ${action.app}?`;
   if (action.action === 'mac_press') return `Press ${action.what} in ${action.app}?`;
   if (action.action === 'calendar_edit') return calendarEditQuestion(action);
-  return atlassianQuestion(action) ?? sparkActionLabels[action.action].question;
+  return (
+    atlassianQuestion(action) ??
+    serviceNowQuestion(action) ??
+    sparkActionLabels[action.action].question
+  );
 }
 
 export const sparkResultStateSchema = z.enum(['waiting', 'running', 'done', 'failed', 'unknown']);

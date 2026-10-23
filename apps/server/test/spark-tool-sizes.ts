@@ -21,6 +21,8 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   meetings: false,
   jira: false,
   confluence: false,
+  servicenow: false,
+  ticket_create: false,
 };
 
 export const SESSION_CASES = {
@@ -45,8 +47,14 @@ export const SESSION_CASES = {
   'plain chat, Atlassian connected': {
     ...NOTHING_AVAILABLE,
     tickets: true,
+    ticket_create: true,
     jira: true,
     confluence: true,
+  },
+  'plain chat, ServiceNow connected': {
+    ...NOTHING_AVAILABLE,
+    tickets: true,
+    servicenow: true,
   },
   'everything connected, Browser pane': EVERYTHING_AVAILABLE,
 } satisfies Record<string, SparkAvailability>;

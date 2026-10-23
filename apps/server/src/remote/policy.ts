@@ -2,6 +2,7 @@ import {
   REMOTE_SWITCH_LABELS,
   approvalPayloadSchema,
   atlassianDeletes,
+  serviceNowAsksAlways,
   isCalendarAction,
   isMacAction,
   isSecretFileName,
@@ -143,6 +144,7 @@ export function cardSwitch(payload: unknown): RemoteSwitch | null {
   if (editsAtlassian && atlassianDeletes(action)) {
     return 'highRiskCards';
   }
+  if (action && serviceNowAsksAlways(action)) return 'highRiskCards';
   const paths = [...card.paths, ...(card.fullPaths ?? [])];
   const highRisk =
     card.gitControl !== undefined ||

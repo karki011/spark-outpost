@@ -23,6 +23,9 @@ function asked(verbs: string, nouns: string): RegExp {
 }
 
 const MCP_NOUN = 'mcp|mcp servers?';
+const TICKET_NOUN = 'tickets?|issues?|[A-Z][A-Z0-9]+-\\d+|[A-Z]{2,8}\\d{4,12}';
+const RECORD_NOUN =
+  'servicenow|records?|incidents?|requests?|tasks?|problems?|changes?|tickets?|[A-Z]{2,8}\\d{4,12}';
 
 const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   open_pr: asked('open|create|make|raise|submit|send|ship|put up', 'pr|prs|pull requests?'),
@@ -30,12 +33,12 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     'create|file|open|make|raise|add|log',
     'tickets?|issues?|bugs?|stor(?:y|ies)',
   ),
-  comment_ticket: asked('comment|reply|post|note|write', 'tickets?|issues?|[A-Z][A-Z0-9]+-\\d+'),
+  comment_ticket: asked('comment|reply|post|note|write', TICKET_NOUN),
   transition_ticket: asked(
     'move|transition|mark|set|close|resolve',
-    'tickets?|issues?|[A-Z][A-Z0-9]+-\\d+|done|in progress|in review',
+    `${TICKET_NOUN}|done|in progress|in review`,
   ),
-  assign_ticket: asked('assign|unassign|take', 'tickets?|issues?|[A-Z][A-Z0-9]+-\\d+|me'),
+  assign_ticket: asked('assign|unassign|take', `${TICKET_NOUN}|me`),
   pr_follow_up: null,
   pr_follow_up_round: asked('follow[- ]?up|address|fix|handle', 'feedback|comments?|reviews?'),
   create_teammate: asked('add|create|make|set up', 'sparks?|teammates?'),
@@ -88,6 +91,14 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   jira_edit: asked(
     'change|update|edit|rename|retitle|rewrite|set|fix|delete|remove|label|reprioriti[sz]e',
     'tickets?|issues?|comments?|[A-Z][A-Z0-9]+-\\d+|summary|description|labels?|priority',
+  ),
+  servicenow_read: asked(
+    'read|look|check|see|find|search|show|list|summari[sz]e|open|query',
+    RECORD_NOUN,
+  ),
+  servicenow_edit: asked(
+    'change|update|edit|set|note|comment|reply|tell|move|resolve|close|cancel|reprioriti[sz]e',
+    `${RECORD_NOUN}|callers?|work notes?`,
   ),
   start_outpost: asked(
     'start|split|spin up|kick off|launch|create',

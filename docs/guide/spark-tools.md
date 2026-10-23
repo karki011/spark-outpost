@@ -30,7 +30,7 @@ Agents get the `spark_*` tools their chat can use.
 | The audit log, including actions that ran without review   | `spark_audit`                                                                                                         |
 | How Spark works, this guide                                | `spark_guide`, `spark_docs`                                                                                           |
 | Your [calendar](calendar.md#let-agents-use-it)             | `spark_calendar`                                                                                                      |
-| Jira or Confluence                                         | `spark_jira`, `spark_confluence`                                                                                      |
+| Jira, Confluence or ServiceNow                             | `spark_jira`, `spark_confluence`, `spark_servicenow`                                                                  |
 
 ## Tools that act
 
@@ -48,7 +48,7 @@ Agents get the `spark_*` tools their chat can use.
 | Keep one command running after the turn     | `spark_terminal_run`                                                                                    |
 | Show a page beside the chat                 | `spark_artifact`                                                                                        |
 | Change a calendar event                     | `spark_calendar_edit`                                                                                   |
-| Change or delete Jira issues                | `spark_jira_edit`                                                                                       |
+| Change or delete Jira; change ServiceNow    | `spark_jira_edit`, `spark_servicenow_edit`                                                              |
 | Change Confluence pages                     | `spark_confluence_edit`                                                                                 |
 
 An MCP server card shows the command; fill values in **Settings → MCP servers**.
@@ -91,7 +91,7 @@ Edit, then confirm or select **Don't**; the card shows the result or **Try again
 
 ## Commands after the turn
 
-`spark_terminal_run` runs a command, like a dev server, outside the sandbox. Modes that don't ask start it, marked ran without review; others show **Allow once** or **Reject**.
+`spark_terminal_run` runs a command outside the sandbox. Modes that don't ask start it, marked ran without review; others show **Allow once** or **Reject**.
 
 [Protected paths](protected-paths.md) and push rules hold in every mode. Read-only and no-project turns are refused.
 

@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   CHOICES,
+  CLOSE_CODES,
   GROUP_NAMES,
   isActive,
   MEMBERSHIPS,
@@ -112,11 +113,12 @@ function listRecords(fake: FakeServiceNow, table: string, url: URL) {
   const query = url.searchParams.get('sysparm_query') ?? '';
   const fields = (url.searchParams.get('sysparm_fields') ?? 'sys_id,number').split(',');
   const limit = Number(url.searchParams.get('sysparm_limit') ?? 10_000);
+  const offset = Number(url.searchParams.get('sysparm_offset') ?? 0);
   return fake.records
     .filter((record) => record.table === table)
     .filter((record) => matchesQuery(query, (field) => valueOf(record, field)))
     .sort((a, b) => b.sys_updated_on.localeCompare(a.sys_updated_on))
-    .slice(0, limit)
+    .slice(offset, offset + limit)
     .map((record) => shape(record, fields, url.searchParams.get('sysparm_display_value')));
 }
 
@@ -136,8 +138,10 @@ function systemRows(fake: FakeServiceNow, table: string, url: URL): unknown[] | 
     }));
   }
   if (table === 'sys_choice') {
-    const name = /^name=([a-z_]+)\^/.exec(query)?.[1] ?? '';
-    return (CHOICES[name] ?? []).map(([value, label]) => ({ value, label }));
+    const [, name = '', element = ''] = /^name=([a-z_]+)\^element=([a-z_]+)\^/.exec(query) ?? [];
+    const choices =
+      element === 'close_code' ? (name === 'incident' ? CLOSE_CODES : []) : CHOICES[name];
+    return (choices ?? []).map(([value, label]) => ({ value, label }));
   }
   if (table === 'sys_journal_field') {
     const id = /^element_id=([0-9a-f]{32})/.exec(query)?.[1];
