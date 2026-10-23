@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PromptCacheLast } from '@spark-outpost/contracts';
 import { useTooltip } from '../ui/Tooltip.tsx';
-import { cacheView, nextCacheChange, type CacheState } from './cache-view.ts';
+import { CACHE_EXPIRED, cacheView, nextCacheChange, type CacheState } from './cache-view.ts';
 import './usage.css';
-
-const EXPIRED = 'Prompt cache expired';
 
 function useCacheClock(last: PromptCacheLast): number {
   const [now, setNow] = useState(Date.now);
@@ -52,7 +50,7 @@ export function CacheTimer({ last, idle }: { last: PromptCacheLast | null; idle:
     if (from === 'warm' && to === 'cold') setExpiredAt(at);
   });
   if (!last) return null;
-  const announcement = expiredAt === last.at ? EXPIRED : '';
+  const announcement = expiredAt === last.at ? CACHE_EXPIRED : '';
   return (
     <>
       {idle && <CacheClock key={last.at} last={last} onChange={onChange} />}

@@ -4,6 +4,8 @@ import { formatCost } from './format.ts';
 
 const MINUTE_MS = 60_000;
 
+export const CACHE_EXPIRED = 'Prompt cache expired';
+
 export type CacheState = 'warm' | 'cold' | 'unknown';
 
 export interface CacheView {
@@ -48,21 +50,24 @@ function knownTip(last: PromptCacheLast): string {
 const UNKNOWN_TIP =
   'Spark could not tell how long this provider keeps the prompt cache, so it shows only when the cache was last used. Spark only shows this; it changes nothing.';
 
+export function rewriteSentence(last: PromptCacheLast): string {
+  return `next message re-writes ${rewriteText(last.contextTokens, last.rewriteUsd)}`;
+}
+
+export function lastUsedText(last: PromptCacheLast, now: number): string {
+  const minutes = Math.floor(Math.max(0, now - Date.parse(last.at)) / MINUTE_MS);
+  return minutes < 1 ? 'last used just now' : `last used ${minutes} min ago`;
+}
+
 function coldView(last: PromptCacheLast): CacheView {
-  return {
-    state: 'cold',
-    text: `Cache cold · next message re-writes ${rewriteText(last.contextTokens, last.rewriteUsd)}`,
-    tip: knownTip(last),
-  };
+  return { state: 'cold', text: `Cache cold · ${rewriteSentence(last)}`, tip: knownTip(last) };
 }
 
 export function cacheView(last: PromptCacheLast, now: number): CacheView {
   if (last.expired === true) return coldView(last);
   const expiry = expiresAt(last);
   if (expiry === null) {
-    const minutes = Math.floor(Math.max(0, now - Date.parse(last.at)) / MINUTE_MS);
-    const ago = minutes < 1 ? 'just now' : `${minutes} min ago`;
-    return { state: 'unknown', text: `Cache last used ${ago}`, tip: UNKNOWN_TIP };
+    return { state: 'unknown', text: `Cache ${lastUsedText(last, now)}`, tip: UNKNOWN_TIP };
   }
   if (now >= expiry) return coldView(last);
   const left = Math.min(Math.ceil((expiry - now) / MINUTE_MS), last.ttlSeconds! / 60);
