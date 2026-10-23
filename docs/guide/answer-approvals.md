@@ -35,7 +35,7 @@ An unanswered card is declined after 30 minutes and says **Expired**.
 
 ## Let a command run without asking
 
-1. Select the project name above the message box.
+1. Select the project name in the message box.
 2. Open **Commands that run without asking**.
 3. Type a command and select **Add**. Select **×** to remove one.
 

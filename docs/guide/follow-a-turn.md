@@ -6,7 +6,7 @@ order: 216
 summary: See what the agent is doing, stop it, queue more messages while it works, and delete a running chat.
 ---
 
-You'll follow, stop and queue a turn. About 2 minutes.
+Follow, stop and queue a turn. About 2 minutes.
 
 ## See what's happening
 
@@ -39,11 +39,11 @@ Other chats never wait; each starts when you send.
 3. While the agent waits, **Enter** sends now.
 4. Use **Edit**, **Move up**, **Move down**, **Remove** or **Send now** on a queued message.
 
-| When                           | Spark                                |
-| ------------------------------ | ------------------------------------ |
-| The turn finishes              | Sends queued messages in order.      |
-| You stop the turn, or it fails | Pauses the queue until **Send now**. |
-| You reload or restart          | Keeps the queue.                     |
+| When                     | Spark                                |
+| ------------------------ | ------------------------------------ |
+| The turn finishes        | Sends queued messages in order.      |
+| You stop it, or it fails | Pauses the queue until **Send now**. |
+| You reload or restart    | Keeps the queue.                     |
 
 ## Delete a running chat
 

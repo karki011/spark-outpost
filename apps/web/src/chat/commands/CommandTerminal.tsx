@@ -1,4 +1,4 @@
-import { memo, use, useId, useState } from 'react';
+import { memo, use, useEffect, useId, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { plainOutput } from '@spark-outpost/contracts';
 import { openCommandTab } from '../../terminal/dock/shell-store.ts';
@@ -11,6 +11,7 @@ import { CommandDockContext } from './command-dock.ts';
 import { commandOutcome, type CommandView } from './command-model.ts';
 import { CommandScreen } from './CommandScreen.tsx';
 import { CommandWord } from './CommandStatus.tsx';
+import { useCommandUi } from './command-ui.ts';
 import { RowIcon } from '../rows/RowIcon.tsx';
 import './command-terminal.css';
 
@@ -22,15 +23,24 @@ function sizeNote(command: CommandView, shown: number): string | null {
   return `Showing the last ${kb(shown)} of ${kb(command.outputChars)}.`;
 }
 
-function useOpenState(command: CommandView) {
-  const [choice, setChoice] = useState<boolean | null>(null);
-  const open = choice ?? (command.status === 'failed' || command.status === 'interrupted');
+function useTerminalUi(command: CommandView) {
+  const [ui, update] = useCommandUi(command.id);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const refocus = useRef(ui.focused);
+  useEffect(() => {
+    if (refocus.current && document.activeElement === document.body) toggleRef.current?.focus();
+  }, []);
+  const open = ui.open ?? (command.status === 'failed' || command.status === 'interrupted');
   return {
     open,
+    tall: ui.tall,
+    toggleRef,
     touch: () => {
-      setChoice((current) => current ?? open);
+      if (ui.open === null) update({ open });
     },
-    toggle: () => setChoice(!open),
+    toggle: () => update({ open: !open }),
+    setTall: (tall: boolean) => update({ open, tall }),
+    focus: (focused: boolean) => update({ focused }),
   };
 }
 
@@ -61,8 +71,7 @@ export const CommandTerminal = memo(function CommandTerminal({
 }: CommandTerminalProps) {
   const bodyId = useId();
   const dockChatId = use(CommandDockContext);
-  const { open, touch, toggle } = useOpenState(command);
-  const [tall, setTall] = useState(false);
+  const { open, tall, toggleRef, touch, toggle, setTall, focus } = useTerminalUi(command);
   const { state: copyState, copy } = useCopyFeedback();
   const queryClient = useQueryClient();
   const running = command.status === 'running';
@@ -91,11 +100,16 @@ export const CommandTerminal = memo(function CommandTerminal({
       <div className="run-cmd-head">
         <button
           type="button"
+          ref={toggleRef}
           className="run-cmd-toggle trow"
           aria-expanded={open}
           aria-controls={bodyId}
           title={command.cwd ? `${command.command}\n${command.cwd}` : command.command}
           onClick={toggle}
+          onFocus={() => focus(true)}
+          onBlur={(event) => {
+            if (event.relatedTarget) focus(false);
+          }}
         >
           <RowIcon name="run" />
           <span className="trow-text">
@@ -123,10 +137,7 @@ export const CommandTerminal = memo(function CommandTerminal({
                 aria-pressed={tall}
                 aria-label="Taller output"
                 title={tall ? 'Shorter' : 'Taller'}
-                onClick={() => {
-                  touch();
-                  setTall(!tall);
-                }}
+                onClick={() => setTall(!tall)}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
                   <path

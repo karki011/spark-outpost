@@ -158,6 +158,25 @@ describe('turn rows', () => {
     expect(spanSeconds([{ startedAt: 1_000 }])).toBeNull();
     expect(spanSeconds([{ startedAt: 1_000, finishedAt: 1_200 }])).toBeNull();
   });
+
+  it("shows a file step's name and keeps its whole path, counting each file once", () => {
+    const edit = (path: string) => done('Edit', { toolKind: 'edit', target: path });
+    const parts = turnRowParts({
+      text: '',
+      steps: [
+        edit('/repo/src/My File.ts'),
+        edit('/repo/tests/index.ts'),
+        edit('/repo/src/My File.ts'),
+      ],
+      commands: [],
+    });
+    const [rows] = rowsOf(parts);
+    const group = rows![0]!;
+    expect(group).toMatchObject({ kind: 'group', family: 'edit' });
+    if (group.kind !== 'group') return;
+    expect(group.items[0]).toMatchObject({ target: 'My File.ts', path: '/repo/src/My File.ts' });
+    expect(groupSummary(group)).toBe('2 files');
+  });
 });
 
 function onlyRow(step: StepView) {

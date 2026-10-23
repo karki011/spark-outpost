@@ -10,29 +10,29 @@ Cards wait at the end of the turn and on [Spark Island](desktop-companion.md#ans
 
 ## Approval cards
 
-These come from the agent's mode, a [protected path](protected-paths.md) or the agent's question. They never go on by themselves and expire after 30 minutes.
+These come from the agent's mode, a [protected path](protected-paths.md) or its question, never go on alone and expire after 30 minutes.
 
-| Card                            | Means                                                                 | Buttons                                           |
-| ------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------- |
-| **Run** _command_**?**          | A command to run.                                                     | **Allow**, **Always allow**, **Deny**             |
-| **Edit** _file_**?**            | A file edit.                                                          | **Allow**, **Always allow**, **Deny**             |
-| **Change agent instructions?**  | An edit to `AGENTS.md`, `CLAUDE.md` and similar.                      | **Allow once**, **Allow for this chat**, **Deny** |
-| **Change git hooks or config?** | An edit to `.git/hooks`, `.git/config` or `git config`.               | **Hold to allow once**, **Deny**                  |
-| **Force push?**                 | A push that rewrites remote history.                                  | **Hold to force push**, **Deny**                  |
-| **Send a secret value?**        | A push, upload or text typed into a site holds a secret file's value. | **Hold to allow once**, **Deny** or **Don't**     |
-| The agent's question            | The agent asks instead of guessing. Pick with 1–9; ⏎ sends.           | **Send**, **Skip**                                |
+| Card                            | Means                                                          | Buttons                                                                 |
+| ------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Run** _command_**?**          | A command.                                                     | **Allow**, **Always allow**, **Always allow in this project**, **Deny** |
+| **Edit** _file_**?**            | A file edit.                                                   | **Allow**, **Always allow**, **Deny**                                   |
+| **Change agent instructions?**  | Edits `AGENTS.md`, `CLAUDE.md` and similar.                    | **Allow once**, **Allow for this chat**, **Deny**                       |
+| **Change git hooks or config?** | Edits `.git/hooks`, `.git/config` or `git config`.             | **Hold to allow once**, **Deny**                                        |
+| **Force push?**                 | Rewrites remote history.                                       | **Hold to force push**, **Deny**                                        |
+| **Send a secret value?**        | A push, upload or typed site text holds a secret file's value. | **Hold to allow once**, **Deny** or **Don't**                           |
+| **Claude has a question**       | Asked instead of guessing. Arrows or 1–9 pick; ⏎ sends.        | **Send**, **Skip**                                                      |
 
-Spark asks nothing of its own before or after a build; the agent's [plan card](plan-card.md) is an approval card.
+Spark adds no card around a build; the agent's [plan card](plan-card.md) is an approval card.
 
 ## Around the result
 
-Kept changes show as a **Changes kept** record with **Revert**, not as a card.
+Kept changes are a **Changes kept** record with **Revert**, not a card.
 
 | Card                                                                     | Means                                                                                                                                   | Buttons                                                                | By itself?                                                            |
 | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **Address PR feedback?**                                                 | Fixes and replies are ready for a pull request.                                                                                         | **Push and reply**, **Don't**                                          | Only at **Full auto → PR**                                            |
-| **This chat is almost full**                                             | Context is near its limit and auto-compaction is off.                                                                                   | **Compact now**, **Start a fresh chat with a summary**, **Keep going** | **Keep going** after [the wait time](approvals.md#if-you-dont-answer) |
-| A Spark action, such as **Create this ticket** or **Change this event?** | An agent proposes an editable action.                                                                                                   | The action's button, **Don't**                                         | See [actions](spark-tools.md#when-actions-ask-first)                  |
-| A flag, such as "… wrote outside the project"                            | An action crossed a protected path, pushed another branch, sent data out, or pushed a [stacked](stacked-pull-requests.md) branch early. | **Revert**, **Got it**                                                 | No; the run goes on.                                                  |
+| **Address PR feedback?**                                                 | PR fixes and replies ready.                                                                                                             | **Push and reply**, **Don't**                                          | Only at **Full auto → PR**                                            |
+| **This chat is almost full**                                             | Context nears its limit; auto-compaction is off.                                                                                        | **Compact now**, **Start a fresh chat with a summary**, **Keep going** | **Keep going** after [the wait time](approvals.md#if-you-dont-answer) |
+| A Spark action, such as **Create this ticket** or **Change this event?** | An editable proposed action.                                                                                                            | The action's button, **Don't**                                         | See [actions](spark-tools.md#when-actions-ask-first)                  |
+| A flag, such as "… wrote outside the project"                            | An action crossed a protected path, pushed another branch, sent data out, or pushed a [stacked](stacked-pull-requests.md) branch early. | **Revert**, **Got it**                                                 | No; the run continues.                                                |
 | **Spark refused** _command_                                              | A [Spark rule](protected-paths.md#spark-rules) refused it.                                                                              | **Allow … and retry**, **Allow once**, **Keep refused**                | No                                                                    |
 | **This turn was interrupted**                                            | Spark Outpost stopped mid-turn.                                                                                                         | **Continue from here**, **Start fresh**                                | No                                                                    |

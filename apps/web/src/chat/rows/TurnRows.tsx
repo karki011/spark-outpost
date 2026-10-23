@@ -1,6 +1,7 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { BrowserShots } from '../../browser/BrowserShots.tsx';
 import { AgentTerminalRow } from '../commands/AgentTerminalRow.tsx';
+import { CommandUiContext, type CommandUiStore } from '../commands/command-ui.ts';
 import { RowView, type RowContext } from './Rows.tsx';
 import type { TurnRowPart } from './turn-rows.ts';
 
@@ -11,6 +12,17 @@ interface TurnRowsProps {
 }
 
 export function TurnRows({ parts, context, children }: TurnRowsProps) {
+  const [commands] = useState<CommandUiStore>(() => new Map());
+  return (
+    <CommandUiContext value={commands}>
+      <Parts parts={parts} context={context}>
+        {children}
+      </Parts>
+    </CommandUiContext>
+  );
+}
+
+function Parts({ parts, context, children }: TurnRowsProps) {
   return parts.map((part, index) => {
     if (part.kind === 'shots') return <BrowserShots key={part.key} shots={part.shots} />;
     if (part.kind === 'terminal') {

@@ -19,6 +19,7 @@ export interface ToolItem {
   status: StepStatus;
   verb: string;
   target: string | null;
+  path: string | null;
   label: string;
   startedAt: number | undefined;
   finishedAt: number | undefined;
@@ -83,7 +84,7 @@ function plainName(name: string): string {
   return friendlyStep(name).replaceAll('`', '');
 }
 
-type ToolBase = Omit<ToolItem, 'tone' | 'verb' | 'target'>;
+type ToolBase = Omit<ToolItem, 'tone' | 'verb' | 'target' | 'path'>;
 
 const FILE_KIND_VERBS: Record<string, [done: string, open: string]> = {
   read: DONE_VERBS.read,
@@ -92,18 +93,28 @@ const FILE_KIND_VERBS: Record<string, [done: string, open: string]> = {
   move: ['Moved', 'Moving'],
 };
 
+export function baseName(path: string): string {
+  return path.split('/').filter(Boolean).at(-1) ?? path;
+}
+
 function fromToolKind(step: StepView, base: ToolBase, open: boolean): ToolItem | null {
   const kind = step.toolKind;
   if (!kind) return null;
   const verbs = FILE_KIND_VERBS[kind];
   if (verbs && step.target) {
     const tone = kind === 'read' ? 'read' : 'edit';
-    return { ...base, tone, verb: verbs[open ? 1 : 0], target: step.target };
+    const target = baseName(step.target);
+    return { ...base, tone, verb: verbs[open ? 1 : 0], target, path: step.target };
   }
   return null;
 }
 
 function fromName(step: StepView, base: ToolBase, open: boolean, ranCommands: boolean) {
+  const item = namedItem(step, base, open, ranCommands);
+  return item && { ...item, path: null };
+}
+
+function namedItem(step: StepView, base: ToolBase, open: boolean, ranCommands: boolean) {
   const activity = stepActivity(step.name);
   if (activity.kind === 'run' || step.toolKind === 'execute') {
     if (ranCommands) return null;
@@ -325,14 +336,21 @@ export function turnRowParts(input: TurnRowInput): TurnRowPart[] {
 
 export function groupSummary(group: RowGroup): string {
   if (group.family === 'explore') {
-    const files = group.items.filter((item) => item.kind === 'tool' && item.tone === 'read');
-    const searches = group.items.length - files.length;
-    return [counted(files.length, 'file'), counted(searches, 'search', 'searches')]
+    const reads = group.items.filter((item) => item.kind === 'tool' && item.tone === 'read');
+    const searches = group.items.length - reads.length;
+    return [counted(fileCount(reads), 'file'), counted(searches, 'search', 'searches')]
       .filter(Boolean)
       .join(', ');
   }
-  if (group.family === 'edit') return counted(group.items.length, 'file');
+  if (group.family === 'edit') return counted(fileCount(group.items), 'file');
   return counted(group.items.length, 'command');
+}
+
+function fileCount(items: readonly GroupedItem[]): number {
+  const files = items.map((item) =>
+    item.kind === 'tool' ? (item.path ?? item.target ?? item.key) : item.key,
+  );
+  return new Set(files).size;
 }
 
 export function groupVerb(family: RowFamily): string {
