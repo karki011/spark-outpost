@@ -1,6 +1,5 @@
-import '../conversations/chat-menu.css';
 import './atlassian-card.css';
-import { useId, useRef, useState, type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ATLASSIAN_NAME,
@@ -12,12 +11,9 @@ import {
   type UpdateTicketSettingsRequest,
 } from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
-import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
-import { anchorFor } from '../conversations/menu-anchor.ts';
+import { AccountRow } from '../connectors/AccountRow.tsx';
 import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
-import { DisconnectDialog } from '../connectors/DisconnectDialog.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
-import { DotsIcon } from '../ui/icons.tsx';
 import { jiraSiteHost } from './jira-site.ts';
 import { TicketConnectForm } from './TicketConnectForm.tsx';
 import { TicketSyncSettings } from './TicketSyncSettings.tsx';
@@ -92,73 +88,6 @@ function ProductRow({
   );
 }
 
-function AccountRow({
-  connection,
-  onDisconnect,
-}: {
-  connection: TicketConnection;
-  onDisconnect: () => void;
-}) {
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const [menu, setMenu] = useState<MenuAnchor | null>(null);
-  const [confirming, setConfirming] = useState(false);
-  const label = `Options for ${ATLASSIAN_NAME}`;
-  const focusTrigger = () => triggerRef.current?.focus();
-  return (
-    <div className="at-account">
-      <p>
-        <b>{jiraSiteHost(connection.siteUrl ?? '')}</b>
-        <small>{connection.account}</small>
-      </p>
-      <button
-        ref={triggerRef}
-        type="button"
-        className="icon-btn"
-        aria-label={label}
-        aria-haspopup="menu"
-        aria-expanded={menu !== null}
-        onClick={(event) => setMenu(menu ? null : anchorFor(event.currentTarget, null))}
-      >
-        <DotsIcon />
-      </button>
-      {menu && (
-        <MenuShell
-          anchor={menu}
-          label={label}
-          page="main"
-          className="at-menu"
-          onClose={() => {
-            setMenu(null);
-            focusTrigger();
-          }}
-        >
-          <MenuItem
-            label="Disconnect…"
-            danger
-            onSelect={() => {
-              setMenu(null);
-              setConfirming(true);
-            }}
-          />
-        </MenuShell>
-      )}
-      {confirming && (
-        <DisconnectDialog
-          copy={ATLASSIAN_DISCONNECT}
-          onCancel={() => {
-            setConfirming(false);
-            focusTrigger();
-          }}
-          onConfirm={() => {
-            setConfirming(false);
-            onDisconnect();
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
 function ConnectedBody({ connection }: { connection: TicketConnection }) {
   const queryClient = useQueryClient();
   const save = useProductSwitch();
@@ -174,7 +103,13 @@ function ConnectedBody({ connection }: { connection: TicketConnection }) {
   const error = save.error ?? remove.error;
   return (
     <div className="cx-body at-body">
-      <AccountRow connection={connection} onDisconnect={() => remove.mutate()} />
+      <AccountRow
+        name={ATLASSIAN_NAME}
+        place={jiraSiteHost(connection.siteUrl ?? '')}
+        account={connection.account}
+        disconnectCopy={ATLASSIAN_DISCONNECT}
+        onDisconnect={() => remove.mutate()}
+      />
       {products && (
         <div className="at-products" role="group" aria-label="Products">
           <ProductRow id="jira" product={products.jira} save={save} />

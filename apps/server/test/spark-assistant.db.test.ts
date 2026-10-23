@@ -119,6 +119,7 @@ describe('Ask Spark', () => {
       'spark_calendar_edit',
       'spark_jira_edit',
       'spark_confluence_edit',
+      'spark_servicenow_edit',
       'spark_start_chat',
       'spark_send_to_chat',
       'spark_stop_chat',

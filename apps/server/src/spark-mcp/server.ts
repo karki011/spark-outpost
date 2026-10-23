@@ -23,6 +23,8 @@ import { confluenceEditTool } from './tools/atlassian/confluence-edit-tool.ts';
 import { confluenceTool } from './tools/atlassian/confluence-tool.ts';
 import { jiraEditTool } from './tools/atlassian/jira-edit-tool.ts';
 import { jiraTool } from './tools/atlassian/jira-tool.ts';
+import { serviceNowEditTool } from './tools/servicenow/edit-tool.ts';
+import { serviceNowReadTool } from './tools/servicenow/read-tool.ts';
 import { prFollowUpRoundTool } from './actions/pr-follow-up-action.ts';
 import { ticketActionTools } from './actions/ticket-actions.ts';
 import { createTeammateTool, updateTeammateTool } from './actions/teammate-actions.ts';
@@ -102,6 +104,8 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   jiraEditTool,
   confluenceTool,
   confluenceEditTool,
+  serviceNowReadTool,
+  serviceNowEditTool,
   ...askSparkTools,
   ...askSparkIslandTools,
 ];

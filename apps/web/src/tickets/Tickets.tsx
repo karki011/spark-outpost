@@ -54,11 +54,12 @@ interface TicketsProps {
   onHome: () => void;
 }
 
-const SOURCE_ORDER: readonly TicketSourceId[] = ['linear', 'jira'];
+const SOURCE_ORDER: readonly TicketSourceId[] = ['linear', 'jira', 'servicenow'];
 
 function sourcesLabel(sources: readonly TicketSourceId[]): string {
   const shown = SOURCE_ORDER.filter((source) => sources.length === 0 || sources.includes(source));
-  return shown.map((source) => ticketSourceNames[source]).join(' and ');
+  const names = shown.map((source) => ticketSourceNames[source]);
+  return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names.join('');
 }
 
 const ROW_STEPS: Record<string, number> = { ArrowDown: 1, j: 1, ArrowUp: -1, k: -1 };

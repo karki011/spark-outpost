@@ -30,7 +30,7 @@ Agents get the `spark_*` tools their chat can use.
 | The audit, including what ran without review             | `spark_audit`                                                                                                         |
 | How Spark works, this guide                              | `spark_guide`, `spark_docs`                                                                                           |
 | [Calendar](calendar.md#let-agents-use-it)                | `spark_calendar`                                                                                                      |
-| Jira or Confluence                                       | `spark_jira`, `spark_confluence`                                                                                      |
+| Jira, Confluence or ServiceNow                           | `spark_jira`, `spark_confluence`, `spark_servicenow`                                                                  |
 
 ## Tools that act
 
@@ -48,7 +48,7 @@ Agents get the `spark_*` tools their chat can use.
 | Run a command past the turn                 | `spark_terminal_run`                                                                                    |
 | Show a page beside the chat                 | `spark_artifact`                                                                                        |
 | Change a calendar event                     | `spark_calendar_edit`                                                                                   |
-| Change or delete Jira issues                | `spark_jira_edit`                                                                                       |
+| Change or delete Jira; change ServiceNow    | `spark_jira_edit`, `spark_servicenow_edit`                                                              |
 | Change Confluence pages                     | `spark_confluence_edit`                                                                                 |
 
 An MCP server card shows the command; fill values in **Settings → MCP servers**.

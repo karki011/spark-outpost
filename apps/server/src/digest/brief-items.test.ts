@@ -32,6 +32,17 @@ const flagged: FlaggedItem[] = [
 ];
 
 describe('briefItems', () => {
+  it('treats ServiceNow record numbers as keys too', () => {
+    const items = briefItems(
+      [
+        { itemId: 'ticket:jira:API-77', text: 'Also INC0010099 needs you.' },
+        { itemId: 'ticket:linear:WEB-433', text: 'Start WEB-433 first.' },
+      ],
+      flagged,
+    );
+    expect(items.map((item) => item.itemId)).toEqual(['ticket:linear:WEB-433']);
+  });
+
   it('keeps items that point at flagged tickets, in the order given', () => {
     const items = briefItems(
       [

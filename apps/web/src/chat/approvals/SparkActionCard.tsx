@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import {
   ARTIFACT_KIND_LABELS,
   editableFields,
+  serviceNowAsksAlways,
   sparkActionQuestion,
   ticketPriorityNameSchema,
   ticketSourceNames,
@@ -17,6 +18,7 @@ import {
 import { approvalsApi } from '../../api/approvals.ts';
 import { formatBytes } from '../../api/attachments.ts';
 import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
+import { WarnIcon } from '../../ui/icons.tsx';
 import { HoldToConfirm } from '../../ui/HoldToConfirm.tsx';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { isAllow } from './approval-outcome.ts';
@@ -25,6 +27,7 @@ import { HandoffFacts, SignInFacts } from './SignInFacts.tsx';
 import { MacFacts, macByline, macNote } from './MacFacts.tsx';
 import { CalendarFacts, calendarByline, calendarNote } from './CalendarFacts.tsx';
 import { AtlassianFacts, atlassianByline, atlassianNote } from './AtlassianFacts.tsx';
+import { ServiceNowFacts, serviceNowByline, serviceNowNote } from './ServiceNowFacts.tsx';
 import { SiteFacts } from './SiteFacts.tsx';
 import { OutpostStartFacts, outpostStartByline, outpostStartNote } from './OutpostStartFacts.tsx';
 import { siteByline, siteNote } from './site-card-text.ts';
@@ -195,6 +198,9 @@ function Facts({ action }: { action: SparkAction }) {
     case 'jira_edit':
     case 'confluence_edit':
       return <AtlassianFacts action={action} />;
+    case 'servicenow_read':
+    case 'servicenow_edit':
+      return <ServiceNowFacts action={action} />;
     case 'post_slack':
       return (
         <dl className="sac-facts">
@@ -241,6 +247,7 @@ function byline(action: SparkAction, agent: string, secretFiles?: readonly strin
     macByline(action, agent) ??
     calendarByline(action, agent) ??
     atlassianByline(action, agent) ??
+    serviceNowByline(action, agent) ??
     outpostStartByline(action, agent);
   if (mac) return mac;
   if (action.action === 'pr_follow_up') {
@@ -253,7 +260,11 @@ function confirmNote(action: SparkAction, secretFiles?: readonly string[]): stri
   const site = siteNote(action, secretFiles);
   if (site) return site;
   const mac =
-    macNote(action) ?? calendarNote(action) ?? atlassianNote(action) ?? outpostStartNote(action);
+    macNote(action) ??
+    calendarNote(action) ??
+    atlassianNote(action) ??
+    serviceNowNote(action) ??
+    outpostStartNote(action);
   if (mac) return mac;
   if (action.action === 'pr_follow_up') {
     return 'Nothing is pushed or posted until you confirm. Uncheck anything to leave it out; a fix reply needs the push.';
@@ -400,7 +411,8 @@ export function SparkActionCard({
     onSuccess: onDecided,
   });
   const confirmRef = useRef<HTMLButtonElement>(null);
-  const requested = approval.payload.sparkRequested === true;
+  const callerSees = serviceNowAsksAlways(action);
+  const requested = approval.payload.sparkRequested === true && !callerSees;
   useEffect(() => {
     if (!requested) return;
     const active = document.activeElement;
@@ -413,14 +425,14 @@ export function SparkActionCard({
   const blankTitle = editableFields(action.action).includes('title') && !draft.title.trim();
   return (
     <div
-      className="appr sac"
+      className={callerSees ? 'appr sac sac-caller' : 'appr sac'}
       role="group"
       aria-labelledby={headingId}
       id={approvalAnchor(approval.id)}
     >
       <div className="appr-h">
         <span className="ic" aria-hidden="true">
-          <i className="appr-dia" />
+          {callerSees ? <WarnIcon /> : <i className="appr-dia" />}
         </span>
         <span id={headingId}>
           <b>{secretFiles ? 'Send a secret value?' : sparkActionQuestion(action)}</b>{' '}

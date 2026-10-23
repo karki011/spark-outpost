@@ -3,13 +3,16 @@ import type { AddressInfo } from 'node:net';
 import { atlassianHandler, fakeConfluence, type FakeConfluence } from './fake-confluence.ts';
 import { fakeJira, type FakeJira } from './fake-jira.ts';
 import { fakeLinear, type FakeLinear } from './fake-linear.ts';
+import { fakeServiceNow, type FakeServiceNow } from './fake-servicenow.ts';
 
 export interface TicketStubs {
   linear: FakeLinear;
   jira: FakeJira;
   confluence: FakeConfluence;
+  servicenow: FakeServiceNow;
   linearUrl: string;
   jiraUrl: string;
+  serviceNowUrl: string;
   close(): Promise<void>;
 }
 
@@ -30,17 +33,22 @@ export async function startTicketStubs(): Promise<TicketStubs> {
   const linear = fakeLinear();
   const jira = fakeJira();
   const confluence = fakeConfluence();
+  const servicenow = fakeServiceNow();
   const linearServer = await serve(linear.handle);
   const jiraServer = await serve(atlassianHandler(jira, confluence));
+  const serviceNowServer = await serve(servicenow.handle);
   return {
     linear,
     jira,
     confluence,
+    servicenow,
     linearUrl: `${linearServer.url}/graphql`,
     jiraUrl: jiraServer.url,
+    serviceNowUrl: serviceNowServer.url,
     close: async () => {
       await stop(linearServer.server);
       await stop(jiraServer.server);
+      await stop(serviceNowServer.server);
     },
   };
 }

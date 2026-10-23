@@ -45,6 +45,46 @@ describe('cardRefusal', () => {
     ).toBe(ASK_SPARK_REFUSALS.macOnly);
   });
 
+  it('leaves a ServiceNow comment or resolve card with the user, but not a work note', () => {
+    const base = card().payload;
+    const serviceNowCard = (op: string, final: boolean) => ({
+      ...base,
+      sparkAction: {
+        action: 'servicenow_edit',
+        op,
+        record: {
+          table: 'incident',
+          number: 'INC0010023',
+          sysId: 'a1b2c3',
+          title: 'VPN drops',
+          url: 'https://acme.service-now.com/x',
+          caller: null,
+        },
+        updated: '2026-10-20 14:03:11',
+        changes: {},
+        before: null,
+        after: null,
+        note: op === 'move' ? null : 'Text',
+        move:
+          op === 'move'
+            ? {
+                from: 'New',
+                to: final ? 'Resolved' : 'In Progress',
+                value: '6',
+                final,
+                closeCode: null,
+                closeNotes: final ? 'Done' : null,
+              }
+            : null,
+      },
+    });
+    const asked = (op: string, final: boolean) =>
+      cardRefusal(card({ payload: serviceNowCard(op, final) as never }), chat('c'), 'a');
+    expect(asked('comment', false)).toBe(ASK_SPARK_REFUSALS.callerSees);
+    expect(asked('move', true)).toBe(ASK_SPARK_REFUSALS.callerSees);
+    expect(asked('work_note', false)).toBeNull();
+  });
+
   it('leaves an agent’s question card for the user to answer', () => {
     const form = { message: 'Which store?', fields: [] };
     expect(
@@ -84,6 +124,7 @@ describe('the tools Ask Spark is offered', () => {
         'spark_slack_post',
         'spark_create_ticket',
         'spark_jira_edit',
+        'spark_servicenow_edit',
         'spark_mac_act',
         'spark_browser_act',
         'spark_start_chat',

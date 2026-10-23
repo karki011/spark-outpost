@@ -1,4 +1,4 @@
-import type { TicketSourceId } from '@spark-outpost/contracts';
+import { ticketKeysInText, type TicketSourceId } from '@spark-outpost/contracts';
 
 export interface TicketMention {
   key: string;
@@ -8,7 +8,7 @@ export interface TicketMention {
 
 const MAX_MENTIONS = 5;
 const URL_PATTERN = /https?:\/\/[^\s<>()[\]"'`]+/gi;
-const KEY_PATTERN = /(?<![\w/.-])([A-Z][A-Z0-9_]{1,9}-[1-9]\d{0,6})(?![\w-])/g;
+const KEY_PATTERN = ticketKeysInText();
 const LINEAR_PATH = /^\/[^/]+\/issue\/([A-Za-z][A-Za-z0-9_]*-\d+)(?:\/|$)/;
 const JIRA_PATH = /^\/browse\/([A-Za-z][A-Za-z0-9_]*-\d+)\/?$/;
 const JIRA_SELECTED = /^[A-Za-z][A-Za-z0-9_]*-\d+$/;
