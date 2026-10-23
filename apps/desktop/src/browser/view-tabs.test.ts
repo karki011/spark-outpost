@@ -135,6 +135,37 @@ describe('favorites', () => {
       ((await invoke('browser-view:state', 'personal')) as { favorites: unknown[] }).favorites,
     ).toEqual([]);
   });
+
+  it('opens the saved page rather than another page on the same site', async () => {
+    const { view, tab } = await openIn('personal', DOCS);
+    await invoke('browser-view:command', 'personal', { command: 'add_favorite', tabId: tab.id });
+    const [favorite] = (
+      (await invoke('browser-view:state', 'personal')) as {
+        favorites: { id: string }[];
+      }
+    ).favorites;
+    const other = 'https://docs.example.com/api';
+    await invoke('browser-view:command', 'personal', {
+      command: 'navigate',
+      tabId: tab.id,
+      url: other,
+    });
+    await invoke('browser-view:command', 'personal', {
+      command: 'open_favorite',
+      id: favorite!.id,
+    });
+    expect(view.panes.tabsOf('personal').map((item) => item.currentUrl())).toEqual([other, DOCS]);
+    await invoke('browser-view:command', 'personal', {
+      command: 'navigate',
+      tabId: tab.id,
+      url: `${DOCS}#install`,
+    });
+    await invoke('browser-view:command', 'personal', {
+      command: 'open_favorite',
+      id: favorite!.id,
+    });
+    expect(view.panes.tabsOf('personal')).toHaveLength(2);
+  });
 });
 
 describe('handing tabs between the Browser view and a chat', () => {
