@@ -7,6 +7,13 @@ import type {
 import { ticketSourceNames } from '@spark-outpost/contracts';
 import { probeConfluence, productsView } from '../atlassian/products.ts';
 import { atlassianAccount, switchProducts } from '../atlassian/connect.ts';
+import {
+  checkServiceNow,
+  recheckServiceNow,
+  serviceNowAccessOf,
+  switchServiceNowTypes,
+} from '../servicenow/connect.ts';
+import { serviceNowView } from '../servicenow/view.ts';
 import type { Db } from '../persistence/db.ts';
 import {
   deleteTicketConnection,
@@ -17,6 +24,7 @@ import {
   saveTicketConnection,
   updateTicketSettings,
   type AtlassianProductRow,
+  type ServiceNowRow,
   type TicketConnectionRow,
 } from '../persistence/ticket-connections.ts';
 import { forgetDevelopment } from '../persistence/ticket-development.ts';
@@ -26,6 +34,7 @@ import { jiraSource } from './jira.ts';
 import { LINEAR_API_URL, linearSource } from './linear.ts';
 import {
   TicketApiError,
+  TicketConflictError,
   TicketNotConnectedError,
   type TicketAccount,
   type TicketSource,
@@ -95,7 +104,7 @@ export async function ticketConnections(deps: TicketDeps): Promise<TicketConnect
       return {
         source: row.source,
         account: row.account,
-        siteUrl: row.source === 'jira' ? row.apiUrl : null,
+        siteUrl: row.source === 'linear' ? null : row.apiUrl,
         validatedAt: row.validatedAt.toISOString(),
         keySaved: secret !== null,
         moveOnShip: row.moveOnShip,
@@ -103,13 +112,31 @@ export async function ticketConnections(deps: TicketDeps): Promise<TicketConnect
         statusMap: row.statusMap,
         moveStatuses: row.moveStatuses,
         atlassian: row.source === 'jira' ? productsView(row) : null,
+        servicenow: row.source === 'servicenow' ? serviceNowView(row) : null,
       };
     }),
   );
   return { connections };
 }
 
+const NO_SERVICENOW: ServiceNowRow = { authKind: null, login: null, serviceNowTypes: null };
+
 function requestedAccess(deps: TicketDeps, request: SaveTicketConnectionRequest) {
+  if (request.source === 'servicenow') {
+    return {
+      row: {
+        source: 'servicenow' as const,
+        apiUrl: request.instanceUrl,
+        email: null,
+        statusMap: {},
+        moveStatuses: {},
+        authKind: request.authKind,
+        login: request.username,
+        serviceNowTypes: null,
+      },
+      secret: request.authKind === 'basic' ? request.password : request.apiKey,
+    };
+  }
   if (request.source === 'linear') {
     return {
       row: {
@@ -118,6 +145,7 @@ function requestedAccess(deps: TicketDeps, request: SaveTicketConnectionRequest)
         email: null,
         statusMap: {},
         moveStatuses: {},
+        ...NO_SERVICENOW,
       },
       secret: request.apiKey,
     };
@@ -129,6 +157,7 @@ function requestedAccess(deps: TicketDeps, request: SaveTicketConnectionRequest)
       email: request.email,
       statusMap: {},
       moveStatuses: {},
+      ...NO_SERVICENOW,
     },
     secret: request.apiToken,
   };
@@ -137,6 +166,7 @@ function requestedAccess(deps: TicketDeps, request: SaveTicketConnectionRequest)
 interface Checked {
   who: TicketAccount;
   products?: AtlassianProductRow;
+  serviceNow?: ServiceNowRow;
 }
 
 async function whoIs(
@@ -146,6 +176,13 @@ async function whoIs(
 ): Promise<Checked> {
   if (row.source === 'jira') {
     return atlassianAccount(atlassianAccessOf(row, secret), deps.fetch);
+  }
+  if (row.source === 'servicenow') {
+    const { who, types } = await checkServiceNow(serviceNowAccessOf(row, secret), deps.fetch, null);
+    return {
+      who,
+      serviceNow: { authKind: row.authKind, login: row.login, serviceNowTypes: types },
+    };
   }
   try {
     return { who: await sourceFor(deps, row, secret).whoami() };
@@ -177,7 +214,7 @@ export async function saveConnection(
     });
     throw error;
   }
-  const { who, products } = checked;
+  const { who, products, serviceNow } = checked;
   await deps.secrets.set(secretIdFor(row.source), secret);
   await forgetDevelopment(deps.db, deps.workspaceId, row.source);
   await saveTicketConnection(deps.db, deps.workspaceId, {
@@ -185,12 +222,18 @@ export async function saveConnection(
     account: who.name,
     accountId: who.id,
     ...(products ? { products } : {}),
+    ...(serviceNow ? { serviceNow } : {}),
   });
   await recordTicketEvent(deps.db, deps.workspaceId, {
     source: row.source,
     action: 'connect',
     outcome: 'succeeded',
-    detail: { site: row.apiUrl, account: who.name, ...(products ? { products } : {}) },
+    detail: {
+      site: row.apiUrl,
+      account: who.name,
+      ...(products ? { products } : {}),
+      ...(serviceNow ? { authKind: serviceNow.authKind, types: serviceNow.serviceNowTypes } : {}),
+    },
   });
   return ticketConnections(deps);
 }
@@ -215,9 +258,16 @@ export async function changeSettings(
   source: TicketSourceId,
   settings: UpdateTicketSettingsRequest,
 ): Promise<TicketConnections> {
-  const { jiraOn, confluenceOn, ...ticketSettings } = settings;
+  const { jiraOn, confluenceOn, serviceNowTypes, recheck, ...ticketSettings } = settings;
+  if (source !== 'servicenow' && (recheck || serviceNowTypes)) {
+    throw new TicketConflictError('Record types and Check connection are for ServiceNow only.');
+  }
   if (jiraOn !== undefined || confluenceOn !== undefined) {
     await switchProducts(deps, source, { jiraOn, confluenceOn });
+  }
+  if (source === 'servicenow' && recheck) await recheckServiceNow(deps);
+  if (source === 'servicenow' && serviceNowTypes) {
+    await switchServiceNowTypes(deps, serviceNowTypes);
   }
   const changesTickets = Object.values(ticketSettings).some((value) => value !== undefined);
   const changed =
@@ -251,6 +301,7 @@ export async function openSource(
   const connection = await getTicketConnection(deps.db, deps.workspaceId, source);
   if (!connection) return null;
   if (source === 'jira' && !jiraLive(connection)) return null;
+  if (source === 'servicenow') return null;
   const secret = await savedSecret(deps, source);
   if (!secret) return null;
   return { source: sourceFor(deps, connection, secret), connection };

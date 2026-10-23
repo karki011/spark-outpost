@@ -2,6 +2,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 import { JIRA_EMAIL, JIRA_TOKEN } from '../../apps/server/test/fake-jira.ts';
 import type { DevStatusMode, FakeDevelopment } from '../../apps/server/test/fake-jira-dev.ts';
 import { LINEAR_KEY } from '../../apps/server/test/fake-linear.ts';
+import { SERVICENOW_PASSWORD, SERVICENOW_USER } from '../../apps/server/test/fake-servicenow.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import { createDb } from '../../apps/server/src/persistence/db.ts';
 import { testDatabaseUrl } from './database.ts';
@@ -61,6 +62,29 @@ export async function connectTickets(page: Page, sources = ['linear', 'jira']): 
       data: { source: 'jira', siteUrl: STUB_URL, email: JIRA_EMAIL, apiToken: JIRA_TOKEN },
     });
   }
+}
+
+export async function setServiceNowFaults(faults: {
+  denied?: string[];
+  limited?: number;
+}): Promise<void> {
+  await fetch(`${STUB_URL}/tickets-test/servicenow`, {
+    method: 'POST',
+    body: JSON.stringify(faults),
+  });
+}
+
+export async function connectServiceNow(page: Page): Promise<void> {
+  const response = await page.request.put('/api/tickets/connections/servicenow', {
+    data: {
+      source: 'servicenow',
+      instanceUrl: STUB_URL,
+      authKind: 'basic',
+      username: SERVICENOW_USER,
+      password: SERVICENOW_PASSWORD,
+    },
+  });
+  expect(response.ok()).toBe(true);
 }
 
 export async function seedAssignedSince(entries: [key: string, days: number][]): Promise<void> {

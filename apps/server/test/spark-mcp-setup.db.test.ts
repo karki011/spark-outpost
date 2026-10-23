@@ -135,6 +135,7 @@ describe('spark_connectors', () => {
     expect(body.tickets).toEqual([
       expect.objectContaining({ source: 'Linear', connected: true, account: 'alex@example.test' }),
       { source: 'Jira (Atlassian)', connected: false },
+      { source: 'ServiceNow', connected: false },
     ]);
     expect(body.mcpServers).toEqual([
       expect.objectContaining({ name: 'slack', transport: 'http' }),

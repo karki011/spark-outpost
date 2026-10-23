@@ -145,6 +145,7 @@ export const SPEC_GROUPS = {
   tickets: [
     'atlassian-connector',
     'connectors',
+    'servicenow-connector',
     'ticket-chat',
     'ticket-start',
     'tickets',
@@ -394,6 +395,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/server/src/terminal/', groups: ['terminal-preview-browser'] },
   { prefix: 'apps/server/src/tickets/', groups: ['tickets'] },
   { prefix: 'apps/server/src/atlassian/', groups: ['tickets'] },
+  { prefix: 'apps/server/src/servicenow/', groups: ['tickets'] },
   { prefix: 'apps/server/src/titles/', groups: ['chat', 'sidebar-projects'] },
   { prefix: 'apps/server/src/usage/', groups: ['chat', 'analytics-audit'] },
   { prefix: 'apps/desktop/', groups: ['island-desktop', 'terminal-preview-browser'] },

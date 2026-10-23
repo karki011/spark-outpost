@@ -3,6 +3,12 @@ import { ATTACHMENTS_PER_MESSAGE } from './attachments.ts';
 import { ticketDevelopmentSchema } from './ticket-development.ts';
 import { nativeTerminalProviderSchema, sessionTypeSchema } from './native-terminal.ts';
 import { atlassianProductLive, atlassianProductsSchema } from './atlassian.ts';
+import {
+  serviceNowConnectionSchema,
+  serviceNowInstanceSchema,
+  serviceNowTypeIdSchema,
+  serviceNowUsernameSchema,
+} from './servicenow.ts';
 
 export const TICKET_KEY_MAX_LENGTH = 64;
 export const TICKET_SEARCH_MAX_LENGTH = 200;
@@ -11,12 +17,13 @@ export const TICKET_START_NOTE_MAX_LENGTH = 4_000;
 export const TICKET_START_LINKS_MAX = 10;
 export const TICKET_START_FOLDERS_MAX = 5;
 
-export const ticketSourceIdSchema = z.enum(['linear', 'jira']);
+export const ticketSourceIdSchema = z.enum(['linear', 'jira', 'servicenow']);
 export type TicketSourceId = z.infer<typeof ticketSourceIdSchema>;
 
 export const ticketSourceNames: Record<TicketSourceId, string> = {
   linear: 'Linear',
   jira: 'Jira',
+  servicenow: 'ServiceNow',
 };
 
 export const ticketStatusSchema = z.enum(['todo', 'in_progress', 'in_review', 'done']);
@@ -168,11 +175,12 @@ export const ticketConnectionSchema = z.object({
   statusMap: ticketStatusMapSchema,
   moveStatuses: ticketMoveStatusesSchema,
   atlassian: atlassianProductsSchema.nullable().default(null),
+  servicenow: serviceNowConnectionSchema.nullable().default(null),
 });
 export type TicketConnection = z.infer<typeof ticketConnectionSchema>;
 
 export function ticketsFlowFrom(connection: TicketConnection): boolean {
-  if (!connection.keySaved) return false;
+  if (!connection.keySaved || connection.source === 'servicenow') return false;
   return connection.source !== 'jira' || atlassianProductLive(connection.atlassian?.jira);
 }
 
@@ -202,6 +210,22 @@ export const saveTicketConnectionRequestSchema = z.discriminatedUnion('source', 
     email: z.email('Use the email you sign in to Atlassian with.').max(320),
     apiToken: z.string().trim().min(10, 'Paste the full API token.').max(400),
   }),
+  z.discriminatedUnion('authKind', [
+    z.object({
+      source: z.literal('servicenow'),
+      instanceUrl: serviceNowInstanceSchema,
+      authKind: z.literal('basic'),
+      username: serviceNowUsernameSchema,
+      password: z.string().min(1, 'Type your password.').max(400),
+    }),
+    z.object({
+      source: z.literal('servicenow'),
+      instanceUrl: serviceNowInstanceSchema,
+      authKind: z.literal('api_key'),
+      username: serviceNowUsernameSchema,
+      apiKey: z.string().trim().min(10, 'Paste the full API key.').max(400),
+    }),
+  ]),
 ]);
 export type SaveTicketConnectionRequest = z.infer<typeof saveTicketConnectionRequestSchema>;
 
@@ -213,6 +237,8 @@ export const updateTicketSettingsRequestSchema = z
     moveStatuses: ticketMoveStatusesSchema.optional(),
     jiraOn: z.boolean().optional(),
     confluenceOn: z.boolean().optional(),
+    serviceNowTypes: z.partialRecord(serviceNowTypeIdSchema, z.boolean()).optional(),
+    recheck: z.literal(true).optional(),
   })
   .refine((body) => Object.values(body).some((value) => value !== undefined), {
     message: 'Change at least one setting.',
