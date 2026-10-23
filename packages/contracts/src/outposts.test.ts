@@ -41,6 +41,7 @@ const detail: OutpostDetail = {
     id: OUTPOST,
     name: 'Orders launch',
     pausedAt: null,
+    instructions: '',
     createdAt: AT,
     updatedAt: AT,
     members: [

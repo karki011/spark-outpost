@@ -10,12 +10,12 @@ import {
   NAME,
   TURN_TIMEOUT,
   openOutpost,
+  openSettings,
   outpostPage,
   outpostRow,
   outpostsSection,
   post,
   say,
-  sheet,
   sidebar,
   stateOf,
 } from './outposts-kit.ts';
@@ -164,9 +164,8 @@ test('an outpost collapses, remembers it, and a member row opens its chat', asyn
 
 test('a chat that leaves its outpost returns to its project', async ({ page }) => {
   await seeded(page);
-  const main = await openOutpost(page);
-  await main.getByRole('button', { name: 'Edit outpost' }).click();
-  const dialog = sheet(page, 'Edit outpost');
+  await openOutpost(page);
+  const dialog = await openSettings(page, NAME);
   await dialog.getByRole('button', { name: 'Remove Frontend' }).click();
   await dialog.getByRole('button', { name: 'Save' }).click();
   await expect(dialog).toBeHidden();
@@ -249,7 +248,7 @@ test('a member that needs you shows it on its row and on the collapsed outpost',
 
   await openOutpost(page);
   await say(page, '@api Deploy the orders service\n\nNeeds you: which region?\n\nThanks');
-  await expect(stateOf(post(page, 'Deploy the orders service'))).toHaveText('Needs you', {
+  await expect(stateOf(post(page, 'Deploy the orders service'))).toHaveText('Waiting on you', {
     timeout: TURN_TIMEOUT,
   });
   await expect(outpostRow(page, NAME)).toHaveAccessibleName(`${NAME}, 1 needs you`);

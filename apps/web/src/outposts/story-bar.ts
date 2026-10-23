@@ -3,6 +3,7 @@ import {
   type OutpostStory,
   type RequestState,
   type StackWarningKind,
+  type StoryPullRequest,
   type StoryTask,
 } from '@spark-outpost/contracts';
 import { countLabel } from '../ui/count-label.ts';
@@ -61,11 +62,15 @@ function baseName(task: StoryTask, parent: StoryTask | null): string | null {
   return stacked ? `#${parent.pullRequest?.number}` : base;
 }
 
+export function pullMark(pull: Pick<StoryPullRequest, 'state' | 'draft'>): PullMark {
+  return pull.state === 'open' && pull.draft ? 'draft' : pull.state;
+}
+
 function chipOf(task: StoryTask, parent: StoryTask | null): PrChipView | null {
   const pull = task.pullRequest;
   if (pull === null) return null;
   const base = baseName(task, parent);
-  const mark: PullMark = pull.state === 'open' && pull.draft ? 'draft' : pull.state;
+  const mark = pullMark(pull);
   const into = base === null ? '' : ` into ${base}`;
   return {
     label: base === null ? `#${pull.number}` : `#${pull.number} → ${base}`,

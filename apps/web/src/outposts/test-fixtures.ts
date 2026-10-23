@@ -52,6 +52,7 @@ export function outpost(overrides: Partial<Outpost> = {}): Outpost {
     createdAt: '2026-10-09T10:00:00.000Z',
     updatedAt: '2026-10-09T10:00:00.000Z',
     members: [member(FE_CHAT, 'fe', 1), member(API_CHAT, 'api', 2)],
+    instructions: '',
     needsYou: 0,
     ...overrides,
   };

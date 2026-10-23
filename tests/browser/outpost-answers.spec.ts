@@ -1,16 +1,18 @@
 import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
-import { openChats } from './navigation.ts';
 import {
   NAME,
   TURN_TIMEOUT,
+  cardOf,
   inBothThemes,
   openOutpost,
+  openThread,
   outpostRow,
   post,
   say,
   seeded,
   stateOf,
+  threadPane,
 } from './outposts-kit.ts';
 
 const NOTES_PATH =
@@ -23,7 +25,7 @@ test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
 });
 
-test('an answer is drawn as Markdown and is the final reply, without the commentary', async ({
+test('an answer is summed up on its card and drawn as Markdown in its thread, without the commentary', async ({
   page,
 }) => {
   await seeded(page);
@@ -33,83 +35,57 @@ test('an answer is drawn as Markdown and is the final reply, without the comment
     `@api #commentary Add the notes file.\n\nAdded \`NOTES.md\` at [NOTES.md](${NOTES_PATH}) and **stopped**.\n\nThanks`,
   );
   const request = post(page, '#commentary Add the notes file.');
-  await expect(stateOf(request)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
-  const answer = request.locator('.op-reply');
-  const text = answer.locator('.op-text');
-  const toggle = answer.locator('button[aria-controls]');
+  await expect(stateOf(request)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
+  const summary = cardOf(request).locator('.op-card-meta');
 
-  await inBothThemes(page, 'collapsed', async () => {
-    await expect(text).toHaveText(/^This reply comes from the fake provider/);
-    await expect(answer).not.toContainText(COMMENTARY);
-    await expect(text).toHaveClass(/clamped/);
-    await expect(toggle).toHaveText('Show all of the answer');
+  await inBothThemes(page, 'card', async () => {
+    await expect(summary).toHaveText(/^This reply comes from the fake provider/);
+    await expect(summary).not.toContainText(COMMENTARY);
+    await expect(summary).not.toContainText('**');
+    await expect(request.locator('.op-text').first()).toContainText('NOTES.md');
+    await expect(request.locator('.op-text').first().locator('code')).toHaveText('NOTES.md');
   });
 
-  await toggle.focus();
-  await page.keyboard.press('Enter');
-  await expect(toggle).toHaveText('Show less');
-  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  await expect(toggle).toBeFocused();
-
-  await inBothThemes(page, 'markdown', async () => {
-    await expect(text).not.toHaveClass(/clamped/);
-    await expect(text.locator('code')).toHaveText('NOTES.md');
-    await expect(text.locator('strong')).toHaveText('stopped');
-    await expect(text.locator('.md-link-off')).toHaveText('NOTES.md');
-    await expect(text).not.toContainText('/private/tmp');
-    await expect(text).not.toContainText('`');
-    await expect(text).not.toContainText('**');
-    await expect(answer.getByRole('link')).toHaveCount(0);
-    await expect(request.locator('.op-text').first().locator('code').first()).toHaveText(
-      'NOTES.md',
-    );
+  await openThread(request, 'api');
+  const pane = threadPane(page, 'api');
+  await expect(pane.getByRole('button', { name: 'Back to Overview' })).toBeFocused();
+  await expect(pane).toContainText('This reply comes from the fake provider');
+  await expect(pane.locator('.md strong').filter({ hasText: 'stopped' }).first()).toBeVisible();
+  await inBothThemes(page, 'thread', async () => {
+    await expect(pane).toBeVisible();
   });
 
-  await request.getByRole('button', { name: 'Open @api in chat' }).click();
+  await pane.getByRole('button', { name: 'Open @api in chat' }).click();
   await expect(page.locator('.chat-title')).toHaveText('Orders API');
   await expect(page.locator('.thread')).toContainText(COMMENTARY);
   await expect(page.locator('.thread')).toContainText('This reply comes from the fake provider');
 });
 
-test('the question and the user’s answer stay under a request that needed you', async ({
+test('a request that needed you shows its question on the card, and the answer in its thread', async ({
   page,
 }) => {
   await seeded(page);
   await openOutpost(page);
   await say(page, '@api Deploy the orders service\n\nNeeds you: which region?\n\nThanks');
   const request = post(page, 'Deploy the orders service');
-  await expect(stateOf(request)).toHaveText('Needs you', { timeout: TURN_TIMEOUT });
-  const waiting = request.locator('.op-reply');
-  await expect(waiting).toContainText('is waiting for you');
+  await expect(stateOf(request)).toHaveText('Waiting on you', { timeout: TURN_TIMEOUT });
 
   await inBothThemes(page, 'needs-you', async () => {
-    await expect(request.locator('.op-reason')).toHaveText('which region?');
-    await expect(waiting).toContainText('Deploy the orders service');
-    await expect(waiting).not.toContainText('which region?');
+    await expect(cardOf(request).locator('.op-card-meta')).toHaveText('which region?');
   });
 
-  await request.getByRole('button', { name: 'Answer', exact: true }).click();
+  await request.getByRole('button', { name: 'Answer @api', exact: true }).click();
   const answerBox = page.getByRole('combobox', { name: 'Answer @api' });
   await answerBox.fill('eu-west');
   await answerBox.press('Enter');
-  await expect(stateOf(request)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
+  await expect(stateOf(request)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
   await expect(outpostRow(page, NAME)).toHaveAccessibleName(NAME);
-  const asked = request.locator('.op-asked');
 
-  const kept = async () => {
-    await expect(asked).toHaveCount(1);
-    await expect(asked.locator('.op-post-head').first()).toHaveText(/@api\s*asked/);
-    await expect(asked).toContainText('Deploy the orders service');
-    await expect(asked.locator('.op-reason')).toHaveText('which region?');
-    await expect(asked.locator('.op-post-head').nth(1)).toHaveText(/You\s*answered/);
-    await expect(asked.locator('.op-text').last()).toHaveText('eu-west');
-    await expect(request.locator('.op-reply')).toContainText('answered');
-    await expect(request.locator('.op-reply')).toContainText('eu-west');
-    await expect(request.locator('> .op-reason')).toHaveCount(0);
-  };
-  await inBothThemes(page, 'answered', kept);
-
-  await openChats(page);
-  await openOutpost(page);
-  await kept();
+  await openThread(request, 'api');
+  const pane = threadPane(page, 'api');
+  await expect(pane).toContainText('which region?');
+  await expect(pane).toContainText('eu-west');
+  await inBothThemes(page, 'answered', async () => {
+    await expect(pane).toBeVisible();
+  });
 });

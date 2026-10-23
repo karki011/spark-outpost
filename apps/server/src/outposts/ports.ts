@@ -98,6 +98,12 @@ export interface OutpostStore {
     id: string,
     name: string,
   ): Promise<StoredOutpost | null>;
+  setInstructions(
+    db: Queryable,
+    workspaceId: string,
+    id: string,
+    instructions: string,
+  ): Promise<StoredOutpost | null>;
   setPaused(
     db: Queryable,
     workspaceId: string,

@@ -19,6 +19,7 @@ function outpost(id: string, name: string, needsYou: number, handles: string[] =
     id,
     name,
     pausedAt: null,
+    instructions: '',
     createdAt: '2026-10-09T10:00:00Z',
     updatedAt: '2026-10-09T10:00:00Z',
     members: handles.map((handle, position) => ({

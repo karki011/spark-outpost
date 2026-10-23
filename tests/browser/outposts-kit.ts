@@ -31,7 +31,27 @@ export const asksLine = (page: Page) =>
 export const thread = (page: Page) => page.getByRole('list', { name: 'Outpost thread' });
 export const post = (page: Page, text: string) =>
   thread(page).locator('.op-post', { hasText: text });
-export const stateOf = (item: Locator) => item.locator('.op-state');
+export const stateOf = (item: Locator) => item.locator('.op-pill');
+export const cardOf = (item: Locator) => item.locator('.op-card');
+export const threadPane = (page: Page, handle: string) =>
+  page.getByRole('complementary', { name: `Thread with @${handle}` });
+
+export async function cancelRequest(item: Locator, handle: string): Promise<void> {
+  await item
+    .getByRole('button', { name: new RegExp(`^(Cancel|Stop) the request to @${handle}…$`) })
+    .click();
+  await item.getByRole('button', { name: /^(Cancel|Stop)$/ }).click();
+}
+
+export async function openThread(item: Locator, handle: string): Promise<void> {
+  await item.getByRole('button', { name: `Open the thread with @${handle}` }).click();
+}
+
+export async function openSettings(page: Page, name: string): Promise<Locator> {
+  await outpostPage(page, name).getByRole('button', { name, exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Outpost Settings…' }).click();
+  return sheet(page, 'Edit outpost');
+}
 export const strip = (page: Page) => page.getByRole('toolbar', { name: 'Chats in this outpost' });
 export const chip = (page: Page, handle: string) =>
   strip(page).getByRole('button', { name: new RegExp(`^@${handle}\\b`) });
