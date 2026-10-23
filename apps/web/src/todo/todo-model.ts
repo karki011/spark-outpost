@@ -93,7 +93,7 @@ interface TodoRun {
 
 export function previousTodo(runs: readonly TodoRun[], runId: string): readonly PlanEntry[] {
   const own = runs.find((run) => run.id === runId);
-  if (!own) return [];
+  if (!own || own.parentRunId) return [];
   const earlier = runs
     .filter((run) => !run.parentRunId && run.todo && run.createdAt < own.createdAt)
     .toSorted((a, b) => a.createdAt.localeCompare(b.createdAt));

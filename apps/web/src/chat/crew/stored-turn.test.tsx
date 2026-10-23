@@ -81,7 +81,7 @@ describe('a stored crew turn', () => {
     expect(messageButtons()).toEqual([]);
   });
 
-  it("shows a helper's own to-do, folded once it finished", () => {
+  it("shows a helper's whole to-do, folded once it finished, even when an earlier turn had the same items", () => {
     const todo = [
       { content: 'Build the store', priority: 'medium', status: 'completed' },
       { content: 'Export it', priority: 'medium', status: 'completed' },
@@ -93,7 +93,14 @@ describe('a stored crew turn', () => {
       status: 'succeeded',
       todo,
     } as unknown as Run;
-    const { view } = show('succeeded', [bolt]);
+    const earlier = {
+      id: '00000000-0000-4000-8000-0000000000b9',
+      createdAt: '2026-09-26T09:00:00.000Z',
+      parentRunId: null,
+      status: 'succeeded',
+      todo,
+    } as unknown as Run;
+    const { view } = show('succeeded', [earlier, bolt]);
     fireEvent.click(within(parallel('Worked')).getByRole('button', { name: /Bolt/ }));
     const block = view.container.querySelector('.par-body [data-agent]')!;
     expect(

@@ -110,4 +110,14 @@ describe("a later turn's own items", () => {
       'Run the tests',
     ]);
   });
+
+  it("keeps a helper's whole list, never compared with an earlier turn", () => {
+    const runs = [
+      { id: 'a', createdAt: '2026-10-22T10:00:00Z', todo: list },
+      { id: 'b', createdAt: '2026-10-22T10:05:00Z', todo: null },
+      { id: 'helper', createdAt: '2026-10-22T10:06:00Z', parentRunId: 'b', todo: list },
+    ];
+    expect(previousTodo(runs, 'helper')).toEqual([]);
+    expect(turnTodo(runs, 'helper', list)).toEqual(list);
+  });
 });
