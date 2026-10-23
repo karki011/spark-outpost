@@ -19,6 +19,19 @@ import { BrowserOpError, refuseHeld, tabFacts, targetTab } from './op-tab.ts';
 import { chooseOpenTab } from './tab-rules.ts';
 import { isDevtoolsOp, runDevtoolsOp } from './devtools-ops.ts';
 
+const DOWNLOAD_WAIT_MS = 50;
+const DOWNLOAD_WAITS = 6;
+
+async function downloadRefused(tab: PaneTab): Promise<boolean> {
+  for (let wait = 0; wait < DOWNLOAD_WAITS && !tab.downloadRefused; wait += 1) {
+    await new Promise((resolve) => setTimeout(resolve, DOWNLOAD_WAIT_MS));
+  }
+  return tab.downloadRefused;
+}
+
+const DOWNLOAD_REFUSED =
+  'That address is a download. Spark cancelled it: agents can’t download files, and only the user can save one.';
+
 type Request<Op extends BrowserHostRequest['op']> = Extract<BrowserHostRequest, { op: Op }>;
 
 export { BrowserOpError };
@@ -54,6 +67,9 @@ async function open(panes: BrowserPanes, request: Request<'open'>, signal: Abort
     const userIsElsewhere = tabs.some((other) => other.active && other.owner === 'user');
     if (!userIsElsewhere) panes.select(request.chatId, tab.id);
     panes.layout();
+    if (tab.error && (await downloadRefused(tab))) {
+      throw new BrowserOpError('load_failed', DOWNLOAD_REFUSED);
+    }
     if (tab.error) throw new BrowserOpError('load_failed', `The page did not load: ${tab.error}`);
     const reused = choice.action === 'reuse' || choice.action === 'reload';
     return { ...tabFacts(tab), status: tab.status, reused };

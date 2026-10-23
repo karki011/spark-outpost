@@ -24,6 +24,7 @@ import {
 import { IPC } from '../ipc-channels.ts';
 import { runBrowserOp } from './agent-ops.ts';
 import { connectWorkerBridge, type BridgePort, type WorkerBridge } from './bridge.ts';
+import { startDownloadsHost, type DownloadsHost } from './downloads-host.ts';
 import { runPaneCommand } from './pane-command.ts';
 import { BrowserPanes } from './panes.ts';
 import { startPick, type PickSession } from './picker.ts';
@@ -99,12 +100,18 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     send(IPC.browserShortcut, event);
   };
   let view: BrowserViewHost | null = null;
+  let downloads: DownloadsHost | null = null;
   const guards: SessionGuards = {
     blockedPorts: () => blocked,
     roots: (contents) => panes.rootsOfContents(contents),
     log: options.log,
     inputMarks: (contents) =>
       panes.inputMarks(contents) ?? view?.panes.inputMarks(contents) ?? null,
+    download: (item, contents) =>
+      downloads?.decide(
+        item,
+        panes.tabOfContents(contents) ?? view?.panes.tabOfContents(contents) ?? null,
+      ) ?? false,
   };
   const panes: BrowserPanes = new BrowserPanes({
     window: options.window,
@@ -227,6 +234,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     history: options.history,
   });
   view = viewHost;
+  downloads = startDownloadsHost({ send, guarded, log: options.log });
   ipcMain.handle(
     IPC.browserViewHand,
     guarded((_event, raw) => handToChat(panes, viewHost, raw)),
@@ -313,6 +321,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     dispose() {
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);
       ipcMain.removeAllListeners(IPC.browserPageCopyAllowed);
+      downloads?.dispose();
       try {
         viewHost.dispose();
         panes.dispose();

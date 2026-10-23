@@ -41,6 +41,7 @@ import { PageChatDock, type DockRequest } from './PageChatDock.tsx';
 import type { PageRef } from './page-chat.ts';
 import { pageRef, usePageIntents } from './page-intents.ts';
 import { ViewFavorites } from './ViewFavorites.tsx';
+import { ViewDownloads } from './ViewDownloads.tsx';
 import { ViewTabs } from './ViewTabs.tsx';
 import {
   acceptViewState,
@@ -232,6 +233,7 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
         <AddressBar key={tabKey} commands={commands} tab={tab} placeholder="Type a web address" />
         <ViewFavorites profile={profile} favorites={favorites} tab={tab} />
         <ViewTabs profile={profile} tabs={tabs} onNewTab={() => setBar('new')} />
+        <ViewDownloads />
       </nav>
       <main className="page bv-page" id="bv-page" aria-label={tab ? tabLabel(tab) : 'Browser'}>
         <div className="bv-bar">
