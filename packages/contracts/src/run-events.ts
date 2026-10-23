@@ -17,6 +17,7 @@ export function parseRunEvent(value: unknown): RunEvent | null {
 }
 
 export const SPARK_METADATA = 'spark';
+export const TOOL_NAME_CHARS = 120;
 
 const stepMarkSchema = z.object({
   toolCallId: z.string().optional(),
@@ -26,6 +27,7 @@ const stepMarkSchema = z.object({
   textBefore: z.string().optional(),
   textHeld: z.number().int().nonnegative().optional(),
   toolKind: z.string().max(40).optional(),
+  toolName: z.string().max(TOOL_NAME_CHARS).optional(),
   target: z.string().max(200).optional(),
 });
 export type StepMark = z.infer<typeof stepMarkSchema>;

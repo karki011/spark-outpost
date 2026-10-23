@@ -47,8 +47,9 @@ export function activityFromEvents(rows: readonly StepEventRow[]): Record<string
     }
     const finished = finishOldest(open.get(name));
     if (finished && at !== null) finished.finishedAt = at;
-    const { target } = kindOf(row.mark);
+    const { target, toolName } = kindOf(row.mark);
     if (finished && target && !finished.target) finished.target = target;
+    if (finished && toolName && !finished.toolName) finished.toolName = toolName;
   }
   return activity;
 }
@@ -59,9 +60,13 @@ function timeOf(value: StepEventRow['at']): number | null {
   return Number.isFinite(time) ? time : null;
 }
 
-function kindOf(mark: unknown): Pick<ActivityStep, 'toolKind' | 'target'> {
-  const { toolKind, target } = stepMark({ metadata: { [SPARK_METADATA]: mark } });
-  return { ...(toolKind ? { toolKind } : {}), ...(target ? { target } : {}) };
+function kindOf(mark: unknown): Pick<ActivityStep, 'toolKind' | 'toolName' | 'target'> {
+  const { toolKind, toolName, target } = stepMark({ metadata: { [SPARK_METADATA]: mark } });
+  return {
+    ...(toolKind ? { toolKind } : {}),
+    ...(toolName ? { toolName } : {}),
+    ...(target ? { target } : {}),
+  };
 }
 
 function anchorOf(mark: unknown): Pick<ActivityStep, 'textOffset' | 'textBefore' | 'textHeld'> {

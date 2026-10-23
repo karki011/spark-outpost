@@ -12,7 +12,7 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 
 | What changed                                                                                                            | What to do                                                 |
 | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| Quieter chat: tool calls are rows, cards wait at the turn's end, details show on hover; **Esc** stops.                  | See [Follow a turn](follow-a-turn.md#see-whats-happening). |
+| Quieter chat: tool calls are rows named by tool, cards wait at the turn's end, details show on hover; **Esc** stops.    | See [Follow a turn](follow-a-turn.md#see-whats-happening). |
 | The message box styles Markdown as you type; **Aa** and a selection toolbar format it. **⌘B** now bolds.                | See [Write a message](start-a-chat.md#write-a-message).    |
 | Keyboard-reachable meeting cards; **⌃⌥⌘M**.                                                                             | See [Calendar](calendar.md#use-it).                        |
 | Appearance follows the system; pick a **Tint**.                                                                         | Had a theme? It stays. [Settings](settings.md#general).    |

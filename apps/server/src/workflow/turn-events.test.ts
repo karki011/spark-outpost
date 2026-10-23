@@ -158,4 +158,25 @@ describe('turn events', () => {
       { toolKind: 'edit' },
     ]);
   });
+
+  it('stores the tool name on the step, from the start or else from the finish', async () => {
+    const long = `mcp__server__${'x'.repeat(200)}`;
+    const events = await eventsFor([
+      {
+        kind: 'step_started',
+        name: 'Bash `ls`',
+        tool: true,
+        toolKind: 'execute',
+        toolName: 'Bash',
+      },
+      { kind: 'step_finished', name: 'Bash `ls`', tool: true, toolKind: 'execute' },
+      { kind: 'step_started', name: 'Late', tool: true },
+      { kind: 'step_finished', name: 'Late', tool: true, toolName: 'WebSearch' },
+      { kind: 'step_started', name: 'Long', tool: true, toolName: long },
+    ]);
+    const marks = events
+      .filter((event) => event.type === 'STEP_STARTED' || event.type === 'STEP_FINISHED')
+      .map((event) => stepMark(event).toolName);
+    expect(marks).toEqual(['Bash', 'Bash', undefined, 'WebSearch', long.slice(0, 120)]);
+  });
 });

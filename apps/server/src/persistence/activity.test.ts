@@ -82,4 +82,22 @@ describe('activityFromEvents', () => {
     expect(steps.slice(2500).some((step) => step.done)).toBe(false);
     expect(elapsed).toBeLessThan(200);
   });
+
+  it('keeps the tool name of a step, taking it from the finish when the start had none', () => {
+    const activity = activityFromEvents([
+      { run_id: 'a', type: 'STEP_STARTED', name: 'Read `x.ts`', mark: { toolName: 'Read' } },
+      { run_id: 'a', type: 'STEP_FINISHED', name: 'Read `x.ts`', mark: { toolName: 'Read' } },
+      { run_id: 'a', type: 'STEP_STARTED', name: 'Searched the web', mark: null },
+      {
+        run_id: 'a',
+        type: 'STEP_FINISHED',
+        name: 'Searched the web',
+        mark: { toolName: 'WebSearch' },
+      },
+    ]);
+    expect(activity.a).toEqual([
+      { name: 'Read `x.ts`', done: true, toolName: 'Read' },
+      { name: 'Searched the web', done: true, toolName: 'WebSearch' },
+    ]);
+  });
 });
