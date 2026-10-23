@@ -11,6 +11,7 @@ export const railKindSchema = z.enum([
   'sent_out',
   'other_piece',
   'stacked_push',
+  'browser_data',
 ]);
 export type RailKind = z.infer<typeof railKindSchema>;
 
@@ -50,6 +51,7 @@ const RAIL_VERBS: Record<RailKind, string> = {
   sent_out: 'sent data out',
   other_piece: 'changed a file another piece owns',
   stacked_push: 'pushed a branch whose parent branch is not on the remote',
+  browser_data: "read or changed Spark's browser data",
 };
 
 const SHOWN_PATHS = 3;

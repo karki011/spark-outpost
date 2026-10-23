@@ -22,6 +22,7 @@ const launch: ServerLaunch = {
     SPARK_API_TOKEN: 'inherited',
     SECRET_STORE: 'memory',
     SPARK_LOG_DIR: '/tmp/elsewhere',
+    SPARK_BROWSER_DATA_DIR: '/tmp/elsewhere',
   },
 };
 
@@ -56,5 +57,13 @@ describe('server environment', () => {
       SPARK_DATA_DIR: '/Users/me/Library/Application Support/Spark Outpost Dev',
     });
     expect(workerEnv(launch).SPARK_LOG_DIR).toBeUndefined();
+  });
+
+  it("tells both processes where Spark's browser data is, so chats can't reach it", () => {
+    for (const env of [apiEnv(launch), workerEnv(launch)]) {
+      expect(env.SPARK_BROWSER_DATA_DIR).toBe(
+        '/Users/me/Library/Application Support/Spark Outpost Dev',
+      );
+    }
   });
 });

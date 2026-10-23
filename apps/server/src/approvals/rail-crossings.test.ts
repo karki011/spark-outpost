@@ -73,6 +73,26 @@ describe('rail crossings Spark flags after an unasked action', () => {
     expect(await run('echo x >> ~/.npmrc')).toEqual([{ rail: 'secret', paths: ['~/.npmrc'] }]);
   });
 
+  it("flags reading or copying Spark's browser data", async () => {
+    const data = '/Users/me/Library/Application Support/Spark Outpost';
+    const command = `cp -r "${data}/Partitions/spark-browser-personal" /tmp/x`;
+    const asked = request({ command, title: command });
+    const found = await railCrossings(asked, {
+      shell: await parseShell(command),
+      browserData: data,
+    });
+    expect(found).toContainEqual({ rail: 'browser_data', paths: [] });
+    const read = request({
+      kind: 'other',
+      toolKind: 'read',
+      command: null,
+      paths: [`${data}/postgres-password`],
+    });
+    expect(await railCrossings(read, { browserData: data })).toEqual([
+      { rail: 'browser_data', paths: [] },
+    ]);
+  });
+
   it('flags nothing for an ordinary command in the project', async () => {
     expect(await run('pnpm test && git status')).toEqual([]);
   });
