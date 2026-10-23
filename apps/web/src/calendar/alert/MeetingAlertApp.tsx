@@ -121,6 +121,22 @@ export function MeetingAlertApp() {
     clearRef.current = clear;
   });
   const scoutRef = useRef<HTMLDivElement>(null);
+  const focusPending = useRef(false);
+
+  useEffect(
+    () =>
+      bridge?.onTakeFocus(() => {
+        if (cardRef.current) cardRef.current.focus();
+        else focusPending.current = true;
+      }),
+    [bridge],
+  );
+
+  useEffect(() => {
+    if (!focusPending.current || !cardRef.current) return;
+    focusPending.current = false;
+    cardRef.current.focus();
+  }, [payload, place]);
 
   const act: Act = (kind, eventKey = null) => {
     if (payload) bridge?.act({ kind, key: payload.key, eventKey });
@@ -205,7 +221,7 @@ export function MeetingAlertApp() {
             ref={cardRef}
             className="ma-card"
             role="alertdialog"
-            aria-labelledby="ma-title"
+            aria-labelledby="ma-kind ma-title"
             aria-describedby="ma-hint"
             onPointerDown={(down) => {
               if ((down.target as Element).closest('button')) return;
@@ -215,6 +231,9 @@ export function MeetingAlertApp() {
             tabIndex={-1}
             onKeyDown={onKeyDown}
           >
+            <span id="ma-kind" className="sr-only">
+              Meeting.
+            </span>
             <h1 id="ma-title" className="ma-title">
               {alertTitle(payload.events, at)}
             </h1>
@@ -256,7 +275,7 @@ export function MeetingAlertApp() {
               </>
             )}
             <p id="ma-hint" className="ma-hint">
-              Esc dismisses · ⌘J joins
+              Esc dismisses · ⌘J joins · ⌃⌥⌘M focuses this card
             </p>
           </div>
         </div>
