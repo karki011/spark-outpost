@@ -17,6 +17,7 @@ import {
 import { readTextFile, refuseWrite } from './fs-handlers.ts';
 import type { TurnHandlers } from './live-binding.ts';
 import { declineInConversation, nativePlan } from './permissions.ts';
+import type { AgentCli } from './agent-cli.ts';
 import { createRailWatch, type RailWatch } from './rail-watch.ts';
 import type { RequestLog } from './turn-loop.ts';
 import type { TurnMapper } from './subagent-updates.ts';
@@ -36,6 +37,7 @@ export function turnGates(
   signal: AbortSignal,
   mapper: TurnMapper,
   push: (outputs: ProviderOutput[]) => void,
+  cli: AgentCli,
 ): TurnGates {
   const gated: DoWorkspace | null =
     policy && turn.approvals
@@ -52,7 +54,7 @@ export function turnGates(
         }
       : null;
   const doing = changing ? gated : null;
-  const rails = gated ? createRailWatch({ roots: gated.policy.roots, cwd: gated.cwd }) : null;
+  const rails = gated ? createRailWatch({ roots: gated.policy.roots, cwd: gated.cwd, cli }) : null;
   return { gated, doing, rails, questions: turn.questions ?? null };
 }
 

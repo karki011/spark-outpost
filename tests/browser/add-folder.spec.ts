@@ -220,6 +220,7 @@ test('on a paired device Add folder browses the Mac and can make a folder there'
   expect(existsSync(path.join(base, 'from-phone'))).toBe(true);
   await dialog.getByRole('button', { name: 'Use this folder' }).click();
   await keepPlainFolder(page, 'from-phone');
+  await composer.getByRole('button', { name: /^Chat details/ }).click();
   await expect(composer.getByRole('button', { name: 'Project folders: from-phone' })).toBeVisible();
 });
 

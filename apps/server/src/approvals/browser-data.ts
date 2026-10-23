@@ -7,7 +7,7 @@ import type { ApprovalRequest } from './decide.ts';
 import { commandCwd } from './request-place.ts';
 
 export const BROWSER_DATA_REASON =
-  "Spark's browser data (Browser pane profiles, history and the database holding it) can't be read, copied or changed by an agent";
+  "Spark's browser data (Browser pane profiles, the app's own cookies and storage, history and the database holding it) can't be read, copied or changed by an agent";
 
 export const BROWSER_DATA_ENTRIES = [
   'Partitions',
@@ -16,6 +16,24 @@ export const BROWSER_DATA_ENTRIES = [
   'postgres',
   'postgres-password',
   'backups',
+  'Cookies',
+  'Cookies-journal',
+  'Local Storage',
+  'Session Storage',
+  'IndexedDB',
+  'WebStorage',
+  'Service Worker',
+  'Shared Dictionary',
+  'Trust Tokens',
+  'Trust Tokens-journal',
+  'DIPS',
+  'DIPS-wal',
+  'Network Persistent State',
+  'Local State',
+  'blob_storage',
+  'Cache',
+  'Code Cache',
+  'web-storage.json',
 ] as const;
 
 const GLOB = /[*?[{]/;
