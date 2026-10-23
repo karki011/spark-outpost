@@ -184,6 +184,12 @@ describe('the sheet for a draft a chat proposed', () => {
     fireEvent.keyDown(name, { key: 'Enter', metaKey: true });
     expect(onStart).not.toHaveBeenCalled();
     expect(screen.getByText('Enter a name.')).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: 'Outpost name' }).getAttribute('aria-invalid')).toBe(
+      'true',
+    );
+    expect(
+      screen.getByRole('textbox', { name: 'Outpost name', description: 'Enter a name.' }),
+    ).toBeTruthy();
   });
 });
 
