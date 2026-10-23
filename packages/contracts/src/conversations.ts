@@ -108,6 +108,7 @@ export const conversationSummarySchema = z.object({
     })
     .nullable(),
   archivedAt: z.string().nullable(),
+  autoArchivedDays: z.number().int().positive().optional(),
   pinnedAt: z.string().nullable(),
   pinnedOrder: z.number().int().nullable().default(null),
   projectOrder: z.number().int().nullable().default(null),
@@ -126,6 +127,10 @@ export const conversationSummarySchema = z.object({
   match: searchMatchSchema.optional(),
 });
 export type ConversationSummary = z.infer<typeof conversationSummarySchema>;
+
+export function archivedInactiveLine(days: number): string {
+  return `Archived after ${days} ${days === 1 ? 'day' : 'days'} without activity`;
+}
 
 export const RENAMED_TITLE_MAX_LENGTH = 100;
 export const CONVERSATION_SEARCH_MAX_LENGTH = 200;

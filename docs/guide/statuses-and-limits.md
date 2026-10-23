@@ -27,6 +27,8 @@ A dot shows changes since you last opened the chat; point at it.
 | **Done**: green             | A turn finished.                                     |
 | **Couldn't finish**: red    | A turn failed or was interrupted.                    |
 
+**History** holds archived chats. Spark archives a chat idle for 2 days unless it's pinned, working or waiting: **Archive inactive chats**. **Projects** lists a project only while it has an active chat.
+
 ## Chats and Sparks
 
 | Status                | Where      | Means                                                                  |

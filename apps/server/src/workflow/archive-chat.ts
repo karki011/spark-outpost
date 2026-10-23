@@ -16,9 +16,10 @@ export async function finishArchive(
   workspaceId: string,
   conversationId: string,
   terminals?: ArchiveTerminals,
+  reason: string = SESSION_CLOSE_REASONS.archived,
 ): Promise<void> {
   await terminals?.stop(conversationId);
-  await closeConversationSessions(db, workspaceId, conversationId, SESSION_CLOSE_REASONS.archived);
+  await closeConversationSessions(db, workspaceId, conversationId, reason);
   await releaseConversation(db, conversationId, 'archived');
 }
 

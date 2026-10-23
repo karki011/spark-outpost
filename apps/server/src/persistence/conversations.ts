@@ -384,7 +384,8 @@ export async function sendInTransaction(
       ? titleFromMessage(request.content || attachments.map((file) => file.name).join(', '))
       : current.title;
   await client.query(
-    'UPDATE conversations SET title = $2, updated_at = now(), archived_at = NULL WHERE id = $1',
+    `UPDATE conversations SET title = $2, updated_at = now(), archived_at = NULL,
+       auto_archived_days = NULL WHERE id = $1`,
     [conversationId, title],
   );
   if (!terminal) await client.query(`SELECT pg_notify('jobs', $1)`, [runId]);

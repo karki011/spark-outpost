@@ -43,15 +43,16 @@ Select **Settings** on the rail, or **⌘,** for its Mac window. **Search settin
 | **Compact automatically at**                 | 80%, on                | [Manage a long chat](compaction.md#change-when-spark-compacts) |
 | **While the agent is working, Enter**        | **Queues the message** | [Queue or send now](follow-a-turn.md#queue-messages)           |
 | **On wide windows**                          | **Context rail**       | Rail, panel or nothing                                         |
+| **Archive inactive chats**                   | **After 2 days**       | [Chat list](statuses-and-limits.md#chat-list)                  |
 | **Record Terminal sessions like chats**      | Off                    | [Record Terminal sessions](#record-terminal-sessions)          |
 
-**Custom instructions** takes text or a UTF-8 file on your Mac (16 KB at most); select **Save instructions**.
+**Custom instructions** takes text or a UTF-8 file (16 KB at most); select **Save instructions**.
 
 ### Record Terminal sessions
 
 With **Record Terminal sessions like chats** on, new Claude turns in a [Terminal session](terminals.md) keep tool calls with input and output, replies, changed files and an audit, like a chat. Secret-file values are hidden.
 
-Pushes to other branches, force pushes, protected files and writes outside the project get a flag; nothing is stopped. Not for Codex.
+Pushes to other branches, force pushes, protected files and writes outside the project are flagged, never stopped. Not for Codex.
 
 **Pull requests**:
 

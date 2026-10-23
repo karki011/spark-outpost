@@ -1,7 +1,12 @@
 import './thread.css';
 import './turn-indent.css';
 import { Fragment, memo, use, useEffect } from 'react';
-import { PERMISSION_DO, type ConversationDetail, type Project } from '@spark-outpost/contracts';
+import {
+  PERMISSION_DO,
+  archivedInactiveLine,
+  type ConversationDetail,
+  type Project,
+} from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { useVoice } from '../spark/use-voice.ts';
 import { greeting } from '../spark/voice.ts';
@@ -10,7 +15,7 @@ import { repoSummary } from './project/repo-list.ts';
 import { RepoKit } from './project/RepoKit.tsx';
 import { buildTurns } from './turns.ts';
 import { TurnSection } from './TurnSection.tsx';
-import { AssistantTopicDivider } from './compaction/DividerLine.tsx';
+import { AssistantTopicDivider, TopicDivider } from './compaction/DividerLine.tsx';
 import { placeTopics } from './compaction/topic-model.ts';
 import { TodaySoFar } from './today/TodaySoFar.tsx';
 import { useStickToBottom } from './use-stick-to-bottom.ts';
@@ -136,6 +141,9 @@ export const Thread = memo(function Thread({
             {topics.after.map((topic) => (
               <AssistantTopicDivider key={topic.id} topic={topic} />
             ))}
+            {detail.conversation.archivedAt && detail.conversation.autoArchivedDays && (
+              <TopicDivider label={archivedInactiveLine(detail.conversation.autoArchivedDays)} />
+            )}
           </CommandDockContext>
           <PendingSends sends={sends} />
         </div>
