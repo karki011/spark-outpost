@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { at, event, link } from '../test-fixtures.ts';
 import {
+  alertNotice,
   alertTitle,
   countdownSeconds,
   joinState,
@@ -45,5 +46,14 @@ describe('alert card', () => {
     expect(shortcutJoin([standup, design], at(9, 59))?.key).toBe(standup.key);
     expect(shortcutJoin([standup, vendor], at(9, 59))).toBeNull();
     expect(shortcutJoin([standup], at(9, 30))).toBeNull();
+  });
+});
+
+describe('alert notification text', () => {
+  it('names the meeting and gives the same time line as the card, without a ticking countdown', () => {
+    const notice = alertNotice([standup]);
+    expect(notice.title).toBe('Standup');
+    expect(notice.body).toMatch(/Zoom/);
+    expect(alertNotice([standup, design]).title).toBe('2 meetings: Standup, Design sync');
   });
 });

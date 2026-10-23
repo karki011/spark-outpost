@@ -28,7 +28,9 @@ import { trayTemplate } from './island-options.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
 import { appLayout } from './layout.ts';
 import { noActivate } from './no-activate.ts';
+import { readAssistiveTech } from './assistive-tech.ts';
 import { startMeetingAlertHost } from './meeting-alert-host.ts';
+import { electronNotices, meetingNotifier } from './meeting-notification.ts';
 import { watchSparkFocus } from './spark-focus.ts';
 import { startViewingHost } from './viewing-host.ts';
 import { watchHourCycle } from './hour-cycle.ts';
@@ -127,6 +129,14 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   });
   const preventActivation = noActivate(layout.noActivateAddon, options.log);
 
+  const registerShortcut = (accelerator: string, run: () => void) => {
+    try {
+      return globalShortcut.register(accelerator, run);
+    } catch {
+      return false;
+    }
+  };
+
   const companion = createCompanion(initial, {
     supported: process.platform === 'darwin',
     openIsland: (onGone) => {
@@ -148,13 +158,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       opened.sparkFocus(sparkFocused());
       return opened;
     },
-    register: (accelerator, run) => {
-      try {
-        return globalShortcut.register(accelerator, run);
-      } catch {
-        return false;
-      }
-    },
+    register: registerShortcut,
     unregister: (accelerator) => globalShortcut.unregister(accelerator),
     save,
     changed: (status) => {
@@ -297,6 +301,10 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     sendToIsland: (channel, payload) => island?.post(channel, payload),
     hideInShare: () => companion.status().hideInShare,
     preventActivation,
+    assistive: readAssistiveTech,
+    register: registerShortcut,
+    unregister: (accelerator) => globalShortcut.unregister(accelerator),
+    notifier: meetingNotifier(electronNotices(options.log)),
     log: options.log,
   });
 

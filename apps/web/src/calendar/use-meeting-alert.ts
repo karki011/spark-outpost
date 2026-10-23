@@ -8,6 +8,7 @@ import {
   type MeetingCountdown,
 } from '@spark-outpost/contracts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
+import { alertNotice, joinState } from './alert/alert-model.ts';
 import { useEventClock } from './event-clock.ts';
 import {
   AUTO_JOIN_COUNTDOWN_MS,
@@ -152,14 +153,19 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
     if (target) join(target, true);
   };
 
-  const handlers = useRef({ cancelJoin, joinNow });
-  useEffect(() => {
-    handlers.current = { cancelJoin, joinNow };
-  });
-
   const alertRef = useRef(alert);
   useEffect(() => {
     alertRef.current = alert;
+  });
+
+  const joinFromNotice = (eventKey: string) => {
+    const target = alertRef.current?.events.find((event) => event.key === eventKey);
+    if (target && joinState(target, Date.now()) === 'open') join(target, false);
+  };
+
+  const handlers = useRef({ cancelJoin, joinNow, joinFromNotice });
+  useEffect(() => {
+    handlers.current = { cancelJoin, joinNow, joinFromNotice };
   });
 
   const payload = alert
@@ -173,6 +179,7 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
           ]),
         ),
         countdown,
+        notice: alertNotice(alert.events),
       }
     : null;
   const payloadKey = JSON.stringify(payload);
@@ -199,6 +206,9 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
       const inAlert = shown && shown.key === action.key ? shown.events : [];
       if (action.kind === 'cancel-join') handlers.current.cancelJoin();
       if (action.kind === 'join-now') handlers.current.joinNow();
+      if (action.kind === 'join' && action.eventKey && shown?.key === action.key) {
+        handlers.current.joinFromNotice(action.eventKey);
+      }
       if (action.kind === 'joined' && action.eventKey) {
         setJoined((current) => new Set(current).add(action.eventKey!));
       }

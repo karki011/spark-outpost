@@ -34,6 +34,7 @@ export const IPC = {
   meetingAlertAct: 'meeting-alert:act',
   meetingAlertAction: 'meeting-alert:action',
   meetingAlertFocus: 'meeting-alert:focus',
+  meetingAlertTakeFocus: 'meeting-alert:take-focus',
   meetingAlertRegions: 'meeting-alert:regions',
   meetingAlertPointerMoved: 'meeting-alert:pointer-moved',
   meetingAutoJoined: 'meeting-alert:auto-joined',
