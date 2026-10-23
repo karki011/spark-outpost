@@ -6,17 +6,17 @@ order: 517
 summary: How an agent in an outpost asks another member, leaves a note or reads the thread, where you see it, and why such a request is never your message.
 ---
 
-In an outpost an agent can ask another member for work or an answer directly. The request is the agent's, never yours, and runs under the receiving chat's mode and autonomy.
+In an outpost an agent can ask another member directly for work or an answer. The request is the agent's, never yours, and runs under the receiving chat's mode and autonomy.
 
 ## What an agent can do
 
 | The agent                                | You see                                                                                         |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | Asks `@api`                              | A request from `@fe` marked **not from you** in the thread, and **To @api** under `@fe`'s turn. |
-| Waits for the answer, or goes on         | The answer under the request. One it didn't wait for reaches it at its next turn.               |
+| Waits for the answer, or goes on         | The answer under the request; one it didn't wait for reaches its next turn.                     |
 | Leaves a note                            | A note in the thread. Members read it at their next turn; it starts no work.                    |
-| Reads the outpost                        | Nothing new. Reading members' notes or answers is a private work-data read.                     |
-| [Proposes sub-tasks](outpost-stories.md) | A draft that you review and start.                                                              |
+| Reads the outpost                        | Nothing new; reading notes or answers is a private work-data read.                              |
+| [Proposes sub-tasks](outpost-stories.md) | A draft you review and start.                                                                   |
 
 In the receiving chat the turn is headed **From @fe** · **not from you**.
 

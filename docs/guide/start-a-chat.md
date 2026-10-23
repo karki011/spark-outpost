@@ -43,9 +43,11 @@ To unlink, select **No project folder** in the menu.
 
 Or paste or drag files into the box.
 
+Markdown is styled as you type. Select text for a toolbar, or **Aa** for lists, quotes and code blocks; **⌘B**, **⌘I**, **⌘⇧X** work too. In a code block, **Enter** adds a line and **⌘Enter** sends.
+
 ## Share a chat with another chat
 
-Copy its link from **Chat actions → Copy chat link**, then paste into another chat. The agent can [read it](spark-tools.md), never change it.
+Paste a link from **Chat actions → Copy chat link** into another chat; the agent can [read it](spark-tools.md), never change it.
 
 For several chats in one thread, use an [outpost](outposts.md).
 
@@ -54,8 +56,8 @@ For several chats in one thread, use an [outpost](outposts.md).
 ## Jump between sessions
 
 1. Press **⌘⇧K**, or select **Sessions** above the chat list.
-2. Sessions that need you come first, then working ones; a Terminal session shows its steps and cost.
+2. Those that need you come first, then working ones; Terminal sessions show steps and cost.
 3. Type to filter by title, project, agent, state or message text.
-4. Press **↑** or **↓**, then **Enter**. A chat found by message text opens there. **Esc** closes.
+4. Press **↑** or **↓**, then **Enter**. A message-text match opens at that message. **Esc** closes.
 
 **Next:** [Pick the model, effort and mode](agent-mode.md)
