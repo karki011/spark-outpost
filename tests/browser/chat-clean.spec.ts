@@ -54,7 +54,7 @@ async function step(runId: string, stepName: string, done = true) {
 async function questionChat(status: 'running' | 'succeeded') {
   const [chatId] = await seedChats([{ title: 'Current Spark activity', run: { status } }]);
   const [run] = await sql<{ id: string }>(
-    `UPDATE runs SET provider = 'claude', model = 'Opus 5.5', effort = 'medium',
+    `UPDATE runs SET provider = 'claude', model = 'claude-opus-5-5', effort = 'medium',
        category = 'question', started_at = now() - interval '19 seconds'
      WHERE conversation_id = $1 RETURNING id`,
     [chatId],
@@ -89,7 +89,6 @@ test('a running turn has one status, with steps in plain words', async ({ page }
 
   await expect(mood(page)).toHaveText('working');
   await expect(rows(page)).toHaveText([
-    'Using Opus 5.5 · medium effort',
     'Looking at projects',
     'Reading the project map',
     'Checking pull requests',
@@ -97,6 +96,7 @@ test('a running turn has one status, with steps in plain words', async ({ page }
   await expect(rows(page).last().getByRole('img', { name: 'In progress' })).toBeVisible();
   await expect(page.locator('.msg.ai .ai-head')).toHaveCount(0);
   await expect(page.locator('.thread')).not.toContainText('mcp__');
+  await expect(page.locator('.thread')).not.toContainText('medium effort');
   await expect(page.locator('.thread .dots')).toHaveCount(0);
   const working = page.locator('.turn-working');
   await expect(working).toContainText('Working');
