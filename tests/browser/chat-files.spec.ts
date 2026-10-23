@@ -1,13 +1,21 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { PACKAGED, PACKAGED_DATA_DIR } from './stub-config.ts';
+
+const dataDir = PACKAGED ? PACKAGED_DATA_DIR : path.resolve('.local');
+const chatHome = (chatId: string) => path.join(dataDir, 'spark', 'chats', chatId);
 
 test.beforeEach(async () => {
   test.slow();
   await resetTestDatabase({ onboarded: true });
 });
 
-test('a chat with no project shows the files its agent made with the turn', async ({ page }) => {
+test('a chat with no project shows the files its agent made with the turn @packaged', async ({
+  page,
+}) => {
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
@@ -45,4 +53,14 @@ test('a chat with no project shows the files its agent made with the turn', asyn
   await expect(viewer.getByRole('img', { name: 'chart.png' })).toBeVisible();
   await viewer.getByRole('button', { name: 'Close' }).click();
   await expect(viewer).toHaveCount(0);
+
+  const chats = (await (await page.request.get('/api/conversations')).json()) as { id: string }[];
+  expect(chats).toHaveLength(1);
+  const chatId = chats[0]!.id;
+  const home = chatHome(chatId);
+  expect(existsSync(path.join(home, 'work', 'cpi.csv'))).toBe(true);
+  expect((await page.request.delete(`/api/conversations/${chatId}`, { data: {} })).status()).toBe(
+    204,
+  );
+  expect(existsSync(home)).toBe(false);
 });
