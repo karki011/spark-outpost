@@ -1,4 +1,11 @@
-import { BrowserWindow, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
+import {
+  BrowserWindow,
+  ipcMain,
+  screen,
+  type IpcMainEvent,
+  type IpcMainInvokeEvent,
+  type Size,
+} from 'electron';
 import { attachContextMenu } from './context-menu.ts';
 import { hourCycleArgs } from './hour-cycle-arg.ts';
 import { systemHourCycle } from './hour-cycle.ts';
@@ -13,7 +20,31 @@ const SETTINGS_ROUTE = /^#\/settings\/[a-z][a-z0-9-]{0,40}(\/[a-z0-9-]{1,40})?$/
 const CHAT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DOC_LINK = /^#\/docs(\/[^\s]{1,200})?$/;
 const FOCUS_LABEL_MAX = 200;
-const SIZE = { width: 900, height: 680, minWidth: 720, minHeight: 480 } as const;
+const PREFERRED = { width: 1120, height: 860 } as const;
+const MINIMUM = { minWidth: 720, minHeight: 480 } as const;
+const SCREEN_MARGIN = { width: 80, height: 60 } as const;
+
+export function settingsWindowSize(workArea: Size) {
+  return {
+    width: Math.max(
+      MINIMUM.minWidth,
+      Math.min(PREFERRED.width, workArea.width - SCREEN_MARGIN.width),
+    ),
+    height: Math.max(
+      MINIMUM.minHeight,
+      Math.min(PREFERRED.height, workArea.height - SCREEN_MARGIN.height),
+    ),
+    ...MINIMUM,
+  };
+}
+
+function workAreaFor(mainWindow: BrowserWindow | null): Size {
+  const display =
+    mainWindow && !mainWindow.isDestroyed()
+      ? screen.getDisplayMatching(mainWindow.getBounds())
+      : screen.getPrimaryDisplay();
+  return display.workAreaSize;
+}
 
 export interface SettingsTarget {
   route: string;
@@ -56,7 +87,7 @@ export interface SettingsWindow {
 
 function createWindow(options: SettingsWindowOptions, route: string): BrowserWindow {
   const window = new BrowserWindow({
-    ...SIZE,
+    ...settingsWindowSize(workAreaFor(options.mainWindow())),
     title: 'Settings',
     show: false,
     minimizable: false,
