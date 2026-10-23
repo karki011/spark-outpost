@@ -63,6 +63,29 @@ describe('Claude session options', () => {
     expect(project.settings.permissions.deny).toEqual(project.disallowedTools);
   });
 
+  it("denies reading and editing Spark's browser data in every Claude session", () => {
+    const saved = process.env.SPARK_BROWSER_DATA_DIR;
+    process.env.SPARK_BROWSER_DATA_DIR = '/nowhere/Spark Outpost';
+    try {
+      const sessions = [
+        agentDefinitions.claude.conversationSessionMeta?.(null),
+        agentDefinitions.claude.projectSessionMeta?.([], null),
+        agentDefinitions.claude.doSessionMeta?.([], null, true),
+      ];
+      for (const meta of sessions) {
+        const options = optionsOf(meta);
+        expect(options.disallowedTools).toContain('Read(//nowhere/Spark Outpost/Partitions/**)');
+        expect(options.disallowedTools).toContain(
+          'Edit(//nowhere/Spark Outpost/postgres-password)',
+        );
+        expect(options.settings.permissions.deny).toEqual(options.disallowedTools);
+      }
+    } finally {
+      if (saved === undefined) delete process.env.SPARK_BROWSER_DATA_DIR;
+      else process.env.SPARK_BROWSER_DATA_DIR = saved;
+    }
+  });
+
   it('denies editing the same secret names as the path policy, and leaves reading to the mode', () => {
     const rules = secretRules([]);
     for (const rule of [

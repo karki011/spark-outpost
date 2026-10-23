@@ -61,7 +61,7 @@ async function newChatOn(page: Page, root: string | null) {
 async function editAndKeep(page: Page, text: string) {
   await send(page, text);
   await page
-    .getByRole('group', { name: /Change a file\?/ })
+    .getByRole('group', { name: /^Edit .+\?$/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await expect(page.getByRole('region', { name: /^Kept · / }).last()).toBeVisible({

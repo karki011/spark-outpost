@@ -39,7 +39,7 @@ async function sendAndKeep(page: Page) {
   await input.fill('Add a line to the notes #edit #plan');
   await input.press('Enter');
   await page
-    .getByRole('group', { name: /Change a file\?/ })
+    .getByRole('group', { name: /^Edit .+\?$/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await expect(page.getByRole('region', { name: /^Kept · / })).toBeVisible({ timeout: 20_000 });
@@ -68,7 +68,7 @@ test('a Do chat works on its own branch in a worktree and brings the change in o
   await sendAndKeep(page);
   const chip = page.getByRole('button', { name: /^This chat’s branch/ });
   await expect(chip).toContainText(/spark\/add-a-line-to-the-notes[a-z-]*-[0-9a-f]{8}/);
-  await expect(chip).toContainText('· worktree');
+  await expect(chip).toHaveAccessibleName(/, worktree$/);
   await expect(page.locator('.head .chat-branch')).toHaveCount(0);
   await expect(place).toHaveCount(0);
   await chip.click();

@@ -40,6 +40,7 @@ import type { OwnRepo } from './own-repo.ts';
 import type { SecretSend } from './secret-send.ts';
 import { secretSendReason, sentOut, type SentOut } from './taint.ts';
 import { webAddressRefusal } from './web-address.ts';
+import { BROWSER_DATA_REASON, browserDataDir, touchesBrowserData } from './browser-data.ts';
 import { writeTargets } from './write-targets.ts';
 import { commandCwd, isSecretTarget, outsideRoots, place, placedLabel } from './request-place.ts';
 import { alwaysAsk, type RailAsk } from './rails.ts';
@@ -174,6 +175,7 @@ export interface DecideOptions {
   agentAsks?: boolean;
   publish?: PublishContext;
   ghRules?: GhRules;
+  browserData?: string | null;
 }
 
 export function namedSecrets(
@@ -331,6 +333,10 @@ export function decide(
   options: DecideOptions = {},
 ): Decision {
   const request = withResolvedVariables(asked);
+  const browserData = options.browserData === undefined ? browserDataDir() : options.browserData;
+  if (touchesBrowserData(request, browserData)) {
+    return { verdict: 'reject', reason: BROWSER_DATA_REASON };
+  }
   const forced = adoptedForce(
     request.command ? forcePush(request.command, options.defaultBranch ?? null) : null,
     options.publish?.task ?? null,

@@ -105,7 +105,9 @@ test('the Home composer keeps its mode and project across a reload and after a s
 test('a chat with no project shows the picked mode and points to projects', async ({ page }) => {
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await expect(page.locator('.ctx-unlinked')).toHaveText('Pick a project to work in your code.');
+  await expect(
+    page.locator('.comp-bar').getByRole('button', { name: 'Choose project' }),
+  ).toBeVisible();
   const chip = permissionChip(page);
   await expect(chip).not.toHaveText(/No file tools/);
 

@@ -37,7 +37,7 @@ describe('StoryBar', () => {
       '@api',
       '@fe',
     ]);
-    expect(within(rows[0]!).getByText('Answered')).toBeTruthy();
+    expect(within(rows[0]!).getByText('Ready for review')).toBeTruthy();
     expect(within(rows[1]!).getByText('on @api')).toBeTruthy();
     expect(within(rows[1]!).getByText('Waiting for @api')).toBeTruthy();
   });

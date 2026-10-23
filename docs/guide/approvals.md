@@ -8,38 +8,38 @@ summary: The agent's mode and Spark autonomy, why an approval card appears, what
 
 The **agent's mode** decides what the agent may do without asking; **Spark autonomy**, what Spark does with the result. Spark adds only a few hard rails.
 
-| Layer              | Decides                                | Details                                                                                  |
-| ------------------ | -------------------------------------- | ---------------------------------------------------------------------------------------- |
-| The agent's mode   | Whether edits and commands ask         | [Agent modes](modes-and-levels.md#agent-modes)                                           |
-| Spark autonomy     | Plans, keeping, shipping, PR follow-up | [Autonomy levels](modes-and-levels.md#autonomy-levels)                                   |
-| Hard rails         | What asks or is refused in every mode  | [Protected paths](protected-paths.md)                                                    |
-| The project's list | Commands that skip the card            | [Let a command run without asking](answer-approvals.md#let-a-command-run-without-asking) |
+| Layer              | Decides                                | Details                                                                  |
+| ------------------ | -------------------------------------- | ------------------------------------------------------------------------ |
+| The agent's mode   | Whether edits and commands ask         | [Agent modes](modes-and-levels.md#agent-modes)                           |
+| Spark autonomy     | Plans, keeping, shipping, PR follow-up | [Autonomy levels](modes-and-levels.md#autonomy-levels)                   |
+| Hard rails         | What asks or is refused in every mode  | [Protected paths](protected-paths.md)                                    |
+| The project's list | Commands that skip the card            | [Allowed commands](answer-approvals.md#let-a-command-run-without-asking) |
 
-Checks run in Spark, not the model, so nothing an agent says can approve its own request.
+Spark, not the model, runs the checks, so no agent can approve its own request.
 
 ![An approval card showing a file diff](images/approvals-edit-light.png)
 
 ## What never goes on without you
 
-- Approval cards, and protected paths in every mode and at both levels.
+- Approval cards, and protected paths in every mode and level.
 - **Address PR feedback?** at **Automatic**.
 - Merging. Nothing ever merges.
 
 ## Actions that ran without review
 
-In **Bypass permissions**, **Approve for me** or **Full access**, Spark doesn't stop the agent; it watches:
+In **Bypass permissions**, **Approve for me** or **Full access**, Spark watches without stopping the agent:
 
-- Each such tool call is marked **Ran without review** in the audit log.
-- An action that crosses a protected path, or pushes a branch that isn't the chat's own, gets a card with **Revert** and **Got it**, pinned until you choose. A flag never counts as needing you.
+- Each tool call is marked **Ran without review** in the audit log.
+- Crossing a protected path, or pushing a branch not the chat's own, gets a flag with **Revert** and **Got it**, pinned until you choose; it never counts as needing you.
 
 ## Sending data out after reading secrets
 
-After a run reads secrets, a web page or tickets, Spark notes sends elsewhere: on the mode's card, or as a flag. The chat's own repository and PR don't count.
+After a run reads secrets, a web page or tickets, Spark notes sends elsewhere, on the mode's card or as a flag. The chat's own repository and PR don't count.
 
 Sending a secret file's value [always asks](protected-paths.md#what-always-asks).
 
 ## If you don't answer
 
-Approval cards wait up to 30 minutes, then are declined.
+Approval cards are declined after 30 minutes.
 
 **This chat is almost full** follows **Wait before going on without your answer** in **Settings → Chats & autonomy**: **30s**, **60s** (default), **2 min**, **5 min**, **Never** or **Custom**. Then Spark keeps going.

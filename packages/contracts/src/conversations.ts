@@ -108,6 +108,7 @@ export const conversationSummarySchema = z.object({
     })
     .nullable(),
   archivedAt: z.string().nullable(),
+  autoArchivedDays: z.number().int().positive().optional(),
   pinnedAt: z.string().nullable(),
   pinnedOrder: z.number().int().nullable().default(null),
   projectOrder: z.number().int().nullable().default(null),
@@ -126,6 +127,10 @@ export const conversationSummarySchema = z.object({
   match: searchMatchSchema.optional(),
 });
 export type ConversationSummary = z.infer<typeof conversationSummarySchema>;
+
+export function archivedInactiveLine(days: number): string {
+  return `Archived after ${days} ${days === 1 ? 'day' : 'days'} without activity`;
+}
 
 export const RENAMED_TITLE_MAX_LENGTH = 100;
 export const CONVERSATION_SEARCH_MAX_LENGTH = 200;
@@ -152,6 +157,14 @@ export const activityStepSchema = z.object({
   done: z.boolean(),
   reasoningId: z.string().optional(),
   subagent: z.boolean().optional(),
+  textOffset: z.number().int().nonnegative().optional(),
+  textBefore: z.string().optional(),
+  textHeld: z.number().int().nonnegative().optional(),
+  startedAt: z.number().optional(),
+  finishedAt: z.number().optional(),
+  toolKind: z.string().optional(),
+  toolName: z.string().optional(),
+  target: z.string().optional(),
 });
 export type ActivityStep = z.infer<typeof activityStepSchema>;
 

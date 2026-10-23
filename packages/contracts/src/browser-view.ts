@@ -4,6 +4,7 @@ import {
   browserBoundsSchema,
   browserCommandSchema,
   browserPaneTabSchema,
+  parseBrowserUrl,
 } from './browser.ts';
 import { BROWSER_SHORTCUTS } from './browser-keys.ts';
 
@@ -26,6 +27,16 @@ export const browserFavoriteSchema = z.object({
   title: z.string().max(300),
 });
 export type BrowserFavorite = z.infer<typeof browserFavoriteSchema>;
+
+function favoritePage(url: string): string {
+  const parsed = parseBrowserUrl(url);
+  if (!parsed || parsed.origin === 'null') return url;
+  return `${parsed.origin}${parsed.pathname.replace(/\/+$/, '')}`;
+}
+
+export function sameFavoritePage(a: string, b: string): boolean {
+  return favoritePage(a) === favoritePage(b);
+}
 
 export const browserViewStateSchema = z.object({
   profile: browserProfileSchema,

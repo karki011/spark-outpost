@@ -75,7 +75,7 @@ describe('Ask Spark', () => {
     expect((await resolveChatSettings(t.db, id)).provider).toBe('claude');
   });
 
-  it('runs the turn with the Spark read tools and only its own actions, no repo and no user MCP servers', async () => {
+  it('runs the turn with the Spark tools a chat gets and its own actions, no repo and no user MCP servers', async () => {
     const id = await assistantId();
     worker = startWorker({
       db: t.db,
@@ -102,8 +102,23 @@ describe('Ask Spark', () => {
     const tools = sparkToolsFor(turn.sparkScope!, EVERYTHING_AVAILABLE);
     expect(tools.length).toBeGreaterThan(0);
     expect(tools.filter((tool) => tool.acts).map((tool) => tool.name)).toEqual([
+      'spark_create_ticket',
       'spark_comment_ticket',
       'spark_transition_ticket',
+      'spark_assign_ticket',
+      'spark_create_spark',
+      'spark_update_spark',
+      'spark_add_mcp_server',
+      'spark_update_mcp_server',
+      'spark_switch_mcp_server',
+      'spark_remove_mcp_server',
+      'spark_slack_post',
+      'spark_browser_act',
+      'spark_browser_devtools',
+      'spark_mac_act',
+      'spark_calendar_edit',
+      'spark_jira_edit',
+      'spark_confluence_edit',
       'spark_start_chat',
       'spark_send_to_chat',
       'spark_stop_chat',

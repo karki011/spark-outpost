@@ -148,10 +148,9 @@ describe('sending attachments', () => {
     expect(detail.messages[0]!.attachments).toEqual([image, notes]);
     expect(detail.messages[1]!.attachments).toEqual([]);
     expect(detail.messages[1]!.content.endsWith(' Attachments: a.png, b.txt.')).toBe(true);
-    expect(Object.values(detail.activity)[0]).toContainEqual({
-      name: 'Reading 2 attachments',
-      done: true,
-    });
+    expect(Object.values(detail.activity)[0]).toContainEqual(
+      expect.objectContaining({ name: 'Reading 2 attachments', done: true }),
+    );
   });
 
   it('returns the same attachments when a send is retried', async () => {

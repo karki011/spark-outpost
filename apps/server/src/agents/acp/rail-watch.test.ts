@@ -39,6 +39,22 @@ describe('watching actions the agent took without asking', () => {
     ]);
   });
 
+  it("flags an unasked copy of Spark's browser data from the folder the app gives the worker", async () => {
+    const saved = process.env.SPARK_BROWSER_DATA_DIR;
+    process.env.SPARK_BROWSER_DATA_DIR = '/nowhere/Spark Outpost';
+    try {
+      const rails = watch();
+      const command = 'cp -r "/nowhere/Spark Outpost/Partitions" /tmp/x';
+      await rails.observe(started('b1', { kind: 'execute', rawInput: { command } }));
+      expect((await rails.observe(done('b1'))).rails).toMatchObject([
+        { toolCallId: 'b1', rail: 'browser_data', paths: [] },
+      ]);
+    } finally {
+      if (saved === undefined) delete process.env.SPARK_BROWSER_DATA_DIR;
+      else process.env.SPARK_BROWSER_DATA_DIR = saved;
+    }
+  });
+
   it('leaves actions the agent asked about to the approval gate', async () => {
     const rails = watch();
     await rails.observe(started('c1', { kind: 'execute', rawInput: { command: 'rm .env' } }));

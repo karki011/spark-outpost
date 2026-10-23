@@ -20,7 +20,8 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **Enter** / **Shift+Enter** | Send / new line                         |
 | **Enter** / **⌘Enter**      | While a turn runs: queue / send now     |
 | **@** / **/**               | Add a file / run a command              |
-| **⌘B** / **⌘I** / **⌘⇧X**   | Bold / italic / strike                  |
+| **⌘B** / **⌘I** / **⌘⇧X**   | Bold / italic / strikethrough           |
+| **Enter** / **⌘Enter**      | Code block: new line / send             |
 | **⌘⇧Y**                     | Jump to the card that waits for you     |
 | **⌘D**                      | Open the **Changes** drawer             |
 | **⌘⇧A**                     | Add selected text to the chat or prompt |
@@ -31,6 +32,7 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **⌘⇧F**                     | Focus a Terminal session, or leave it   |
 | **⌥Tab** / **⌥⇧Tab**        | Leave a Terminal session                |
 | **Esc**                     | Close Agent TV, a drawer or a menu      |
+| **Esc** in the chat         | Stop the running turn                   |
 
 ## Browser pane, Mac app
 

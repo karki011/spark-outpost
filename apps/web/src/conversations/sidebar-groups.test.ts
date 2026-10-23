@@ -4,10 +4,12 @@ import {
   activeGroups,
   historyGroups,
   looseBuckets,
+  mergedOrder,
   movedOrder,
   movedProjectIds,
   pinnedFirst,
   pinnedSiblings,
+  projectsWithChats,
 } from './sidebar-groups.ts';
 
 const project = (id: string, name: string): Project => ({
@@ -162,5 +164,31 @@ describe('pinned order', () => {
     expect(movedOrder(['a', 'b', 'c'], 'c', -1)).toEqual(['a', 'c', 'b']);
     expect(movedOrder(['a', 'b'], 'a', -1)).toBeNull();
     expect(movedOrder(['a', 'b'], 'b', 1)).toBeNull();
+  });
+});
+
+describe('projects in the side panel', () => {
+  it('shows a project only while it has an active chat', () => {
+    const web = project('web', 'web-apps');
+    const docs = project('docs', 'docs');
+    const site = project('site', 'site');
+    const { groups } = activeGroups(
+      [
+        chat('a', { projectIds: ['web'] }),
+        chat('b', { projectIds: ['docs'], archivedAt: '2026-09-26T09:00:00.000Z' }),
+      ],
+      [web, docs, site],
+    );
+    expect([...projectsWithChats(groups)]).toEqual(['web']);
+  });
+
+  it('puts a reordered set of shown projects back among the hidden ones', () => {
+    expect(mergedOrder(['a', 'hidden', 'b', 'c', 'gone'], ['c', 'a', 'b'])).toEqual([
+      'c',
+      'hidden',
+      'a',
+      'b',
+      'gone',
+    ]);
   });
 });

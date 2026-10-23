@@ -4,6 +4,7 @@ import {
   modePosture,
   permissionFor,
   type AgentModeOption,
+  type ArchiveInactiveDays,
   type BusyEnterAction,
   type CompactionThresholds,
   type InvolvementLevel,
@@ -55,6 +56,7 @@ interface ProfileRow {
   heartbeat: boolean;
   wide_window: WideWindowLayout;
   busy_enter: BusyEnterAction;
+  archive_inactive_days: ArchiveInactiveDays;
   terminal_record_like_chat: boolean;
   mac_control: boolean;
 }
@@ -101,7 +103,8 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
        pr_follow_up_reviews, pr_follow_up_replies, pr_follow_up_ask, personality, agent_instructions, agent_instructions_file, default_level,
        default_level_notice,
        morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
-       heartbeat, wide_window, busy_enter, terminal_record_like_chat, mac_control,
+       heartbeat, wide_window, busy_enter, archive_inactive_days, terminal_record_like_chat,
+       mac_control,
        to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
@@ -197,6 +200,7 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     heartbeat: profile.heartbeat,
     wideWindow: profile.wide_window,
     busyEnter: profile.busy_enter,
+    archiveInactiveDays: profile.archive_inactive_days,
     terminalRecordLikeChat: profile.terminal_record_like_chat,
     macControl: profile.mac_control,
   };
@@ -257,6 +261,7 @@ export async function updateProfile(
        agent_instructions_file = COALESCE($25, agent_instructions_file),
        terminal_record_like_chat = COALESCE($26, terminal_record_like_chat),
        mac_control = COALESCE($27, mac_control),
+       archive_inactive_days = CASE WHEN $28 THEN $29::integer ELSE archive_inactive_days END,
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -287,6 +292,8 @@ export async function updateProfile(
       update.agentInstructionsFile?.trim() ?? null,
       update.terminalRecordLikeChat ?? null,
       update.macControl ?? null,
+      update.archiveInactiveDays !== undefined,
+      update.archiveInactiveDays ?? null,
     ],
   );
 }

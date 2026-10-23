@@ -27,7 +27,7 @@ export async function askForEdit(page: Page, root: string): Promise<void> {
 
 export function allowEdit(page: Page): Locator {
   return page
-    .getByRole('group', { name: /Change a file\?/ })
+    .getByRole('group', { name: /^Edit .+\?$/ })
     .getByRole('button', { name: 'Allow', exact: true });
 }
 
