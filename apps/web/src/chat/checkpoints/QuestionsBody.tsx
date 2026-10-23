@@ -33,7 +33,20 @@ function caretAtStart(target: EventTarget): boolean {
   );
 }
 
+function checkNextRadio(from: HTMLInputElement, by: number): boolean {
+  const group = from.closest('[role="radiogroup"]');
+  if (!group) return false;
+  const radios = [...group.querySelectorAll<HTMLInputElement>('input[type="radio"]')];
+  const at = radios.indexOf(from);
+  const next = radios[(at + by + radios.length) % radios.length];
+  if (!next) return false;
+  next.focus();
+  next.click();
+  return true;
+}
+
 function moveFocus(form: HTMLFormElement, from: EventTarget, by: number): boolean {
+  if (from instanceof HTMLInputElement && from.type === 'radio') return checkNextRadio(from, by);
   const rows = [...form.querySelectorAll<HTMLElement>(`[${ASK_ROW}]`)];
   const next = rows[rows.indexOf(from as HTMLElement) + by];
   next?.focus();

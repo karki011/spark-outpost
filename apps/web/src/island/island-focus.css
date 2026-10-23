@@ -257,7 +257,7 @@
 .isl-aside-list h3 {
   margin: 4px 6px 8px;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -360,7 +360,7 @@
 
 .isl-inbox-ask-from {
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .isl-home :focus-visible {

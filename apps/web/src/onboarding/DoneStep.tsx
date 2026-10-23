@@ -15,7 +15,8 @@ import { currentModel } from '../chat/composer/model-options.ts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
 import { UserBlob } from '../brand/UserBlob.tsx';
-import { readTheme, themes } from '../theme/theme.ts';
+import { readAppearance, systemLook } from '../theme/appearance.ts';
+import { appearanceSummary, resolveSkin, tintOf } from '../theme/theme.ts';
 import { burstAt } from '../ui/sparks.ts';
 import { reveal } from '../ui/transitions.tsx';
 import { useGitItem, useToolItems, type SummaryItem } from './done-tools.tsx';
@@ -85,8 +86,7 @@ export function DoneStep({ displayName, providers, defaultProvider, level }: Don
   const toolItems = useToolItems();
   const gitItem = useGitItem();
   const firstName = displayName.trim().split(/\s+/)[0] ?? '';
-  const themeId = readTheme();
-  const theme = themes.find((option) => option.id === themeId) ?? themes[0];
+  const appearance = readAppearance();
 
   useEffect(() => {
     const first = setTimeout(() => burstAt(scoutRef.current, 26, 110), 350);
@@ -109,18 +109,14 @@ export function DoneStep({ displayName, providers, defaultProvider, level }: Don
       icon: (
         <span
           className="theme-dot"
-          data-skin={theme.id === 'system' ? undefined : theme.id}
+          data-skin={resolveSkin(appearance, systemLook())}
           aria-hidden="true"
         >
           <i />
         </span>
       ),
-      title: (
-        <>
-          <b>{theme.label}</b> theme
-        </>
-      ),
-      detail: theme.description,
+      title: <b>{appearanceSummary(appearance)}</b>,
+      detail: tintOf(appearance.tint).description,
     },
     ...connected.flatMap((provider, index) => {
       const item = providerItem(

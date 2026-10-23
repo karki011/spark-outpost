@@ -103,7 +103,7 @@
   overflow: hidden;
   color: var(--muted);
   font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
-  font-size: 11.5px;
+  font-size: 12px;
   text-overflow: ellipsis;
 }
 
@@ -117,7 +117,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--map-warm) 14%, var(--panel));
   color: var(--warn);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 18px;
 }

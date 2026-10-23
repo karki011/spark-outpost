@@ -34,17 +34,12 @@ import { Onboarding } from '../onboarding/Onboarding.tsx';
 import { OutpostHost } from '../outposts/OutpostHost.tsx';
 import { ResetHost } from '../reset/ResetHost.tsx';
 import { SessionPaletteHost } from '../sessions/SessionPaletteHost.tsx';
-import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
-import { useSettingsRequests } from '../settings/settings-request.ts';
-import {
-  currentProviderRoute,
-  leaveProviderRoute,
-  onProviderRoute,
-} from '../providers/provider-route.ts';
+import { SettingsDialog } from '../settings/SettingsDialog.tsx';
+import { useSettingsState } from '../settings/use-settings-state.ts';
+import { useAppMenu } from '../desktop/use-app-menu.ts';
 import { SHOW_ISLAND_LABEL } from '../settings/DesktopCompanionSetting.tsx';
 import { requestSettingFocus } from '../settings/setting-focus.ts';
 import { LEVEL_LABEL } from '../spark/LevelSetting.tsx';
-import { requestFeedback } from '../help/feedback-request.ts';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { FreezeWhileHidden } from '../ui/FreezeWhileHidden.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
@@ -104,15 +99,7 @@ function ChatShell({ entering }: { entering: boolean }) {
     setOpenOutpostId(null);
   }, []);
   const [draftId, setDraftId] = useState(newDraftId);
-  const [settings, setSettingsState] = useState<SettingsSection | null>(() =>
-    currentProviderRoute() ? 'ai' : null,
-  );
-  const setSettings = useCallback((next: SettingsSection | null) => {
-    if (next !== 'ai') leaveProviderRoute();
-    setSettingsState(next);
-  }, []);
-  useSettingsRequests(setSettings);
-  useEffect(() => onProviderRoute(() => setSettingsState('ai')), []);
+  const [settings, setSettings] = useSettingsState();
   const [storedView, setViewState] = useState<AppView>(() =>
     isDocLinkOpen() ? 'docs' : readSavedView(),
   );
@@ -158,6 +145,7 @@ function ChatShell({ entering }: { entering: boolean }) {
   const view: AppView = hiddenView ? 'home' : storedView;
   useAttentionTitle(waiting);
   useAttentionReport(conversations.data);
+  useAppMenu({ sidebarShown: !layout.hidden, toggleSidebar: layout.toggle });
   const finished = chats.some((chat) => rowState(chat, false).tone === 'done');
   const mood =
     waiting > 0 ? 'alert' : chats.some(isRunning) ? 'working' : finished ? 'happy' : null;
@@ -217,7 +205,6 @@ function ChatShell({ entering }: { entering: boolean }) {
   useTodayOpener(showToday);
   useSlackPresence(remote);
   useNotificationChats(remote, openChat);
-  useEffect(() => sparkDesktop()?.help?.onOpenFeedback(requestFeedback), []);
   useEffect(
     () =>
       sparkDesktop()?.onOpenSettings?.((target) => {

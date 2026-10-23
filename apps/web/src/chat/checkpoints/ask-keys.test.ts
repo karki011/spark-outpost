@@ -44,9 +44,13 @@ describe('askKeyAction', () => {
     expect(askKeyAction(press('ArrowDown', { target: 'answer', caretAtStart: true }))).toBeNull();
   });
 
-  it('leaves the arrows to the browser on radios, which move and choose natively', () => {
-    expect(askKeyAction(press('ArrowDown', { target: 'radio' }))).toBeNull();
-    expect(askKeyAction(press('ArrowUp', { target: 'radio' }))).toBeNull();
+  it('moves between radios with all four arrows, and leaves Left and Right to other rows', () => {
+    expect(askKeyAction(press('ArrowRight', { target: 'radio' }))).toEqual({ kind: 'move', by: 1 });
+    expect(askKeyAction(press('ArrowLeft', { target: 'radio' }))).toEqual({ kind: 'move', by: -1 });
+    expect(askKeyAction(press('ArrowDown', { target: 'radio' }))).toEqual({ kind: 'move', by: 1 });
+    expect(askKeyAction(press('ArrowRight'))).toBeNull();
+    expect(askKeyAction(press('ArrowLeft', { target: 'answer', caretAtStart: true }))).toBeNull();
+    expect(askKeyAction(press('ArrowRight', { target: 'other' }))).toBeNull();
   });
 
   it('picks by number outside text fields only', () => {

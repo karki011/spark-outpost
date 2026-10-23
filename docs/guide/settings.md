@@ -6,15 +6,15 @@ order: 610
 summary: Every Settings section by group, its rows and defaults, and the page that explains each one.
 ---
 
-Select **Settings** on the rail, or **⌘,** in the Mac app. **Search settings** finds a section or row; Enter opens it.
+Select **Settings** on the rail, or **⌘,** for its Mac window. **Search settings** finds a section or row; Enter opens it.
 
 ## General
 
-| Section                   | Holds                                                                                                     | Read more                                                |
-| ------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| **Profile & personality** | **What should Spark call you?** and **Personality** (**Friendly**).                                       | [Set up](getting-started.md#meet-spark-and-pick-a-theme) |
-| **Voice**                 | Mac app: push to talk.                                                                                    | [Talk to Spark](voice.md)                                |
-| **Appearance**            | The theme, **Graphite** by default. Terminals use [SF Mono](https://developer.apple.com/fonts/) or Menlo. | [Set up](getting-started.md#meet-spark-and-pick-a-theme) |
+| Section                   | Holds                                                                                                                             | Read more                                               |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| **Profile & personality** | **What should Spark call you?** and **Personality** (**Friendly**).                                                               | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
+| **Voice**                 | Mac app: push to talk.                                                                                                            | [Talk to Spark](voice.md)                               |
+| **Appearance**            | **Automatic**, **Tint** (**Graphite**), **Increase contrast**. Terminals: [SF Mono](https://developer.apple.com/fonts/) or Menlo. | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
 
 ### Spark assistant
 

@@ -83,6 +83,20 @@ export interface DesktopMacControl {
   onIndicator(callback: (state: MacIndicator | null) => void): Unsubscribe;
 }
 
+export interface SettingsWindowTarget {
+  route: string;
+  focus: string | null;
+}
+
+export interface DesktopSettingsWindow {
+  open(route: string, focus: string | null): void;
+  take(): Promise<SettingsWindowTarget | null>;
+  onChange(callback: () => void): Unsubscribe;
+  openChat(id: string): void;
+  openDoc(link: string): void;
+  onDoc(callback: (link: string) => void): Unsubscribe;
+}
+
 export interface SparkDesktop {
   platform: string;
   theme?: {
@@ -117,6 +131,7 @@ export interface SparkDesktop {
     gone(): void;
     ready(): void;
     focus(): void;
+    onTakeFocus(callback: () => void): Unsubscribe;
     setRegions(regions: IslandRegions): void;
     pointerMoved(): void;
   };
@@ -161,13 +176,17 @@ export interface SparkDesktop {
     info(): Promise<DesktopHelpInfo | null>;
     exportDiagnostics(): Promise<DiagnosticsExport | null>;
     showLogs(): Promise<void>;
-    onOpenFeedback(callback: () => void): Unsubscribe;
   };
   privacy?: {
     openFullDiskAccess(): Promise<void>;
   };
   browser?: DesktopBrowser;
   macControl?: DesktopMacControl;
+  menu?: {
+    onCommand(callback: (command: unknown) => void): Unsubscribe;
+    reportSidebar(shown: boolean): void;
+  };
+  settingsWindow?: DesktopSettingsWindow;
   onOpenChat(callback: (id: string, runId: string | null) => void): Unsubscribe;
   onOpenSettings?(callback: (target: IslandSettingsTarget) => void): Unsubscribe;
 }

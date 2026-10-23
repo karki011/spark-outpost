@@ -62,11 +62,3 @@ export function routeToProvider(providerId: ConnectableId | null): void {
 export function leaveProviderRoute(): void {
   if (currentProviderRoute()) replaceHash('');
 }
-
-export function onProviderRoute(open: () => void): () => void {
-  const onHashChange = () => {
-    if (currentProviderRoute()) open();
-  };
-  window.addEventListener('hashchange', onHashChange);
-  return () => window.removeEventListener('hashchange', onHashChange);
-}

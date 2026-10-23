@@ -9,7 +9,7 @@ import { configureLiveQueries } from './app/live/use-app-events.ts';
 import { markScrollbarStyle } from './app/scrollbars.ts';
 import { startTouchViewport } from './app/touch-viewport.ts';
 import { warmTerminalFont } from './terminal/terminal-font.ts';
-import { syncThemeColor } from './theme/theme.ts';
+import { followAppearance } from './theme/appearance.ts';
 import { AppMotion } from './ui/transitions.tsx';
 import 'blobatar/motion.css';
 import './brand/blob-motion.css';
@@ -30,7 +30,7 @@ configureLiveQueries(queryClient);
 
 reportCspViolationsInDev();
 markScrollbarStyle();
-syncThemeColor();
+followAppearance();
 warmTerminalFont();
 startTouchViewport();
 ignoreAnimationIterationListeners(EventTarget.prototype);
@@ -48,7 +48,13 @@ const MeetingAlertApp = lazy(() =>
     default: module.MeetingAlertApp,
   })),
 );
+const SettingsWindowApp = lazy(() =>
+  import('./settings/SettingsWindowApp.tsx').then((module) => ({
+    default: module.SettingsWindowApp,
+  })),
+);
 const island = window.location.pathname === '/island';
+const settingsWindow = window.location.pathname === '/settings' && 'sparkDesktop' in window;
 const meetingAlert = window.location.pathname === '/meeting-alert';
 const macIndicator = window.location.pathname === '/mac-indicator';
 
@@ -64,6 +70,13 @@ function Root() {
     return (
       <Suspense fallback={null}>
         <MeetingAlertApp />
+      </Suspense>
+    );
+  }
+  if (settingsWindow) {
+    return (
+      <Suspense fallback={null}>
+        <SettingsWindowApp />
       </Suspense>
     );
   }

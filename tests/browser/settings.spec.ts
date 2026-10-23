@@ -38,11 +38,11 @@ test('settings opens from the sidebar and lets a CLI provider sign in again', as
   await providers.getByRole('tab', { name: 'Appearance' }).click();
   await expect(page).not.toHaveURL(/#\/settings/);
   const cards = page.getByRole('dialog', { name: 'Appearance' }).locator('.tcard');
-  await expect(cards).toHaveCount(12);
+  await expect(cards).toHaveCount(6);
   const lefts = await cards.evaluateAll((all) =>
     all.map((card) => Math.round(card.getBoundingClientRect().left)),
   );
-  expect(new Set(lefts).size).toBe(4);
+  expect(new Set(lefts).size).toBe(3);
 
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', { name: 'Appearance' })).toHaveCount(0);
@@ -404,4 +404,46 @@ test('disconnecting a CLI provider waits 10 seconds for Undo @packaged', async (
   await page.keyboard.up(' ');
   await expect(codex.getByRole('tab', { name: 'API key' })).toBeVisible({ timeout: 15_000 });
   await expect(codex).toContainText('Not set up');
+});
+
+test('Appearance follows the system, pairs tints and explains Increase contrast', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Appearance' }).click();
+  const appearance = page.getByRole('dialog', { name: 'Appearance' });
+  const modes = appearance.getByRole('radiogroup', { name: 'Appearance' });
+  await expect(modes.getByRole('radio', { name: 'Automatic' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(appearance.getByText("It's light right now.")).toBeVisible();
+  await appearance.getByRole('radio', { name: 'Sage · Loam' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'sage');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'loam');
+  await expect(appearance.getByText("It's dark right now.")).toBeVisible();
+  await page.screenshot({ path: 'test-results/appearance/settings-dark.png' });
+
+  const contrast = appearance.getByRole('radiogroup', { name: 'Increase contrast' });
+  await expect(contrast.getByRole('radio', { name: 'Follow system' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await page.emulateMedia({ colorScheme: 'dark', contrast: 'more' });
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'contrast-dark');
+  await expect(appearance.getByText(/On because Increase contrast is on/)).toBeVisible();
+  await page.screenshot({ path: 'test-results/appearance/settings-contrast-dark.png' });
+  await page.emulateMedia({ colorScheme: 'light', contrast: 'no-preference' });
+  await contrast.getByRole('radio', { name: 'Always' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'contrast');
+  await expect(appearance.getByText('Always uses the high-contrast set.')).toBeVisible();
+  await page.screenshot({ path: 'test-results/appearance/settings-contrast-light.png' });
+  const results = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
+  const blocking = results.violations.filter(
+    (violation) => violation.impact === 'serious' || violation.impact === 'critical',
+  );
+  expect(blocking.map((violation) => violation.id)).toEqual([]);
 });

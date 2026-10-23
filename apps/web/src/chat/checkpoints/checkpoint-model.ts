@@ -88,11 +88,11 @@ export function togglePick(
   pick: string,
   question?: CheckpointQuestion,
 ): QuestionAnswer {
+  if (question?.pick === 'one') return { ...answer, picks: [pick] };
   if (answer.picks.includes(pick)) {
     return { ...answer, picks: answer.picks.filter((picked) => picked !== pick) };
   }
-  const picks = question?.pick === 'one' ? [pick] : [...answer.picks, pick];
-  return { ...answer, picks };
+  return { ...answer, picks: [...answer.picks, pick] };
 }
 
 export function choosePick(pick: string): QuestionAnswer {

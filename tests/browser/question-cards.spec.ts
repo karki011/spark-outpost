@@ -36,14 +36,23 @@ test('answers an agent’s questions with keys and sends them back to the agent'
   await expect(questions.getByRole('textbox')).toHaveCount(1);
   await expect(questions.getByRole('textbox')).toHaveAttribute('placeholder', 'Something else…');
 
-  const postgres = questions.getByRole('radio', { name: /^Postgres/ });
-  const redis = questions.getByRole('radio', { name: /^Redis/ });
+  const store = questions.getByRole('radiogroup', { name: /choose one/ });
+  const postgres = store.getByRole('radio', { name: /^Postgres/ });
+  const redis = store.getByRole('radio', { name: /^Redis/ });
   await postgres.focus();
   await page.keyboard.press('2');
   await expect(redis).toBeChecked();
   await page.keyboard.press('1');
   await expect(postgres).toBeChecked();
   await expect(redis).not.toBeChecked();
+  await page.keyboard.press('ArrowDown');
+  await expect(redis).toBeFocused();
+  await expect(redis).toBeChecked();
+  await expect(postgres).not.toBeChecked();
+  await page.keyboard.press('ArrowUp');
+  await expect(postgres).toBeChecked();
+  await expect(postgres).toHaveAttribute('tabindex', '0');
+  await expect(redis).toHaveAttribute('tabindex', '-1');
 
   await page.keyboard.press('Enter');
   const lint = questions.getByRole('checkbox', { name: /^Lint/ });

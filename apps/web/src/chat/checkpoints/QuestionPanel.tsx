@@ -37,7 +37,10 @@ function OptionRows({
   name,
 }: PanelProps & { name: string }) {
   const single = question.pick === 'one';
-  return quickPicks(question).map((pick, index) => {
+  const picks = quickPicks(question);
+  const chosen = picks.findIndex((pick) => answer.picks.includes(pick));
+  const tabStop = chosen === -1 ? 0 : chosen;
+  return picks.map((pick, index) => {
     const picked = answer.picks.includes(pick);
     return (
       <label key={pick} className={picked ? 'ask-opt picked' : 'ask-opt'}>
@@ -46,6 +49,7 @@ function OptionRows({
           name={single ? name : undefined}
           className="ask-input"
           checked={picked}
+          tabIndex={single && index !== tabStop ? -1 : 0}
           {...{ [ASK_ROW]: single ? 'radio' : 'option' }}
           onChange={() => onAnswer(single ? choosePick(pick) : togglePick(answer, pick, question))}
         />
