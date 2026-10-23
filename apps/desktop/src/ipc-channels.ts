@@ -65,7 +65,6 @@ export const IPC = {
   helpExportDiagnostics: 'help:export-diagnostics',
   helpShowLogs: 'help:show-logs',
   helpOpen: 'help:open',
-  menuCommand: 'menu:command',
   helpPending: 'help:pending',
   menuOpenSettings: 'menu:open-settings',
   menuSettingsPending: 'menu:settings-pending',
