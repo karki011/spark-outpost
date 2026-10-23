@@ -75,7 +75,7 @@
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
 }
 
@@ -133,7 +133,7 @@
 
 .bp-tool[aria-pressed='true'] {
   background: var(--raise);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .bp-tool:disabled {
@@ -265,7 +265,7 @@
 }
 
 .bp-badge.drive {
-  color: var(--accent);
+  color: var(--accent-text);
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
 }
 

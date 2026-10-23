@@ -12,6 +12,7 @@ import {
   resetWithAgents,
   send,
 } from './project-chat-kit.ts';
+import { animationsSettled } from './settle.ts';
 
 const FAKE_HOST = process.env.SPARK_FAKE_BROWSER === '1';
 const SITE = 'https://docs.example.com';
@@ -84,6 +85,7 @@ test('the pane marks the tab the agent is working on and says what it last did',
   );
   await expect(pane.getByText('Spark is driving')).toBeVisible();
   await expect(pane.getByLabel('Address')).toHaveValue(`${SITE}/guide`);
+  await animationsSettled(page);
   const axe = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
     .include('.bp-head')
