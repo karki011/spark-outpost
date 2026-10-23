@@ -33,7 +33,7 @@ import { ProjectMenu } from './ProjectMenu.tsx';
 import { membersByOutpost, memberships, outsideOutposts } from './outpost-members.ts';
 import { attention } from './row-state.ts';
 import { useAlertingChats } from '../attention/use-attention.ts';
-import { activeGroups } from './sidebar-groups.ts';
+import { activeGroups, mergedOrder, projectsWithChats } from './sidebar-groups.ts';
 import { NO_PROJECT, chatLayout, groupOf, listIn, pinnedIn } from './sidebar-order.ts';
 import {
   LIST_PANEL_ID,
@@ -130,7 +130,8 @@ export const ConversationList = memo(function ConversationList({
 
   const projectAdded = async (project: Project) => {
     folds.open(project.id);
-    toaster.show({ text: `Added project ${project.name}` });
+    toaster.show({ text: `Added project ${project.name}. Start a chat in it.` });
+    onNewInProject(project.id);
     await client.invalidateQueries({ queryKey: projectKeys.all });
   };
   const moveTarget = useRef<ConversationSummary | null>(null);
@@ -163,9 +164,13 @@ export const ConversationList = memo(function ConversationList({
     [...membership].map(([chatId, member]) => `${chatId}:${member.outpostId}`).join(),
   );
   const projectById = new Map(projectList.map((project) => [project.id, project]));
+  const allProjectIds = projectList.map((project) => project.id);
+  const withChats = projectsWithChats(
+    activeGroups(outsideOutposts(chats, membership), projectList).groups,
+  );
   const dnd = useSidebarDnd({
     layout: chatLayout(grouped),
-    projectIds: projectList.map((project) => project.id),
+    projectIds: allProjectIds.filter((id) => withChats.has(id)),
     chatTitle: (id) => byId.get(id)?.title ?? 'Chat',
     updatedAt: (id) => byId.get(id)?.updatedAt ?? '',
     projectName: (id) => projectById.get(id)?.name ?? 'the project',
@@ -174,7 +179,7 @@ export const ConversationList = memo(function ConversationList({
       const group = groupOf(drop.to);
       if (chat) actions.drop(chat, group === NO_PROJECT ? null : group, drop.order);
     },
-    onProjectsDrop: projectActions.reorder,
+    onProjectsDrop: (shown) => projectActions.reorder(mergedOrder(allProjectIds, shown)),
     onHold: (chatId, point) => {
       const row = listRef.current?.querySelector<HTMLElement>(`[data-chat="${chatId}"]`);
       if (row) setMenu({ chatId, anchor: anchorFor(row, point) });
@@ -341,7 +346,6 @@ export const ConversationList = memo(function ConversationList({
                   searching={searching}
                   canDrag={canDrag}
                   hasChats={chats.length > 0}
-                  hasProjects={projectList.length > 0}
                   projectById={projectById}
                   dnd={dnd}
                   folds={folds}
