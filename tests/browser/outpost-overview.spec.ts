@@ -1,11 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import {
   NAME,
   TURN_TIMEOUT,
   asPairedPhone,
   cardOf,
+  expectTopmost,
   inBothThemes,
   openOutpost,
   openThread,
@@ -34,25 +35,6 @@ async function expectAccessible(page: Page): Promise<void> {
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
     .analyze();
   expect(results.violations.map((violation) => violation.id)).toEqual([]);
-}
-
-async function expectTopmost(menu: Locator): Promise<void> {
-  await expect(menu).toBeVisible();
-  const covered = await menu.evaluate((element) => {
-    const box = element.getBoundingClientRect();
-    const inset = 10;
-    const corners = [
-      [box.left + inset, box.top + inset],
-      [box.right - inset, box.top + inset],
-      [box.left + inset, box.bottom - inset],
-      [box.right - inset, box.bottom - inset],
-    ];
-    const inWindow =
-      box.left >= 0 && box.top >= 0 && box.right <= innerWidth && box.bottom <= innerHeight;
-    const hidden = corners.filter(([x, y]) => !element.contains(document.elementFromPoint(x!, y!)));
-    return { inWindow, hidden: hidden.length };
-  });
-  expect(covered).toEqual({ inWindow: true, hidden: 0 });
 }
 
 test('Overview groups the requests by state and names what waits on you', async ({ page }) => {

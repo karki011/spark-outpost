@@ -15,7 +15,7 @@ Ask several chats from one thread. About 3 minutes. See [When to use an outpost]
 3. Optionally **Add a first message** and files: your first request.
 4. Select **Continue**, check the review, then **Start outpost**. The thread introduces each chat.
 
-Or use **Add to outpost** in a chat's row menu. A chat joins one outpost; Terminal sessions can't.
+Or use **Add to outpost** in a chat's menu. One outpost per chat; not Terminal sessions.
 
 ## Send a request
 
@@ -43,6 +43,6 @@ No handle: **Post note** starts no work.
 
 A request you type counts as your message: "open a PR" [publishes](ship-and-pull-requests.md#when-the-agent-publishes). Why: [What an outpost request may do](outpost-permissions.md).
 
-Agents can [ask each other](outpost-asks.md) and [start sub-tasks](outpost-stories.md). A [paired device](use-your-phone.md) can read, post, answer, cancel, pause, rename and start drafts.
+Agents can [ask each other](outpost-asks.md) and [start sub-tasks](outpost-stories.md). A [paired device](use-your-phone.md) can read, post, answer, cancel, pause, rename and start drafts, nothing more.
 
 **Next:** [Choose where a chat works](where-spark-works.md)

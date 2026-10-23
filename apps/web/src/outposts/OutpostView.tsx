@@ -229,7 +229,10 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
       answerable={!approvalChats.has(thread.post.toConversationId ?? '')}
       question={questionChats.has(thread.post.toConversationId ?? '')}
       answerNow={questionFor === thread.post.id}
-      onBack={layout.backToOverview}
+      onBack={() => {
+        setQuestionFor(null);
+        layout.backToOverview();
+      }}
       onOpenChat={onOpenChat}
       onCancel={(postId) => cancel.mutate(postId)}
     />
