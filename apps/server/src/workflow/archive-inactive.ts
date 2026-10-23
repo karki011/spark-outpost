@@ -1,15 +1,28 @@
 import { archivedInactiveLine } from '@spark-outpost/contracts';
-import type { Db } from '../persistence/db.ts';
+import { withTransaction, type Db } from '../persistence/db.ts';
 import {
-  archiveIfInactive,
   archiveInactiveSetting,
   inactiveChats,
-  stillArchived,
+  markArchivedIfInactive,
+  type Days,
 } from '../persistence/inactive-chats.ts';
-import { finishArchive, type ArchiveTerminals } from './archive-chat.ts';
+import { finishArchive } from './archive-chat.ts';
 
 const SWEEP_EVERY_MS = 60 * 60 * 1000;
 const FIRST_SWEEP_MS = 5_000;
+
+export async function archiveIfInactive(
+  db: Db,
+  workspaceId: string,
+  conversationId: string,
+  days: Days,
+): Promise<boolean> {
+  return withTransaction(db, async (client) => {
+    if (!(await markArchivedIfInactive(client, workspaceId, conversationId, days))) return false;
+    await finishArchive(client, workspaceId, conversationId, undefined, archivedInactiveLine(days));
+    return true;
+  });
+}
 
 async function notifyArchived(db: Db, conversationId: string): Promise<void> {
   await db.query(`SELECT pg_notify('changes', $1)`, [
@@ -17,20 +30,17 @@ async function notifyArchived(db: Db, conversationId: string): Promise<void> {
   ]);
 }
 
-export async function archiveInactive(
-  db: Db,
-  workspaceId: string,
-  terminals?: ArchiveTerminals,
-): Promise<string[]> {
+export async function archiveInactive(db: Db, workspaceId: string): Promise<string[]> {
   const days = await archiveInactiveSetting(db, workspaceId);
   if (days === null) return [];
   const archived: string[] = [];
   for (const id of await inactiveChats(db, workspaceId, days)) {
-    if (!(await archiveIfInactive(db, workspaceId, id, days))) continue;
+    const done = await archiveIfInactive(db, workspaceId, id, days).catch((error: unknown) => {
+      console.error(`Could not archive inactive chat ${id}; the next sweep tries again`, error);
+      return false;
+    });
+    if (!done) continue;
     archived.push(id);
-    if (await stillArchived(db, id)) {
-      await finishArchive(db, workspaceId, id, terminals, archivedInactiveLine(days));
-    }
     await notifyArchived(db, id);
   }
   return archived;
@@ -40,17 +50,13 @@ export interface ArchiveSweep {
   stop(): void;
 }
 
-export function startArchiveSweep(
-  db: Db,
-  workspaceId: string,
-  terminals?: ArchiveTerminals,
-): ArchiveSweep {
+export function startArchiveSweep(db: Db, workspaceId: string): ArchiveSweep {
   let running = false;
   const tick = async () => {
     if (running) return;
     running = true;
     try {
-      await archiveInactive(db, workspaceId, terminals);
+      await archiveInactive(db, workspaceId);
     } catch (error) {
       console.error('Could not archive inactive chats', error);
     } finally {

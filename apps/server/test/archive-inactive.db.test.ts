@@ -2,8 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
-import { archiveIfInactive, inactiveChats } from '../src/persistence/inactive-chats.ts';
-import { archiveInactive, startArchiveSweep } from '../src/workflow/archive-inactive.ts';
+import { inactiveChats } from '../src/persistence/inactive-chats.ts';
+import {
+  archiveIfInactive,
+  archiveInactive,
+  startArchiveSweep,
+} from '../src/workflow/archive-inactive.ts';
 import { createTestApp, localClient } from './app-support.ts';
 import { createTestDb, eventually, startChat, type TestDb } from './support.ts';
 
@@ -89,16 +93,29 @@ async function outpostWith(member: string, request: 'open' | 'answered'): Promis
   );
 }
 
+async function openSession(conversationId: string): Promise<string> {
+  const sessionId = randomUUID();
+  await t.db.query(
+    `INSERT INTO provider_sessions
+       (id, conversation_id, provider, agent_key, session_id, cwd, settings_hash)
+     VALUES ($1, $2, 'claude', 'chat:chat', $3, '/work', 'h')`,
+    [randomUUID(), conversationId, sessionId],
+  );
+  return sessionId;
+}
+
+async function closeReason(sessionId: string): Promise<string | null> {
+  const { rows } = await t.db.query<{ close_reason: string | null }>(
+    'SELECT close_reason FROM provider_sessions WHERE session_id = $1',
+    [sessionId],
+  );
+  return rows[0]!.close_reason;
+}
+
 describe('archiving inactive chats', () => {
   it('archives a chat idle past the setting, with the line and the session closed', async () => {
     const id = await idleChat(3);
-    const sessionId = randomUUID();
-    await t.db.query(
-      `INSERT INTO provider_sessions
-         (id, conversation_id, provider, agent_key, session_id, cwd, settings_hash)
-       VALUES ($1, $2, 'claude', 'chat:chat', $3, '/work', 'h')`,
-      [randomUUID(), id, sessionId],
-    );
+    const sessionId = await openSession(id);
 
     expect(await archiveInactive(t.db, t.workspaceId)).toEqual([id]);
 
@@ -106,11 +123,7 @@ describe('archiving inactive chats', () => {
       archivedAt: expect.any(String),
       autoArchivedDays: 2,
     });
-    const { rows } = await t.db.query<{ close_reason: string }>(
-      'SELECT close_reason FROM provider_sessions WHERE session_id = $1',
-      [sessionId],
-    );
-    expect(rows[0]!.close_reason).toBe('Archived after 2 days without activity');
+    expect(await closeReason(sessionId)).toBe('Archived after 2 days without activity');
   });
 
   it('leaves chats with activity inside the window', async () => {
@@ -217,6 +230,45 @@ describe('archiving inactive chats', () => {
     );
     expect(await archiveIfInactive(t.db, t.workspaceId, id, 2)).toBe(false);
     expect((await summary(id)).archivedAt).toBeNull();
+  });
+
+  it('waits for a send that holds the chat, then leaves it and its session alone', async () => {
+    const id = await idleChat(4);
+    const sessionId = await openSession(id);
+    const sender = await t.db.connect();
+    try {
+      await sender.query('BEGIN');
+      await sender.query('SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE', [id]);
+      const sweeping = archiveIfInactive(t.db, t.workspaceId, id, 2);
+      await sender.query(
+        `INSERT INTO messages (id, conversation_id, role, content) VALUES ($1, $2, 'user', 'Back')`,
+        [randomUUID(), id],
+      );
+      await sender.query('COMMIT');
+      expect(await sweeping).toBe(false);
+    } finally {
+      sender.release();
+    }
+    expect((await summary(id)).archivedAt).toBeNull();
+    expect(await closeReason(sessionId)).toBeNull();
+  });
+
+  it('keeps the chat active when cleanup fails, and archives it on the next sweep', async () => {
+    const id = await idleChat(4);
+    const sessionId = await openSession(id);
+    await t.db.query(`CREATE FUNCTION refuse_close() RETURNS trigger AS $$
+      BEGIN RAISE EXCEPTION 'close failed'; END; $$ LANGUAGE plpgsql`);
+    await t.db.query(`CREATE TRIGGER refuse_close BEFORE UPDATE ON provider_sessions
+      FOR EACH ROW EXECUTE FUNCTION refuse_close()`);
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    expect(await archiveInactive(t.db, t.workspaceId)).toEqual([]);
+    quiet.mockRestore();
+    expect((await summary(id)).archivedAt).toBeNull();
+    expect(await closeReason(sessionId)).toBeNull();
+
+    await t.db.query('DROP TRIGGER refuse_close ON provider_sessions');
+    expect(await archiveInactive(t.db, t.workspaceId)).toEqual([id]);
+    expect(await closeReason(sessionId)).toBe('Archived after 2 days without activity');
   });
 
   it('archives at startup without waiting for the hourly timer', async () => {

@@ -1,6 +1,6 @@
 import { DEFAULT_ARCHIVE_INACTIVE_DAYS, type ArchiveInactiveDays } from '@spark-outpost/contracts';
 import { LISTED_CHAT } from './conversation-search.ts';
-import { withTransaction, type Db, type Queryable } from './db.ts';
+import type { Queryable } from './db.ts';
 
 const LAST_ACTIVITY = `GREATEST(
   c.created_at,
@@ -46,7 +46,7 @@ const INACTIVE = `${LISTED_CHAT} AND c.archived_at IS NULL AND c.pinned_at IS NU
   AND NOT ${RUNNING_TERMINAL}
   AND NOT ${OPEN_OUTPOST_REQUEST}`;
 
-type Days = NonNullable<ArchiveInactiveDays>;
+export type Days = NonNullable<ArchiveInactiveDays>;
 
 export async function inactiveChats(
   db: Queryable,
@@ -60,29 +60,19 @@ export async function inactiveChats(
   return rows.map((row) => row.id);
 }
 
-export async function archiveIfInactive(
-  db: Db,
+export async function markArchivedIfInactive(
+  client: Queryable,
   workspaceId: string,
   conversationId: string,
   days: Days,
 ): Promise<boolean> {
-  return withTransaction(db, async (client) => {
-    await client.query('SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE', [conversationId]);
-    const { rowCount } = await client.query(
-      `UPDATE conversations c SET archived_at = now(), auto_archived_days = $2
-       WHERE c.id = $3 AND ${INACTIVE}`,
-      [workspaceId, days, conversationId],
-    );
-    return rowCount === 1;
-  });
-}
-
-export async function stillArchived(db: Queryable, conversationId: string): Promise<boolean> {
-  const { rows } = await db.query<{ archived: boolean }>(
-    'SELECT archived_at IS NOT NULL AS archived FROM conversations WHERE id = $1',
-    [conversationId],
+  await client.query('SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE', [conversationId]);
+  const { rowCount } = await client.query(
+    `UPDATE conversations c SET archived_at = now(), auto_archived_days = $2
+     WHERE c.id = $3 AND ${INACTIVE}`,
+    [workspaceId, days, conversationId],
   );
-  return rows[0]?.archived === true;
+  return rowCount === 1;
 }
 
 export async function archiveInactiveSetting(

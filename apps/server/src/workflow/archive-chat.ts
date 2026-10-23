@@ -1,5 +1,5 @@
 import type { ConversationSummary } from '@spark-outpost/contracts';
-import type { Db } from '../persistence/db.ts';
+import type { Db, Queryable } from '../persistence/db.ts';
 import { updateConversation } from '../persistence/conversation-actions.ts';
 import {
   SESSION_CLOSE_REASONS,
@@ -12,7 +12,7 @@ export interface ArchiveTerminals {
 }
 
 export async function finishArchive(
-  db: Db,
+  db: Queryable,
   workspaceId: string,
   conversationId: string,
   terminals?: ArchiveTerminals,

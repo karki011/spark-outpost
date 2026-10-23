@@ -330,9 +330,7 @@ const { app, reconcileRemote } = createAppParts({
 const outcomeSweep = startOutcomeSweep(db, workspaceId, {
   sampleRate: config.OUTCOME_SAMPLE_RATE,
 });
-const archiveSweep = config.ARCHIVE_SWEEP
-  ? startArchiveSweep(db, workspaceId, nativeTerminals)
-  : null;
+const archiveSweep = config.ARCHIVE_SWEEP ? startArchiveSweep(db, workspaceId) : null;
 const morningBrief = config.MORNING_BRIEF
   ? startMorningBrief(db, workspaceId, () =>
       loadInbox({
