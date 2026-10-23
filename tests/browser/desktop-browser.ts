@@ -41,6 +41,7 @@ export async function withDesktopBrowser(page: Page) {
       error: null,
       ...change,
     });
+    const viewStates = new Map<string, unknown>();
     Object.assign(window, {
       browserCalls: calls,
       browserPush: (chatId: string, tabs: Record<string, unknown>[]) => {
@@ -64,6 +65,7 @@ export async function withDesktopBrowser(page: Page) {
           tabs: tabs.map((item, index) => tab(`v${index + 1}`, item)),
           favorites,
         };
+        viewStates.set(profile, state);
         viewStateListeners.forEach((listener) => listener(state));
       },
       browserViewShortcut: (event: unknown) =>
@@ -77,7 +79,7 @@ export async function withDesktopBrowser(page: Page) {
         updates: { get: async () => null, onChange: noop },
         onOpenChat: noop,
         browserView: {
-          state: async () => null,
+          state: async (profile: string) => viewStates.get(profile) ?? null,
           place: async (placement: unknown) =>
             calls.push({ kind: 'view-place', payload: placement }),
           command: async (profile: string, command: unknown) => {
@@ -86,7 +88,7 @@ export async function withDesktopBrowser(page: Page) {
           },
           start: async (profile: string) => {
             calls.push({ kind: 'view-start', payload: profile });
-            return { profile, tabs: [tab('v1', { active: true })] };
+            return viewStates.get(profile) ?? { profile, tabs: [tab('v1', { active: true })] };
           },
           onState: (listener: (state: unknown) => void) => {
             viewStateListeners.add(listener);

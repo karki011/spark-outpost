@@ -60,6 +60,15 @@ describe('Browser pane shortcuts', () => {
     expect(browserShortcut(chord('KeyT'), false)).toBeNull();
   });
 
+  it('asks Spark with Option-Command-A and nothing else on A', () => {
+    expect(browserShortcut(chord('KeyA', { alt: true }), true)).toBe('ask_spark');
+    expect(browserShortcut(chord('KeyA', { alt: true, ctrl: true, meta: false }), false)).toBe(
+      'ask_spark',
+    );
+    expect(browserShortcut(chord('KeyA', { alt: true, shift: true }), true)).toBeNull();
+    expect(browserShortcut(chord('KeyA', { alt: true, meta: false }), true)).toBeNull();
+  });
+
   it('picks the tab a shortcut goes to', () => {
     expect(shortcutTabIndex('tab_1', 2, 4)).toBe(0);
     expect(shortcutTabIndex('tab_5', 0, 4)).toBeNull();

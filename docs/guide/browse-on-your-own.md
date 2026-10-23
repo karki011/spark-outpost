@@ -16,10 +16,10 @@ Your own tabs, apart from every chat. About 1 minute. Mac app only.
 
 ## Pick a profile
 
-| Profile      | Who reaches it                                                         |
-| ------------ | ---------------------------------------------------------------------- |
-| **Personal** | Only you: no agent, Ask Spark or phone can open, read or list its tabs |
-| **Work**     | You; chats' agents share its sign-ins but not these tabs               |
+| Profile      | Who reaches it                                                   |
+| ------------ | ---------------------------------------------------------------- |
+| **Personal** | Only you: no agent, Ask Spark or phone can open or list its tabs |
+| **Work**     | You; chats' agents share its sign-ins but not these tabs         |
 
 ## Keep and share tabs
 
@@ -30,5 +30,11 @@ Your own tabs, apart from every chat. About 1 minute. Mac app only.
 ## Start a chat from a page
 
 **New chat** (**⌘⇧O**), or right-click a selection or link: a chat opens beside the tab, at **Automatic**. The page text and selection go as untrusted attachments, read when you send; only what you type is your message.
+
+## Ask Spark about your tabs
+
+**Ask Spark** (**⌥⌘A**) opens beside the tab with that page mentioned; type **@** to add tabs from either profile. Spark reads only the tabs you mention, once, as text, when you send.
+
+Anything that question asks Spark to do is a card, even in **Act**, and it answers no other chat's card.
 
 **Next:** [Use the browser](use-the-browser.md)

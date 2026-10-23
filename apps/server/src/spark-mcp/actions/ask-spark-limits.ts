@@ -18,6 +18,7 @@ import {
 import { CARD_ROUTE } from '../../remote/route-rules.ts';
 import { runFromDevice } from '../../remote/run-mark.ts';
 import { spokenRun } from '../../mac-control/offered.ts';
+import { runOrigin } from '../../persistence/run-origin.ts';
 import { remoteAccess } from '../../remote/store.ts';
 import { LINKED_TITLE_MIN } from '../../companion/assistant-links.ts';
 import type { ActionPath } from './action-policy.ts';
@@ -38,7 +39,12 @@ export const ASK_SPARK_REFUSALS = {
   terminal: 'Ask Spark does not act on Terminal sessions. Use the session itself.',
   assistantChat: 'Ask Spark does not act on its own conversation.',
   archived: 'That chat is archived. Open it from Archived first if you want to message it.',
+  tabs: 'A question that mentioned browser tabs never answers another chat’s card. Answer it yourself.',
 } as const;
+
+export async function tabQuestionRun(db: Queryable, runId: string): Promise<boolean> {
+  return (await runOrigin(db, runId)) === 'pages';
+}
 
 interface Route {
   method: string;
@@ -177,6 +183,7 @@ export async function assistantRefusal(
   let card: Approval | null = null;
   if (answering) {
     if (await spokenRun(db, runId)) return ASK_SPARK_REFUSALS.voice;
+    if (await tabQuestionRun(db, runId)) return ASK_SPARK_REFUSALS.tabs;
     const checked = await cardRefusalFor(db, workspaceId, action.approvalId ?? PLACEHOLDER);
     if (checked.refusal) return checked.refusal;
     card = checked.approval;
@@ -251,6 +258,7 @@ export async function assistantPath(
   action: SparkAction,
 ): Promise<ActionPath> {
   if ((await assistantActs(db, workspaceId)) !== 'act') return 'confirm';
+  if (await tabQuestionRun(db, runId)) return 'confirm';
   if (action.action !== 'ask_spark' || action.op !== 'answer_card') return 'perform';
   const question = await questionOf(db, runId);
   const { chat } = await cardRefusalFor(db, workspaceId, action.approvalId ?? PLACEHOLDER);

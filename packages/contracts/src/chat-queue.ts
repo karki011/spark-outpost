@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ATTACHMENTS_PER_MESSAGE } from './attachments.ts';
 import { queuedMessageSchema } from './crew-messages.ts';
 
 export const QUEUE_LIMIT = 50;
@@ -6,7 +7,8 @@ export const QUEUE_LIMIT = 50;
 export const queueAddRequestSchema = z.object({
   id: z.uuid(),
   content: z.string().trim().min(1),
-  origin: z.literal('voice').optional(),
+  origin: z.enum(['voice', 'pages']).optional(),
+  attachmentIds: z.array(z.uuid()).max(ATTACHMENTS_PER_MESSAGE).optional(),
 });
 export type QueueAddRequest = z.infer<typeof queueAddRequestSchema>;
 
