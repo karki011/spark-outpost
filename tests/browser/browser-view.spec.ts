@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { openBrowserView, pushView, rail, viewCommands } from './browser-view-support.ts';
 import { calls, withDesktopBrowser } from './desktop-browser.ts';
 import { toggleHeaderPane } from './header-menu.ts';
 import { seedChats } from './sidebar-seed.ts';
@@ -8,21 +9,6 @@ import { seedChats } from './sidebar-seed.ts';
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude'] });
 });
-
-const rail = (page: Page) => page.getByRole('navigation', { name: 'Main' });
-
-async function openBrowserView(page: Page) {
-  await withDesktopBrowser(page);
-  await page.goto('/');
-  await rail(page).getByRole('button', { name: 'Browser' }).click();
-  const side = page.getByRole('navigation', { name: 'Browser' });
-  await expect(side).toBeVisible();
-  return side;
-}
-
-async function viewCommands(page: Page) {
-  return (await calls(page, 'view-command')) as { profile: string; command: unknown }[];
-}
 
 test('the web app and paired devices have no Browser view', async ({ page }) => {
   await page.goto('/');
@@ -125,18 +111,6 @@ test('the Browser view passes an accessibility check', async ({ page }) => {
 
 const DOCS = 'https://docs.example.com/';
 const NEWS = 'https://news.example.com/';
-
-async function pushView(page: Page, tabs: unknown[], favorites: unknown[] = []) {
-  await page.evaluate(
-    ([tabsArg, favoritesArg]) =>
-      (
-        window as unknown as {
-          browserViewPush: (p: string, t: unknown[], f: unknown[]) => void;
-        }
-      ).browserViewPush('personal', tabsArg as unknown[], favoritesArg as unknown[]),
-    [tabs, favorites],
-  );
-}
 
 test('favorites and pinned tabs sit above Today', async ({ page }) => {
   const side = await openBrowserView(page);

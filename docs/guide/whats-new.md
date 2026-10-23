@@ -20,6 +20,3 @@ What changed recently, newest first.
 | A sent spoken question acts like a typed one (**When Ask Spark acts**).                                                          | See [Talk to Spark](voice.md#turn-it-on).                |
 | Claude agents can sleep: **Sleeping until 10:48**; the turn then picks up.                                                       | See [Background work](follow-a-turn.md#background-work). |
 | Agents ask with question cards; Spark Island answers one-pick ones and its count skips set-aside cards.                          | See [Cards](cards.md#approval-cards).                    |
-| **Add folder…** ends every project picker.                                                                                       | See [Link a project](start-a-chat.md#link-a-project).    |
-| Agents share your Browser pane sign-ins; sign in again once.                                                                     | See [Use the browser](use-the-browser.md).               |
-| Meeting lines count down on time, wrap-ups name the chat, joined meetings drop; **Alert at** sets the card earlier.              | See [Use it](calendar.md#use-it).                        |

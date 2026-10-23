@@ -85,6 +85,8 @@ export interface DesktopBrowserView {
   start(profile: BrowserProfile): Promise<unknown>;
   handToChat(request: BrowserHandToChat): Promise<unknown>;
   fromChat(request: BrowserToView): Promise<unknown>;
+  pageText(profile: BrowserProfile, tabId: string): Promise<unknown>;
+  onIntent(callback: (intent: unknown) => void): Unsubscribe;
   onState(callback: (state: unknown) => void): Unsubscribe;
   onSnapshot(callback: (snapshot: unknown) => void): Unsubscribe;
   onShortcut(callback: (event: unknown) => void): Unsubscribe;

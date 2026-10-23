@@ -10,7 +10,9 @@ import {
   type ConversationSummary,
 } from '@spark-outpost/contracts';
 import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
-import { ExternalLinkIcon, LockIcon } from '../ui/icons.tsx';
+import { ChatPlusIcon, ExternalLinkIcon, LockIcon } from '../ui/icons.tsx';
+import { keysText, NEW_CHAT_KEYS } from '../ui/Keys.tsx';
+import { MAC } from '../ui/shortcuts.ts';
 import { AddressBar } from '../browser/AddressBar.tsx';
 import {
   DevtoolsIcon,
@@ -32,6 +34,8 @@ import { useNativePlacement, type PlaceView } from '../browser/use-view-placemen
 import { ProfileBadge, ProfileSwitch, profileNote } from './ProfileSwitch.tsx';
 import { setBrowserPaneOpen } from '../browser/pane-open.ts';
 import { HandToChat } from './HandToChat.tsx';
+import { PageChatDock, type DockRequest } from './PageChatDock.tsx';
+import { pageRef, usePageIntents } from './page-intents.ts';
 import { ViewFavorites } from './ViewFavorites.tsx';
 import { ViewTabs } from './ViewTabs.tsx';
 import {
@@ -97,6 +101,8 @@ function PageHost({ url }: { url: string }) {
   );
 }
 
+const NEW_CHAT_ARIA = MAC ? 'Meta+Shift+O' : 'Control+Shift+O';
+
 interface BrowserViewProps {
   chats: readonly ConversationSummary[];
   onOpenChat(chatId: string): void;
@@ -126,11 +132,20 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
     address?.focus();
     address?.select();
   };
+  const [dock, setDock] = useState<DockRequest | null>(null);
+  const openDock = (change: Partial<DockRequest> = {}) => {
+    const page = tab && tab.url !== '' && tab.error === null ? pageRef(profile, tab) : null;
+    setDock({ key: Date.now(), page, selection: null, link: null, ...change });
+  };
+  usePageIntents(profile, tabs, (page, intent) =>
+    openDock({ page, selection: intent.selection, link: intent.link }),
+  );
   const runShortcut = (shortcut: BrowserShortcut) =>
     runPaneShortcut(commands, tabs, shortcut, {
       focusAddress,
       openFind: () => undefined,
       copiedUrl: () => undefined,
+      newChat: () => openDock(),
     });
   useViewShortcuts(profile, runShortcut);
 
@@ -197,6 +212,16 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
           <ProfileBadge profile={profile} />
           <PageHost url={tab?.url ?? ''} />
           <span className="bv-title">{tab && tab.url !== '' ? tabLabel(tab) : ''}</span>
+          <button
+            type="button"
+            className="btn bv-hand"
+            aria-keyshortcuts={NEW_CHAT_ARIA}
+            title={`Start a chat about this page (${keysText(NEW_CHAT_KEYS)})`}
+            onClick={() => openDock()}
+          >
+            <ChatPlusIcon />
+            New chat
+          </button>
           <HandToChat
             profile={profile}
             tab={tab}
@@ -236,6 +261,17 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
           {!blank && snapshot && <img className="bp-snapshot" src={snapshot} alt="" />}
         </div>
       </main>
+      {dock && (
+        <PageChatDock
+          key={dock.key}
+          request={dock}
+          onOpenChat={(chatId) => {
+            setDock(null);
+            onOpenChat(chatId);
+          }}
+          onClose={() => setDock(null)}
+        />
+      )}
     </div>
   );
 }

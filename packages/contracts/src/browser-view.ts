@@ -74,3 +74,22 @@ export const browserViewSnapshotSchema = z.object({
   image: z.string().max(8_000_000).nullable(),
 });
 export type BrowserViewSnapshot = z.infer<typeof browserViewSnapshotSchema>;
+
+export const browserViewIntentSchema = z.object({
+  profile: browserProfileSchema,
+  tabId: z.string().min(1).max(40),
+  kind: z.literal('new_chat'),
+  selection: z.string().max(4000).nullable(),
+  link: z.string().max(BROWSER_URL_MAX).nullable(),
+});
+export type BrowserViewIntent = z.infer<typeof browserViewIntentSchema>;
+
+export const BROWSER_PAGE_TEXT_MAX = 12_000;
+
+export const browserPageTextSchema = z.object({
+  url: z.string().max(BROWSER_URL_MAX),
+  title: z.string().max(300),
+  text: z.string().max(BROWSER_PAGE_TEXT_MAX),
+  main: z.boolean(),
+});
+export type BrowserPageText = z.infer<typeof browserPageTextSchema>;

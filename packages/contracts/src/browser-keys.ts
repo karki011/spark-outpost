@@ -22,6 +22,7 @@ export const BROWSER_SHORTCUTS = [
   'next_tab',
   'previous_tab',
   'find',
+  'new_chat',
 ] as const;
 export type BrowserShortcut = (typeof BROWSER_SHORTCUTS)[number];
 
@@ -35,6 +36,7 @@ export const BROWSER_FOCUS_SHORTCUTS: ReadonlySet<BrowserShortcut> = new Set([
   'new_tab',
   'focus_address',
   'find',
+  'new_chat',
 ]);
 
 export interface ShortcutChord {
@@ -69,6 +71,7 @@ const SHIFTED: Record<string, BrowserShortcut> = {
   KeyC: 'copy_url',
   KeyT: 'reopen_tab',
   KeyR: 'hard_reload',
+  KeyO: 'new_chat',
 };
 
 function tabSwitch(chord: ShortcutChord): BrowserShortcut | null {

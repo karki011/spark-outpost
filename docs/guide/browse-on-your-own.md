@@ -27,4 +27,8 @@ Your own tabs, apart from every chat. About 1 minute. Mac app only.
 - **Hand to chat** gives a chat the page: a **Work** tab moves there; from **Personal** only the address goes.
 - In a chat's pane, **Open in Browser view (Work)** moves the tab here.
 
+## Start a chat from a page
+
+**New chat** (**⌘⇧O**), or right-click a selection or link: a chat opens beside the tab, at **Automatic**. The page text and selection go as untrusted attachments, read when you send; only what you type is your message.
+
 **Next:** [Use the browser](use-the-browser.md)
