@@ -104,3 +104,17 @@ export const browserPageTextSchema = z.object({
   main: z.boolean(),
 });
 export type BrowserPageText = z.infer<typeof browserPageTextSchema>;
+
+export const browserSearchEngineSchema = z.enum(['duckduckgo', 'google', 'bing']);
+export type BrowserSearchEngine = z.infer<typeof browserSearchEngineSchema>;
+export const DEFAULT_SEARCH_ENGINE: BrowserSearchEngine = 'duckduckgo';
+
+export const SEARCH_ENGINES: Record<BrowserSearchEngine, { label: string; base: string }> = {
+  duckduckgo: { label: 'DuckDuckGo', base: 'https://duckduckgo.com/?q=' },
+  google: { label: 'Google', base: 'https://www.google.com/search?q=' },
+  bing: { label: 'Bing', base: 'https://www.bing.com/search?q=' },
+};
+
+export function searchUrl(engine: BrowserSearchEngine, text: string): string {
+  return `${SEARCH_ENGINES[engine].base}${encodeURIComponent(text.trim())}`;
+}

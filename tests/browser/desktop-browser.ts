@@ -42,6 +42,7 @@ export async function withDesktopBrowser(page: Page) {
       ...change,
     });
     const viewStates = new Map<string, unknown>();
+    let searchEngine = 'duckduckgo';
     Object.assign(window, {
       browserCalls: calls,
       browserPush: (chatId: string, tabs: Record<string, unknown>[]) => {
@@ -97,6 +98,12 @@ export async function withDesktopBrowser(page: Page) {
           handToChat: async (request: unknown) => {
             calls.push({ kind: 'view-hand', payload: request });
             return { ok: true };
+          },
+          searchEngine: async () => searchEngine,
+          setSearchEngine: async (engine: string) => {
+            calls.push({ kind: 'view-search-engine', payload: engine });
+            searchEngine = engine;
+            return searchEngine;
           },
           pageText: async (profile: string, tabId: string) => {
             calls.push({ kind: 'view-page-text', payload: { profile, tabId } });

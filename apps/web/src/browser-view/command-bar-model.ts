@@ -1,15 +1,18 @@
 import {
+  SEARCH_ENGINES,
   addressToUrl,
   historyUrl,
+  searchUrl,
   type BrowserFavorite,
   type BrowserHistoryEntry,
   type BrowserPaneTab,
+  type BrowserSearchEngine,
 } from '@spark-outpost/contracts';
 import { tabLabel } from '../browser/tab-label.ts';
 
 export type BarMode = 'new' | 'here';
 export type BarAction = 'ask_spark' | 'new_chat' | 'copy_link' | 'default_browser';
-export type BarGroup = 'address' | 'tabs' | 'favorites' | 'history' | 'actions';
+export type BarGroup = 'address' | 'tabs' | 'favorites' | 'history' | 'actions' | 'search';
 
 export type BarTarget =
   | { kind: 'tab'; tabId: string; url: string }
@@ -30,6 +33,7 @@ export interface BarInput {
   favorites: readonly BrowserFavorite[];
   history: readonly BrowserHistoryEntry[];
   page: boolean;
+  search: BrowserSearchEngine | null;
 }
 
 export const GROUP_TITLES: Record<BarGroup, string> = {
@@ -37,6 +41,7 @@ export const GROUP_TITLES: Record<BarGroup, string> = {
   tabs: 'Open tabs',
   favorites: 'Favorites',
   history: 'History',
+  search: 'Search the web',
   actions: 'Actions',
 };
 
@@ -128,11 +133,22 @@ export function barRows(input: BarInput, now = Date.now()): BarRow[] {
       target: { kind: 'action', action: item.action },
     });
   }
+  const query = input.text.trim();
+  if (input.search && query !== '' && !/^https?:\/\//i.test(query)) {
+    const engine = SEARCH_ENGINES[input.search].label;
+    rows.push({
+      key: `search:${input.search}`,
+      group: 'search',
+      title: `Search ${engine} for “${query}”`,
+      detail: `Sends what you typed to ${engine}`,
+      target: { kind: 'open', url: searchUrl(input.search, query) },
+    });
+  }
   return rows;
 }
 
 export function barSections(rows: readonly BarRow[]) {
-  const groups: BarGroup[] = ['address', 'tabs', 'favorites', 'history', 'actions'];
+  const groups: BarGroup[] = ['address', 'tabs', 'favorites', 'history', 'actions', 'search'];
   let index = 0;
   return groups
     .map((group) => ({

@@ -25,6 +25,8 @@ Your own tabs, apart from every chat. About 1 minute. Mac app only.
 
 **⌘T** or **⌘L** opens the command bar: tabs, favorites and this profile's history. **⌘Enter** opens a new tab. History stays on this Mac; clear it in **Settings → Browser pane**.
 
+The last row searches the web with **DuckDuckGo**. Only choosing that row sends what you typed to it. Pick another **Search engine** in **Settings → Browser pane**.
+
 ## Keep and share tabs
 
 - **+** under **Favorites** saves the page; **Pin** keeps a tab above **Today**. Tabs come back after a relaunch.

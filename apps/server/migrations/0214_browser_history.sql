@@ -1,4 +1,4 @@
-CREATE TABLE browser_history (
+CREATE TABLE IF NOT EXISTS browser_history (
   workspace_id uuid NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
   profile text NOT NULL CHECK (profile IN ('personal', 'work')),
   url text NOT NULL,
@@ -8,5 +8,5 @@ CREATE TABLE browser_history (
   PRIMARY KEY (workspace_id, profile, url)
 );
 
-CREATE INDEX browser_history_recent_idx
+CREATE INDEX IF NOT EXISTS browser_history_recent_idx
   ON browser_history (workspace_id, profile, last_visited_at DESC);
