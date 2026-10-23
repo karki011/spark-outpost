@@ -6,7 +6,7 @@ order: 312
 summary: List files in .sparkignore so agents can't read or change them, and keep API keys out of chat messages.
 ---
 
-You'll protect files that Spark doesn't treat as secret, and keep keys out of chats. About 2 minutes.
+You'll protect files Spark doesn't treat as secret, and keep keys out of chats. About 2 minutes.
 
 ## Hide files with .sparkignore
 

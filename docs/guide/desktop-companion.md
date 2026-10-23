@@ -14,7 +14,7 @@ You'll answer agents from Spark Island. About 2 minutes.
 2. Switch **Show Spark Island** on or off.
 3. Pick a **Spark Island size**.
 4. **Island chimes** sound for new requests.
-5. **Hide in screen sharing** keeps it out of most shares.
+5. **Hide in screen sharing** keeps it out of shares; some apps may still show it.
 
 ![The Spark Island settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 

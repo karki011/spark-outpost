@@ -20,7 +20,7 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 ## Drop files or a folder
 
 1. Drag files or a folder from Finder onto the island.
-2. Files join a new chat. Secret files such as `.env` are skipped.
+2. Files join a new chat. Secret files like `.env` are skipped.
 3. For a folder, pick **Start a chat here** or **Add as project**. **Esc** cancels.
 
 **Add folder…** under **Choose project** opens Spark's folder picker.
@@ -28,7 +28,7 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 ## Ask Spark
 
 1. In the panel, select **Ask Spark**, or press **⌘3**.
-2. Type a question, or pick a suggestion such as **Who needs me?**, and press **Enter**.
+2. Type a question, or pick a suggestion like **Who needs me?**, and press **Enter**.
 3. Scroll up for earlier questions; **New topic** starts fresh.
 4. **Open in Spark** shows the whole conversation.
 

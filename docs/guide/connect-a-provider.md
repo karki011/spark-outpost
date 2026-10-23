@@ -6,7 +6,7 @@ order: 120
 summary: Connect Claude, Codex or Z.ai with the local CLI or an API key, then send a test message.
 ---
 
-You'll connect one provider and check that it answers. About 2 minutes.
+You'll connect one provider and check it answers. About 2 minutes.
 
 ## Before you start
 
