@@ -35,7 +35,7 @@ function useOpenTabs() {
     const view = desktopBrowserView();
     for (const profile of ['personal', 'work'] as const) {
       void view
-        ?.start(profile)
+        ?.state(profile)
         .then(acceptViewState)
         .catch(() => undefined);
     }

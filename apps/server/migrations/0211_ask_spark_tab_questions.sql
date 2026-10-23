@@ -3,7 +3,7 @@ ALTER TABLE chat_queue
   ADD CONSTRAINT chat_queue_origin_check CHECK (origin IN ('voice', 'assistant', 'pages'));
 
 ALTER TABLE chat_queue
-  ADD COLUMN attachment_ids uuid[] NOT NULL DEFAULT '{}';
+  ADD COLUMN IF NOT EXISTS attachment_ids uuid[] NOT NULL DEFAULT '{}';
 
 ALTER TABLE runs DROP CONSTRAINT IF EXISTS runs_source_check;
 ALTER TABLE runs

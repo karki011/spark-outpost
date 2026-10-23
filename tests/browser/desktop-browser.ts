@@ -79,7 +79,7 @@ export async function withDesktopBrowser(page: Page) {
         updates: { get: async () => null, onChange: noop },
         onOpenChat: noop,
         browserView: {
-          state: async () => null,
+          state: async (profile: string) => viewStates.get(profile) ?? null,
           place: async (placement: unknown) =>
             calls.push({ kind: 'view-place', payload: placement }),
           command: async (profile: string, command: unknown) => {
