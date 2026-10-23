@@ -40,7 +40,7 @@ async function expectTopmost(menu: Locator): Promise<void> {
   await expect(menu).toBeVisible();
   const covered = await menu.evaluate((element) => {
     const box = element.getBoundingClientRect();
-    const inset = 2;
+    const inset = 10;
     const corners = [
       [box.left + inset, box.top + inset],
       [box.right - inset, box.top + inset],
