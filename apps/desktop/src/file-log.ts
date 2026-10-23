@@ -102,3 +102,10 @@ export class FileLog {
     this.size = 0;
   }
 }
+
+export function sourceLogger(file: FileLog, source: string): (line: string) => void {
+  return (line) => {
+    console.log(`[${source}] ${line}`);
+    file.write(source, line);
+  };
+}

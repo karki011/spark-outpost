@@ -1,4 +1,5 @@
 export const DIAGNOSTICS_EXPORT_PATH = '/api/diagnostics/export';
+export const FEEDBACK_SETTINGS_FOCUS = 'send-feedback';
 
 export interface DesktopHelpInfo {
   version: string;

@@ -17,6 +17,12 @@ export function clearSettingFocus(): void {
   pendingLabel = null;
 }
 
+export function takeSettingFocus(): string | null {
+  const label = pendingLabel;
+  pendingLabel = null;
+  return label;
+}
+
 function controlToFocus(scope: HTMLElement): HTMLElement | null {
   const candidates = scope.matches(FOCUSABLE)
     ? [scope]
