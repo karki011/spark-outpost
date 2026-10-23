@@ -67,7 +67,9 @@
 [data-skin='void'],
 [data-skin='moss'],
 [data-skin='plum'],
-[data-skin='aurora'] {
+[data-skin='aurora'],
+[data-skin='loam'],
+[data-skin='contrast-dark'] {
   --map-sky-0: color-mix(in srgb, #10203f 80%, var(--bg));
   --map-sky-1: color-mix(in srgb, #070e1f 80%, var(--bg));
   --map-grid: rgba(98, 140, 204, 0.42);

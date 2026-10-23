@@ -15,7 +15,12 @@ export const PHONE_PAGE = 'http://phone.test';
 export const WIDE = { width: 1280, height: 900 };
 export const NARROW = { width: 390, height: 844 };
 export const REMOTE_TURN_MS = 20_000;
-const THEME = path.resolve(import.meta.dirname, '../../apps/web/public/theme.css');
+const PUBLIC = path.resolve(import.meta.dirname, '../../apps/web/public');
+const PUBLIC_FILES: Record<string, string> = {
+  '/theme.css': 'text/css',
+  '/theme-base.css': 'text/css',
+  '/appearance.js': 'text/javascript',
+};
 
 export function setFakeTailscale(change: Partial<FakeTailscaleState> | null): void {
   if (change) writeFileSync(FAKE_TAILSCALE_STATE, JSON.stringify(change));
@@ -89,8 +94,10 @@ export async function servePhonePage(page: Page): Promise<void> {
   await page.route(`${PHONE_PAGE}/**`, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    if (url.pathname === '/theme.css') {
-      await route.fulfill({ contentType: 'text/css', body: readFileSync(THEME, 'utf8') });
+    const publicType = PUBLIC_FILES[url.pathname];
+    if (publicType) {
+      const body = readFileSync(path.join(PUBLIC, url.pathname), 'utf8');
+      await route.fulfill({ contentType: publicType, body });
       return;
     }
     const sent = request.method() === 'GET' ? undefined : (request.postData() ?? '{}');

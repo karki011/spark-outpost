@@ -20,7 +20,7 @@ type StepId = 'meet' | 'theme' | 'provider' | 'tools' | 'mac-access' | 'done';
 
 const STEP_LABELS: Record<StepId, string> = {
   meet: 'Meet Spark',
-  theme: 'Theme',
+  theme: 'Appearance',
   provider: 'AI provider',
   tools: 'Tools',
   'mac-access': 'Mac access',

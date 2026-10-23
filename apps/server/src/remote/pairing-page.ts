@@ -31,9 +31,14 @@ const THEME_KEY = 'spark-outpost.theme';
 const DEFAULT_SKIN = 'graphite';
 
 const THEME_SCRIPT = `
+  let saved = null;
   try {
-    const saved = localStorage.getItem('${THEME_KEY}') || '${DEFAULT_SKIN}';
-    if (saved !== 'system' && /^[a-z]+$/.test(saved)) document.documentElement.dataset.skin = saved;
+    saved = localStorage.getItem('${THEME_KEY}');
+  } catch {
+    saved = null;
+  }
+  try {
+    document.documentElement.dataset.skin = window.sparkAppearance.skin(saved, false);
   } catch {
     document.documentElement.dataset.skin = '${DEFAULT_SKIN}';
   }
@@ -233,6 +238,7 @@ function page(nonce: string, options: PairingPageOptions): string {
 <meta name="robots" content="noindex">
 <title>Pair with Spark Outpost</title>
 <link rel="stylesheet" href="/theme.css">
+<script nonce="${nonce}" src="/appearance.js"></script>
 <script nonce="${nonce}">${THEME_SCRIPT}</script>
 <style nonce="${nonce}">${PAIRING_PAGE_STYLES}</style>
 </head>

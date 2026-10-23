@@ -22,7 +22,7 @@ export async function enterName(page: Page, name: string) {
   await nameField(page).fill(name);
   await expect(dialog(page)).toContainText(`Hi ${name.split(' ')[0]} 👋`);
   await nameField(page).press('Enter');
-  await expect(dialog(page).getByRole('heading', { name: 'Pick a theme' })).toBeVisible();
+  await expect(dialog(page).getByRole('heading', { name: 'Pick a look' })).toBeVisible();
   await continueButton(page).click();
   await expect(
     dialog(page).getByRole('heading', { name: 'Connect your AI providers' }),

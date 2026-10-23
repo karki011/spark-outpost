@@ -3,7 +3,7 @@
   display: grid;
   grid-template-columns: repeat(
     auto-fill,
-    minmax(max(150px, calc((100% - 3 * var(--tcard-gap)) / 4)), 1fr)
+    minmax(max(150px, calc((100% - 2 * var(--tcard-gap)) / 3)), 1fr)
   );
   gap: var(--tcard-gap);
 }
@@ -163,4 +163,26 @@
 
 .tprev.split .tmini {
   padding: 8px 4px 8px 8px;
+}
+
+.tints {
+  padding: 12px 0 14px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.tints-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.tints-title span {
+  font-weight: 400;
+  color: var(--muted);
 }
