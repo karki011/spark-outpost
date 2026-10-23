@@ -401,7 +401,12 @@ function ChatShell({ entering }: { entering: boolean }) {
           )}
           <StatusCompanion
             chats={chats}
-            visible={!layout.narrow && view !== 'map' && (view !== 'chats' || activeId === null)}
+            visible={
+              !layout.narrow &&
+              view !== 'map' &&
+              view !== 'browser' &&
+              (view !== 'chats' || activeId === null)
+            }
             onOpenChat={openAtCard}
             onHome={() => setView('home')}
           />

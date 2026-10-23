@@ -38,6 +38,7 @@ test('the Browser view opens in Personal, which agents cannot reach', async ({ p
   await expect
     .poll(async () => ((await calls(page, 'view-place')) as { profile: string }[]).at(-1))
     .toMatchObject({ profile: 'personal', covered: false });
+  await expect(page.locator('.cmp')).toHaveCount(0);
   const page_ = page.getByRole('main', { name: 'New tab' });
   await expect(page_.getByText('Personal', { exact: true })).toBeVisible();
 
