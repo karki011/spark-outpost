@@ -224,3 +224,64 @@
 .bv-view {
   margin-top: 0;
 }
+
+.bv-favs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 0;
+  padding: 0 2px;
+  list-style: none;
+}
+
+.bv-fav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 40px;
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.bv-fav-btn:hover:not(:disabled) {
+  background: var(--raise);
+}
+
+.bv-fav-btn .bv-tile {
+  width: 24px;
+  height: 24px;
+}
+
+.bv-fav-add {
+  color: var(--muted);
+}
+
+.bv-fav-add:disabled {
+  opacity: 0.5;
+}
+
+.bv-hand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-height: 28px;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.bv-hand svg {
+  width: 14px;
+  height: 14px;
+}
+
+.bv-problem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 10px 8px;
+  font-size: 13px;
+  color: var(--text);
+}

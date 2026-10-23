@@ -21,4 +21,10 @@ Your own tabs, apart from every chat. About 1 minute. Mac app only.
 | **Personal** | Only you: no agent, Ask Spark or phone can open, read or list its tabs |
 | **Work**     | You; chats' agents share its sign-ins but not these tabs               |
 
+## Keep and share tabs
+
+- **+** under **Favorites** saves the page; **Pin** keeps a tab above **Today**. Tabs come back after a relaunch.
+- **Hand to chat** gives a chat the page: a **Work** tab moves there; from **Personal** only the address goes.
+- In a chat's pane, **Open in Browser view (Work)** moves the tab here.
+
 **Next:** [Use the browser](use-the-browser.md)

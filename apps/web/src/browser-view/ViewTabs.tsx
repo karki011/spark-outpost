@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import type { BrowserPaneTab, BrowserProfile } from '@spark-outpost/contracts';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
-import { PlusIcon, SpinnerIcon } from '../ui/icons.tsx';
+import { PinIcon, PlusIcon, SpinnerIcon, UnpinIcon } from '../ui/icons.tsx';
 import { Keys } from '../ui/Keys.tsx';
 import { PANE_KEYS } from '../browser/pane-shortcuts.ts';
 import { tabLabel } from '../browser/tab-label.ts';
@@ -14,8 +14,8 @@ interface ViewTabsProps {
 
 const tabElementId = (tab: BrowserPaneTab) => `bv-tab-${tab.id}`;
 
-function initial(tab: BrowserPaneTab): string {
-  return (tabLabel(tab).trim()[0] ?? '?').toUpperCase();
+export function initialOf(label: string): string {
+  return (label.trim()[0] ?? '?').toUpperCase();
 }
 
 function nextIndex(key: string, current: number, count: number): number | null {
@@ -26,7 +26,7 @@ function nextIndex(key: string, current: number, count: number): number | null {
   return null;
 }
 
-export function ViewTabs({ profile, tabs }: ViewTabsProps) {
+function TabList({ profile, tabs, label }: ViewTabsProps & { label: string }) {
   const focusableId = tabs.find((tab) => tab.active)?.id ?? tabs[0]?.id ?? null;
   const select = (tab: BrowserPaneTab) =>
     sendViewCommand(profile, { command: 'select', tabId: tab.id });
@@ -43,53 +43,82 @@ export function ViewTabs({ profile, tabs }: ViewTabsProps) {
   };
 
   return (
-    <section className="bv-section" aria-labelledby="bv-today">
-      <h2 id="bv-today" className="bv-heading">
-        Today
-      </h2>
-      <button
-        type="button"
-        className="bv-row bv-new"
-        aria-keyshortcuts={PANE_KEYS.newTab.aria}
-        onClick={() => sendViewCommand(profile, { command: 'new_tab', url: null })}
-      >
-        <PlusIcon />
-        <span>New tab</span>
-        <Keys keys={PANE_KEYS.newTab.shown} />
-      </button>
-      <ul className="bv-tabs" aria-label="Tabs" onKeyDown={onKeyDown}>
-        {tabs.map((tab) => {
-          const label = tabLabel(tab);
-          return (
-            <li key={tab.id} className={tab.active ? 'bv-tab on' : 'bv-tab'}>
-              <button
-                type="button"
-                id={tabElementId(tab)}
-                className="bv-row bv-tab-main"
-                aria-current={tab.active ? 'page' : undefined}
-                aria-label={label}
-                tabIndex={tab.id === focusableId ? 0 : -1}
-                title={tab.url || label}
-                onClick={() => select(tab)}
-              >
-                <span className="bv-tile" aria-hidden="true">
-                  {tab.loading ? <SpinnerIcon /> : initial(tab)}
-                </span>
-                <span className="bv-tab-title">{label}</span>
-              </button>
-              <button
-                type="button"
-                className="icon-btn bv-tab-x"
-                aria-label={`Close ${label}`}
-                aria-keyshortcuts={tab.active ? PANE_KEYS.close.aria : undefined}
-                onClick={() => sendViewCommand(profile, { command: 'close', tabId: tab.id })}
-              >
-                <CloseIcon />
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    <ul className="bv-tabs" aria-label={label} onKeyDown={onKeyDown}>
+      {tabs.map((tab) => {
+        const title = tabLabel(tab);
+        return (
+          <li key={tab.id} className={tab.active ? 'bv-tab on' : 'bv-tab'}>
+            <button
+              type="button"
+              id={tabElementId(tab)}
+              className="bv-row bv-tab-main"
+              aria-current={tab.active ? 'page' : undefined}
+              aria-label={title}
+              tabIndex={tab.id === focusableId ? 0 : -1}
+              title={tab.url || title}
+              onClick={() => select(tab)}
+            >
+              <span className="bv-tile" aria-hidden="true">
+                {tab.loading ? <SpinnerIcon /> : initialOf(title)}
+              </span>
+              <span className="bv-tab-title">{title}</span>
+            </button>
+            <button
+              type="button"
+              className="icon-btn bv-tab-x"
+              aria-label={tab.pinned ? `Unpin ${title}` : `Pin ${title}`}
+              aria-pressed={tab.pinned}
+              onClick={() =>
+                sendViewCommand(profile, { command: 'pin', tabId: tab.id, pinned: !tab.pinned })
+              }
+            >
+              {tab.pinned ? <UnpinIcon /> : <PinIcon />}
+            </button>
+            <button
+              type="button"
+              className="icon-btn bv-tab-x"
+              aria-label={`Close ${title}`}
+              aria-keyshortcuts={tab.active ? PANE_KEYS.close.aria : undefined}
+              onClick={() => sendViewCommand(profile, { command: 'close', tabId: tab.id })}
+            >
+              <CloseIcon />
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+export function ViewTabs({ profile, tabs }: ViewTabsProps) {
+  const pinned = tabs.filter((tab) => tab.pinned);
+  const today = tabs.filter((tab) => !tab.pinned);
+  return (
+    <>
+      {pinned.length > 0 && (
+        <section className="bv-section" aria-labelledby="bv-pinned">
+          <h2 id="bv-pinned" className="bv-heading">
+            Pinned
+          </h2>
+          <TabList profile={profile} tabs={pinned} label="Pinned tabs" />
+        </section>
+      )}
+      <section className="bv-section" aria-labelledby="bv-today">
+        <h2 id="bv-today" className="bv-heading">
+          Today
+        </h2>
+        <button
+          type="button"
+          className="bv-row bv-new"
+          aria-keyshortcuts={PANE_KEYS.newTab.aria}
+          onClick={() => sendViewCommand(profile, { command: 'new_tab', url: null })}
+        >
+          <PlusIcon />
+          <span>New tab</span>
+          <Keys keys={PANE_KEYS.newTab.shown} />
+        </button>
+        <TabList profile={profile} tabs={today} label="Tabs" />
+      </section>
+    </>
   );
 }

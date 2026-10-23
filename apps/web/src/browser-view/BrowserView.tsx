@@ -1,12 +1,13 @@
 import '../browser/browser-pane.css';
 import './browser-view.css';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   browserViewShortcutEventSchema,
   parseBrowserUrl,
   type BrowserPaneTab,
   type BrowserProfile,
   type BrowserShortcut,
+  type ConversationSummary,
 } from '@spark-outpost/contracts';
 import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
 import { ExternalLinkIcon, LockIcon } from '../ui/icons.tsx';
@@ -29,6 +30,9 @@ import { tabLabel } from '../browser/tab-label.ts';
 import { ToolButton } from '../browser/ToolButton.tsx';
 import { useNativePlacement, type PlaceView } from '../browser/use-view-placement.ts';
 import { ProfileBadge, ProfileSwitch, profileNote } from './ProfileSwitch.tsx';
+import { setBrowserPaneOpen } from '../browser/pane-open.ts';
+import { HandToChat } from './HandToChat.tsx';
+import { ViewFavorites } from './ViewFavorites.tsx';
 import { ViewTabs } from './ViewTabs.tsx';
 import {
   acceptViewState,
@@ -93,9 +97,15 @@ function PageHost({ url }: { url: string }) {
   );
 }
 
-export function BrowserView() {
+interface BrowserViewProps {
+  chats: readonly ConversationSummary[];
+  onOpenChat(chatId: string): void;
+}
+
+export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
   const profile = useChosenProfile();
-  const { tabs, snapshot } = useProfileTabs(profile);
+  const { tabs, favorites, snapshot } = useProfileTabs(profile);
+  const [problem, setProblem] = useState<string | null>(null);
   const tab = tabs.find((candidate) => candidate.active) ?? null;
   const viewRef = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -179,6 +189,7 @@ export function BrowserView() {
         <ProfileSwitch profile={profile} onChange={chooseProfile} />
         <p className="bv-note">{profileNote(profile)}</p>
         <AddressBar key={tabKey} commands={commands} tab={tab} placeholder="Type a web address" />
+        <ViewFavorites profile={profile} favorites={favorites} tab={tab} />
         <ViewTabs profile={profile} tabs={tabs} />
       </nav>
       <main className="page bv-page" id="bv-page" aria-label={tab ? tabLabel(tab) : 'Browser'}>
@@ -186,6 +197,17 @@ export function BrowserView() {
           <ProfileBadge profile={profile} />
           <PageHost url={tab?.url ?? ''} />
           <span className="bv-title">{tab && tab.url !== '' ? tabLabel(tab) : ''}</span>
+          <HandToChat
+            profile={profile}
+            tab={tab}
+            chats={chats}
+            onHanded={(chatId) => {
+              setProblem(null);
+              setBrowserPaneOpen(chatId, true);
+              onOpenChat(chatId);
+            }}
+            onProblem={setProblem}
+          />
           <ToolButton
             label="Open developer tools (⌥⌘I)"
             disabled={blank}
@@ -201,6 +223,14 @@ export function BrowserView() {
             <ExternalLinkIcon />
           </ToolButton>
         </div>
+        {problem && (
+          <p className="bv-problem" role="alert">
+            <span>{problem}</span>
+            <button type="button" className="bp-link" onClick={() => setProblem(null)}>
+              Dismiss
+            </button>
+          </p>
+        )}
         <div className="bp-view bv-view" ref={viewRef}>
           {blank && <StartPage profile={profile} tab={tab} />}
           {!blank && snapshot && <img className="bp-snapshot" src={snapshot} alt="" />}

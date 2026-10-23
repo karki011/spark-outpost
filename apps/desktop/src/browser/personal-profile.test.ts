@@ -6,24 +6,13 @@ import {
 } from '@spark-outpost/contracts';
 import { runBrowserOp } from './agent-ops.ts';
 import { net, type FakeContents } from './electron.fixture.ts';
-import { BrowserPanes } from './panes.ts';
+import type { BrowserPanes } from './panes.ts';
 import { BROWSER_PARTITION, PERSONAL_PARTITION } from './request-guard.ts';
-import type { SessionGuards } from './sessions.ts';
 import type { PaneTab } from './tab.ts';
-import { startBrowserViewHost, type BrowserViewHost } from './view-host.ts';
+import type { BrowserViewHost } from './view-host.ts';
+import { invoke, startTestBrowser } from './view-host.fixture.ts';
 
-const ipc = vi.hoisted(() => new Map<string, (...args: unknown[]) => unknown>());
-
-vi.mock('electron', async () => ({
-  ...(await import('./electron.fixture.ts')).fakeElectron,
-  ipcMain: {
-    handle: (channel: string, handler: (...args: unknown[]) => unknown) =>
-      ipc.set(channel, handler),
-    removeHandler: (channel: string) => ipc.delete(channel),
-  },
-  Menu: { buildFromTemplate: () => ({ popup: () => undefined }) },
-  clipboard: { writeText: () => undefined },
-}));
+vi.mock('electron', async () => (await import('./electron-ipc.fixture.ts')).fakeElectronWithIpc);
 vi.mock('./cdp.ts', () => ({
   attachCdp: (contents: FakeContents) => contents.cdp,
 }));
@@ -37,52 +26,14 @@ let chats: BrowserPanes;
 let view: BrowserViewHost;
 let bankPageTouched: string[];
 
-const panesOptions = {
-  window: () => null,
-  blockedPorts: () => new Set([32682]),
-  stateChanged: () => undefined,
-  snapshot: () => undefined,
-  localOriginSeen: () => undefined,
-  contextMenu: () => undefined,
-  addShortcut: () => undefined,
-  paneShortcut: () => undefined,
-  found: () => undefined,
-  log: () => undefined,
-};
-
-function invoke(channel: string, ...args: unknown[]) {
-  return ipc.get(channel)!({ sender: null }, ...args);
-}
-
 beforeEach(() => {
   net.reset();
-  ipc.clear();
   bankPageTouched = [];
   net.answer = (method, _params, url) => {
     if (url === BANK) bankPageTouched.push(method);
     return {};
   };
-  let viewHost: BrowserViewHost | null = null;
-  const guards: SessionGuards = {
-    blockedPorts: () => new Set([32682]),
-    roots: (contents) => chats.rootsOfContents(contents),
-    log: () => undefined,
-    inputMarks: (contents) =>
-      chats.inputMarks(contents) ?? viewHost?.panes.inputMarks(contents) ?? null,
-  };
-  chats = new BrowserPanes({ ...panesOptions, partition: () => BROWSER_PARTITION, guards });
-  viewHost = startBrowserViewHost({
-    window: () => null,
-    blockedPorts: () => new Set([32682]),
-    guards,
-    send: () => undefined,
-    guarded:
-      (run) =>
-      async (event, ...args) =>
-        run(event, ...args),
-    log: () => undefined,
-  });
-  view = viewHost;
+  ({ chats, view } = startTestBrowser());
 });
 
 async function personalTab(): Promise<PaneTab> {

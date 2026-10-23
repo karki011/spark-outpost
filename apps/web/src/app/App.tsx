@@ -84,7 +84,7 @@ import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { startIdleMotion } from './idle-motion.ts';
 import '../ui/controls.css';
 import { openTodayEvent, useTodayOpener } from '../calendar/today-request.ts';
-import { browserViewAvailable } from '../browser-view/view-store.ts';
+import { browserViewAvailable, useBrowserViewOpener } from '../browser-view/view-store.ts';
 
 const StableChatView = memo(ChatView);
 
@@ -215,6 +215,11 @@ function ChatShell({ entering }: { entering: boolean }) {
     setView('today');
   }, [setSettings, setView]);
   useTodayOpener(showToday);
+  const showBrowserView = useCallback(() => {
+    setSettings(null);
+    setView('browser');
+  }, [setSettings, setView]);
+  useBrowserViewOpener(showBrowserView);
   useSlackPresence(remote);
   useNotificationChats(remote, openChat);
   useEffect(
@@ -346,7 +351,7 @@ function ChatShell({ entering }: { entering: boolean }) {
           )}
           {view === 'browser' && (
             <Suspense fallback={<main className="page" aria-label="Browser" aria-busy="true" />}>
-              <BrowserView />
+              <BrowserView chats={chats} onOpenChat={openChat} />
             </Suspense>
           )}
           {view === 'today' && (

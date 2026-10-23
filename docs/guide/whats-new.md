@@ -12,7 +12,7 @@ What changed recently, newest first.
 
 | What changed                                                                                                                     | What to do                                               |
 | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| **Browser** in the left bar: **Personal** tabs no agent can reach; **Work** shares agents' sign-ins.                             | See [Browse on your own](browse-on-your-own.md).         |
+| **Browser** in the left bar: **Personal** tabs no agent can reach, **Work**, favorites, pinned tabs, **Hand to chat**.           | See [Browse on your own](browse-on-your-own.md).         |
 | Keyboard-reachable meeting cards; **⌃⌥⌘M**.                                                                                      | See [Calendar](calendar.md#use-it).                      |
 | Appearance follows the system; pick a **Tint**.                                                                                  | Had a theme? It stays. [Settings](settings.md#general).  |
 | Mac app: **Settings…** window (⌘,), **Hide Sidebar** (⌃⌘S), right-click editing; one-answer questions show radios; Markdown box. | See [Keys](keyboard-shortcuts.md#chats).                 |
@@ -23,6 +23,3 @@ What changed recently, newest first.
 | **Add folder…** ends every project picker.                                                                                       | See [Link a project](start-a-chat.md#link-a-project).    |
 | Agents share your Browser pane sign-ins; sign in again once.                                                                     | See [Use the browser](use-the-browser.md).               |
 | Meeting lines count down on time, wrap-ups name the chat, joined meetings drop; **Alert at** sets the card earlier.              | See [Use it](calendar.md#use-it).                        |
-| Shared inbox: answer or set aside in place; flags never count; **Dismiss** sticks.                                               | See [Spark Island](desktop-companion.md#open-it).        |
-| Ask Spark has a chat’s tools. **Let agents read my calendar** is now on; turn it off if you had it off.                          | See [Ask Spark](companion-quick-chat.md#ask-spark).      |
-| Browser: copy buttons, keys, find, developer tools, network log, SSO handoff.                                                    | See [Keys](keyboard-shortcuts.md#browser-pane-mac-app).  |

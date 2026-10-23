@@ -53,8 +53,16 @@ export async function withDesktopBrowser(page: Page) {
         textListeners.forEach((listener) => listener(selected)),
       browserShortcut: (event: unknown) => shortcutListeners.forEach((listener) => listener(event)),
       browserFound: (found: unknown) => foundListeners.forEach((listener) => listener(found)),
-      browserViewPush: (profile: string, tabs: Record<string, unknown>[]) => {
-        const state = { profile, tabs: tabs.map((item, index) => tab(`v${index + 1}`, item)) };
+      browserViewPush: (
+        profile: string,
+        tabs: Record<string, unknown>[],
+        favorites: Record<string, unknown>[] = [],
+      ) => {
+        const state = {
+          profile,
+          tabs: tabs.map((item, index) => tab(`v${index + 1}`, item)),
+          favorites,
+        };
         viewStateListeners.forEach((listener) => listener(state));
       },
       browserViewShortcut: (event: unknown) =>
@@ -80,6 +88,14 @@ export async function withDesktopBrowser(page: Page) {
           onState: (listener: (state: unknown) => void) => {
             viewStateListeners.add(listener);
             return () => viewStateListeners.delete(listener);
+          },
+          handToChat: async (request: unknown) => {
+            calls.push({ kind: 'view-hand', payload: request });
+            return { ok: true };
+          },
+          fromChat: async (request: unknown) => {
+            calls.push({ kind: 'view-from-chat', payload: request });
+            return { ok: true };
           },
           onSnapshot: noop,
           onShortcut: (listener: (event: unknown) => void) => {

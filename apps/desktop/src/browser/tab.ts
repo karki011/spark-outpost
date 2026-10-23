@@ -45,6 +45,7 @@ export interface TabInit {
   owner: BrowserTabOwner;
   runId: string | null;
   url: string;
+  title?: string;
 }
 
 export interface LiveTab {
@@ -124,6 +125,7 @@ export class PaneTab {
     this.owner = init.owner;
     this.runId = init.runId;
     this.url = init.url;
+    this.title = init.title ?? '';
     this.hooks = hooks;
   }
 

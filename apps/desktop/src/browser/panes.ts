@@ -144,7 +144,7 @@ export class BrowserPanes {
 
   createTab(
     chatId: string,
-    init: { owner: BrowserTabOwner; runId: string | null; url: string },
+    init: { owner: BrowserTabOwner; runId: string | null; url: string; title?: string },
     home?: ChatHome,
   ): PaneTab | null {
     const pane = this.chat(chatId, home);
