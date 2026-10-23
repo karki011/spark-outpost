@@ -49,6 +49,7 @@ export function SettingsDialog({ section, onSection, onClose, onOpenChat }: Sett
 
   const trapTab = (event: KeyboardEvent<HTMLDivElement>) => {
     const panel = event.currentTarget;
+    if (!(event.target instanceof Node) || !panel.contains(event.target)) return;
     if (event.key === 'Tab' && !panel.contains(document.activeElement)) {
       event.preventDefault();
       closeRef.current?.focus();

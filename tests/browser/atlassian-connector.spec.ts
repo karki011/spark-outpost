@@ -112,7 +112,15 @@ test('asks before Disconnect in a dialog, and Esc keeps the connection', async (
   await page.getByRole('menuitem', { name: 'Disconnect…' }).click();
   const dialog = page.getByRole('alertdialog', { name: 'Disconnect Atlassian?' });
   await expect(dialog).toContainText('Nothing changes on your Atlassian site.');
-  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  const cancel = dialog.getByRole('button', { name: 'Cancel' });
+  const confirm = dialog.getByRole('button', { name: 'Disconnect', exact: true });
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(confirm).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(confirm).toBeFocused();
   await shoot(page, 'atlassian-disconnect', page.locator('body'));
   await axeInEveryTheme(page, '.cx-confirm');
   await page.keyboard.press('Escape');
