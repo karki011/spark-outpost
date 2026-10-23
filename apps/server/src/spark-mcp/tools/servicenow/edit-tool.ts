@@ -106,7 +106,9 @@ async function closeCodeFor(
   }
   const codes = await readChoices(session.store.client, 'incident', 'close_code');
   if (codes.length === 0) return closeCode ?? null;
-  const named = codes.map((code) => code.value);
+  const named = codes.map((code) =>
+    code.label === code.value ? code.value : `${code.label} (${code.value})`,
+  );
   if (!closeCode) {
     throw new SparkToolError(`Pass closeCode, one of: ${named.join(', ')}.`);
   }

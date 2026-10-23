@@ -68,7 +68,7 @@ Priority is not written: instances usually derive it from impact and urgency.
   - need **High-risk cards** on a paired device (`cardSwitch`);
   - Ask Spark refuses to answer them (`cardRefusal`).
 - **Ask Spark** may propose them; a turn from a paired device gets no ServiceNow action, as with Jira.
-- **On confirm,** Spark reads the record again. It changes nothing if it is no longer the same `sys_id`, or if `sys_updated_on` (the stored UTC value) moved on.
+- **On confirm,** Spark reads the record again. It writes nothing if it is no longer the same `sys_id` or a change request, or, for `update` and `move`, if `sys_updated_on` (the stored UTC value) moved on. A note or comment only appends, so two proposed together both land.
 - **Audit and send flag:**
   - The audit records table, number, op, changed field names, the target state, the close code, and note and close-notes lengths. It never records text (`serviceNowAuditFacts`).
   - A write is a send to ServiceNow for the send flag. A read records private work data.

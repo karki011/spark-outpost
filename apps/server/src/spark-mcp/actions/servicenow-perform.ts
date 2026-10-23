@@ -56,7 +56,9 @@ export async function performServiceNowEdit(
   const { record } = action;
   const now = await store.writable(record.number, CHECK_FIELDS);
   const sameRecord = now.table === record.table && valueOf(now.record.sys_id) === record.sysId;
-  if (!sameRecord || valueOf(now.record.sys_updated_on) !== action.updated) {
+  const appends = action.op === 'work_note' || action.op === 'comment';
+  const movedOn = !appends && valueOf(now.record.sys_updated_on) !== action.updated;
+  if (!sameRecord || movedOn) {
     throw new Error(SERVICENOW_CHANGED);
   }
   await store.patch(

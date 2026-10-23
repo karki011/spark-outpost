@@ -180,6 +180,26 @@ describe('spark_servicenow_edit', () => {
     expect(writes()).toEqual([]);
   });
 
+  it('writes two notes proposed together, since a note does not depend on the record', async () => {
+    h = await start('Note INC0010023 and tell the caller', 'default');
+    await h.tools.call('spark_servicenow_edit', {
+      action: 'work_note',
+      number: 'INC0010023',
+      body: 'Internal.',
+    });
+    await h.tools.call('spark_servicenow_edit', {
+      action: 'comment',
+      number: 'INC0010023',
+      body: 'For the caller.',
+    });
+    await confirmCard(h.t);
+    await confirmCard(h.t);
+    expect(writes()).toHaveLength(2);
+    expect(writes()).toEqual(
+      expect.arrayContaining([{ work_notes: 'Internal.' }, { comments: 'For the caller.' }]),
+    );
+  });
+
   it('keeps change requests read only', async () => {
     h = await start('Note CHG0030012', 'auto');
     const refused = await h.tools.call('spark_servicenow_edit', {
