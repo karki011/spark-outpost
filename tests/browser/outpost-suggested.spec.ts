@@ -117,7 +117,13 @@ test('suggested threads sit in the message column and Start opens the started ch
   await expect(pane).toBeVisible({ timeout: TURN_TIMEOUT });
   await expect(pane).toContainText(TASK);
   await expect(suggested(page)).toHaveCount(0);
+  await expect(pane.getByRole('button', { name: 'Back to Overview' })).toBeFocused();
   await inBothThemes(page, 'started', () => expect(pane).toBeVisible());
+
+  await page.keyboard.press('Escape');
+  const overview = page.getByRole('complementary', { name: 'Overview' });
+  await expect(overview).toContainText(TASK);
+  await inBothThemes(page, 'overview', () => expect(overview).toBeVisible());
 });
 
 test('at phone width the box fits the column and Start lands on the started thread', async ({
