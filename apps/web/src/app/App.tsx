@@ -43,6 +43,7 @@ import { LEVEL_LABEL } from '../spark/LevelSetting.tsx';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { FreezeWhileHidden } from '../ui/FreezeWhileHidden.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
+import { useOutpostRoute } from './use-outpost-route.ts';
 import { TicketsViewSkeleton } from '../tickets/TicketsViewSkeleton.tsx';
 import { unseenNotices } from '../tickets/ticket-model.ts';
 import { ticketKeys } from '../tickets/tickets-api.ts';
@@ -101,12 +102,15 @@ function ChatShell({ entering }: { entering: boolean }) {
   const live = useAppEvents();
   const connection = useConnection();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [openOutpostId, setOpenOutpostId] = useState<string | null>(null);
-  const [outpostJumpTo, setOutpostJumpTo] = useState<string | null>(null);
-  const selectChat = useCallback((id: string) => {
-    setSelectedId(id);
-    setOpenOutpostId(null);
-  }, []);
+  const { route: outpost, show: showOutpost, close: closeOutpost } = useOutpostRoute();
+  const openOutpostId = outpost?.id ?? null;
+  const selectChat = useCallback(
+    (id: string) => {
+      setSelectedId(id);
+      closeOutpost();
+    },
+    [closeOutpost],
+  );
   const [draftId, setDraftId] = useState(newDraftId);
   const [settings, setSettings] = useSettingsState();
   const [storedView, setViewState] = useState<AppView>(() =>
@@ -189,9 +193,8 @@ function ChatShell({ entering }: { entering: boolean }) {
     layout.closeDrawer();
   });
 
-  const openOutpost = useStableCallback((id: string, postId?: string) => {
-    setOpenOutpostId(id);
-    setOutpostJumpTo(postId ?? null);
+  const openOutpost = useStableCallback((id: string, postId?: string, thread?: boolean) => {
+    showOutpost(id, postId, thread);
     setView('chats');
     layout.closeDrawer();
   });
@@ -323,9 +326,10 @@ function ChatShell({ entering }: { entering: boolean }) {
                   <OutpostView
                     key={openOutpostId}
                     id={openOutpostId}
-                    jumpTo={outpostJumpTo}
+                    jumpTo={outpost?.jumpTo}
+                    openThread={outpost?.thread}
                     onOpenChat={openChat}
-                    onGone={() => setOpenOutpostId(null)}
+                    onGone={closeOutpost}
                   />
                 </Suspense>
               )}

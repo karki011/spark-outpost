@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { outpostKeys } from '../../outposts/outposts-api.ts';
 import {
@@ -19,6 +19,7 @@ import { TurnOutpostLines } from './TurnOutpostLines.tsx';
 
 const RUN_ID = '0e000000-0000-4000-8000-000000000001';
 const DRAFT_ID = '0f000000-0000-4000-8000-000000000001';
+const OPENING_POST = '0f000000-0000-4000-8000-000000000002';
 const RUN: TurnWindow = { id: RUN_ID, parentRunId: null };
 const MEMBER = { id: FE_CHAT, outpost: { id: OUTPOST_ID, name: 'Usage by user', handle: 'fe' } };
 
@@ -34,6 +35,24 @@ function seam(overrides: Partial<OutpostSeam> = {}): OutpostSeam {
     onNewOutpost: vi.fn(),
     onAddToOutpost: vi.fn(),
     ...overrides,
+  };
+}
+
+function storyTask() {
+  return {
+    conversationId: API_CHAT,
+    handle: 'api',
+    title: 'Usage endpoint',
+    position: 0,
+    dependsOn: null,
+    dependsOnHandle: null,
+    stacked: false,
+    openingPostId: OPENING_POST,
+    state: null,
+    reason: null,
+    branch: null,
+    pullRequest: null,
+    warnings: [],
   };
 }
 
@@ -134,6 +153,34 @@ describe('TurnOutpostLines', () => {
     renderLines(seam({ onOpenDraft: vi.fn(), canManage: false }));
     expect(screen.getByRole('button', { name: 'Start' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Review and start' })).toBeNull();
+  });
+
+  it('opens the first started thread after Start where chats cannot be edited', async () => {
+    seedDrafts([draft()]);
+    const story = {
+      draftId: DRAFT_ID,
+      title: 'Usage',
+      leadConversationId: FE_CHAT,
+      leadHandle: 'fe',
+      tasks: [storyTask()],
+    };
+    client.setQueryData(outpostKeys.detail(OUTPOST_ID), { ...detail([]), stories: [story] });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ outpostId: OUTPOST_ID, message: 'Started.' }), {
+            status: 200,
+          }),
+        ),
+      ),
+    );
+    const value = seam({ onOpenDraft: vi.fn(), canManage: false });
+    renderLines(value);
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    await waitFor(() =>
+      expect(value.onOpenOutpost).toHaveBeenCalledWith(OUTPOST_ID, OPENING_POST, true),
+    );
   });
 
   it('shows Started with the outpost name and opens that outpost', () => {

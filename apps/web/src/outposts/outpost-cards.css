@@ -1,6 +1,7 @@
 .main.op {
   --op-pane-width: 440px;
   --op-avatar: 32px;
+  --op-msg-gap: 10px;
   --op-card-pad: 12px;
   --op-card-radius: 10px;
   --op-meta-size: 12.5px;
@@ -159,7 +160,7 @@
 
 .op-msg {
   display: flex;
-  gap: 10px;
+  gap: var(--op-msg-gap);
   padding-left: 0;
   border-left: 0;
 }
@@ -339,26 +340,29 @@
 }
 
 .op-suggested {
-  margin: 18px 0 4px;
-  padding: var(--op-card-pad);
+  margin: 16px 0 4px calc(var(--op-avatar) + var(--op-msg-gap));
+  padding: calc(var(--op-card-pad) - 1px);
   border: 1px dashed var(--line-strong);
   border-radius: var(--op-card-radius);
+  background: var(--raise);
+  font-size: 13.5px;
 }
 
 .op-suggested h3 {
   margin: 0;
   font-size: 13.5px;
+  font-weight: 600;
 }
 
 .op-suggested-note {
   margin: 2px 0 8px;
   color: var(--muted);
-  font-size: var(--op-small);
+  font-size: var(--op-meta-size);
 }
 
 .op-suggested ul {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -368,11 +372,19 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 7px;
+  gap: 4px 7px;
+  min-width: 0;
+}
+
+.op-suggested-from {
+  flex-shrink: 0;
+  font-weight: 600;
 }
 
 .op-suggested li .op-line {
+  flex: 1 1 auto;
   margin: 0;
+  font-size: inherit;
 }
 
 @media (pointer: coarse) {

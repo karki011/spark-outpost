@@ -85,7 +85,7 @@ describe('OutpostCreate', () => {
       members: [{ conversationId: FE_CHAT, handle: 'fe' }],
     });
     expect(requests[0]?.id).toMatch(/^[0-9a-f-]{36}$/);
-    expect(onCreated).toHaveBeenCalledWith(requests[0]?.id);
+    expect(onCreated).toHaveBeenCalledWith(requests[0]?.id, null);
   });
 
   it('sends a new chat with the default agent, its picked mode and a first message', async () => {

@@ -43,6 +43,7 @@ import {
 interface OutpostViewProps {
   id: string;
   jumpTo?: string | null | undefined;
+  openThread?: string | null | undefined;
   onOpenChat: (conversationId: string) => void;
   onGone: () => void;
 }
@@ -96,11 +97,16 @@ interface LoadedProps extends OutpostViewProps {
 
 type Sheet = 'settings' | 'instructions' | null;
 
-function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
+function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedProps) {
   const { outpost, posts, stories } = detail;
   const { chats, projectNames } = useOutpostChats();
   const { remote } = useRemoteClient();
   const layout = useOutpostLayout();
+  const [openedThread, setOpenedThread] = useState<string | null>(null);
+  if (openThread && openThread !== openedThread) {
+    setOpenedThread(openThread);
+    layout.openThread(openThread);
+  }
   const [answeringId, setAnsweringId] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [fill, setFill] = useState<ComposerFill | null>(null);
@@ -352,7 +358,7 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
   );
 }
 
-export function OutpostView({ id, jumpTo, onOpenChat, onGone }: OutpostViewProps) {
+export function OutpostView({ id, jumpTo, openThread, onOpenChat, onGone }: OutpostViewProps) {
   const query = useOutpost(id);
   if (isGone(query.error)) return <Gone onGone={onGone} />;
   if (!query.data) {
@@ -365,6 +371,13 @@ export function OutpostView({ id, jumpTo, onOpenChat, onGone }: OutpostViewProps
     );
   }
   return (
-    <Loaded id={id} detail={query.data} jumpTo={jumpTo} onOpenChat={onOpenChat} onGone={onGone} />
+    <Loaded
+      id={id}
+      detail={query.data}
+      jumpTo={jumpTo}
+      openThread={openThread}
+      onOpenChat={onOpenChat}
+      onGone={onGone}
+    />
   );
 }

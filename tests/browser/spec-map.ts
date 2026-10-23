@@ -215,6 +215,7 @@ export const SPEC_GROUPS = {
     'outpost-overview',
     'outpost-sidebar',
     'outpost-story-bar',
+    'outpost-suggested',
     'outposts',
     'outposts-agents',
     'outposts-story',

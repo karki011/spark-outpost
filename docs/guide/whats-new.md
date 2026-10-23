@@ -10,6 +10,6 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 
 ## October 2026
 
-| What changed                         | What to do                                                         |
-| ------------------------------------ | ------------------------------------------------------------------ |
-| Nothing yet since **0.1.0-beta.28**. | Open **Release notes** in **Settings → Updates** for that release. |
+| What changed                                                                                                            | What to do                                         |
+| ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| **Suggested threads** in an outpost lines up with the messages, and starting a draft opens the first sub-chat's thread. | Select **Review and start**, then **Start chats**. |

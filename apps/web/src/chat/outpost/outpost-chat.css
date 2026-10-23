@@ -131,5 +131,18 @@ button.ctx-outpost:hover {
   color: var(--faint);
 }
 .op-line .from-open {
+  position: relative;
   flex-shrink: 0;
+  min-height: 28px;
+}
+@media (pointer: coarse) {
+  .op-line .from-open::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
 }

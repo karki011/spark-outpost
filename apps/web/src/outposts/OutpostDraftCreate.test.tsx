@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CreateOutpostRequest, DraftChat } from '@spark-outpost/contracts';
+import type { CreateOutpostRequest, DraftChat, OutpostStory } from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
 import { projectKeys } from '../api/projects.ts';
 import {
@@ -13,10 +13,47 @@ import {
 } from './create/create-fixtures.ts';
 import { OutpostCreate } from './OutpostCreate.tsx';
 import { outpostKeys, type ProposedDraft } from './outposts-api.ts';
-import { DOCS_CHAT, FE_CHAT, OUTPOST_ID, chat, detail, member, outpost } from './test-fixtures.ts';
+import {
+  API_CHAT,
+  DOCS_CHAT,
+  FE_CHAT,
+  OUTPOST_ID,
+  chat,
+  detail,
+  member,
+  outpost,
+} from './test-fixtures.ts';
 
 let client: QueryClient;
 let requests: CreateOutpostRequest[];
+let stories: OutpostStory[];
+
+const OPENING_POST = '0f000000-0000-4000-8000-000000000001';
+
+function storyOpening(): OutpostStory {
+  const task = {
+    conversationId: API_CHAT,
+    handle: 'api',
+    title: 'Build api',
+    position: 0,
+    dependsOn: null,
+    dependsOnHandle: null,
+    stacked: false,
+    openingPostId: OPENING_POST,
+    state: null,
+    reason: null,
+    branch: null,
+    pullRequest: null,
+    warnings: [],
+  };
+  return {
+    draftId: STORY_DRAFT_ID,
+    title: 'Checkout',
+    leadConversationId: DOCS_CHAT,
+    leadHandle: 'lead',
+    tasks: [task],
+  };
+}
 
 function proposed(handle: string, overrides: Partial<DraftChat> = {}): DraftChat {
   return {
@@ -63,6 +100,7 @@ beforeEach(() => {
   client.setQueryData(outpostKeys.list, []);
   seedCreateQueries(client);
   requests = [];
+  stories = [];
   vi.stubGlobal(
     'fetch',
     vi.fn((_url: string, init?: RequestInit) => {
@@ -71,7 +109,8 @@ beforeEach(() => {
       }
       const body = JSON.parse(String(init.body)) as CreateOutpostRequest;
       requests.push(body);
-      const created = { ...detail([], { id: body.id, name: body.name, members: [] }), failed: [] };
+      const made = detail([], { id: body.id, name: body.name, members: [] });
+      const created = { ...made, stories, failed: [] };
       return Promise.resolve(new Response(JSON.stringify(created), { status: 201 }));
     }),
   );
@@ -169,7 +208,8 @@ describe('OutpostCreate from a draft a chat proposed', () => {
     expect(screen.queryByRole('alertdialog')).toBeNull();
   });
 
-  it('adds the chats to the outpost the lead is already in, under its id and name', async () => {
+  it('adds the chats to the outpost the lead is already in and opens the first started thread', async () => {
+    stories = [storyOpening()];
     seedDraft({}, [proposed('api')]);
     seedLead('agent', true);
     client.setQueryData(outpostKeys.list, [outpost({ members: [member(DOCS_CHAT, 'lead', 1)] })]);
@@ -179,7 +219,7 @@ describe('OutpostCreate from a draft a chat proposed', () => {
     fireEvent.click(button(/^Continue/));
     fireEvent.click(button(/^Start chats/));
 
-    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(OUTPOST_ID));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(OUTPOST_ID, OPENING_POST));
     expect(requests[0]).toMatchObject({
       id: OUTPOST_ID,
       name: 'Usage by user',
@@ -192,7 +232,7 @@ describe('OutpostCreate from a draft a chat proposed', () => {
     seedDraft({ startedAt: '2026-10-09T10:00:00.000Z', outpostId: OUTPOST_ID });
     seedLead('agent');
     const { onCreated } = open();
-    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(OUTPOST_ID));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(OUTPOST_ID, null));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
