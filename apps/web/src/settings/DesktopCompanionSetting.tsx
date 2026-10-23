@@ -211,7 +211,7 @@ export function DesktopCompanionSetting() {
         <SwitchRow
           id={menuBarId}
           label={MENU_BAR}
-          doc={{ page: 'settings', heading: 'mac' }}
+          doc={{ page: 'desktop-companion', heading: 'turn-it-on-and-size-it' }}
           hint={
             status.menuBar
               ? 'A Spark icon in the menu bar opens Spark, shows or hides Spark Island, and quits.'

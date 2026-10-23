@@ -10,25 +10,25 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 
 ## Start a chat
 
-1. Press **⌥Space** anywhere. The panel opens on **New chat**.
+1. Press **⌥Space** anywhere to open **New chat**.
 2. Type your task in **Start a new chat…**.
-3. If needed, pick **Choose project** or the autonomy chip.
-4. Press **Enter**. **Esc** closes and keeps your draft.
+3. Optionally pick **Choose project** or the autonomy chip.
+4. Press **Enter**; **Esc** closes, keeping your draft.
 
 ![The New chat tab of Spark Island with a message typed and the project, model, permissions and autonomy chips](images/companion-island-chat-light.png)
 
 ## Drop files or a folder
 
 1. Drag files or a folder from Finder onto the island.
-2. Files join a new chat. Secret files like `.env` are skipped.
+2. Files join a new chat, skipping secret files such as `.env`.
 3. For a folder, pick **Start a chat here** or **Add as project**. **Esc** cancels.
 
 **Add folder…** under **Choose project** opens Spark's folder picker.
 
 ## Ask Spark
 
-1. In the panel, select **Ask Spark**, or press **⌘3**.
-2. Type a question, or pick a suggestion like **Who needs me?**, and press **Enter**.
+1. Select **Ask Spark**, or press **⌘3**.
+2. Type a question, or pick a suggestion such as **Who needs me?**, and press **Enter**.
 3. Scroll up for earlier questions; **New topic** starts fresh.
 4. **Open in Spark** shows the whole conversation.
 
@@ -38,7 +38,7 @@ Answers link to named chats; **Review** opens a waiting card in place. It never 
 
 ## Let Ask Spark act
 
-It has a chat's [Spark tools](spark-tools.md#ask-spark-tools); if a switch is off, it names it.
+It has a chat's [Spark tools](spark-tools.md#ask-spark-tools), naming any switch that's off.
 
 Each action shows **Do it** and **Don’t** first, in **Needs you** too, unless [When Ask Spark acts](settings.md#spark-assistant) is **Act**. Cards with more to check show **Review in Spark**.
 

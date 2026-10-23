@@ -6,7 +6,7 @@ order: 216
 summary: See what the agent is doing, stop it, queue more messages while it works, and delete a running chat.
 ---
 
-You'll follow, stop and queue a turn. About 2 minutes.
+Follow, stop and queue a turn. About 2 minutes.
 
 ## See what's happening
 
@@ -16,17 +16,17 @@ You'll follow, stop and queue a turn. About 2 minutes.
 4. **Show work panel** has the to-do, files and cost; **Agent TV** is under **…**.
 5. Sub-agents share one line; **View** shows a card each.
 
-When it needs you, select **Waiting for you** or press **⌘⇧Y**.
+When it needs you: **Waiting for you** or **⌘⇧Y**.
 
 **Open in terminal** shows failed output in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 
-1. Select **Stop**. Its sub-agents and background work stop too.
+1. Select **Stop**; sub-agents and background work stop too.
 
 ## Background work
 
-While background agents run, the chat shows **Waiting on 1 background agent**, then **Writing up results**. A sleeping Claude agent shows **Sleeping until 10:48**, then wakes in that turn. **Stop background tasks** or **Stop waiting** ends the wait.
+Background agents show **Waiting on 1 background agent**, then **Writing up results**. A sleeping Claude agent shows **Sleeping until 10:48**, then wakes in that turn. **Stop background tasks** or **Stop waiting** ends the wait.
 
 The agent stays running up to 30 idle minutes. A turn it starts itself shows **Continued on its own**; after Quit, **Stopped by Quit**.
 
@@ -39,11 +39,11 @@ Other chats never wait; each starts when you send.
 3. While the agent waits, **Enter** sends now.
 4. Use **Edit**, **Move up**, **Move down**, **Remove** or **Send now** on a queued message.
 
-| When                           | Spark                                |
-| ------------------------------ | ------------------------------------ |
-| The turn finishes              | Sends queued messages in order.      |
-| You stop the turn, or it fails | Pauses the queue until **Send now**. |
-| You reload or restart          | Keeps the queue.                     |
+| When                     | Spark                                |
+| ------------------------ | ------------------------------------ |
+| The turn finishes        | Sends queued messages in order.      |
+| You stop it, or it fails | Pauses the queue until **Send now**. |
+| You reload or restart    | Keeps the queue.                     |
 
 ## Delete a running chat
 
