@@ -7,6 +7,7 @@ import {
   ipcMain,
   Menu,
   shell,
+  type IpcMainEvent,
   type IpcMainInvokeEvent,
 } from 'electron';
 import {
@@ -21,13 +22,14 @@ import { appMenuTemplate, type HelpActions } from './help-menu.ts';
 import { IPC } from './ipc-channels.ts';
 
 const EXPORT_TIMEOUT_MS = 60_000;
+const TOGGLE_SIDEBAR_COMMAND = 'toggle-sidebar';
 
 export interface HelpOptions {
   version: string;
   logsFolder: string;
   apiUrl: string;
   token: string;
-  trusted: (event: IpcMainInvokeEvent) => boolean;
+  trusted: (event: IpcMainInvokeEvent | IpcMainEvent) => boolean;
   showSpark: () => void;
   mainWindow: () => BrowserWindow | null;
   paneShortcut: HelpActions['paneShortcut'];
@@ -87,7 +89,13 @@ async function exportFromMenu(options: HelpOptions): Promise<void> {
   }
 }
 
-const CHANNELS = [IPC.helpInfo, IPC.helpExportDiagnostics, IPC.helpShowLogs, IPC.helpPending];
+const CHANNELS = [
+  IPC.helpInfo,
+  IPC.helpExportDiagnostics,
+  IPC.helpShowLogs,
+  IPC.helpPending,
+  IPC.menuSettingsPending,
+];
 
 export function startHelp(options: HelpOptions): Help {
   const info: DesktopHelpInfo = {
@@ -96,11 +104,15 @@ export function startHelp(options: HelpOptions): Help {
     logsFolder: options.logsFolder,
   };
   let feedbackPending = false;
+  let settingsPending = false;
+  const toMainWindow = (channel: string, payload?: string) => {
+    const window = options.mainWindow();
+    if (window && !window.isDestroyed()) window.webContents.send(channel, payload);
+  };
   const sendFeedback = () => {
     feedbackPending = true;
     options.showSpark();
-    const window = options.mainWindow();
-    if (window && !window.isDestroyed()) window.webContents.send(IPC.helpOpen);
+    toMainWindow(IPC.helpOpen);
   };
   const handle = (channel: string, handler: () => Promise<unknown> | unknown) => {
     ipcMain.handle(channel, (event) => (options.trusted(event) ? handler() : null));
@@ -113,19 +125,42 @@ export function startHelp(options: HelpOptions): Help {
     feedbackPending = false;
     return pending;
   });
-  Menu.setApplicationMenu(
-    Menu.buildFromTemplate(
-      appMenuTemplate({
-        sendFeedback,
-        exportDiagnostics: () => void exportFromMenu(options),
-        showLogs: () => void showLogs(options.logsFolder),
-        paneShortcut: options.paneShortcut,
-      }),
-    ),
-  );
+  handle(IPC.menuSettingsPending, () => {
+    const pending = settingsPending;
+    settingsPending = false;
+    return pending;
+  });
+  let sidebarShown = true;
+  const buildMenu = () =>
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate(
+        appMenuTemplate({
+          dev: !app.isPackaged,
+          sidebarShown,
+          openSettings: () => {
+            settingsPending = true;
+            options.showSpark();
+            toMainWindow(IPC.menuOpenSettings);
+          },
+          toggleSidebar: () => toMainWindow(IPC.menuCommand, TOGGLE_SIDEBAR_COMMAND),
+          sendFeedback,
+          exportDiagnostics: () => void exportFromMenu(options),
+          showLogs: () => void showLogs(options.logsFolder),
+          paneShortcut: options.paneShortcut,
+        }),
+      ),
+    );
+  const onSidebarShown = (event: IpcMainEvent, shown: unknown) => {
+    if (!options.trusted(event) || typeof shown !== 'boolean' || shown === sidebarShown) return;
+    sidebarShown = shown;
+    buildMenu();
+  };
+  ipcMain.on(IPC.menuSidebarShown, onSidebarShown);
+  buildMenu();
   return {
     dispose() {
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);
+      ipcMain.off(IPC.menuSidebarShown, onSidebarShown);
     },
   };
 }
