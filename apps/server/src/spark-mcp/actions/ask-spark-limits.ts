@@ -17,6 +17,7 @@ import {
 import { CARD_ROUTE } from '../../remote/route-rules.ts';
 import { runFromDevice } from '../../remote/run-mark.ts';
 import { spokenRun } from '../../mac-control/offered.ts';
+import { runOrigin } from '../../persistence/run-origin.ts';
 import { remoteAccess } from '../../remote/store.ts';
 import { LINKED_TITLE_MIN } from '../../companion/assistant-links.ts';
 import type { ActionPath } from './action-policy.ts';
@@ -39,12 +40,7 @@ export const ASK_SPARK_REFUSALS = {
 } as const;
 
 export async function tabQuestionRun(db: Queryable, runId: string): Promise<boolean> {
-  const { rows } = await db.query<{ tabs: boolean }>(
-    `SELECT COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
-       = 'pages' AS tabs FROM runs r WHERE r.id = $1`,
-    [runId],
-  );
-  return rows[0]?.tabs === true;
+  return (await runOrigin(db, runId)) === 'pages';
 }
 
 interface Route {

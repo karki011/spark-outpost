@@ -1,4 +1,5 @@
 import type { Queryable } from '../persistence/db.ts';
+import { runOrigin } from '../persistence/run-origin.ts';
 import { runFromDevice } from '../remote/run-mark.ts';
 
 export interface MacScope {
@@ -28,12 +29,7 @@ export async function childRun(db: Queryable, runId: string): Promise<boolean> {
 export type MacRefusedRun = 'off' | 'remote' | 'child' | 'voice' | 'read_only' | 'no_chat';
 
 export async function spokenRun(db: Queryable, runId: string): Promise<boolean> {
-  const { rows } = await db.query<{ spoken: boolean }>(
-    `SELECT COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
-       = 'voice' AS spoken FROM runs r WHERE r.id = $1`,
-    [runId],
-  );
-  return rows[0]?.spoken === true;
+  return (await runOrigin(db, runId)) === 'voice';
 }
 
 export async function macRunRefusal(db: Queryable, scope: MacScope): Promise<MacRefusedRun | null> {
