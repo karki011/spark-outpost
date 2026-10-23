@@ -157,6 +157,15 @@ describe('desktop companion lifecycle', () => {
     expect(effects.changed).toHaveBeenLastCalledWith(expect.objectContaining({ notify: false }));
   });
 
+  it('keeps the menu bar item off until turned on, then saves and announces the choice', () => {
+    const { companion, effects } = setup();
+    expect(companion.status().menuBar).toBe(false);
+    expect(companion.setMenuBar(true)).toMatchObject({ menuBar: true });
+    expect(effects.save).toHaveBeenLastCalledWith(expect.objectContaining({ menuBar: true }));
+    expect(effects.changed).toHaveBeenLastCalledWith(expect.objectContaining({ menuBar: true }));
+    expect(companion.setMenuBar(false)).toMatchObject({ menuBar: false });
+  });
+
   it('announces a blocked notification once, without saving it', () => {
     const { companion, effects } = setup();
     const saves = effects.save.mock.calls.length;
@@ -202,6 +211,7 @@ describe('desktop companion lifecycle', () => {
     other.resume();
     expect(other.running()).toBe(false);
     expect(other.setEnabled(true).enabled).toBe(false);
+    expect(other.setMenuBar(true).menuBar).toBe(false);
     expect(companion.running()).toBe(true);
   });
 });

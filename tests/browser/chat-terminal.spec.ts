@@ -176,7 +176,7 @@ test('a Do chat with a worktree opens its terminal in the worktree', async ({ pa
   await input.fill('Add a line to the notes #edit #plan');
   await input.press('Enter');
   await page
-    .getByRole('group', { name: /Change a file\?/ })
+    .getByRole('group', { name: /^Edit .+\?$/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await turnDone(page, 15_000);

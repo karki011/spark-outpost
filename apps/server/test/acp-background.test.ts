@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import type { AgentSettings, ProviderOutput, SteerRequests } from '../src/providers/provider.ts';
-import { WRITE_UP_STEP } from '../src/agents/acp/turn-loop.ts';
+import { WRITE_UP_STEP } from '@spark-outpost/contracts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 

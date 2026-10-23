@@ -100,7 +100,7 @@ async function chatOnItsBranch(page: Page, repo: ChatRepo) {
   await input.fill('Add a line to the notes #edit #plan');
   await input.press('Enter');
   await page
-    .getByRole('group', { name: /Change a file\?/ })
+    .getByRole('group', { name: /^Edit .+\?$/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await turnDone(page, 20_000);
@@ -116,7 +116,7 @@ test('the context bar chips never overlap at narrow, typical and wide windows', 
     await chatOnItsBranch(page, repo);
     const bar = page.locator('.ctxbar');
     const branch = bar.locator('.chat-branch');
-    await expect(branch).toContainText('· worktree');
+    await expect(branch).toHaveAccessibleName(/, worktree$/);
     await expect(bar.getByRole('button', { name: /^Spark autonomy/ })).toHaveCount(0);
 
     for (const width of WIDTHS) {
@@ -129,12 +129,12 @@ test('the context bar chips never overlap at narrow, typical and wide windows', 
       }
       expect(await overflowOf(bar)).toBeLessThanOrEqual(0);
       expect(await overflowOf(branch)).toBeLessThanOrEqual(0);
-      const kind = (await branch.locator('.chat-branch-kind').boundingBox())!;
+      const chip = (await branch.boundingBox())!;
       const setup = (await bar.locator('.ctx-setup').boundingBox())!;
       const apart =
-        kind.x + kind.width <= setup.x ||
-        kind.y + kind.height <= setup.y ||
-        setup.y + setup.height <= kind.y;
+        chip.x + chip.width <= setup.x ||
+        chip.y + chip.height <= setup.y ||
+        setup.y + setup.height <= chip.y;
       expect(apart).toBe(true);
       for (const theme of ['light', 'graphite']) {
         await useTheme(page, theme);

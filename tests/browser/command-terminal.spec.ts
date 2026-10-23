@@ -43,27 +43,26 @@ async function unfold(box: Locator) {
   await toggle(box).click();
 }
 
-test('shows live output where the command runs, then folds a passing command to one line', async ({
+test('shows a running command as one row, then passed, with its output on unfold', async ({
   page,
 }) => {
   await askInChats(page, 'Run the tests #terminal=pass 400ms');
   const box = terminal(page, PASS);
   await expect(box).toBeVisible({ timeout: 15_000 });
-  await expect(toggle(box)).toHaveAttribute('aria-expanded', 'true');
-  await expect(rows(box)).toContainText('turns.test.ts', { timeout: 10_000 });
+  await expect(toggle(box)).toHaveAttribute('aria-expanded', 'false');
+  await expect(toggle(box)).toContainText('Running');
   await expect(box.locator('.spin')).toBeVisible();
   await expect(box.locator('.run-cmd-cwd')).toHaveCount(0);
   await expect(page.locator('.md', { hasText: 'Finished pass.' })).toHaveCount(0);
-  const heightWhileRunning = (await box.boundingBox())!.height;
   await shot(page, 'running');
-  await expect(rows(box)).toContainText('run-projection.test.ts');
-  expect((await box.boundingBox())!.height).toBe(heightWhileRunning);
 
-  await expect(state(box)).toHaveText(/exit 0 · \d+s/, { timeout: 15_000 });
-  await expect(rows(box)).toContainText('Tests 23 passed');
-  await expect(toggle(box)).toHaveAttribute('aria-expanded', 'false', { timeout: 5_000 });
+  await expect(state(box)).toHaveText(/passed · \d+s/, { timeout: 15_000 });
+  await expect(toggle(box)).toContainText('Ran');
+  await expect(toggle(box)).toHaveAttribute('aria-expanded', 'false');
   await expect(box.locator('.xterm')).toHaveCount(0);
   await expect(done(page)).toBeVisible();
+  await unfold(box);
+  await expect(rows(box)).toContainText('Tests 23 passed');
   await shot(page, 'finished');
 
   const order = await page
@@ -85,7 +84,7 @@ test('keeps a failed command open, and expands, collapses and copies by keyboard
   await askInChats(page, 'Lint it #terminal=fail,pass 30ms');
   await expect(done(page)).toBeVisible({ timeout: 20_000 });
   const failed = terminal(page, FAIL);
-  await expect(state(failed)).toHaveText(/exit 1 · \d+s/);
+  await expect(state(failed)).toHaveText(/failed · exit 1 · \d+s/);
   await page.waitForTimeout(2_200);
   await expect(toggle(failed)).toHaveAttribute('aria-expanded', 'true');
   await expect(rows(failed)).toContainText('1 problem (1 error, 0 warnings)');
@@ -127,7 +126,7 @@ test('shows stored output after a reload and the reader text without colour code
   const passed = terminal(page, PASS);
   const failed = terminal(page, FAIL);
   await expect(toggle(passed)).toHaveAttribute('aria-expanded', 'false');
-  await expect(state(passed)).toHaveText(/exit 0/);
+  await expect(state(passed)).toHaveText(/passed/);
   await expect(toggle(failed)).toHaveAttribute('aria-expanded', 'true');
   await expect(rows(failed)).toContainText('1 problem (1 error, 0 warnings)');
   await unfold(passed);
@@ -155,9 +154,9 @@ test('strips unsafe sequences and secrets before output reaches the page', async
 test('a very long output stays capped and the chat stays usable', async ({ page }) => {
   await askInChats(page, 'Noisy #terminal=huge 5ms');
   const box = terminal(page, 'seq 40000');
+  await unfold(box);
   await expect(rows(box)).toContainText(/row \d+/, { timeout: 15_000 });
   await expect(done(page)).toBeVisible({ timeout: 30_000 });
-  await unfold(box);
   await expect(rows(box)).toContainText('row 39999');
   await expect(box.locator('.run-cmd-note')).toHaveText(/Showing the last \d+ KB of [\d,]+ KB\./);
   const kept = await box.locator('.xterm-rows > div').count();
@@ -167,19 +166,19 @@ test('a very long output stays capped and the chat stays usable', async ({ page 
 test('says when an agent only reports output at the end', async ({ page }) => {
   await askInChats(page, 'End only #terminal=final 300ms');
   const box = terminal(page, 'git status --short');
+  await unfold(box);
   await expect(box.locator('.run-cmd-note')).toHaveText('Output shows when the command ends.', {
     timeout: 15_000,
   });
   await expect(box.locator('.xterm')).toHaveCount(0);
-  await expect(state(box)).toHaveText(/done · \d+s/, { timeout: 15_000 });
-  await expect(toggle(box)).toHaveAttribute('aria-expanded', 'false');
-  await unfold(box);
+  await expect(state(box)).toHaveText(/passed · \d+s/, { timeout: 15_000 });
   await expect(rows(box)).toContainText('?? notes.txt');
 });
 
 test('marks a command that was running when the turn stopped as interrupted', async ({ page }) => {
   await askInChats(page, 'Dev server #terminal=hang 20ms');
   const box = terminal(page, 'pnpm dev');
+  await unfold(box);
   await expect(rows(box)).toContainText('ready on http://localhost:5173', { timeout: 15_000 });
   await page.getByRole('button', { name: 'Stop' }).click();
   await expect(state(box)).toHaveText('interrupted', { timeout: 15_000 });

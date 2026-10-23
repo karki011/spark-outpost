@@ -1,4 +1,4 @@
-import { API_TOKEN_ENV, BROWSER_HOST_ENV } from '@spark-outpost/contracts';
+import { API_TOKEN_ENV, BROWSER_DATA_ENV, BROWSER_HOST_ENV } from '@spark-outpost/contracts';
 import type { ChannelConfig, ChannelPaths } from './channel.ts';
 
 export const POSTGRES_LOCALE = 'en_US.UTF-8';
@@ -38,6 +38,7 @@ const LAUNCHER_OWNED = [
   'SPARK_DATA_DIR',
   'SPARK_TMUX_BIN',
   BROWSER_HOST_ENV,
+  BROWSER_DATA_ENV,
 ];
 
 function inherited(baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
@@ -57,6 +58,7 @@ export function workerEnv(launch: ServerLaunch): NodeJS.ProcessEnv {
     DATABASE_URL: launch.databaseUrl,
     KEYCHAIN_SERVICE: launch.config.keychainService,
     BRANCH_PREFIX: launch.config.branchPrefix,
+    [BROWSER_DATA_ENV]: launch.paths.userData,
   };
 }
 

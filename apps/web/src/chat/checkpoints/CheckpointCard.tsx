@@ -240,6 +240,8 @@ export function CheckpointCard({ approval: incoming }: { approval: CheckpointApp
 
   const title = checkpointTitle(checkpoint);
   const questions = asksQuestions(checkpoint);
+  const heading =
+    questions && checkpoint.questions.length === 1 ? checkpoint.questions[0]!.question : title;
   const said = saidNote(approval);
 
   return (
@@ -260,7 +262,7 @@ export function CheckpointCard({ approval: incoming }: { approval: CheckpointApp
             <i className={pending ? 'appr-dia' : 'appr-dia still'} />
           </span>
           <span id={headingId}>
-            <CheckpointHeading payload={checkpoint} title={title} />{' '}
+            <CheckpointHeading payload={checkpoint} title={heading} />{' '}
             {checkpointQuestion(checkpoint)}
           </span>
         </div>

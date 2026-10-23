@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     setAutoExpand: (on: boolean) => ipcRenderer.invoke(IPC.companionSetAutoExpand, on),
     setHideInShare: (on: boolean) => ipcRenderer.invoke(IPC.companionSetHideInShare, on),
     setNotify: (on: boolean) => ipcRenderer.invoke(IPC.companionSetNotify, on),
+    setMenuBar: (on: boolean) => ipcRenderer.invoke(IPC.companionSetMenuBar, on),
     onChange: (callback: (status: unknown) => void) => listen(IPC.companionChanged, callback),
   },
   attention: {
