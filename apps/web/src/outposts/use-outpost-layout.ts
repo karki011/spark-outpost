@@ -46,12 +46,17 @@ export function useOutpostLayout() {
   const [phoneView, setPhoneView] = useState<PhoneView>('conversation');
 
   const toggleOverview = useCallback(() => {
+    if (threadId) {
+      setThreadId(null);
+      setOverviewOpen(true);
+      saveOverview(true);
+      return;
+    }
     setOverviewOpen((open) => {
       saveOverview(!open);
       return !open;
     });
-    setThreadId(null);
-  }, []);
+  }, [threadId]);
 
   const openThread = useCallback((postId: string) => setThreadId(postId), []);
 
@@ -59,7 +64,6 @@ export function useOutpostLayout() {
     if (threadId) focusAfterBack(threadId);
     setThreadId(null);
     setOverviewOpen(true);
-    saveOverview(true);
     setTab('threads');
     setPhoneView('overview');
   }, [threadId]);

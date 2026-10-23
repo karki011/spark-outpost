@@ -95,7 +95,7 @@
   font-size: 13px;
 }
 
-.op-trow:hover,
+button.op-trow:hover,
 .op-trow[aria-current='true'] {
   background: var(--raise);
 }

@@ -64,6 +64,27 @@ describe('the Overview pane', () => {
     expect(overview()).toBeTruthy();
   });
 
+  it('shows Overview again from the toggle while a thread is open, and keeps it shown', () => {
+    show(detail(threads()));
+    view();
+    fireEvent.click(within(overview()).getByRole('button', { name: /Add the endpoint/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Show Overview/ }));
+    expect(screen.queryByRole('complementary', { name: 'Thread with @api' })).toBeNull();
+    expect(overview()).toBeTruthy();
+    expect(localStorage.getItem('spark-outpost.outpost-overview')).toBe('shown');
+  });
+
+  it('leaves no way into the thread of a request whose chat was deleted', () => {
+    show(
+      detail([
+        post(1, { state: 'answered', body: '@api Add the endpoint', toConversationId: null }),
+      ]),
+    );
+    view();
+    expect(within(overview()).queryByRole('button', { name: /Add the endpoint/ })).toBeNull();
+    expect(within(overview()).getByText('Add the endpoint')).toBeTruthy();
+  });
+
   it('shows the outpost’s pull requests and says Spark never merges', () => {
     const url = 'https://github.com/acme/shop/pull/12';
     show(
@@ -96,6 +117,17 @@ describe('a thread in the side pane', () => {
     expect(screen.queryByRole('complementary', { name: 'Thread with @api' })).toBeNull();
     const row = within(overview()).getByRole('button', { name: /Add the endpoint/ });
     await waitFor(() => expect(document.activeElement).toBe(row));
+  });
+
+  it('shows Overview after a thread without saving it over the user’s choice to hide it', () => {
+    show(detail(threads()));
+    view();
+    fireEvent.click(screen.getByRole('button', { name: /^Hide Overview/ }));
+    expect(localStorage.getItem('spark-outpost.outpost-overview')).toBe('hidden');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open the thread with @api' })[0]!);
+    fireEvent.click(within(pane()).getByRole('button', { name: 'Back to Overview' }));
+    expect(overview()).toBeTruthy();
+    expect(localStorage.getItem('spark-outpost.outpost-overview')).toBe('hidden');
   });
 
   it('goes back on ⌘[ too', () => {

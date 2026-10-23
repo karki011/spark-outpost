@@ -60,7 +60,7 @@ export function outpostPulls(
 export function pullOf(post: OutpostPost, pulls: readonly OutpostPull[]): OutpostPull | null {
   const urls = post.answer?.pullRequests ?? [];
   const own = pulls.filter((pull) => urls.includes(pull.url));
-  return own.at(-1) ?? null;
+  return own.findLast(isOpenPull) ?? own.at(-1) ?? null;
 }
 
 export function isOpenPull(pull: OutpostPull): boolean {

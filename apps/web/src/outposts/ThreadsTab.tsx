@@ -15,6 +15,62 @@ export function threadRowId(postId: string): string {
   return `op-thread-row-${postId}`;
 }
 
+function RowText({ card }: { card: ThreadCard }) {
+  const chatId = card.post.toConversationId;
+  const from = provenance(card.post);
+  return (
+    <>
+      {chatId && (
+        <MemberFace
+          chatId={chatId}
+          state={requestFaceState(card.post.state ?? 'sent')}
+          size="row"
+        />
+      )}
+      <span className="op-trow-text">
+        <b>{card.title}</b>
+        <span className="op-trow-sub">
+          {receiverName(card.post)}
+          {card.pull?.number ? ` · PR #${card.pull.number}` : ''}
+        </span>
+        {from && <span className="sr-only">{from}</span>}
+      </span>
+      <StatusPill status={card.status} label={card.pill} />
+    </>
+  );
+}
+
+function ThreadRow({
+  card,
+  selected,
+  onOpenThread,
+}: {
+  card: ThreadCard;
+  selected: boolean;
+  onOpenThread: (postId: string) => void;
+}) {
+  const from = provenance(card.post) ?? undefined;
+  if (card.post.toConversationId === null) {
+    return (
+      <div className="op-trow gone" title={from}>
+        <RowText card={card} />
+      </div>
+    );
+  }
+  return (
+    <button
+      id={threadRowId(card.post.id)}
+      type="button"
+      className="op-trow"
+      aria-current={selected ? 'true' : undefined}
+      title={from}
+      onClick={() => onOpenThread(card.post.id)}
+    >
+      <RowText card={card} />
+    </button>
+  );
+}
+
 function Group({
   status,
   cards,
@@ -34,39 +90,15 @@ function Group({
         <span className="op-group-count">{cards.length}</span>
       </h3>
       <ul>
-        {cards.map((card) => {
-          const chatId = card.post.toConversationId;
-          const from = provenance(card.post);
-          return (
-            <li key={card.post.id}>
-              <button
-                id={threadRowId(card.post.id)}
-                type="button"
-                className="op-trow"
-                aria-current={card.post.id === selectedId ? 'true' : undefined}
-                title={from ?? undefined}
-                onClick={() => onOpenThread(card.post.id)}
-              >
-                {chatId && (
-                  <MemberFace
-                    chatId={chatId}
-                    state={requestFaceState(card.post.state ?? 'sent')}
-                    size="row"
-                  />
-                )}
-                <span className="op-trow-text">
-                  <b>{card.title}</b>
-                  <span className="op-trow-sub">
-                    {receiverName(card.post)}
-                    {card.pull?.number ? ` · PR #${card.pull.number}` : ''}
-                  </span>
-                  {from && <span className="sr-only">{from}</span>}
-                </span>
-                <StatusPill status={card.status} label={card.pill} />
-              </button>
-            </li>
-          );
-        })}
+        {cards.map((card) => (
+          <li key={card.post.id}>
+            <ThreadRow
+              card={card}
+              selected={card.post.id === selectedId}
+              onOpenThread={onOpenThread}
+            />
+          </li>
+        ))}
       </ul>
     </section>
   );

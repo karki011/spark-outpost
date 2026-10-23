@@ -133,7 +133,8 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
   const waiting = waitsOnYou(cards);
   const paused = outpost.pausedAt !== null;
   const problem = cancel.error?.message ?? startNow.error?.message ?? pause.error?.message ?? null;
-  const thread = layout.threadId ? (cardsById.get(layout.threadId) ?? null) : null;
+  const picked = layout.threadId ? (cardsById.get(layout.threadId) ?? null) : null;
+  const thread = picked?.post.toConversationId ? picked : null;
 
   const fillBox = (text: string) => {
     setAnsweringId(null);
@@ -261,7 +262,7 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
           <SidebarToggle />
           <OutpostTitleMenu
             name={outpost.name}
-            overviewOpen={layout.phone ? null : layout.overviewOpen}
+            overviewOpen={layout.phone ? null : layout.overviewOpen && thread === null}
             onRename={() => setSheet('settings')}
             onSettings={() => setSheet('settings')}
             onInstructions={() => setSheet('instructions')}

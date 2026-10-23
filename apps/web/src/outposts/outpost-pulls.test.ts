@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { outpostPulls } from './outpost-pulls.ts';
+import { outpostPulls, pullOf, type OutpostPull } from './outpost-pulls.ts';
 import { API_CHAT, chat, post } from './test-fixtures.ts';
 import { stackedStory } from './story-fixtures.ts';
 
@@ -37,6 +37,21 @@ describe('the pull requests of an outpost', () => {
       [chat(API_CHAT, { pullRequestMerged: true })],
     );
     expect(pulls[0]?.state).toBe('merged');
+  });
+
+  it('gives a request the open pull request it names before a later merged one', () => {
+    const later = 'https://github.com/acme/shop/pull/13';
+    const request = answered([URL, later]);
+    const pull = (url: string, state: OutpostPull['state']): OutpostPull => ({
+      url,
+      number: null,
+      conversationId: API_CHAT,
+      handle: 'api',
+      postId: request.id,
+      state,
+    });
+    expect(pullOf(request, [pull(URL, 'open'), pull(later, 'merged')])?.url).toBe(URL);
+    expect(pullOf(request, [pull(URL, 'closed'), pull(later, 'merged')])?.url).toBe(later);
   });
 
   it('takes the state a story knows for that chat and number', () => {
