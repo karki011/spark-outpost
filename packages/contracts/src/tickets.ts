@@ -29,13 +29,6 @@ export const ticketStatusLabels: Record<TicketStatus, string> = {
   done: 'Done',
 };
 
-export const ticketKeySchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(TICKET_KEY_MAX_LENGTH)
-  .regex(/^[A-Za-z][A-Za-z0-9_]*-\d+$/, 'Use a ticket key such as ENG-12.');
-
 export const ticketPersonSchema = z.object({ id: z.string(), name: z.string() });
 export type TicketPerson = z.infer<typeof ticketPersonSchema>;
 
