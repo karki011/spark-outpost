@@ -109,20 +109,14 @@ export function TerminalComposer({
             onSendAnyway={start}
           />
         }
-        context={
-          <ProjectFolders
-            conversationId={conversationId}
-            repos={repos}
-            popover={folders}
-            lead={sessionPicker}
-          >
-            <span className="ctx-unlinked" title={WORKTREE_HINT}>
-              {WORKTREE_HINT}
-            </span>
-          </ProjectFolders>
-        }
+        lead={sessionPicker}
         bar={
           <>
+            <ProjectFolders conversationId={conversationId} repos={repos} popover={folders}>
+              <span className="ctx-unlinked" title={WORKTREE_HINT}>
+                {WORKTREE_HINT}
+              </span>
+            </ProjectFolders>
             <span className="hint shown" title={`${PULL_REQUEST_HINT}.`}>
               {PULL_REQUEST_HINT}
             </span>

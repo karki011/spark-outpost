@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PR_ROUTE_LABELS, type ChatBranch as Branch } from '@spark-outpost/contracts';
 import { shipApi, shipKeys } from '../../ship/ship-api.ts';
-import { BranchIcon, ChevronIcon, CopyIcon, FolderIcon } from '../../ui/icons.tsx';
+import { BranchIcon, CopyIcon, FolderIcon } from '../../ui/icons.tsx';
 import { usePopover } from '../../ui/use-popover.ts';
 import { useTooltip } from '../../ui/Tooltip.tsx';
 import { useRemoteClient } from '../../phone/use-remote-client.ts';
@@ -48,13 +48,13 @@ export function ChatBranch({ conversationId, branch, checkoutBranch }: ChatBranc
   const bring = useBringChanges(conversationId);
   const copy = useCopyFeedback();
   const routeLabel = usePrRouteLabel(conversationId);
-  const tipText = routeLabel ? `${branchTip(branch)} · ${routeLabel}` : branchTip(branch);
-  const tip = useTooltip(tipText, { side: 'top' });
   const kind = branch.adopted
     ? adoptedLabel(branch.adopted)
     : branch.worktree
       ? 'worktree'
       : 'my files';
+  const tipText = [branchTip(branch), kind, routeLabel].filter(Boolean).join(' · ');
+  const tip = useTooltip(tipText, { side: 'top' });
   const into = checkoutBranch ?? 'my files';
   const failure = openFolder.error ?? bring.error;
 
@@ -73,8 +73,6 @@ export function ChatBranch({ conversationId, branch, checkoutBranch }: ChatBranc
       >
         <BranchIcon />
         <span className="ctx-branch-name">{branch.branch}</span>
-        <span className="chat-branch-kind">· {kind}</span>
-        <ChevronIcon />
       </button>
       {tip.tooltip}
       <div

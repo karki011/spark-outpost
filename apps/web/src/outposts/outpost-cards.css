@@ -262,6 +262,22 @@
   text-overflow: ellipsis;
 }
 
+.op-card-git {
+  display: flex;
+  min-width: 0;
+  margin: 2px 0 0;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: var(--op-meta-size);
+}
+
+.op-card-branch {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono);
+}
+
 .op-card-facts {
   flex-shrink: 0;
   white-space: pre;
@@ -383,18 +399,13 @@
   }
 }
 
-@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
-  .op-head .op-count {
-    display: none;
-  }
-}
-
 @media (prefers-contrast: more) {
   .op-card {
     box-shadow: inset 0 0 0 1px var(--line-strong);
   }
 
   .op-card-meta,
+  .op-card-git,
   .op-nfy,
   .op-pill,
   .op-pill svg,

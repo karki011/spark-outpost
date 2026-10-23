@@ -243,7 +243,9 @@ test('settings cards have no outer border and the last provider row follows the 
   }
   await page.getByRole('dialog').getByRole('tab', { name: 'Appearance' }).click();
   const themes = page.getByRole('dialog', { name: 'Appearance' });
-  const chosen = themes.getByRole('radio', { checked: true });
+  const chosen = themes
+    .getByRole('radiogroup', { name: 'Tint' })
+    .getByRole('radio', { checked: true });
   await expect(chosen).toHaveCount(1);
   expect(await chosen.evaluate((node) => getComputedStyle(node).boxShadow)).not.toBe('none');
 });

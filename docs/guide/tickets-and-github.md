@@ -10,15 +10,15 @@ Each connection is optional. About 3 minutes.
 
 ## Connect GitHub
 
-1. Open **Settings → Connectors** and select the **GitHub** card.
-2. For **GitHub sign-in**, select **Sign in with GitHub**, then **Open GitHub**, and enter the code shown. Only builds set up for it offer this.
-3. For **gh CLI**, run `gh auth login` in a terminal, then select **Check again**.
-4. For **Personal token**, paste it into **Personal access token** and select **Verify token**. Add an **Enterprise host** if you use one.
-5. Select **Test** to check each project's remote and sign-in.
+1. Open **Settings → Connectors** and select **GitHub**.
+2. For **GitHub sign-in**, select **Sign in with GitHub**, then **Open GitHub**, and enter the code shown (only in builds set up for it).
+3. For **gh CLI**, run `gh auth login`, then select **Check again**.
+4. For **Personal token**, paste it into **Personal access token** and select **Verify token**, adding any **Enterprise host**.
+5. Select **Test** to check each project's remote and sign-in, changing nothing.
 
-With sign-in, Spark reaches only the repositories you pick. A project marked **not covered** shows **Give Spark access to this repo**.
+Sign-in reaches only repositories you pick. A project marked **not covered** shows **Give Spark access to this repo**.
 
-Access renews itself; if it ends, select **Sign in again**. Sign-in needs github.com, not an Enterprise server.
+Access renews itself; if it ends, select **Sign in again**. Sign-in needs github.com, not Enterprise.
 
 ![The GitHub card in Settings → Connectors](images/tickets-github-light.png)
 
@@ -34,12 +34,10 @@ Keys stay in your keychain. To stop, select **Disconnect** (or **···** → **
 
 ## Keep tickets in sync with pull requests
 
-Linear and **Jira tickets** on Atlassian have two switches, on by default: **Move tickets to In review when a PR opens** and **Move tickets to Done when the PR merges**.
+Linear and Atlassian **Jira tickets** have two switches, on by default: **Move tickets to In review when a PR opens** and **Move tickets to Done when the PR merges**.
 
-Under each switch, and for **Start work**, a picker lists your projects' statuses. **Automatic** uses the status named Done, In Review or In Progress, or the only fit; never Rejected, Cancelled or Duplicate.
+Each switch, and **Start work**, has a picker of your projects' statuses. **Automatic** uses the status named Done, In Review or In Progress, or the only fit; never Rejected, Cancelled or Duplicate.
 
-If several fit, Spark flags the ticket.
-
-Spark always adds the PR link and never comments on tickets.
+When several fit, Spark flags the ticket. It always adds the PR link, never a comment.
 
 **Next:** [Work from the Tickets inbox](tickets-inbox.md)

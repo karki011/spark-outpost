@@ -5,6 +5,9 @@ import { mountOutputView, type OutputView } from '../../terminal/output-view.ts'
 const NEAR_VIEWPORT = '300px';
 const READER_CHARS = 4_000;
 const TOP = -1_000_000;
+const SCREEN_PX = 176;
+const LINE_PX = 18;
+const PAD_PX = 10;
 
 interface CommandScreenProps {
   text: string;
@@ -12,6 +15,7 @@ interface CommandScreenProps {
   epoch: number;
   tall: boolean;
   fill?: boolean;
+  fit?: boolean;
   onTouched: () => void;
 }
 
@@ -45,6 +49,11 @@ export function readerText(text: string): string {
   return plainOutput(text.slice(-READER_CHARS * 2)).slice(-READER_CHARS);
 }
 
+function fittedHeight(text: string): string {
+  const lines = Math.max(2, plainOutput(text).split('\n').length);
+  return `${Math.min(SCREEN_PX, lines * LINE_PX + PAD_PX)}px`;
+}
+
 function screenClass(tall: boolean, fill: boolean): string {
   if (fill) return 'run-cmd-screen fill';
   return tall ? 'run-cmd-screen tall' : 'run-cmd-screen';
@@ -56,6 +65,7 @@ export function CommandScreen({
   epoch,
   tall,
   fill = false,
+  fit = false,
   onTouched,
 }: CommandScreenProps) {
   const [frame, near] = useNearViewport();
@@ -95,6 +105,7 @@ export function CommandScreen({
     <div
       ref={frame}
       className={screenClass(tall, fill)}
+      style={fit && !tall && !fill ? { height: fittedHeight(text) } : undefined}
       role="group"
       aria-label="Command output"
       tabIndex={0}

@@ -241,7 +241,9 @@ export type ProviderOutput =
       name: string;
       tool?: boolean;
       toolKind?: string;
+      toolName?: string;
       target?: string;
+      path?: string;
       subagent?: string;
       waits?: boolean;
     }
@@ -250,7 +252,9 @@ export type ProviderOutput =
       name: string;
       tool?: boolean;
       toolKind?: string;
+      toolName?: string;
       target?: string;
+      path?: string;
       subagent?: string;
       waits?: boolean;
     }

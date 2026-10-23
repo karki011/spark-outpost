@@ -22,10 +22,10 @@ import { SuggestedThreads } from './SuggestedThreads.tsx';
 import { ThreadPane } from './ThreadPane.tsx';
 import type { Answering, ComposerTarget } from './composer-target.ts';
 import { chatActivity } from './chat-activity.ts';
-import { chatsOnApproval, memberViews, membersLabel } from './member-view.ts';
+import { chatsOnApproval, chatsOnQuestion, memberViews } from './member-view.ts';
 import { outpostPulls } from './outpost-pulls.ts';
 import { formOf, hasChanges, sheetChanges, type SheetForm } from './sheet-draft.ts';
-import { requestsOf, threadCard, waitsOnYou } from './thread-cards.ts';
+import { threadCards, waitsOnYou } from './thread-cards.ts';
 import { useOutpostChats } from './use-outpost-chats.ts';
 import { useOutpostLayout, type PhoneView } from './use-outpost-layout.ts';
 import {
@@ -118,13 +118,12 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
     [outpost.members, chats, projectNames],
   );
   const approvalChats = useMemo(() => chatsOnApproval(chats), [chats]);
+  const questionChats = useMemo(() => chatsOnQuestion(chats), [chats]);
+  const [questionFor, setQuestionFor] = useState<string | null>(null);
   const activity = useMemo(() => chatActivity(chats), [chats]);
   const pulls = useMemo(() => outpostPulls(posts, stories, chats), [posts, stories, chats]);
   const cards = useMemo(
-    () =>
-      requestsOf(items).map((request) =>
-        threadCard(request, pulls, activity.get(request.toConversationId ?? '')),
-      ),
+    () => threadCards(items, pulls, (chatId) => activity.get(chatId ?? '')),
     [items, pulls, activity],
   );
   const cardsById = useMemo(() => new Map(cards.map((card) => [card.post.id, card])), [cards]);
@@ -143,6 +142,12 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
   };
 
   const startAnswer = (postId: string) => {
+    const chatId = cardsById.get(postId)?.post.toConversationId ?? '';
+    if (questionChats.has(chatId)) {
+      setQuestionFor(postId);
+      layout.openThread(postId);
+      return;
+    }
     setAnsweringId(postId);
     layout.showConversation();
   };
@@ -196,6 +201,7 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
         answeringId={answering?.postId ?? null}
         jumpTo={jumpTo ?? null}
         approvalChats={approvalChats}
+        questionChats={questionChats}
         storyTags={storyTags}
         empty={empty}
         after={<SuggestedThreads outpostId={id} members={members} />}
@@ -221,7 +227,12 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
       card={thread}
       canSteer={!remote}
       answerable={!approvalChats.has(thread.post.toConversationId ?? '')}
-      onBack={layout.backToOverview}
+      question={questionChats.has(thread.post.toConversationId ?? '')}
+      answerNow={questionFor === thread.post.id}
+      onBack={() => {
+        setQuestionFor(null);
+        layout.backToOverview();
+      }}
       onOpenChat={onOpenChat}
       onCancel={(postId) => cancel.mutate(postId)}
     />
@@ -269,7 +280,6 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
             onToggleOverview={layout.toggleOverview}
           />
           <MemberStrip members={members} onOpen={onOpenChat} />
-          <span className="op-count">{membersLabel(members.length)}</span>
           <div className="head-r">
             <button
               type="button"

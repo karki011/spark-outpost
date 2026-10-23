@@ -40,7 +40,8 @@ test('a turn shows its sub-agents as one line and as cards in the work panel, an
   });
   await expect(turn.locator('.sl-scout[data-working]')).toHaveCount(2);
   await expect(mood(page)).toHaveText('waiting on 2 sub-agents');
-  await expect(turn.locator('.ai-head .steps-head')).toHaveText(/^\d+ steps$/);
+  await expect(turn.locator('.turn-working')).toBeVisible();
+  await expect(turn.locator('.trow', { hasText: 'Starting a subagent' })).toHaveCount(0);
   await expect(cardsIn(turn)).toHaveCount(0);
   await expect(turn).not.toContainText('Read routes.ts');
 

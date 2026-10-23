@@ -56,19 +56,25 @@ export interface TrayActions {
   quit: () => void;
 }
 
+export function islandToggle(
+  state: TrayState,
+  toggle: (on: boolean) => void,
+): MenuItemConstructorOptions[] {
+  if (!state.supported) return [];
+  return [
+    {
+      label: 'Show Spark Island',
+      type: 'checkbox',
+      checked: state.companionOn,
+      click: () => toggle(!state.companionOn),
+    },
+  ];
+}
+
 export function trayTemplate(state: TrayState, actions: TrayActions): MenuItemConstructorOptions[] {
   return [
     { label: `Open ${state.appName}`, click: actions.openSpark },
-    ...(state.supported
-      ? [
-          {
-            label: 'Show Spark Island',
-            type: 'checkbox' as const,
-            checked: state.companionOn,
-            click: () => actions.toggleCompanion(!state.companionOn),
-          },
-        ]
-      : []),
+    ...islandToggle(state, actions.toggleCompanion),
     { type: 'separator' },
     { label: `Quit ${state.appName}`, click: actions.quit },
   ];

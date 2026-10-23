@@ -6,6 +6,7 @@ import {
   TURN_TIMEOUT,
   asPairedPhone,
   cardOf,
+  expectTopmost,
   inBothThemes,
   openOutpost,
   openThread,
@@ -59,7 +60,12 @@ test('Overview groups the requests by state and names what waits on you', async 
 
   await toggle.click();
   await expect(overview(page)).toBeHidden();
-  await main.getByRole('button', { name: NAME, exact: true }).click();
+  const title = main.getByRole('button', { name: NAME, exact: true });
+  await title.click();
+  const menu = page.getByRole('menu', { name: NAME });
+  await expectTopmost(menu);
+  const [titleBox, menuBox] = await Promise.all([title.boundingBox(), menu.boundingBox()]);
+  expect(Math.abs((menuBox?.x ?? 0) - (titleBox?.x ?? 0))).toBeLessThanOrEqual(1);
   await page.getByRole('menuitemcheckbox', { name: 'Show Overview' }).click();
   await expect(overview(page)).toBeVisible();
 });
@@ -159,4 +165,8 @@ test('on a phone the conversation and Overview are one segmented control, and a 
   await expectNoSidewaysScroll(page);
   await pane.getByRole('button', { name: 'Back to Overview' }).click();
   await expect(overview(page)).toBeVisible();
+
+  await outpostPage(page, NAME).getByRole('button', { name: NAME, exact: true }).click();
+  await expectTopmost(page.getByRole('menu', { name: NAME }));
+  await page.keyboard.press('Escape');
 });
