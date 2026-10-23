@@ -51,6 +51,7 @@ export interface PaneShortcutUi {
   openFind(): void;
   copiedUrl(): void;
   newChat?(): void;
+  askSpark?(): void;
 }
 
 const HISTORY: Partial<Record<BrowserShortcut, 'reload' | 'hard_reload' | 'back' | 'forward'>> = {
@@ -74,6 +75,7 @@ export function runPaneShortcut(
   else if (shortcut === 'reopen_tab') commands.send({ command: 'reopen' });
   else if (shortcut === 'focus_address') ui.focusAddress();
   else if (shortcut === 'new_chat') ui.newChat?.();
+  else if (shortcut === 'ask_spark') ui.askSpark?.();
   else if (shortcut === 'close_tab') {
     if (tab) commands.close(tab.id);
   } else if (shortcut === 'copy_url') {

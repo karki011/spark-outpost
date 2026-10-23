@@ -36,12 +36,17 @@ export function selectionNote(page: Pick<PageRef, 'title' | 'url'>, text: string
   return [SELECTION_HEADING, ...pageLines(page), '', ...evidence([text])].join('\n');
 }
 
-async function capturePage(page: PageRef): Promise<File> {
+export async function readTabText(page: PageRef): Promise<BrowserPageText> {
   const view = desktopBrowserView();
   const raw = view ? await view.pageText(page.profile, page.tabId).catch(() => null) : null;
   const read = browserPageTextSchema.safeParse(raw);
-  if (!read.success) throw new Error('The page is closed or blank, so its text can’t go.');
-  return new File([pageTextNote(read.data)], 'page-text.txt', { type: 'text/plain' });
+  if (!read.success) throw new Error(`“${page.title}” is closed or blank, so its text can’t go.`);
+  return read.data;
+}
+
+async function capturePage(page: PageRef): Promise<File> {
+  const read = await readTabText(page);
+  return new File([pageTextNote(read)], 'page-text.txt', { type: 'text/plain' });
 }
 
 export async function startPageChat(start: PageChatStart): Promise<string> {

@@ -10,8 +10,8 @@ import {
   type ConversationSummary,
 } from '@spark-outpost/contracts';
 import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
-import { ChatPlusIcon, ExternalLinkIcon, LockIcon } from '../ui/icons.tsx';
-import { keysText, NEW_CHAT_KEYS } from '../ui/Keys.tsx';
+import { ChatPlusIcon, ExternalLinkIcon, LockIcon, SparkleIcon } from '../ui/icons.tsx';
+import { ASK_TABS_KEYS, keysText, NEW_CHAT_KEYS } from '../ui/Keys.tsx';
 import { MAC } from '../ui/shortcuts.ts';
 import { AddressBar } from '../browser/AddressBar.tsx';
 import {
@@ -33,8 +33,10 @@ import { ToolButton } from '../browser/ToolButton.tsx';
 import { useNativePlacement, type PlaceView } from '../browser/use-view-placement.ts';
 import { ProfileBadge, ProfileSwitch, profileNote } from './ProfileSwitch.tsx';
 import { setBrowserPaneOpen } from '../browser/pane-open.ts';
+import { AskTabsDock } from './AskTabsDock.tsx';
 import { HandToChat } from './HandToChat.tsx';
 import { PageChatDock, type DockRequest } from './PageChatDock.tsx';
+import type { PageRef } from './page-chat.ts';
 import { pageRef, usePageIntents } from './page-intents.ts';
 import { ViewFavorites } from './ViewFavorites.tsx';
 import { ViewTabs } from './ViewTabs.tsx';
@@ -83,7 +85,7 @@ function StartPage({ profile, tab }: { profile: BrowserProfile; tab: BrowserPane
       <p>Type a web address on the left to open a page.</p>
       <p>
         {profile === 'personal'
-          ? 'No agent, Ask Spark or paired device can open, read or act in these tabs, and your sign-ins here stay out of every chat.'
+          ? 'No agent, Ask Spark or paired device can open or act in these tabs, and your sign-ins here stay out of every chat. Ask Spark reads a tab’s text only when you @-mention it in a question.'
           : 'Work shares its sign-ins with every chat’s agent, so you can sign in for them or check what they see. Agents still can’t see these tabs until you hand one to a chat.'}
       </p>
     </div>
@@ -102,6 +104,7 @@ function PageHost({ url }: { url: string }) {
 }
 
 const NEW_CHAT_ARIA = MAC ? 'Meta+Shift+O' : 'Control+Shift+O';
+const ASK_TABS_ARIA = MAC ? 'Alt+Meta+A' : 'Control+Alt+A';
 
 interface BrowserViewProps {
   chats: readonly ConversationSummary[];
@@ -133,9 +136,16 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
     address?.select();
   };
   const [dock, setDock] = useState<DockRequest | null>(null);
+  const [asking, setAsking] = useState<{ key: number; first: PageRef | null } | null>(null);
+  const shownPage = () =>
+    tab && tab.url !== '' && tab.error === null ? pageRef(profile, tab) : null;
   const openDock = (change: Partial<DockRequest> = {}) => {
-    const page = tab && tab.url !== '' && tab.error === null ? pageRef(profile, tab) : null;
-    setDock({ key: Date.now(), page, selection: null, link: null, ...change });
+    setAsking(null);
+    setDock({ key: Date.now(), page: shownPage(), selection: null, link: null, ...change });
+  };
+  const openAsk = () => {
+    setDock(null);
+    setAsking({ key: Date.now(), first: shownPage() });
   };
   usePageIntents(profile, tabs, (page, intent) =>
     openDock({ page, selection: intent.selection, link: intent.link }),
@@ -146,6 +156,7 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
       openFind: () => undefined,
       copiedUrl: () => undefined,
       newChat: () => openDock(),
+      askSpark: openAsk,
     });
   useViewShortcuts(profile, runShortcut);
 
@@ -215,6 +226,16 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
           <button
             type="button"
             className="btn bv-hand"
+            aria-keyshortcuts={ASK_TABS_ARIA}
+            title={`Ask Spark about your tabs (${keysText(ASK_TABS_KEYS)})`}
+            onClick={openAsk}
+          >
+            <SparkleIcon />
+            Ask Spark
+          </button>
+          <button
+            type="button"
+            className="btn bv-hand"
             aria-keyshortcuts={NEW_CHAT_ARIA}
             title={`Start a chat about this page (${keysText(NEW_CHAT_KEYS)})`}
             onClick={() => openDock()}
@@ -270,6 +291,14 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
             onOpenChat(chatId);
           }}
           onClose={() => setDock(null)}
+        />
+      )}
+      {asking && (
+        <AskTabsDock
+          key={asking.key}
+          first={asking.first}
+          onOpenAssistant={onOpenChat}
+          onClose={() => setAsking(null)}
         />
       )}
     </div>

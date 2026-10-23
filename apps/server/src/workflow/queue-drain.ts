@@ -63,12 +63,20 @@ async function sendQueued(
   conversationId: string,
   item: Pick<
     QueuedMessage,
-    'id' | 'content' | 'continueRunId' | 'outpostPostId' | 'sparkRuleCardId' | 'origin'
+    | 'id'
+    | 'content'
+    | 'continueRunId'
+    | 'outpostPostId'
+    | 'sparkRuleCardId'
+    | 'origin'
+    | 'attachmentIds'
   >,
   target: RunTarget,
 ): Promise<void> {
   const continuing = item.continueRunId !== null && target.permission === PERMISSION_DO;
-  const attachmentIds = item.outpostPostId ? await postAttachmentIds(db, item.outpostPostId) : [];
+  const attachmentIds = item.outpostPostId
+    ? await postAttachmentIds(db, item.outpostPostId)
+    : (item.attachmentIds ?? []);
   const sent = await sendInTransaction(
     db,
     conversationId,
@@ -183,6 +191,9 @@ export async function sendNow(
     if (queued?.origin === 'assistant' && running) {
       throw new QueueError(409, 'A message from Ask Spark starts when this chat is free.');
     }
+    if (queued?.origin === 'pages' && running) {
+      throw new QueueError(409, 'A question about your tabs starts when Ask Spark is free.');
+    }
     if (!running) {
       await sendQueued(
         client,
@@ -194,6 +205,7 @@ export async function sendNow(
           outpostPostId: queued?.outpostPostId ?? null,
           ...(queued?.sparkRuleCardId ? { sparkRuleCardId: queued.sparkRuleCardId } : {}),
           ...(queued?.origin ? { origin: queued.origin } : {}),
+          ...(queued?.attachmentIds ? { attachmentIds: queued.attachmentIds } : {}),
         },
         target,
       );

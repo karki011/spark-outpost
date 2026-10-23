@@ -8,11 +8,17 @@ export const queueApi = {
     conversationId: string,
     id: string,
     content: string,
-    origin?: 'voice',
+    origin?: 'voice' | 'pages',
+    attachmentIds: readonly string[] = [],
   ): Promise<QueueResponse> =>
     request(queueResponseSchema, path(conversationId), {
       method: 'POST',
-      body: JSON.stringify({ id, content, ...(origin ? { origin } : {}) }),
+      body: JSON.stringify({
+        id,
+        content,
+        ...(origin ? { origin } : {}),
+        ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
+      }),
     }),
   edit: (conversationId: string, id: string, content: string): Promise<QueueResponse> =>
     request(queueResponseSchema, path(conversationId, `/${id}`), {

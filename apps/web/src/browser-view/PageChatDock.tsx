@@ -3,8 +3,8 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { InvolvementLevel } from '@spark-outpost/contracts';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
+import { DockChip } from './DockChip.tsx';
 import { ArrowUpIcon, EyeIcon, ExternalLinkIcon } from '../ui/icons.tsx';
-import { GlobeIcon } from '../browser/BrowserIcons.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { startPageChat, type PageRef } from './page-chat.ts';
 
@@ -25,24 +25,6 @@ const LEVELS: { id: InvolvementLevel; label: string; description: string }[] = [
   { id: 'hands-off', label: 'Automatic', description: 'Keeps changes; publishes nothing' },
   { id: 'full-auto', label: 'Full auto → PR', description: 'Keeps changes, then opens a PR' },
 ];
-
-function Chip({ label, detail, onRemove }: { label: string; detail: string; onRemove(): void }) {
-  return (
-    <li className="pcd-chip">
-      <GlobeIcon />
-      <span className="pcd-chip-name">{label}</span>
-      <span className="pcd-chip-kind">{detail}</span>
-      <button
-        type="button"
-        className="icon-btn pcd-chip-x"
-        aria-label={`Remove ${detail}`}
-        onClick={onRemove}
-      >
-        <CloseIcon />
-      </button>
-    </li>
-  );
-}
 
 export function PageChatDock({ request, onOpenChat, onClose }: PageChatDockProps) {
   const projects = useProjects();
@@ -123,9 +105,10 @@ export function PageChatDock({ request, onOpenChat, onClose }: PageChatDockProps
             {(page || selection) && (
               <ul className="pcd-chips" aria-label="Attached">
                 {page && (
-                  <Chip
+                  <DockChip
                     label={page.title || page.url}
                     detail="page text"
+                    removeLabel="Remove page text"
                     onRemove={() => {
                       setPage(null);
                       input.current?.focus();
@@ -133,9 +116,10 @@ export function PageChatDock({ request, onOpenChat, onClose }: PageChatDockProps
                   />
                 )}
                 {selection && (
-                  <Chip
+                  <DockChip
                     label="Selected text"
                     detail={`${selection.length} chars`}
+                    removeLabel={`Remove ${selection.length} chars`}
                     onRemove={() => {
                       setSelection(null);
                       input.current?.focus();

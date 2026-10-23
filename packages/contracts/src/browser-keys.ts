@@ -23,6 +23,7 @@ export const BROWSER_SHORTCUTS = [
   'previous_tab',
   'find',
   'new_chat',
+  'ask_spark',
 ] as const;
 export type BrowserShortcut = (typeof BROWSER_SHORTCUTS)[number];
 
@@ -37,6 +38,7 @@ export const BROWSER_FOCUS_SHORTCUTS: ReadonlySet<BrowserShortcut> = new Set([
   'focus_address',
   'find',
   'new_chat',
+  'ask_spark',
 ]);
 
 export interface ShortcutChord {
@@ -74,6 +76,10 @@ const SHIFTED: Record<string, BrowserShortcut> = {
   KeyO: 'new_chat',
 };
 
+const OPTIONED: Record<string, BrowserShortcut> = {
+  KeyA: 'ask_spark',
+};
+
 function tabSwitch(chord: ShortcutChord): BrowserShortcut | null {
   if (chord.code !== 'Tab' || !chord.ctrl || chord.meta || chord.alt) return null;
   return chord.shift ? 'previous_tab' : 'next_tab';
@@ -84,7 +90,8 @@ export function browserShortcut(chord: ShortcutChord, mac: boolean): BrowserShor
   const switched = tabSwitch(chord);
   if (switched) return switched;
   const primary = mac ? chord.meta && !chord.ctrl : chord.ctrl && !chord.meta;
-  if (!primary || chord.alt) return null;
+  if (!primary) return null;
+  if (chord.alt) return chord.shift ? null : (OPTIONED[chord.code] ?? null);
   return (chord.shift ? SHIFTED[chord.code] : PLAIN[chord.code]) ?? null;
 }
 

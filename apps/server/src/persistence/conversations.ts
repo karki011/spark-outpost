@@ -291,6 +291,7 @@ export type SendMessageInput = Omit<
     | 'spark_rule'
     | 'voice'
     | 'assistant'
+    | 'pages'
     | undefined;
   startAs?: StartAs;
   continuesRunId?: string;

@@ -5,6 +5,7 @@ import {
   queueAddRequestSchema,
   queueEditRequestSchema,
   queueOrderRequestSchema,
+  type QueueAddRequest,
   type QueueResponse,
   type SendNowOutcome,
 } from '@spark-outpost/contracts';
@@ -58,6 +59,20 @@ export function queueRoutes({ db, workspaceId, fixedRunProvider }: QueueRouteDep
     if (rowCount !== 1) throw new QueueError(404, 'Conversation not found.');
   };
 
+  const queuedRequest = async (conversationId: string, request: QueueAddRequest) => {
+    const { attachmentIds, ...item } = request;
+    if (!attachmentIds?.length && request.origin !== 'pages') return item;
+    if (request.origin !== 'pages') {
+      throw new BadRequestError('Only a question about your tabs can carry files here.');
+    }
+    const { rowCount } = await db.query(
+      'SELECT 1 FROM profiles WHERE workspace_id = $1 AND assistant_conversation_id = $2',
+      [workspaceId, conversationId],
+    );
+    if (rowCount !== 1) throw new BadRequestError('Only Ask Spark takes questions about tabs.');
+    return { ...item, attachmentIds: attachmentIds ?? [] };
+  };
+
   const reply = async (conversationId: string, outcome?: SendNowOutcome) => {
     const body: QueueResponse = {
       queue: await listQueue(db, conversationId),
@@ -86,7 +101,7 @@ export function queueRoutes({ db, workspaceId, fixedRunProvider }: QueueRouteDep
     const conversationId = paramId(req);
     const request = parseBody(queueAddRequestSchema, req);
     await known(conversationId);
-    await addToQueue(db, conversationId, request);
+    await addToQueue(db, conversationId, await queuedRequest(conversationId, request));
     await drainQueue(db, conversationId, resolveTarget);
     res.status(201).json(await reply(conversationId));
   });

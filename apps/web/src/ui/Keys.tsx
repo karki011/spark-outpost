@@ -4,6 +4,7 @@ import { MAC } from './shortcuts.ts';
 export type ShortcutKeys = readonly string[];
 
 export const NEW_CHAT_KEYS: ShortcutKeys = MAC ? ['⌘', '⇧', 'O'] : ['Ctrl', 'Shift', 'O'];
+export const ASK_TABS_KEYS: ShortcutKeys = MAC ? ['⌥', '⌘', 'A'] : ['Ctrl', 'Alt', 'A'];
 export const SEARCH_KEYS: ShortcutKeys = MAC ? ['⌘', 'K'] : ['Ctrl', 'K'];
 export const PALETTE_KEYS: ShortcutKeys = MAC ? ['⌘', '⇧', 'K'] : ['Ctrl', 'Shift', 'K'];
 export const SIDEBAR_KEYS: ShortcutKeys = MAC ? ['⌃', '⌘', 'S'] : ['Ctrl', 'Alt', 'S'];

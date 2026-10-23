@@ -100,6 +100,7 @@ export const SPEC_GROUPS = {
     'browser-tab-life',
     'browser-view',
     'browser-view-chat',
+    'browser-view-ask',
     'chat-links',
     'chat-terminal',
     'native-terminal',

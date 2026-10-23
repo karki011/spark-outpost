@@ -16,14 +16,19 @@ export async function viewCommands(page: Page) {
   return (await calls(page, 'view-command')) as { profile: string; command: unknown }[];
 }
 
-export async function pushView(page: Page, tabs: unknown[], favorites: unknown[] = []) {
+export async function pushView(
+  page: Page,
+  tabs: unknown[],
+  favorites: unknown[] = [],
+  profile: 'personal' | 'work' = 'personal',
+) {
   await page.evaluate(
-    ([tabsArg, favoritesArg]) =>
+    ([tabsArg, favoritesArg, profileArg]) =>
       (
         window as unknown as {
           browserViewPush: (p: string, t: unknown[], f: unknown[]) => void;
         }
-      ).browserViewPush('personal', tabsArg as unknown[], favoritesArg as unknown[]),
-    [tabs, favorites],
+      ).browserViewPush(profileArg as string, tabsArg as unknown[], favoritesArg as unknown[]),
+    [tabs, favorites, profile] as const,
   );
 }

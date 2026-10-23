@@ -35,7 +35,17 @@ export const ASK_SPARK_REFUSALS = {
   terminal: 'Ask Spark does not act on Terminal sessions. Use the session itself.',
   assistantChat: 'Ask Spark does not act on its own conversation.',
   archived: 'That chat is archived. Open it from Archived first if you want to message it.',
+  tabs: 'A question that mentioned browser tabs never answers another chat’s card. Answer it yourself.',
 } as const;
+
+export async function tabQuestionRun(db: Queryable, runId: string): Promise<boolean> {
+  const { rows } = await db.query<{ tabs: boolean }>(
+    `SELECT COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
+       = 'pages' AS tabs FROM runs r WHERE r.id = $1`,
+    [runId],
+  );
+  return rows[0]?.tabs === true;
+}
 
 interface Route {
   method: string;
@@ -172,6 +182,7 @@ export async function assistantRefusal(
   let card: Approval | null = null;
   if (answering) {
     if (await spokenRun(db, runId)) return ASK_SPARK_REFUSALS.voice;
+    if (await tabQuestionRun(db, runId)) return ASK_SPARK_REFUSALS.tabs;
     const checked = await cardRefusalFor(db, workspaceId, action.approvalId ?? PLACEHOLDER);
     if (checked.refusal) return checked.refusal;
     card = checked.approval;
@@ -246,6 +257,7 @@ export async function assistantPath(
   action: SparkAction,
 ): Promise<ActionPath> {
   if ((await assistantActs(db, workspaceId)) !== 'act') return 'confirm';
+  if (await tabQuestionRun(db, runId)) return 'confirm';
   if (action.action !== 'ask_spark' || action.op !== 'answer_card') return 'perform';
   const question = await questionOf(db, runId);
   const { chat } = await cardRefusalFor(db, workspaceId, action.approvalId ?? PLACEHOLDER);

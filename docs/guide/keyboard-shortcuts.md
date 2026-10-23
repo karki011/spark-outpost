@@ -34,16 +34,17 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 
 ## Browser pane, Mac app
 
-| Keys                      | Action                            |
-| ------------------------- | --------------------------------- |
-| **⌘T** / **⌘W** / **⌘⇧T** | New, close, reopen a tab          |
-| **⌘1**–**⌘8** / **⌘9**    | Tab N / last tab                  |
-| **⌃Tab** / **⌃⇧Tab**      | Next / previous tab               |
-| **⌘L** / **⌘⇧C**          | Address bar / copy it             |
-| **⌘R** / **⌘⇧R**          | Reload / hard reload              |
-| **⌘[** / **⌘]**           | Back / forward                    |
-| **⌘F**                    | Find in page                      |
-| **⌘⇧O**                   | Browser view: chat about the page |
+| Keys                      | Action                                  |
+| ------------------------- | --------------------------------------- |
+| **⌘T** / **⌘W** / **⌘⇧T** | New, close, reopen a tab                |
+| **⌘1**–**⌘8** / **⌘9**    | Tab N / last tab                        |
+| **⌃Tab** / **⌃⇧Tab**      | Next / previous tab                     |
+| **⌘L** / **⌘⇧C**          | Address bar / copy it                   |
+| **⌘R** / **⌘⇧R**          | Reload / hard reload                    |
+| **⌘[** / **⌘]**           | Back / forward                          |
+| **⌘F**                    | Find in page                            |
+| **⌘⇧O**                   | Browser view: chat about the page       |
+| **⌥⌘A**                   | Browser view: Ask Spark about your tabs |
 
 ## Cards
 
