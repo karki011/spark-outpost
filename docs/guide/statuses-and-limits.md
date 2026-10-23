@@ -43,7 +43,7 @@ A dot shows changes since you last opened the chat; point at it.
 | **Queued**              | The chat is busy, failed or stopped, or paused.                           |
 | **Working**             | Its turn runs.                                                            |
 | **Held**                | It reads **Waiting for @api** until that request is answered.             |
-| **Waiting on you**      | An approval card waits, or the reply ends **Needs you: …**.               |
+| **Waiting on you**      | A card waits, or the reply ends **Needs you: …**.                         |
 | **Failed**              | The turn failed, or **Not delivered: …**. Listed with **Waiting on you**. |
 | **Ready for review**    | Answered, with an open pull request.                                      |
 | **Idle**                | Answered, with no open pull request.                                      |

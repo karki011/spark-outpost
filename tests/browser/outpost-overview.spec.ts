@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import {
   NAME,
@@ -36,6 +36,25 @@ async function expectAccessible(page: Page): Promise<void> {
   expect(results.violations.map((violation) => violation.id)).toEqual([]);
 }
 
+async function expectTopmost(menu: Locator): Promise<void> {
+  await expect(menu).toBeVisible();
+  const covered = await menu.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const inset = 2;
+    const corners = [
+      [box.left + inset, box.top + inset],
+      [box.right - inset, box.top + inset],
+      [box.left + inset, box.bottom - inset],
+      [box.right - inset, box.bottom - inset],
+    ];
+    const inWindow =
+      box.left >= 0 && box.top >= 0 && box.right <= innerWidth && box.bottom <= innerHeight;
+    const hidden = corners.filter(([x, y]) => !element.contains(document.elementFromPoint(x!, y!)));
+    return { inWindow, hidden: hidden.length };
+  });
+  expect(covered).toEqual({ inWindow: true, hidden: 0 });
+}
+
 test('Overview groups the requests by state and names what waits on you', async ({ page }) => {
   await seeded(page);
   const main = await openOutpost(page);
@@ -59,7 +78,12 @@ test('Overview groups the requests by state and names what waits on you', async 
 
   await toggle.click();
   await expect(overview(page)).toBeHidden();
-  await main.getByRole('button', { name: NAME, exact: true }).click();
+  const title = main.getByRole('button', { name: NAME, exact: true });
+  await title.click();
+  const menu = page.getByRole('menu', { name: NAME });
+  await expectTopmost(menu);
+  const [titleBox, menuBox] = await Promise.all([title.boundingBox(), menu.boundingBox()]);
+  expect(Math.abs((menuBox?.x ?? 0) - (titleBox?.x ?? 0))).toBeLessThanOrEqual(1);
   await page.getByRole('menuitemcheckbox', { name: 'Show Overview' }).click();
   await expect(overview(page)).toBeVisible();
 });
@@ -159,4 +183,8 @@ test('on a phone the conversation and Overview are one segmented control, and a 
   await expectNoSidewaysScroll(page);
   await pane.getByRole('button', { name: 'Back to Overview' }).click();
   await expect(overview(page)).toBeVisible();
+
+  await outpostPage(page, NAME).getByRole('button', { name: NAME, exact: true }).click();
+  await expectTopmost(page.getByRole('menu', { name: NAME }));
+  await page.keyboard.press('Escape');
 });
