@@ -178,3 +178,101 @@ describe('turn rows', () => {
     expect(groupSummary(group)).toBe('2 files');
   });
 });
+
+function onlyRow(step: StepView) {
+  const [rows] = rowsOf(turnRowParts({ text: '', steps: [step], commands: [] }));
+  return rows![0];
+}
+
+describe('turn rows named by the ACP tool name', () => {
+  it('shows the tool name as the verb and keeps the target from the title', () => {
+    const file = { toolKind: 'read', target: 'cart.js', toolName: 'Read' };
+    expect(onlyRow(done('Read `cart.js`', file))).toMatchObject({
+      tone: 'read',
+      verb: 'Read',
+      target: 'cart.js',
+    });
+    const shell = { toolKind: 'execute', toolName: 'Bash' };
+    expect(onlyRow(done('`git status`', shell))).toMatchObject({
+      tone: 'run',
+      verb: 'Bash',
+      target: 'git status',
+      label: 'git status',
+    });
+    const grep = { toolKind: 'search', toolName: 'Grep' };
+    expect(onlyRow(done('Search for `total` in `src`', grep))).toMatchObject({
+      tone: 'search',
+      verb: 'Grep',
+      target: 'for total in src',
+    });
+    const edit = { toolKind: 'edit', target: 'cart.js', toolName: 'Edit' };
+    expect(onlyRow(done('Edit `cart.js`', edit))).toMatchObject({
+      tone: 'edit',
+      verb: 'Edit',
+      target: 'cart.js',
+    });
+  });
+
+  it('spells out web tools and drops a target that only restates the tool', () => {
+    const search = { toolKind: 'fetch', toolName: 'WebSearch' };
+    expect(onlyRow(done('Searched the web', search))).toMatchObject({
+      tone: 'web',
+      verb: 'Web search',
+      target: null,
+      label: 'Searched the web',
+    });
+    const fetch = { toolKind: 'fetch', toolName: 'WebFetch' };
+    expect(onlyRow(done('Fetched example.com', fetch))).toMatchObject({
+      verb: 'Web fetch',
+      target: 'example.com',
+    });
+  });
+
+  it('names MCP and Spark tools, and keeps a title that adds to the name', () => {
+    const mcp = { toolKind: 'other', toolName: 'mcp__github__create_issue' };
+    expect(onlyRow(done('Using create issue (github)', mcp))).toMatchObject({
+      verb: 'github · create_issue',
+      target: null,
+      label: 'Using create issue (github)',
+    });
+    const spark = { toolKind: 'other', toolName: 'mcp__spark__spark_docs' };
+    expect(onlyRow(done('Reading the user guide', spark))).toMatchObject({
+      verb: 'Reading the user guide',
+      target: null,
+    });
+    const agent = { toolKind: 'think', toolName: 'Agent' };
+    expect(onlyRow(done('Explore the repo', agent))).toMatchObject({
+      verb: 'Agent',
+      target: 'Explore the repo',
+    });
+  });
+
+  it("keeps today's row when the name is missing or hides the action", () => {
+    const read = { toolKind: 'read', target: 'a.ts' };
+    expect(onlyRow(done('Read `a.ts`', read))).toMatchObject({ verb: 'Read', target: 'a.ts' });
+    const codexRead = { ...read, toolName: 'exec_command' };
+    expect(onlyRow(done("Read file 'a.ts'", codexRead))).toMatchObject({
+      tone: 'read',
+      verb: 'Read',
+      target: 'a.ts',
+    });
+    const codexRun = { toolKind: 'execute', toolName: 'exec_command' };
+    expect(onlyRow(done('`ls`', codexRun))).toMatchObject({ verb: 'Ran', target: 'ls' });
+  });
+
+  it('counts files and searches in a group by tool name', () => {
+    const parts = turnRowParts({
+      text: '',
+      steps: [
+        done('Read `a.ts`', { toolKind: 'read', target: 'a.ts', toolName: 'Read' }),
+        done('Find `src` `**/*.ts`', { toolKind: 'search', toolName: 'Glob' }),
+        done('Search for `x`', { toolKind: 'search', toolName: 'Grep' }),
+        done('View Image `b.png`', { toolKind: 'read', target: 'b.png', toolName: 'view_image' }),
+      ],
+      commands: [],
+    });
+    const group = rowsOf(parts)[0]![0]!;
+    expect(group.kind).toBe('group');
+    if (group.kind === 'group') expect(groupSummary(group)).toBe('2 files, 2 searches');
+  });
+});

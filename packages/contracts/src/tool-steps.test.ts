@@ -6,6 +6,7 @@ import {
   isWebToolTitle,
   parseMcpTool,
   placeNoteText,
+  toolLabel,
 } from './tool-steps.ts';
 
 describe('friendlyStep', () => {
@@ -109,5 +110,40 @@ describe('isSparkNote', () => {
     ]) {
       expect(isSparkNote(step)).toBe(false);
     }
+  });
+});
+
+describe('toolLabel', () => {
+  it('keeps agent tool names that already read as words', () => {
+    for (const name of ['Read', 'Grep', 'Glob', 'Bash', 'Edit', 'Write', 'Skill']) {
+      expect(toolLabel(name)).toBe(name);
+    }
+    expect(toolLabel('PowerShell')).toBe('PowerShell');
+  });
+
+  it('spells out the few names that do not', () => {
+    expect(toolLabel('WebFetch')).toBe('Web fetch');
+    expect(toolLabel('WebSearch')).toBe('Web search');
+    expect(toolLabel('TodoWrite')).toBe('To-do');
+  });
+
+  it('names MCP tools by server and tool, and Spark tools by what they do', () => {
+    expect(toolLabel('mcp__github__create_issue')).toBe('github · create_issue');
+    expect(toolLabel('mcp__spark__spark_docs')).toBe('Reading the user guide');
+    expect(toolLabel('spark_tickets')).toBe('Looking at tickets');
+  });
+
+  it('splits unknown names into words', () => {
+    expect(toolLabel('NotebookEdit')).toBe('Notebook edit');
+    expect(toolLabel('view_image')).toBe('View image');
+    expect(toolLabel(' AskUserQuestion ')).toBe('Ask user question');
+  });
+
+  it('has no label for a missing name or a shell name that hides the action', () => {
+    expect(toolLabel(undefined)).toBeNull();
+    expect(toolLabel(null)).toBeNull();
+    expect(toolLabel('  ')).toBeNull();
+    expect(toolLabel('exec_command')).toBeNull();
+    expect(toolLabel('write_stdin')).toBeNull();
   });
 });

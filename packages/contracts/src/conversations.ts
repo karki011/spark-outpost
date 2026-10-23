@@ -163,6 +163,7 @@ export const activityStepSchema = z.object({
   startedAt: z.number().optional(),
   finishedAt: z.number().optional(),
   toolKind: z.string().optional(),
+  toolName: z.string().optional(),
   target: z.string().optional(),
 });
 export type ActivityStep = z.infer<typeof activityStepSchema>;
