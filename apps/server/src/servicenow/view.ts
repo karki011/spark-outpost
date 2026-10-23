@@ -14,5 +14,10 @@ export function serviceNowView(row: TicketConnectionRow): ServiceNowConnection {
       { on: stored[type].on, reach: stored[type].reach ?? 'unchecked' },
     ]),
   ) as ServiceNowTypes;
-  return { authKind: row.authKind ?? 'basic', login: row.login ?? '', types };
+  return {
+    authKind: row.authKind ?? 'basic',
+    login: row.login ?? '',
+    types,
+    inboxScope: row.inboxScope,
+  };
 }

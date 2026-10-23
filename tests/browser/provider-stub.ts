@@ -160,6 +160,9 @@ const server = createServer((req, res) => {
     tickets.confluenceReachable(false);
     return send(res, 200, { ok: true });
   }
+  if (path === '/tickets-test/servicenow-writes') {
+    return send(res, 200, { writes: tickets.serviceNowWrites() });
+  }
   if (path === '/tickets-test/servicenow' && req.method === 'POST') {
     return void serviceNowFaults(req, res);
   }

@@ -88,7 +88,10 @@ async function probeTypes(
   >;
 }
 
-async function whoAmI(client: ServiceNowClient, access: ServiceNowAccess): Promise<TicketAccount> {
+export async function whoAmI(
+  client: ServiceNowClient,
+  access: ServiceNowAccess,
+): Promise<TicketAccount> {
   const answer = await client.raw({
     method: 'GET',
     path: '/api/now/table/sys_user',

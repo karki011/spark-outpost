@@ -8,7 +8,13 @@ import {
   type RemoteSwitch,
   type RemoteSwitches,
 } from '@spark-outpost/contracts';
-import { AGENT_MODE_FIELDS, CARD_ROUTE, ROUTE_RULES, type RemoteRule } from './route-rules.ts';
+import {
+  AGENT_MODE_FIELDS,
+  CARD_ROUTE,
+  HIGH_RISK_FIELDS,
+  ROUTE_RULES,
+  type RemoteRule,
+} from './route-rules.ts';
 
 const WEB_APP_ROUTE = 'GET /{*path}';
 const API_PREFIX = '/api';
@@ -23,7 +29,12 @@ interface Pattern {
 export type RemoteDecision =
   | { kind: 'refuse'; reason: string }
   | { kind: 'pairing' }
-  | { kind: 'allow'; blockedFields: readonly string[]; card: boolean };
+  | {
+      kind: 'allow';
+      blockedFields: readonly string[];
+      highRiskFields: readonly string[];
+      card: boolean;
+    };
 
 function segmentsOf(path: string): string[] {
   return path
@@ -91,9 +102,13 @@ export function remoteDecision(
   const blockedFields = switches.agentMode
     ? []
     : matched.flatMap(({ route }) => AGENT_MODE_FIELDS[route] ?? []);
+  const highRiskFields = switches.highRiskCards
+    ? []
+    : matched.flatMap(({ route }) => HIGH_RISK_FIELDS[route] ?? []);
   return {
     kind: 'allow',
     blockedFields,
+    highRiskFields,
     card: matched.some(({ route }) => route === CARD_ROUTE),
   };
 }

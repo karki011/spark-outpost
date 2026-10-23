@@ -5,6 +5,7 @@ import {
   SERVICENOW_NAME,
   serviceNowTypeIdSchema,
   serviceNowTypeNames,
+  type ServiceNowInboxScope,
   type ServiceNowType,
   type ServiceNowTypeId,
   type TicketConnection,
@@ -15,6 +16,7 @@ import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { AccountRow } from '../connectors/AccountRow.tsx';
 import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
+import { Segmented } from '../ui/Segmented.tsx';
 import { jiraSiteHost } from './jira-site.ts';
 import { TicketConnectForm } from './TicketConnectForm.tsx';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
@@ -91,6 +93,37 @@ function TypeRow({
   );
 }
 
+const SCOPES = [
+  { id: 'me', label: 'Assigned to me' },
+  { id: 'groups', label: 'Me and my groups' },
+];
+
+function InboxScopeRow({
+  scope,
+  save,
+}: {
+  scope: ServiceNowInboxScope;
+  save: ReturnType<typeof useSettings>;
+}) {
+  const hintId = useId();
+  const wanted = save.isPending ? save.variables.inboxScope : undefined;
+  return (
+    <SettingRow
+      label="Show"
+      hint="Records assigned to you, or also those waiting in your groups with nobody assigned. ServiceNow tickets never move when a chat ships or merges."
+      hintId={hintId}
+    >
+      <Segmented
+        ariaLabel="Show"
+        describedBy={hintId}
+        options={SCOPES}
+        value={wanted ?? scope}
+        onChange={(id) => save.mutate({ inboxScope: id as ServiceNowInboxScope })}
+      />
+    </SettingRow>
+  );
+}
+
 function ConnectedBody({ connection }: { connection: TicketConnection }) {
   const queryClient = useQueryClient();
   const save = useSettings();
@@ -129,6 +162,12 @@ function ConnectedBody({ connection }: { connection: TicketConnection }) {
           {serviceNowTypeIdSchema.options.map((id) => (
             <TypeRow key={id} id={id} type={types[id]} save={save} />
           ))}
+        </section>
+      )}
+      {connection.servicenow && (
+        <section className="at-products" aria-label="Tickets inbox">
+          <h4 className="at-sub">Tickets inbox</h4>
+          <InboxScopeRow scope={connection.servicenow.inboxScope} save={save} />
         </section>
       )}
       {error && (

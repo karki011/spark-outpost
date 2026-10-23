@@ -171,9 +171,9 @@ describe('connecting ServiceNow', () => {
     );
   });
 
-  it('brings no tickets yet and disconnects by deleting the keychain item', async () => {
+  it('opens as a ticket source and disconnects by deleting the keychain item', async () => {
     await saveConnection(deps(), basic());
-    expect(await connectedSources(deps())).toEqual([]);
+    expect((await connectedSources(deps())).map((open) => open.source.id)).toEqual(['servicenow']);
     await removeConnection(deps(), 'servicenow');
     expect(await serviceNow()).toBeUndefined();
     expect(await secrets.get('ticket:servicenow').catch(() => null)).toBeNull();

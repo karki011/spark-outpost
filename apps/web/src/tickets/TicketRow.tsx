@@ -59,6 +59,8 @@ function Assignee({ name }: { name: string | null }) {
   );
 }
 
+const SOURCE_MARKS: Record<TicketSourceId, string> = { linear: 'L', jira: 'J', servicenow: 'S' };
+
 export function TicketRow(props: TicketRowProps) {
   const { action, pinned, below, links } = props;
   const preview = useTooltip(props.preview ?? '');
@@ -72,9 +74,10 @@ export function TicketRow(props: TicketRowProps) {
         {...(props.preview ? preview.triggerProps : {})}
       >
         <span className="srcl" aria-hidden="true">
-          {props.source === 'linear' ? 'L' : 'J'}
+          {SOURCE_MARKS[props.source]}
         </span>
         <PriorityGlyph rank={props.priorityRank} />
+        {props.source === 'servicenow' && <span className="sr-only">ServiceNow </span>}
         <span className="tk-key">{props.ticketKey}</span>
         <StatusBadge status={props.status} name={props.statusName} />
         <span className="tk-title">{props.title}</span>
