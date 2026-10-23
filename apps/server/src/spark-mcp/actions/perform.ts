@@ -22,6 +22,7 @@ import {
   performJiraEdit,
 } from './atlassian-perform.ts';
 import type { Performed } from './performed.ts';
+import { performServiceNowEdit } from './servicenow-perform.ts';
 import { performAskSpark } from './ask-spark-perform.ts';
 import { performPublishArtifact } from './artifact-actions.ts';
 import { performStartOutpost } from './outpost-actions.ts';
@@ -112,6 +113,10 @@ export function performSparkAction(
       return performJiraEdit(context, action);
     case 'confluence_edit':
       return performConfluenceEdit(context, action);
+    case 'servicenow_read':
+      return Promise.resolve({ message: 'The agent can read ServiceNow in this chat.', url: null });
+    case 'servicenow_edit':
+      return performServiceNowEdit(context, action);
     case 'start_outpost':
       return performStartOutpost(context, action, startedBy);
     case 'pr_follow_up':

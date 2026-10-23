@@ -14,7 +14,8 @@ const failed = (error: unknown): TicketSync => ({
 
 function syncOf(result: TransitionResult): TicketSync {
   if (result.moved) return { outcome: 'succeeded', message: null };
-  return { outcome: result.stopped === 'blocked' ? 'failed' : 'skipped', message: result.message };
+  const failed = result.stopped === 'blocked' || result.stopped === 'refused';
+  return { outcome: failed ? 'failed' : 'skipped', message: result.message };
 }
 
 export async function moveTicket(

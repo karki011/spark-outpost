@@ -1,5 +1,12 @@
+import { z } from 'zod';
 import {
+  serviceNowAuthKindSchema,
+  serviceNowInboxScopeSchema,
+  serviceNowTypeIdSchema,
   ticketMoveStatusesSchema,
+  type ServiceNowAuthKind,
+  type ServiceNowInboxScope,
+  type ServiceNowTypeId,
   ticketStatusMapSchema,
   type TicketMoveStatuses,
   type TicketSourceId,
@@ -16,7 +23,21 @@ export interface AtlassianProductRow {
   confluenceReach: StoredReach;
 }
 
-export interface TicketConnectionRow extends AtlassianProductRow {
+export type ServiceNowTypeRows = Record<ServiceNowTypeId, { on: boolean; reach: StoredReach }>;
+
+const serviceNowTypeRowsSchema = z.record(
+  serviceNowTypeIdSchema,
+  z.object({ on: z.boolean(), reach: z.enum(['reachable', 'denied']).nullable() }),
+);
+
+export interface ServiceNowRow {
+  authKind: ServiceNowAuthKind | null;
+  login: string | null;
+  serviceNowTypes: ServiceNowTypeRows | null;
+}
+
+export interface TicketConnectionRow extends AtlassianProductRow, ServiceNowRow {
+  inboxScope: ServiceNowInboxScope;
   source: TicketSourceId;
   apiUrl: string;
   email: string | null;
@@ -44,11 +65,17 @@ interface StoredTicketConnection {
   jira_reach: StoredReach;
   confluence_on: boolean;
   confluence_reach: StoredReach;
+  auth_kind: string | null;
+  login: string | null;
+  servicenow_types: unknown;
+  inbox_scope: string;
 }
 
 function toConnection(row: StoredTicketConnection): TicketConnectionRow {
   const statusMap = ticketStatusMapSchema.safeParse(row.status_map);
   const moveStatuses = ticketMoveStatusesSchema.safeParse(row.move_statuses);
+  const authKind = serviceNowAuthKindSchema.safeParse(row.auth_kind);
+  const types = serviceNowTypeRowsSchema.safeParse(row.servicenow_types);
   return {
     source: row.source,
     apiUrl: row.api_url,
@@ -64,6 +91,10 @@ function toConnection(row: StoredTicketConnection): TicketConnectionRow {
     jiraReach: row.jira_reach,
     confluenceOn: row.confluence_on,
     confluenceReach: row.confluence_reach,
+    authKind: authKind.success ? authKind.data : null,
+    login: row.login,
+    serviceNowTypes: types.success ? types.data : null,
+    inboxScope: serviceNowInboxScopeSchema.catch('groups').parse(row.inbox_scope),
   };
 }
 
@@ -97,6 +128,7 @@ export interface SavedConnection {
   account: string;
   accountId: string;
   products?: AtlassianProductRow;
+  serviceNow?: ServiceNowRow;
 }
 
 export async function saveTicketConnection(
@@ -105,15 +137,18 @@ export async function saveTicketConnection(
   connection: SavedConnection,
 ): Promise<void> {
   const products = connection.products;
+  const serviceNow = connection.serviceNow;
   await db.query(
     `INSERT INTO ticket_connections (workspace_id, source, api_url, email, account, account_id,
-       jira_on, jira_reach, confluence_on, confluence_reach)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       jira_on, jira_reach, confluence_on, confluence_reach, auth_kind, login, servicenow_types,
+       move_on_ship, move_on_merge)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $14)
      ON CONFLICT (workspace_id, source) DO UPDATE SET api_url = EXCLUDED.api_url,
        email = EXCLUDED.email, account = EXCLUDED.account, account_id = EXCLUDED.account_id,
        jira_on = EXCLUDED.jira_on, jira_reach = EXCLUDED.jira_reach,
        confluence_on = EXCLUDED.confluence_on, confluence_reach = EXCLUDED.confluence_reach,
-       validated_at = now()`,
+       auth_kind = EXCLUDED.auth_kind, login = EXCLUDED.login,
+       servicenow_types = EXCLUDED.servicenow_types, validated_at = now()`,
     [
       workspaceId,
       connection.source,
@@ -125,7 +160,26 @@ export async function saveTicketConnection(
       products?.jiraReach ?? (connection.source === 'jira' ? 'reachable' : null),
       products?.confluenceOn ?? false,
       products?.confluenceReach ?? null,
+      serviceNow?.authKind ?? null,
+      serviceNow?.login ?? null,
+      serviceNow?.serviceNowTypes ? JSON.stringify(serviceNow.serviceNowTypes) : null,
+      connection.source !== 'servicenow',
     ],
+  );
+}
+
+export async function saveServiceNowCheck(
+  db: Queryable,
+  workspaceId: string,
+  account: { id: string; name: string } | null,
+  types: ServiceNowTypeRows,
+): Promise<void> {
+  await db.query(
+    `UPDATE ticket_connections SET servicenow_types = $2::jsonb,
+       account = COALESCE($3, account), account_id = COALESCE($4, account_id),
+       validated_at = CASE WHEN $3::text IS NULL THEN validated_at ELSE now() END
+     WHERE workspace_id = $1 AND source = 'servicenow'`,
+    [workspaceId, JSON.stringify(types), account?.name ?? null, account?.id ?? null],
   );
 }
 
@@ -172,13 +226,15 @@ export async function updateTicketSettings(
     moveOnMerge?: boolean | undefined;
     statusMap?: TicketStatusMap | undefined;
     moveStatuses?: TicketMoveStatuses | undefined;
+    inboxScope?: ServiceNowInboxScope | undefined;
   },
 ): Promise<boolean> {
   const { rowCount } = await db.query(
     `UPDATE ticket_connections SET move_on_ship = COALESCE($3, move_on_ship),
        status_map = COALESCE($4::jsonb, status_map),
        move_on_merge = COALESCE($5, move_on_merge),
-       move_statuses = COALESCE($6::jsonb, move_statuses)
+       move_statuses = COALESCE($6::jsonb, move_statuses),
+       inbox_scope = COALESCE($7, inbox_scope)
      WHERE workspace_id = $1 AND source = $2`,
     [
       workspaceId,
@@ -187,6 +243,7 @@ export async function updateTicketSettings(
       settings.statusMap ? JSON.stringify(settings.statusMap) : null,
       settings.moveOnMerge ?? null,
       settings.moveStatuses ? JSON.stringify(settings.moveStatuses) : null,
+      settings.inboxScope ?? null,
     ],
   );
   return (rowCount ?? 0) > 0;

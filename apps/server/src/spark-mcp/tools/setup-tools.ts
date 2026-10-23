@@ -132,6 +132,7 @@ async function connectors(context: SparkToolContext) {
             moveOnMerge: connection.moveOnMerge,
             moveStatuses: connection.moveStatuses,
             ...(connection.atlassian ? { atlassian: connection.atlassian } : {}),
+            ...(connection.servicenow ? { servicenow: connection.servicenow } : {}),
             ...(connection.keySaved ? {} : { problem: 'The saved key is missing; reconnect it.' }),
           }
         : {}),

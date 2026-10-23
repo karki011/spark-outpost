@@ -94,7 +94,14 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await expect(git).toContainText(/Git \d+\.\d+/);
   await expect(git).toContainText('Found');
   const tools = dialog(page).locator('.cx-card');
-  const names = ['GitHub', 'Jira', 'Linear', 'Slack', ...(CALENDAR_HOST ? ['Calendar'] : [])];
+  const names = [
+    'GitHub',
+    'Jira',
+    'Linear',
+    'Slack',
+    'ServiceNow',
+    ...(CALENDAR_HOST ? ['Calendar'] : []),
+  ];
   await expect(tools).toHaveCount(names.length);
   for (const [index, name] of names.entries()) await expect(tools.nth(index)).toContainText(name);
   await expect(dialog(page).locator('.cx-card button.pc-head')).toHaveCount(names.length);

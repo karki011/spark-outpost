@@ -188,6 +188,8 @@ describe('tickets', () => {
     expect(view.work).toEqual([]);
     await get('/api/tickets/linear/ENG-999').expect(404);
     await get('/api/tickets/linear/not a key').expect(400);
+    const recordNumber = await get('/api/tickets/linear/INC0010023').expect(400);
+    expect(recordNumber.body).toMatchObject({ error: 'Use a ticket key such as ENG-12.' });
   });
 
   it('starts a chat from a ticket, links it, and moves it to In progress', async () => {

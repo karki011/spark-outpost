@@ -5,7 +5,7 @@
   list-style: none;
   display: grid;
   grid-template-columns:
-    20px 16px 72px 112px minmax(0, 1fr) fit-content(230px) auto 34px 18px
+    20px 16px minmax(72px, max-content) 112px minmax(0, 1fr) fit-content(230px) auto 34px 18px
     var(--acts-w);
   column-gap: 10px;
   max-width: 1600px;
