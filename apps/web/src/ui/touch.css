@@ -17,7 +17,9 @@
     .ctx-repo,
     .ctx-branch,
     .ctx-details,
-    .theme-menu button
+    .theme-menu button,
+    .mdf-tool,
+    .mdf-toggle
   ) {
     position: relative;
   }
@@ -39,7 +41,9 @@
     .vstep,
     .ctx-repo,
     .ctx-branch,
-    .ctx-details
+    .ctx-details,
+    .mdf-tool,
+    .mdf-toggle
   )::before {
     content: '';
     position: absolute;

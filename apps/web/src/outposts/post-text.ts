@@ -58,10 +58,6 @@ export function postTime(iso: string): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export function filesLabel(count: number): string {
-  return `${countLabel(count, 'file')} changed`;
-}
-
 export function publishLabels(publish: AnswerPublish | null | undefined): string[] {
   if (!publish) return [];
   return [
@@ -74,9 +70,9 @@ export function attachedLabel(count: number): string {
   return countLabel(count, 'file');
 }
 
-export function pullRequestLabel(url: string): string {
-  const number = PULL_NUMBER.exec(url)?.[1];
-  return number ? `Pull request #${number}` : 'Pull request';
+export function pullNumber(url: string): number | null {
+  const found = PULL_NUMBER.exec(url)?.[1];
+  return found ? Number(found) : null;
 }
 
 export function webLink(url: string): string | undefined {

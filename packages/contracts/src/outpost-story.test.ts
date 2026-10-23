@@ -156,6 +156,7 @@ describe('outpost story', () => {
     const outpost = {
       id: OUTPOST,
       name: 'Orders launch',
+      instructions: '',
       pausedAt: null,
       createdAt: AT,
       updatedAt: AT,

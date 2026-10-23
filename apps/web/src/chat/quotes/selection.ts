@@ -1,4 +1,4 @@
-const QUOTE_SOURCE = '.bubble, .md';
+const QUOTE_SOURCE = '.bubble, .md:not(.bubble .md)';
 
 interface MessageSelection {
   range: Range;
@@ -55,7 +55,7 @@ export function messageIdOf(source: Element): string | null {
 export function sourcesFor(root: Element, messageId: string): Element[] {
   return Array.from(
     root.querySelectorAll(
-      `[${USER_MESSAGE}="${messageId}"] .bubble, [${ASSISTANT_MESSAGE}="${messageId}"] .md`,
+      `[${USER_MESSAGE}="${messageId}"] .bubble, [${ASSISTANT_MESSAGE}="${messageId}"] .md:not(.bubble .md)`,
     ),
   );
 }

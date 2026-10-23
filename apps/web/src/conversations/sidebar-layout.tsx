@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useLayoutEffect,
@@ -10,7 +11,8 @@ import {
 } from 'react';
 import { usePhone } from '../ui/breakpoints.ts';
 import { keysText, SIDEBAR_KEYS as SIDEBAR_SHORTCUT } from '../ui/Keys.tsx';
-import { hasModifier, MAC } from '../ui/shortcuts.ts';
+import { MAC } from '../ui/shortcuts.ts';
+import { useMenuCommand } from '../desktop/use-menu-command.ts';
 import { useTooltip } from '../ui/Tooltip.tsx';
 
 const COLLAPSED_KEY = 'spark-outpost.sidebar.collapsed';
@@ -19,7 +21,8 @@ export const SIDEBAR_MIN_WIDTH = 240;
 export const SIDEBAR_MAX_WIDTH = 420;
 export const SIDEBAR_DEFAULT_WIDTH = 300;
 export const SIDEBAR_HINT = keysText(SIDEBAR_SHORTCUT);
-const SIDEBAR_ARIA_KEYS = MAC ? 'Meta+B' : 'Control+B';
+const SIDEBAR_ARIA_KEYS = MAC ? 'Control+Meta+S' : 'Control+Alt+S';
+const TOGGLE_SIDEBAR_COMMAND = 'toggle-sidebar';
 const EDGE_SWIPE_START = 28;
 const SWIPE_DISTANCE = 60;
 
@@ -101,7 +104,10 @@ function useEdgeSwipe(narrow: boolean, drawer: boolean, setDrawer: (open: boolea
 }
 
 function isSidebarShortcut(event: KeyboardEvent): boolean {
-  return hasModifier(event) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'b';
+  const modifiers = MAC
+    ? event.ctrlKey && event.metaKey && !event.altKey
+    : event.ctrlKey && event.altKey && !event.metaKey && !event.getModifierState('AltGraph');
+  return modifiers && !event.shiftKey && event.code === 'KeyS';
 }
 
 let focusAfterSwap = false;
@@ -125,17 +131,25 @@ export function useSidebarLayoutState(attention: boolean): SidebarLayout {
 
   useEffect(() => saveCollapsed(collapsed), [collapsed]);
 
+  const flip = useCallback(() => {
+    rememberToggleFocus();
+    if (narrow) setDrawer((open) => !open);
+    else setCollapsed((hidden) => !hidden);
+  }, [narrow]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!isSidebarShortcut(event)) return;
       event.preventDefault();
-      rememberToggleFocus();
-      if (narrow) setDrawer((open) => !open);
-      else setCollapsed((hidden) => !hidden);
+      flip();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [narrow]);
+  }, [flip]);
+
+  useMenuCommand((command) => {
+    if (command === TOGGLE_SIDEBAR_COMMAND) flip();
+  });
 
   return useMemo(
     () => ({

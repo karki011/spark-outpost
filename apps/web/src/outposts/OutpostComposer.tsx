@@ -1,6 +1,9 @@
 import '../chat/composer.css';
 import './outpost-composer.css';
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { FormatToggle } from '../chat/composer/markdown/FormatToggle.tsx';
+import { MarkdownInput } from '../chat/composer/markdown/MarkdownInput.tsx';
+import { codeBlockEnter } from '../chat/composer/markdown/md-keys.ts';
 import { XIcon } from '../ui/icons.tsx';
 import { AsksLine } from './AsksLine.tsx';
 import { HandlePicker, handleOptionId } from './HandlePicker.tsx';
@@ -41,6 +44,7 @@ export function OutpostComposer({
   const [skipped, setSkipped] = useState<string[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
   const [filled, setFilled] = useState(fill?.id ?? null);
+  const [formatting, setFormatting] = useState(false);
   const handles = members.map((member) => member.handle);
   const picker = useHandlePicker(typed, members, answering === null);
   const fillId = fill?.id ?? null;
@@ -112,6 +116,7 @@ export function OutpostComposer({
       return;
     }
     if (event.key === 'Enter' && !event.shiftKey) {
+      if (codeBlockEnter(event, event.currentTarget) === 'newline') return;
       event.preventDefault();
       void send();
     }
@@ -149,8 +154,9 @@ export function OutpostComposer({
             </button>
           </div>
         )}
-        <textarea
+        <MarkdownInput
           ref={textareaRef}
+          formatting={formatting}
           value={text}
           rows={Math.min(MAX_ROWS, Math.max(1, text.split('\n').length))}
           placeholder={
@@ -171,6 +177,7 @@ export function OutpostComposer({
           onKeyDown={onKeyDown}
         />
         <div className="comp-bar">
+          <FormatToggle open={formatting} onToggle={setFormatting} />
           {target.action === 'request' ? (
             <AsksLine
               id={hintId}

@@ -4,6 +4,7 @@ import {
   createOutpostRequestSchema,
   createPostRequestSchema,
   needsYouCount,
+  outpostInstructionsRequestSchema,
   stackedCount,
   updateOutpostRequestSchema,
   type ChatDrafts,
@@ -27,6 +28,7 @@ import {
   notifyOutpostChanged,
   OUTPOST_NOT_FOUND,
   OutpostError,
+  setInstructions,
   setName,
   setPaused,
 } from '../persistence/outposts.ts';
@@ -205,6 +207,15 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
     if (update.paused !== undefined) await setPaused(db, workspaceId, id, update.paused);
     await notifyOutpostChanged(db, id);
     if (update.paused === false && before.pausedAt !== null) await resume(before);
+    res.json(await detail(id));
+  });
+
+  router.put('/outposts/:id/instructions', async (req, res) => {
+    const id = paramId(req);
+    const { instructions } = parseBody(outpostInstructionsRequestSchema, req);
+    await known(id);
+    await setInstructions(db, workspaceId, id, instructions);
+    await notifyOutpostChanged(db, id);
     res.json(await detail(id));
   });
 

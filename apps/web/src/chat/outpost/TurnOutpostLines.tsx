@@ -54,7 +54,7 @@ interface ChatDraftLineProps {
   onOpenDraft: (draftId: string) => void;
 }
 
-function ChatDraftLine({ chatId, draft, seam, onOpenDraft }: ChatDraftLineProps) {
+export function ChatDraftLine({ chatId, draft, seam, onOpenDraft }: ChatDraftLineProps) {
   const start = useStartDraft(chatId, draft.id);
   const outpostId = draft.outpostId;
   const outpost = seam.outposts.find((listed) => listed.id === outpostId);

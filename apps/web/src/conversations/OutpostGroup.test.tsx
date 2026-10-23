@@ -10,6 +10,7 @@ const outpost: Outpost = {
   id: '7a1f0c1e-6f0e-4d57-9a3e-0d8a53a7b201',
   name: 'Orders launch',
   pausedAt: null,
+  instructions: '',
   createdAt: '2026-10-09T10:00:00Z',
   updatedAt: '2026-10-09T10:00:00Z',
   members: [],
