@@ -10,6 +10,6 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 
 ## October 2026
 
-| What changed                         | What to do                                                         |
-| ------------------------------------ | ------------------------------------------------------------------ |
-| Nothing yet since **0.1.0-beta.28**. | Open **Release notes** in **Settings → Updates** for that release. |
+| What changed                               | What to do                              |
+| ------------------------------------------ | --------------------------------------- |
+| Mac app: the Settings window opens larger. | Nothing; it still fits smaller screens. |
