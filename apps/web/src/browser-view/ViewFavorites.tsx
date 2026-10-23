@@ -1,4 +1,4 @@
-import { BROWSER_FAVORITES_MAX, parseBrowserUrl } from '@spark-outpost/contracts';
+import { BROWSER_FAVORITES_MAX, parseBrowserUrl, sameFavoritePage } from '@spark-outpost/contracts';
 import type { BrowserFavorite, BrowserPaneTab, BrowserProfile } from '@spark-outpost/contracts';
 import { MinusIcon, PlusIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
@@ -49,7 +49,9 @@ function FavoriteTile({
 
 export function ViewFavorites({ profile, favorites, tab }: ViewFavoritesProps) {
   const page = tab !== null && tab.url !== '' && tab.error === null;
-  const saved = page ? favorites.find((favorite) => favorite.url === tab.url) : undefined;
+  const saved = page
+    ? favorites.find((favorite) => sameFavoritePage(favorite.url, tab.url))
+    : undefined;
   const full = favorites.length >= BROWSER_FAVORITES_MAX && !saved;
   const toggleLabel = saved ? 'Remove this page from Favorites' : 'Add this page to Favorites';
   const addTip = useTooltip(toggleLabel, { side: 'bottom' });
