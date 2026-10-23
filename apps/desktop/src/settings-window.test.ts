@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IPC } from './ipc-channels.ts';
-import { isDocLink, settingsTarget, startSettingsWindow } from './settings-window.ts';
+import {
+  isDocLink,
+  settingsTarget,
+  settingsWindowSize,
+  startSettingsWindow,
+} from './settings-window.ts';
 
 const native = vi.hoisted(() => {
   const listeners = new Map<string, (event: unknown, ...values: unknown[]) => void>();
@@ -43,6 +48,10 @@ const native = vi.hoisted(() => {
 
 vi.mock('electron', () => ({
   BrowserWindow: native.BrowserWindow,
+  screen: {
+    getPrimaryDisplay: () => ({ workAreaSize: { width: 1512, height: 944 } }),
+    getDisplayMatching: () => ({ workAreaSize: { width: 1512, height: 944 } }),
+  },
   ipcMain: {
     on: (channel: string, listener: (event: unknown, ...values: unknown[]) => void) =>
       native.listeners.set(channel, listener),
@@ -69,7 +78,11 @@ function start(change: { trusted?: boolean } = {}) {
     theme: () => 'graphite',
     trusted: () => change.trusted ?? true,
     mainWindow: () =>
-      ({ isDestroyed: () => false, webContents: { id: MAIN_ID, send: mainSend } }) as never,
+      ({
+        isDestroyed: () => false,
+        getBounds: () => ({ x: 0, y: 0, width: 1400, height: 900 }),
+        webContents: { id: MAIN_ID, send: mainSend },
+      }) as never,
     showSpark: () => did.push('show spark'),
     openChat: (id) => did.push(`open chat ${id}`),
   });
@@ -216,5 +229,38 @@ describe('the Settings window', () => {
     expect(native.windows[0]!.destroy).toHaveBeenCalled();
     expect(native.listeners.size).toBe(0);
     expect(native.handlers.size).toBe(0);
+  });
+});
+
+describe('settingsWindowSize', () => {
+  it('opens wide and tall on a laptop screen', () => {
+    expect(settingsWindowSize({ width: 1512, height: 944 })).toMatchObject({
+      width: 1120,
+      height: 860,
+    });
+  });
+
+  it('fits a small screen without going below the minimum', () => {
+    expect(settingsWindowSize({ width: 1024, height: 700 })).toMatchObject({
+      width: 944,
+      height: 640,
+    });
+    expect(settingsWindowSize({ width: 700, height: 400 })).toMatchObject({
+      width: 720,
+      height: 480,
+    });
+  });
+
+  it('opens the window at that size', () => {
+    startSettingsWindow({
+      origin: 'http://127.0.0.1:1',
+      preload: '/preload.js',
+      theme: () => null,
+      trusted: () => true,
+      mainWindow: () => null,
+      showSpark: vi.fn(),
+      openChat: vi.fn(),
+    }).open({ route: '#/settings/spark', focus: null });
+    expect(native.options.at(-1)).toMatchObject({ width: 1120, height: 860, minWidth: 720 });
   });
 });

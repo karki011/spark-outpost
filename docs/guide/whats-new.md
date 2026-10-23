@@ -13,3 +13,4 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 | What changed                                                                                                            | What to do                                         |
 | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
 | **Suggested threads** in an outpost lines up with the messages, and starting a draft opens the first sub-chat's thread. | Select **Review and start**, then **Start chats**. |
+| Mac app: the Settings window opens larger.                                                                              | Nothing; it still fits smaller screens.            |
