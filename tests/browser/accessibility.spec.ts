@@ -28,7 +28,9 @@ const THEMES = [
   'sage',
   'aurora',
   'iris',
+  'loam',
   'contrast',
+  'contrast-dark',
 ] as const;
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const BLOCKING_IMPACTS = new Set(['serious', 'critical']);

@@ -106,3 +106,9 @@
     transition: opacity 0.15s;
   }
 }
+
+.theme-menu-tints {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}

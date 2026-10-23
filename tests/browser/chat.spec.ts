@@ -71,10 +71,14 @@ test('applies the saved theme before the app renders', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('apricot');
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await page.getByRole('button', { name: 'Theme' }).click();
-  await page.getByRole('menuitemradio', { name: 'Fjord' }).click();
+  await page.getByRole('menuitemradio', { name: 'Fjord · Void' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'fjord');
   await page.getByRole('button', { name: 'Theme' }).click();
-  await expect(page.getByRole('menuitemradio', { name: 'Fjord' })).toHaveAttribute(
+  await expect(page.getByRole('menuitemradio', { name: 'Fjord · Void' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(page.getByRole('menuitemradio', { name: 'Light' })).toHaveAttribute(
     'aria-checked',
     'true',
   );
@@ -82,48 +86,69 @@ test('applies the saved theme before the app renders', async ({ page }) => {
   await expect(page.getByRole('menu', { name: 'Theme' })).toBeHidden();
 });
 
-test('the theme picker lists every theme and applies the newer ones', async ({ page }) => {
+test('the theme menu sets the mode and a tint that follows the system', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
   await openChats(page);
+  expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('light');
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await page.getByRole('button', { name: 'Theme' }).click();
   await expect(page.getByRole('menu', { name: 'Theme' }).getByRole('menuitemradio')).toHaveText([
-    'Match system',
+    'Automatic',
+    'Light',
+    'Dark',
     'Graphite',
-    'Apricot',
-    'Void',
-    'Fjord',
-    'Moss',
-    'Lagoon',
-    'Plum',
-    'Sage',
-    'Aurora',
-    'Iris',
-    'High contrast',
+    'Apricot · Plum',
+    'Lagoon · Moss',
+    'Iris · Aurora',
+    'Fjord · Void',
+    'Sage · Loam',
   ]);
+  await expect(page.getByRole('menuitemradio', { name: 'Automatic' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
   await page.keyboard.press('Escape');
 
-  const newer = [
-    { name: 'Lagoon', skin: 'lagoon', panel: '#fbfefe' },
-    { name: 'Plum', skin: 'plum', panel: '#1c1520' },
-    { name: 'Sage', skin: 'sage', panel: '#fbfcf8' },
-    { name: 'Aurora', skin: 'aurora', panel: '#18152f' },
-    { name: 'Iris', skin: 'iris', panel: '#fdfcff' },
+  const tints = [
+    { name: 'Lagoon · Moss', light: 'lagoon', dark: 'moss', darkPanel: '#171b13' },
+    { name: 'Iris · Aurora', light: 'iris', dark: 'aurora', darkPanel: '#18152f' },
+    { name: 'Sage · Loam', light: 'sage', dark: 'loam', darkPanel: '#1a1913' },
   ];
-  for (const { name, skin, panel } of newer) {
-    await page.getByRole('button', { name: 'Theme' }).click();
-    await page.getByRole('menuitemradio', { name }).click();
-    await expect(page.locator('html')).toHaveAttribute('data-skin', skin);
-    const token = await page.evaluate(() =>
+  const panel = () =>
+    page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue('--panel').trim(),
     );
-    expect(token).toBe(panel);
+  for (const { name, light, dark, darkPanel } of tints) {
+    await page.emulateMedia({ colorScheme: 'light' });
     await page.getByRole('button', { name: 'Theme' }).click();
-    await expect(page.getByRole('menuitemradio', { name })).toHaveAttribute('aria-checked', 'true');
-    await page.keyboard.press('Escape');
+    await page.getByRole('menuitemradio', { name }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-skin', light);
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect(page.locator('html')).toHaveAttribute('data-skin', dark);
+    expect(await panel()).toBe(darkPanel);
   }
 
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.getByRole('button', { name: 'Theme' }).click();
+  await page.getByRole('menuitemradio', { name: 'Dark' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'loam');
   await page.reload();
-  expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('iris');
+  expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('loam');
+  expect(await page.evaluate(() => localStorage.getItem('spark-outpost.theme'))).toBe(
+    'dark.sage.system',
+  );
+});
+
+test('Increase contrast switches to the high-contrast set on the matching side', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light', contrast: 'more' });
+  await openChats(page);
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'contrast');
+  await page.emulateMedia({ colorScheme: 'dark', contrast: 'more' });
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'contrast-dark');
+  await page.emulateMedia({ colorScheme: 'dark', contrast: 'no-preference' });
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'graphite');
 });
 
 test('replies render Markdown safely', async ({ page }) => {

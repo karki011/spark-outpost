@@ -3,6 +3,10 @@ import type { BaseWindow, MenuItemConstructorOptions } from 'electron';
 export type MenuPaneShortcut = 'close_tab' | 'reload' | 'hard_reload';
 
 export interface HelpActions {
+  dev: boolean;
+  sidebarShown: boolean;
+  openSettings: () => void;
+  toggleSidebar: () => void;
   sendFeedback: () => void;
   exportDiagnostics: () => void;
   showLogs: () => void;
@@ -28,9 +32,32 @@ function paneFirst(
   };
 }
 
+function appMenu(actions: HelpActions): MenuItemConstructorOptions {
+  return {
+    role: 'appMenu',
+    submenu: [
+      { role: 'about' },
+      { type: 'separator' },
+      { label: 'Settings…', accelerator: 'CommandOrControl+,', click: actions.openSettings },
+      { type: 'separator' },
+      { role: 'services' },
+      { type: 'separator' },
+      { role: 'hide' },
+      { role: 'hideOthers' },
+      { role: 'unhide' },
+      { type: 'separator' },
+      { role: 'quit' },
+    ],
+  };
+}
+
+function developerItems(actions: HelpActions): MenuItemConstructorOptions[] {
+  return actions.dev ? [{ role: 'toggleDevTools' }] : [];
+}
+
 export function appMenuTemplate(actions: HelpActions): MenuItemConstructorOptions[] {
   return [
-    { role: 'appMenu' },
+    appMenu(actions),
     {
       label: 'File',
       submenu: [
@@ -46,6 +73,12 @@ export function appMenuTemplate(actions: HelpActions): MenuItemConstructorOption
       label: 'View',
       submenu: [
         {
+          label: actions.sidebarShown ? 'Hide Sidebar' : 'Show Sidebar',
+          accelerator: 'Control+Command+S',
+          click: actions.toggleSidebar,
+        },
+        { type: 'separator' },
+        {
           label: 'Reload',
           accelerator: 'CommandOrControl+R',
           click: paneFirst(actions, 'reload', (window) => windowContents(window)?.reload()),
@@ -57,13 +90,11 @@ export function appMenuTemplate(actions: HelpActions): MenuItemConstructorOption
             windowContents(window)?.reloadIgnoringCache(),
           ),
         },
-        { role: 'toggleDevTools' },
+        ...developerItems(actions),
         { type: 'separator' },
         { role: 'resetZoom' },
         { role: 'zoomIn' },
         { role: 'zoomOut' },
-        { type: 'separator' },
-        { role: 'togglefullscreen' },
       ],
     },
     { role: 'windowMenu' },

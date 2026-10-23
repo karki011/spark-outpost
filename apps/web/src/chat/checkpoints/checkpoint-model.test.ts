@@ -93,11 +93,14 @@ describe('checkpoint wording', () => {
     );
   });
 
-  it('keeps one pick on a single-choice question and offers no blank best guess', () => {
+  it('keeps exactly one pick on a single-choice question and offers no blank best guess', () => {
     const question = { question: 'Which store?', options: ['Postgres', 'Redis'], default: '' };
     const single = { ...question, pick: 'one' as const };
     expect(quickPicks(question)).toEqual(['Postgres', 'Redis']);
     expect(togglePick(togglePick(NO_ANSWER, 'Postgres', single), 'Redis', single).picks).toEqual([
+      'Redis',
+    ]);
+    expect(togglePick(togglePick(NO_ANSWER, 'Redis', single), 'Redis', single).picks).toEqual([
       'Redis',
     ]);
     expect(

@@ -46,7 +46,7 @@ test('Getting started screenshots', async ({ page }) => {
   await shoot(page, IMAGES, 'getting-started-meet-spark');
 
   await name.press('Enter');
-  await expect(onboarding(page).getByRole('heading', { name: 'Pick a theme' })).toBeVisible();
+  await expect(onboarding(page).getByRole('heading', { name: 'Pick a look' })).toBeVisible();
 
   await continueButton(page).click();
   await onboarding(page).locator('.ptile[data-prov="claude"]').click();
