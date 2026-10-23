@@ -184,7 +184,9 @@ export function recordedItems(events: readonly TaskListEvent[]): TaskListItem[] 
 }
 
 function liveRun(runs: readonly TaskListRun[]): TaskListRun | undefined {
-  return runs.find((run) => run.status === 'running') ?? runs.find((run) => run.status === 'queued');
+  return (
+    runs.find((run) => run.status === 'running') ?? runs.find((run) => run.status === 'queued')
+  );
 }
 
 function stoppedVerb(runs: readonly TaskListRun[]): string | undefined {

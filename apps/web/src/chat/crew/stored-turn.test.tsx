@@ -96,7 +96,9 @@ describe('a stored crew turn', () => {
     const { view } = show('succeeded', [bolt]);
     fireEvent.click(within(parallel('Worked')).getByRole('button', { name: /Bolt/ }));
     const block = view.container.querySelector('.par-body [data-agent]')!;
-    expect(within(block as HTMLElement).getByRole('button', { name: 'To-do: 2 of 2 done' })).toBeTruthy();
+    expect(
+      within(block as HTMLElement).getByRole('button', { name: 'To-do: 2 of 2 done' }),
+    ).toBeTruthy();
   });
 
   it('keeps a message the user sent a helper during the turn and the saved plan line', () => {
