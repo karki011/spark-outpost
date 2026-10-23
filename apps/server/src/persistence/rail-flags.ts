@@ -18,6 +18,7 @@ export interface NewRailFlag {
   inside: boolean;
   originals: RailOriginal[];
   read?: readonly string[];
+  stopped?: boolean;
 }
 
 interface RailFlagRow {
