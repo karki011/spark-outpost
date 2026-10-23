@@ -108,3 +108,13 @@ export function movedProjectIds(current: readonly string[], target: string | nul
   if (target === null) return [];
   return [target, ...current.filter((id) => id !== target)].slice(0, CONVERSATION_PROJECTS_MAX);
 }
+
+export function projectsWithChats(groups: readonly ProjectGroup[]): Set<string> {
+  return new Set(groups.filter((group) => group.chats.length > 0).map((group) => group.project.id));
+}
+
+export function mergedOrder(all: readonly string[], shown: readonly string[]): string[] {
+  const slots = new Set(shown);
+  let next = 0;
+  return all.map((id) => (slots.has(id) ? (shown[next++] ?? id) : id));
+}

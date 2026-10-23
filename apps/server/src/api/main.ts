@@ -9,6 +9,7 @@ import { seedModelStats } from '../model-cards/ingest.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
 import { startOutcomeSweep } from '../outcomes/sweep.ts';
+import { startArchiveSweep } from '../workflow/archive-inactive.ts';
 import { configuredBackup } from '../persistence/startup-backup.ts';
 import { migrateOrExit } from '../persistence/migrate-startup.ts';
 import { listen } from '../persistence/notifications.ts';
@@ -329,6 +330,7 @@ const { app, reconcileRemote } = createAppParts({
 const outcomeSweep = startOutcomeSweep(db, workspaceId, {
   sampleRate: config.OUTCOME_SAMPLE_RATE,
 });
+const archiveSweep = config.ARCHIVE_SWEEP ? startArchiveSweep(db, workspaceId) : null;
 const morningBrief = config.MORNING_BRIEF
   ? startMorningBrief(db, workspaceId, () =>
       loadInbox({
@@ -379,6 +381,7 @@ const shutdown = async (keepTerminals = false) => {
   await agentTerminals.stopAll().catch(() => undefined);
   stopLagMonitor();
   outcomeSweep.stop();
+  archiveSweep?.stop();
   morningBrief?.stop();
   slackSocket.stop();
   await slackNotifier.stop();
