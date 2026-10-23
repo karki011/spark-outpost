@@ -21,6 +21,11 @@ export function hiddenPlacement(home: BrowserHome): BrowserPlacement {
 }
 
 const PROBE_INSET = 6;
+const RECHECK_EVENT = 'spark:native-placement';
+
+export function recheckNativePlacement(): void {
+  window.dispatchEvent(new Event(RECHECK_EVENT));
+}
 const SETTLE_MS = 320;
 const DRAG_HANDLES = '[role="separator"]';
 
@@ -158,6 +163,7 @@ export function useNativePlacement(
     window.addEventListener('pointercancel', onPointerUp, true);
     window.addEventListener('keyup', scheduleSettled, true);
     window.addEventListener('focusin', scheduleSettled, true);
+    window.addEventListener(RECHECK_EVENT, scheduleSettled);
     scheduleSettled();
 
     return () => {
@@ -172,6 +178,7 @@ export function useNativePlacement(
       window.removeEventListener('pointercancel', onPointerUp, true);
       window.removeEventListener('keyup', scheduleSettled, true);
       window.removeEventListener('focusin', scheduleSettled, true);
+      window.removeEventListener(RECHECK_EVENT, scheduleSettled);
       cancelAnimationFrame(frame);
       cancelAnimationFrame(animating);
       clearTimeout(settle);

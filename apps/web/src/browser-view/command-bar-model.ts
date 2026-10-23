@@ -1,5 +1,6 @@
 import {
   addressToUrl,
+  historyUrl,
   type BrowserFavorite,
   type BrowserHistoryEntry,
   type BrowserPaneTab,
@@ -90,7 +91,7 @@ export function barRows(input: BarInput, now = Date.now()): BarRow[] {
       target: { kind: 'tab', tabId: tab.id },
     });
   }
-  const open = new Set(tabs.map((tab) => tab.url));
+  const open = new Set(tabs.flatMap((tab) => [tab.url, historyUrl(tab.url) ?? tab.url]));
   const favorites = input.favorites.filter(
     (favorite) => !open.has(favorite.url) && matches(wanted, favorite.title, favorite.url),
   );

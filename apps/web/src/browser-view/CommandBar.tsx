@@ -1,10 +1,12 @@
 import '../sessions/session-palette.css';
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { BrowserFavorite, BrowserPaneTab, BrowserProfile } from '@spark-outpost/contracts';
 import { browserHistoryApi, browserHistoryKey } from '../api/browser-history.ts';
+import { recheckNativePlacement } from '../browser/use-view-placement.ts';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
-import { SearchIcon, XIcon } from '../ui/icons.tsx';
+import { ClockIcon, SearchIcon, SparkleIcon, XIcon } from '../ui/icons.tsx';
+import { GlobeIcon } from '../browser/BrowserIcons.tsx';
 import { Keys, type ShortcutKeys } from '../ui/Keys.tsx';
 import { MAC } from '../ui/shortcuts.ts';
 import { useDebouncedValue } from '../ui/use-debounced-value.ts';
@@ -13,10 +15,19 @@ import {
   barRows,
   barSections,
   type BarAction,
+  type BarGroup,
   type BarMode,
   type BarRow,
 } from './command-bar-model.ts';
 import { ProfileBadge } from './ProfileSwitch.tsx';
+
+const GROUP_ICONS: Record<BarGroup, ReactNode> = {
+  address: <GlobeIcon />,
+  tabs: <GlobeIcon />,
+  favorites: <GlobeIcon />,
+  history: <ClockIcon />,
+  actions: <SparkleIcon />,
+};
 
 export interface CommandBarProps {
   profile: BrowserProfile;
@@ -45,10 +56,14 @@ function useHistory(profile: BrowserProfile, text: string) {
   });
 }
 
-function useReturnFocus() {
+function useOverlay() {
   useEffect(() => {
     const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    return () => before?.focus({ preventScroll: true });
+    recheckNativePlacement();
+    return () => {
+      before?.focus({ preventScroll: true });
+      requestAnimationFrame(recheckNativePlacement);
+    };
   }, []);
 }
 
@@ -71,7 +86,7 @@ export function CommandBar(props: CommandBarProps) {
   const sections = barSections(rows);
   const current = Math.min(active, Math.max(0, rows.length - 1));
   const optionId = (index: number) => `${id}-opt-${index}`;
-  useReturnFocus();
+  useOverlay();
 
   useEffect(() => {
     input.current?.focus();
@@ -174,11 +189,16 @@ export function CommandBar(props: CommandBarProps) {
                   onClick={(event) => pick(row, MAC ? event.metaKey : event.ctrlKey)}
                   onPointerMove={() => setActive(index)}
                 >
+                  <span className="bv-cmd-icon" aria-hidden="true">
+                    {GROUP_ICONS[row.group]}
+                  </span>
                   <span className="sp-main">
                     <span className="sp-title">{row.title}</span>
                     {row.detail && <span className="sp-where">{row.detail}</span>}
                   </span>
-                  {row.target.kind === 'tab' && <span className="sp-state">Switch</span>}
+                  <span className="sp-side">
+                    {row.target.kind === 'tab' && <span className="sp-state">Switch</span>}
+                  </span>
                 </li>
               ))}
             </ul>

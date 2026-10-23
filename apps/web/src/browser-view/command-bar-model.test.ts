@@ -80,6 +80,29 @@ describe('the Browser view command bar', () => {
     ]);
   });
 
+  it('shows an open tab once even when history keeps its address with a secret hidden', () => {
+    const rows = barRows(
+      {
+        ...input,
+        tabs: [tab('v1', 'Callback', 'https://app.acme.dev/cb?code=abc', true)],
+        favorites: [],
+        history: [
+          {
+            profile: 'personal',
+            url: 'https://app.acme.dev/cb?code=[redacted]',
+            title: 'Callback',
+            visitCount: 1,
+            lastVisitedAt: '2026-10-23T11:00:00Z',
+          },
+        ],
+      },
+      NOW,
+    );
+    expect(rows.filter((row) => row.title === 'Callback').map((row) => row.group)).toEqual([
+      'tabs',
+    ]);
+  });
+
   it('says when a page was last visited', () => {
     const history = barRows(input, NOW).find((row) => row.group === 'history');
     expect(history?.detail).toBe('docs.acme.dev · yesterday');
