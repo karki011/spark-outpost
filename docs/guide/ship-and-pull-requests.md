@@ -6,11 +6,11 @@ order: 320
 summary: Commit, push or open a pull request from a chat, and choose whether pull requests open ready for review or as drafts.
 ---
 
-You'll ship a finished change as a commit, a pushed branch or a pull request. About 2 minutes.
+Ship a finished change as a commit, pushed branch or pull request. About 2 minutes.
 
-1. Select the ship button in the **Changes** tab of the **Work** panel. It reads **Open PR**, **Push branch** or **Commit**.
+1. In the **Work** panel's **Changes** tab, select the ship button: **Open PR**, **Push branch** or **Commit**.
 2. In **Ship this task**, pick **Commit**, **Push** or **PR** under **How to ship**.
-3. Check the branch, the files and the **Pull request title**.
+3. Check the branch, files and **Pull request title**.
 4. Select **Open PR**, **Push branch** or **Commit**.
 
 ![Ship this task with the PR option, branch and files](images/ship-panel-light.png)
@@ -21,22 +21,20 @@ Ship commits only the task's own files, without secret files. Once a PR exists, 
 
 Ask for a pull request in your message, or set **Full auto → PR**. After its reply, Spark asks the agent to push and open the PR; at **Full auto → PR** only when the turn changed files.
 
-Spark's result line leads under the reply.
-
 In an outpost: [requests](outpost-permissions.md), [stacks](stacked-pull-requests.md).
 
-| The chat says                                               | Meaning                                  |
+| First under the reply                                       | Meaning                                  |
 | ----------------------------------------------------------- | ---------------------------------------- |
 | **Opened pull request #12**                                 | Spark tracks it.                         |
-| "The branch was pushed, but no pull request was opened."    | Use the link to create it.               |
-| "Pushed …"                                                  | You asked for the push only.             |
+| "The branch was pushed, but no pull request was opened."    | Create it from the link.                 |
+| "Pushed …"                                                  | You asked only to push.                  |
 | **Push stopped by the pre-push check**, with its last lines | Nothing was pushed.                      |
 | "Not published: …"                                          | Kept, not pushed. Ask again, or ship it. |
-| "Committed … not pushed."                                   | The project has no remote.               |
+| "Committed … not pushed."                                   | No remote.                               |
 
 The push uses your shell's logins; tokens never reach the agent. Without `gh`, the PR opens through your GitHub sign-in.
 
-Every pull request from the chat or its terminal shows above the message box and under **Links** with checks, reviews and comments. **Refresh** re-reads one from GitHub. A reopened one shows **Open** again.
+Every pull request from the chat or its terminal shows above the message box and under **Links** with checks, reviews and comments. **Refresh** re-reads one from GitHub; a reopened one shows **Open** again.
 
 ## Ready for review or draft
 
