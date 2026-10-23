@@ -12,20 +12,20 @@ What changed recently, newest first.
 
 | What changed                                                                                                                                 | What to do                                                 |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Keyboard-reachable meeting cards; **⌃⌥⌘M**.                                                                                                  | See [Calendar](calendar.md#use-it).                        |
+| Appearance follows the system; pick a **Tint**.                                                                                              | Had a theme? It stays. [Settings](settings.md#general).    |
 | Mac app: **Settings…** window (⌘,), **Hide Sidebar** (⌃⌘S), right-click editing; one-answer questions show radios.                           | See [Keys](keyboard-shortcuts.md#chats).                   |
-| A spoken question, once sent, acts like a typed one under **When Ask Spark acts**.                                                           | See [Talk to Spark](voice.md#turn-it-on).                  |
+| A sent spoken question acts like a typed one (**When Ask Spark acts**).                                                                      | See [Talk to Spark](voice.md#turn-it-on).                  |
 | Claude agents can sleep: **Sleeping until 10:48**; the turn then picks up.                                                                   | See [Background work](follow-a-turn.md#background-work).   |
-| An outpost no longer shows the last chat's Browser pane on its left.                                                                         | See [Outposts](outposts.md).                               |
-| Spark Island answers one-pick questions; its card count skips set-aside cards.                                                               | See [Cards](cards.md#approval-cards).                      |
+| Outposts no longer show the last chat's Browser pane.                                                                                        | See [Outposts](outposts.md).                               |
+| Agents ask with question cards; Spark Island answers one-pick ones and its count skips set-aside cards.                                      | See [Cards](cards.md#approval-cards).                      |
 | **Add folder…** ends every project picker.                                                                                                   | See [Link a project](start-a-chat.md#link-a-project).      |
-| Agents are signed in wherever you are in the Browser pane. Sign in again once.                                                               | See [Use the browser](use-the-browser.md).                 |
-| Meeting lines: on-time countdowns, wrap-ups name the chat, joined meetings drop. Card at start; **Alert at** sets earlier.                   | See [Use it](calendar.md#use-it).                          |
-| Agents ask with a question card.                                                                                                             | See [Cards](cards.md#approval-cards).                      |
-| One shared inbox, cleared everywhere; answer or set aside in place; flags never count. Meeting **Dismiss** sticks; **Refresh now** on Today. | See [Spark Island](desktop-companion.md#open-it).          |
-| Ask Spark has a chat’s tools. **Let agents read my calendar** is now on; had it off? Turn it off again.                                      | See [Ask Spark](companion-quick-chat.md#ask-spark).        |
+| Agents share your Browser pane sign-ins; sign in again once.                                                                                 | See [Use the browser](use-the-browser.md).                 |
+| Meeting lines count down on time, wrap-ups name the chat, joined meetings drop; **Alert at** sets the card earlier.                          | See [Use it](calendar.md#use-it).                          |
+| Shared inbox: answer or set aside in place; flags never count; **Dismiss** sticks.                                                           | See [Spark Island](desktop-companion.md#open-it).          |
+| Ask Spark has a chat’s tools. **Let agents read my calendar** is now on; turn it off if you had it off.                                      | See [Ask Spark](companion-quick-chat.md#ask-spark).        |
 | Browser: copy buttons, keys, find, developer tools, network log, SSO handoff.                                                                | See [Keys](keyboard-shortcuts.md#browser-pane-mac-app).    |
 | Sub-agents: one line, work-panel cards; Agent TV in chat; most edits show diffs.                                                             | See [Follow a turn](follow-a-turn.md#see-whats-happening). |
-| Picker: no **Auto**, shows the model; no-project chats get a folder. Agents search the web, show artifacts; links ask first.                 | See [Agent tools](modes-and-levels.md#agent-tools).        |
-| Agents stay running between messages: **Continued on its own**, **Waiting on…**, **Stopped by Quit**. Every chat starts at once.             | See [Background work](follow-a-turn.md#background-work).   |
-| Spark Island survives closing Spark's window.                                                                                                | See [Spark Island](desktop-companion.md#open-it).          |
-| Nothing chimes for the chat you're viewing. Spark Island opens from Scout; **Hide in screen sharing**. Clicks keep your app active.          | See [Spark Island](desktop-companion.md#answer-a-card).    |
+| Picker shows the model, no **Auto**; no-project chats get a folder. Agents search, show artifacts; links ask.                                | See [Agent tools](modes-and-levels.md#agent-tools).        |
+| Agents run between messages (**Continued on its own**, **Waiting on…**, **Stopped by Quit**).                                                | See [Background work](follow-a-turn.md#background-work).   |
+| No chime for the chat you view. Spark Island outlives Spark's window and opens from Scout; **Hide in screen sharing**; clicks keep your app. | See [Spark Island](desktop-companion.md#answer-a-card).    |

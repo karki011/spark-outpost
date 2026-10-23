@@ -44,6 +44,8 @@ export interface GatewayDeps {
 
 const PUBLIC_FILES = new Set([
   '/theme.css',
+  '/theme-base.css',
+  '/appearance.js',
   '/manifest.webmanifest',
   '/icon-192.png',
   '/icon-512.png',

@@ -197,6 +197,29 @@ describe('useIslandCalendar island line', () => {
     expect(hook.result.current.line?.text).toBe('Standup in 2 min');
   });
 
+  it('names the meeting for the notification and joins from its Join button', async () => {
+    const opened = vi.spyOn(window, 'open').mockReturnValue(null);
+    const bridge = fakeBridge();
+    mount();
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    expect(bridge.shown.at(-1)?.notice.title).toBe('Standup');
+    act(() => bridge.act({ kind: 'join', key: standup.key, eventKey: standup.key }));
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    expect(opened).toHaveBeenCalledWith(standup.link!.url, '_blank', 'noopener,noreferrer');
+    expect(bridge.shown.at(-1)).toBeNull();
+    opened.mockRestore();
+  });
+
+  it('ignores a Join from a notification for an alert that is gone', async () => {
+    const opened = vi.spyOn(window, 'open').mockReturnValue(null);
+    const bridge = fakeBridge();
+    mount();
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    act(() => bridge.act({ kind: 'join', key: 'old-alert', eventKey: standup.key }));
+    expect(opened).not.toHaveBeenCalled();
+    opened.mockRestore();
+  });
+
   it('drops the line for a meeting once it is joined', async () => {
     vi.setSystemTime(at(10, 26));
     fakeBridge();

@@ -9,7 +9,7 @@ import { configureLiveQueries } from './app/live/use-app-events.ts';
 import { markScrollbarStyle } from './app/scrollbars.ts';
 import { startTouchViewport } from './app/touch-viewport.ts';
 import { warmTerminalFont } from './terminal/terminal-font.ts';
-import { syncThemeColor } from './theme/theme.ts';
+import { followAppearance } from './theme/appearance.ts';
 import { AppMotion } from './ui/transitions.tsx';
 import 'blobatar/motion.css';
 import './brand/blob-motion.css';
@@ -30,7 +30,7 @@ configureLiveQueries(queryClient);
 
 reportCspViolationsInDev();
 markScrollbarStyle();
-syncThemeColor();
+followAppearance();
 warmTerminalFont();
 startTouchViewport();
 ignoreAnimationIterationListeners(EventTarget.prototype);

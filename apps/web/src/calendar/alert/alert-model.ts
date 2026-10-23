@@ -49,6 +49,18 @@ export function alertDetail(event: CalendarEvent): string {
   return [span(start, end), service, people].filter(Boolean).join(' · ');
 }
 
+const NOTICE_MAX = 400;
+
+export function alertNotice(events: readonly CalendarEvent[]): { title: string; body: string } {
+  const [first] = events;
+  if (!first) return { title: '', body: '' };
+  const title =
+    events.length === 1
+      ? first.title
+      : `${events.length} meetings: ${events.map((event) => event.title).join(', ')}`;
+  return { title: title.slice(0, NOTICE_MAX), body: alertDetail(first).slice(0, NOTICE_MAX) };
+}
+
 export function joinState(event: CalendarEvent, at: number): 'open' | 'later' | 'none' {
   if (!event.link) return 'none';
   const window = spanOf(event);

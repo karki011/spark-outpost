@@ -1,130 +1,144 @@
-import { sparkDesktop } from '../desktop/desktop-bridge.ts';
+export const modes = [
+  { id: 'auto', label: 'Automatic' },
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' },
+] as const;
 
-export const themes = [
-  {
-    id: 'system',
-    label: 'Match system',
-    description: 'Follows your light or dark setting',
-    swatch: { accent: '#8b95a3', background: '#12161a' },
-  },
+export const contrastChoices = [
+  { id: 'system', label: 'Follow system' },
+  { id: 'always', label: 'Always' },
+] as const;
+
+export const tints = [
   {
     id: 'graphite',
     label: 'Graphite',
-    description: 'Dark, teal accent',
+    description: 'Neutral grey, teal accent',
+    light: 'light',
+    dark: 'graphite',
     swatch: { accent: '#34c3a3', background: '#12161a' },
   },
   {
     id: 'apricot',
-    label: 'Apricot',
-    description: 'Warm light, orange accent',
-    swatch: { accent: '#e2742f', background: '#fffdfb' },
-  },
-  {
-    id: 'void',
-    label: 'Void',
-    description: 'Pure black, violet accent',
-    swatch: { accent: '#9d8aff', background: '#000000' },
-  },
-  {
-    id: 'fjord',
-    label: 'Fjord',
-    description: 'Cool light, blue accent',
-    swatch: { accent: '#2f6fe4', background: '#ffffff' },
-  },
-  {
-    id: 'moss',
-    label: 'Moss',
-    description: 'Deep green, lime accent',
-    swatch: { accent: '#c7d96b', background: '#171b13' },
+    label: 'Apricot · Plum',
+    description: 'Warm cream and dusky plum',
+    light: 'apricot',
+    dark: 'plum',
+    swatch: { accent: '#e2742f', background: '#1c1520' },
   },
   {
     id: 'lagoon',
-    label: 'Lagoon',
-    description: 'Sea-glass light, teal accent',
-    swatch: { accent: '#0a7389', background: '#fbfefe' },
-  },
-  {
-    id: 'plum',
-    label: 'Plum',
-    description: 'Dusky plum, rose-gold accent',
-    swatch: { accent: '#e9ab8c', background: '#1c1520' },
-  },
-  {
-    id: 'sage',
-    label: 'Sage',
-    description: 'Soft sage, clay accent',
-    swatch: { accent: '#a85a2a', background: '#fbfcf8' },
-  },
-  {
-    id: 'aurora',
-    label: 'Aurora',
-    description: 'Night violet, lime glow',
-    swatch: { accent: '#c1f354', background: '#18152f' },
+    label: 'Lagoon · Moss',
+    description: 'Sea-glass and deep green',
+    light: 'lagoon',
+    dark: 'moss',
+    swatch: { accent: '#0a7389', background: '#171b13' },
   },
   {
     id: 'iris',
-    label: 'Iris',
-    description: 'Lilac light, indigo accent',
-    swatch: { accent: '#5b3df5', background: '#fdfcff' },
+    label: 'Iris · Aurora',
+    description: 'Lilac and night violet',
+    light: 'iris',
+    dark: 'aurora',
+    swatch: { accent: '#5b3df5', background: '#18152f' },
   },
   {
-    id: 'contrast',
-    label: 'High contrast',
-    description: 'Maximum legibility',
-    swatch: { accent: '#0000e0', background: '#ffffff' },
+    id: 'fjord',
+    label: 'Fjord · Void',
+    description: 'Cool blue and pure black',
+    light: 'fjord',
+    dark: 'void',
+    swatch: { accent: '#2f6fe4', background: '#07070a' },
+  },
+  {
+    id: 'sage',
+    label: 'Sage · Loam',
+    description: 'Soft sage and dark loam, clay accent',
+    light: 'sage',
+    dark: 'loam',
+    swatch: { accent: '#a85a2a', background: '#1a1913' },
   },
 ] as const;
 
-export type ThemeId = (typeof themes)[number]['id'];
+export type Mode = (typeof modes)[number]['id'];
+export type ContrastChoice = (typeof contrastChoices)[number]['id'];
+export type Tint = (typeof tints)[number];
+export type TintId = Tint['id'];
+export type SkinId = Tint['light'] | Tint['dark'] | 'contrast' | 'contrast-dark';
 
-const STORAGE_KEY = 'spark-outpost.theme';
-const DEFAULT_THEME: ThemeId = 'graphite';
-
-function isThemeId(value: string | null): value is ThemeId {
-  return themes.some((theme) => theme.id === value);
+export interface Appearance {
+  mode: Mode;
+  tint: TintId;
+  contrast: ContrastChoice;
 }
 
-export function readTheme(): ThemeId {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return isThemeId(stored) ? stored : DEFAULT_THEME;
-  } catch {
-    return DEFAULT_THEME;
+export interface SystemLook {
+  dark: boolean;
+  moreContrast: boolean;
+}
+
+export const DEFAULT_APPEARANCE: Appearance = {
+  mode: 'auto',
+  tint: 'graphite',
+  contrast: 'system',
+};
+
+function isMode(value: string | undefined): value is Mode {
+  return modes.some((mode) => mode.id === value);
+}
+
+function isContrast(value: string | undefined): value is ContrastChoice {
+  return contrastChoices.some((choice) => choice.id === value);
+}
+
+export function tintOf(id: TintId): Tint {
+  return tints.find((tint) => tint.id === id) ?? tints[0];
+}
+
+function fromLegacyTheme(theme: string): Appearance {
+  if (theme === 'light') return { ...DEFAULT_APPEARANCE, mode: 'light' };
+  if (theme === 'dark') return { ...DEFAULT_APPEARANCE, mode: 'dark' };
+  if (theme === 'contrast') return { ...DEFAULT_APPEARANCE, mode: 'light', contrast: 'always' };
+  const lightOf = tints.find((tint) => tint.light === theme);
+  if (lightOf) return { ...DEFAULT_APPEARANCE, mode: 'light', tint: lightOf.id };
+  const darkOf = tints.find((tint) => tint.dark === theme);
+  if (darkOf) return { ...DEFAULT_APPEARANCE, mode: 'dark', tint: darkOf.id };
+  return DEFAULT_APPEARANCE;
+}
+
+export function parseAppearance(stored: string | null): Appearance {
+  if (!stored) return DEFAULT_APPEARANCE;
+  const parts = stored.split('.');
+  if (parts.length === 1) return fromLegacyTheme(stored);
+  const [mode, tintId, contrast] = parts;
+  const tint = tints.find((option) => option.id === tintId);
+  if (parts.length !== 3 || !isMode(mode) || !tint || !isContrast(contrast)) {
+    return DEFAULT_APPEARANCE;
   }
+  return { mode, tint: tint.id, contrast };
 }
 
-const SYSTEM_BAR_COLORS = ['#eaecf0', '#07090b'];
-
-export function syncThemeColor(): void {
-  const skinned = document.documentElement.dataset.skin !== undefined;
-  const rail = getComputedStyle(document.documentElement).getPropertyValue('--rail').trim();
-  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta, index) => {
-    const fallback = SYSTEM_BAR_COLORS[index];
-    const color = skinned && rail ? rail : fallback;
-    if (color) meta.content = color;
-  });
+export function formatAppearance(appearance: Appearance): string {
+  return `${appearance.mode}.${appearance.tint}.${appearance.contrast}`;
 }
 
-function paintTheme(id: ThemeId): void {
-  if (id === 'system') delete document.documentElement.dataset.skin;
-  else document.documentElement.dataset.skin = id;
-  syncThemeColor();
+export function contrastOn(appearance: Appearance, system: SystemLook): boolean {
+  return appearance.contrast === 'always' || system.moreContrast;
 }
 
-export function followSavedTheme(): () => void {
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === STORAGE_KEY) paintTheme(readTheme());
-  };
-  window.addEventListener('storage', onStorage);
-  return () => window.removeEventListener('storage', onStorage);
+export function resolveSkin(appearance: Appearance, system: SystemLook): SkinId {
+  const dark = appearance.mode === 'auto' ? system.dark : appearance.mode === 'dark';
+  if (contrastOn(appearance, system)) return dark ? 'contrast-dark' : 'contrast';
+  const tint = tintOf(appearance.tint);
+  return dark ? tint.dark : tint.light;
 }
 
-export function applyTheme(id: ThemeId): void {
-  paintTheme(id);
-  sparkDesktop()?.theme?.save(id);
-  try {
-    localStorage.setItem(STORAGE_KEY, id);
-  } catch {
-    return;
-  }
+export function resolveIslandSkin(appearance: Appearance, system: SystemLook): SkinId {
+  return contrastOn(appearance, system) ? 'contrast-dark' : tintOf(appearance.tint).dark;
+}
+
+export function appearanceSummary(appearance: Appearance): string {
+  const mode = modes.find((option) => option.id === appearance.mode)?.label ?? 'Automatic';
+  const contrast = appearance.contrast === 'always' ? ' · High contrast' : '';
+  return `${mode} · ${tintOf(appearance.tint).label}${contrast}`;
 }

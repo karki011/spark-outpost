@@ -5,7 +5,7 @@ import { ModelsSection } from '../models/ModelsSection.tsx';
 import { ConnectorGrid } from '../onboarding/ToolsStep.tsx';
 import { ProviderSetupView } from '../providers/ProviderSetupView.tsx';
 import { routeToProvider, useRoutedProvider } from '../providers/provider-route.ts';
-import { ThemeCards } from '../theme/ThemeCards.tsx';
+import { APPEARANCE_ROWS, AppearanceSettings } from '../theme/AppearanceSettings.tsx';
 import { UsageSection } from '../usage/UsageSection.tsx';
 import { ProfileSection } from '../spark/ProfileSection.tsx';
 import { ASSISTANT_ROWS, SparkAssistantSection } from './assistant/SparkAssistantSection.tsx';
@@ -129,10 +129,11 @@ export const SETTINGS_SECTIONS = [
     group: 'general',
     label: 'Appearance',
     icon: icons.APPEARANCE_ICON,
+    rows: () => APPEARANCE_ROWS,
     render: () => (
       <>
-        <p className="lede">Pick a theme. It applies everywhere right away.</p>
-        <ThemeCards />
+        <p className="lede">Follows your system by default. Changes apply everywhere right away.</p>
+        <AppearanceSettings />
       </>
     ),
   },

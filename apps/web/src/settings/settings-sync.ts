@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { followSavedTheme } from '../theme/theme.ts';
 
 const CHANNEL = 'spark-outpost.settings';
 
@@ -28,7 +27,6 @@ export function useAnnounceSettingChanges(): void {
 
 export function useFollowSettingsWindow(): void {
   const queryClient = useQueryClient();
-  useEffect(() => followSavedTheme(), []);
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
     const channel = new BroadcastChannel(CHANNEL);
