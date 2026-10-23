@@ -3,17 +3,27 @@ import type { ChangeEntry } from '@spark-outpost/contracts';
 import { diffApi, diffKeys } from '../../diff/diff-api.ts';
 import { useViewChanges } from '../../tasks/view-changes.ts';
 import { runTotals } from '../changes/change-rules.ts';
+import { baseName } from './turn-rows.ts';
 
 export interface TurnChanges {
   files: number;
   added: number;
   removed: number;
-  entry(name: string): ChangeEntry | null;
+  entry(path: string): ChangeEntry | null;
   open: ((file?: ChangeEntry) => void) | null;
 }
 
-function baseName(path: string): string {
-  return path.split('/').at(-1) ?? path;
+function sameFile(stepPath: string, filePath: string): boolean {
+  return stepPath === filePath || stepPath.endsWith(`/${filePath}`);
+}
+
+export function changeEntry(files: readonly ChangeEntry[], path: string): ChangeEntry | null {
+  if (path.includes('/')) {
+    const matches = files.filter((file) => sameFile(path, file.path));
+    return matches.sort((left, right) => right.path.length - left.path.length)[0] ?? null;
+  }
+  const named = files.filter((file) => baseName(file.path) === path);
+  return named.length === 1 ? named[0]! : null;
 }
 
 export function useTurnChanges(
@@ -38,10 +48,10 @@ export function useTurnChanges(
     placeholderData: keepPreviousData,
   });
   if (!taskId || live.length === 0) return null;
-  const byName = new Map((page.data?.files ?? []).map((file) => [baseName(file.path), file]));
+  const files = page.data?.files ?? [];
   return {
     ...runTotals(live),
-    entry: (name) => byName.get(name) ?? null,
+    entry: (path) => changeEntry(files, path),
     open: viewChanges ? (file) => viewChanges(taskId, file) : null,
   };
 }

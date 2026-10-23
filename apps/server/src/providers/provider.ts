@@ -242,6 +242,7 @@ export type ProviderOutput =
       tool?: boolean;
       toolKind?: string;
       target?: string;
+      path?: string;
       subagent?: string;
       waits?: boolean;
     }
@@ -251,6 +252,7 @@ export type ProviderOutput =
       tool?: boolean;
       toolKind?: string;
       target?: string;
+      path?: string;
       subagent?: string;
       waits?: boolean;
     }

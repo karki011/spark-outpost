@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckIcon, XIcon } from '../../ui/icons.tsx';
+import { CheckIcon, PauseIcon, XIcon } from '../../ui/icons.tsx';
 import { commandSeconds, shownDuration, type CommandView } from './command-model.ts';
 
 export function Elapsed({ command }: { command: CommandView }) {
@@ -21,7 +21,14 @@ export function CommandWord({ command, waiting }: { command: CommandView; waitin
       </span>
     );
   }
-  if (command.status === 'interrupted') return <span className="trow-word">interrupted</span>;
+  if (command.status === 'interrupted') {
+    return (
+      <span className="trow-word">
+        <PauseIcon />
+        interrupted
+      </span>
+    );
+  }
   const ended = Date.parse(command.finishedAt ?? command.startedAt);
   const took = shownDuration(commandSeconds(command, ended));
   if (command.status === 'failed') {

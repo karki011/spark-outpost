@@ -139,4 +139,23 @@ describe('turn events', () => {
     expect(stepMark(finished!)).toEqual({});
     expect(finished!.timestamp).toBe(2_000);
   });
+
+  it("names a file step by the agent's own path, spaces and commas included", async () => {
+    const written = await eventsFor([
+      {
+        kind: 'step_started',
+        name: 'Read `My File.ts`',
+        tool: true,
+        toolKind: 'read',
+        target: '/repo/My, File.ts:4 {"file_path":"/repo/My, File.ts"}',
+        path: '/repo/My, File.ts',
+      },
+      { kind: 'step_started', name: 'Edit', tool: true, toolKind: 'edit', target: '{"a":1}' },
+    ]);
+    const marks = written.filter((event) => event.type === EventType.STEP_STARTED).map(stepMark);
+    expect(marks).toEqual([
+      { toolKind: 'read', target: '/repo/My, File.ts' },
+      { toolKind: 'edit' },
+    ]);
+  });
 });

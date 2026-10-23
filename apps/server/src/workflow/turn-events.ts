@@ -39,16 +39,15 @@ interface OpenStep {
 const FILE_KINDS = new Set(['read', 'edit', 'delete', 'move']);
 const TARGET_CHARS = 200;
 
-function fileLabel(target: string | undefined): string | null {
-  const path = target?.split(/[\s,]/)[0]?.replace(/:\d*$/, '') ?? '';
-  const name = path.split('/').filter(Boolean).at(-1) ?? '';
-  return name ? name.slice(0, TARGET_CHARS) : null;
+function filePath(path: string | undefined): string | null {
+  const trimmed = path?.trim() ?? '';
+  return trimmed ? trimmed.slice(-TARGET_CHARS) : null;
 }
 
-function kindMark(output: { toolKind?: string; target?: string }): StepMark {
+function kindMark(output: { toolKind?: string; path?: string }): StepMark {
   if (!output.toolKind) return {};
-  const label = FILE_KINDS.has(output.toolKind) ? fileLabel(output.target) : null;
-  return { toolKind: output.toolKind.slice(0, 40), ...(label ? { target: label } : {}) };
+  const path = FILE_KINDS.has(output.toolKind) ? filePath(output.path) : null;
+  return { toolKind: output.toolKind.slice(0, 40), ...(path ? { target: path } : {}) };
 }
 
 function anchorMark(reply: ReplySoFar | undefined): StepMark {
