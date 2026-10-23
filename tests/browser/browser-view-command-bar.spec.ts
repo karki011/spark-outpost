@@ -122,6 +122,28 @@ test('an action runs from the bar, and Esc gives focus back', async ({ page }) =
   await expect(page.getByRole('complementary', { name: 'Ask Spark' })).toBeVisible();
 });
 
+test('⌘Enter opens an open tab’s page in a new tab, and ⌘L after ⌘T starts over', async ({
+  page,
+}) => {
+  await openWithPages(page);
+  await shortcut(page, 'new_tab');
+  const fresh = bar(page, 'Open a new tab');
+  await expect(fresh.getByRole('combobox')).toBeFocused();
+  await page.keyboard.type('weather');
+  await shortcut(page, 'focus_address');
+  const here = bar(page, 'Go to');
+  await expect(here.getByRole('combobox')).toHaveValue(DOCS);
+  await expect(here.getByRole('combobox')).toBeFocused();
+  await page.keyboard.type('weather');
+  await page.keyboard.press('ControlOrMeta+Enter');
+  await expect
+    .poll(async () => (await viewCommands(page)).at(-1))
+    .toEqual({
+      profile: 'personal',
+      command: { command: 'new_tab', url: 'https://weather.example.com/' },
+    });
+});
+
 test('the command bar passes an accessibility check', async ({ page }) => {
   await openWithPages(page);
   await shortcut(page, 'new_tab');

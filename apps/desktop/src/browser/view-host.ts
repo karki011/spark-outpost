@@ -52,7 +52,7 @@ export interface ViewHostOptions {
 export interface BrowserViewHost {
   panes: BrowserPanes;
   shortcut(tab: PaneTab, shortcut: BrowserShortcut): void;
-  openTab(profile: BrowserProfile, url: string): Promise<void>;
+  openTab(profile: BrowserProfile, url: string): Promise<boolean>;
   dispose(): void;
 }
 
@@ -193,8 +193,7 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     tabsMax: BROWSER_VIEW_TABS_MAX,
     partition: (key) => profilePartition(browserProfileSchema.parse(key)),
     guards: options.guards,
-    visited: (tab, url, sameDocument) =>
-      history.visited(tab, url, sameDocument ? tab.currentTitle() : ''),
+    visited: (tab, url) => history.visited(tab, url, ''),
     titled: (tab, title) => history.titled(tab, title),
   });
 
@@ -247,7 +246,9 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     shortcut,
     async openTab(profile, url) {
       restore(profile);
+      if (panes.tabsOf(profile).length >= BROWSER_VIEW_TABS_MAX) return false;
       await command(profile, { command: 'new_tab', url });
+      return true;
     },
     dispose() {
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);

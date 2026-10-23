@@ -127,7 +127,19 @@ export function AskTabsDock({ first, onOpenAssistant, onClose }: AskTabsDockProp
     queryFn: () => assistantApi.history(null),
     enabled: asked.length > 0,
   });
-  const stored = new Map(history.data?.exchanges.map((exchange) => [exchange.id, exchange]));
+  const [settled, setSettled] = useState<ReadonlyMap<string, AssistantExchange>>(new Map());
+  const askedIds = new Set(asked.map((entry) => entry.id));
+  const fresh = (history.data?.exchanges ?? []).filter(
+    (exchange) =>
+      askedIds.has(exchange.id) && exchange.status !== 'waiting' && !settled.has(exchange.id),
+  );
+  if (fresh.length > 0) {
+    setSettled(new Map([...settled, ...fresh.map((exchange) => [exchange.id, exchange] as const)]));
+  }
+  const stored = new Map([
+    ...(history.data?.exchanges ?? []).map((exchange) => [exchange.id, exchange] as const),
+    ...settled,
+  ]);
   const pendingCards = (assistant.detail?.approvals ?? []).filter(
     (card) => card.status === 'pending' && card.payload.sparkAction !== undefined,
   );

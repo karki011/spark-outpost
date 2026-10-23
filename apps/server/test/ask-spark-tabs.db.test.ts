@@ -3,6 +3,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Attachment } from '@spark-outpost/contracts';
 import { getApproval, insertApproval } from '../src/persistence/approvals.ts';
+import { pruneUnlinkedAttachments } from '../src/persistence/attachments.ts';
 import { addToQueue } from '../src/persistence/chat-queue.ts';
 import { ASK_SPARK_REFUSALS } from '../src/spark-mcp/actions/ask-spark-limits.ts';
 import { createTestApp, LOCAL_HEADERS, localClient, ORIGIN } from './app-support.ts';
@@ -157,5 +158,37 @@ describe('Ask Spark questions that @-mention browser tabs', () => {
       `/api/conversations/${assistant}/queue/${item}/send-now`,
     );
     expect(steer.status).toBe(409);
+  });
+
+  it('keep cards for a continuation the agent starts after a tab question', async () => {
+    await setActs(t, 'act');
+    const { conversationId, runId } = await startChat(t, 'Build the thing');
+    await t.db.query(`UPDATE runs SET status = 'running' WHERE id = $1`, [runId]);
+    const asked = await assistantRunIn(t, assistant, 'what does @Docs say?', 'pages');
+    await t.db.query(`UPDATE runs SET status = 'succeeded' WHERE id = $1`, [asked]);
+    const cycle = randomUUID();
+    await t.db.query(
+      `INSERT INTO runs (id, conversation_id, user_message_id, provider, status, source, created_at)
+       VALUES ($1, $2, NULL, 'claude', 'running', 'agent_cycle', now() + interval '1 second')`,
+      [cycle, assistant],
+    );
+    const tools = await open(cycle);
+    const result = await tools.call('spark_stop_chat', { chat: conversationId });
+    expect(result.json()).toMatchObject({ outcome: 'waiting_for_user' });
+  });
+
+  it('keep their page text through startup cleanup while they wait in the queue', async () => {
+    const client = api();
+    const page = await client.upload('page text');
+    await addToQueue(t.db, assistant, {
+      id: randomUUID(),
+      content: '@Docs summarize',
+      origin: 'pages',
+      attachmentIds: [page.id],
+    });
+    await t.db.query(`UPDATE attachments SET created_at = now() - interval '2 days'`);
+    await pruneUnlinkedAttachments(t.db, t.workspaceId);
+    const { rowCount } = await t.db.query('SELECT 1 FROM attachments WHERE id = $1', [page.id]);
+    expect(rowCount).toBe(1);
   });
 });

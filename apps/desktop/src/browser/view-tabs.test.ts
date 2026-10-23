@@ -165,6 +165,29 @@ describe('handing tabs between the Browser view and a chat', () => {
     expect(net.requests.at(-1)).toEqual({ partition: BROWSER_PARTITION, url: DOCS, cookie: null });
   });
 
+  it('keeps a Work tab that is in use, and moves it only once the chat has it', async () => {
+    const { chats, view, tab } = await openIn('work', DOCS);
+    tab.picking = true;
+    expect(await handToChat(chats, view, { profile: 'work', tabId: tab.id, chatId: CHAT })).toEqual(
+      { ok: false, reason: 'This tab is in use. Try again when it is free.' },
+    );
+    expect(chats.tabsOf(CHAT)).toEqual([]);
+    tab.picking = false;
+    const close = vi.spyOn(view.panes, 'close');
+    const load = vi
+      .spyOn(Object.getPrototypeOf(tab), 'load')
+      .mockRejectedValueOnce(new Error('gone'));
+    expect(
+      await handToChat(chats, view, { profile: 'work', tabId: tab.id, chatId: CHAT }),
+    ).toMatchObject({
+      ok: false,
+    });
+    expect(close).not.toHaveBeenCalledWith('work', tab.id);
+    expect(view.panes.tabsOf('work')).toEqual([tab]);
+    expect(chats.tabsOf(CHAT)).toEqual([]);
+    load.mockRestore();
+  });
+
   it('refuses a blank tab', async () => {
     const browser = startTestBrowser();
     await invoke('browser-view:start', 'personal');
@@ -207,5 +230,26 @@ describe('handing tabs between the Browser view and a chat', () => {
       reason: 'Only web pages open in the Browser view.',
     });
     expect(chats.tabsOf(CHAT)).toHaveLength(2);
+  });
+
+  it('keeps the chat tab when the Work profile, saved tabs included, is full', async () => {
+    const full = memorySaved();
+    full.store.setTabs(
+      'work',
+      Array.from({ length: 40 }, (_, index) => ({
+        url: `https://site${index}.example.com/`,
+        title: `Site ${index}`,
+        pinned: false,
+        active: index === 0,
+      })),
+    );
+    const { chats, view } = startTestBrowser(full.store);
+    const tab = chats.createTab(CHAT, { owner: 'user', runId: null, url: 'about:blank' })!;
+    await tab.load(NEWS);
+    expect(await toView(chats, view, { chatId: CHAT, tabId: tab.id })).toEqual({
+      ok: false,
+      reason: 'The Browser view has too many Work tabs. Close one first.',
+    });
+    expect(chats.tabsOf(CHAT)).toEqual([tab]);
   });
 });
