@@ -24,9 +24,10 @@ import { targetsApi } from './api-token.ts';
 import { startAttentionHost, type AttentionHost } from './attention-host.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 import { isSize } from './island-geometry.ts';
-import { trayTemplate } from './island-options.ts';
+import { islandToggle, trayTemplate } from './island-options.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
 import { appLayout } from './layout.ts';
+import { menuBarItem, type MenuBarTray } from './menu-bar.ts';
 import { noActivate } from './no-activate.ts';
 import { readAssistiveTech } from './assistive-tech.ts';
 import { startMeetingAlertHost } from './meeting-alert-host.ts';
@@ -80,10 +81,15 @@ function broadcast(channel: string, payload: unknown): void {
   }
 }
 
-function trayIcon(file: string) {
-  const image = nativeImage.createFromPath(file);
+function openTray(iconFile: string, toolTip: string): MenuBarTray {
+  const image = nativeImage.createFromPath(iconFile);
   image.setTemplateImage(true);
-  return image;
+  const tray = new Tray(image);
+  tray.setToolTip(toolTip);
+  return {
+    setMenu: (template) => tray.setContextMenu(Menu.buildFromTemplate(template)),
+    destroy: () => tray.destroy(),
+  };
 }
 
 export async function startCompanionHost(options: CompanionHostOptions): Promise<CompanionHost> {
@@ -93,27 +99,25 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   let pendingSettings: string | null = null;
   let saving = Promise.resolve();
   let attention: AttentionHost | null = null;
-  const tray = new Tray(trayIcon(options.trayIcon));
-  tray.setToolTip(options.appName);
+  const menuBar = menuBarItem(() => openTray(options.trayIcon, options.appName));
 
   const fromSpark = (event: IpcMainEvent | IpcMainInvokeEvent) =>
     targetsApi(event.senderFrame?.url ?? '', options.origin);
   const fromIsland = (event: IpcMainEvent | IpcMainInvokeEvent) =>
     fromSpark(event) && island !== null && island.owns(event.sender.id);
 
-  const refreshTray = (status: CompanionStatus) => {
-    tray.setContextMenu(
-      Menu.buildFromTemplate(
-        trayTemplate(
-          { appName: options.appName, companionOn: status.enabled, supported: status.supported },
-          {
-            openSpark: options.showSpark,
-            toggleCompanion: (on) => companion.setEnabled(on),
-            quit: options.quit,
-          },
-        ),
-      ),
+  const refreshMenus = (status: CompanionStatus) => {
+    const state = {
+      appName: options.appName,
+      companionOn: status.enabled,
+      supported: status.supported,
+    };
+    const toggleCompanion = (on: boolean) => companion.setEnabled(on);
+    menuBar.update(
+      status.menuBar,
+      trayTemplate(state, { openSpark: options.showSpark, toggleCompanion, quit: options.quit }),
     );
+    app.dock?.setMenu(Menu.buildFromTemplate(islandToggle(state, toggleCompanion)));
   };
 
   const save = (settings: CompanionSettings) => {
@@ -162,12 +166,12 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     unregister: (accelerator) => globalShortcut.unregister(accelerator),
     save,
     changed: (status) => {
-      refreshTray(status);
+      refreshMenus(status);
       attention?.refresh();
       broadcast(IPC.companionChanged, status);
     },
   });
-  refreshTray(companion.status());
+  refreshMenus(companion.status());
 
   const sparkFocused = () =>
     BrowserWindow.getAllWindows().some(
@@ -220,6 +224,9 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   });
   ipcMain.handle(IPC.companionSetNotify, (event, on: unknown) =>
     fromSpark(event) && typeof on === 'boolean' ? companion.setNotify(on) : companion.status(),
+  );
+  ipcMain.handle(IPC.companionSetMenuBar, (event, on: unknown) =>
+    fromSpark(event) && typeof on === 'boolean' ? companion.setMenuBar(on) : companion.status(),
   );
   ipcMain.handle(IPC.islandGeometry, (event) => (fromIsland(event) ? island!.geometry() : null));
   ipcMain.handle(IPC.pendingChat, (event) => {
@@ -354,6 +361,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.companionSetAutoExpand,
         IPC.companionSetHideInShare,
         IPC.companionSetNotify,
+        IPC.companionSetMenuBar,
         IPC.islandGeometry,
         IPC.islandSparkFocused,
         IPC.pendingChat,
@@ -375,7 +383,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         ipcMain.removeAllListeners(channel);
       }
       stopFocusWatch();
-      tray.destroy();
+      menuBar.dispose();
     },
   };
 }

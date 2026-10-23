@@ -60,7 +60,7 @@ describe('RequestCard', () => {
     );
   });
 
-  it('shows the answer in one meta line: a short summary and the git facts, or else the branch', () => {
+  it('shows a short summary, then a git line that starts with the branch', () => {
     renderCard(
       post(1, {
         state: 'answered',
@@ -83,11 +83,9 @@ describe('RequestCard', () => {
         },
       ],
     );
-    const meta = screen.getByText('Added the endpoint.').parentElement!;
-    expect(meta.textContent).toBe(
-      'Added the endpoint. · Not committed · Pushed · 2 files · PR #12',
-    );
-    expect(screen.getByTitle('spark/usage')).toBeTruthy();
+    expect(screen.getByText('Added the endpoint.')).toBeTruthy();
+    const git = screen.getByTitle('spark/usage').parentElement!;
+    expect(git.textContent).toBe('spark/usage · Not committed · Pushed · 2 files · PR #12');
     expect(screen.getByText('Ready for review')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Review PR' }).getAttribute('href')).toBe(PR_URL);
     cleanup();
@@ -105,7 +103,23 @@ describe('RequestCard', () => {
         answer: { text: '', branch: 'spark/usage', changes: ['a.ts'], pullRequests: [] },
       }),
     );
-    expect(screen.getByText('spark/usage · 1 file')).toBeTruthy();
+    expect(screen.getByTitle('spark/usage').parentElement!.textContent).toBe(
+      'spark/usage · 1 file',
+    );
+    cleanup();
+    renderCard(
+      post(1, {
+        state: 'answered',
+        answer: {
+          text: 'Done.',
+          branch: null,
+          changes: ['a.ts'],
+          pullRequests: [],
+          publish: { committed: true, pushed: false, reason: null },
+        },
+      }),
+    );
+    expect(screen.getByText('Committed · Not pushed · 1 file').textContent).not.toMatch(/^ ·/);
   });
 
   it('puts who wrote a request from another chat in its name and tooltip, not on its face', () => {

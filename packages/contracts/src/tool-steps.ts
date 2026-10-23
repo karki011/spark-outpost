@@ -187,3 +187,47 @@ const SNAKE_NAME = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$/;
 function snakeStep(title: string): string {
   return SNAKE_NAME.test(title) ? `Using ${humanizeToolName(title)}` : title;
 }
+
+export const WRITE_UP_STEP = 'Writing up results';
+export const CONTINUED_SESSION_STEP = 'Continued session';
+
+const SPARK_NOTES = [
+  /^Working on \S+ in (?:this chat's worktree|your checkout)\./,
+  /^Allowed .+ \(you (?:allowed|always allow) it[^)]*\)$/s,
+  /^Denied: .+ \(you denied it\)$/s,
+  /^Using .+ · \S+ effort$/,
+  /^Using .+'s defaults$/,
+];
+
+export function placeNoteText(branch: string, inPlace: boolean): string {
+  return inPlace
+    ? `Working on ${branch} in your checkout.`
+    : `Working on ${branch} in this chat's worktree.`;
+}
+
+export function isSparkNote(name: string): boolean {
+  if (name === WRITE_UP_STEP || name === CONTINUED_SESSION_STEP) return true;
+  return SPARK_NOTES.some((note) => note.test(name));
+}
+
+const TOOL_LABELS: Readonly<Record<string, string>> = {
+  WebFetch: 'Web fetch',
+  WebSearch: 'Web search',
+  TodoWrite: 'To-do',
+  PowerShell: 'PowerShell',
+};
+
+const UNNAMED_TOOLS = new Set(['exec_command', 'write_stdin']);
+
+function sentenceCase(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function toolLabel(name: string | null | undefined): string | null {
+  const trimmed = name?.trim() ?? '';
+  if (!trimmed || UNNAMED_TOOLS.has(trimmed)) return null;
+  const mcp = parseMcpTool(trimmed);
+  if (mcp) return SPARK_TOOL_STEPS[mcp.tool] ?? `${mcp.server} · ${mcp.tool}`;
+  const known = TOOL_LABELS[trimmed] ?? SPARK_TOOL_STEPS[trimmed];
+  return known ?? sentenceCase(humanizeToolName(trimmed));
+}

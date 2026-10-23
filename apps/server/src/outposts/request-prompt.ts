@@ -284,10 +284,15 @@ function listed(names: readonly string[]): string {
   return `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
 }
 
-export function alsoAskedLine(handles: readonly (string | null)[]): string | null {
-  const others = handles.map(handleOf).filter((handle): handle is string => handle !== null);
-  if (others.length === 0) return null;
-  return `The user sent this same message to ${listed(others)} as well. Each chat received it whole and answers for itself.`;
+export function batchLine(
+  ownHandle: string | null,
+  otherHandles: readonly (string | null)[],
+): string | null {
+  const own = handleOf(ownHandle);
+  const others = otherHandles.map(handleOf).filter((handle): handle is string => handle !== null);
+  if (own === null || others.length === 0) return null;
+  const theirs = listed(others);
+  return `You are ${own} in this outpost. The user sent this one message to ${listed([own, ...others])}. Do only what it asks of ${own} and reply as ${own}; the parts for ${theirs} are their work, context for you, not yours.`;
 }
 
 export interface StackLineFacts {

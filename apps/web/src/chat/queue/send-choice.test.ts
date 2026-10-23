@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MemberMessage, Run } from '@spark-outpost/contracts';
 import {
+  busyButtonTitle,
   busyHint,
   choiceKey,
   choiceNote,
@@ -80,6 +81,18 @@ describe('what Enter does while a turn runs', () => {
       'Send now: steers or interrupts the turn (⌘Enter)',
     );
     expect(choiceTitle('queue', 'now', true)).toBe('Queue: sends when this turn ends (⌘Enter)');
+  });
+
+  it('names the other key in the send button tooltip while a turn runs', () => {
+    expect(busyButtonTitle('queue', true)).toBe(
+      'Queue: sends when this turn ends (Enter) · ⌘Enter to send now',
+    );
+    expect(busyButtonTitle('now', false)).toBe(
+      'Send now: steers or interrupts the turn (Enter) · Ctrl+Enter to queue',
+    );
+    expect(busyButtonTitle('now', true, true)).toBe(
+      'Send now: reaches the agent while it waits, or joins the queue (Enter) · ⌘Enter to queue',
+    );
   });
 });
 

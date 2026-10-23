@@ -11,7 +11,9 @@ test('a chat with no project shows the files its agent made with the turn', asyn
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
-  await expect(page.locator('.ctx-unlinked')).toHaveText('Pick a project to work in your code.');
+  await expect(
+    page.locator('.comp-bar').getByRole('button', { name: 'Choose project' }),
+  ).toBeVisible();
 
   await input.fill('Make me a CSV and a chart #files');
   await input.press('Enter');

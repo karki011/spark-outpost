@@ -1,5 +1,5 @@
 import { AskIcon, CheckIcon, PauseIcon } from '../ui/icons.tsx';
-import type { ThreadStatus } from './thread-cards.ts';
+import type { ThreadStatus } from './request-status.ts';
 
 function PillIcon({ status }: { status: ThreadStatus }) {
   if (status === 'working') return <i className="op-orb" aria-hidden="true" />;

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Approval } from '@spark-outpost/contracts';
 import { ApprovalCard } from './ApprovalCard.tsx';
+import { buttonNames } from './test-approval.ts';
 
 afterEach(cleanup);
 
@@ -45,7 +46,7 @@ describe('ObservedNote on an approval card', () => {
         <ApprovalCard approval={approval} provider="claude" agent="Bolt" repo={null} />
       </QueryClientProvider>,
     );
-    const card = screen.getByRole('group', { name: /Run a command\?/ });
+    const card = screen.getByRole('group', { name: /^Run .+\?$/ });
     expect(
       within(card)
         .getByText(/Read sensitive data this turn/)
@@ -54,11 +55,7 @@ describe('ObservedNote on an approval card', () => {
       'Read sensitive data this turn: .env, private work data (spark_tickets). This sends data to collect.example.net.',
     );
     expect(card.textContent).not.toContain('whatever your permissions');
-    expect(
-      within(card)
-        .getAllByRole('button')
-        .map((button) => button.textContent),
-    ).toEqual(['Yes', 'Always allow in this project', 'No']);
+    expect(buttonNames(card)).toEqual(['Yes', 'Always allow in this project', 'No', 'Details']);
   });
 
   it('shows nothing when the run read nothing sensitive', () => {

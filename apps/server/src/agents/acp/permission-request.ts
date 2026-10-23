@@ -11,6 +11,7 @@ import type { ApprovalRequest, RequestRoot } from '../../approvals/decide.ts';
 import { exitPlanText, isExitPlanKind } from '../../plans/plan-mode.ts';
 import type { GateAnswer } from '../../providers/provider.ts';
 import { objectFields } from './object-fields.ts';
+import { toolNameOf } from './tool-titles.ts';
 
 export interface RequestContext {
   rpcId: string | null;
@@ -23,13 +24,6 @@ export interface RequestContext {
 }
 
 const EDIT_KINDS = new Set(['edit', 'delete', 'move']);
-
-export function toolNameOf(toolCall: acp.ToolCallUpdate): string | null {
-  const named = objectFields(toolCall).name;
-  if (typeof named === 'string' && named.trim()) return named.trim();
-  const meta = objectFields(objectFields(toolCall._meta).claudeCode).toolName;
-  return typeof meta === 'string' && meta.trim() ? meta.trim() : null;
-}
 
 function monitorCommand(toolName: string | null, rawInput: Record<string, unknown>) {
   if (toolName !== 'Monitor') return null;

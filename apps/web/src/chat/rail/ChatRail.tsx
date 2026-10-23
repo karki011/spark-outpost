@@ -29,7 +29,7 @@ import { RailToggleIcon } from './RailIcons.tsx';
 import { RailSummary } from './RailSummary.tsx';
 import { RailTodo } from './RailTodo.tsx';
 import { RailTv } from './RailTv.tsx';
-import { railCrew, railRows, type RailAction } from './rail-model.ts';
+import { latestFollowing, railCrew, railRows, type RailAction } from './rail-model.ts';
 import { useRoomInThread } from './use-rail-layout.ts';
 
 interface ChatRailProps {
@@ -122,6 +122,7 @@ function OpenRail({
     contextPercent: reading ? contextPercent(reading.used, reading.size) : null,
     hasTask: taskId !== null,
     hasStoredCrew: storedCrew(detail) !== null,
+    following: latestFollowing(detail),
   });
   const openTodo = useCallback(() => onTab('todo'), [onTab]);
   const crew = railCrew(detail, running);

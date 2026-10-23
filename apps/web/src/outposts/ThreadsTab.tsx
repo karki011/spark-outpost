@@ -3,7 +3,8 @@ import { MemberFace } from './MemberFace.tsx';
 import { provenance } from './RequestCard.tsx';
 import { StatusPill } from './StatusPill.tsx';
 import { receiverName, requestFaceState } from './post-text.ts';
-import { GROUP_LABELS, groupCards, type ThreadCard, type ThreadStatus } from './thread-cards.ts';
+import { GROUP_LABELS, type ThreadStatus } from './request-status.ts';
+import { groupCards, type ThreadCard } from './thread-cards.ts';
 
 interface ThreadsTabProps {
   cards: readonly ThreadCard[];

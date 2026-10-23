@@ -1,9 +1,8 @@
-import '../audit/audit.css';
-import { useEffect, useId, type KeyboardEvent } from 'react';
-import { ChevronIcon, TickIcon } from '../ui/icons.tsx';
-import { usePopover } from '../ui/use-popover.ts';
-
-const ITEMS = '[role="menuitem"], [role="menuitemcheckbox"]';
+import '../conversations/chat-menu.css';
+import { useState } from 'react';
+import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
+import { anchorFor } from '../conversations/menu-anchor.ts';
+import { CheckIcon, ChevronIcon } from '../ui/icons.tsx';
 
 interface OutpostTitleMenuProps {
   name: string;
@@ -14,15 +13,6 @@ interface OutpostTitleMenuProps {
   onToggleOverview: () => void;
 }
 
-function moveFocus(event: KeyboardEvent<HTMLDivElement>) {
-  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-  event.preventDefault();
-  const items = [...event.currentTarget.querySelectorAll<HTMLElement>(ITEMS)];
-  const index = items.indexOf(document.activeElement as HTMLElement);
-  const step = event.key === 'ArrowDown' ? 1 : -1;
-  items[(index + step + items.length) % items.length]?.focus();
-}
-
 export function OutpostTitleMenu({
   name,
   overviewOpen,
@@ -31,66 +21,54 @@ export function OutpostTitleMenu({
   onInstructions,
   onToggleOverview,
 }: OutpostTitleMenuProps) {
-  const menuId = useId();
-  const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
-    HTMLButtonElement,
-    HTMLDivElement
-  >();
-  useEffect(() => {
-    if (open) panelRef.current?.querySelector<HTMLElement>(ITEMS)?.focus();
-  }, [open, panelRef]);
+  const [menu, setMenu] = useState<MenuAnchor | null>(null);
+  const close = () => {
+    menu?.focusBack?.focus();
+    setMenu(null);
+  };
   const choose = (action: () => void) => () => {
-    setOpen(false);
-    anchorRef.current?.focus();
+    close();
     action();
   };
   return (
-    <div className="head-menu op-title-menu">
+    <div className="op-title-menu">
       <h1 className="chat-title">
         <button
-          ref={anchorRef}
           type="button"
           className="op-title-btn"
           aria-haspopup="menu"
-          aria-expanded={open}
-          aria-controls={menuId}
-          onClick={toggle}
+          aria-expanded={menu !== null}
+          onClick={(event) => setMenu(menu ? null : anchorFor(event.currentTarget, null))}
           onKeyDown={(event) => {
-            if (event.key !== 'ArrowDown') return;
+            if (event.key !== 'ArrowDown' || menu) return;
             event.preventDefault();
-            setOpen(true);
+            setMenu(anchorFor(event.currentTarget, null));
           }}
         >
           <span className="op-title-text">{name}</span>
           <ChevronIcon />
         </button>
       </h1>
-      {open && (
-        <div ref={panelRef} id={menuId} className="head-menu-pop" role="menu" onKeyDown={moveFocus}>
-          <button type="button" role="menuitem" onClick={choose(onRename)}>
-            Rename…
-          </button>
-          <button type="button" role="menuitem" onClick={choose(onSettings)}>
-            Outpost Settings…
-          </button>
-          <button type="button" role="menuitem" onClick={choose(onInstructions)}>
-            Instructions…
-          </button>
+      {menu && (
+        <MenuShell anchor={menu} label={name} page="main" className="op-menu" onClose={close}>
+          <MenuItem label="Rename…" onSelect={choose(onRename)} />
+          <MenuItem label="Outpost Settings…" onSelect={choose(onSettings)} />
+          <MenuItem label="Instructions…" onSelect={choose(onInstructions)} />
           {overviewOpen !== null && (
             <>
-              <div className="head-menu-sep" role="separator" />
+              <hr />
               <button
                 type="button"
                 role="menuitemcheckbox"
                 aria-checked={overviewOpen}
                 onClick={choose(onToggleOverview)}
               >
-                Show Overview
-                <span className="head-menu-end">{overviewOpen && <TickIcon />}</span>
+                <span>Show Overview</span>
+                <span className="tk">{overviewOpen && <CheckIcon className="tick" />}</span>
               </button>
             </>
           )}
-        </div>
+        </MenuShell>
       )}
     </div>
   );

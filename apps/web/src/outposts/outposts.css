@@ -2,16 +2,6 @@
   flex: 0 1 auto;
 }
 
-.op-count {
-  flex-shrink: 0;
-  padding: 3px 9px;
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 12.5px;
-  white-space: nowrap;
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-
 .op-banner {
   flex-shrink: 0;
   margin: 0;
@@ -237,7 +227,7 @@
 }
 
 @media (pointer: coarse) {
-  :is(.op-link, .op-count)::before {
+  .op-link::before {
     content: '';
     position: absolute;
     top: 50%;
@@ -245,10 +235,6 @@
     width: max(100%, 44px);
     height: max(100%, 44px);
     transform: translate(-50%, -50%);
-  }
-
-  .op-count {
-    position: relative;
   }
 }
 

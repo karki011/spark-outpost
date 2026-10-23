@@ -51,7 +51,7 @@ function ChoicesBody({ approval, decide }: BodyProps) {
       )}
       {offers(approval, CHECKPOINT_OPTION.answer) && (
         <NoteForm
-          label={choices.length > 0 ? 'Or answer in your own words' : 'Answer in your own words'}
+          label={choices.length > 0 ? 'Something else…' : 'Type your answer'}
           initial=""
           submit="Send"
           busy={decide.busy}

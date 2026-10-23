@@ -29,7 +29,7 @@ describe('OutpostView', () => {
     );
     view();
     expect(screen.getByRole('heading', { level: 1, name: 'Usage by user' })).toBeTruthy();
-    expect(screen.getByText('You and 2 chats')).toBeTruthy();
+    expect(screen.queryByText(/^You and \d+ chats$/)).toBeNull();
     expect(within(screen.getByRole('toolbar')).getAllByRole('button')).toHaveLength(2);
     expect(
       within(screen.getByRole('list', { name: 'Outpost thread' })).getAllByRole('listitem'),
