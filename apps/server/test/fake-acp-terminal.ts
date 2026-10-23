@@ -99,6 +99,14 @@ async function atEnd(turn: FakeTurn, id: string, fake: FakeCommand, gapMs: numbe
     toolCallId: id,
     kind: 'execute',
     title: fake.command,
+    rawInput: { command: fake.command },
+    _meta: meta,
+  });
+  await turn.update({
+    sessionUpdate: 'tool_call_update',
+    toolCallId: id,
+    kind: 'execute',
+    title: fake.command,
     rawInput: { command: fake.command, description: 'Runs the command' },
     content: [{ type: 'content', content: { type: 'text', text: 'Runs the command' } }],
     _meta: meta,

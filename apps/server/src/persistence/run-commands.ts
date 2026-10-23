@@ -1,5 +1,6 @@
 import {
   commandRunSchema,
+  type CommandDescribed,
   type CommandFinished,
   type CommandOutputResponse,
   type CommandRun,
@@ -76,6 +77,13 @@ export async function insertCommand(
       command.textHeld,
     ],
   );
+}
+
+export async function describeCommand(db: Queryable, described: CommandDescribed): Promise<void> {
+  await db.query('UPDATE run_commands SET description = $2 WHERE id = $1', [
+    described.id,
+    described.description,
+  ]);
 }
 
 export async function saveCommandOutput(

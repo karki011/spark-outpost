@@ -92,7 +92,8 @@ button.trow:hover {
   height: 12px;
 }
 
-.trow-word.ok {
+.trow-word.ok,
+.trow-word.ok .ok {
   color: var(--success);
 }
 

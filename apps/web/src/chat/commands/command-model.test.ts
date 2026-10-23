@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   COMMAND_BROWSER_CHARS,
+  COMMAND_DESCRIBED,
   COMMAND_FINISHED,
   COMMAND_OUTPUT,
   COMMAND_STARTED,
@@ -51,6 +52,13 @@ describe('applyCommandEvent', () => {
     const commands = play(started, started);
     expect(commands).toHaveLength(1);
     expect(commands[0]).toMatchObject({ status: 'running', output: '', received: 0 });
+  });
+
+  it("takes the agent's description when it arrives after the command started", () => {
+    const described = { name: COMMAND_DESCRIBED, value: { id: ID, description: 'Run the tests' } };
+    const [command] = play(started, described, finished('completed', 0));
+    expect(command).toMatchObject({ description: 'Run the tests', status: 'completed' });
+    expect(play(described)).toEqual([]);
   });
 
   it('appends chunks in order', () => {

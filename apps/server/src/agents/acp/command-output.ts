@@ -105,11 +105,19 @@ export function createCommandTracker(live: boolean): CommandTracker {
     return outputs;
   };
 
+  const noteDescription = (update: ToolUpdate, command: OpenCommand): ProviderOutput[] => {
+    const description = commandDescription(update.rawInput);
+    if (!description || description === command.description) return [];
+    command.description = description;
+    if (!command.started) return [];
+    return [{ kind: 'command_described', id: update.toolCallId, description }];
+  };
+
   const seen = (update: ToolUpdate, command: OpenCommand): ProviderOutput[] => {
     command.text ||= commandText(update.title, update.rawInput);
-    command.description ??= commandDescription(update.rawInput);
+    const described = noteDescription(update, command);
     command.cwd ??= commandCwd(update);
-    const outputs = produced(update, command);
+    const outputs = [...described, ...produced(update, command)];
     if (command.started || (command.text === '' && outputs.length === 0)) return outputs;
     command.started = true;
     const { text, description, cwd } = command;

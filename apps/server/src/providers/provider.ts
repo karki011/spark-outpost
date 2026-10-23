@@ -326,6 +326,7 @@ export type ProviderOutput =
       live: boolean;
     }
   | { kind: 'command_output'; id: string; data: string; replace?: boolean }
+  | { kind: 'command_described'; id: string; description: string }
   | { kind: 'command_finished'; id: string; failed: boolean; exitCode: number | null }
   | { kind: 'account'; account: ProviderAccount };
 

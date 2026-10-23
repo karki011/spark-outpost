@@ -61,24 +61,12 @@ describe('command output over ACP against a fake agent', { timeout: 20_000 }, ()
       await collect(fake(agentDefinitions.claude), '#term=endpass,endfail'),
     );
     expect(outputs).toEqual([
-      {
-        kind: 'command_started',
-        id: 'term-0',
-        command: 'pnpm test',
-        description: 'Runs the command',
-        cwd: null,
-        live: false,
-      },
+      { kind: 'command_started', id: 'term-0', command: 'pnpm test', cwd: null, live: false },
+      { kind: 'command_described', id: 'term-0', description: 'Runs the command' },
       expect.objectContaining({ kind: 'command_output', id: 'term-0' }),
       { kind: 'command_finished', id: 'term-0', failed: false, exitCode: null },
-      {
-        kind: 'command_started',
-        id: 'term-1',
-        command: 'pnpm lint',
-        description: 'Runs the command',
-        cwd: null,
-        live: false,
-      },
+      { kind: 'command_started', id: 'term-1', command: 'pnpm lint', cwd: null, live: false },
+      { kind: 'command_described', id: 'term-1', description: 'Runs the command' },
       {
         kind: 'command_output',
         id: 'term-1',
