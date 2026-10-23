@@ -30,6 +30,3 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 | Agents ask with question cards; Spark Island answers one-pick ones and its count skips set-aside cards.                 | See [Cards](cards.md#approval-cards).                             |
 | **Add folder…** ends every project picker.                                                                              | See [Link a project](start-a-chat.md#link-a-project).             |
 | Agents share your Browser pane sign-ins; sign in again once.                                                            | See [Use the browser](use-the-browser.md).                        |
-| Meeting lines count down on time, wrap-ups name the chat, joined meetings drop; **Alert at** sets the card earlier.     | See [Use it](calendar.md#use-it).                                 |
-| Ask Spark has a chat’s tools. **Let agents read my calendar** is now on; turn it off if you had it off.                 | See [Ask Spark](companion-quick-chat.md#ask-spark).               |
-| No-project chats get a folder. Agents search the web and show artifacts; most edits show diffs; links ask.              | See [Agent tools](modes-and-levels.md#agent-tools).               |
