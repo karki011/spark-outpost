@@ -2,6 +2,7 @@ import { appendFileSync } from 'node:fs';
 import { app, BrowserWindow, dialog, session, shell } from 'electron';
 import { targetsApi, withApiToken } from './api-token.ts';
 import type { ChannelConfig } from './channel.ts';
+import { attachContextMenu } from './context-menu.ts';
 import { linkTarget } from './link-target.ts';
 import { guardSessionMedia } from './media-guard.ts';
 import { allowArtifactFrames, fromArtifactPage, guardSubframes } from './artifact-frames.ts';
@@ -98,5 +99,6 @@ export function openWindow({ config, preload, theme }: WindowOptions): BrowserWi
     event.preventDefault();
     window.setTitle(title);
   });
+  attachContextMenu(window);
   return window;
 }

@@ -15,7 +15,7 @@ Only your name and one provider are required. Change the rest later in **Setting
 1. Type your name under **What should Spark call you?**.
 2. Pick a **Personality**: **Playful**, **Friendly** (default) or **Just the facts**.
 3. Select **Continue**.
-4. Pick a **Tint**, then **Continue**. **Automatic** follows your Mac's light or dark mode.
+4. Pick a **Tint**, then **Continue**.
 
 ![The Meet Spark step with a name typed in and the Friendly personality selected](images/getting-started-meet-spark-light.png)
 

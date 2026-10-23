@@ -216,7 +216,7 @@
 
 .rl-video small {
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .rl-chip {
@@ -244,7 +244,7 @@
   border-radius: var(--r-sm);
   color: var(--faint);
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 @container (max-width: 900px) {

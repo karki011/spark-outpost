@@ -45,6 +45,15 @@ describe('askKeyAction', () => {
     expect(askKeyAction(press('ArrowUp', { target: 'own-words', caretAtStart: true }))).toBeNull();
   });
 
+  it('moves between radios with all four arrows, and leaves Left and Right to other rows', () => {
+    expect(askKeyAction(press('ArrowRight', { target: 'radio' }))).toEqual({ kind: 'move', by: 1 });
+    expect(askKeyAction(press('ArrowLeft', { target: 'radio' }))).toEqual({ kind: 'move', by: -1 });
+    expect(askKeyAction(press('ArrowDown', { target: 'radio' }))).toEqual({ kind: 'move', by: 1 });
+    expect(askKeyAction(press('ArrowRight'))).toBeNull();
+    expect(askKeyAction(press('ArrowLeft', { target: 'answer', caretAtStart: true }))).toBeNull();
+    expect(askKeyAction(press('ArrowRight', { target: 'other' }))).toBeNull();
+  });
+
   it('picks by number outside text fields only', () => {
     expect(askKeyAction(press('2'))).toEqual({ kind: 'pick', index: 1 });
     expect(askKeyAction(press('2', { target: 'other' }))).toEqual({ kind: 'pick', index: 1 });

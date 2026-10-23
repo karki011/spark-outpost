@@ -121,7 +121,7 @@
 
 .isl-ask-md .md code {
   font:
-    11.5px 'Geist Mono',
+    12px 'Geist Mono',
     monospace;
   padding: 0 4px;
   border-radius: 4px;
@@ -152,7 +152,7 @@
 .isl-ask-day {
   margin: 4px 0 0;
   text-align: center;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -166,13 +166,13 @@
 .isl-ask-older {
   justify-self: center;
   height: 24px;
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .isl-ask-src {
   display: block;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--faint);
 }
 
