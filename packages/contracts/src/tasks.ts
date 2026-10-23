@@ -53,6 +53,7 @@ export const taskSummarySchema = z.object({
   done: z.number().int(),
   total: z.number().int(),
   waiting: z.number().int(),
+  runState: z.enum(['working', 'stopped', 'ended']),
   text: z.string(),
 });
 export type TaskSummary = z.infer<typeof taskSummarySchema>;
@@ -182,15 +183,30 @@ export function recordedItems(events: readonly TaskListEvent[]): TaskListItem[] 
   }));
 }
 
+function liveRun(runs: readonly TaskListRun[]): TaskListRun | undefined {
+  return (
+    runs.find((run) => run.status === 'running') ?? runs.find((run) => run.status === 'queued')
+  );
+}
+
+function stoppedVerb(runs: readonly TaskListRun[]): string | undefined {
+  if (liveRun(runs)) return undefined;
+  const last = runs.at(-1);
+  return last && stoppedVerbs[last.status];
+}
+
+function runState(runs: readonly TaskListRun[]): TaskSummary['runState'] {
+  if (runs.some((run) => liveStatuses.has(run.status))) return 'working';
+  return stoppedVerb(runs) ? 'stopped' : 'ended';
+}
+
 function runStatusText(runs: readonly TaskListRun[]): string {
-  const live =
-    runs.find((run) => run.status === 'running') ?? runs.find((run) => run.status === 'queued');
+  const live = liveRun(runs);
   if (live) {
     const who = live.name ?? providerLabel(live.provider);
     return `${who} ${live.status === 'running' ? 'working' : 'queued'}`;
   }
-  const last = runs.at(-1);
-  return (last && stoppedVerbs[last.status]) ?? '';
+  return stoppedVerb(runs) ?? '';
 }
 
 export function taskSummary(
@@ -206,6 +222,7 @@ export function taskSummary(
     done,
     total: todo.length,
     waiting,
+    runState: runState(runs),
     text: [counts, status].filter(Boolean).join(' · '),
   };
 }

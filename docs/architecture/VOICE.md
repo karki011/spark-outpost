@@ -109,8 +109,8 @@ Matching runs locally in TypeScript with a subset of Home Assistant's [hassil](h
 
 ### Answers
 
-- **Every question** goes into **Ask Spark** as text, sent on the same confirm as a typed question, including questions about Spark (who needs me, what's running, spend, pending tickets, a ticket's status); its read-only session looks things up with the Spark tools (`spark_attention`, `spark_tickets` `list`, `read`, `search`). There are no instant answers: they answered from stale local state, so "What's happening? Anything new?" got "Nothing is running right now." The `open` intent's result card is a command, not an answer, and stays.
-- **Answers never act.** They may offer **Open** buttons; nothing in an answer starts, sends or changes anything.
+- **Every question** goes into **Ask Spark** as text, sent on the same confirm as a typed question, including questions about Spark (who needs me, what's running, spend, pending tickets, a ticket's status); its session looks things up with the Spark tools (`spark_attention`, `spark_tickets` `list`, `read`, `search`). There are no instant answers: they answered from stale local state, so "What's happening? Anything new?" got "Nothing is running right now." The `open` intent's result card is a command, not an answer, and stays.
+- **A spoken question acts as a typed one.** Once the user sends it, what Ask Spark does follows **When Ask Spark acts** (Manual: a card; Act: at once), except that a spoken run gets no Mac control tools (`mac-control/offered.ts`) and never answers an approval card (`ASK_SPARK_REFUSALS.voice` in `spark-mcp/actions/ask-spark-limits.ts`); covered by `ask-spark-acts.db.test.ts`.
 
 ## UI flows
 
@@ -136,7 +136,7 @@ With a ticket, Send uses the existing ticket start route (`projectId`, `note` = 
 ## Safety
 
 - **Push-to-talk only:** no always-listening, no wake word; the mic is open only with the listening view on screen. The Fn monitor watches modifier changes only, and only when Fn twice is picked.
-- **Voice never starts work on its own:** commands open a screen the user confirms, dictation is never sent automatically, answers never act.
+- **Voice never starts work on its own:** commands open a screen the user confirms, dictation is never sent automatically, and a question is sent only when the user confirms; what Ask Spark then does follows **When Ask Spark acts**.
 - **Never by voice:** approval and denial cards, pushes, pull requests, Mac control, Settings, remote control, anything with hold-to-confirm; `confirm` answers only its own voice result.
 - **A transcript is the user's message only once the user sends it**; the matcher's choice grants nothing.
 - **Paired devices** get no voice: the bridge is Electron IPC, not an HTTP route.

@@ -35,7 +35,7 @@ function task(runs: TaskRun[], extra: Partial<TaskDetail> = {}): TaskDetail {
     planVersion: null,
     todo: [],
     recorded: [],
-    summary: { done: 0, total: 0, waiting: 0, text: '' },
+    summary: { done: 0, total: 0, waiting: 0, runState: 'ended', text: '' },
     costUsd: null,
     tokens: null,
     runs,

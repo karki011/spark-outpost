@@ -77,6 +77,10 @@ test('each turn shows only its own items and the rail shows the latest list', as
   await expect(
     first.getByRole('button', { name: 'To-do: 1 of 3 done · 2 not finished' }),
   ).toBeVisible();
+  await page.getByRole('button', { name: 'Show work panel' }).click();
+  await expect(panel(page).locator('.wt-h .spill')).toHaveText('Stopped');
+  await page.getByRole('button', { name: 'Hide work panel' }).first().click();
+  await expect(panel(page)).toHaveCount(0);
 
   await expect(page.getByRole('textbox', { name: 'Message' })).toHaveAttribute(
     'placeholder',
@@ -106,6 +110,8 @@ test('each turn shows only its own items and the rail shows the latest list', as
   await expect(
     turns(page).nth(0).getByRole('button', { name: 'To-do: 1 of 3 done · 2 not finished' }),
   ).toBeVisible();
+  await page.getByRole('button', { name: 'Show work panel' }).click();
+  await expect(panel(page).locator('.wt-h .spill')).toHaveText('Done');
 });
 
 test('a turn without a to-do shows no card and no To-do anywhere', async ({ page }) => {

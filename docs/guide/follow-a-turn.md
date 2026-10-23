@@ -13,7 +13,7 @@ You'll follow, stop and queue a turn. About 2 minutes.
 1. Each tool call is a row; reads fold into **Explored 2 files**.
 2. **Thought for 4s** opens the thinking; a failed command opens itself.
 3. The to-do ticks off, then folds.
-4. Hover a reply for **Copy**, ratings and cost. **Agent TV** is under **…**.
+4. Hover a reply for **Copy** and cost; **Agent TV** is under **…**.
 5. Sub-agents share one line; **View** shows their cards.
 
 A waiting card sits at the turn's end; **⌘⇧Y** jumps there.

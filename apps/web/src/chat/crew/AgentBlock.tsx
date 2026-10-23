@@ -241,6 +241,7 @@ interface AgentBlockProps {
   waited?: TimedOutFacts;
   after?: ReactNode;
   changes?: ReactNode;
+  todo?: ReactNode;
 }
 
 const NO_SHOTS: readonly BrowserShot[] = [];
@@ -262,6 +263,7 @@ export function AgentBlock({
   conversationId,
   after,
   changes,
+  todo,
   shots = NO_SHOTS,
   ...body
 }: AgentBlockProps) {
@@ -310,6 +312,7 @@ export function AgentBlock({
           Collapse
         </button>
       )}
+      {todo}
       {changes}
       {after}
     </div>

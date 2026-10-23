@@ -59,9 +59,8 @@ function tabAfterKey(tabs: readonly WorkTab[], current: WorkTab, key: string): W
 
 function statusPill(task: TaskOverview): { className: string; label: string } {
   if (task.summary.waiting > 0) return { className: 'spill rev', label: 'Needs you' };
-  if (task.todo.some((item) => item.state === 'active')) {
-    return { className: 'spill prog', label: 'Working' };
-  }
+  if (task.summary.runState === 'working') return { className: 'spill prog', label: 'Working' };
+  if (task.summary.runState === 'stopped') return { className: 'spill bad', label: 'Stopped' };
   if (task.summary.done < task.summary.total) {
     return { className: 'spill', label: 'Not finished' };
   }

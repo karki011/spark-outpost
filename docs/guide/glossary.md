@@ -31,6 +31,5 @@ summary: One-line definitions of the words you see in Spark Outpost - agent, mod
 | **Spark Island**          | The Mac app's [panel](desktop-companion.md) atop the screen.                             |
 | **Sub-agent**             | A [helper](follow-a-turn.md#see-whats-happening) the agent starts itself.                |
 | **Standing instructions** | What a Spark follows in every chat.                                                      |
-| **To-do**                 | The agent's own checklist for a turn.                                                    |
 | **Work panel**            | The chat's side panel: to-do, plan, changes, cost.                                       |
 | **Worktree**              | A copy of the repo on its own branch, one per chat.                                      |
