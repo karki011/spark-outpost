@@ -18,7 +18,7 @@ A request runs under the receiving chat's own agent mode and autonomy. Only word
 
 The first case covers every request [an agent sends](outpost-asks.md), a [story](outpost-stories.md)'s first messages even after you edit them, Spark's wrap-up and Spark actions such as tickets and Slack: text you didn't write never asks for them.
 
-An agent mode that publishes without asking, such as **Auto**, works like the third case. When the mode raises an approval card, it appears in that chat and the request reads **Waiting on you**.
+**Auto** works like the third case. The request reads **Waiting on you** while that chat shows an approval card.
 
 ## What never changes
 

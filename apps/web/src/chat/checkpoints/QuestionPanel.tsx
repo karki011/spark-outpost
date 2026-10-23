@@ -15,6 +15,82 @@ export function AnswerBox({ className, ...props }: ComponentProps<'textarea'>) {
   return <textarea className={`inp ck-box ${className ?? ''}`} rows={1} {...props} />;
 }
 
+interface OptionsProps {
+  question: CheckpointQuestion;
+  number: number;
+  answer: QuestionAnswer;
+  onAnswer(answer: QuestionAnswer): void;
+}
+
+function OptionLabel({ pick, question }: { pick: string; question: CheckpointQuestion }) {
+  return (
+    <>
+      <span className="ask-opt-text">{pick}</span>
+      {pick === question.default && <span className="ask-tag">best guess</span>}
+    </>
+  );
+}
+
+function CheckOptions({ question, number, answer, onAnswer }: OptionsProps) {
+  return (
+    <div
+      className="ask-opts"
+      role="group"
+      aria-label={`Quick answers to question ${number}, choose any`}
+    >
+      {quickPicks(question).map((pick, index) => {
+        const picked = answer.picks.includes(pick);
+        return (
+          <button
+            key={pick}
+            type="button"
+            className="ask-opt"
+            aria-pressed={picked}
+            data-key={index + 1}
+            {...{ [ASK_ROW]: 'option' }}
+            onClick={() => onAnswer(togglePick(answer, pick, question))}
+          >
+            <span className="ask-box" aria-hidden="true">
+              {picked && <CheckIcon className="ask-check" />}
+            </span>
+            <OptionLabel pick={pick} question={question} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function RadioOptions({ question, number, answer, onAnswer }: OptionsProps) {
+  const picks = quickPicks(question);
+  const chosen = picks.findIndex((pick) => answer.picks.includes(pick));
+  const tabStop = chosen === -1 ? 0 : chosen;
+  return (
+    <div
+      className="ask-opts"
+      role="radiogroup"
+      aria-label={`Quick answers to question ${number}, choose one`}
+    >
+      {picks.map((pick, index) => (
+        <button
+          key={pick}
+          type="button"
+          role="radio"
+          className="ask-opt"
+          aria-checked={index === chosen}
+          tabIndex={index === tabStop ? 0 : -1}
+          data-key={index + 1}
+          {...{ [ASK_ROW]: 'option' }}
+          onClick={() => onAnswer(togglePick(answer, pick, question))}
+        >
+          <span className="ask-box ask-radio" aria-hidden="true" />
+          <OptionLabel pick={pick} question={question} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 interface QuestionProps {
   question: CheckpointQuestion;
   number: number;
@@ -35,34 +111,11 @@ export function QuestionPanel({
       <p className="ask-q-text" id={`${id}-q`}>
         {question.question}
       </p>
-      <div
-        className="ask-opts"
-        role="group"
-        aria-label={`Quick answers to question ${number}, ${
-          question.pick === 'one' ? 'choose one' : 'choose any'
-        }`}
-      >
-        {quickPicks(question).map((pick, index) => {
-          const picked = answer.picks.includes(pick);
-          return (
-            <button
-              key={pick}
-              type="button"
-              className="ask-opt"
-              aria-pressed={picked}
-              data-key={index + 1}
-              {...{ [ASK_ROW]: 'option' }}
-              onClick={() => onAnswer(togglePick(answer, pick, question))}
-            >
-              <span className="ask-box" aria-hidden="true">
-                {picked && <CheckIcon className="ask-check" />}
-              </span>
-              <span className="ask-opt-text">{pick}</span>
-              {pick === question.default && <span className="ask-tag">best guess</span>}
-            </button>
-          );
-        })}
-      </div>
+      {question.pick === 'one' ? (
+        <RadioOptions question={question} number={number} answer={answer} onAnswer={onAnswer} />
+      ) : (
+        <CheckOptions question={question} number={number} answer={answer} onAnswer={onAnswer} />
+      )}
       {takesText(question) && (
         <AnswerBox
           className="ask-answer"

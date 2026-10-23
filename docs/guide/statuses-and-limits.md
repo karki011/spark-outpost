@@ -38,16 +38,16 @@ A dot shows changes since you last opened the chat; point at it.
 
 ## Outpost requests
 
-| Status                  | Means                                                                                 |
-| ----------------------- | ------------------------------------------------------------------------------------- |
-| **Queued**              | The chat is busy, failed or stopped, or something is paused.                          |
-| **Working**             | Its turn runs.                                                                        |
-| **Held**                | It reads **Waiting for @api** until that request is answered.                         |
-| **Waiting on you**      | An approval card waits, or the reply ends **Needs you: …**.                           |
-| **Failed**              | The turn failed, saying why, or **Not delivered: …**. Listed with **Waiting on you**. |
-| **Ready for review**    | Answered, with an open pull request.                                                  |
-| **Idle**                | Answered, with no open pull request.                                                  |
-| **Done**, **Cancelled** | Its pull request merged or closed, or you cancelled it.                               |
+| Status                  | Means                                                                     |
+| ----------------------- | ------------------------------------------------------------------------- |
+| **Queued**              | The chat is busy, failed or stopped, or paused.                           |
+| **Working**             | Its turn runs.                                                            |
+| **Held**                | It reads **Waiting for @api** until that request is answered.             |
+| **Waiting on you**      | An approval card waits, or the reply ends **Needs you: …**.               |
+| **Failed**              | The turn failed, or **Not delivered: …**. Listed with **Waiting on you**. |
+| **Ready for review**    | Answered, with an open pull request.                                      |
+| **Idle**                | Answered, with no open pull request.                                      |
+| **Done**, **Cancelled** | Its pull request merged or closed, or you cancelled it.                   |
 
 ## Ticket groups
 

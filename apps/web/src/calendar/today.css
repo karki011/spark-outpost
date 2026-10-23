@@ -75,7 +75,7 @@
 
 .td-day > span:not(.td-dots) {
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .td-day[aria-pressed='true'] {
@@ -239,7 +239,7 @@
 .td-act small {
   margin-left: auto;
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .td-act[aria-pressed='true'] small {

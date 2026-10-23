@@ -16,7 +16,7 @@
   box-shadow: inset 0 -1px 0 var(--line);
   color: color-mix(in srgb, var(--muted) 70%, var(--text));
   font:
-    500 11.5px/1 ui-sans-serif,
+    500 12px/1 ui-sans-serif,
     system-ui,
     -apple-system,
     'Segoe UI',

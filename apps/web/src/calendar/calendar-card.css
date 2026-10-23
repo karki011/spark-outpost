@@ -65,7 +65,7 @@
 .cal-acct-h small {
   flex: none;
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .cal-rows-h {
@@ -74,7 +74,7 @@
   margin: 0;
   padding: 0 2px;
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .cal-rows {

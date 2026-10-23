@@ -61,7 +61,7 @@
   background: var(--raise);
   color: var(--text);
   font-family: var(--mcp-mono);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 .mcp-paste {
   flex-basis: 100%;
