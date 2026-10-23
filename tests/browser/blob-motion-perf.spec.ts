@@ -200,7 +200,7 @@ test('the Agent TV blob does no work on each frame', async ({ page }) => {
     await page.setViewportSize({ width: 1400, height: 900 });
     await projectChat(page, repo, 'Ask before edits');
     await send(page, `${BUILD_REQUEST} #build`);
-    await expect(card(page, /Change a file\?/)).toBeVisible({ timeout: 30_000 });
+    await expect(card(page, /^Edit .+\?$/)).toBeVisible({ timeout: 30_000 });
     await toggleHeaderPane(page, 'Agent TV');
     const tv = page.getByRole('dialog', { name: 'Agent TV' });
     await expect(tv).toBeVisible();

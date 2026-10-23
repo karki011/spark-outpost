@@ -183,7 +183,10 @@ export async function getConversationDetail(
     db.query<StepEventRow>(
       `SELECT e.run_id, e.type,
          COALESCE(e.payload->>'stepName', e.payload->>'messageId') AS name,
-         e.payload ? 'subagentRunId' AS subagent
+         e.payload ? 'subagentRunId' AS subagent,
+         e.payload->'metadata'->'spark' AS mark,
+         COALESCE((e.payload->>'timestamp')::double precision,
+           EXTRACT(EPOCH FROM e.created_at) * 1000) AS at
        FROM run_events e
        JOIN runs r ON r.id = e.run_id
        WHERE r.conversation_id = $1

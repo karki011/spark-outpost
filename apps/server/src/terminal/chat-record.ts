@@ -102,7 +102,7 @@ export async function startChatRecord(
     projectRoots: roots,
     replySoFar,
   });
-  const events = createTurnEvents({ append, secretValues });
+  const events = createTurnEvents({ append, secretValues, replySoFar });
   const tools = new Map<string, RecordedTool>();
   const done = new Set<string>();
   let replies = 0;

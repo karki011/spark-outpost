@@ -127,7 +127,7 @@ test('Ship screenshot', async ({ page }) => {
     await pickPermission(page, 'Ask before edits');
     await page.keyboard.press('Escape');
     await send(page, 'Add a line to the notes #edit #plan');
-    await card(page, /Change a file\?/)
+    await card(page, /^Edit .+\?$/)
       .getByRole('button', { name: 'Allow', exact: true })
       .click();
     await turnDone(page, 15_000);

@@ -36,7 +36,7 @@ const running = (page: Page) =>
 async function listWhileWaiting(page: Page) {
   await projectChat(page, repo, 'Ask before edits');
   await send(page, `${BUILD_REQUEST} #build`);
-  await expect(card(page, /Change a file\?/)).toBeVisible({ timeout: 30_000 });
+  await expect(card(page, /^Edit .+\?$/)).toBeVisible({ timeout: 30_000 });
   return openList(page);
 }
 
@@ -98,7 +98,7 @@ test('Needs you jumps to the approval, and Finished opens, shows the outcome and
 }) => {
   test.setTimeout(90_000);
   const tv = await listWhileWaiting(page);
-  const edit = card(page, /Change a file\?/);
+  const edit = card(page, /^Edit .+\?$/);
   const needs = running(page).getByRole('button', { name: 'Needs you' });
   await expect(needs).toBeVisible({ timeout: 10_000 });
   await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));

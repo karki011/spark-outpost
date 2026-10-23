@@ -10,7 +10,7 @@ async function send(page: Page, text: string) {
   await input.press('Enter');
 }
 
-const working = (page: Page) => page.locator('.ai-avatar.working');
+const working = (page: Page) => page.locator('.turn-working');
 const done = (page: Page) => page.locator('.mood', { hasText: 'done' });
 
 test.beforeEach(async () => {

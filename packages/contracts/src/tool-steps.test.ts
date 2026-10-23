@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { friendlyStep, humanizeToolName, isWebToolTitle, parseMcpTool } from './tool-steps.ts';
+import {
+  friendlyStep,
+  humanizeToolName,
+  isSparkNote,
+  isWebToolTitle,
+  parseMcpTool,
+  placeNoteText,
+} from './tool-steps.ts';
 
 describe('friendlyStep', () => {
   it('names Spark tools in plain words, from Claude and Codex', () => {
@@ -70,5 +77,37 @@ describe('parseMcpTool', () => {
 
   it('humanizes names', () => {
     expect(humanizeToolName('getPullRequest_files')).toBe('get pull request files');
+  });
+});
+
+describe('isSparkNote', () => {
+  it("knows Spark's own bookkeeping steps", () => {
+    for (const note of [
+      placeNoteText('spark/x', false),
+      placeNoteText('main', true),
+      'Writing up results',
+      'Continued session',
+      'Allowed Edit `a.ts` (you allowed it)',
+      'Allowed Run `ls` (you allowed it for this chat)',
+      'Allowed Run `ls` (you always allow it in this project)',
+      'Denied: Run `rm x` (you denied it)',
+      'Using Opus 5.5 · medium effort',
+      "Using Claude's defaults",
+    ]) {
+      expect(isSparkNote(note)).toBe(true);
+    }
+  });
+
+  it('keeps tool steps and warnings', () => {
+    for (const step of [
+      'Read `a.ts`',
+      'Using get issue (linear)',
+      'Using get issue',
+      "Using Claude's default model; Fable 5 isn't available",
+      'Warning: Claude switched to Bypass permissions mode',
+      'Installing dependencies in this chat’s copy',
+    ]) {
+      expect(isSparkNote(step)).toBe(false);
+    }
   });
 });
