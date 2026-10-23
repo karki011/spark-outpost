@@ -7,6 +7,7 @@ import { usePhone } from '../../ui/breakpoints.ts';
 import { DotsIcon } from '../../ui/icons.tsx';
 import type { usePopover } from '../../ui/use-popover.ts';
 import { TalkToChip } from '../../teammates/TalkToChip.tsx';
+import { memberRole, roleLine } from '../../outposts/member-roles.ts';
 import { OutpostChip } from '../outpost/OutpostChip.tsx';
 import { useOutpostSeam } from '../outpost/outpost-seam.ts';
 import { AgentSetup, useSetupAttention } from './AgentSetup.tsx';
@@ -32,10 +33,14 @@ function MemberChip({ conversationId }: { conversationId: string }) {
     select: memberOf,
   }).data;
   if (!outpost) return null;
+  const members = seam?.outposts.find((listed) => listed.id === outpost.id)?.members ?? [];
+  const role = memberRole(members, conversationId);
   return (
     <OutpostChip
       name={outpost.name}
       handle={outpost.handle}
+      lead={role?.kind === 'lead'}
+      relation={role ? roleLine(role) : null}
       onOpen={seam ? () => seam.onOpenOutpost(outpost.id) : undefined}
     />
   );

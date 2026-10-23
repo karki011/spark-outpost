@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ConversationSummary, Outpost } from '@spark-outpost/contracts';
+import type { ConversationSummary, MemberStory, Outpost } from '@spark-outpost/contracts';
 import {
   membersByOutpost,
   memberships,
@@ -103,6 +103,34 @@ describe('membersByOutpost', () => {
       ['api', 'api'],
     ]);
     expect(listed.get(USAGE)?.map((member) => member.chat.id)).toEqual(['docs']);
+  });
+
+  it('puts the lead first with the only face, then its sub-chats, then chats added by hand', () => {
+    const plain: Outpost = outpost(ORDERS, [
+      ['docs', 'docs', 0],
+      ['web', 'web', 1],
+      ['lead', 'lead', 2],
+      ['api', 'api', 3],
+    ]);
+    const places: Record<string, MemberStory> = {
+      web: { lead: 'lead', after: 'api', position: 1 },
+      api: { lead: 'lead', after: null, position: 0 },
+    };
+    const story = {
+      ...plain,
+      members: plain.members.map((member) => {
+        const place = places[member.conversationId];
+        return place ? { ...member, story: place } : member;
+      }),
+    };
+    const chats = ['docs', 'web', 'lead', 'api'].map((id) => chat(id));
+    const listed = membersByOutpost(chats, memberships([story])).get(ORDERS) ?? [];
+    expect(listed.map((member) => [member.handle, member.face])).toEqual([
+      ['lead', true],
+      ['api', false],
+      ['web', false],
+      ['docs', false],
+    ]);
   });
 
   it('leaves out archived members and members the list does not hold', () => {

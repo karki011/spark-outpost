@@ -9,6 +9,7 @@ import {
   chatDraftsSchema,
   createOutpostResponseSchema,
   outpostDetailSchema,
+  outpostSchema,
 } from '@spark-outpost/contracts';
 import {
   ONLY_REQUESTS_START,
@@ -341,5 +342,20 @@ describe('POST /api/outposts/:id/posts/:postId/start-now', () => {
     expect(unknown.body).toEqual({ error: POST_NOT_FOUND });
     expect((await startNow(webPost, randomUUID())).status).toBe(404);
     expect((await heldRequests(t.db)).map(({ post }) => post.id)).toEqual([webPost]);
+  });
+});
+
+describe('GET /api/outposts', () => {
+  it('gives each story chat its lead, the chat it starts after and its story order', async () => {
+    expect((await start()).status).toBe(201);
+
+    const response = await request(app).get('/api/outposts');
+
+    expect(response.status).toBe(200);
+    const members = outpostSchema.array().parse(response.body)[0]?.members ?? [];
+    const byId = new Map(members.map((member) => [member.conversationId, member]));
+    expect(byId.get(lead)?.story).toBeUndefined();
+    expect(byId.get(api)?.story).toEqual({ lead, after: null, position: 0 });
+    expect(byId.get(web)?.story).toEqual({ lead, after: api, position: 1 });
   });
 });

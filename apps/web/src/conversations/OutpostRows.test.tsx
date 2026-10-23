@@ -103,6 +103,8 @@ function renderOutposts(props: Partial<RowsProps> & Pick<RowsProps, 'outposts'>)
   );
 }
 
+const PLAIN = { role: { kind: 'other' as const }, face: true };
+
 describe('OutpostRows', () => {
   it('lists each outpost by name with its Needs you count as text', () => {
     renderOutposts({
@@ -153,8 +155,8 @@ describe('OutpostRows', () => {
       [
         ORDERS,
         [
-          { chat: chat({ id: CHAT, title: 'Frontend' }), handle: 'fe' },
-          { chat: chat({ id: PROJECT, title: 'Orders API' }), handle: 'api' },
+          { chat: chat({ id: CHAT, title: 'Frontend' }), handle: 'fe', ...PLAIN },
+          { chat: chat({ id: PROJECT, title: 'Orders API' }), handle: 'api', ...PLAIN },
         ],
       ],
     ]);
@@ -177,7 +179,7 @@ describe('OutpostRows', () => {
     const onOpen = vi.fn();
     renderOutposts({
       outposts: [outpost(ORDERS, 'Orders launch', 0)],
-      members: new Map([[ORDERS, [{ chat: chat(), handle: 'fe' }]]]),
+      members: new Map([[ORDERS, [{ chat: chat(), handle: 'fe', ...PLAIN }]]]),
       isOpen: (id) => id !== ORDERS,
       onToggle,
       onOpen,
@@ -206,7 +208,9 @@ describe('Add to outpost in the chat menu', () => {
   });
 
   it('is not offered to a member, an archived chat or a terminal session', () => {
-    renderMenu({ chat: chat({ outpost: { id: ORDERS, name: 'Orders launch', handle: 'fe' } }) });
+    renderMenu({
+      chat: chat({ outpost: { id: ORDERS, name: 'Orders launch', handle: 'fe', ...PLAIN } }),
+    });
     expect(screen.queryByRole('menuitem', { name: 'Add to outpost' })).toBeNull();
     cleanup();
     renderMenu({ chat: chat({ archivedAt: '2026-10-09T10:00:00Z' }) });
