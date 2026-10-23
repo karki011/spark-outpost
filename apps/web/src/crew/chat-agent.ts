@@ -38,7 +38,7 @@ function agentLine(
   return open ? stepLine(open.name) : 'thinking';
 }
 
-function modelOf(run: Run): string | null {
+export function modelOf(run: Run): string | null {
   const ran = run.usedModel ?? run.model;
   return ran && ran !== AGENT_DEFAULT ? prettyModelId(ran) : null;
 }

@@ -15,11 +15,13 @@ import { turnState } from '../../crew/tv-list.ts';
 import { countLabel } from '../../ui/count-label.ts';
 import { formatTokens } from '../composer/model-options.ts';
 import { filesLabel, formatTotal } from '../changes/change-rules.ts';
+import { followingLine } from '../project/agent-setup.ts';
 import { repoSummary } from '../project/repo-list.ts';
 import type { WorkTab } from '../../tasks/TaskDetails.tsx';
 import { formatCost } from '../../usage/format.ts';
 
-export type RailRowId = 'project' | 'agent' | 'autonomy' | 'changes' | 'checks' | 'pr' | 'usage';
+export type RailRowId =
+  'project' | 'agent' | 'following' | 'autonomy' | 'changes' | 'checks' | 'pr' | 'usage';
 
 export type RailAction =
   | { kind: 'project' }
@@ -55,6 +57,7 @@ export interface RailFacts {
   contextPercent: number | null;
   hasTask: boolean;
   hasStoredCrew?: boolean;
+  following?: readonly string[];
 }
 
 const CHECKS: Record<PrChecks, { text: string; tone?: RailTone }> = {
@@ -142,6 +145,10 @@ export function railRows(facts: RailFacts): RailRow[] {
     label: `Agent ${agent}, ${mode}`,
     action: facts.hasTask && facts.hasStoredCrew ? { kind: 'tab', tab: 'crew' } : null,
   });
+  const following = followingLine(facts.following ?? []);
+  if (following) {
+    rows.push({ id: 'following', text: following, detail: null, label: following, action: null });
+  }
   if (facts.autonomy) {
     const level = autonomyLabel(facts.autonomy);
     rows.push({
@@ -221,4 +228,8 @@ export function crewSectionLabel(agents: readonly CrewAgent[]): string {
 export function crewJob(agent: CrewAgent): string {
   const turns = agent.turns && agent.turns > 1 ? `${agent.turns} turns` : null;
   return [roleLabel(agent), modelLabel(agent), turns].filter(Boolean).join(' · ');
+}
+
+export function latestFollowing(detail: Pick<ConversationDetail, 'runs'>): readonly string[] {
+  return detail.runs.findLast((run) => !run.parentRunId && run.following?.length)?.following ?? [];
 }

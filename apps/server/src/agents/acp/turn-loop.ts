@@ -5,6 +5,7 @@ import type {
   RequestUsage,
   SteerRequests,
 } from '../../providers/provider.ts';
+import { WRITE_UP_STEP } from '@spark-outpost/contracts';
 import { setTimeout as delay } from 'node:timers/promises';
 import { endsAgentCycle, type BackgroundCount, type BackgroundWork } from './background-work.ts';
 import { startsAgentCycle } from './agent-cycle.ts';
@@ -54,7 +55,6 @@ export interface PromptLoop {
   writeUpMs?: number;
 }
 
-export const WRITE_UP_STEP = 'Writing up results';
 const WRITE_UP_MS = 15_000;
 
 type Woken =

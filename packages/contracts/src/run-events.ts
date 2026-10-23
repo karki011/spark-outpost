@@ -22,6 +22,11 @@ const stepMarkSchema = z.object({
   toolCallId: z.string().optional(),
   interrupted: z.boolean().optional(),
   waits: z.boolean().optional(),
+  textOffset: z.number().int().nonnegative().optional(),
+  textBefore: z.string().optional(),
+  textHeld: z.number().int().nonnegative().optional(),
+  toolKind: z.string().max(40).optional(),
+  target: z.string().max(200).optional(),
 });
 export type StepMark = z.infer<typeof stepMarkSchema>;
 

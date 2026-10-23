@@ -101,7 +101,7 @@ function crowdedChips(page: Page, rows: string): Promise<string[]> {
         if (box.left < -0.5 || box.right > document.documentElement.clientWidth + 0.5) {
           problems.push(`${chip.getAttribute('class')} leaves the screen`);
         }
-        const frame = (row.closest('.ctxbar') ?? row).getBoundingClientRect();
+        const frame = (row.closest('.ctx-more, .ctxbar, .comp-bar') ?? row).getBoundingClientRect();
         if (box.left < frame.left - 0.5 || box.right > frame.right + 0.5) {
           problems.push(`${chip.getAttribute('class')} leaves its bar`);
         }
@@ -111,12 +111,12 @@ function crowdedChips(page: Page, rows: string): Promise<string[]> {
   }, rows);
 }
 
-function fitsComposer(page: Page): Promise<boolean> {
-  return page.evaluate(() => {
+function fitsComposer(page: Page, selector: string): Promise<boolean> {
+  return page.evaluate((inner) => {
     const composer = document.querySelector('.composer')!.getBoundingClientRect();
-    const wrap = document.querySelector('.ctxbar-wrap')!.getBoundingClientRect();
-    return wrap.left >= composer.left - 0.5 && wrap.right <= composer.right + 0.5;
-  });
+    const box = document.querySelector(inner)!.getBoundingClientRect();
+    return box.left >= composer.left - 0.5 && box.right <= composer.right + 0.5;
+  }, selector);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -135,17 +135,21 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(() => repo.remove());
 
 for (const width of WIDTHS) {
-  test(`the context bar keeps its chips apart at ${width}px`, async ({ browser }) => {
+  test(`the composer bar keeps its chips apart at ${width}px`, async ({ browser }) => {
     const page = await openTouch(browser, { width, height: 800 }, 'chats');
-    const outpost = bar(page).locator('.ctx-outpost');
-    await expect(outpost).toContainText(`@${HANDLE}`, { timeout: 20_000 });
-    expect(await crowdedChips(page, '.ctx-row, .comp-bar')).toEqual([]);
-    await expect(bar(page).locator('.ctx-place')).toBeVisible();
+    await expect(detailsChip(page)).toBeVisible({ timeout: 20_000 });
+    expect(await crowdedChips(page, '.comp-bar')).toEqual([]);
     await expect(bar(page).getByRole('button', { name: /^Spark autonomy/ })).toHaveCount(0);
-    for (const hidden of ['.ctx-setup', '.ctx-repo', '.cache-timer']) {
+    for (const hidden of [
+      '.ctx-outpost',
+      '.ctx-place',
+      '.ctx-setup',
+      '.ctx-repo',
+      '.cache-timer',
+    ]) {
       await expect(bar(page).locator(hidden)).toBeHidden();
     }
-    expect(await fitsComposer(page)).toBe(true);
+    expect(await fitsComposer(page, '.ctxbar')).toBe(true);
     expect(await smallTapTargets(page, '.ctx-details')).toEqual([]);
     await expectNoSidewaysScroll(page);
     for (const theme of THEMES) {
@@ -155,10 +159,14 @@ for (const width of WIDTHS) {
 
     await detailsChip(page).click();
     await expect(detailsChip(page)).toHaveAttribute('aria-expanded', 'true');
+    await expect(details(page).locator('.ctx-outpost')).toContainText(`@${HANDLE}`);
+    await expect(details(page).locator('.ctx-place')).toBeVisible();
     await expect(details(page).getByRole('button', { name: /^Agent setup/ })).toBeVisible();
     await expect(details(page).getByRole('button', { name: /^Project folders/ })).toBeVisible();
     await expect(details(page).locator('.cache-timer')).toHaveCount(0);
-    expect(await crowdedChips(page, '.ctxbar, .ctx-row, .ctx-more, .comp-bar')).toEqual([]);
+    expect(await crowdedChips(page, '.ctx-more')).toEqual([]);
+    expect(await fitsComposer(page, '.ctx-more')).toBe(true);
+    expect(await smallTapTargets(page, '.ctx-more .ctx-repo, .ctx-more .ctx-branch')).toEqual([]);
     await expectNoSidewaysScroll(page);
     for (const theme of THEMES) {
       await page.emulateMedia({ colorScheme: theme });
@@ -175,6 +183,13 @@ for (const width of WIDTHS) {
       .getByRole('button', { name: /^Project folders/ })
       .click();
     await expect(page.getByRole('dialog', { name: 'Project folders' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Project folders' })).toBeHidden();
+    await expect(async () => {
+      await page.keyboard.press('Escape');
+      await expect(details(page)).toBeHidden({ timeout: 500 });
+    }).toPass();
+    await expect(detailsChip(page)).toBeFocused();
     await page.close();
   });
 }
@@ -192,14 +207,18 @@ test('a paired phone without the settings switch gets no agent setup in Details'
       });
     });
   });
-  await expect(bar(page).locator('.ctx-outpost')).toBeVisible({ timeout: 20_000 });
+  await expect(detailsChip(page)).toBeVisible({ timeout: 20_000 });
   await detailsChip(page).click();
   await expect(details(page).getByRole('button', { name: /^Project folders/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /^Agent setup/ })).toHaveCount(0);
+  await expect(detailsChip(page)).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(details(page)).toBeHidden();
+  await expect(detailsChip(page)).toHaveAttribute('aria-expanded', 'false');
   await page.close();
 });
 
-test('the desktop context bar keeps its chips, with no autonomy or Details chip', async ({
+test('the desktop composer bar keeps its chips, with no autonomy or Details chip', async ({
   page,
 }) => {
   await page.goto('/');
@@ -222,12 +241,14 @@ test('a chat with no project and a new chat fit at 320px with no Details chip', 
   await page.getByRole('button', { name: 'Plain question', exact: true }).dispatchEvent('click');
   await expect(bar(page).getByRole('button', { name: 'Choose project' })).toBeVisible();
   await expect(detailsChip(page)).toHaveCount(0);
-  expect(await crowdedChips(page, '.ctxbar, .ctx-row, .comp-bar')).toEqual([]);
+  expect(await crowdedChips(page, '.ctxbar, .comp-bar')).toEqual([]);
   await expectNoSidewaysScroll(page);
 
   await page.getByRole('button', { name: 'New chat', exact: true }).first().dispatchEvent('click');
-  await expect(bar(page).getByRole('group', { name: 'New session' })).toBeVisible();
-  expect(await crowdedChips(page, '.ctxbar, .ctx-row, .comp-bar')).toEqual([]);
+  await expect(
+    page.locator('.composer-lead').getByRole('group', { name: 'New session' }),
+  ).toBeVisible();
+  expect(await crowdedChips(page, '.ctxbar, .comp-bar')).toEqual([]);
   await expectNoSidewaysScroll(page);
   await shot(page, 'context-bar-new-chat');
   await page.close();

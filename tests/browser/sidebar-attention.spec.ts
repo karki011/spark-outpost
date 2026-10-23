@@ -107,7 +107,7 @@ test('the attention card jumps to the waiting card in that chat', async ({ page 
   });
   await attention.click();
   await expect(page.locator('.chat-title')).toHaveText('Deploy the site');
-  const approval = page.getByRole('group', { name: /Run a command\?/ });
+  const approval = page.getByRole('group', { name: /^Run .+\?$/ });
   await expect(approval).toBeInViewport();
   await expect(approval).toHaveClass(/flash/);
   await expect(attention).not.toBeVisible();

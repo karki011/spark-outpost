@@ -1,6 +1,6 @@
 import { access } from 'node:fs/promises';
 import path from 'node:path';
-import { UNTITLED_CONVERSATION } from '@spark-outpost/contracts';
+import { UNTITLED_CONVERSATION, placeNoteText } from '@spark-outpost/contracts';
 import {
   insertChatWorktree,
   liveChatWorktree,
@@ -227,9 +227,7 @@ async function restoreCopy(db: Queryable, record: ChatWorktree): Promise<boolean
 }
 
 function placeNote(record: ChatWorktree, extra: string | null): string {
-  const where = record.inPlace
-    ? `Working on ${record.branch} in your checkout.`
-    : `Working on ${record.branch} in this chat's worktree.`;
+  const where = placeNoteText(record.branch, record.inPlace);
   return extra ? `${where} ${extra}` : where;
 }
 

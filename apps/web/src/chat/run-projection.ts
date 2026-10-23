@@ -29,7 +29,23 @@ import {
 
 export type LiveRunStatus = 'connecting' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 
-export interface RunStep {
+export interface StepAnchor {
+  textOffset?: number | undefined;
+  textBefore?: string | undefined;
+  textHeld?: number | undefined;
+}
+
+export interface StepTimes {
+  startedAt?: number | undefined;
+  finishedAt?: number | undefined;
+}
+
+export interface StepTool {
+  toolKind?: string | undefined;
+  target?: string | undefined;
+}
+
+export interface RunStep extends StepAnchor, StepTimes, StepTool {
   name: string;
   done: boolean;
   toolCallId?: string | undefined;
@@ -41,7 +57,7 @@ export interface RunStep {
 
 export type StepStatus = 'done' | 'failed' | 'open';
 
-export interface StepView {
+export interface StepView extends StepAnchor, StepTimes, StepTool {
   name: string;
   status: StepStatus;
   reasoningId?: string | undefined;
@@ -58,13 +74,37 @@ function thinkingOf(step: RunStep): Pick<StepView, 'reasoningId' | 'thought'> {
 }
 
 function startedStep(event: Extract<RunEvent, { type: typeof EventType.STEP_STARTED }>): RunStep {
-  const { toolCallId, waits } = stepMark(event);
+  const { toolCallId, waits, textOffset, textBefore, textHeld, toolKind, target } = stepMark(event);
   return {
     name: event.stepName,
     done: false,
     ...(toolCallId ? { toolCallId } : {}),
     ...(waits ? { waits: true } : {}),
     ...(event.subagentRunId ? { subagent: true } : {}),
+    ...(textOffset === undefined ? {} : { textOffset, textBefore, textHeld }),
+    ...(event.timestamp === undefined ? {} : { startedAt: event.timestamp }),
+    ...(toolKind ? { toolKind } : {}),
+    ...(target ? { target } : {}),
+  };
+}
+
+function toolOf(step: StepTool): StepTool {
+  return {
+    ...(step.toolKind ? { toolKind: step.toolKind } : {}),
+    ...(step.target ? { target: step.target } : {}),
+  };
+}
+
+function anchorOf(step: StepAnchor): StepAnchor {
+  return step.textOffset === undefined
+    ? {}
+    : { textOffset: step.textOffset, textBefore: step.textBefore, textHeld: step.textHeld };
+}
+
+function timesOf(step: StepTimes): StepTimes {
+  return {
+    ...(step.startedAt === undefined ? {} : { startedAt: step.startedAt }),
+    ...(step.finishedAt === undefined ? {} : { finishedAt: step.finishedAt }),
   };
 }
 
@@ -79,7 +119,13 @@ function finishStep(
     : -1;
   const index =
     called >= 0 ? called : steps.findIndex((step) => !step.done && step.name === event.stepName);
-  return steps.map((step, position) => (position === index ? { ...step, done: true } : step));
+  const finishedAt = event.timestamp === undefined ? {} : { finishedAt: event.timestamp };
+  const { target } = stepMark(event);
+  return steps.map((step, position) =>
+    position === index
+      ? { ...step, done: true, ...finishedAt, ...(target && !step.target ? { target } : {}) }
+      : step,
+  );
 }
 
 function withThought(steps: readonly RunStep[], reasoningId: string, delta: string): RunStep[] {
@@ -131,6 +177,9 @@ export function viewSteps(steps: readonly RunStep[]): StepView[] {
     views.push({
       name: step.name,
       status: step.done ? 'done' : 'open',
+      ...anchorOf(step),
+      ...timesOf(step),
+      ...toolOf(step),
       ...thinkingOf(step),
       ...(step.subagent ? { subagent: true } : {}),
       ...(step.waits ? { waits: true } : {}),
