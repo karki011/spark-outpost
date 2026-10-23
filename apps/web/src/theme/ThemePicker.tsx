@@ -2,8 +2,8 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode 
 import './theme-menu.css';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { useKeepInViewport } from '../ui/viewport-clamp.ts';
-import { readAppearance } from './appearance.ts';
 import { revealAppearance } from './reveal.ts';
+import { useAppearance, withChange } from './use-appearance.ts';
 import { modes, tints, type Appearance } from './theme.ts';
 
 const LIGHT = '#f4f5f7';
@@ -62,7 +62,7 @@ function Choice({ checked, open, swatch, onSelect, children }: ChoiceProps) {
 }
 
 export function ThemePicker() {
-  const [appearance, setAppearance] = useState<Appearance>(readAppearance);
+  const appearance = useAppearance();
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -88,10 +88,9 @@ export function ThemePicker() {
   }, [open]);
 
   const choose = (patch: Partial<Appearance>) => {
-    const next = { ...appearance, ...patch };
     setOpen(false);
     buttonRef.current?.focus();
-    revealAppearance(next, () => setAppearance(next));
+    revealAppearance(withChange(patch));
   };
 
   const moveFocus = (delta: number) => {

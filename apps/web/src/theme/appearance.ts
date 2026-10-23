@@ -13,12 +13,14 @@ export const APPEARANCE_KEY = 'spark-outpost.theme';
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 const MORE_CONTRAST_QUERY = '(prefers-contrast: more)';
 const SYSTEM_BAR_COLORS = ['#eaecf0', '#07090b'];
+const CHANGED_EVENT = 'spark-outpost:appearance';
+let unsaved: Appearance = DEFAULT_APPEARANCE;
 
 export function readAppearance(): Appearance {
   try {
     return parseAppearance(localStorage.getItem(APPEARANCE_KEY));
   } catch {
-    return DEFAULT_APPEARANCE;
+    return unsaved;
   }
 }
 
@@ -55,21 +57,32 @@ export function saveAppearance(appearance: Appearance): void {
   try {
     localStorage.setItem(APPEARANCE_KEY, stored);
   } catch {
-    return;
+    unsaved = appearance;
   }
+  window.dispatchEvent(new Event(CHANGED_EVENT));
+}
+
+export function onAppearanceChange(listener: () => void): () => void {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === APPEARANCE_KEY) listener();
+  };
+  window.addEventListener('storage', onStorage);
+  window.addEventListener(CHANGED_EVENT, listener);
+  return () => {
+    window.removeEventListener('storage', onStorage);
+    window.removeEventListener(CHANGED_EVENT, listener);
+  };
 }
 
 export function followAppearance(): () => void {
   const refresh = () => showAppearance();
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === null || event.key === APPEARANCE_KEY) refresh();
-  };
   const queries = [DARK_QUERY, MORE_CONTRAST_QUERY].map((query) => window.matchMedia(query));
   refresh();
-  window.addEventListener('storage', onStorage);
+  syncThemeColor();
+  const stopStorage = onAppearanceChange(refresh);
   queries.forEach((query) => query.addEventListener('change', refresh));
   return () => {
-    window.removeEventListener('storage', onStorage);
+    stopStorage();
     queries.forEach((query) => query.removeEventListener('change', refresh));
   };
 }

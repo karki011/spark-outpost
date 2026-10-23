@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
+import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { APPEARANCE_KEY, followAppearance, readAppearance, saveAppearance } from './appearance.ts';
+import { useAppearance, withChange } from './use-appearance.ts';
 
 type Listener = () => void;
 
@@ -67,5 +69,32 @@ describe('following the system appearance', () => {
     expect(localStorage.getItem(APPEARANCE_KEY)).toBe('dark.sage.always');
     expect(readAppearance()).toEqual({ mode: 'dark', tint: 'sage', contrast: 'always' });
     expect(document.documentElement.dataset.skin).toBe('contrast-dark');
+  });
+
+  it('sets the browser bar colour on load even when the boot script already set the skin', () => {
+    document.head.innerHTML = '<meta name="theme-color" content="#eaecf0" />';
+    localStorage.setItem(APPEARANCE_KEY, 'dark.sage.system');
+    document.documentElement.dataset.skin = 'loam';
+    document.documentElement.style.setProperty('--rail', '#0d0c08');
+    const stop = followAppearance();
+    expect(document.querySelector('meta')?.getAttribute('content')).toBe('#0d0c08');
+    stop();
+    document.documentElement.style.removeProperty('--rail');
+  });
+
+  it('merges a change with the latest saved choice, wherever it was made', () => {
+    const { result } = renderHook(() => useAppearance());
+    act(() => saveAppearance({ mode: 'auto', tint: 'sage', contrast: 'always' }));
+    expect(result.current).toEqual({ mode: 'auto', tint: 'sage', contrast: 'always' });
+    expect(withChange({ mode: 'dark' })).toEqual({
+      mode: 'dark',
+      tint: 'sage',
+      contrast: 'always',
+    });
+    act(() => {
+      localStorage.setItem(APPEARANCE_KEY, 'light.iris.system');
+      window.dispatchEvent(new StorageEvent('storage', { key: APPEARANCE_KEY }));
+    });
+    expect(result.current.tint).toBe('iris');
   });
 });

@@ -1,8 +1,9 @@
-import { useId, useState, useSyncExternalStore } from 'react';
+import { useId, useSyncExternalStore } from 'react';
 import { SettingRow } from '../settings/SettingRow.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
-import { readAppearance, systemLook } from './appearance.ts';
+import { systemLook } from './appearance.ts';
 import { revealAppearance } from './reveal.ts';
+import { useAppearance, withChange } from './use-appearance.ts';
 import {
   contrastChoices,
   modes,
@@ -100,15 +101,14 @@ function TintPreview({ light, dark }: { light: SkinId; dark: SkinId }) {
 }
 
 export function AppearanceSettings() {
-  const [appearance, setAppearance] = useState<Appearance>(readAppearance);
+  const appearance = useAppearance();
   const system = useSystemLook();
   const modeHintId = useId();
   const tintTitleId = useId();
   const contrastHintId = useId();
 
   const choose = (patch: Partial<Appearance>) => {
-    const next = { ...appearance, ...patch };
-    revealAppearance(next, () => setAppearance(next));
+    revealAppearance(withChange(patch));
   };
 
   return (
