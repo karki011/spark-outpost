@@ -81,8 +81,25 @@ test('a selection and a link from the page menu open the dock with what was pick
   await expect(dock(page).getByText('page text')).toBeVisible();
   await dock(page).getByRole('button', { name: 'Remove page text' }).click();
   await expect(dock(page).getByText('page text')).toHaveCount(0);
+  await expect(dock(page).getByText('Selected text')).toBeVisible();
 
-  await page.keyboard.press('Escape');
+  const message = page.waitForRequest(
+    (request) => request.url().endsWith('/messages') && request.method() === 'POST',
+  );
+  await dock(page).getByRole('textbox', { name: 'Message' }).fill('Explain this');
+  await page.keyboard.press('Enter');
+  const sent = (await message).postDataJSON() as { attachmentIds: string[] };
+  expect(sent.attachmentIds).toHaveLength(1);
+  const uploaded = await page.evaluate(
+    (id) => fetch(`/api/attachments/${id}/content`).then((response) => response.text()),
+    sent.attachmentIds[0]!,
+  );
+  expect(uploaded).toContain('The user selected this text in the Browser view.');
+  expect(uploaded).toContain('Promote the preview');
+  expect(await calls(page, 'view-page-text')).toEqual([]);
+  await expect(dock(page).getByRole('status')).toContainText('The chat started');
+
+  await dock(page).getByRole('button', { name: 'Close' }).click();
   await expect(dock(page)).toHaveCount(0);
 
   await intent({
@@ -111,4 +128,26 @@ test('⌘⇧O from the page opens the dock, and the dock passes an accessibility
   await expect(dock(page)).toBeVisible();
   const results = await new AxeBuilder({ page }).include('.pcd').analyze();
   expect(results.violations).toEqual([]);
+});
+
+test('a pasted key holds the chat until the user deals with it', async ({ page }) => {
+  await openWithPage(page);
+  await page.getByRole('button', { name: 'New chat', exact: true }).click();
+  let posted = 0;
+  page.on('request', (request) => {
+    if (request.url().endsWith('/messages') && request.method() === 'POST') posted += 1;
+  });
+  const input = dock(page).getByRole('textbox', { name: 'Message' });
+  await input.fill('Use my key sk-ant-api03-FAKEfake0123456789abcdEFGH here');
+  await page.keyboard.press('Enter');
+  const warning = dock(page).getByRole('alert').filter({ hasText: 'This looks like' });
+  await expect(warning).toBeVisible();
+  await expect(warning.getByRole('button', { name: 'Remove it' })).toBeFocused();
+  expect(posted).toBe(0);
+  expect(await calls(page, 'view-page-text')).toEqual([]);
+
+  await warning.getByRole('button', { name: 'Remove it' }).click();
+  await expect(input).toHaveValue('Use my key [removed] here');
+  await expect(input).toBeFocused();
+  await expect(dock(page)).toBeVisible();
 });

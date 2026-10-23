@@ -6,6 +6,8 @@ import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { ArrowUpIcon, EyeIcon, ExternalLinkIcon } from '../ui/icons.tsx';
 import { GlobeIcon } from '../browser/BrowserIcons.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
+import { SecretWarning } from '../ui/SecretWarning.tsx';
+import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import { startPageChat, type PageRef } from './page-chat.ts';
 
 export interface DockRequest {
@@ -48,7 +50,8 @@ export function PageChatDock({ request, onOpenChat, onClose }: PageChatDockProps
   const projects = useProjects();
   const ids = useId();
   const input = useRef<HTMLTextAreaElement>(null);
-  const [page, setPage] = useState(request.page);
+  const page = request.page;
+  const [withPageText, setWithPageText] = useState(page !== null);
   const [selection, setSelection] = useState(request.selection);
   const [text, setText] = useState(request.link ? `Open ${request.link} and ` : '');
   const [projectId, setProjectId] = useState<string>('');
@@ -56,18 +59,20 @@ export function PageChatDock({ request, onOpenChat, onClose }: PageChatDockProps
   const [sending, setSending] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [started, setStarted] = useState<string | null>(null);
+  const secrets = useSecretGuard(text);
 
   useEffect(() => {
     input.current?.focus();
   }, []);
 
   const send = async () => {
-    if (text.trim() === '' || sending) return;
+    if (text.trim() === '' || sending || secrets.blocks(text)) return;
     setSending(true);
     setProblem(null);
     try {
       const chatId = await startPageChat({
         page,
+        withPageText,
         selection,
         text: text.trim(),
         projectId: projectId || null,
@@ -120,14 +125,14 @@ export function PageChatDock({ request, onOpenChat, onClose }: PageChatDockProps
               void send();
             }}
           >
-            {(page || selection) && (
+            {((page && withPageText) || selection) && (
               <ul className="pcd-chips" aria-label="Attached">
-                {page && (
+                {page && withPageText && (
                   <Chip
                     label={page.title || page.url}
                     detail="page text"
                     onRemove={() => {
-                      setPage(null);
+                      setWithPageText(false);
                       input.current?.focus();
                     }}
                   />
@@ -158,6 +163,12 @@ export function PageChatDock({ request, onOpenChat, onClose }: PageChatDockProps
                 event.preventDefault();
                 void send();
               }}
+            />
+            <SecretWarning
+              guard={secrets}
+              input={input}
+              onText={setText}
+              onSendAnyway={() => void send()}
             />
             <div className="pcd-row">
               <ChoicePicker

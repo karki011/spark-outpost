@@ -28,7 +28,7 @@ export async function readViewPageText(
   );
   return {
     url: tab.currentUrl().slice(0, 4096),
-    title: tab.currentTitle().slice(0, 300),
+    title: redactText(tab.currentTitle()).slice(0, 300),
     text: redactText(page.text).slice(0, BROWSER_PAGE_TEXT_MAX),
     main: page.main !== 'whole_page',
   };

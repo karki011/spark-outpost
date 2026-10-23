@@ -34,7 +34,7 @@ beforeEach(() => {
 });
 
 describe('page text the user attaches from the Browser view', () => {
-  it('reads the page’s text with secret-looking values redacted', async () => {
+  it('reads the page’s text and title with secret-looking values redacted', async () => {
     const { view } = startTestBrowser();
     await invoke('browser-view:start', 'personal');
     const [tab] = view.panes.tabsOf('personal');
@@ -43,10 +43,13 @@ describe('page text the user attaches from the Browser view', () => {
       tabId: tab!.id,
       url: DOCS,
     });
+    vi.spyOn(tab!, 'currentTitle').mockReturnValue('Keys key=AKIAABCDEFGHIJKLMNOP');
     const page = await readViewPageText(view.panes, 'personal', tab!.id);
     expect(page.url).toBe(DOCS);
     expect(page.text).toContain('acme deploy --prod');
     expect(page.text).not.toContain('AKIAABCDEFGHIJKLMNOP');
+    expect(page.title).toContain('Keys');
+    expect(page.title).not.toContain('AKIAABCDEFGHIJKLMNOP');
   });
 
   it('refuses a blank tab and a tab of another profile', async () => {
