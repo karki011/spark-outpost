@@ -52,6 +52,28 @@ describe('the saved Browser view', () => {
     expect(parseSavedView('{"version":2}').profiles.personal.tabs).toEqual([]);
   });
 
+  it('keeps the search engine, with DuckDuckGo for a new or unknown one', async () => {
+    expect(parseSavedView('{}').searchEngine).toBe('duckduckgo');
+    const file = (engine: unknown) =>
+      JSON.stringify({
+        version: 1,
+        profiles: { personal: { tabs: [], favorites: [] }, work: { tabs: [], favorites: [] } },
+        searchEngine: engine,
+      });
+    expect(parseSavedView(file('google')).searchEngine).toBe('google');
+    expect(parseSavedView(file('evil')).searchEngine).toBe('duckduckgo');
+    expect(parseSavedView(file(undefined)).searchEngine).toBe('duckduckgo');
+
+    startTestBrowser();
+    expect(await invoke('browser-view:search-engine')).toBe('duckduckgo');
+    expect(await invoke('browser-view:set-search-engine', 'bing')).toBe('bing');
+    expect(await invoke('browser-view:search-engine')).toBe('bing');
+    await expect(
+      invoke('browser-view:set-search-engine', 'https://evil.example/?q='),
+    ).rejects.toThrow();
+    expect(await invoke('browser-view:search-engine')).toBe('bing');
+  });
+
   it('keeps no blank tab', () => {
     const blank = { url: 'about:blank', title: '', pinned: false, active: true };
     expect(keptTabs([blank, { ...blank, url: NEWS }])).toEqual([{ ...blank, url: NEWS }]);

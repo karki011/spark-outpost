@@ -154,6 +154,35 @@ describe('the facts a request state is derived from', () => {
     }
   });
 
+  describe('a run waiting on a card', () => {
+    const pending = (runId: string, kind: string, minutesAgo: number) =>
+      t.db.query(
+        `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash,
+           options, status, created_at)
+         VALUES ($1, $2, $3, $4, 'Card', '{}', 'sha256:card', '[]', 'pending',
+           now() - make_interval(mins => $5))`,
+        [randomUUID(), runId, `call-${randomUUID()}`, kind, minutesAgo],
+      );
+    const waitingOn = async (...cards: [string, number][]) => {
+      const postId = await request();
+      const runId = await receivingRun(postId, 'awaiting_approval');
+      for (const [kind, minutesAgo] of cards) await pending(runId, kind, minutesAgo);
+      return stateOf(postId);
+    };
+    const QUESTION = { state: 'needs_you', reason: '@api has a question' };
+    const APPROVAL = { state: 'needs_you', reason: '@api is waiting for your approval' };
+
+    it('has a question when its pending card asks one', async () => {
+      expect(await waitingOn(['clarify', 1])).toEqual(QUESTION);
+      expect(await waitingOn(['execute', 1])).toEqual(APPROVAL);
+    });
+
+    it('reads the oldest pending card, the one the chat summary shows', async () => {
+      expect(await waitingOn(['execute', 5], ['clarify', 1])).toEqual(APPROVAL);
+      expect(await waitingOn(['clarify', 5], ['execute', 1])).toEqual(QUESTION);
+    });
+  });
+
   it('reads Needs you with the question when the reply ends with one', async () => {
     const postId = await request();
     const runId = await receivingRun(postId, 'succeeded');

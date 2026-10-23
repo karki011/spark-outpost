@@ -183,7 +183,10 @@ export async function getConversationDetail(
     db.query<StepEventRow>(
       `SELECT e.run_id, e.type,
          COALESCE(e.payload->>'stepName', e.payload->>'messageId') AS name,
-         e.payload ? 'subagentRunId' AS subagent
+         e.payload ? 'subagentRunId' AS subagent,
+         e.payload->'metadata'->'spark' AS mark,
+         COALESCE((e.payload->>'timestamp')::double precision,
+           EXTRACT(EPOCH FROM e.created_at) * 1000) AS at
        FROM run_events e
        JOIN runs r ON r.id = e.run_id
        WHERE r.conversation_id = $1
@@ -385,7 +388,8 @@ export async function sendInTransaction(
       ? titleFromMessage(request.content || attachments.map((file) => file.name).join(', '))
       : current.title;
   await client.query(
-    'UPDATE conversations SET title = $2, updated_at = now(), archived_at = NULL WHERE id = $1',
+    `UPDATE conversations SET title = $2, updated_at = now(), archived_at = NULL,
+       auto_archived_days = NULL WHERE id = $1`,
     [conversationId, title],
   );
   if (!terminal) await client.query(`SELECT pg_notify('jobs', $1)`, [runId]);

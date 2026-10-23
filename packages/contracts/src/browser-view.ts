@@ -4,6 +4,7 @@ import {
   browserBoundsSchema,
   browserCommandSchema,
   browserPaneTabSchema,
+  parseBrowserUrl,
 } from './browser.ts';
 import { BROWSER_SHORTCUTS } from './browser-keys.ts';
 
@@ -26,6 +27,16 @@ export const browserFavoriteSchema = z.object({
   title: z.string().max(300),
 });
 export type BrowserFavorite = z.infer<typeof browserFavoriteSchema>;
+
+function favoritePage(url: string): string {
+  const parsed = parseBrowserUrl(url);
+  if (!parsed || parsed.origin === 'null') return url;
+  return `${parsed.origin}${parsed.pathname.replace(/\/+$/, '')}`;
+}
+
+export function sameFavoritePage(a: string, b: string): boolean {
+  return favoritePage(a) === favoritePage(b);
+}
 
 export const browserViewStateSchema = z.object({
   profile: browserProfileSchema,
@@ -93,3 +104,17 @@ export const browserPageTextSchema = z.object({
   main: z.boolean(),
 });
 export type BrowserPageText = z.infer<typeof browserPageTextSchema>;
+
+export const browserSearchEngineSchema = z.enum(['duckduckgo', 'google', 'bing']);
+export type BrowserSearchEngine = z.infer<typeof browserSearchEngineSchema>;
+export const DEFAULT_SEARCH_ENGINE: BrowserSearchEngine = 'duckduckgo';
+
+export const SEARCH_ENGINES: Record<BrowserSearchEngine, { label: string; base: string }> = {
+  duckduckgo: { label: 'DuckDuckGo', base: 'https://duckduckgo.com/?q=' },
+  google: { label: 'Google', base: 'https://www.google.com/search?q=' },
+  bing: { label: 'Bing', base: 'https://www.bing.com/search?q=' },
+};
+
+export function searchUrl(engine: BrowserSearchEngine, text: string): string {
+  return `${SEARCH_ENGINES[engine].base}${encodeURIComponent(text.trim())}`;
+}

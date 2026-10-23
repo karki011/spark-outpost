@@ -13,6 +13,7 @@ import {
   BROWSER_FOCUS_SHORTCUTS,
   BROWSER_VIEW_TABS_MAX,
   browserProfileSchema,
+  browserSearchEngineSchema,
   browserViewCommandSchema,
   browserViewPlacementSchema,
   browserOrigin,
@@ -25,6 +26,7 @@ import {
   type BrowserViewShortcutEvent,
   type BrowserViewSnapshot,
   type BrowserViewState,
+  sameFavoritePage,
 } from '@spark-outpost/contracts';
 import { IPC } from '../ipc-channels.ts';
 import { runPaneCommand } from './pane-command.ts';
@@ -62,6 +64,8 @@ const CHANNELS = [
   IPC.browserViewCommand,
   IPC.browserViewStart,
   IPC.browserViewPageText,
+  IPC.browserViewSearchEngine,
+  IPC.browserViewSetSearchEngine,
 ];
 
 function profileOf(tab: PaneTab): BrowserProfile {
@@ -111,7 +115,7 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
       const tab = panes.tab(profile, action.tabId);
       const url = tab?.currentUrl() ?? 'about:blank';
       if (!tab || url === 'about:blank' || favorites.length >= BROWSER_FAVORITES_MAX) return;
-      if (favorites.some((item) => item.url === url)) return;
+      if (favorites.some((item) => sameFavoritePage(item.url, url))) return;
       const added = { id: randomUUID().slice(0, 8), url, title: tab.currentTitle().slice(0, 300) };
       options.saved.setFavorites(profile, [...favorites, added]);
     }
@@ -228,6 +232,17 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     options.guarded((_event, rawProfile, rawTab) =>
       readViewPageText(panes, browserProfileSchema.parse(rawProfile), String(rawTab)),
     ),
+  );
+  ipcMain.handle(
+    IPC.browserViewSearchEngine,
+    options.guarded(() => options.saved.searchEngine()),
+  );
+  ipcMain.handle(
+    IPC.browserViewSetSearchEngine,
+    options.guarded((_event, raw) => {
+      options.saved.setSearchEngine(browserSearchEngineSchema.parse(raw));
+      return options.saved.searchEngine();
+    }),
   );
   ipcMain.handle(
     IPC.browserViewStart,

@@ -49,6 +49,7 @@ const input: BarInput = {
     },
   ],
   page: true,
+  search: null,
 };
 
 const titles = (text: string, page = true) =>
@@ -132,5 +133,30 @@ describe('the Browser view command bar', () => {
     expect(sections.flatMap((section) => section.rows.map((item) => item.index))).toEqual([
       0, 1, 2, 3, 4, 5, 6,
     ]);
+  });
+
+  it('offers a web search after the local matches, only for typed text', () => {
+    const rows = (text: string) =>
+      barRows({ ...input, text, search: 'duckduckgo' }, NOW).map((row) => ({
+        group: row.group,
+        title: row.title,
+        detail: row.detail,
+        target: row.target,
+      }));
+    expect(rows('').some((row) => row.group === 'search')).toBe(false);
+    expect(rows('https://docs.acme.dev/x').some((row) => row.group === 'search')).toBe(false);
+    const found = rows('deploy');
+    expect(found.map((row) => row.group)).toEqual(['tabs', 'history', 'search']);
+    expect(found.at(-1)).toEqual({
+      group: 'search',
+      title: 'Search DuckDuckGo for “deploy”',
+      detail: 'Sends what you typed to DuckDuckGo',
+      target: { kind: 'open', url: 'https://duckduckgo.com/?q=deploy' },
+    });
+    const google = barRows({ ...input, text: 'rust & go', search: 'google' }, NOW);
+    expect(google[0]?.target).toEqual({
+      kind: 'open',
+      url: 'https://www.google.com/search?q=rust%20%26%20go',
+    });
   });
 });

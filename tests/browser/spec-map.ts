@@ -144,6 +144,7 @@ export const SPEC_GROUPS = {
     'sidebar-projects',
     'sidebar-sections',
     'sidebar-seen-blobs',
+    'sidebar-tidy',
   ],
   tasks: ['todo'],
   tickets: [

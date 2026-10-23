@@ -34,6 +34,17 @@ function stateOf(chat: ConversationSummary | undefined): MemberState {
   return 'idle';
 }
 
+export function chatsOnQuestion(chats: readonly ConversationSummary[]): ReadonlySet<string> {
+  return new Set(
+    chats
+      .filter(
+        (chat) =>
+          chat.latestRun?.status === 'awaiting_approval' && chat.attention?.kind === 'input',
+      )
+      .map((chat) => chat.id),
+  );
+}
+
 export function chatsOnApproval(chats: readonly ConversationSummary[]): ReadonlySet<string> {
   return new Set(
     chats.filter((chat) => chat.latestRun?.status === 'awaiting_approval').map((chat) => chat.id),
@@ -76,9 +87,4 @@ export function memberViews(
 
 export function memberDetails(member: MemberView): string {
   return [member.title, member.place, member.agent].filter(Boolean).join(' · ');
-}
-
-export function membersLabel(count: number): string {
-  if (count === 0) return 'No chats yet';
-  return count === 1 ? 'You and 1 chat' : `You and ${count} chats`;
 }

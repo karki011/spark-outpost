@@ -20,12 +20,14 @@ import {
   type BarRow,
 } from './command-bar-model.ts';
 import { ProfileBadge } from './ProfileSwitch.tsx';
+import { useSearchEngine } from './search-engine.ts';
 
 const GROUP_ICONS: Record<BarGroup, ReactNode> = {
   address: <GlobeIcon />,
   tabs: <GlobeIcon />,
   favorites: <GlobeIcon />,
   history: <ClockIcon />,
+  search: <SearchIcon />,
   actions: <SparkleIcon />,
 };
 
@@ -76,12 +78,14 @@ export function CommandBar(props: CommandBarProps) {
   const [typed, setTyped] = useState(false);
   const [active, setActive] = useState(0);
   const history = useHistory(profile, typed ? text : '');
+  const search = useSearchEngine();
   const rows = barRows({
     text: typed ? text : '',
     tabs: props.tabs,
     favorites: props.favorites,
     history: history.data ?? [],
     page: tab !== null && tab.url !== '' && tab.error === null,
+    search,
   });
   const sections = barSections(rows);
   const current = Math.min(active, Math.max(0, rows.length - 1));
@@ -159,7 +163,7 @@ export function CommandBar(props: CommandBarProps) {
             aria-controls={`${id}-list`}
             aria-autocomplete="list"
             aria-activedescendant={rows[current] ? optionId(current) : undefined}
-            placeholder="Search tabs, favorites and history, or type an address"
+            placeholder="Search tabs, favorites, history or the web, or type an address"
             autoComplete="off"
             spellCheck={false}
             value={text}

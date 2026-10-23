@@ -58,8 +58,8 @@ describe('storyBarView', () => {
     );
     expect(view.rows.map((row) => [row.stateLabel, row.note])).toEqual([
       ['Not started', null],
-      ['Sent', 'Waiting for @api'],
-      ['Answered', null],
+      ['Queued', 'Waiting for @api'],
+      ['Idle', null],
     ]);
   });
 

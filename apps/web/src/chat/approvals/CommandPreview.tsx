@@ -11,7 +11,7 @@ export function CommandPreview({ command }: { command: string }) {
   return (
     <div className={clipped ? 'appr-cmd-wrap clipped' : 'appr-cmd-wrap'}>
       <pre id={previewId} className="appr-cmd">
-        $ {command}
+        {command}
       </pre>
       {long && (
         <button

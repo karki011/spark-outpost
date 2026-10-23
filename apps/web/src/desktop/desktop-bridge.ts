@@ -6,6 +6,7 @@ import type {
   BrowserPlacement,
   BrowserDownloadAction,
   BrowserProfile,
+  BrowserSearchEngine,
   BrowserViewPlacement,
   BrowserHandToChat,
   BrowserToView,
@@ -43,6 +44,7 @@ export interface CompanionStatus {
   hideInShare?: boolean;
   notify?: boolean;
   notifyBlocked?: boolean;
+  menuBar?: boolean;
 }
 
 export type ShortcutResult = { ok: true } | { ok: false; error: string };
@@ -90,6 +92,8 @@ export interface DesktopBrowserView {
   downloads(): Promise<unknown>;
   downloadAct(request: BrowserDownloadAction): Promise<unknown>;
   onDownloads(callback: (list: unknown) => void): Unsubscribe;
+  searchEngine(): Promise<unknown>;
+  setSearchEngine(engine: BrowserSearchEngine): Promise<unknown>;
   onIntent(callback: (intent: unknown) => void): Unsubscribe;
   onState(callback: (state: unknown) => void): Unsubscribe;
   onSnapshot(callback: (snapshot: unknown) => void): Unsubscribe;
@@ -137,6 +141,7 @@ export interface SparkDesktop {
     setAutoExpand?(on: boolean): Promise<CompanionStatus>;
     setHideInShare?(on: boolean): Promise<CompanionStatus>;
     setNotify?(on: boolean): Promise<CompanionStatus>;
+    setMenuBar?(on: boolean): Promise<CompanionStatus>;
     onChange(callback: (status: CompanionStatus) => void): Unsubscribe;
   };
   attention?: {

@@ -44,6 +44,7 @@ export async function withDesktopBrowser(page: Page) {
     const viewStates = new Map<string, unknown>();
     let downloadList: unknown[] = [];
     const downloadListeners = new Set<(list: unknown) => void>();
+    let searchEngine = 'duckduckgo';
     Object.assign(window, {
       browserCalls: calls,
       browserPush: (chatId: string, tabs: Record<string, unknown>[]) => {
@@ -112,6 +113,12 @@ export async function withDesktopBrowser(page: Page) {
           onDownloads: (listener: (list: unknown) => void) => {
             downloadListeners.add(listener);
             return () => downloadListeners.delete(listener);
+          },
+          searchEngine: async () => searchEngine,
+          setSearchEngine: async (engine: string) => {
+            calls.push({ kind: 'view-search-engine', payload: engine });
+            searchEngine = engine;
+            return searchEngine;
           },
           pageText: async (profile: string, tabId: string) => {
             calls.push({ kind: 'view-page-text', payload: { profile, tabId } });

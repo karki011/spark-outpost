@@ -1,5 +1,5 @@
 import { ExternalLinkIcon, LockIcon } from '../ui/icons.tsx';
-import type { PullMark } from './story-bar.ts';
+import type { PullMark } from './request-status.ts';
 import { isOpenPull, type OutpostPull } from './outpost-pulls.ts';
 import { webLink } from './post-text.ts';
 

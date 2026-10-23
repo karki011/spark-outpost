@@ -33,7 +33,9 @@ test("the agent's plan shows on the approval card, and once approved one quiet l
   await expect(approval).toContainText('wrote a plan and wants to start building', {
     timeout: 30_000,
   });
-  await expect(page.locator('.cstatus')).toContainText('Waiting for you · plan to review');
+  await expect(page.locator('.cstatus').getByRole('status')).toHaveText(
+    'Waiting for you: plan to review',
+  );
   await expect(page.locator('.plan-line')).toHaveCount(0);
   const plan = approval.getByRole('region', { name: 'Proposed plan' });
   await expect(plan.getByRole('heading', { name: 'Add CSV export' })).toBeVisible();

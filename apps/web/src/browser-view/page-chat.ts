@@ -18,6 +18,7 @@ export interface PageRef {
 
 export interface PageChatStart {
   page: PageRef | null;
+  withPageText: boolean;
   selection: string | null;
   text: string;
   projectId: string | null;
@@ -51,7 +52,7 @@ async function capturePage(page: PageRef): Promise<File> {
 
 export async function startPageChat(start: PageChatStart): Promise<string> {
   const files: File[] = [];
-  if (start.page) files.push(await capturePage(start.page));
+  if (start.page && start.withPageText) files.push(await capturePage(start.page));
   if (start.selection && start.page) {
     const note = selectionNote(start.page, start.selection);
     files.push(new File([note], 'selected-text.txt', { type: 'text/plain' }));

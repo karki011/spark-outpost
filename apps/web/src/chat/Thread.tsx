@@ -1,7 +1,12 @@
 import './thread.css';
 import './turn-indent.css';
 import { Fragment, memo, use, useEffect } from 'react';
-import { PERMISSION_DO, type ConversationDetail, type Project } from '@spark-outpost/contracts';
+import {
+  PERMISSION_DO,
+  archivedInactiveLine,
+  type ConversationDetail,
+  type Project,
+} from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { useVoice } from '../spark/use-voice.ts';
 import { greeting } from '../spark/voice.ts';
@@ -10,11 +15,10 @@ import { repoSummary } from './project/repo-list.ts';
 import { RepoKit } from './project/RepoKit.tsx';
 import { buildTurns } from './turns.ts';
 import { TurnSection } from './TurnSection.tsx';
-import { AssistantTopicDivider } from './compaction/DividerLine.tsx';
+import { AssistantTopicDivider, TopicDivider } from './compaction/DividerLine.tsx';
 import { placeTopics } from './compaction/topic-model.ts';
 import { TodaySoFar } from './today/TodaySoFar.tsx';
 import { useStickToBottom } from './use-stick-to-bottom.ts';
-import { OpenItems } from './approvals/OpenItems.tsx';
 import { useMessageJump } from './message-jump.ts';
 import { QuoteMarks } from './quotes/QuoteMarks.tsx';
 import { QuoteToolbar } from './quotes/QuoteToolbar.tsx';
@@ -114,10 +118,9 @@ export const Thread = memo(function Thread({
       <div className="thread" ref={scrollerRef}>
         <RailSlot />
         <div className="col">
-          <OpenItems detail={detail} />
           <OutlineTicks detail={detail} taskId={taskId} scroller={scroller} />
           <CommandDockContext value={remote ? null : detail.conversation.id}>
-            {turns.map(({ run, userMessage, assistantMessage, laterMessages }) => (
+            {turns.map(({ run, userMessage, assistantMessage, laterMessages }, index) => (
               <Fragment key={run.id}>
                 {topics.before.get(run.id)?.map((topic) => (
                   <AssistantTopicDivider key={topic.id} topic={topic} />
@@ -127,6 +130,7 @@ export const Thread = memo(function Thread({
                   userMessage={userMessage}
                   assistantMessage={assistantMessage}
                   laterMessages={laterMessages}
+                  previous={turns[index - 1]?.run ?? null}
                   detail={detail}
                   repo={repos[0] ?? null}
                   onOpenChat={onOpenChat}
@@ -136,6 +140,9 @@ export const Thread = memo(function Thread({
             {topics.after.map((topic) => (
               <AssistantTopicDivider key={topic.id} topic={topic} />
             ))}
+            {detail.conversation.archivedAt && detail.conversation.autoArchivedDays && (
+              <TopicDivider label={archivedInactiveLine(detail.conversation.autoArchivedDays)} />
+            )}
           </CommandDockContext>
           <PendingSends sends={sends} />
         </div>

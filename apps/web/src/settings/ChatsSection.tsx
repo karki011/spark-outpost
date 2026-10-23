@@ -3,6 +3,7 @@ import type { Profile } from '@spark-outpost/contracts';
 import { AgentInstructionsSetting } from '../spark/AgentInstructionsSetting.tsx';
 import { CompactionSettings } from '../spark/CompactionSettings.tsx';
 import { LevelSetting } from '../spark/LevelSetting.tsx';
+import { ArchiveInactiveSetting } from './ArchiveInactiveSetting.tsx';
 import { AutoContinueSetting } from './AutoContinueSetting.tsx';
 import { BusyEnterSetting } from './BusyEnterSetting.tsx';
 import { TerminalRecordSetting } from './TerminalRecordSetting.tsx';
@@ -21,6 +22,10 @@ export function ChatsSection({ profile }: { profile: Profile }) {
         <h4 id="chats-window">In the chat</h4>
         <BusyEnterSetting action={profile.busyEnter} />
         <WideWindowSetting layout={profile.wideWindow} />
+      </section>
+      <section className="spark-group" aria-labelledby="chats-list">
+        <h4 id="chats-list">Chat list</h4>
+        <ArchiveInactiveSetting days={profile.archiveInactiveDays} />
       </section>
       <section className="spark-group" aria-labelledby="chats-sessions">
         <h4 id="chats-sessions">Agent sessions</h4>

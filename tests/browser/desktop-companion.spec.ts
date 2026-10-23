@@ -16,6 +16,7 @@ async function fakeDesktop(page: Page) {
       hideInShare: true,
       notify: true,
       notifyBlocked: false,
+      menuBar: false,
     };
     const publish = () => {
       const copy = structuredClone(status);
@@ -76,6 +77,11 @@ async function fakeDesktop(page: Page) {
           setNotify: async (on: boolean) => {
             calls.push(['notify', on]);
             status.notify = on;
+            return publish();
+          },
+          setMenuBar: async (on: boolean) => {
+            calls.push(['menuBar', on]);
+            status.menuBar = on;
             return publish();
           },
           onChange: (listener: (status: unknown) => void) => {
@@ -175,6 +181,41 @@ test('the browser build hides the desktop companion settings', async ({ page }) 
   await expect(spark.getByRole('radiogroup', { name: 'Status companion' })).toBeVisible();
   await expect(spark.getByRole('switch', { name: 'Show Spark Island' })).toHaveCount(0);
   await expect(spark.getByRole('switch', { name: 'Dock badge and notifications' })).toHaveCount(0);
+  await expect(spark.getByRole('switch', { name: 'Show in menu bar' })).toHaveCount(0);
+});
+
+test('the menu bar item stays off until switched on, with or without the island', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await fakeDesktop(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const search = page.getByRole('combobox', { name: 'Search settings' });
+  await search.fill('menu bar');
+  await expect(page.getByRole('option')).toHaveText([/^Show in menu bar/]);
+  await search.press('Enter');
+  const spark = page.getByRole('dialog', { name: 'Notifications' });
+  const menuBar = spark.getByRole('switch', { name: 'Show in menu bar' });
+  await expect(menuBar).toBeFocused();
+  await expect(menuBar).toHaveAttribute('aria-checked', 'false');
+  await expect(spark.getByRole('switch', { name: 'Show Spark Island' })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
+  await expect(spark).toContainText('Open Spark from the Dock');
+  await page.keyboard.press('Space');
+  await expect(menuBar).toHaveAttribute('aria-checked', 'true');
+  await expect(spark).toContainText('A Spark icon in the menu bar opens Spark');
+  await spark.getByRole('switch', { name: 'Show Spark Island' }).click();
+  await expect(menuBar).toHaveAttribute('aria-checked', 'true');
+  await menuBar.click();
+  await expect(menuBar).toHaveAttribute('aria-checked', 'false');
+  expect(await desktopCalls(page)).toEqual([
+    ['menuBar', true],
+    ['enabled', true],
+    ['menuBar', false],
+  ]);
 });
 
 test('searching an island row while the island is off focuses Show Spark Island', async ({

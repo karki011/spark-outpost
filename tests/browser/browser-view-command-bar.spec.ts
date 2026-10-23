@@ -55,8 +55,9 @@ test('⌘T finds history from this profile only and opens it in a new tab', asyn
   await expect(dialog.getByRole('combobox')).toBeFocused();
   await page.keyboard.type('previews');
   const options = dialog.getByRole('option');
-  await expect(options).toHaveCount(1);
+  await expect(options).toHaveCount(2);
   await expect(options.first()).toContainText('Deploy previews');
+  await expect(options.last()).toContainText('Search DuckDuckGo for “previews”');
   await expect(dialog).not.toContainText('Work previews');
   await page.keyboard.press('Enter');
   await expect(dialog).toHaveCount(0);
@@ -167,6 +168,48 @@ test('Settings clears history by range and profile', async ({ page }) => {
   await page.keyboard.press('Escape');
 
   await shortcut(page, 'new_tab');
+  await expect(bar(page, 'Open a new tab').getByRole('combobox')).toBeFocused();
   await page.keyboard.type('previews');
-  await expect(bar(page, 'Open a new tab').getByRole('option')).toHaveCount(1);
+  await expect(bar(page, 'Open a new tab').getByRole('option')).toHaveCount(2);
+  await expect(bar(page, 'Open a new tab').getByRole('option').first()).toContainText(
+    'Deploy previews',
+  );
+});
+
+test('a typed search goes to DuckDuckGo only from its row, and Settings changes the engine', async ({
+  page,
+}) => {
+  await openWithPages(page);
+  await shortcut(page, 'new_tab');
+  const dialog = bar(page, 'Open a new tab');
+  await expect(dialog.getByRole('combobox')).toBeFocused();
+  await page.keyboard.type('rust lifetimes');
+  const search = dialog.getByRole('option', { name: /Search DuckDuckGo/ });
+  await expect(search).toContainText('Search DuckDuckGo for “rust lifetimes”');
+  await expect(search).toContainText('Sends what you typed to DuckDuckGo');
+  expect(await viewCommands(page)).toEqual([]);
+  await page.keyboard.press('Enter');
+  await expect
+    .poll(async () => (await viewCommands(page)).at(-1))
+    .toEqual({
+      profile: 'personal',
+      command: { command: 'new_tab', url: 'https://duckduckgo.com/?q=rust%20lifetimes' },
+    });
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Browser pane' }).click();
+  const engine = page
+    .getByRole('dialog', { name: 'Browser pane' })
+    .getByRole('group', { name: 'Search engine' });
+  await engine.getByRole('button', { name: 'Search engine' }).click();
+  await page.getByRole('menuitemradio', { name: 'Google' }).click();
+  await expect(engine.getByRole('button', { name: 'Search engine' })).toHaveText('Google');
+  await page.keyboard.press('Escape');
+
+  await shortcut(page, 'new_tab');
+  await expect(bar(page, 'Open a new tab').getByRole('combobox')).toBeFocused();
+  await page.keyboard.type('rust');
+  await expect(
+    bar(page, 'Open a new tab').getByRole('option', { name: /Search Google/ }),
+  ).toBeVisible();
 });

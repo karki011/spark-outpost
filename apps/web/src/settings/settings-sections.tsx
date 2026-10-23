@@ -18,6 +18,7 @@ import { SparksSection } from '../teammates/SparksSection.tsx';
 import { ResetSection, KEEP_KEYS_LABEL } from '../reset/ResetSection.tsx';
 import { HelpSection, helpRows } from '../help/HelpSection.tsx';
 import { AUTO_CONTINUE_LABEL } from './AutoContinueSetting.tsx';
+import { ARCHIVE_INACTIVE_LABEL } from './ArchiveInactiveSetting.tsx';
 import { BUSY_ENTER_LABEL } from './BusyEnterSetting.tsx';
 import {
   BrowserSection,
@@ -26,6 +27,7 @@ import {
   browserSettingsAvailable,
 } from './BrowserSection.tsx';
 import { CLEAR_HISTORY_LABEL } from './BrowserHistorySetting.tsx';
+import { SEARCH_ENGINE_LABEL } from './BrowserSearchSetting.tsx';
 import { ChatsSection } from './ChatsSection.tsx';
 import { COMPANION_LABEL } from './CompanionSetting.tsx';
 import { islandRows } from './DesktopCompanionSetting.tsx';
@@ -190,6 +192,7 @@ export const SETTINGS_SECTIONS = [
       COMPACT_LABEL,
       BUSY_ENTER_LABEL,
       WIDE_WINDOW_LABEL,
+      ARCHIVE_INACTIVE_LABEL,
       INSTRUCTIONS_LABEL,
       TERMINAL_RECORD_LABEL,
     ],
@@ -248,7 +251,12 @@ export const SETTINGS_SECTIONS = [
     label: 'Browser pane',
     icon: icons.BROWSER_ICON,
     available: browserSettingsAvailable,
-    rows: () => [SIGNED_IN_SITES_LABEL, SIGN_OUT_ALL_LABEL, CLEAR_HISTORY_LABEL],
+    rows: () => [
+      SIGNED_IN_SITES_LABEL,
+      SIGN_OUT_ALL_LABEL,
+      SEARCH_ENGINE_LABEL,
+      CLEAR_HISTORY_LABEL,
+    ],
     render: () => <BrowserSection />,
   },
   {
