@@ -27,7 +27,6 @@ interface ActiveChatsProps {
   searching: boolean;
   canDrag: boolean;
   hasChats: boolean;
-  hasProjects: boolean;
   projectById: ReadonlyMap<string, Project>;
   dnd: SidebarDnd;
   folds: SidebarFolds;
@@ -48,7 +47,6 @@ export function ActiveChats({
   searching,
   canDrag,
   hasChats,
-  hasProjects,
   projectById,
   dnd,
   folds,
@@ -152,10 +150,10 @@ export function ActiveChats({
           pinned={loosePinned}
           unpinned={looseRest}
           empty={
-            hasChats
+            blocks.length > 0
               ? 'Drag a chat here to take it out of its project.'
-              : hasProjects
-                ? null
+              : hasChats
+                ? 'No active chats. Start one with New chat.'
                 : 'No chats yet. Start one with New chat.'
           }
           searching={searching}

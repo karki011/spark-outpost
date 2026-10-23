@@ -46,6 +46,7 @@ export function OutpostComposer({
   const [filled, setFilled] = useState(fill?.id ?? null);
   const [formatting, setFormatting] = useState(false);
   const handles = members.map((member) => member.handle);
+  const mentionable = [...handles, 'all'];
   const picker = useHandlePicker(typed, members, answering === null);
   const fillId = fill?.id ?? null;
   if (fill && fill.id !== filled) {
@@ -157,6 +158,7 @@ export function OutpostComposer({
         <MarkdownInput
           ref={textareaRef}
           formatting={formatting}
+          mentionable={mentionable}
           value={text}
           rows={Math.min(MAX_ROWS, Math.max(1, text.split('\n').length))}
           placeholder={

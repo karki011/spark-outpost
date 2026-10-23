@@ -33,6 +33,10 @@ async function shots(page: Page, name: string) {
   await shoot(page, SHOTS, name, page.locator('.main'));
 }
 
+async function scrollAway(page: Page) {
+  await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
+}
+
 async function openWaitingChat(page: Page, approvals: SeedApproval[]) {
   await seedChats([
     {
@@ -75,6 +79,11 @@ test.describe('waiting for you', () => {
   test('one approval is one line that says what, and jumps to the card', async ({ page }) => {
     test.setTimeout(60_000);
     await openWaitingChat(page, [grep]);
+    const approval = card(page, /^Run .+\?$/);
+    await expect(approval).toBeInViewport();
+    await expect(waiting(page)).toHaveCount(0);
+    await scrollAway(page);
+    await expect(approval).not.toBeInViewport();
     await expect(waiting(page)).toHaveText(
       /^Waiting for you · approve git grep -l -i 'AI_USER' …\s*Review$/,
     );
@@ -93,22 +102,22 @@ test.describe('waiting for you', () => {
     expect(axe.violations).toEqual([]);
     await shots(page, 'waiting-approval');
 
-    const approval = card(page, /Run a command\?/);
-    await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
     await expect(approval).not.toBeInViewport();
     await waiting(page).click();
     await expect(approval).toBeInViewport();
-    await expect(approval.getByRole('button', { name: 'Allow', exact: true })).toBeFocused();
+    await expect(approval.locator('.appr-h')).toBeFocused();
+    await expect(waiting(page)).toHaveCount(0);
 
     await page.getByRole('textbox', { name: 'Message' }).focus();
-    await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
+    await scrollAway(page);
     await page.keyboard.press('ControlOrMeta+Shift+Y');
-    await expect(approval.getByRole('button', { name: 'Allow', exact: true })).toBeFocused();
+    await expect(approval.locator('.appr-h')).toBeFocused();
     await expect(approval).toBeInViewport();
   });
 
   test('a plan says there is a plan to review', async ({ page }) => {
     await openWaitingChat(page, [plan]);
+    await scrollAway(page);
     await expect(waiting(page)).toContainText('Waiting for you · plan to review');
     await expect(card(page, /Approve the plan\?/)).toBeVisible();
     await shots(page, 'waiting-plan');
@@ -116,6 +125,7 @@ test.describe('waiting for you', () => {
 
   test('several waiting things collapse to a count with a short list', async ({ page }) => {
     await openWaitingChat(page, [grep, edit]);
+    await scrollAway(page);
     await expect(waiting(page)).toContainText('Waiting for you · 2 things');
     await expect(waiting(page)).toHaveAttribute('aria-expanded', 'false');
     await waiting(page).click();
@@ -127,28 +137,30 @@ test.describe('waiting for you', () => {
     ]);
     await shots(page, 'waiting-several');
     await list.getByRole('button', { name: 'approve edit monitors-table.tsx' }).click();
-    const change = card(page, /Change a file\?/);
-    await expect(change.getByRole('button', { name: 'Allow', exact: true })).toBeFocused();
+    const change = card(page, /^Edit .+\?$/);
+    await expect(change.locator('.appr-h')).toBeFocused();
     await expect(list).toHaveCount(0);
   });
 
   test('with reduced motion the line holds still and still jumps', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openWaitingChat(page, [grep]);
+    await scrollAway(page);
     await expect(waiting(page)).toBeVisible();
     const animation = await line(page)
       .locator('.mo-breathe')
       .evaluate((element) => getComputedStyle(element).animationName);
     expect(animation).toBe('none');
-    await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
     await waiting(page).click();
-    const approval = card(page, /Run a command\?/);
+    const approval = card(page, /^Run .+\?$/);
     await expect(approval).toBeInViewport();
-    await expect(approval.getByRole('button', { name: 'Allow', exact: true })).toBeFocused();
+    await expect(approval.locator('.appr-h')).toBeFocused();
   });
 });
 
-test('while the agent works the line says what it is doing, then Done', async ({ page }) => {
+test('while the agent works the line says what it is doing, then says Done only aloud', async ({
+  page,
+}) => {
   test.setTimeout(60_000);
   await resetTestDatabase({ onboarded: true });
   const [chatId] = await seedChats([{ title: 'Tidy the monitors', run: { status: 'running' } }]);
@@ -158,8 +170,9 @@ test('while the agent works the line says what it is doing, then Done', async ({
   const runId = run!.id;
   await emit(runId, { type: 'RUN_STARTED', runId, threadId: chatId });
   await openChats(page);
-  const turnHead = page.locator('.thread .ai-head');
-  await expect(turnHead.locator('.mood')).toHaveText('thinking');
+  const turnHead = page.locator('.thread .turn-working');
+  await expect(page.locator('.thread .msg.ai .mood')).toHaveText('thinking');
+  await expect(turnHead).toBeInViewport();
   await expect(shown(page)).toHaveCount(0);
   await expect(page.locator('.thread .dots')).toHaveCount(0);
   await expect(line(page).getByRole('status')).toHaveText('Fake provider is thinking…');
@@ -195,12 +208,12 @@ test('while the agent works the line says what it is doing, then Done', async ({
     [runId],
   );
   await emit(runId, { type: 'RUN_FINISHED', runId, threadId: chatId });
-  await expect(shown(page)).toHaveText('Done · 2m 14s');
+  await expect(line(page).getByRole('status')).toHaveText('Done after 2m 14s');
+  await expect(line(page).locator('.cs-line')).toHaveCount(0);
   await shots(page, 'done');
-  await expect(line(page).locator('.cs-line')).toHaveCount(0, { timeout: 15_000 });
 });
 
-test("the line stays away while a short turn's header is in view, and shows under a long one", async ({
+test('the line stays away while the Working line is in view, and shows when it scrolls away', async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -210,31 +223,29 @@ test("the line stays away while a short turn's header is in view, and shows unde
     await page.setViewportSize({ width: 1400, height: 900 });
     await projectChat(page, repo, 'Auto-edit');
     await send(page, `${BUILD_REQUEST} #build #slowbuild`);
-    const head = page.locator('.thread .ai-head').last();
-    await expect(head.locator('.mood')).toHaveText('working', { timeout: 30_000 });
-    await expect(head).toBeInViewport();
+    const working = page.locator('.thread .turn-working').last();
+    await expect(page.locator('.thread .msg.ai .mood').last()).toHaveText('working', {
+      timeout: 30_000,
+    });
+    await expect(working).toBeInViewport();
     await expect(shown(page)).toHaveCount(0);
     await expect(line(page).getByRole('status')).toHaveText(/^Claude is /);
-    await shots(page, 'head-in-view');
+    await shots(page, 'working-in-view');
 
     await page.addStyleTag({ content: '.thread .col { padding-bottom: 200vh; }' });
     const thread = page.locator('.thread');
     await thread.evaluate((element) => (element.scrollTop = element.scrollHeight));
-    await expect(head).not.toBeInViewport();
+    await expect(working).not.toBeInViewport();
     await expect(shown(page)).toHaveText(/^Claude is (working|thinking)/);
-    await shots(page, 'head-out-of-view');
+    await shots(page, 'working-out-of-view');
 
-    await thread.evaluate((element) => (element.scrollTop = 0));
-    await expect(head).toBeInViewport();
+    await working.scrollIntoViewIfNeeded();
+    await expect(working).toBeInViewport();
     await expect(shown(page)).toHaveCount(0);
-
-    await head.evaluate((element) => {
-      element.parentElement!.style.minHeight = '600px';
-    });
-    await expect(head).toBeInViewport();
-    await expect(shown(page)).toHaveText(/^Claude is (working|thinking)/);
     await page.getByRole('button', { name: 'Stop' }).click();
-    await expect(head.locator('.mood')).toHaveText('stopped', { timeout: 30_000 });
+    await expect(page.locator('.thread .msg.ai .mood').last()).toHaveText('stopped', {
+      timeout: 30_000,
+    });
   } finally {
     repo.remove();
   }

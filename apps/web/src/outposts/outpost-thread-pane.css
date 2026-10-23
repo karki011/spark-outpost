@@ -57,6 +57,33 @@
   border-color: var(--warn);
 }
 
+.op-question-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  font-size: 13px;
+}
+
+.op-question-bar > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.op-thread-body .jump {
+  left: auto;
+  right: 12px;
+  transform: translate(0, 16px) scale(0.9);
+}
+
+.op-thread-body .jump.show {
+  transform: none;
+}
+
+.op-thread-body .thread .col {
+  padding-bottom: 48px;
+}
+
 .op-steer textarea {
   display: block;
   width: 100%;

@@ -1,4 +1,13 @@
+import type * as acp from '@agentclientprotocol/sdk';
 import { friendlyStep } from '@spark-outpost/contracts';
+import { objectFields } from './object-fields.ts';
+
+export function toolNameOf(toolCall: Pick<acp.ToolCallUpdate, '_meta'>): string | null {
+  const named = objectFields(toolCall).name;
+  if (typeof named === 'string' && named.trim()) return named.trim();
+  const meta = objectFields(objectFields(toolCall._meta).claudeCode).toolName;
+  return typeof meta === 'string' && meta.trim() ? meta.trim() : null;
+}
 
 const ABSOLUTE_PATH = /(^|[\s(])(\/[^\s`'")]+)/g;
 
@@ -66,4 +75,21 @@ export function toolTarget(
   }
   const target = [paths.join(','), input].filter(Boolean).join(' ');
   return target ? target.slice(0, TARGET_CHARS) : null;
+}
+
+const PATH_KEYS = ['file_path', 'notebook_path', 'path'];
+
+export function toolPath(
+  locations: readonly { path: string }[] | null | undefined,
+  rawInput: unknown,
+): string | null {
+  const located = locations?.find((location) => location.path)?.path;
+  if (located) return located;
+  if (typeof rawInput !== 'object' || rawInput === null) return null;
+  const input = rawInput as Record<string, unknown>;
+  for (const key of PATH_KEYS) {
+    const value = input[key];
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return null;
 }

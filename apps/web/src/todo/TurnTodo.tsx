@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import type { PlanEntry } from '@spark-outpost/contracts';
-import { CheckIcon, ChevronIcon } from '../ui/icons.tsx';
+import { ChevronIcon } from '../ui/icons.tsx';
+import { RowIcon } from '../chat/rows/RowIcon.tsx';
 import { TodoList } from './TodoList.tsx';
 import { doneCount, finishedText, todoRows } from './todo-model.ts';
 
@@ -12,7 +13,8 @@ interface TurnTodoProps {
 function LiveTodo({ entries }: { entries: readonly PlanEntry[] }) {
   return (
     <section className="todo-card" aria-label="This turn's to-do">
-      <div className="todo-head">
+      <div className="todo-head trow">
+        <RowIcon name="todo" />
         <b>To-do</b>
         <span className="todo-count" aria-live="polite">
           {doneCount(entries)} of {entries.length}
@@ -28,20 +30,20 @@ function FinishedTodo({ entries }: { entries: readonly PlanEntry[] }) {
   const [open, setOpen] = useState(false);
   const listId = useId();
   const text = finishedText(entries);
-  const complete = doneCount(entries) === entries.length;
   return (
     <div className={open ? 'todo-done open' : 'todo-done'}>
       <button
         type="button"
-        className="todo-line"
+        className="todo-line trow"
         aria-expanded={open}
         aria-controls={listId}
         aria-label={`To-do: ${text}`}
         onClick={() => setOpen(!open)}
       >
-        {complete ? <CheckIcon /> : <span className="todo-left" aria-hidden="true" />}
-        <b>To-do</b>
-        <span>{text}</span>
+        <RowIcon name="todo" />
+        <span className="trow-text">
+          <b>To-do</b> {text}
+        </span>
         <ChevronIcon />
       </button>
       {open && <TodoList rows={todoRows(entries, false)} finished id={listId} />}

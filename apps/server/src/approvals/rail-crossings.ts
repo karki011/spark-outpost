@@ -1,5 +1,6 @@
 import type { RailKind } from '@spark-outpost/contracts';
 import { guardedTargets, secretLabels, type ApprovalRequest } from './decide.ts';
+import { browserDataDir, touchesBrowserData } from './browser-data.ts';
 import { diskFiles, type FileLister } from './file-lister.ts';
 import { withPrefetchedFiles } from './prefetched-files.ts';
 import { forcePush } from './git-commands.ts';
@@ -17,6 +18,7 @@ export interface CrossingOptions {
   shell?: ShellScript | null;
   defaultBranch?: string | null;
   files?: FileLister;
+  browserData?: string | null;
 }
 
 async function askedRail(
@@ -44,6 +46,8 @@ export async function railCrossings(
 ): Promise<RailCrossing[]> {
   const request = withResolvedVariables(observed);
   const crossings: RailCrossing[] = [];
+  const browserData = options.browserData === undefined ? browserDataDir() : options.browserData;
+  if (touchesBrowserData(request, browserData)) crossings.push({ rail: 'browser_data', paths: [] });
   const reasoned = await reasonCrossing(request, options);
   if (reasoned) crossings.push(reasoned);
   const guarded = guardedTargets(request);

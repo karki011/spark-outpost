@@ -20,6 +20,7 @@ export interface CompanionSettings {
   autoExpand: boolean;
   hideInShare: boolean;
   notify: boolean;
+  menuBar: boolean;
 }
 
 export const DEFAULT_SHORTCUTS: Readonly<Record<ShortcutAction, string>> = {
@@ -37,6 +38,7 @@ export const DEFAULT_SETTINGS: CompanionSettings = {
   autoExpand: true,
   hideInShare: true,
   notify: true,
+  menuBar: false,
 };
 
 const MODIFIERS = new Set([
@@ -148,6 +150,7 @@ export function parseSettings(raw: string | null): CompanionSettings {
     autoExpand: savedFlag(record.autoExpand, DEFAULT_SETTINGS.autoExpand),
     hideInShare: savedFlag(record.hideInShare, DEFAULT_SETTINGS.hideInShare),
     notify: savedFlag(record.notify, DEFAULT_SETTINGS.notify),
+    menuBar: savedFlag(record.menuBar, DEFAULT_SETTINGS.menuBar),
   };
 }
 

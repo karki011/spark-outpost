@@ -3,7 +3,7 @@
     --turn-indent: calc(var(--turn-avatar) + var(--turn-gap));
   }
 
-  .col :is(.msg.ai, .crew-turn) {
+  .col :is(.msg.ai:not(.solo), .crew-turn) {
     padding-left: var(--turn-indent);
   }
 

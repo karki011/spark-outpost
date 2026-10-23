@@ -106,7 +106,7 @@ export async function turnDone(page: Page, timeout = 30_000): Promise<void> {
 }
 
 export async function allowEdit(page: Page): Promise<void> {
-  const edit = card(page, /Change a file\?/).filter({
+  const edit = card(page, /^Edit .+\?$/).filter({
     has: page.getByRole('button', { name: 'Deny' }),
   });
   await edit.getByRole('button', { name: 'Allow', exact: true }).click();
