@@ -46,7 +46,7 @@ async function otherKey(page: Page): Promise<string> {
 async function waitingCrew(page: Page) {
   await projectChat(page, repo, 'Ask before edits');
   await send(page, `${BUILD_REQUEST} #build`);
-  await expect(card(page, /Change a file\?/)).toBeVisible({ timeout: 30_000 });
+  await expect(card(page, /^Edit .+\?$/)).toBeVisible({ timeout: 30_000 });
 }
 
 async function noAxeViolations(page: Page, selector: string) {
@@ -83,10 +83,10 @@ test('Enter queues and ⌘Enter sends now while a turn runs, ahead of the queue 
   await waitingCrew(page);
   const other = await otherKey(page);
   await composer(page).focus();
-  await expect(hint(page)).toHaveText(`Enter to queue · ${other} to send now`);
+  await expect(hint(page)).toHaveText('');
   await expect(page.getByRole('button', { name: 'Queue message' })).toHaveAttribute(
     'title',
-    'Queue: sends when this turn ends (Enter)',
+    `Queue: sends when this turn ends (Enter) · ${other} to send now`,
   );
   await shot(page, 'hint');
 
@@ -180,10 +180,13 @@ test('the Enter setting flips the default, the button and the hint', async ({ pa
   expect((await (await page.request.get('/api/setup')).json()).profile.busyEnter).toBe('now');
 
   await composer(page).focus();
-  await expect(hint(page)).toHaveText(`Enter to send now · ${other} to queue`);
+  await expect(hint(page)).toHaveText('');
   await expect(composer(page)).toHaveAttribute('placeholder', 'Send a message to the running turn');
   const main = page.getByRole('button', { name: 'Send now', exact: true });
-  await expect(main).toHaveAttribute('title', 'Send now: steers or interrupts the turn (Enter)');
+  await expect(main).toHaveAttribute(
+    'title',
+    `Send now: steers or interrupts the turn (Enter) · ${other} to queue`,
+  );
   await caret(page).click();
   await expect(menu(page).getByRole('menuitem').nth(0)).toContainText(other);
   await expect(menu(page).getByRole('menuitem').nth(1)).toContainText(/Enter$/);

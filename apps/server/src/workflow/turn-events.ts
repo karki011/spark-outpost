@@ -1,6 +1,7 @@
 import type { RunEvent, StepMark } from '@spark-outpost/contracts';
 import { THINKING_STEP } from '../agents/acp/session-updates.ts';
 import { storableText } from '../audit/redact.ts';
+import { shotAnchor } from '../persistence/browser-screenshots.ts';
 import {
   createRedactionFilter,
   redactSecrets,
@@ -16,6 +17,13 @@ import { toolArguments, toolResult } from './tool-call-text.ts';
 export interface TurnEventsOptions {
   append: (event: RunEvent) => Promise<unknown>;
   secretValues: readonly string[];
+  replySoFar?: () => ReplySoFar;
+  now?: () => number;
+}
+
+interface ReplySoFar {
+  shown: string;
+  held: number;
 }
 
 export interface TurnEvents {
@@ -26,6 +34,26 @@ export interface TurnEvents {
 interface OpenStep {
   calls: number;
   mark: StepMark;
+}
+
+const FILE_KINDS = new Set(['read', 'edit', 'delete', 'move']);
+const TARGET_CHARS = 200;
+
+function filePath(path: string | undefined): string | null {
+  const trimmed = path?.trim() ?? '';
+  return trimmed ? trimmed.slice(-TARGET_CHARS) : null;
+}
+
+function kindMark(output: { toolKind?: string; path?: string }): StepMark {
+  if (!output.toolKind) return {};
+  const path = FILE_KINDS.has(output.toolKind) ? filePath(output.path) : null;
+  return { toolKind: output.toolKind.slice(0, 40), ...(path ? { target: path } : {}) };
+}
+
+function anchorMark(reply: ReplySoFar | undefined): StepMark {
+  if (!reply) return {};
+  const { textOffset, textBefore, textHeld } = shotAnchor(reply.shown, reply.held);
+  return { textOffset, textBefore, textHeld };
 }
 
 interface Thought {
@@ -39,7 +67,12 @@ const stepKey = (name: string, subagent: string | undefined) =>
 const owned = (event: RunEvent, subagent: string | undefined): RunEvent =>
   (subagent ? attributed(event, subagent) : null) ?? event;
 
-export function createTurnEvents({ append, secretValues }: TurnEventsOptions): TurnEvents {
+export function createTurnEvents({
+  append,
+  secretValues,
+  replySoFar,
+  now = Date.now,
+}: TurnEventsOptions): TurnEvents {
   const subagents = createSubagentProgress({
     storable: (text) => storableText(redactSecrets(text, secretValues)),
   });
@@ -68,7 +101,12 @@ export function createTurnEvents({ append, secretValues }: TurnEventsOptions): T
     await append(runEvents.reasoningEnd(id));
   };
 
-  const startStep = async (name: string, subagent?: string, waits?: boolean) => {
+  const startStep = async (
+    name: string,
+    subagent?: string,
+    waits?: boolean,
+    kind: StepMark = {},
+  ) => {
     const key = stepKey(name, subagent);
     const open = openSteps.get(key);
     if (open) {
@@ -77,12 +115,17 @@ export function createTurnEvents({ append, secretValues }: TurnEventsOptions): T
     }
     const toolCallId = announced.get(name);
     announced.delete(name);
-    const mark: StepMark = { ...(toolCallId ? { toolCallId } : {}), ...(waits ? { waits } : {}) };
+    const mark: StepMark = {
+      ...(toolCallId ? { toolCallId } : {}),
+      ...(waits ? { waits } : {}),
+      ...kind,
+    };
     openSteps.set(key, { calls: 1, mark });
-    await append(owned(runEvents.stepStarted(name, mark), subagent));
+    const anchor = subagent ? {} : anchorMark(replySoFar?.());
+    await append(owned(runEvents.stepStarted(name, { ...mark, ...anchor }, now()), subagent));
   };
 
-  const finishStep = async (name: string, subagent?: string) => {
+  const finishStep = async (name: string, subagent?: string, kind: StepMark = {}) => {
     if (name === THINKING_STEP && !subagent) await stopThinking();
     const key = stepKey(name, subagent);
     const open = openSteps.get(key);
@@ -92,7 +135,9 @@ export function createTurnEvents({ append, secretValues }: TurnEventsOptions): T
     }
     if (!open) return;
     openSteps.delete(key);
-    await append(owned(runEvents.stepFinished(name, open.mark), subagent));
+    const finished =
+      kind.target && !open.mark.target ? { ...open.mark, target: kind.target } : open.mark;
+    await append(owned(runEvents.stepFinished(name, finished, now()), subagent));
   };
 
   const startCall = async (id: string, name: string, subagent?: string) => {
@@ -113,9 +158,11 @@ export function createTurnEvents({ append, secretValues }: TurnEventsOptions): T
   return {
     async observe(output) {
       if (output.kind === 'step_started') {
-        await startStep(output.name, output.subagent, output.waits);
+        await startStep(output.name, output.subagent, output.waits, kindMark(output));
       }
-      if (output.kind === 'step_finished') await finishStep(output.name, output.subagent);
+      if (output.kind === 'step_finished') {
+        await finishStep(output.name, output.subagent, kindMark(output));
+      }
       if (output.kind === 'file_focus') await append(runEvents.fileFocus(output));
       if (output.kind === 'thought_delta') await think(output.delta);
       if (output.kind === 'tool_started') {

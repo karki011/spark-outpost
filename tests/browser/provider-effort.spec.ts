@@ -79,5 +79,5 @@ test('the Claude default effort preselects fresh chats and the picked effort run
 
   await send(page, `${BUILD_REQUEST} #build`);
   await turnDone(page, 30_000);
-  await expect(page.locator('.msg.ai .turn-foot').last()).toContainText('high effort');
+  await expect(page.locator('.msg.ai .turn-meta').last()).toContainText('high effort');
 });

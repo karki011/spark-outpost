@@ -152,6 +152,13 @@ export const activityStepSchema = z.object({
   done: z.boolean(),
   reasoningId: z.string().optional(),
   subagent: z.boolean().optional(),
+  textOffset: z.number().int().nonnegative().optional(),
+  textBefore: z.string().optional(),
+  textHeld: z.number().int().nonnegative().optional(),
+  startedAt: z.number().optional(),
+  finishedAt: z.number().optional(),
+  toolKind: z.string().optional(),
+  target: z.string().optional(),
 });
 export type ActivityStep = z.infer<typeof activityStepSchema>;
 

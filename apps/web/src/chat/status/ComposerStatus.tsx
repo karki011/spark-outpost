@@ -14,6 +14,7 @@ import { RunningLine, runningText } from './RunningLine.tsx';
 import { SummaryText } from './SummaryText.tsx';
 import { clockText } from './status-text.ts';
 import type { PendingEntry, StatusStore } from './status-store.ts';
+import { useCardsInView } from './use-cards-in-view.ts';
 import { useHeadInView, useStatusLine, useThrottled, type StatusLine } from './use-status-line.ts';
 
 const ANNOUNCE_GAP_MS = 4_000;
@@ -128,29 +129,6 @@ function WaitingLine({
   );
 }
 
-function EndedLine({
-  provider,
-  word,
-  elapsed,
-}: {
-  provider: string;
-  word: string;
-  elapsed: number | null;
-}) {
-  return (
-    <p className="cs-line end">
-      <Indicator provider={provider} expression={word === 'Done' ? 'happy' : 'sleepy'} still />
-      <span className="cs-word">{word}</span>
-      {elapsed !== null && (
-        <>
-          <Dot />
-          <span className="cs-time">{clockText(elapsed)}</span>
-        </>
-      )}
-    </p>
-  );
-}
-
 function LineBody({
   line,
   provider,
@@ -173,7 +151,7 @@ function LineBody({
       />
     );
   }
-  return <EndedLine provider={provider} word={line.word} elapsed={line.elapsed} />;
+  return null;
 }
 
 interface ComposerStatusProps {
@@ -198,7 +176,8 @@ export function ComposerStatus({
   const said = useThrottled(announcement(line), ANNOUNCE_GAP_MS, statusState(line));
   const expand = useExpandReveal();
   const headInView = useHeadInView(store, line?.kind === 'running' ? line.worker.id : null);
-  const shown = headInView ? null : line;
+  const cardsInView = useCardsInView(pending.map((entry) => entry.id));
+  const shown = headInView || cardsInView || line?.kind === 'ended' ? null : line;
   return (
     <div className="cstatus" data-state={shown?.kind ?? 'idle'}>
       <p className="sr-only" role="status">

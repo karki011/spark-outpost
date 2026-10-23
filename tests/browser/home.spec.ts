@@ -231,7 +231,7 @@ test('the Needs you feed lists asking, then errors, then finished chats, counts 
   await expect(feed(page).locator('.why-r').first()).toBeHidden();
   await answer.click();
   await expect(page.locator('.chat-title')).toHaveText('Deploy the site');
-  const approval = page.getByRole('group', { name: /Run a command\?/ });
+  const approval = page.getByRole('group', { name: /^Run .+\?$/ });
   await expect(approval).toBeInViewport();
   await expect(approval).toHaveClass(/flash/);
 

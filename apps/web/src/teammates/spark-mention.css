@@ -26,10 +26,6 @@
   color: var(--muted);
 }
 
-.ctxbar:has(.spark-suggest) > .ctx-unlinked {
-  display: none;
-}
-
 .sparklist {
   padding-bottom: 0;
 }

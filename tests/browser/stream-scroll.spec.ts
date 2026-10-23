@@ -197,7 +197,7 @@ test('a message queued or sent now while a turn runs brings the thread back to t
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 45_000 });
   await input.fill('Keep going until I stop you #slowbuild');
   await input.press('Enter');
-  await expect(page.locator('.thread .ai-head').last().locator('.mood')).toHaveText('working');
+  await expect(page.locator('.thread .msg.ai .mood').last()).toHaveText('working');
 
   await scrollUp();
   await input.fill('Queue this for later');

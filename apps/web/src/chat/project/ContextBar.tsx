@@ -1,5 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
-import { PICK_PROJECT_HINT } from './repo-list.ts';
+import { useId, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ConversationDetail, Project } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../../api/client.ts';
@@ -43,15 +42,17 @@ function MemberChip({ conversationId }: { conversationId: string }) {
 }
 
 interface DetailsChipProps {
+  chipRef: RefObject<HTMLButtonElement | null>;
   open: boolean;
   controls: string;
   attention: boolean;
   onToggle: () => void;
 }
 
-function DetailsChip({ open, controls, attention, onToggle }: DetailsChipProps) {
+function DetailsChip({ chipRef, open, controls, attention, onToggle }: DetailsChipProps) {
   return (
     <button
+      ref={chipRef}
       type="button"
       className="ctx-details"
       aria-label={attention ? 'Chat details, agent setup needs a look' : 'Chat details'}
@@ -69,13 +70,11 @@ export function ContextBar({
   conversationId,
   repos,
   popover,
-  lead,
   suggestion,
 }: {
   conversationId: string;
   repos: Project[];
   popover: RepoPopover;
-  lead?: ReactNode;
   suggestion?: ReactNode;
 }) {
   const primary = repos[0] ?? null;
@@ -88,6 +87,7 @@ export function ContextBar({
   const attention = useSetupAttention(phone && setup ? primary.id : null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const detailsId = useId();
+  const detailsChipRef = useRef<HTMLButtonElement>(null);
   const branchChip = primary && current && (
     <ChatBranch conversationId={conversationId} branch={current} checkoutBranch={branch} />
   );
@@ -96,49 +96,65 @@ export function ContextBar({
   );
   const setupChip = setup && <AgentSetup key={primary.id} repos={repos} labelled={phone} />;
   const hasDetails = Boolean(branchChip) || Boolean(placeMenu) || setup;
+  const people = (
+    <>
+      <TalkToChip conversationId={conversationId} />
+      <MemberChip conversationId={conversationId} />
+    </>
+  );
+  const closeDetails = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!detailsOpen || event.key !== 'Escape' || event.defaultPrevented) return;
+    event.preventDefault();
+    setDetailsOpen(false);
+    detailsChipRef.current?.focus();
+  };
 
-  if (phone) {
+  if (phone && hasDetails) {
     return (
       <ProjectFolders
         conversationId={conversationId}
         repos={repos}
         popover={popover}
-        lead={lead}
         details={{
           id: detailsId,
           open: detailsOpen,
-          folder: Boolean(branchChip),
+          onKeyDown: closeDetails,
           items: (
             <>
+              {branchChip}
               {placeMenu}
+              {people}
               {setupChip}
             </>
           ),
         }}
       >
-        {branchChip}
-        <TalkToChip conversationId={conversationId} />
-        <MemberChip conversationId={conversationId} />
-        {hasDetails && (
-          <DetailsChip
-            open={detailsOpen}
-            controls={detailsId}
-            attention={attention && !detailsOpen}
-            onToggle={() => setDetailsOpen((open) => !open)}
-          />
-        )}
+        <DetailsChip
+          chipRef={detailsChipRef}
+          open={detailsOpen}
+          controls={detailsId}
+          attention={attention && !detailsOpen}
+          onToggle={() => setDetailsOpen((open) => !open)}
+        />
+        {suggestion}
+      </ProjectFolders>
+    );
+  }
+
+  if (phone) {
+    return (
+      <ProjectFolders conversationId={conversationId} repos={repos} popover={popover}>
+        {people}
         {suggestion}
       </ProjectFolders>
     );
   }
 
   return (
-    <ProjectFolders conversationId={conversationId} repos={repos} popover={popover} lead={lead}>
-      {!primary && <span className="ctx-unlinked">{PICK_PROJECT_HINT}</span>}
+    <ProjectFolders conversationId={conversationId} repos={repos} popover={popover}>
       {branchChip}
       {placeMenu}
-      <TalkToChip conversationId={conversationId} />
-      <MemberChip conversationId={conversationId} />
+      {people}
       {setupChip}
       <ChatCache conversationId={conversationId} />
       {suggestion}
