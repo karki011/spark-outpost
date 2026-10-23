@@ -17,7 +17,7 @@ const WRITE_MODE_OPEN = new RegExp(
   `\\b(?:f?open|os\\.open)\\s*\\([^)]*?,\\s*(?:mode\\s*=\\s*)?${WRITE_MODE}`,
 );
 const WRITE_MODE_METHOD = new RegExp(`\\.open\\s*\\(\\s*(?:mode\\s*=\\s*)?${WRITE_MODE}`);
-const REDIRECT_WRITE = /(?:>>?|\|)\s*['"]/;
+const REDIRECT_WRITE = /(?:^|[\s)]|\bprintf?)(?:>>?|\|)\s*['"]/;
 const OPEN_FLAGS = /\bO_(?:WRONLY|RDWR|CREAT|TRUNC|APPEND)\b/;
 const CHANGE_CALL =
   /\b(?:write_text|write_bytes|writeFileSync|writeFile|writeTextFileSync|writeTextFile|appendFileSync|appendFile|createWriteStream|unlinkSync|unlink|rmSync|rmdirSync|rmdir|rmtree|renameSync|rename|copyFileSync|copyFile|copyfile|copy2|copytree|cpSync|truncateSync|truncate|chmodSync|chmod|symlinkSync|symlink|file_put_contents|set_key|unset_key|touch|execSync|execFileSync|spawnSync|spawn|execFile|system|popen|check_output|check_call|Popen)\s*\(/;

@@ -50,6 +50,13 @@ const decideAt = (posture: ModePosture, command: string) =>
 const fullAccess = (command: string) => decideAt('full_access', command);
 
 describe('decide() asks when a command reads files it computes', () => {
+  it('lets Full access run inline code that only reads a secret file', () => {
+    expect(fullAccess('python3 -c "print(open(\'.env\').read())"')).toEqual({
+      verdict: 'allow',
+      by: 'level',
+    });
+  });
+
   it.each([
     'for f in $(ls -A | grep "^\\.e"); do head -c 200 "$f"; done',
     'cat $(ls -A | grep env)',
@@ -87,7 +94,6 @@ describe('decide() asks when a command reads files it computes', () => {
     'ls -A | grep "^\\.e" | for f in x; do read f; cat "$f"; done',
     'IFS=x; for f in x.env; do cat $f; done',
     'for f in $(ls -A | grep "^\\.e"); do while read l; do echo "$l"; done < "$f"; done',
-    'python3 -c "print(open(\'.env\').read())"',
   ])('lets Full access run a read it cannot resolve: %s', (command) => {
     expect(fullAccess(command)).toEqual({ verdict: 'allow', by: 'level' });
   });

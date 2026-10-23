@@ -43,6 +43,7 @@ const SCRIPTS: Record<string, ScriptFile> = {
   'copy.js': changed(
     "const fs = require('fs');\nfs.writeFileSync('copy.txt', fs.readFileSync('.env'));\n",
   ),
+  'arrow.js': changed("require('dotenv').config();\nconst ok = () => 'ok';\nconsole.log('<b>');\n"),
   'notes.py': changed("print(open('private/notes.md').read())\n"),
 };
 
@@ -214,7 +215,8 @@ describe('decide() judges what a script names the way it judges a typed command'
     '.venv/bin/python /tmp/poc_sa/q.py',
     "sed -i '' \"s/print('ERROR', e)/print('ERROR', repr(e))/\" /tmp/poc_sa/q.py && .venv/bin/python /tmp/poc_sa/q.py",
     'python3 keys.py',
-  ])('a dictionary key or header name is not a secret file: %s', (command) => {
+    'node arrow.js',
+  ])('a dictionary key, header name or arrow function is not a change: %s', (command) => {
     for (const posture of POSTURES) {
       expect(decideAt(posture, command), posture).toEqual({ verdict: 'allow', by: 'level' });
     }
@@ -253,5 +255,17 @@ describe('a secret a script reads counts for the send flag', () => {
     ['python3 report.py', []],
   ])('%s', (command, labels) => {
     expect(secretReadLabels(run(command), lister, null)).toEqual(labels);
+  });
+});
+
+describe('a secret-file card never quotes the code around the file', () => {
+  it('names only the file an inline script writes', () => {
+    const command = "node -e \"require('fs').writeFileSync('config/.env.local', 'TOKEN=abc123')\"";
+    expect(decideAt('auto', command)).toEqual({
+      verdict: 'ask',
+      reason:
+        'This uses config/.env.local, a secret file, in a command that does more than read it',
+      secretFiles: ['config/.env.local'],
+    });
   });
 });

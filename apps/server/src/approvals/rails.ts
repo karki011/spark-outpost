@@ -107,9 +107,25 @@ function secretTargets(
     .flatMap((word) => {
       const target = resolveCommandPath(word, cwd, request.home);
       const secret = (!reading && isSecretPath(path.basename(word))) || asks(target);
-      return secret ? [target] : [];
+      if (!secret) return [];
+      if (!CODE_WORD.test(word)) return [target];
+      const quoted = quotedSecrets(word, (literal) => {
+        const inner = resolveCommandPath(literal, cwd, request.home);
+        return (!reading && isSecretPath(path.basename(literal))) || asks(inner) ? inner : null;
+      });
+      return quoted.length > 0 ? quoted : [target];
     });
   return unique([...named, ...words]);
+}
+
+const CODE_WORD = /['"()\s]/;
+const QUOTED_LITERAL = /(['"])([^'"\n]+)\1/g;
+
+function quotedSecrets(word: string, secretTarget: (literal: string) => string | null): string[] {
+  return [...word.matchAll(QUOTED_LITERAL)].flatMap(([, , literal]) => {
+    const target = secretTarget(literal!);
+    return target ? [target] : [];
+  });
 }
 
 interface SecretsFound {
