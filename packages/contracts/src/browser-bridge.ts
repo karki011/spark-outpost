@@ -31,7 +31,6 @@ import {
 } from './sign-ins.ts';
 
 export const BROWSER_HOST_ENV = 'SPARK_BROWSER_HOST';
-export const BROWSER_DATA_ENV = 'SPARK_BROWSER_DATA_DIR';
 export const BROWSER_REQUEST_TIMEOUT_MS = 30_000;
 export const BROWSER_READ_MAX_CHARS = 12_000;
 export const BROWSER_READ_MIN_CHARS = 500;
