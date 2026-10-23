@@ -31,7 +31,8 @@ export interface TabHooks {
   viewCreated(view: WebContentsView): void;
   viewClosed(view: WebContentsView): void;
   gone(tab: PaneTab): void;
-  visited(url: string): void;
+  visited(url: string, sameDocument: boolean): void;
+  titled(title: string): void;
   contextMenu(tab: PaneTab, params: ContextMenuParams): void;
   addShortcut(tab: PaneTab): void;
   paneShortcut(tab: PaneTab, shortcut: BrowserShortcut): void;
@@ -277,7 +278,10 @@ export class PaneTab {
     });
     contents.on('did-start-loading', () => this.note({ loading: true, error: null }));
     contents.on('did-stop-loading', () => this.note({ loading: false }));
-    contents.on('page-title-updated', (_event, title) => this.note({ title }));
+    contents.on('page-title-updated', (_event, title) => {
+      this.note({ title });
+      this.hooks.titled(title);
+    });
     contents.on('did-start-navigation', (details) => {
       if (details.isMainFrame && !details.isSameDocument) this.live?.logs.reset();
     });
@@ -286,13 +290,14 @@ export class PaneTab {
       this.filled.clear();
       this.status = code > 0 ? code : null;
       this.url = url;
-      this.hooks.visited(url);
+      this.hooks.visited(url, false);
       this.hooks.changed();
     });
     contents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
       if (!isMainFrame) return;
       this.url = url;
       this.refs.movedInPage();
+      this.hooks.visited(url, true);
       this.hooks.changed();
     });
     contents.on('did-fail-load', (_event, code, description, _url, isMainFrame) => {

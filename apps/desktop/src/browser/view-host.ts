@@ -33,6 +33,7 @@ import { profilePartition, type SessionGuards } from './sessions.ts';
 import type { PaneTab } from './tab.ts';
 import { viewMenuItems, type ViewMenuItem } from './view-menu.ts';
 import { readViewPageText } from './view-page-text.ts';
+import { viewHistory, type HistorySink } from './view-history.ts';
 import type { SavedViewStore } from './view-saved.ts';
 
 export interface ViewHostOptions {
@@ -45,6 +46,7 @@ export interface ViewHostOptions {
     run: (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<T> | T,
   ): (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<T | null>;
   log(line: string): void;
+  history?: HistorySink | undefined;
 }
 
 export interface BrowserViewHost {
@@ -170,6 +172,7 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     Menu.buildFromTemplate(items.map((item) => menuItem(tab, item))).popup({ window });
   };
 
+  const history = viewHistory(options.history);
   const panes: BrowserPanes = new BrowserPanes({
     window: options.window,
     blockedPorts: options.blockedPorts,
@@ -190,6 +193,9 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     tabsMax: BROWSER_VIEW_TABS_MAX,
     partition: (key) => profilePartition(browserProfileSchema.parse(key)),
     guards: options.guards,
+    visited: (tab, url, sameDocument) =>
+      history.visited(tab, url, sameDocument ? tab.currentTitle() : ''),
+    titled: (tab, title) => history.titled(tab, title),
   });
 
   ipcMain.handle(

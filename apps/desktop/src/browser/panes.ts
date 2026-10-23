@@ -32,6 +32,8 @@ export interface PanesOptions {
   tabsMax?: number;
   partition?(key: string): string;
   guards?: SessionGuards;
+  visited?(tab: PaneTab, url: string, sameDocument: boolean): void;
+  titled?(tab: PaneTab, title: string): void;
 }
 
 export interface ChatHome {
@@ -163,7 +165,11 @@ export class BrowserPanes {
         viewCreated: (view) => this.attach(view, tab),
         viewClosed: (view) => this.detach(view, tab),
         gone: (owner) => this.close(chatId, owner.id),
-        visited: (url) => this.visited(pane, url),
+        visited: (url, sameDocument) => {
+          this.visited(pane, url);
+          this.options.visited?.(tab, url, sameDocument);
+        },
+        titled: (title) => this.options.titled?.(tab, title),
         contextMenu: (owner, params) => this.options.contextMenu(owner, params),
         addShortcut: (owner) => this.options.addShortcut(owner),
         paneShortcut: (owner, shortcut) => this.options.paneShortcut(owner, shortcut),

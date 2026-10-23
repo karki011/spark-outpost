@@ -41,6 +41,7 @@ import {
   type ServerLaunch,
 } from './server-env.ts';
 import { startAgentHosts, type AgentHosts } from './agent-hosts.ts';
+import { historyPoster } from './browser/history-client.ts';
 import type { ServiceOptions } from './service.ts';
 import { RuntimeServices } from './runtime-services.ts';
 import { createQuitPolicy } from './quit-policy.ts';
@@ -323,6 +324,7 @@ async function launch(): Promise<void> {
       userData: paths.userData,
       blockedPorts: [apiPort, databaseOptions.port],
       log: log('browser'),
+      history: historyPoster(apiUrl, token),
     },
     { helperPath: layout.macControlBin, origin: () => origin, preload, trusted, log: log('mac') },
     { helperPath: layout.calendarBin, seedPath: layout.calendarSeedBin, log: log('calendar') },

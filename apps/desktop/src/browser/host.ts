@@ -39,6 +39,7 @@ import { removeRetiredPartitions } from './retired-partitions.ts';
 import { BROWSER_PARTITION } from './request-guard.ts';
 import { signOut, signedInSites, type SessionGuards } from './sessions.ts';
 import { startBrowserViewHost, type BrowserViewHost } from './view-host.ts';
+import type { HistorySink } from './view-history.ts';
 import { loadSavedView } from './view-saved.ts';
 import { handToChat, toView } from './view-transfer.ts';
 import type { PaneTab } from './tab.ts';
@@ -49,6 +50,7 @@ export interface BrowserHostOptions {
   userData: string;
   blockedPorts: readonly number[];
   log(line: string): void;
+  history?: HistorySink;
 }
 
 export interface DesktopBrowserHost {
@@ -222,6 +224,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     send,
     guarded,
     log: options.log,
+    history: options.history,
   });
   view = viewHost;
   ipcMain.handle(

@@ -43,6 +43,7 @@ import { taskChangeRoutes } from './task-change-routes.ts';
 import { taskRoutes } from './task-routes.ts';
 import { queueRoutes } from './queue-routes.ts';
 import { sparkPauseRoutes } from './spark-pause-routes.ts';
+import { browserHistoryRoutes } from './browser-history-routes.ts';
 import { calendarRoutes } from '../calendar/routes.ts';
 import type { CalendarHost } from '../calendar/host-client.ts';
 import type { GoogleSource } from '../calendar/google/source.ts';
@@ -140,6 +141,7 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', taskRoutes(options));
   app.use('/api', queueRoutes(options));
   app.use('/api', sparkPauseRoutes(options));
+  app.use('/api', browserHistoryRoutes(options));
   app.use('/api', calendarRoutes(options));
   const outposts = outpostRouters(options);
   app.use('/api', outposts.api);

@@ -168,6 +168,9 @@ POST /api/tickets/:source/:key/transition
 `;
 
 const NEVER = `
+POST /api/browser-history
+GET /api/browser-history
+POST /api/browser-history/clear
 PUT /api/spark-rules
 GET /api/artifacts/:id/versions/:version/file
 GET /api/chat-files/:id/content
