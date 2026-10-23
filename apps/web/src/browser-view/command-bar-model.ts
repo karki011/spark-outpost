@@ -12,7 +12,7 @@ export type BarAction = 'ask_spark' | 'new_chat' | 'copy_link' | 'default_browse
 export type BarGroup = 'address' | 'tabs' | 'favorites' | 'history' | 'actions';
 
 export type BarTarget =
-  | { kind: 'tab'; tabId: string }
+  | { kind: 'tab'; tabId: string; url: string }
   | { kind: 'open'; url: string }
   | { kind: 'action'; action: BarAction };
 
@@ -88,10 +88,10 @@ export function barRows(input: BarInput, now = Date.now()): BarRow[] {
       group: 'tabs',
       title: tabLabel(tab),
       detail: tab.active ? 'Showing' : tab.pinned ? `Pinned · ${host(tab.url)}` : host(tab.url),
-      target: { kind: 'tab', tabId: tab.id },
+      target: { kind: 'tab', tabId: tab.id, url: tab.url },
     });
   }
-  const open = new Set(tabs.flatMap((tab) => [tab.url, historyUrl(tab.url) ?? tab.url]));
+  const open = new Set(input.tabs.flatMap((tab) => [tab.url, historyUrl(tab.url) ?? tab.url]));
   const favorites = input.favorites.filter(
     (favorite) => !open.has(favorite.url) && matches(wanted, favorite.title, favorite.url),
   );

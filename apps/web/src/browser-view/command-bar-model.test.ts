@@ -103,6 +103,19 @@ describe('the Browser view command bar', () => {
     ]);
   });
 
+  it('leaves out history for a page open in a tab the filter hides', () => {
+    const rows = barRows(
+      {
+        ...input,
+        text: 'deploy',
+        tabs: [tab('v9', 'Acme', 'https://docs.acme.dev/previews')],
+        favorites: [],
+      },
+      NOW,
+    );
+    expect(rows).toEqual([]);
+  });
+
   it('says when a page was last visited', () => {
     const history = barRows(input, NOW).find((row) => row.group === 'history');
     expect(history?.detail).toBe('docs.acme.dev · yesterday');

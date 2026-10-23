@@ -310,6 +310,7 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
       )}
       {bar && (
         <CommandBar
+          key={bar}
           profile={profile}
           mode={bar}
           tab={tab}

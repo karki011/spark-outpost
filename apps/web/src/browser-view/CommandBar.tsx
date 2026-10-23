@@ -100,7 +100,8 @@ export function CommandBar(props: CommandBarProps) {
   const pick = (row: BarRow, newTab: boolean) => {
     onClose();
     const target = row.target;
-    if (target.kind === 'tab') props.onSelectTab(target.tabId);
+    if (target.kind === 'tab' && newTab) props.onOpen(target.url, true);
+    else if (target.kind === 'tab') props.onSelectTab(target.tabId);
     else if (target.kind === 'open') props.onOpen(target.url, newTab || mode === 'new' || !tab);
     else props.onAction(target.action);
   };

@@ -193,8 +193,7 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     tabsMax: BROWSER_VIEW_TABS_MAX,
     partition: (key) => profilePartition(browserProfileSchema.parse(key)),
     guards: options.guards,
-    visited: (tab, url, sameDocument) =>
-      history.visited(tab, url, sameDocument ? tab.currentTitle() : ''),
+    visited: (tab, url) => history.visited(tab, url, ''),
     titled: (tab, title) => history.titled(tab, title),
   });
 
