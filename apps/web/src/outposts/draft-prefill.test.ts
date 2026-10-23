@@ -82,6 +82,25 @@ describe('fromDraft', () => {
     });
   });
 
+  it('lists a chat the lead named as an existing chat that gets the task as a request', () => {
+    const draft = fromDraft(
+      source([proposed('api'), proposed('fe', { chatId: FE_CHAT, dependsOn: 'api' })]),
+      base(),
+      lead('auto'),
+      countingIds(),
+    );
+    const [, api, fe] = draft.chats;
+    expect(fe).toMatchObject({
+      kind: 'existing',
+      chatId: FE_CHAT,
+      handle: 'fe',
+      text: 'Do the fe part.',
+      storyTitle: 'Build fe',
+      touched: true,
+      dependsOn: api?.key,
+    });
+  });
+
   it('names the outpost after the story when the draft has no name', () => {
     expect(fromDraft(source([proposed('api')]), base(), lead('auto')).name).toBe('Checkout');
   });

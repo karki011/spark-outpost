@@ -18,6 +18,7 @@ export interface StoryOrderItem {
 
 export interface StackSide {
   projectId: string | null;
+  chatId?: string | undefined;
 }
 
 export interface StackFacts {
@@ -145,7 +146,10 @@ export const storyOrder: StoryOrder = <Item extends StoryOrderItem>(tasks: reado
 };
 
 export const isStacked: IsStacked = (task, parent) =>
-  parent !== null && task.projectId !== null && task.projectId === parent.projectId;
+  parent !== null &&
+  task.chatId === undefined &&
+  task.projectId !== null &&
+  task.projectId === parent.projectId;
 
 export interface StackedChat extends StackSide {
   handle: string;

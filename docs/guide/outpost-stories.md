@@ -6,7 +6,7 @@ order: 233
 summary: Let a chat start or propose a story, a job split across several chats, review a draft, and follow its order, pull requests and wrap-up.
 ---
 
-You'll have one chat split a job across several chats. About 3 minutes.
+One chat splits a job across several chats. About 3 minutes.
 
 ## Start it from a chat
 
@@ -14,14 +14,16 @@ You'll have one chat split a job across several chats. About 3 minutes.
 2. In **Auto**, **Bypass permissions**, **Approve for me** or **Full access** the agent starts them. Otherwise confirm its **Start these sub-chats?** card: **Start**, **Edit** or **Discard**.
 3. The reply shows **Started outpost Docs split with 2 chats**. Select **Open**.
 
-To check first, ask it to propose sub-tasks. The reply shows **Proposed 3 chats · 1 stacked**. **Review and start** opens one sheet showing each chat in full. **Edit** changes its **Agent**, **Permissions**, first message and:
+To check first, ask it to propose sub-tasks. The reply shows **Proposed 3 chats · 1 stacked**. **Review and start** opens a sheet of every chat. **Edit** changes its **Agent**, **Permissions**, first message and:
 
 | Field            | Choose                                                                                                                      |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | **Starts after** | **Nothing**, or a handle such as `@api`: the chat waits until `@api` has answered.                                          |
 | **Pull request** | **Pull request, parallel**, **Pull request, stacked on @api** ([stacked](stacked-pull-requests.md)) or **No pull request**. |
 
-Select **Start outpost** (**Start N chats** in an outpost) or **Cancel**. In an outpost, a member chat's draft also shows in **Suggested threads**; starting it opens the first sub-chat's thread.
+Select **Start outpost** (**Start N chats** in an outpost) or **Cancel**. In an outpost, drafts also show in **Suggested threads**.
+
+**Existing chat · gets a request**: a chat already in that repo takes it, keeping its title, mode and branch.
 
 First messages are the proposing chat's, [not yours](outpost-permissions.md), so they open no pull request. A sub-chat's mode asks at least as often as the proposing chat's; only you raise it. A sub-chat can't start more chats.
 

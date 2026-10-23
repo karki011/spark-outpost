@@ -22,6 +22,10 @@ export function startsAfterUnknown(handle: string): string {
   return `@${handle} starts after a chat that gets no first message in this start.`;
 }
 
+export function inAnotherStory(handle: string): string {
+  return `@${handle} is already in another story, so it cannot get this one's request.`;
+}
+
 export function nothingToHold(handle: string): string {
   return `@${handle} starts after another chat but has no first message to hold.`;
 }
@@ -104,6 +108,13 @@ function titleOf(draft: StoredDraft, task: SubTask): string {
   return proposed?.title ?? (firstLine(task.firstMessage.text) || draft.title);
 }
 
+function stackEdge(task: SubTask, byChat: ReadonlyMap<string, SubTask>): string | null {
+  const parent =
+    task.member.dependsOn === undefined ? undefined : byChat.get(task.member.dependsOn);
+  if (parent === undefined) return null;
+  return 'new' in task.member ? parent.conversationId : null;
+}
+
 export function planStory(
   draft: StoredDraft,
   request: CreateOutpostRequest,
@@ -138,7 +149,7 @@ export function planStory(
       leadConversationId: lead.conversationId,
       title: titleOf(draft, task),
       position: task.position,
-      dependsOnConversationId: task.member.dependsOn ?? null,
+      dependsOnConversationId: stackEdge(task, byChat),
       openingPostId: task.firstMessage.id,
     })),
     posts: ordered.map((task) => ({

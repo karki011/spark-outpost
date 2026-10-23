@@ -110,6 +110,31 @@ async function newMember(
   };
 }
 
+function existingMember(
+  deps: DraftRequestDeps,
+  { chatIds }: Placed,
+  chat: DraftChat & { chatId: string },
+): StartMember {
+  const parent = chat.dependsOn === undefined ? undefined : chatIds.get(chat.dependsOn);
+  return {
+    conversationId: chat.chatId,
+    handle: chat.handle,
+    firstMessage: { id: deps.newId(), text: chat.task, attachmentIds: [] },
+    ...(parent === undefined ? {} : { dependsOn: parent }),
+  };
+}
+
+function memberFor(
+  deps: DraftRequestDeps,
+  placed: Placed,
+  chat: DraftChat,
+): Promise<StartMember> | StartMember {
+  const { chatId } = chat;
+  return chatId === undefined
+    ? newMember(deps, placed, chat)
+    : existingMember(deps, placed, { ...chat, chatId });
+}
+
 async function leadHandleOf(db: Queryable, lead: Lead, draft: StoredDraft): Promise<string> {
   if (lead.outpost) return lead.outpost.handle;
   const taken = draft.body.chats.map((chat) => chat.handle);
@@ -126,7 +151,7 @@ export async function draftStartRequest(
   const placed: Placed = {
     lead,
     leadHandle: await leadHandleOf(deps.db, lead, draft),
-    chatIds: new Map(draft.body.chats.map((chat) => [chat.handle, deps.newId()])),
+    chatIds: new Map(draft.body.chats.map((chat) => [chat.handle, chat.chatId ?? deps.newId()])),
   };
   const members: StartMember[] = lead.outpost
     ? []
@@ -135,7 +160,7 @@ export async function draftStartRequest(
     if (joined.has(chat.handle)) continue;
     const parentJoined = chat.dependsOn !== undefined && joined.has(chat.dependsOn);
     members.push(
-      await newMember(deps, placed, parentJoined ? { ...chat, dependsOn: undefined } : chat),
+      await memberFor(deps, placed, parentJoined ? { ...chat, dependsOn: undefined } : chat),
     );
   }
   const name =

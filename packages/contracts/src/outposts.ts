@@ -305,6 +305,7 @@ export const draftChatSchema = z.object({
   handle: outpostHandleSchema,
   title: storyTitleSchema,
   projectId: z.uuid(),
+  chatId: z.uuid().optional(),
   agent: providerIdSchema.optional(),
   agentMode: z.string().min(1).max(200).optional(),
   task: postTextSchema,

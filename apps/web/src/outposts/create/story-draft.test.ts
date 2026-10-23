@@ -74,6 +74,18 @@ describe('the story fields of the create sheet', () => {
     expect(stackParent(draft, next, CHATS)?.key).toBe(old.key);
   });
 
+  it('never stacks an existing chat that starts after another: it keeps its own branch', () => {
+    const ids = countingIds();
+    const api = withTask(fresh(ids, API_PROJECT, 'api'), 'Add the endpoint.');
+    const old = withTask(existing(ids, FE_CHAT, 'old'), 'Use it.', api.key);
+    const draft = storyDraft([existing(ids, DOCS_CHAT, 'lead'), api, old], DOCS_CHAT);
+    expect(stackParent(draft, old, CHATS)).toBeNull();
+    expect(orderLine(draft, old, CHATS)).toBe(
+      'Starts after @api · order only, it keeps its own branch',
+    );
+    expect(pullLine(draft, old, facts())).toBeNull();
+  });
+
   it('says what the pull request of a new chat targets', () => {
     const { draft, api, fe, lead } = story();
     expect(pullLine(draft, api, facts())).toBe('Pull request, parallel');

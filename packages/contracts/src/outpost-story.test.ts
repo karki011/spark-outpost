@@ -389,6 +389,12 @@ describe('isStacked', () => {
     expect(isStacked({ projectId: PROJECT }, { projectId: PROJECT })).toBe(true);
   });
 
+  it('never stacks an existing chat, which keeps its own branch, but stacks a new chat on one', () => {
+    const existing = { projectId: PROJECT, chatId: 'chat-1' };
+    expect(isStacked(existing, { projectId: PROJECT })).toBe(false);
+    expect(isStacked({ projectId: PROJECT }, existing)).toBe(true);
+  });
+
   it('is order only across projects, with no parent, or with no project', () => {
     expect(isStacked({ projectId: PROJECT }, { projectId: DRAFT })).toBe(false);
     expect(isStacked({ projectId: PROJECT }, null)).toBe(false);

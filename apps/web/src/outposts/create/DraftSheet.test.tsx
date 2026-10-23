@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DOCS_CHAT, OUTPOST_ID, WEB_PROJECT, chat } from '../test-fixtures.ts';
+import { DOCS_CHAT, FE_CHAT, OUTPOST_ID, WEB_PROJECT, chat } from '../test-fixtures.ts';
 import type { CreateDraft } from './create-draft.ts';
 import {
   API_PROJECT,
@@ -103,6 +103,22 @@ describe('the sheet for a draft a chat proposed', () => {
     expect(start.querySelector('.keys')).toBeNull();
     fireEvent.click(start);
     expect(onStart).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a chat the lead named as an existing chat that gets a request', () => {
+    const ids = countingIds();
+    const lead = existing(ids, DOCS_CHAT, 'lead');
+    const api = withTask(fresh(ids, API_PROJECT, 'api'), 'Add the endpoint.');
+    const old = withTask(existing(ids, FE_CHAT, 'usage'), 'Use the endpoint.', api.key);
+    render(
+      <Harness initial={{ ...storyDraft([lead, api, old], DOCS_CHAT), name: 'Orders launch' }} />,
+    );
+    const card = cards()[2];
+    expect(card?.querySelector('.op-tag')?.textContent).toBe('Existing chat · gets a request');
+    expect(card?.querySelector('.op-draft-label')?.textContent).toBe('Request');
+    expect(card?.querySelector('.op-draft-order')?.textContent).toBe(
+      'Starts after @apiorder only, it keeps its own branch',
+    );
   });
 
   it('clamps a long first message until Show all', () => {

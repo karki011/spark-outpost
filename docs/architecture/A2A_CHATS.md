@@ -772,3 +772,12 @@ A real dev-app run of section 18 with two Claude chats found these; the behaviou
 - **Composer.** Only member handles and `@all` are highlighted as mentions (`mentionable` on `MarkdownInput`); the chat composer still highlights any `@word`.
 
 Not changed, recommended: a lead chat's default handle is its project name, so two chats from one project can both suggest `@oqrepo`; `suggestHandle` should add a suffix when the handle is taken in that outpost. The sidebar draws a chat's own face style while the outpost assigns member faces that differ, so one chat has two colours; one source should own the colour.
+
+## Reusing an existing chat in a story (October 23, 2026)
+
+Owner-requested: a lead proposing sub-chats always made new chats, even when a chat already worked in that repo.
+
+- **Input.** Each entry of `spark_outpost_draft` and `spark_outpost_start` takes either `project` (a new chat) or `chat` (an existing chat's id or chat link), never both, and `agent` and `agentMode` only with `project`. Both tool descriptions tell the lead to check `spark_chats` with that project first. `reusedChat` (`spark-mcp/tools/outpost-reuse.ts`) refuses the lead itself, an unknown, archived or project-less chat, a Terminal session, a chat already in a story and a chat in another outpost; a chat already in the lead's outpost keeps its handle.
+- **Draft.** `draftChatSchema` carries `chatId`, with `projectId` read from the chat. The draft line, the start card (`existing` on `startOutpostChatSchema`, shown as "Existing chat · gets a request") and the sheet (`fromDraft` lists it as an existing chat, tagged "Existing chat · gets a request", its message labelled **Request**, its project, agent and mode read from the chat) say so.
+- **Start.** `draftStartRequest` sends it as an existing start member with the task as its first message, so it joins without a new chat, keeps its title (only new chats take the story title), its mode (`holdToLeadMode` runs for new chats only) and its autonomy, and gets a request from the lead, never the user. `refuseOtherStories` (`start-outpost.ts`) refuses a start when an existing chat is in another story.
+- **Order only.** An existing chat keeps its branch, so it is never stacked: `isStacked` is false for a task with `chatId`, `planStory` stores no `depends_on_conversation_id` for an existing chat, and its request waits through `after_post_id` alone. A new chat may still stack on an existing chat's branch.

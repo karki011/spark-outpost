@@ -35,6 +35,13 @@ import { listProjects } from '../../projects/projects.ts';
 import { runEvents } from '../../workflow/run-events.ts';
 import { SparkToolError, type SparkToolContext } from '../tool.ts';
 import { chatTurn, type ChatTurn } from './outpost-turn.ts';
+import {
+  CHAT_AND_PROJECT,
+  CHAT_NEEDS_PROJECT_OR_CHAT,
+  reusedChat,
+  reuseRefusal,
+  type ReuseFacts,
+} from './outpost-reuse.ts';
 import { at } from './outpost-view.ts';
 
 export const DRAFT_FROM_REQUEST =
@@ -42,13 +49,29 @@ export const DRAFT_FROM_REQUEST =
 export const DRAFT_NEEDS_PROJECT =
   'Link a project to this chat first: a chat proposes sub-task chats from a project or from inside an outpost.';
 const CROSS_REPO_NOTE = 'different repo: order only, no branch base';
+const ORDER_ONLY_NOTE = 'order only: it keeps its own branch';
 
 const handleInput = z.string().trim().min(1).max(40);
 
 const chatInput = z.object({
   handle: handleInput.describe('Short name in the outpost, such as api.'),
   title: z.string().trim().min(1).max(OUTPOST_STORY_TITLE_MAX),
-  project: z.string().trim().min(1).max(200).describe('Project name or id.'),
+  project: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .optional()
+    .describe('Project name or id, for a new chat.'),
+  chat: z
+    .string()
+    .trim()
+    .min(1)
+    .max(300)
+    .optional()
+    .describe(
+      'An existing chat that gets task as a request instead of a new chat: its id or chat link from spark_chats. It keeps its own title, project, agent, mode, autonomy and branch; leave project, agent and agentMode out.',
+    ),
   agent: providerIdSchema.optional(),
   agentMode: z
     .string()
@@ -88,6 +111,8 @@ export interface Proposal {
   projects: readonly Project[];
 }
 
+type Joined = NonNullable<Awaited<ReturnType<typeof outpostOf>>>;
+
 const plainHandle = (handle: string) => handle.replace(/^@/, '').toLowerCase();
 
 function projectOf(projects: readonly Project[], reference: string): Project {
@@ -100,16 +125,51 @@ function projectOf(projects: readonly Project[], reference: string): Project {
   throw new SparkToolError(`No project called ${reference}. Projects: ${names}.`);
 }
 
-function draftChat(chat: ChatInput, projects: readonly Project[]): DraftChat {
+function proposedTask(chat: ChatInput) {
   return {
-    handle: plainHandle(chat.handle),
     title: chat.title,
-    projectId: projectOf(projects, chat.project).id,
-    ...(chat.agent ? { agent: chat.agent } : {}),
-    ...(chat.agentMode ? { agentMode: chat.agentMode } : {}),
     task: storableText(redactText(chat.task)),
     ...(chat.dependsOn ? { dependsOn: plainHandle(chat.dependsOn) } : {}),
   };
+}
+
+async function draftChat(
+  chat: ChatInput,
+  projects: readonly Project[],
+  reuse: ReuseFacts,
+): Promise<DraftChat> {
+  const handle = plainHandle(chat.handle);
+  if (chat.chat !== undefined) {
+    if (chat.project !== undefined || chat.agent || chat.agentMode) {
+      throw new SparkToolError(reuseRefusal(handle, CHAT_AND_PROJECT));
+    }
+    const reused = await reusedChat(reuse, handle, chat.chat);
+    return {
+      handle: reused.handle ?? handle,
+      projectId: reused.projectId,
+      chatId: reused.chatId,
+      ...proposedTask(chat),
+    };
+  }
+  if (chat.project === undefined) {
+    throw new SparkToolError(reuseRefusal(handle, CHAT_NEEDS_PROJECT_OR_CHAT));
+  }
+  return {
+    handle,
+    projectId: projectOf(projects, chat.project).id,
+    ...(chat.agent ? { agent: chat.agent } : {}),
+    ...(chat.agentMode ? { agentMode: chat.agentMode } : {}),
+    ...proposedTask(chat),
+  };
+}
+
+function takenHandles(joined: Joined | null, chats: readonly DraftChat[]): string[] {
+  const reused = new Set(chats.flatMap((chat) => (chat.chatId ? [chat.chatId] : [])));
+  return (
+    joined?.outpost.members
+      .filter((member) => !reused.has(member.conversationId))
+      .map((member) => member.handle) ?? []
+  );
 }
 
 function problemLine(problem: StoryProblem): string {
@@ -158,6 +218,17 @@ async function proposedModes(
   return resolved;
 }
 
+function noteOf(chat: DraftChat, parent: DraftChat | null, stacked: boolean): string {
+  if (chat.chatId) {
+    return parent
+      ? `existing chat, gets a request: ${ORDER_ONLY_NOTE}`
+      : 'existing chat, gets a request';
+  }
+  if (!parent) return 'parallel: its own branch and pull request from the default branch';
+  if (stacked) return `stacked: its branch and pull request start from ${at(parent.handle)}'s`;
+  return CROSS_REPO_NOTE;
+}
+
 function chatLines(chats: readonly DraftChat[], projects: readonly Project[]) {
   const byHandle = new Map(chats.map((chat) => [chat.handle, chat]));
   return chats.map((chat) => {
@@ -166,13 +237,10 @@ function chatLines(chats: readonly DraftChat[], projects: readonly Project[]) {
     return {
       handle: at(chat.handle),
       project: projects.find((project) => project.id === chat.projectId)?.name ?? null,
+      ...(chat.chatId ? { existingChat: chat.chatId } : {}),
       ...(parent ? { dependsOn: at(parent.handle) } : {}),
       stacked,
-      note: !parent
-        ? 'parallel: its own branch and pull request from the default branch'
-        : stacked
-          ? `stacked: its branch and pull request start from ${at(parent.handle)}'s`
-          : CROSS_REPO_NOTE,
+      note: noteOf(chat, parent, stacked),
     };
   });
 }
@@ -202,8 +270,15 @@ export async function saveProposal(
   }
   const joined = await outpostOf(deps.db, turn.conversationId);
   const projects = await listProjects(deps.db, scope.workspaceId);
-  const named = args.chats.map((chat) => draftChat(chat, projects));
-  refuseProblems(named, joined?.outpost.members.map((member) => member.handle) ?? []);
+  const reuse = {
+    db: deps.db,
+    workspaceId: scope.workspaceId,
+    leadChatId: turn.conversationId,
+    leadOutpostId: joined?.outpost.id ?? null,
+  };
+  const named: DraftChat[] = [];
+  for (const chat of args.chats) named.push(await draftChat(chat, projects, reuse));
+  refuseProblems(named, takenHandles(joined, named));
   const chats = await proposedModes(context, turn, named);
   const body: OutpostDraft = outpostDraftSchema.parse({
     ...(joined || args.name === undefined ? {} : { name: args.name }),
