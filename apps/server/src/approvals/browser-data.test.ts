@@ -7,6 +7,7 @@ import {
   globReachesBrowserData,
   isBrowserData,
 } from './browser-data.ts';
+import { LOCAL_DATA_DIR } from '../config.ts';
 import { NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
 import { parseShell } from './shell-parse.ts';
 
@@ -127,10 +128,17 @@ describe('browser data paths', () => {
     expect(reaches(`${DATA}/logs/*`)).toBe(false);
   });
 
-  it('reads the folder from the environment only when it is absolute', () => {
-    expect(browserDataDir({})).toBeNull();
-    expect(browserDataDir({ SPARK_BROWSER_DATA_DIR: 'relative' })).toBeNull();
-    expect(browserDataDir({ SPARK_BROWSER_DATA_DIR: '/nowhere/spark' })).toBe('/nowhere/spark');
+  it("takes the folder from Spark's one data folder setting and never turns off", () => {
+    expect(browserDataDir({ SPARK_DATA_DIR: '/nowhere/spark' })).toBe('/nowhere/spark');
+    expect(browserDataDir({}, true)).toBe(LOCAL_DATA_DIR);
+    expect(() => browserDataDir({}, false)).toThrow('SPARK_DATA_DIR is not set');
+    expect(() => browserDataDir({ SPARK_DATA_DIR: 'relative' })).toThrow('absolute');
+  });
+
+  it('protects the data folder for a server started without a folder, from a checkout', () => {
+    const asked = request({ command: `cat "${LOCAL_DATA_DIR}/postgres-password"` });
+    const decision = decide('full_access', asked, NO_RUN_RULES, [], { files: NO_FILES });
+    expect(decision).toEqual({ verdict: 'reject', reason: BROWSER_DATA_REASON });
   });
 
   it("gives Claude read and edit deny rules for each entry, not for the chats' folder", () => {

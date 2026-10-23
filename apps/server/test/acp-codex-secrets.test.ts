@@ -27,12 +27,12 @@ const neverAsked: PermissionGate = {
 
 let root: string;
 let data: string;
-const savedData = process.env.SPARK_BROWSER_DATA_DIR;
+const savedData = process.env.SPARK_DATA_DIR;
 
 beforeAll(async () => {
   root = await realpath(await mkdtemp(join(tmpdir(), 'spark-codex-secrets-')));
   data = await realpath(await mkdtemp(join(tmpdir(), 'spark-codex-data-')));
-  process.env.SPARK_BROWSER_DATA_DIR = data;
+  process.env.SPARK_DATA_DIR = data;
   await mkdir(join(data, 'Partitions', 'spark-browser-personal'), { recursive: true });
   await writeFile(join(data, 'Partitions', 'spark-browser-personal', 'Cookies'), `${SECRET}\n`);
   await writeFile(join(data, 'postgres-password'), `${SECRET}\n`);
@@ -46,8 +46,8 @@ beforeAll(async () => {
 afterAll(async () => {
   await rm(root, { recursive: true, force: true });
   await rm(data, { recursive: true, force: true });
-  if (savedData === undefined) delete process.env.SPARK_BROWSER_DATA_DIR;
-  else process.env.SPARK_BROWSER_DATA_DIR = savedData;
+  if (savedData === undefined) delete process.env.SPARK_DATA_DIR;
+  else process.env.SPARK_DATA_DIR = savedData;
 });
 
 async function reply(prompt: string, turn: Partial<ProviderTurn> = {}): Promise<string> {
