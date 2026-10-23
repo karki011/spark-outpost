@@ -83,11 +83,18 @@ function EditRow({ item, context }: { item: ToolItem; context: RowContext }) {
       </span>
     </>
   );
-  if (!open || item.status === 'open') return <div className="trow">{body}</div>;
+  if (!open || item.status === 'open') {
+    return (
+      <div className="trow" title={item.label}>
+        {body}
+      </div>
+    );
+  }
   return (
     <button
       type="button"
       className="trow"
+      title={item.label}
       aria-label={`${item.verb} ${item.target ?? ''}: open in Changes`}
       onClick={() => open(entry ?? undefined)}
     >

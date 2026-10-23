@@ -102,7 +102,7 @@ const FACTS_QUERY = `
     CASE WHEN r.status = 'awaiting_approval' THEN (
       SELECT a.kind = 'clarify' FROM approvals a JOIN runs ar ON ar.id = a.run_id
       WHERE a.status = 'pending' AND (ar.id = r.id OR ar.parent_run_id = r.id)
-      ORDER BY a.created_at DESC LIMIT 1
+      ORDER BY a.created_at, a.id LIMIT 1
     ) END AS run_asks_question,
     CASE WHEN w.to_conversation_id IS NOT NULL THEN w.to_handle END AS waiting_handle,
     (w.id IS NOT NULL AND w.to_conversation_id IS NULL) AS waiting_deleted,
