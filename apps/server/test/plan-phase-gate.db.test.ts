@@ -151,10 +151,7 @@ describe('commands Claude asks for while it plans in a chat set to Bypass permis
       ['allowed', 'level'],
     ]);
     expect(await turn.decisionRows()).toEqual([]);
-    expect(turn.notes).toEqual([
-      expect.stringMatching(/^Allowed .+ \(Bypass permissions mode\)$/),
-      expect.stringMatching(/^Allowed .+ \(Bypass permissions mode\)$/),
-    ]);
+    expect(turn.notes).toEqual([]);
   });
 
   it('does the same in a chat set to Auto', async () => {

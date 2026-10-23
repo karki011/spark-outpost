@@ -10,6 +10,7 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 
 ## October 2026
 
-| What changed                               | What to do                              |
-| ------------------------------------------ | --------------------------------------- |
-| Mac app: the Settings window opens larger. | Nothing; it still fits smaller screens. |
+| What changed                                                                                                       | What to do                               |
+| ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| A chat no longer shows an "Allowed …" step for each command its mode ran without asking, in new and earlier chats. | Nothing; each one is still in the audit. |
+| Mac app: the Settings window opens larger.                                                                         | Nothing; it still fits smaller screens.  |

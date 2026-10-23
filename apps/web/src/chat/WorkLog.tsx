@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { friendlyStep } from '@spark-outpost/contracts';
+import { friendlyStep, isSparkNote } from '@spark-outpost/contracts';
 export type TurnState = 'working' | 'waiting' | 'done' | 'failed' | 'stopped';
 import { viewSteps, type RunStep, type StepView } from './run-projection.ts';
 import { StepThought, ThoughtToggle } from './StepThought.tsx';
@@ -31,6 +31,10 @@ export function turnHeading(
   return current ? `${current} · ${stepCount(steps)}` : stepCount(steps);
 }
 
+export function loggedSteps(steps: readonly RunStep[]): StepView[] {
+  return viewSteps(steps).filter((step) => !isSparkNote(step.name));
+}
+
 export interface StepLog {
   open: boolean;
   runId: string | null;
@@ -48,13 +52,14 @@ export function useStepLog(
   const working = state === 'working' || state === 'waiting';
   const [choice, setChoice] = useState<boolean | null>(null);
   const listId = useId();
-  if (steps.length === 0) return null;
+  const views = loggedSteps(steps);
+  if (views.length === 0) return null;
   const open = choice ?? false;
   return {
     open,
     runId,
     listId,
-    views: viewSteps(steps),
+    views,
     working,
     toggle: () => setChoice(!open),
   };

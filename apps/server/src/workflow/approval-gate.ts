@@ -213,6 +213,9 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     };
   };
 
+  const quietly = (answer: GateAnswer): GateAnswer =>
+    answer.outcome === 'selected' ? { ...answer, quiet: true } : answer;
+
   const reject = (
     request: ApprovalRequest,
     note: string,
@@ -414,10 +417,8 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       by: decision.by,
       approvalId: recorded.id,
     });
-    const allowed = await allow(
-      request,
-      `Allowed ${what} (${allowedWhy(decision, request)})`,
-      recorded.id,
+    const allowed = quietly(
+      await allow(request, `Allowed ${what} (${allowedWhy(decision, request)})`, recorded.id),
     );
     if (decision.sent && allowed.outcome === 'selected') {
       deps.observations?.sentOut({

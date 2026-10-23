@@ -76,6 +76,18 @@ describe('turn rows', () => {
     expect(rows![0]).toMatchObject({ kind: 'tool', verb: 'Read', target: 'a.ts' });
   });
 
+  it('hides the allowed notes earlier runs stored between commands', () => {
+    const parts = turnRowParts({
+      text: '',
+      steps: [
+        done('Allowed `pnpm a` (Bypass permissions mode)'),
+        done('Allowed `pnpm b` (on the project allowlist)'),
+      ],
+      commands: [command('a', 'completed', 0), command('b', 'completed', 10)],
+    });
+    expect(kinds(parts)).toEqual(['rows:group']);
+  });
+
   it('shows thinking as its own row, never grouped', () => {
     const parts = turnRowParts({
       text: '',

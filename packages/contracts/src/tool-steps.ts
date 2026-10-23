@@ -193,7 +193,7 @@ export const CONTINUED_SESSION_STEP = 'Continued session';
 
 const SPARK_NOTES = [
   /^Working on \S+ in (?:this chat's worktree|your checkout)\./,
-  /^Allowed .+ \(you (?:allowed|always allow) it[^)]*\)$/s,
+  /^Allowed .+ \([^()]+\)$/s,
   /^Denied: .+ \(you denied it\)$/s,
   /^Using .+ · \S+ effort$/,
   /^Using .+'s defaults$/,

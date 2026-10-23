@@ -5,7 +5,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import type { ApprovalOption } from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
-import type { ProviderOutput, ProviderTurn } from './provider.ts';
+import { isQuiet, type ProviderOutput, type ProviderTurn } from './provider.ts';
 
 export const FAKE_COMMAND_TRIGGER = '#approve';
 export const FAKE_EDIT_TRIGGER = '#edit';
@@ -162,7 +162,7 @@ export async function* fakeApprovalTurn(turn: ProviderTurn): AsyncGenerator<Prov
     yield { kind: 'step_started', name: request.title, tool: true };
     const answer = await turn.approvals.review(request, turn.signal);
     yield { kind: 'step_finished', name: request.title };
-    yield* note(answer.note);
+    if (!isQuiet(answer)) yield* note(answer.note);
     if (answer.outcome === 'cancelled') return;
     outcomes.push(`${request.toolCallId}=${answer.allowed ? 'allowed' : 'denied'}`);
     if (answer.allowed && request.toolCallId === 'fake-instructions-shell') {

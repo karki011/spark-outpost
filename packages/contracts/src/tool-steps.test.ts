@@ -91,6 +91,11 @@ describe('isSparkNote', () => {
       'Allowed Edit `a.ts` (you allowed it)',
       'Allowed Run `ls` (you allowed it for this chat)',
       'Allowed Run `ls` (you always allow it in this project)',
+      'Allowed `aws sts get-caller-identity --query Arn` (Bypass permissions mode)',
+      'Allowed Run `pnpm lint` (on the project allowlist)',
+      'Allowed `make build` (allowed for this run)',
+      'Allowed `ls -la` (a read-only command inside the project)',
+      'Allowed `echo "(x)"` (Automatic in an Ask turn)',
       'Denied: Run `rm x` (you denied it)',
       'Using Opus 5.5 · medium effort',
       "Using Claude's defaults",
@@ -107,6 +112,8 @@ describe('isSparkNote', () => {
       "Using Claude's default model; Fable 5 isn't available",
       'Warning: Claude switched to Bypass permissions mode',
       'Installing dependencies in this chat’s copy',
+      'Allowed list',
+      'Allowed hosts (example.com) were updated by the agent',
     ]) {
       expect(isSparkNote(step)).toBe(false);
     }
