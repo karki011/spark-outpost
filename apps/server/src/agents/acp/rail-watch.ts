@@ -8,6 +8,8 @@ import { observedSecretReads } from '../../approvals/secret-reads.ts';
 import { outsideRoots } from '../../approvals/request-place.ts';
 import { parseShell } from '../../approvals/shell-parse.ts';
 import { createReviewTracker } from '../../audit/review-tracker.ts';
+import type { AgentCli } from './agent-cli.ts';
+import { stoppedByAgent } from './agent-stopped.ts';
 import { approvalRequestFrom } from './permission-request.ts';
 import { objectFields } from './object-fields.ts';
 
@@ -17,6 +19,7 @@ export interface ObservedRail {
   paths: string[];
   inside: boolean;
   originals: RailOriginal[];
+  stopped: boolean;
 }
 
 export interface Observed {
@@ -36,6 +39,7 @@ export interface RailWatchContext {
   roots: readonly RequestRoot[];
   cwd: string;
   home?: string;
+  cli?: AgentCli | null;
 }
 
 const ORIGINAL_MAX_CHARS = 64 * 1024;
@@ -111,6 +115,13 @@ export function createRailWatch(context: RailWatchContext): RailWatch {
         paths: crossing.paths.map((target) => shown(target, home)),
         inside: changesInside(crossing, request),
         originals: originalsOf(crossing, request, home),
+        stopped: stoppedByAgent(
+          context.cli ?? null,
+          crossing.rail,
+          toolCall,
+          request.command,
+          update.status === 'failed',
+        ),
       }));
       return { rails, secretReads };
     },
