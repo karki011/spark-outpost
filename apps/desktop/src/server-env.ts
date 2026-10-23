@@ -59,6 +59,7 @@ export function workerEnv(launch: ServerLaunch): NodeJS.ProcessEnv {
     KEYCHAIN_SERVICE: launch.config.keychainService,
     BRANCH_PREFIX: launch.config.branchPrefix,
     [BROWSER_DATA_ENV]: launch.paths.userData,
+    SPARK_DATA_DIR: launch.paths.userData,
   };
 }
 
@@ -71,7 +72,6 @@ export function apiEnv(launch: ServerLaunch): NodeJS.ProcessEnv {
     WEB_ROOT: launch.webRoot,
     SPARK_APP_VERSION: launch.version,
     SPARK_LOG_DIR: launch.paths.logs,
-    SPARK_DATA_DIR: launch.paths.userData,
     SPARK_TMUX_BIN: launch.tmuxBin,
     [API_TOKEN_ENV]: launch.token,
   };
