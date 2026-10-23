@@ -43,6 +43,12 @@ function secretWord(word: string, place: ReadPlace): boolean {
   return place.isSecret(resolveCommandPath(word, place.cwd, place.home));
 }
 
+function secretInScript(word: string, place: ReadPlace): boolean {
+  if (!secretWord(word, place)) return false;
+  place.inCode?.([resolveCommandPath(word, place.cwd, place.home)]);
+  return true;
+}
+
 function loadsSecretEnv(program: readonly string[], place: ReadPlace): boolean {
   if (!ENV_FILE_RUNTIMES.has(programName(program))) return false;
   return program.some((arg, index) => {
@@ -61,7 +67,7 @@ function shellConcern(text: string, launch: Launch): Concern {
     .join('\n');
   const tree = commandTree(script);
   if (tree.opaque) return 'unknown';
-  if (tree.commands.flat().some((word) => secretWord(word, launch.place))) return 'secret';
+  if (tree.commands.flat().some((word) => secretInScript(word, launch.place))) return 'secret';
   return launch.shell(script);
 }
 

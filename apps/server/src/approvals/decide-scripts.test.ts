@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import type { ModePosture } from '@spark-outpost/contracts';
 import { NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
 import type { FileLister, ScriptFile } from './file-lister.ts';
+import { secretReadLabels } from './secret-reads.ts';
 
 const ROOT = '/work/app';
 const HOME = '/Users/me';
@@ -31,6 +33,17 @@ const SCRIPTS: Record<string, ScriptFile> = {
   'scripts/dump2.py': changed('print(open("../.env").read())\n'),
   'scripts/report2.py': changed('print("ok")\n'),
   '.venv/bin/activate': changed(ACTIVATE),
+  'q.py': changed("r = {'Credentials': 'x'}\nc = r['Credentials']\nprint('ERROR', c)\n"),
+  '../../tmp/poc_sa/q.py': changed("c = r['Credentials']\nprint('ERROR', e)\n"),
+  'keys.py': changed(
+    "headers = {'api-token': token}\nkey = cfg['server.key']\nopen('out.json', 'w').write('{}')\n",
+  ),
+  'write-env.py': changed("open('.env', 'w').write('TOKEN=1')\n"),
+  'set-key.py': changed("from dotenv import set_key\nset_key('.env', 'TOKEN', '1')\n"),
+  'copy.js': changed(
+    "const fs = require('fs');\nfs.writeFileSync('copy.txt', fs.readFileSync('.env'));\n",
+  ),
+  'notes.py': changed("print(open('private/notes.md').read())\n"),
 };
 
 const lister: FileLister = {
@@ -51,13 +64,14 @@ function run(command: string): ApprovalRequest {
     paths: [],
     diffs: [],
     options: [],
-    roots: [{ path: ROOT, ignore: [] }],
+    roots: [{ path: ROOT, ignore: ['private/'] }],
     home: HOME,
   };
 }
 
-const fullAccess = (command: string) =>
-  decide('full_access', run(command), NO_RUN_RULES, [], { files: lister });
+const decideAt = (posture: ModePosture, command: string) =>
+  decide(posture, run(command), NO_RUN_RULES, [], { files: lister });
+const fullAccess = (command: string) => decideAt('full_access', command);
 
 describe('decide() looks inside scripts the agent runs by name', () => {
   it.each([
@@ -71,18 +85,25 @@ describe('decide() looks inside scripts the agent runs by name', () => {
     'deno run --allow-read leak.ts',
     'uv run dump.py',
     'poetry run python dump.py',
+    'bin/peek',
+    'cd scripts && python3 dump2.py',
+    'python3 dump.py 2>&1 | tail -5',
+    'python3 -c "from dotenv import load_dotenv; load_dotenv(); import os; print(os.environ)"',
+  ])('lets the mode decide when the code only reads a secret: %s', (command) => {
+    expect(fullAccess(command)).toEqual({ verdict: 'allow', by: 'level' });
+    expect(decideAt('auto', command)).toEqual({ verdict: 'allow', by: 'level' });
+    expect(decideAt('asks', command)).toMatchObject({ verdict: 'ask', reason: null });
+  });
+
+  it.each([
     'bash show.sh',
     './show.sh',
-    'bin/peek',
     'source setup.sh',
     '. setup.sh',
-    'cd scripts && python3 dump2.py',
     'cat > x.py <<EOF\nprint(open(".env").read())\nEOF\npython3 x.py',
     'node --env-file=.env -e "console.log(process.env)"',
     'node --env-file=.env build.js',
-    'python3 dump.py 2>&1 | tail -5',
-    'python3 -c "from dotenv import load_dotenv; load_dotenv(); import os; print(os.environ)"',
-  ])('asks when it reads a secret: %s', (command) => {
+  ])('still asks when the command itself or a shell script uses a secret: %s', (command) => {
     expect(fullAccess(command)).toMatchObject({ verdict: 'ask', secretFiles: expect.any(Array) });
   });
 
@@ -140,10 +161,16 @@ describe('decide() treats code piped into an interpreter as inline code', () => 
     'printf \'print(open(".env").read())\' | python3 -',
     'cat dump.py | python3',
     'python3 <<< \'print(open(".env").read())\'',
-    'python3 <<EOF\nprint(open(".env").read())\nEOF',
     'cat <<EOF | node\nconsole.log(require("fs").readFileSync(".env", "utf8"))\nEOF',
-  ])('asks when the piped code reads a secret: %s', (command) => {
-    expect(fullAccess(command)).toMatchObject({ verdict: 'ask', secretFiles: expect.any(Array) });
+  ])('lets the mode decide when the piped code only reads a secret: %s', (command) => {
+    expect(fullAccess(command)).toEqual({ verdict: 'allow', by: 'level' });
+  });
+
+  it('still asks for piped code that changes a secret file', () => {
+    expect(fullAccess('echo \'open(".env", "w").write("x")\' | python3')).toMatchObject({
+      verdict: 'ask',
+      secretFiles: ['.env'],
+    });
   });
 
   it.each([
@@ -176,5 +203,55 @@ describe('decide() treats code piped into an interpreter as inline code', () => 
     'ls src | wc -l',
   ])('%s', (command) => {
     expect(fullAccess(command)).toEqual({ verdict: 'allow', by: 'level' });
+  });
+});
+
+describe('decide() judges what a script names the way it judges a typed command', () => {
+  const POSTURES: ModePosture[] = ['auto', 'full_access'];
+
+  it.each([
+    'python3 q.py',
+    '.venv/bin/python /tmp/poc_sa/q.py',
+    "sed -i '' \"s/print('ERROR', e)/print('ERROR', repr(e))/\" /tmp/poc_sa/q.py && .venv/bin/python /tmp/poc_sa/q.py",
+    'python3 keys.py',
+  ])('a dictionary key or header name is not a secret file: %s', (command) => {
+    for (const posture of POSTURES) {
+      expect(decideAt(posture, command), posture).toEqual({ verdict: 'allow', by: 'level' });
+    }
+  });
+
+  it.each([
+    ['python3 write-env.py', '.env'],
+    ['python3 set-key.py', '.env'],
+    ['node copy.js', '.env'],
+  ])('asks in every mode when the code changes files and names a secret: %s', (command, file) => {
+    for (const posture of [...POSTURES, 'asks', 'edits'] as ModePosture[]) {
+      expect(decideAt(posture, command), posture).toEqual({
+        verdict: 'ask',
+        reason: `This runs code that uses ${file}, a secret file, and does more than read it`,
+        secretFiles: [file],
+      });
+    }
+  });
+
+  it('asks in every mode when the code reads a file .sparkignore lists', () => {
+    for (const posture of POSTURES) {
+      expect(decideAt(posture, 'python3 notes.py'), posture).toEqual({
+        verdict: 'ask',
+        reason: 'This runs code that reads private/notes.md, which .sparkignore lists',
+        secretFiles: ['private/notes.md'],
+      });
+    }
+  });
+});
+
+describe('a secret a script reads counts for the send flag', () => {
+  it.each([
+    ['python3 dump.py', ['.env']],
+    ['python3 -c "from dotenv import load_dotenv; load_dotenv()"', ['.env']],
+    ['python3 q.py', []],
+    ['python3 report.py', []],
+  ])('%s', (command, labels) => {
+    expect(secretReadLabels(run(command), lister, null)).toEqual(labels);
   });
 });

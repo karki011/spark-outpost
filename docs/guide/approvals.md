@@ -34,7 +34,7 @@ In **Bypass permissions**, **Approve for me** or **Full access**, Spark watches 
 
 ## Sending data out after reading secrets
 
-After a run reads secrets, a web page or tickets, Spark notes sends elsewhere, on the mode's card or as a flag. The chat's own repository and PR don't count.
+After a run reads secrets, by a script too, a web page or tickets, Spark notes sends elsewhere on the mode's card or as a flag, never a card of its own. The chat's own repository and PR don't count.
 
 Sending a secret file's value [always asks](protected-paths.md#what-always-asks).
 

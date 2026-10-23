@@ -54,7 +54,7 @@ Following the mode: at once in **Auto**, **Bypass permissions**, **Approve for m
 | Keys             | SSH keys (`id_rsa`, `id_ed25519`), `*.pem`, `*.key`, `*.p12`, `*.pfx`                          |
 | Credential files | `.npmrc`, `.netrc`, `.pgpass`, `.pypirc`, `.git-credentials`, `credentials` files, `api-token` |
 
-Ship leaves these out of commits.
+A script that reads one follows your mode. A script that names one and changes files asks, naming the file. Ship leaves these out of commits.
 
 ## When an agent may publish
 

@@ -75,7 +75,7 @@ The safety floor holds at every level.`,
     id: 'read-then-send',
     title: 'Read, then send',
     keywords: ['exfiltration', 'curl', 'sensitive', 'network', 'egress', 'secret', 'send data'],
-    text: `Once a chat has seen sensitive data — a secret file the agent read, secret values in a tool's output (env, printenv, config dumps) a web page, or private work data from spark_tickets, spark_slack, spark_pr and similar tools (not this chat's own task or history) — anything that sends data off this computer asks first, at every level and mode: curl, wget, ssh, scp, nc, dig, git push, gh and cloud CLIs, package publishing, one-liners that open connections, user MCP tools and web fetches. The card names what was read (never values) and where the data would go. Requests to localhost stay unasked; the allowlist, run rules and Always allow can't skip it.`,
+    text: `Once a turn has seen sensitive data (a secret file read directly or by a script, secret values in tool output such as env or config dumps, a web page, or private work data from spark_tickets, spark_slack, spark_pr and similar tools), a send off this computer gets a note, never a card of its own: when the mode would run it, it runs with an audit entry and a non-blocking flag ("sent data … after reading …"); when the mode asks, its card carries the note. The note names what was read (never values) and where the data went, and ends with the turn. Sends include curl, wget, ssh, git push, gh, cloud CLIs, publishing, user MCP tools and web fetches; localhost and the chat's own repo and PR don't count. A push or upload holding a secret file's value asks with hold to confirm.`,
   },
   {
     id: 'safety-floor',

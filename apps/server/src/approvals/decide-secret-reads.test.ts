@@ -277,14 +277,14 @@ describe('a secret-file card names the file that raised it', () => {
     });
   });
 
-  it('falls back to the rule when no file can be named', async () => {
+  it('names the file a glob reaches instead of the general rule', async () => {
     expect(SECRET_REASON).toBe(
       'Changing a secret file always asks, and so does reading one listed in .sparkignore',
     );
     expect(await parsed('auto', 'for f in .e*; do head "$f"; done')).toEqual({
       verdict: 'ask',
-      reason: SECRET_REASON,
-      secretFiles: [],
+      reason: 'This uses .env, a secret file, in a command that does more than read it',
+      secretFiles: ['.env'],
     });
   });
 });
