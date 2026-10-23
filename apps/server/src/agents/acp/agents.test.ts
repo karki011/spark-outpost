@@ -64,8 +64,8 @@ describe('Claude session options', () => {
   });
 
   it("denies reading and editing Spark's browser data in every Claude session", () => {
-    const saved = process.env.SPARK_BROWSER_DATA_DIR;
-    process.env.SPARK_BROWSER_DATA_DIR = '/nowhere/Spark Outpost';
+    const saved = process.env.SPARK_DATA_DIR;
+    process.env.SPARK_DATA_DIR = '/nowhere/Spark Outpost';
     try {
       const sessions = [
         agentDefinitions.claude.conversationSessionMeta?.(null),
@@ -81,8 +81,8 @@ describe('Claude session options', () => {
         expect(options.settings.permissions.deny).toEqual(options.disallowedTools);
       }
     } finally {
-      if (saved === undefined) delete process.env.SPARK_BROWSER_DATA_DIR;
-      else process.env.SPARK_BROWSER_DATA_DIR = saved;
+      if (saved === undefined) delete process.env.SPARK_DATA_DIR;
+      else process.env.SPARK_DATA_DIR = saved;
     }
   });
 

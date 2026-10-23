@@ -45,12 +45,12 @@ describe('watching actions the agent took without asking', () => {
     const command = `cp -r "${DATA}/Partitions" /tmp/x`;
     let saved: string | undefined;
     beforeEach(() => {
-      saved = process.env.SPARK_BROWSER_DATA_DIR;
-      process.env.SPARK_BROWSER_DATA_DIR = DATA;
+      saved = process.env.SPARK_DATA_DIR;
+      process.env.SPARK_DATA_DIR = DATA;
     });
     afterEach(() => {
-      if (saved === undefined) delete process.env.SPARK_BROWSER_DATA_DIR;
-      else process.env.SPARK_BROWSER_DATA_DIR = saved;
+      if (saved === undefined) delete process.env.SPARK_DATA_DIR;
+      else process.env.SPARK_DATA_DIR = saved;
     });
     const finished = (status: string, text: string) => ({
       sessionUpdate: 'tool_call_update',
