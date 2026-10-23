@@ -1,16 +1,68 @@
-import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import './theme-menu.css';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { useKeepInViewport } from '../ui/viewport-clamp.ts';
-import { revealTheme } from './reveal.ts';
-import { readTheme, themes, type ThemeId } from './theme.ts';
+import { revealAppearance } from './reveal.ts';
+import { useAppearance, withChange } from './use-appearance.ts';
+import { modes, tints, type Appearance } from './theme.ts';
+
+const LIGHT = '#f4f5f7';
+const DARK = '#12161a';
+const MODE_SWATCHES = {
+  auto: { accent: LIGHT, background: DARK },
+  light: { accent: LIGHT, background: LIGHT },
+  dark: { accent: DARK, background: DARK },
+};
 
 function swatchStyle(swatch: { accent: string; background: string }): CSSProperties {
   return { '--a': swatch.accent, '--b': swatch.background } as CSSProperties;
 }
 
+function Tick() {
+  return (
+    <svg
+      className="tick"
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m5 12 5 5 9-10" />
+    </svg>
+  );
+}
+
+interface ChoiceProps {
+  checked: boolean;
+  open: boolean;
+  swatch: { accent: string; background: string };
+  onSelect: () => void;
+  children: ReactNode;
+}
+
+function Choice({ checked, open, swatch, onSelect, children }: ChoiceProps) {
+  return (
+    <button
+      type="button"
+      role="menuitemradio"
+      aria-checked={checked}
+      tabIndex={open ? 0 : -1}
+      onClick={onSelect}
+    >
+      <span className="sw" style={swatchStyle(swatch)} />
+      {children}
+      <Tick />
+    </button>
+  );
+}
+
 export function ThemePicker() {
-  const [theme, setTheme] = useState<ThemeId>(readTheme);
+  const appearance = useAppearance();
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -35,10 +87,10 @@ export function ThemePicker() {
     checked?.focus();
   }, [open]);
 
-  const selectTheme = (next: ThemeId) => {
+  const choose = (patch: Partial<Appearance>) => {
     setOpen(false);
     buttonRef.current?.focus();
-    revealTheme(next, () => setTheme(next));
+    revealAppearance(withChange(patch));
   };
 
   const moveFocus = (delta: number) => {
@@ -86,33 +138,32 @@ export function ThemePicker() {
           }
         }}
       >
-        {themes.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            role="menuitemradio"
-            aria-checked={option.id === theme}
-            tabIndex={open ? 0 : -1}
-            onClick={() => selectTheme(option.id)}
-          >
-            <span className="sw" style={swatchStyle(option.swatch)} />
-            {option.label}
-            <svg
-              className="tick"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+        <div role="group" aria-label="Appearance">
+          {modes.map((mode) => (
+            <Choice
+              key={mode.id}
+              checked={mode.id === appearance.mode}
+              open={open}
+              swatch={MODE_SWATCHES[mode.id]}
+              onSelect={() => choose({ mode: mode.id })}
             >
-              <path d="m5 12 5 5 9-10" />
-            </svg>
-          </button>
-        ))}
+              {mode.label}
+            </Choice>
+          ))}
+        </div>
+        <div role="group" aria-label="Tint" className="theme-menu-tints">
+          {tints.map((tint) => (
+            <Choice
+              key={tint.id}
+              checked={tint.id === appearance.tint}
+              open={open}
+              swatch={tint.swatch}
+              onSelect={() => choose({ tint: tint.id })}
+            >
+              {tint.label}
+            </Choice>
+          ))}
+        </div>
       </div>
     </div>
   );

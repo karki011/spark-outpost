@@ -62,7 +62,6 @@ import { useIslandAttention } from './use-island-attention.ts';
 import { islandViewedChat, useIslandViewing } from './use-island-viewing.ts';
 import { PANEL_ANNOUNCEMENTS } from './panel-announcements.ts';
 import { useGreeting, useMoments } from './use-island-moments.ts';
-import { useThemeSync } from './use-theme-sync.ts';
 import { useAssistantInbox } from './ask-assistant.ts';
 import { SpeechSeedContext } from '../voice/speech-seed.tsx';
 import { useSpeechIsland } from '../voice/use-speech-island.ts';
@@ -78,7 +77,6 @@ function isRunningChat(chat: ConversationSummary): boolean {
 }
 
 export function IslandApp() {
-  useThemeSync();
   useAppEvents();
   const reduced = useReducedMotion();
   const voice = useVoice();
