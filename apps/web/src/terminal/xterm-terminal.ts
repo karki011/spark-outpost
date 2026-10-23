@@ -55,15 +55,24 @@ export function createTerminal(overrides: ITerminalOptions = {}): Terminal {
 }
 
 export function followTheme(terminal: Terminal, onChange?: () => void): () => void {
-  const observer = new MutationObserver(() => {
+  const update = () => {
     terminal.options.theme = themeFromTokens();
     onChange?.();
-  });
+  };
+  const observer = new MutationObserver(update);
   observer.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ['data-skin'],
   });
-  return () => observer.disconnect();
+  const scheme =
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-color-scheme: dark)')
+      : null;
+  scheme?.addEventListener('change', update);
+  return () => {
+    observer.disconnect();
+    scheme?.removeEventListener('change', update);
+  };
 }
 
 export function openXterm<T extends TerminalTicket>(

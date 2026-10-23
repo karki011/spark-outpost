@@ -22,7 +22,10 @@ export async function updateConversation(
          WHEN $4 THEN COALESCE(pinned_at, now()) ELSE NULL END,
        pinned_order = CASE WHEN $4::boolean IS FALSE THEN NULL ELSE pinned_order END,
        archived_at = CASE WHEN $5::boolean IS NULL THEN archived_at
-         WHEN $5 THEN COALESCE(archived_at, now()) ELSE NULL END
+         WHEN $5 THEN COALESCE(archived_at, now()) ELSE NULL END,
+       restored_at = CASE WHEN $5::boolean IS FALSE AND archived_at IS NOT NULL THEN now()
+         ELSE restored_at END,
+       auto_archived_days = CASE WHEN $5::boolean IS FALSE THEN NULL ELSE auto_archived_days END
      WHERE id = $1 AND workspace_id = $2`,
     [
       id,

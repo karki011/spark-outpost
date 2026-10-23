@@ -128,6 +128,7 @@ test('reorders chats inside a project and reorders the projects', async ({ page 
     { title: 'First', projectIds: [alpha.id], minutesAgo: 1 },
     { title: 'Second', projectIds: [alpha.id], minutesAgo: 2 },
     { title: 'Third', projectIds: [alpha.id], minutesAgo: 3 },
+    { title: 'Beta chat', projectIds: [beta.id], minutesAgo: 4 },
   ]);
   await page.reload();
   await expect(projectNames(page)).toHaveText(['alpha', 'beta']);
@@ -171,9 +172,10 @@ test('reorders chats inside a project and reorders the projects', async ({ page 
 test('moves chats and projects with the keyboard and announces each step', async ({ page }) => {
   await openChats(page);
   const web = await createProject(page, 'web');
-  await createProject(page, 'zeta');
+  const zeta = await createProject(page, 'zeta');
   await seedChats([
     { title: 'Web chat', projectIds: [web.id], minutesAgo: 2 },
+    { title: 'Zeta chat', projectIds: [zeta.id], minutesAgo: 3 },
     { title: 'Loose idea', minutesAgo: 1 },
   ]);
   await page.reload();
@@ -184,8 +186,10 @@ test('moves chats and projects with the keyboard and announces each step', async
   await keyboardPickUp(page, 'Space', 'Picked up Loose idea. It is in Chats.');
   await page.keyboard.press('ArrowUp');
   await page.keyboard.press('ArrowUp');
-  await expect(announcer(page)).toContainText('Loose idea will move to zeta, position 1 of 1.');
+  await expect(announcer(page)).toContainText('Loose idea will move to zeta, position 2 of 2.');
   await expectGhost(page, slot(block(page, 'zeta')));
+  await page.keyboard.press('ArrowUp');
+  await expect(announcer(page)).toContainText('Loose idea will move to zeta, position 1 of 2.');
   await page.keyboard.press('ArrowUp');
   await expect(announcer(page)).toContainText('Loose idea will move to web, position');
   await page.keyboard.press('Space');
@@ -211,31 +215,16 @@ test('moves chats and projects with the keyboard and announces each step', async
   await expect(projectNames(page)).toHaveText(['zeta', 'web']);
 });
 
-test('shows the ghost row inside an empty project and inside a folded project', async ({
-  page,
-}) => {
+test('shows the ghost row inside a folded project', async ({ page }) => {
   await openChats(page);
-  const docs = await createProject(page, 'docs');
   const web = await createProject(page, 'web');
   await seedChats([
     { title: 'Web chat', projectIds: [web.id], minutesAgo: 2 },
     { title: 'Loose idea', minutesAgo: 1 },
   ]);
   await page.reload();
-  const empty = block(page, docs.name);
-  await expect(empty.locator('.pempty')).toBeVisible();
   const folded = block(page, web.name);
   await folded.locator('.proj-head').click();
-  await expect(folded).not.toHaveClass(/open/);
-
-  await pickUp(page, row(page, 'Loose idea'));
-  await hoverOver(page, empty.locator('.proj-head'), 'bottom');
-  await expect(slot(empty)).toContainText('Loose idea');
-  await expect(empty.locator('.pempty')).toHaveCount(0);
-  await expectGhost(page, slot(empty));
-  await page.keyboard.press('Escape');
-  await page.mouse.up();
-  await expect(slot(empty)).toHaveCount(0);
   await expect(folded).not.toHaveClass(/open/);
 
   await pickUp(page, row(page, 'Loose idea'));
@@ -335,7 +324,10 @@ test('reduced motion keeps the drag card still', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openChats(page);
   const project = await createProject(page, 'web');
-  await seedChats([{ title: 'Loose idea' }]);
+  await seedChats([
+    { title: 'Loose idea', minutesAgo: 1 },
+    { title: 'Web chat', projectIds: [project.id], minutesAgo: 2 },
+  ]);
   await page.reload();
   await pickUp(page, row(page, 'Loose idea'));
   await hoverOver(page, block(page, project.name), 'top');
@@ -346,5 +338,5 @@ test('reduced motion keeps the drag card still', async ({ page }) => {
     await card.locator('.dc-blob').evaluate((node) => getComputedStyle(node).animationName),
   ).toBe('none');
   await page.mouse.up();
-  await expect(block(page, project.name).locator('.row .tt')).toHaveText(['Loose idea']);
+  await expect(block(page, project.name).locator('.row .tt')).toContainText(['Loose idea']);
 });

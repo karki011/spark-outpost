@@ -246,7 +246,7 @@ export async function runAgentTurn(
   });
   const guard = { ...input, db: deps.db, runId: lease.runId, append };
   const commands = createCommandRecorder({ ...guard, secretValues, replySoFar });
-  const events = createTurnEvents({ append, secretValues });
+  const events = createTurnEvents({ append, secretValues, replySoFar });
   try {
     if (await isCancelRequested(deps.db, lease.runId)) control.stop('cancelled');
     if (control.signal.aborted && control.reason() !== 'lease_lost') {

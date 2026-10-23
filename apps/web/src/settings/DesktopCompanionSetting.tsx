@@ -18,6 +18,7 @@ const CHIMES = 'Island chimes';
 const AUTO_EXPAND = 'Open requests by themselves';
 const HIDE_IN_SHARE = 'Hide in screen sharing';
 const NOTIFY = 'Dock badge and notifications';
+const MENU_BAR = 'Show in menu bar';
 
 function notifyHint(status: CompanionStatus): string {
   if (!status.notify) return 'Off. No Dock count, and no notification while Spark Island is off.';
@@ -46,6 +47,7 @@ export function islandRows(): string[] {
   return [
     SHOW_ISLAND_LABEL,
     NOTIFY,
+    MENU_BAR,
     ISLAND_SIZE_LABEL,
     AUTO_EXPAND,
     HIDE_IN_SHARE,
@@ -176,6 +178,7 @@ export function DesktopCompanionSetting() {
   const expandId = useId();
   const shareId = useId();
   const notifyId = useId();
+  const menuBarId = useId();
   if (!companionAvailable() || !status?.supported) return null;
   const desktop = sparkDesktop()!;
   return (
@@ -202,6 +205,20 @@ export function DesktopCompanionSetting() {
           hint={notifyHint(status)}
           checked={status.notify === true}
           onChange={(on) => void desktop.companion.setNotify?.(on)}
+        />
+      )}
+      {desktop.companion.setMenuBar && (
+        <SwitchRow
+          id={menuBarId}
+          label={MENU_BAR}
+          doc={{ page: 'desktop-companion', heading: 'turn-it-on-and-size-it' }}
+          hint={
+            status.menuBar
+              ? 'A Spark icon in the menu bar opens Spark, shows or hides Spark Island, and quits.'
+              : 'Off. Open Spark from the Dock; right-click its icon to show or hide Spark Island.'
+          }
+          checked={status.menuBar === true}
+          onChange={(on) => void desktop.companion.setMenuBar?.(on)}
         />
       )}
       {status.enabled && (

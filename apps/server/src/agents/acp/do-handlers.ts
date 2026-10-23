@@ -3,7 +3,8 @@ import type * as acp from '@agentclientprotocol/sdk';
 import type { PathPolicy } from '../../projects/path-policy.ts';
 import type { PermissionGate } from '../../providers/provider.ts';
 import { writeTextFile } from './fs-handlers.ts';
-import { approvalRequestFrom, permissionResponse, toolNameOf } from './permission-request.ts';
+import { approvalRequestFrom, permissionResponse } from './permission-request.ts';
+import { toolNameOf } from './tool-titles.ts';
 import type { SubagentAsker } from './subagent-updates.ts';
 
 export interface DoWorkspace {

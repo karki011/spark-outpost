@@ -6,7 +6,7 @@ order: 220
 summary: Have the agent plan first with /plan or Plan mode, approve its plan, and open the approved plan later.
 ---
 
-You'll have the agent plan before it changes anything. About 1 minute.
+The agent plans before changing anything. About 1 minute.
 
 1. Type `/plan` and what you want, or set the chat's mode to **Plan** and ask for the change.
 2. Read the agent's plan on its **Approve the plan?** card.
@@ -14,9 +14,9 @@ You'll have the agent plan before it changes anything. About 1 minute.
 
 The card is the agent's own. A mode that never asks, such as **Full access**, approves it at once.
 
-While the agent plans, a chat set to **Auto** or **Bypass permissions** runs commands that change no files without a card. A command that changes files still asks.
+While planning in **Auto** or **Bypass permissions**, commands that change no files run without a card; ones that change files still ask.
 
-`/plan` plans for one turn. In a **Plan** chat every message runs in the agent's Plan mode, so nothing changes until you approve its plan. Such a chat gets a worktree even for a question.
+`/plan` plans for one turn. In a **Plan** chat every message runs in the agent's Plan mode, so nothing changes until you approve. Such a chat gets a worktree even for a question.
 
 ## The plan line
 
@@ -24,7 +24,7 @@ Spark has no plan card and saves no plan of its own. Without `/plan` or **Plan**
 
 The plan you approve becomes the chat's agreed plan. The thread shows **Plan saved**; select it to open the plan in **Work**. A revised plan you approve is saved as a new version.
 
-Codex's plan setting stops no edit, so `/plan` runs a Codex turn in **Read-only**: it replies with a plan, changes nothing and shows no line; the **Work** panel lists it as **Proposed plan**. Send your next message to build.
+Codex's plan setting stops no edit, so `/plan` runs a Codex turn in **Read-only**: it replies with a plan, changes nothing and shows no line; **Work** lists it as **Proposed plan**. Your next message builds.
 
 Older chats keep lines such as **Plan saved · 4 pieces**.
 

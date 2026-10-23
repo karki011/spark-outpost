@@ -104,3 +104,9 @@ export function sendNowStatus({ memberMessages = [], runs }: SendNowFacts): stri
       return null;
   }
 }
+
+export function busyButtonTitle(preferred: BusyEnterAction, mac: boolean, waiting = false) {
+  const other = otherAction(preferred);
+  const otherKey = `${modifiedEnter(mac)} to ${SEND_CHOICES[other].hint}`;
+  return `${choiceTitle(preferred, preferred, mac, waiting)} · ${otherKey}`;
+}

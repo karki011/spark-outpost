@@ -39,6 +39,7 @@ export interface CompanionStatus {
   hideInShare?: boolean;
   notify?: boolean;
   notifyBlocked?: boolean;
+  menuBar?: boolean;
 }
 
 export type ShortcutResult = { ok: true } | { ok: false; error: string };
@@ -126,6 +127,7 @@ export interface SparkDesktop {
     setAutoExpand?(on: boolean): Promise<CompanionStatus>;
     setHideInShare?(on: boolean): Promise<CompanionStatus>;
     setNotify?(on: boolean): Promise<CompanionStatus>;
+    setMenuBar?(on: boolean): Promise<CompanionStatus>;
     onChange(callback: (status: CompanionStatus) => void): Unsubscribe;
   };
   attention?: {

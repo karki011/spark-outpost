@@ -64,8 +64,8 @@ describe('run event stream', () => {
     const run = await getRun(t.db, runId);
     const detail = await get(`/api/conversations/${run!.conversationId}`).expect(200);
     expect(detail.body.activity[runId]).toEqual([
-      { name: 'Reading your message', done: true },
-      { name: 'Writing a reply', done: true },
+      expect.objectContaining({ name: 'Reading your message', done: true }),
+      expect.objectContaining({ name: 'Writing a reply', done: true }),
     ]);
   });
 
