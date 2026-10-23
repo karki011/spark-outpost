@@ -14,10 +14,12 @@ import {
   saveTicketConnectionRequestSchema,
   ticketSourceNames,
   type SaveTicketConnectionRequest,
+  type ServiceNowAuthKind,
   type TicketConnections,
   type TicketSourceId,
 } from '@spark-outpost/contracts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
+import { Segmented } from '../ui/Segmented.tsx';
 import { atLeast } from '../ui/min-duration.ts';
 import { fadeReveal } from '../ui/transitions.tsx';
 import { ConnectBlob } from './ConnectBlob.tsx';
@@ -61,7 +63,56 @@ export function HelpLink({ href, children }: { href: string; children: ReactNode
   );
 }
 
-const FIELDS: Record<TicketSourceId, FieldSpec[]> = {
+const INSTANCE_FIELD: FieldSpec = {
+  key: 'instanceUrl',
+  label: 'Instance',
+  placeholder: 'acme.service-now.com',
+  type: 'text',
+  inputMode: 'url',
+  help: 'Type acme or the full address. Spark connects over https only.',
+};
+
+const SERVICENOW_FIELDS: Record<ServiceNowAuthKind, FieldSpec[]> = {
+  basic: [
+    {
+      key: 'username',
+      label: 'Username',
+      placeholder: 'jordan.lee',
+      type: 'text',
+      help: 'The user name you sign in to ServiceNow with.',
+    },
+    {
+      key: 'password',
+      label: 'Password',
+      placeholder: 'Your ServiceNow password',
+      type: 'password',
+      help: 'If you sign in to ServiceNow with SSO, or your instance blocks password sign-in, ask your admin for an API key or a web service account.',
+    },
+  ],
+  api_key: [
+    {
+      key: 'username',
+      label: 'Username',
+      placeholder: 'jordan.lee',
+      type: 'text',
+      help: 'The ServiceNow user the API key belongs to.',
+    },
+    {
+      key: 'apiKey',
+      label: 'API key',
+      placeholder: 'Paste your API key',
+      type: 'password',
+      help: 'Your ServiceNow admin creates it for your account.',
+    },
+  ],
+};
+
+const AUTH_OPTIONS: { id: ServiceNowAuthKind; label: string }[] = [
+  { id: 'basic', label: 'Username and password' },
+  { id: 'api_key', label: 'API key' },
+];
+
+const FIELDS: Record<Exclude<TicketSourceId, 'servicenow'>, FieldSpec[]> = {
   jira: [
     {
       key: 'siteUrl',
@@ -108,7 +159,23 @@ const FIELDS: Record<TicketSourceId, FieldSpec[]> = {
   ],
 };
 
-function requestFor(source: TicketSourceId, values: Record<string, string>) {
+function requestFor(
+  source: TicketSourceId,
+  authKind: ServiceNowAuthKind,
+  values: Record<string, string>,
+) {
+  if (source === 'servicenow') {
+    const signIn =
+      authKind === 'basic'
+        ? { authKind, password: values.password ?? '' }
+        : { authKind, apiKey: values.apiKey ?? '' };
+    return {
+      source,
+      instanceUrl: values.instanceUrl ?? '',
+      username: values.username ?? '',
+      ...signIn,
+    };
+  }
   return source === 'linear'
     ? { source, apiKey: values.apiKey ?? '' }
     : {
@@ -117,6 +184,10 @@ function requestFor(source: TicketSourceId, values: Record<string, string>) {
         email: (values.email ?? '').trim(),
         apiToken: values.apiToken ?? '',
       };
+}
+
+function fieldsFor(source: TicketSourceId, authKind: ServiceNowAuthKind): FieldSpec[] {
+  return source === 'servicenow' ? SERVICENOW_FIELDS[authKind] : FIELDS[source];
 }
 
 function statusLine(mood: CheckMood | null, name: string): string {
@@ -132,12 +203,14 @@ export function TicketConnectForm({ source, onConnected, onCancel }: TicketConne
   const [values, setValues] = useState<Record<string, string>>({});
   const [invalid, setInvalid] = useState<CheckFailure | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [authKind, setAuthKind] = useState<ServiceNowAuthKind>('basic');
   const name = source === 'jira' ? ATLASSIAN_NAME : ticketSourceNames[source];
   const connect = useMutation({
     mutationFn: (body: SaveTicketConnectionRequest) =>
       atLeast(ticketsApi.connect(body), MIN_CHECK_MS),
   });
-  const failure = invalid ?? (connect.isError ? checkFailure(source, connect.error) : null);
+  const failure =
+    invalid ?? (connect.isError ? checkFailure(source, connect.error, authKind) : null);
   const busy = connect.isPending || connect.isSuccess;
   let mood: CheckMood | null = null;
   if (connect.isPending) mood = 'checking';
@@ -181,7 +254,9 @@ export function TicketConnectForm({ source, onConnected, onCancel }: TicketConne
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (busy) return;
-    const parsed = saveTicketConnectionRequestSchema.safeParse(requestFor(source, values));
+    const parsed = saveTicketConnectionRequestSchema.safeParse(
+      requestFor(source, authKind, values),
+    );
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
       setInvalid({
@@ -261,7 +336,27 @@ export function TicketConnectForm({ source, onConnected, onCancel }: TicketConne
       aria-busy={connect.isPending}
       noValidate
     >
-      {FIELDS[source].map(field)}
+      {source === 'servicenow' && field(INSTANCE_FIELD, 0)}
+      {source === 'servicenow' && (
+        <div className="tk-field">
+          <span className="tk-field-label" aria-hidden="true">
+            Sign in with
+          </span>
+          <Segmented
+            ariaLabel="Sign in with"
+            options={AUTH_OPTIONS}
+            value={authKind}
+            onChange={(id) => {
+              setAuthKind(id as ServiceNowAuthKind);
+              setInvalid(null);
+              if (connect.isError) connect.reset();
+            }}
+          />
+        </div>
+      )}
+      {fieldsFor(source, authKind).map((spec, index) =>
+        field(spec, source === 'servicenow' ? index + 1 : index),
+      )}
       {failure && !failure.field && (
         <p className="tk-cform-err" role="alert">
           {failure.message}

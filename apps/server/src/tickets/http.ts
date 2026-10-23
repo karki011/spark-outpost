@@ -5,9 +5,10 @@ const REQUEST_TIMEOUT_MS = 20_000;
 const USER_AGENT = 'Spark-Outpost';
 
 export interface JsonCall {
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   url: string;
-  authorization: string;
+  authorization?: string;
+  headers?: Record<string, string>;
   body?: unknown;
   timeoutMs?: number;
 }
@@ -38,7 +39,8 @@ export async function callJson(
       method: call.method,
       headers: {
         accept: 'application/json',
-        authorization: call.authorization,
+        ...(call.authorization ? { authorization: call.authorization } : {}),
+        ...call.headers,
         'user-agent': USER_AGENT,
         ...(call.body === undefined ? {} : { 'content-type': 'application/json' }),
       },
@@ -67,8 +69,17 @@ function detailOf(data: unknown): string {
     errors[0] && typeof errors[0] === 'object'
       ? (errors[0] as { message?: unknown; title?: unknown; detail?: unknown })
       : null;
+  const nested =
+    record.error && typeof record.error === 'object'
+      ? (record.error as { message?: unknown }).message
+      : undefined;
   const first =
-    messages[0] ?? firstError?.message ?? firstError?.detail ?? firstError?.title ?? record.message;
+    messages[0] ??
+    firstError?.message ??
+    firstError?.detail ??
+    firstError?.title ??
+    record.message ??
+    nested;
   return typeof first === 'string' ? redactText(first).slice(0, 200) : '';
 }
 

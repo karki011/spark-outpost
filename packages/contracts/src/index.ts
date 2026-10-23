@@ -69,6 +69,7 @@ export * from './content-security-policy.ts';
 export * from './ship.ts';
 export * from './pr-follow-up.ts';
 export * from './push-activity.ts';
+export * from './servicenow.ts';
 export * from './tickets.ts';
 export * from './ticket-development.ts';
 export * from './ticket-inbox.ts';

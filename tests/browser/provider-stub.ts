@@ -104,6 +104,12 @@ async function setJiraWorkflow(req: IncomingMessage, res: ServerResponse) {
   tickets.jiraWorkflow(project, statuses);
   send(res, 200, { ok: true });
 }
+async function serviceNowFaults(req: IncomingMessage, res: ServerResponse) {
+  let text = '';
+  for await (const chunk of req) text += String(chunk);
+  tickets.serviceNowFaults(JSON.parse(text) as { denied?: string[]; limited?: number });
+  send(res, 200, { ok: true });
+}
 let slack = fakeSlack();
 
 const server = createServer((req, res) => {
@@ -153,6 +159,9 @@ const server = createServer((req, res) => {
   if (path === '/tickets-test/confluence-off') {
     tickets.confluenceReachable(false);
     return send(res, 200, { ok: true });
+  }
+  if (path === '/tickets-test/servicenow' && req.method === 'POST') {
+    return void serviceNowFaults(req, res);
   }
   if (path === '/tickets-test/volume') {
     tickets.volume();
