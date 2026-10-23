@@ -1,5 +1,6 @@
 import {
   holdsToConfirm,
+  serviceNowAsksAlways,
   type Approval,
   type AskSparkAnswer,
   type AssistantActs,
@@ -31,6 +32,8 @@ export const ASK_SPARK_REFUSALS = {
     'This card changes an agent instruction file, so it stays with you. Answer it yourself in the chat.',
   macOnly: 'Mac control, calendar and browser sign-in cards stay with you. Answer it yourself.',
   question: 'An agent’s question needs your own answer. Answer it yourself in the chat.',
+  callerSees:
+    'This card tells a ServiceNow caller something (a comment, or resolving, closing or cancelling), so it stays with you. Answer it yourself in the chat.',
   notWaiting: 'That card is no longer waiting for an answer.',
   noOption: 'This card has no Allow once or Deny answer, so it stays with you.',
   terminal: 'Ask Spark does not act on Terminal sessions. Use the session itself.',
@@ -108,6 +111,8 @@ export function cardRefusal(
   if (approval.payload.instructionFiles !== undefined) return ASK_SPARK_REFUSALS.instructions;
   if (approval.payload.form) return ASK_SPARK_REFUSALS.question;
   if (macOnlyCard(approval.payload)) return ASK_SPARK_REFUSALS.macOnly;
+  const action = approval.payload.sparkAction;
+  if (action && serviceNowAsksAlways(action)) return ASK_SPARK_REFUSALS.callerSees;
   if (approval.payload.sparkAction?.action === 'browser_sign_in') return ASK_SPARK_REFUSALS.macOnly;
   const answers = new Set(approval.options.map((option) => option.kind));
   if (!answers.has('allow_once') || !answers.has('reject_once')) return ASK_SPARK_REFUSALS.noOption;

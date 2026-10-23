@@ -9,6 +9,7 @@ interface RemoteLocals {
   remote?: true;
   remoteDevice?: RemoteDevicePrincipal;
   remoteBlockedFields?: readonly string[];
+  remoteHighRiskFields?: readonly string[];
 }
 
 function localsOf(res: Response): RemoteLocals {
@@ -26,10 +27,11 @@ export function isRemote(res: Response): boolean {
 export function admitDevice(
   res: Response,
   device: RemoteDevicePrincipal,
-  blockedFields: readonly string[],
+  fields: { blocked: readonly string[]; highRisk: readonly string[] },
 ): void {
   localsOf(res).remoteDevice = device;
-  localsOf(res).remoteBlockedFields = blockedFields;
+  localsOf(res).remoteBlockedFields = fields.blocked;
+  localsOf(res).remoteHighRiskFields = fields.highRisk;
 }
 
 export function remoteDeviceOf(res: Response): RemoteDevicePrincipal | null {
@@ -38,6 +40,10 @@ export function remoteDeviceOf(res: Response): RemoteDevicePrincipal | null {
 
 export function blockedFieldsOf(res: Response): readonly string[] {
   return localsOf(res).remoteBlockedFields ?? [];
+}
+
+export function highRiskFieldsOf(res: Response): readonly string[] {
+  return localsOf(res).remoteHighRiskFields ?? [];
 }
 
 export function presenceClientOf(res: Response, clientId: string | undefined): string {

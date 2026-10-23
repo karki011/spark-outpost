@@ -87,6 +87,7 @@ export interface TicketSource {
   transition(key: string, request: MoveRequest): Promise<TransitionResult>;
   projectStatuses(project: string): Promise<SourceState[]>;
   comment(key: string, body: string): Promise<void>;
+  customerComment?(key: string, body: string): Promise<void>;
   linkPullRequest(key: string, pull: TicketRef): Promise<void>;
   create(ticket: NewTicket): Promise<CreatedTicket>;
   development?(key: string): Promise<SourceDevelopment>;
