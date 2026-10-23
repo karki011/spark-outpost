@@ -53,10 +53,24 @@ function useMemberFace(chatId: string, name: string): TurnFace {
   );
 }
 
-function focusQuestion(body: RefObject<HTMLDivElement | null>): void {
+function focusQuestion(body: RefObject<HTMLDivElement | null>): boolean {
   const row = body.current?.querySelector<HTMLElement>(ASK_ROW);
-  row?.scrollIntoView({ block: 'nearest' });
-  row?.focus();
+  if (!row) return false;
+  row.scrollIntoView({ block: 'nearest' });
+  row.focus();
+  return true;
+}
+
+function useFocusQuestionOnce(body: RefObject<HTMLDivElement | null>, wanted: boolean): void {
+  useEffect(() => {
+    const element = body.current;
+    if (!wanted || !element || focusQuestion(body)) return;
+    const observer = new MutationObserver(() => {
+      if (focusQuestion(body)) observer.disconnect();
+    });
+    observer.observe(element, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [body, wanted]);
 }
 
 function useEscapeFromNowhere(onBack: () => void): void {
@@ -141,9 +155,7 @@ export function ThreadPane({
     requestMessageJump(chatId, { messageId: post.id, runId: post.runId, parts: [] });
   }, [chatId, post.id, post.runId, loaded]);
 
-  useEffect(() => {
-    if (loaded && question && answerNow) focusQuestion(bodyRef);
-  }, [loaded, question, answerNow]);
+  useFocusQuestionOnce(bodyRef, loaded && question && answerNow);
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (!isBackKey(event)) return;
