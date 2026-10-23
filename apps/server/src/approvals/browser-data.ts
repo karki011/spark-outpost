@@ -1,6 +1,6 @@
 import { realpathSync } from 'node:fs';
 import path from 'node:path';
-import { BROWSER_DATA_ENV } from '@spark-outpost/contracts';
+import { sparkDataDir } from '../config.ts';
 import { commandTree, treeWords } from './command-tree.ts';
 import { resolveCommandPath } from './commands.ts';
 import type { ApprovalRequest } from './decide.ts';
@@ -38,13 +38,15 @@ export const BROWSER_DATA_ENTRIES = [
 
 const GLOB = /[*?[{]/;
 
-export function browserDataDir(env: NodeJS.ProcessEnv = process.env): string | null {
-  const configured = env[BROWSER_DATA_ENV];
-  if (!configured || !path.isAbsolute(configured)) return null;
+export function browserDataDir(
+  env: NodeJS.ProcessEnv = process.env,
+  fromCheckout?: boolean,
+): string {
+  const dataDir = sparkDataDir({ SPARK_DATA_DIR: env.SPARK_DATA_DIR }, fromCheckout);
   try {
-    return realpathSync(configured);
+    return realpathSync(dataDir);
   } catch {
-    return path.resolve(configured);
+    return path.resolve(dataDir);
   }
 }
 
