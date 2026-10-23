@@ -8,6 +8,7 @@ import {
 } from '../../apps/server/test/fake-jira.ts';
 import type { DevStatusMode, FakeDevelopment } from '../../apps/server/test/fake-jira-dev.ts';
 import { fakeConfluence } from '../../apps/server/test/fake-confluence.ts';
+import { fakeServiceNow } from '../../apps/server/test/fake-servicenow.ts';
 import {
   fakeLinear,
   LINEAR_ME,
@@ -255,11 +256,20 @@ export function ticketFakes() {
   let linear = seedLinear();
   let jira = seedJira();
   let confluence = fakeConfluence();
+  const servicenow = fakeServiceNow();
   return {
     reset() {
       linear = seedLinear();
       jira = seedJira();
       confluence = fakeConfluence();
+      servicenow.reset();
+    },
+    serviceNowWrites() {
+      return servicenow.writes;
+    },
+    serviceNowFaults(faults: { denied?: string[]; limited?: number }) {
+      servicenow.denied = new Set(faults.denied ?? []);
+      servicenow.limited = faults.limited ?? 0;
     },
     confluenceReachable(reachable: boolean) {
       confluence.reachable = reachable;
@@ -290,6 +300,7 @@ export function ticketFakes() {
     },
     handles(path: string): boolean {
       return (
+        servicenow.handles(path) ||
         path.startsWith('/linear/') ||
         path.startsWith('/wiki/') ||
         path.startsWith('/rest/api/3/') ||
@@ -299,6 +310,7 @@ export function ticketFakes() {
     handle(req: IncomingMessage, res: ServerResponse, path: string) {
       if (path.startsWith('/linear/')) return linear.handle(req, res);
       if (path.startsWith('/wiki/')) return confluence.handle(req, res);
+      if (servicenow.handles(path)) return servicenow.handle(req, res);
       return jira.handle(req, res);
     },
   };

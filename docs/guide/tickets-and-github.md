@@ -1,12 +1,12 @@
 ---
-title: Connect GitHub, Atlassian or Linear
+title: Connect GitHub and ticket trackers
 section: Projects and shipping
 type: how-to
 order: 330
-summary: Connect GitHub so Spark can open pull requests, connect Atlassian (Jira, Confluence) or Linear, and keep tickets in step with pull requests.
+summary: Connect GitHub so Spark can open pull requests, connect Atlassian (Jira, Confluence), Linear or ServiceNow, and keep tickets in step with pull requests.
 ---
 
-You'll connect GitHub and your ticket tracker, each optional. About 3 minutes.
+Each connection is optional. About 3 minutes.
 
 ## Connect GitHub
 
@@ -22,15 +22,15 @@ Access renews itself; if it ends, select **Sign in again**. Sign-in needs github
 
 ![The GitHub card in Settings → Connectors](images/tickets-github-light.png)
 
-## Connect Atlassian or Linear
+## Connect a ticket tracker
 
-1. Open **Settings → Connectors** and select **Atlassian** or **Linear**.
-2. Enter the **Site URL**, **Email** and an **API token** for Atlassian, or an **API key** for Linear.
+1. Open **Settings → Connectors** and select **Atlassian**, **Linear** or **ServiceNow**.
+2. Atlassian: **Site URL**, **Email**, **API token**. Linear: **API key**. ServiceNow: **Instance** (`acme`), then a **Username** with a **Password** or **API key**; with SSO, ask your admin for a key.
 3. Select **Save and check**.
 
-**Jira** and **Confluence** each get a switch; the card says when the token can't reach one.
+Each product or record type has a switch (**Changes**: read only) and says when out of reach.
 
-Keys stay in your keychain, never shown again. To stop, pick **Disconnect** (Atlassian: **···** → **Disconnect…**).
+Keys stay in your keychain. To stop, select **Disconnect** (or **···** → **Disconnect…**). ServiceNow's **···** also has **Check connection** and **Open instance**.
 
 ## Keep tickets in sync with pull requests
 

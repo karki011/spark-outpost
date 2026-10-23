@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ATLASSIAN_NAME, ticketSourceNames } from '@spark-outpost/contracts';
+import { ATLASSIAN_NAME, SERVICENOW_NAME, ticketSourceNames } from '@spark-outpost/contracts';
 import { ConnectorBlob, type ConnectorId } from '../brand/ConnectorBlob.tsx';
 import { BranchIcon } from '../ui/icons.tsx';
 import { activeLine } from '../ship/GitHubCard.tsx';
 import { githubApi, shipKeys } from '../ship/ship-api.ts';
 import { atlassianLine } from '../tickets/AtlassianCard.tsx';
+import { serviceNowLine } from '../tickets/ServiceNowCard.tsx';
 import { whereLine } from '../tickets/TicketSourceCard.tsx';
 import { ticketKeys, ticketsApi } from '../tickets/tickets-api.ts';
 import { gitLabel, gitStatusQuery } from './git-status.ts';
@@ -30,7 +31,7 @@ const NO_TOOLS: SummaryItem = {
   key: 'tools',
   icon: <span className="tools-dot" aria-hidden="true" />,
   title: <b>Connect tools anytime in Settings</b>,
-  detail: 'GitHub, Atlassian, and Linear',
+  detail: 'GitHub, Atlassian, Linear and ServiceNow',
 };
 
 export function useToolItems(): SummaryItem[] {
@@ -43,6 +44,10 @@ export function useToolItems(): SummaryItem[] {
     if (!connection.keySaved) continue;
     if (connection.source === 'jira') {
       items.push(toolItem('atlassian', ATLASSIAN_NAME, atlassianLine(connection)));
+      continue;
+    }
+    if (connection.source === 'servicenow') {
+      items.push(toolItem('servicenow', SERVICENOW_NAME, serviceNowLine(connection)));
       continue;
     }
     const name = ticketSourceNames[connection.source];

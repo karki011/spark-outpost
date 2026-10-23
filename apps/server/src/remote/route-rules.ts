@@ -363,6 +363,10 @@ export const AGENT_MODE_FIELDS: Record<string, readonly string[]> = {
   'PATCH /api/providers/:provider/defaults': ['agentMode', 'permission', 'level'],
 };
 
+export const HIGH_RISK_FIELDS: Record<string, readonly string[]> = {
+  'POST /api/tickets/:source/:key/comments': ['visibility'],
+};
+
 export const CARD_ROUTE = 'POST /api/approvals/:id/decision';
 
 function routesOf(block: string): string[] {

@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { ticketKeySchema, ticketSourceIdSchema, ticketStatusSchema } from './tickets.ts';
+import { isTicketKey, ticketKeyHint, ticketKeySchema } from './ticket-keys.ts';
+import { ticketSourceIdSchema, ticketStatusSchema } from './tickets.ts';
 
 export const chatTicketSchema = z.object({
   source: ticketSourceIdSchema,
@@ -18,8 +19,13 @@ export const chatTicketsSchema = z.object({
 });
 export type ChatTickets = z.infer<typeof chatTicketsSchema>;
 
-export const linkChatTicketRequestSchema = z.object({
-  source: ticketSourceIdSchema,
-  key: ticketKeySchema,
-});
+export const linkChatTicketRequestSchema = z
+  .object({
+    source: ticketSourceIdSchema,
+    key: ticketKeySchema,
+  })
+  .superRefine((request, context) => {
+    if (isTicketKey(request.key, request.source)) return;
+    context.addIssue({ code: 'custom', path: ['key'], message: ticketKeyHint(request.source) });
+  });
 export type LinkChatTicketRequest = z.infer<typeof linkChatTicketRequestSchema>;

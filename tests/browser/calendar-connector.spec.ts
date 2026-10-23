@@ -1,8 +1,7 @@
 import { rmSync, writeFileSync } from 'node:fs';
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { GOOGLE_TESTING_LINE, calendarStatusSchema } from '../../packages/contracts/src/index.ts';
-import { THEMES } from '../../scripts/contrast/theme.ts';
+import { axeInEveryTheme } from './connector-cards.ts';
 import { resetTestDatabase } from './database.ts';
 import { readCalendarClock } from './fake-calendar-clock.ts';
 import { calendarCard, chooseCalendars, sourceMenu } from './calendar-card.ts';
@@ -36,23 +35,6 @@ async function openCard(page: Page) {
 async function connect(page: Page) {
   const connected = await page.request.post('/api/calendar/connect', { data: {} });
   expect(connected.ok()).toBe(true);
-}
-
-async function axeInEveryTheme(page: Page, include: string) {
-  for (const theme of THEMES) {
-    const scheme = theme === 'system-dark' ? 'dark' : 'light';
-    await page.emulateMedia({ colorScheme: scheme });
-    await page.evaluate((skin) => {
-      if (skin.startsWith('system')) delete document.documentElement.dataset.skin;
-      else document.documentElement.dataset.skin = skin;
-    }, theme);
-    await animationsSettled(page);
-    const scan = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
-      .include(include)
-      .analyze();
-    expect(scan.violations, theme).toEqual([]);
-  }
 }
 
 async function shoot(page: Page, name: string, target = card(page)) {

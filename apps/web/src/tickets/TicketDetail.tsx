@@ -1,6 +1,13 @@
 import type { CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ticketSourceNames, type InboxTicket, type TicketSummary } from '@spark-outpost/contracts';
+import {
+  serviceNowTableNames,
+  serviceNowTableSchema,
+  ticketSourceNames,
+  type InboxTicket,
+  type TicketSourceId,
+  type TicketSummary,
+} from '@spark-outpost/contracts';
 import { UserBlob } from '../brand/UserBlob.tsx';
 import type { ToastSpec } from '../conversations/use-toast.ts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
@@ -42,6 +49,24 @@ interface TicketDetailProps {
 }
 
 const PRIORITY_NAMES = ['No priority', 'Urgent', 'High', 'Medium', 'Low'];
+
+const PLACE_LABELS: Record<TicketSourceId, string> = {
+  linear: 'Team',
+  jira: 'Project',
+  servicenow: 'Type',
+};
+
+const GROUP_LABELS: Record<TicketSourceId, string> = {
+  linear: 'Cycle',
+  jira: 'Sprint',
+  servicenow: 'Assignment group',
+};
+
+function placeOf(ticket: TicketSummary): string {
+  if (ticket.source !== 'servicenow') return ticket.project ?? 'None';
+  const table = serviceNowTableSchema.safeParse(ticket.project);
+  return table.success ? serviceNowTableNames[table.data] : (ticket.project ?? 'None');
+}
 
 function WhyBox({ ticket }: { ticket: InboxTicket }) {
   if (ticket.flags.length === 0) return null;
@@ -226,10 +251,10 @@ export function TicketDetail({
           </dd>
           <dt>Due</dt>
           <dd>{ticket.dueDate ?? 'No due date'}</dd>
-          <dt>{ticket.source === 'linear' ? 'Team' : 'Project'}</dt>
-          <dd>{ticket.project ?? 'None'}</dd>
-          <dt>{ticket.source === 'linear' ? 'Cycle' : 'Sprint'}</dt>
-          <dd>{ticket.sprint ?? 'None'}</dd>
+          <dt>{PLACE_LABELS[ticket.source]}</dt>
+          <dd>{placeOf(ticket)}</dd>
+          <dt>{GROUP_LABELS[ticket.source]}</dt>
+          <dd>{(ticket.source === 'servicenow' ? ticket.group : ticket.sprint) ?? 'None'}</dd>
           <dt>Assignee</dt>
           <dd>
             {ticket.assignedTo ? (
@@ -241,7 +266,7 @@ export function TicketDetail({
               </>
             )}
           </dd>
-          <dt>Reporter</dt>
+          <dt>{ticket.source === 'servicenow' ? 'Caller' : 'Reporter'}</dt>
           <dd>
             {ticket.reporter ? (
               <Person name={ticket.reporter.name} />

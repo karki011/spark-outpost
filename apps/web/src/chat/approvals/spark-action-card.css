@@ -109,3 +109,12 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+.sac-caller {
+  box-shadow: inset 0 0 0 1.5px var(--warn);
+}
+.sac-caller .sn-vis {
+  margin-bottom: 4px;
+}
+.sac-caller .appr-h .ic {
+  color: var(--warn);
+}

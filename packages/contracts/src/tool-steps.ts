@@ -63,6 +63,8 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_jira_edit: 'Changing Jira',
   spark_confluence: 'Reading Confluence',
   spark_confluence_edit: 'Changing Confluence',
+  spark_servicenow: 'Reading ServiceNow',
+  spark_servicenow_edit: 'Changing ServiceNow',
   spark_browser_tabs: 'Looking at browser tabs',
   spark_browser_read: 'Reading a page',
   spark_browser_screenshot: 'Taking a screenshot of a page',
