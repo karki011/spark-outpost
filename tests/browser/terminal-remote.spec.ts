@@ -4,6 +4,7 @@ import type { RemoteSession, RemoteSwitches } from '../../packages/contracts/src
 import type { TerminalRemoteView } from '../../packages/contracts/src/native-terminal-remote.ts';
 import { resetTestDatabase } from './database.ts';
 import { startFixtureTerminal } from './native-terminal-fixture.ts';
+import { animationsSettled } from './settle.ts';
 
 const PHONE = { width: 390, height: 844 };
 
@@ -113,6 +114,7 @@ test('an approval shows the request, takes an optional reason with a denial and 
   await expect(reason).toBeFocused();
   for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme });
+    await animationsSettled(page);
     const results = await new AxeBuilder({ page })
       .include('.native-workspace.rt')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
