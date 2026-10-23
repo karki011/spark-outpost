@@ -150,6 +150,6 @@ The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every en
 - **Theme switch:** the circular reveal (650ms, `theme/reveal.ts`) runs longer than 250ms and doesn't use ease-out. It is skipped under reduced motion.
 - **Spinners:** they keep rotating under reduced motion because they show progress.
 - **Sidebar:** the collapse and expand animation and the resize handle are being reworked to the motion rules separately.
-- **Error dot:** the sidebar's error dot draws its `!` glyph at 10px inside a 14px circle. The glyph gives it a shape cue, and the status element has an accessible label.
+- **Font floor:** `pnpm check:source` fails on a `font-size` or `font` size below 12px (px or rem) in `apps/web` stylesheets. Sizes in `em`, `var()` or `max()` and sizes set from script aren't checked. The only exceptions are the decorative glyphs listed with their reason in `scripts/font-floor.ts`, matched by file and selector: the sleeping Zs, the panic `!` and the sleeping-blob `z`, the `!` inside the 13px error dot, and the count dots drawn on Scout and on chat blobs, which are hidden from assistive technology and repeated in text.
 - **Agent TV:** labels are sized in `em` relative to the stage scale, and the smallest reaches about 11px at the default scale.
 

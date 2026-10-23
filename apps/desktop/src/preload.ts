@@ -161,6 +161,18 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
       return listen(IPC.helpOpen, take);
     },
   },
+  menu: {
+    onOpenSettings: (callback: () => void) => {
+      const take = () =>
+        void ipcRenderer.invoke(IPC.menuSettingsPending).then((pending: unknown) => {
+          if (pending === true) callback();
+        });
+      take();
+      return listen(IPC.menuOpenSettings, take);
+    },
+    onCommand: (callback: (command: unknown) => void) => listen(IPC.menuCommand, callback),
+    reportSidebar: (shown: boolean) => ipcRenderer.send(IPC.menuSidebarShown, shown),
+  },
   onOpenSettings: (callback: (target: string) => void) => {
     const take = () =>
       void ipcRenderer.invoke(IPC.pendingSettings).then((target: unknown) => {
