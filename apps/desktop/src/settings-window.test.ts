@@ -57,6 +57,7 @@ vi.mock('./context-menu.ts', () => ({ attachContextMenu: vi.fn() }));
 vi.mock('./hour-cycle.ts', () => ({ systemHourCycle: () => null }));
 
 const ORIGIN = 'http://127.0.0.1:4000';
+const MAIN_ID = 7;
 const CHAT = '0f8e2a4c-1b3d-4e5f-8a9b-0c1d2e3f4a5b';
 
 function start(change: { trusted?: boolean } = {}) {
@@ -67,7 +68,8 @@ function start(change: { trusted?: boolean } = {}) {
     preload: '/preload.cjs',
     theme: () => 'graphite',
     trusted: () => change.trusted ?? true,
-    mainWindow: () => ({ isDestroyed: () => false, webContents: { send: mainSend } }) as never,
+    mainWindow: () =>
+      ({ isDestroyed: () => false, webContents: { id: MAIN_ID, send: mainSend } }) as never,
     showSpark: () => did.push('show spark'),
     openChat: (id) => did.push(`open chat ${id}`),
   });
@@ -200,7 +202,11 @@ describe('the Settings window', () => {
     openChat(fromWindow(), CHAT);
     openDoc(fromWindow(), '#/docs/settings');
     expect(did).toEqual([`open chat ${CHAT}`, 'show spark']);
-    expect(mainSend).toHaveBeenCalledWith(IPC.settingsWindowDoc, '#/docs/settings');
+    expect(mainSend).toHaveBeenCalledWith(IPC.settingsWindowDoc);
+    const takeDoc = native.handlers.get(IPC.settingsWindowTakeDoc)!;
+    expect(takeDoc(fromWindow())).toBeNull();
+    expect(takeDoc({ sender: { id: MAIN_ID } })).toBe('#/docs/settings');
+    expect(takeDoc({ sender: { id: MAIN_ID } })).toBeNull();
   });
 
   it('closes the window and stops listening on dispose', () => {

@@ -71,6 +71,7 @@ export const IPC = {
   settingsWindowOpenChat: 'settings-window:open-chat',
   settingsWindowOpenDoc: 'settings-window:open-doc',
   settingsWindowDoc: 'settings-window:doc',
+  settingsWindowTakeDoc: 'settings-window:take-doc',
   menuSidebarShown: 'menu:sidebar-shown',
   privacyOpenFullDiskAccess: 'privacy:open-full-disk-access',
   browserState: 'browser:state',

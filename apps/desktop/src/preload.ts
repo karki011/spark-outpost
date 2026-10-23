@@ -163,7 +163,14 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     onChange: (callback: () => void) => listen(IPC.settingsWindowChanged, callback),
     openChat: (id: string) => ipcRenderer.send(IPC.settingsWindowOpenChat, id),
     openDoc: (link: string) => ipcRenderer.send(IPC.settingsWindowOpenDoc, link),
-    onDoc: (callback: (link: string) => void) => listen(IPC.settingsWindowDoc, callback),
+    onDoc: (callback: (link: string) => void) => {
+      const take = () =>
+        void ipcRenderer.invoke(IPC.settingsWindowTakeDoc).then((link: unknown) => {
+          if (typeof link === 'string') callback(link);
+        });
+      take();
+      return listen(IPC.settingsWindowDoc, take);
+    },
   },
   onOpenSettings: (callback: (target: string) => void) => {
     const take = () =>

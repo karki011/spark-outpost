@@ -81,6 +81,7 @@ export function startSettingsWindow(options: SettingsWindowOptions): SettingsWin
   let window: BrowserWindow | null = null;
   let pending: SettingsTarget | null = null;
   let lastRoute = DEFAULT_SETTINGS_ROUTE;
+  let pendingDoc: string | null = null;
 
   const focusOpen = (): boolean => {
     if (!window || window.isDestroyed()) return false;
@@ -126,11 +127,21 @@ export function startSettingsWindow(options: SettingsWindowOptions): SettingsWin
       options.openChat(id);
     }
   };
+  const fromMainWindow = (event: IpcMainInvokeEvent) => {
+    const main = options.mainWindow();
+    return (
+      options.trusted(event) &&
+      main !== null &&
+      !main.isDestroyed() &&
+      event.sender.id === main.webContents.id
+    );
+  };
   const onOpenDoc = (event: IpcMainEvent, link: unknown) => {
     if (!fromSettingsWindow(event) || !isDocLink(link)) return;
+    pendingDoc = link;
     options.showSpark();
     const main = options.mainWindow();
-    if (main && !main.isDestroyed()) main.webContents.send(IPC.settingsWindowDoc, link);
+    if (main && !main.isDestroyed()) main.webContents.send(IPC.settingsWindowDoc);
   };
 
   ipcMain.on(IPC.settingsWindowOpen, onOpen);
@@ -142,6 +153,12 @@ export function startSettingsWindow(options: SettingsWindowOptions): SettingsWin
     pending = null;
     return taken;
   });
+  ipcMain.handle(IPC.settingsWindowTakeDoc, (event) => {
+    if (!fromMainWindow(event)) return null;
+    const taken = pendingDoc;
+    pendingDoc = null;
+    return taken;
+  });
 
   return {
     open,
@@ -151,6 +168,7 @@ export function startSettingsWindow(options: SettingsWindowOptions): SettingsWin
       ipcMain.off(IPC.settingsWindowOpenChat, onOpenChat);
       ipcMain.off(IPC.settingsWindowOpenDoc, onOpenDoc);
       ipcMain.removeHandler(IPC.settingsWindowTake);
+      ipcMain.removeHandler(IPC.settingsWindowTakeDoc);
       if (window && !window.isDestroyed()) window.destroy();
       window = null;
     },
