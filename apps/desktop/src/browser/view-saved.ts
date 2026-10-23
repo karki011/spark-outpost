@@ -5,10 +5,13 @@ import {
   BROWSER_FAVORITES_MAX,
   BROWSER_URL_MAX,
   BROWSER_VIEW_TABS_MAX,
+  DEFAULT_SEARCH_ENGINE,
   browserFavoriteSchema,
+  browserSearchEngineSchema,
   classifyBrowserUrl,
   type BrowserFavorite,
   type BrowserProfile,
+  type BrowserSearchEngine,
 } from '@spark-outpost/contracts';
 
 const FILE_NAME = 'browser-view.json';
@@ -30,13 +33,20 @@ export type SavedProfile = z.infer<typeof savedProfileSchema>;
 const savedViewSchema = z.object({
   version: z.literal(1),
   profiles: z.object({ personal: savedProfileSchema, work: savedProfileSchema }),
+  searchEngine: browserSearchEngineSchema
+    .catch(DEFAULT_SEARCH_ENGINE)
+    .default(DEFAULT_SEARCH_ENGINE),
 });
 export type SavedView = z.infer<typeof savedViewSchema>;
 
 const EMPTY_PROFILE: SavedProfile = { tabs: [], favorites: [] };
 
 export function emptySavedView(): SavedView {
-  return { version: 1, profiles: { personal: EMPTY_PROFILE, work: EMPTY_PROFILE } };
+  return {
+    version: 1,
+    profiles: { personal: EMPTY_PROFILE, work: EMPTY_PROFILE },
+    searchEngine: DEFAULT_SEARCH_ENGINE,
+  };
 }
 
 function webAddress(url: string): boolean {
@@ -58,6 +68,7 @@ export function parseSavedView(text: string): SavedView {
         personal: clean(parsed.data.profiles.personal),
         work: clean(parsed.data.profiles.work),
       },
+      searchEngine: parsed.data.searchEngine,
     };
   } catch {
     return emptySavedView();
@@ -72,6 +83,8 @@ export interface SavedViewStore {
   get(profile: BrowserProfile): SavedProfile;
   setTabs(profile: BrowserProfile, tabs: readonly SavedTab[]): void;
   setFavorites(profile: BrowserProfile, favorites: readonly BrowserFavorite[]): void;
+  searchEngine(): BrowserSearchEngine;
+  setSearchEngine(engine: BrowserSearchEngine): void;
 }
 
 export async function loadSavedView(
@@ -102,5 +115,10 @@ export async function loadSavedView(
     setTabs: (profile, tabs) => change(profile, { tabs: keptTabs(tabs) }),
     setFavorites: (profile, favorites) =>
       change(profile, { favorites: favorites.slice(0, BROWSER_FAVORITES_MAX) }),
+    searchEngine: () => saved.searchEngine,
+    setSearchEngine: (engine) => {
+      saved = { ...saved, searchEngine: engine };
+      save();
+    },
   };
 }

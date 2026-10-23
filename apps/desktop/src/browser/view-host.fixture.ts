@@ -1,4 +1,9 @@
-import type { BrowserFavorite, BrowserProfile } from '@spark-outpost/contracts';
+import {
+  DEFAULT_SEARCH_ENGINE,
+  type BrowserFavorite,
+  type BrowserProfile,
+  type BrowserSearchEngine,
+} from '@spark-outpost/contracts';
 import { ipc } from './electron-ipc.fixture.ts';
 import { BrowserPanes } from './panes.ts';
 import { BROWSER_PARTITION } from './request-guard.ts';
@@ -26,6 +31,7 @@ export function memorySaved(start: Partial<Record<BrowserProfile, SavedProfile>>
     personal: start.personal ?? { tabs: [], favorites: [] },
     work: start.work ?? { tabs: [], favorites: [] },
   };
+  let engine: BrowserSearchEngine = DEFAULT_SEARCH_ENGINE;
   const store: SavedViewStore = {
     get: (profile) => profiles[profile],
     setTabs: (profile, tabs: readonly SavedTab[]) => {
@@ -33,6 +39,10 @@ export function memorySaved(start: Partial<Record<BrowserProfile, SavedProfile>>
     },
     setFavorites: (profile, favorites: readonly BrowserFavorite[]) => {
       profiles[profile] = { ...profiles[profile], favorites: [...favorites] };
+    },
+    searchEngine: () => engine,
+    setSearchEngine: (next) => {
+      engine = next;
     },
   };
   return { store, profiles };

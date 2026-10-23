@@ -26,6 +26,8 @@ import {
   SIGN_OUT_ALL_LABEL,
   browserSettingsAvailable,
 } from './BrowserSection.tsx';
+import { CLEAR_HISTORY_LABEL } from './BrowserHistorySetting.tsx';
+import { SEARCH_ENGINE_LABEL } from './BrowserSearchSetting.tsx';
 import { ChatsSection } from './ChatsSection.tsx';
 import { COMPANION_LABEL } from './CompanionSetting.tsx';
 import { islandRows } from './DesktopCompanionSetting.tsx';
@@ -249,7 +251,12 @@ export const SETTINGS_SECTIONS = [
     label: 'Browser pane',
     icon: icons.BROWSER_ICON,
     available: browserSettingsAvailable,
-    rows: () => [SIGNED_IN_SITES_LABEL, SIGN_OUT_ALL_LABEL],
+    rows: () => [
+      SIGNED_IN_SITES_LABEL,
+      SIGN_OUT_ALL_LABEL,
+      SEARCH_ENGINE_LABEL,
+      CLEAR_HISTORY_LABEL,
+    ],
     render: () => <BrowserSection />,
   },
   {

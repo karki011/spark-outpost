@@ -34,6 +34,8 @@ import { useNativePlacement, type PlaceView } from '../browser/use-view-placemen
 import { ProfileBadge, ProfileSwitch, profileNote } from './ProfileSwitch.tsx';
 import { setBrowserPaneOpen } from '../browser/pane-open.ts';
 import { AskTabsDock } from './AskTabsDock.tsx';
+import { CommandBar } from './CommandBar.tsx';
+import type { BarAction, BarMode } from './command-bar-model.ts';
 import { HandToChat } from './HandToChat.tsx';
 import { PageChatDock, type DockRequest } from './PageChatDock.tsx';
 import type { PageRef } from './page-chat.ts';
@@ -150,7 +152,12 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
   usePageIntents(profile, tabs, (page, intent) =>
     openDock({ page, selection: intent.selection, link: intent.link }),
   );
-  const runShortcut = (shortcut: BrowserShortcut) =>
+  const [bar, setBar] = useState<BarMode | null>(null);
+  const runShortcut = (shortcut: BrowserShortcut) => {
+    if (shortcut === 'new_tab' || shortcut === 'focus_address') {
+      setBar(shortcut === 'new_tab' ? 'new' : 'here');
+      return;
+    }
     runPaneShortcut(commands, tabs, shortcut, {
       focusAddress,
       openFind: () => undefined,
@@ -158,6 +165,7 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
       newChat: () => openDock(),
       askSpark: openAsk,
     });
+  };
   useViewShortcuts(profile, runShortcut);
 
   const act = (command: 'back' | 'forward' | 'reload' | 'stop') => {
@@ -165,6 +173,13 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
   };
   const blank = !tab || tab.url === '' || tab.error !== null;
   const outside = defaultBrowserUrl(tab?.url ?? null, window.location.origin);
+  const barAction = (action: BarAction) => {
+    if (action === 'ask_spark') openAsk();
+    else if (action === 'new_chat') openDock();
+    else if (action === 'copy_link' && tab)
+      sendViewCommand(profile, { command: 'copy_url', tabId: tab.id });
+    else if (action === 'default_browser' && outside) openInDefaultBrowser(outside);
+  };
   const tabKey = `${profile}:${tab?.id ?? ''}:${tab?.url ?? ''}`;
 
   return (
@@ -216,7 +231,7 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
         <p className="bv-note">{profileNote(profile)}</p>
         <AddressBar key={tabKey} commands={commands} tab={tab} placeholder="Type a web address" />
         <ViewFavorites profile={profile} favorites={favorites} tab={tab} />
-        <ViewTabs profile={profile} tabs={tabs} />
+        <ViewTabs profile={profile} tabs={tabs} onNewTab={() => setBar('new')} />
       </nav>
       <main className="page bv-page" id="bv-page" aria-label={tab ? tabLabel(tab) : 'Browser'}>
         <div className="bv-bar">
@@ -291,6 +306,27 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
             onOpenChat(chatId);
           }}
           onClose={() => setDock(null)}
+        />
+      )}
+      {bar && (
+        <CommandBar
+          key={bar}
+          profile={profile}
+          mode={bar}
+          tab={tab}
+          tabs={tabs}
+          favorites={favorites}
+          onSelectTab={(tabId) => sendViewCommand(profile, { command: 'select', tabId })}
+          onOpen={(url, newTab) =>
+            sendViewCommand(
+              profile,
+              newTab || !tab
+                ? { command: 'new_tab', url }
+                : { command: 'navigate', tabId: tab.id, url },
+            )
+          }
+          onAction={barAction}
+          onClose={() => setBar(null)}
         />
       )}
       {asking && (

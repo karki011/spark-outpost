@@ -285,3 +285,23 @@
   font-size: 13px;
   color: var(--text);
 }
+
+.bv-cmd-note {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.bv-bar-cmd .sp-row {
+  grid-template-columns: 16px minmax(0, 1fr) minmax(0, auto);
+  min-height: 40px;
+}
+
+.bv-cmd-icon {
+  display: inline-flex;
+  color: var(--muted);
+}
+
+.bv-cmd-icon svg {
+  width: 16px;
+  height: 16px;
+}

@@ -100,6 +100,8 @@ export const IPC = {
   browserViewHand: 'browser-view:hand',
   browserViewIntent: 'browser-view:intent',
   browserViewPageText: 'browser-view:page-text',
+  browserViewSearchEngine: 'browser-view:search-engine',
+  browserViewSetSearchEngine: 'browser-view:set-search-engine',
   browserToView: 'browser:to-view',
   macControlStatus: 'mac-control:status',
   macControlPrompt: 'mac-control:prompt',

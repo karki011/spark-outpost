@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { DocLink } from '../ui/DocLink.tsx';
+import { BrowserHistorySetting } from './BrowserHistorySetting.tsx';
+import { BrowserSearchSetting } from './BrowserSearchSetting.tsx';
 
 export const SIGNED_IN_SITES_LABEL = 'Signed-in sites';
 export const SIGN_OUT_ALL_LABEL = 'Sign out of everything';
@@ -71,6 +73,8 @@ export function BrowserSection() {
         <DocLink topic="Browser pane" doc={{ page: 'use-the-browser' }} />
       </p>
       <SignedInSites />
+      <BrowserSearchSetting />
+      <BrowserHistorySetting />
     </>
   );
 }
