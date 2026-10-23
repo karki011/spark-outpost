@@ -190,6 +190,12 @@ describe('requestFor', () => {
     );
   });
 
+  it('leaves out the word that joins one part to the next', () => {
+    const text = 'Before Friday: @api list the order fields and @web name the page.';
+    expect(requestFor(text, 'api', asked)).toBe('list the order fields');
+    expect(requestFor(text, 'web', asked)).toBe('name the page.');
+  });
+
   it('shares the text after handles that are typed together', () => {
     expect(requestFor('@api @web review the README', 'api', asked)).toBe('review the README');
     expect(requestFor('@api and @web: review the README', 'web', asked)).toBe('review the README');

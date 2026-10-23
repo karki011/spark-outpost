@@ -51,6 +51,9 @@ export function userAddress(
 
 const JOINER = /^[\s.,:;!?()[\]{}"'&]*(?:(?:and|or)[\s.,:;!?()[\]{}"']*)?$/i;
 
+const LEADING_JOIN = /^[\s,:;]+/;
+const TRAILING_JOIN = /(?:[\s,;]+(?:and|or)\b)?[\s,;]*$/i;
+
 interface Mention {
   handle: string;
   start: number;
@@ -88,7 +91,8 @@ export function requestFor(text: string, handle: string, asked: readonly string[
   const at = mentions.findIndex((mention) => mention.handle === own);
   if (at === -1) return text;
   const part = partOf(text, mentions, at)
-    .replace(/^[\s,:;]+/, '')
+    .replace(LEADING_JOIN, '')
+    .replace(TRAILING_JOIN, '')
     .trim();
   return saysSomething(part) ? part : text;
 }
