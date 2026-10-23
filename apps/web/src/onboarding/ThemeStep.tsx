@@ -1,13 +1,14 @@
-import { ThemeCards } from '../theme/ThemeCards.tsx';
+import { AppearanceSettings } from '../theme/AppearanceSettings.tsx';
 
 export function ThemeStep() {
   return (
     <>
-      <h2 id="onbTitle">Pick a theme</h2>
+      <h2 id="onbTitle">Pick a look</h2>
       <p className="lede">
-        Choose how Spark Outpost looks. You can change it anytime from the chat header.
+        Spark Outpost follows your system&apos;s light and dark setting. Pick a tint, or change it
+        anytime from the chat header.
       </p>
-      <ThemeCards />
+      <AppearanceSettings />
     </>
   );
 }

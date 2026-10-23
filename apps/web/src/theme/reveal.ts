@@ -1,12 +1,13 @@
 import { flushSync } from 'react-dom';
-import { applyTheme, type ThemeId } from './theme.ts';
+import { saveAppearance } from './appearance.ts';
+import type { Appearance } from './theme.ts';
 
 const REVEAL_MS = 650;
 
-export function revealTheme(id: ThemeId, updateView: () => void = () => undefined): void {
+export function revealAppearance(next: Appearance, updateView: () => void = () => undefined): void {
   const commit = () => {
     flushSync(updateView);
-    applyTheme(id);
+    saveAppearance(next);
   };
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!document.startViewTransition || reduced) {

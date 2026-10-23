@@ -1,6 +1,6 @@
 # Accessibility rules
 
-Spark Outpost targets **WCAG 2.2 AA** in every theme (Light, Graphite, Apricot, Void, Fjord, Moss, Lagoon, Plum, Sage, Aurora, Iris, High contrast, and the system light and dark pair). This page lists the rules we enforce, where each one comes from, and how it is checked.
+Spark Outpost targets **WCAG 2.2 AA** in every colour set (Light, Graphite, Apricot, Plum, Lagoon, Moss, Iris, Aurora, Fjord, Void, Sage, Loam, High contrast, High contrast dark, and the system light and dark pair). This page lists the rules we enforce, where each one comes from, and how it is checked.
 
 The per-theme before and after numbers are in [`accessibility-report.html`](accessibility-report.html).
 
@@ -47,6 +47,32 @@ Keep feature CSS on these tokens and never hard-code palette values (see `AGENTS
 
 Use `color: var(--accent-text)`, not `var(--accent)`, whenever accent colour is used for text or `currentColor` icons.
 
+### Modes, tints and Increase contrast
+
+Spark follows Apple's guidance to follow the system appearance rather than offer an app-only one. Settings → Appearance has three choices:
+
+- **Appearance:** **Automatic** (the default, follows `prefers-color-scheme`), **Light** or **Dark**.
+- **Tint:** six pairs, each with a light and a dark colour set, so a tint looks right in both modes.
+- **Increase contrast:** **Follow system** (the default) uses the high-contrast set while `prefers-contrast: more` matches, which macOS sets from Accessibility → Display → Increase contrast. **Always** keeps it on. The light side uses High contrast and the dark side High contrast dark.
+
+| Tint          | Light side | Dark side |
+| ------------- | ---------- | --------- |
+| Graphite      | Light      | Graphite  |
+| Apricot · Plum | Apricot   | Plum      |
+| Lagoon · Moss | Lagoon     | Moss      |
+| Iris · Aurora | Iris       | Aurora    |
+| Fjord · Void  | Fjord      | Void      |
+| Sage · Loam   | Sage       | Loam      |
+
+The choice is stored as `mode.tint.contrast` (for example `auto.graphite.system`) under `spark-outpost.theme`. `public/appearance.js` resolves it to a `data-skin` before React mounts, in `app-boot.js`, the desktop boot page and the pairing page; `theme/theme.ts` holds the same rules for the app, and a unit test keeps the two in step. A stored theme name from before tints keeps its look: a light theme becomes its tint plus **Light**, a dark one its tint plus **Dark**, **Match system** becomes **Automatic**, and High contrast becomes **Light** with contrast **Always**. Spark Island and the meeting card always use the tint's dark side, or High contrast dark.
+
+Loam is Sage's new dark partner: a dark earth canvas with a lighter clay accent.
+
+| Theme              | Mood                     | Canvas / rail / panel             | Accent (fill / text)  | Success / danger, hue gap |
+| ------------------ | ------------------------ | --------------------------------- | --------------------- | ------------------------- |
+| Loam               | Dark earth, clay         | `#13120d` / `#0d0c08` / `#1a1913` | `#e39a6b` / `#eba57a` | `#9fd38a` / `#f47c78`, 114° |
+| High contrast dark | Black, white lines, blue | `#000` / `#0d0d0d` / `#000`       | `#7cc4ff` / `#8fd0ff` | `#6ff09a` / `#ff8f8f`, 132° |
+
 ### Lagoon, Plum and Sage
 
 These three themes follow Apricot's recipe: tinted surfaces instead of neutral grey, one confident accent, a rail that sits one step deeper than the canvas, and a raised tone between canvas and panel. Each block in `theme.css` defines every token itself, including `--scout-eye`, the scrollbar thumbs, `--r` and `--r-sm`, so nothing falls back to another theme's colours. The diff, Shiki code-token and terminal colours derive from these tokens.
@@ -77,7 +103,7 @@ Both pass every pair in `pnpm a11y:contrast` with only the standard allowlist ex
 
 The provider colours fill the cost bar and its legend swatches in the work panel, and they draw the active wires and packets in Agent TV. They are never used as text. The audit checks each one as non-text UI at 3:1 against canvas, rail, panel and raise.
 
-Each provider keeps one OKLCH hue in every theme: Claude 40°, Codex 225°, Z.ai 115° and Jev 330°. Only the lightness and chroma change. `:root` holds a darker light set that serves every light theme. The system dark block and one grouped block for Graphite, Void, Moss, Plum and Aurora keep the original set.
+Each provider keeps one OKLCH hue in every theme: Claude 40°, Codex 225°, Z.ai 115° and Jev 330°. Only the lightness and chroma change. `:root` holds a darker light set that serves every light theme. The system dark block and one grouped block for Graphite, Void, Moss, Plum, Aurora and Loam keep the original set; High contrast dark sets a lighter one of its own.
 
 | Set   | Claude                 | Codex                    | Z.ai                   | Jev                    | Lowest ratio          |
 | ----- | ---------------------- | ------------------------ | ---------------------- | ---------------------- | --------------------- |
@@ -90,7 +116,7 @@ Two uses are decorative and are not held to 3:1. The lighter shades that mark ch
 
 ### Automated check
 
-`pnpm a11y:contrast` (part of `pnpm check`) resolves the tokens for every theme from `apps/web/public/theme.css` and `chat/markdown/code-tokens.css`. It composites the translucent layers (`color-mix`, `rgba`), then checks 300 text and UI pairings plus one hue check per theme. The diff tints (`--diff-add`, `--diff-remove` and their `-word` and `-edge` steps) live in `theme.css`; every syntax colour is checked on the line tint, and its `--code-word-*` ink on the word highlight. It prints a table per theme and exits non-zero on any failure. The pairings are listed in `scripts/contrast/*-pairs.ts`. When a feature puts text on a new surface, add a pair for it.
+`pnpm a11y:contrast` (part of `pnpm check`) resolves the tokens for every theme from `apps/web/public/theme-base.css`, `theme.css` and `chat/markdown/code-tokens.css`. It composites the translucent layers (`color-mix`, `rgba`), then checks 300 text and UI pairings plus one hue check per theme. The diff tints (`--diff-add`, `--diff-remove` and their `-word` and `-edge` steps) live in `theme.css`; every syntax colour is checked on the line tint, and its `--code-word-*` ink on the word highlight. It prints a table per theme and exits non-zero on any failure. The pairings are listed in `scripts/contrast/*-pairs.ts`. When a feature puts text on a new surface, add a pair for it.
 
 The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every entry gives its reason:
 
@@ -98,7 +124,7 @@ The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every en
 - `offline.zz`: the decorative, `aria-hidden` "z" glyphs on the offline mascot.
 - `provider.cost-tier-shade`: the lighter tier shades in the cost bar, which repeat what the legend text says.
 
-`tests/browser/accessibility.spec.ts` runs axe-core on the main screens (chat with work panel, Settings, Home and Tickets) in all twelve themes. It fails on any serious or critical `color-contrast` or `aria-*` violation.
+`tests/browser/accessibility.spec.ts` runs axe-core on the main screens (chat with work panel, Settings, Home and Tickets) in all fourteen colour sets. It fails on any serious or critical `color-contrast` or `aria-*` violation.
 
 ## Typography
 

@@ -1,8 +1,11 @@
 (function () {
   var root = document.documentElement;
-  var theme = new URLSearchParams(location.search).get('theme') || 'graphite';
-  if (!/^[a-z]{1,24}$/.test(theme)) theme = 'graphite';
-  if (theme !== 'system') root.dataset.skin = theme;
+  var theme = new URLSearchParams(location.search).get('theme');
+  try {
+    root.dataset.skin = window.sparkAppearance.skin(theme, false);
+  } catch {
+    root.dataset.skin = 'graphite';
+  }
 
   function showStatus(line, text) {
     if (line.dataset.text === text) return;

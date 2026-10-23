@@ -9,7 +9,6 @@ import type {
 } from '@spark-outpost/contracts';
 import { BlobScout } from '../../brand/BlobScout.tsx';
 import { sparkDesktop } from '../../desktop/desktop-bridge.ts';
-import { useThemeSync } from '../../island/use-theme-sync.ts';
 import { useReducedMotion } from '../../ui/motion.ts';
 import { joinLabel } from '../meeting-card.ts';
 import { openJoin } from '../today-model.ts';
@@ -111,7 +110,6 @@ function Countdown({ payload, at, act }: { payload: MeetingAlertPayload; at: num
 }
 
 export function MeetingAlertApp() {
-  useThemeSync();
   const reduced = useReducedMotion();
   const bridge = sparkDesktop()?.meetingAlert;
   const { payload, place, leaving, receivedAt, clear } = useAlertFeed();
