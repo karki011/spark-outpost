@@ -78,7 +78,7 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 
 **Mac control** (Mac app): **Let agents control other Mac apps** and the Accessibility permission. See [Let agents use Mac apps](mac-control.md).
 
-**Browser pane** (Mac app): signed-in sites and **Sign out of everything**.
+**Browser pane** (Mac app): signed-in sites, **Sign out of everything**, **Clear browser history**.
 
 **Notifications**:
 

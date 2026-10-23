@@ -285,3 +285,8 @@
   font-size: 13px;
   color: var(--text);
 }
+
+.bv-cmd-note {
+  margin-left: auto;
+  color: var(--muted);
+}

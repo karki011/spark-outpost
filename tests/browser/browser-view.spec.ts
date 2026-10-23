@@ -85,9 +85,9 @@ test('the address bar and tab list drive the chosen profile’s tabs', async ({ 
     .toEqual({ profile: 'personal', command: { command: 'close', tabId: 'v2' } });
 
   await side.getByRole('button', { name: /New tab/ }).click();
-  await expect
-    .poll(async () => (await viewCommands(page)).at(-1))
-    .toEqual({ profile: 'personal', command: { command: 'new_tab', url: null } });
+  await expect(page.getByRole('dialog', { name: 'Open a new tab' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
 test('page keys reach the profile that owns the focused page', async ({ page }) => {
@@ -95,12 +95,12 @@ test('page keys reach the profile that owns the focused page', async ({ page }) 
   await page.evaluate(() => {
     const push = (window as unknown as { browserViewShortcut: (event: unknown) => void })
       .browserViewShortcut;
-    push({ profile: 'work', shortcut: 'new_tab' });
-    push({ profile: 'personal', shortcut: 'new_tab' });
+    push({ profile: 'work', shortcut: 'reopen_tab' });
+    push({ profile: 'personal', shortcut: 'reopen_tab' });
   });
   await expect
     .poll(() => viewCommands(page))
-    .toEqual([{ profile: 'personal', command: { command: 'new_tab', url: null } }]);
+    .toEqual([{ profile: 'personal', command: { command: 'reopen' } }]);
 });
 
 test('the Browser view passes an accessibility check', async ({ page }) => {

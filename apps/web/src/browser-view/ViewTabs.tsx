@@ -10,6 +10,7 @@ import { sendViewCommand } from './view-store.ts';
 interface ViewTabsProps {
   profile: BrowserProfile;
   tabs: readonly BrowserPaneTab[];
+  onNewTab(): void;
 }
 
 const tabElementId = (tab: BrowserPaneTab) => `bv-tab-${tab.id}`;
@@ -26,7 +27,7 @@ function nextIndex(key: string, current: number, count: number): number | null {
   return null;
 }
 
-function TabList({ profile, tabs, label }: ViewTabsProps & { label: string }) {
+function TabList({ profile, tabs, label }: Omit<ViewTabsProps, 'onNewTab'> & { label: string }) {
   const focusableId = tabs.find((tab) => tab.active)?.id ?? tabs[0]?.id ?? null;
   const select = (tab: BrowserPaneTab) =>
     sendViewCommand(profile, { command: 'select', tabId: tab.id });
@@ -90,7 +91,7 @@ function TabList({ profile, tabs, label }: ViewTabsProps & { label: string }) {
   );
 }
 
-export function ViewTabs({ profile, tabs }: ViewTabsProps) {
+export function ViewTabs({ profile, tabs, onNewTab }: ViewTabsProps) {
   const pinned = tabs.filter((tab) => tab.pinned);
   const today = tabs.filter((tab) => !tab.pinned);
   return (
@@ -111,7 +112,7 @@ export function ViewTabs({ profile, tabs }: ViewTabsProps) {
           type="button"
           className="bv-row bv-new"
           aria-keyshortcuts={PANE_KEYS.newTab.aria}
-          onClick={() => sendViewCommand(profile, { command: 'new_tab', url: null })}
+          onClick={onNewTab}
         >
           <PlusIcon />
           <span>New tab</span>

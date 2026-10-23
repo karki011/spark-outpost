@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BROWSER_URL_MAX } from './browser.ts';
+import { BROWSER_URL_MAX, parseBrowserUrl } from './browser.ts';
 import { redactQuery } from './browser-network.ts';
 import { browserProfileSchema } from './browser-view.ts';
 
@@ -8,8 +8,8 @@ export const BROWSER_HISTORY_QUERY_MAX = 200;
 export const BROWSER_HISTORY_LIMIT_MAX = 50;
 
 export function historyUrl(url: string): string | null {
-  if (url.length > BROWSER_URL_MAX || !URL.canParse(url)) return null;
-  const parsed = new URL(url);
+  const parsed = parseBrowserUrl(url);
+  if (!parsed) return null;
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
   if (parsed.username || parsed.password) return null;
   return redactQuery(parsed.href);
