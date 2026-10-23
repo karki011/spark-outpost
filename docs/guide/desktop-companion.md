@@ -14,7 +14,7 @@ You'll answer agents from Spark Island. About 2 minutes.
 2. Switch **Show Spark Island** on or off.
 3. Pick a **Spark Island size**.
 4. **Island chimes** sound for new requests.
-5. **Hide in screen sharing** keeps it out of shares; some apps may still show it.
+5. **Hide in screen sharing** keeps it out of most shares.
 
 ![The Spark Island settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 
@@ -28,7 +28,7 @@ Resting, Scout sits at the notch, with an amber count when something needs you. 
 
 Home shows one big card: a request, a question's choices or a starting meeting. **‹ ›** moves between requests. **Home**, **Ask Spark** and **+** sit on top; **⌘O** opens Spark, **Esc** closes.
 
-Spark Island and Spark share one inbox: opening a request or its chat anywhere marks it read everywhere; it stays **Seen** until answered. Finished chats and flags stay in Spark.
+Spark Island and Spark share one inbox: opening a request or its chat marks it read everywhere; it stays **Seen** until answered. Finished chats and flags stay in Spark.
 
 ## Answer a card
 
