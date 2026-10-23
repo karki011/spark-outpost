@@ -25,7 +25,12 @@ export const planEntrySchema = z.object({
 });
 export type PlanEntry = z.infer<typeof planEntrySchema>;
 
-export const planBodySchema = z.object({ entries: z.array(planEntrySchema).max(200) });
+export const todoListSchema = z.array(planEntrySchema).max(200);
+
+export const planBodySchema = z.object({ entries: todoListSchema });
+
+export const TODO_ACTIVITY = 'todo';
+export const todoActivitySchema = z.object({ entries: todoListSchema });
 export type PlanBody = z.infer<typeof planBodySchema>;
 
 export const planVersionSchema = z.object({

@@ -27,7 +27,7 @@ import { primaryPull } from '../pull-request/pull-request-model.ts';
 import { RailCrew } from './RailCrew.tsx';
 import { RailToggleIcon } from './RailIcons.tsx';
 import { RailSummary } from './RailSummary.tsx';
-import { RailTasks } from './RailTasks.tsx';
+import { RailTodo } from './RailTodo.tsx';
 import { RailTv } from './RailTv.tsx';
 import { railCrew, railRows, type RailAction } from './rail-model.ts';
 import { useRoomInThread } from './use-rail-layout.ts';
@@ -123,7 +123,7 @@ function OpenRail({
     hasTask: taskId !== null,
     hasStoredCrew: storedCrew(detail) !== null,
   });
-  const openTasks = useCallback(() => onTab('tasks'), [onTab]);
+  const openTodo = useCallback(() => onTab('todo'), [onTab]);
   const crew = railCrew(detail, running);
 
   const act = (action: RailAction) => {
@@ -140,7 +140,7 @@ function OpenRail({
         <RailToggle open onToggle={() => onCollapse(true)} />
       </div>
       <RailSummary rows={rows} provider={provider} onAction={act} />
-      {task && <RailTasks task={task} onOpen={openTasks} />}
+      {task && <RailTodo task={task} onOpen={openTodo} />}
       <AnimatePresence>
         {crew.stage.length > 0 && (
           <RailTv key="tv" conversationId={conversationId} agents={crew.stage} />

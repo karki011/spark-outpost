@@ -53,8 +53,8 @@ import { ChatTicketChips } from './tickets/ChatTicketChips.tsx';
 import { useChatTickets } from './tickets/use-chat-tickets.ts';
 import { useChatWorkspace } from './project/use-chat-workspace.ts';
 import { ChatRail } from './rail/ChatRail.tsx';
-import { showsTaskCard } from '../tasks/task-card-shown.ts';
-import { RailContext, RailTaskContext } from './rail/rail-context.ts';
+import { hasTodo } from '../todo/task-todo.ts';
+import { RailContext } from './rail/rail-context.ts';
 import { useRailCollapsed, useRoomy } from './rail/use-rail-layout.ts';
 import { panelOpensByDefault, railState } from './rail/wide-layout.ts';
 import { createFollowRequests, FollowContext } from './follow-requests.ts';
@@ -172,13 +172,12 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     turns: detail.data?.runs.length ?? 0,
   });
   const crew = conversationCrew(detail.data);
-  const openTask = useStableCallback(panel.openTask);
   const openChat = useStableCallback(onOpenChat);
   const task = panel.task;
   const crewRun = storedCrew(detail.data);
   const taskCrew = task && crewRun && belongsTo(task, crewRun) ? crewRun : null;
   const [auditOpen, setAuditOpen] = useState(false);
-  const [panelTab, setPanelTab] = useState<WorkTab>('tasks');
+  const [panelTab, setPanelTab] = useState<WorkTab>('todo');
   const [autonomyRequest, setAutonomyRequest] = useState(0);
   const openAutonomy = () => {
     panel.setView('work');
@@ -187,7 +186,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const diff = useDiffDrawer();
   const openDiff = diff.open;
   const taskId = task?.id ?? null;
-  const railTask = task && showsTaskCard(task) ? task : null;
+  const railTask = task && hasTodo(task) ? task : null;
   const viewChanges = useMemo(
     () =>
       taskId ? (target?: string, file?: ChangeEntry) => openDiff(target ?? taskId, file) : null,
@@ -355,19 +354,16 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   )
                 }
               >
-                <RailTaskContext value={rail === 'open' ? (railTask?.id ?? null) : null}>
-                  <FollowContext value={followRequests}>
-                    <Thread
-                      detail={detail.data}
-                      repos={repos}
-                      sends={sends}
-                      taskId={taskId}
-                      onOpenTask={openTask}
-                      onOpenChat={openChat}
-                      quotes={quotes}
-                    />
-                  </FollowContext>
-                </RailTaskContext>
+                <FollowContext value={followRequests}>
+                  <Thread
+                    detail={detail.data}
+                    repos={repos}
+                    sends={sends}
+                    taskId={taskId}
+                    onOpenChat={openChat}
+                    quotes={quotes}
+                  />
+                </FollowContext>
               </RailContext>
             </PanelOpenContext>
           ) : (

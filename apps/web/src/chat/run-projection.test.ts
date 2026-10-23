@@ -232,6 +232,34 @@ describe('a model switch during a run', () => {
   });
 });
 
+describe("the agent's to-do during a run", () => {
+  const todo = (entries: unknown[]): RunEvent => ({
+    type: EventType.ACTIVITY_SNAPSHOT,
+    messageId: 'todo',
+    activityType: 'todo',
+    content: { entries },
+    replace: true,
+  });
+  const entry = (content: string, status: string) => ({ content, priority: 'medium', status });
+
+  it('starts empty and keeps the latest list as items tick', () => {
+    expect(initialRunProjection.todo).toBeNull();
+    const state = replay([
+      [1, todo([entry('Read', 'in_progress'), entry('Fix', 'pending')])],
+      [2, todo([entry('Read', 'completed'), entry('Fix', 'in_progress')])],
+    ]);
+    expect(state.todo?.map((item) => item.status)).toEqual(['completed', 'in_progress']);
+  });
+
+  it('ignores a malformed list and keeps the last good one', () => {
+    const state = replay([
+      [1, todo([entry('Read', 'completed')])],
+      [2, todo([{ content: 'Read', status: 'nonsense' }])],
+    ]);
+    expect(state.todo).toEqual([entry('Read', 'completed')]);
+  });
+});
+
 describe('viewSteps', () => {
   it('folds a failure note into the step it names and keeps open steps open', () => {
     expect(

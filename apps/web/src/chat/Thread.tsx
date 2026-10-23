@@ -39,7 +39,6 @@ interface ThreadProps {
   repos: Project[];
   sends: ChatSends;
   taskId: string | null;
-  onOpenTask?: (taskId: string) => void;
   onOpenChat: (conversationId: string) => void;
   quotes: QuotesState;
 }
@@ -49,7 +48,6 @@ export const Thread = memo(function Thread({
   repos,
   sends,
   taskId,
-  onOpenTask,
   onOpenChat,
   quotes,
 }: ThreadProps) {
@@ -65,13 +63,6 @@ export const Thread = memo(function Thread({
       runId: run.id,
       at: userMessage?.createdAt ?? run.createdAt,
     })),
-  );
-  const parentOf = new Map(detail.runs.map((run) => [run.id, run.parentRunId ?? run.id]));
-  const taskAfterRun = new Map(
-    detail.tasks.map((task) => {
-      const last = task.runIds.at(-1);
-      return [last ? (parentOf.get(last) ?? last) : undefined, task];
-    }),
   );
 
   usePendingArrival(follow);
@@ -138,8 +129,6 @@ export const Thread = memo(function Thread({
                   laterMessages={laterMessages}
                   detail={detail}
                   repo={repos[0] ?? null}
-                  task={taskAfterRun.get(run.id) ?? null}
-                  onOpenTask={onOpenTask}
                   onOpenChat={onOpenChat}
                 />
               </Fragment>

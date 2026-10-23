@@ -106,7 +106,7 @@ interface CostPaneProps {
 
 export function CostPane({ task, runs = [], agents = [], onAudit, conversationId }: CostPaneProps) {
   const modelName = useModelNamer(task.runs.map((run) => run.provider));
-  const identities = runIdentities(task, runs, agents);
+  const identities = runIdentities(runs, agents);
   const dispatcher = agents.find((agent) => agent.role === 'jev') ?? null;
   const summary = costSummary({ task, runs, identities, modelName, dispatcher });
   const estimated = summary.rows.some(

@@ -100,18 +100,12 @@ function roleName(role: string | null | undefined): string | null {
 }
 
 export function runIdentities(
-  task: TaskDetail,
   runs: readonly Run[],
   agents: readonly { id: string; name: string; role: string }[],
 ): Map<string, AgentIdentity> {
   const identities = new Map<string, AgentIdentity>();
   for (const run of runs) {
     if (run.agentLabel) identities.set(run.id, { name: run.agentLabel, role: roleName(run.role) });
-  }
-  for (const item of task.items) {
-    if (item.runId && item.name) {
-      identities.set(item.runId, { name: item.name, role: roleName(item.role) });
-    }
   }
   for (const agent of agents) {
     identities.set(agent.id, { name: agent.name, role: roleName(agent.role) });

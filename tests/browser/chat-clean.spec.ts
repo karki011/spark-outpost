@@ -136,7 +136,7 @@ test('a finished answer keeps one quiet meta row and no plan or Jev lines', asyn
   await expect(head(page).getByRole('button', { name: 'worked for 19s' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save as agreed plan' })).toHaveCount(0);
   await expect(page.getByText(/^Jev:/)).toHaveCount(0);
-  await expect(page.locator('.taskc')).toHaveCount(0);
+  await expect(page.locator('.todo-card, .todo-line')).toHaveCount(0);
   await expect(page.locator('.turn-foot .run-usage')).toContainText('61');
   await expect(page.locator('.ctx-unlinked')).toHaveText('Pick a project to work in your code.');
 

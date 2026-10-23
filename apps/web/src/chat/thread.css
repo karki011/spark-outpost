@@ -159,16 +159,6 @@
   flex-shrink: 0;
   white-space: nowrap;
 }
-.ai-task {
-  flex-shrink: 0;
-  color: var(--faint);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.ai-task:hover {
-  color: var(--text);
-}
 .ai-following {
   min-width: 0;
   margin-left: auto;

@@ -1,30 +1,14 @@
 import './task-list.css';
 import { memo, useDeferredValue, useId, useState } from 'react';
-import {
-  providerLabel,
-  waitingApprovalId,
-  type TaskItemState,
-  type TaskListItem,
-} from '@spark-outpost/contracts';
+import { waitingApprovalId, type TaskListItem } from '@spark-outpost/contracts';
 import { commandApproval } from '../chat/status/pending-summary.ts';
 import { commandFull, commandSummary } from '../chat/status/status-text.ts';
 import { SummaryText } from '../chat/status/SummaryText.tsx';
 import { approvalAnchor } from '../crew/conversation-crew.ts';
-import { CrewBlob } from '../crew/CrewBlob.tsx';
-import type { CrewState } from '../crew/crew-model.ts';
 import { scrollToAnchor } from '../crew/scroll-to-anchor.ts';
 import { ChevronIcon } from '../ui/icons.tsx';
-import { usageLine } from '../usage/format.ts';
 import { shortenPaths } from './short-paths.ts';
-import { TaskStateIcon, WhoIcon } from './TaskIcons.tsx';
-
-const CREW_STATES: Record<TaskItemState, CrewState> = {
-  done: 'done',
-  active: 'working',
-  waiting: 'waiting',
-  pending: 'queued',
-  failed: 'failed',
-};
+import { HarnessIcon, TaskStateIcon } from './TaskIcons.tsx';
 
 const SHOW_DONE_KEY = 'spark-outpost.tasks.show-done';
 const FIRST_ROWS = 30;
@@ -43,12 +27,6 @@ function saveShowDone(show: boolean): void {
   } catch {
     return;
   }
-}
-
-function agentLine(item: TaskListItem): string {
-  if (!item.agent) return 'Spark';
-  const { provider, model, effort } = item.agent;
-  return [providerLabel(provider), model, effort].filter(Boolean).join(' · ');
 }
 
 interface DecisionTag {
@@ -97,7 +75,6 @@ function waitingSubject(item: TaskListItem): string {
 function TaskRow({ item, roots }: { item: TaskListItem; roots: readonly string[] }) {
   const [open, setOpen] = useState(false);
   const moreId = useId();
-  const numbers = usageLine(item.tokens ?? null, item.costUsd ?? null, item.costSource);
   const label = rowLabel(item, roots);
   const tag = decisionTag(item);
   const showFull = item.command || label !== item.label;
@@ -115,32 +92,15 @@ function TaskRow({ item, roots }: { item: TaskListItem; roots: readonly string[]
           {label}
         </span>
         {tag && <span className={`ti-tag ${tag.tone}`}>{tag.text}</span>}
-        {item.role && item.agent && (
-          <span className="ti-tag crew" title="A crew member Spark started for this task">
-            Crew
-          </span>
-        )}
-        <span className="ti-av" title={agentLine(item)}>
-          {item.role && item.agent ? (
-            <span className="mb" aria-hidden="true">
-              <CrewBlob
-                name={item.name ?? item.role}
-                provider={item.agent.provider}
-                state={CREW_STATES[item.state]}
-                size={16}
-              />
-            </span>
-          ) : (
-            <WhoIcon provider={item.agent?.provider} />
-          )}
+        <span className="ti-av" title="Spark">
+          <HarnessIcon />
         </span>
       </button>
       {open && (
         <div className="ti-more" id={moreId}>
           {showFull && <code className="ti-full">{fullLabel(item)}</code>}
-          {agentLine(item)}
+          Spark
           {item.detail ? ` · ${item.detail}` : ''}
-          {numbers ? ` · ${numbers}` : ''}
           {item.url && (
             <>
               {' · '}
@@ -185,7 +145,7 @@ export function TaskList({ items, roots }: TaskListProps) {
   const shownDone = useDeferredValue(done, done.slice(0, FIRST_ROWS));
   const rest = items.filter((item) => item.state !== 'done' && item.state !== 'waiting');
   return (
-    <div className="wsec">
+    <>
       {done.length > 0 && (
         <>
           <button
@@ -210,16 +170,14 @@ export function TaskList({ items, roots }: TaskListProps) {
           )}
         </>
       )}
-      {rest.length > 0 ? (
-        <ul className="tlist" aria-label="Remaining">
+      {rest.length > 0 && (
+        <ul className="tlist" aria-label="Not done">
           {rest.map((item) => (
             <ListRow key={item.id} item={item} roots={roots} />
           ))}
         </ul>
-      ) : (
-        <p className="wnote">All done.</p>
       )}
-    </div>
+    </>
   );
 }
 

@@ -126,7 +126,7 @@ test('every screen opens and stays smooth with heavy data', async ({ page }) => 
   );
   const show = page.getByRole('button', { name: 'Show work panel' });
   if (await show.isVisible()) await show.click();
-  for (const tab of ['Plan', 'Crew', 'Cost', 'Tasks']) {
+  for (const tab of ['Plan', 'Crew', 'Cost', 'To-do']) {
     const target = work.getByRole('tab', { name: tab });
     if ((await target.count()) === 0) continue;
     steps[`work ${tab}`] = await measure(page, target, target, async () => undefined);

@@ -139,7 +139,7 @@ export const SPEC_GROUPS = {
     'sidebar-sections',
     'sidebar-seen-blobs',
   ],
-  tasks: ['tasks'],
+  tasks: ['todo'],
   tickets: [
     'atlassian-connector',
     'connectors',
@@ -336,6 +336,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/web/src/slack/', groups: ['slack'] },
   { prefix: 'apps/web/src/spark/', groups: ['sparks'] },
   { prefix: 'apps/web/src/tasks/', groups: ['tasks'] },
+  { prefix: 'apps/web/src/todo/', groups: ['tasks', 'chat'] },
   { prefix: 'apps/web/src/teammates/', groups: ['sparks', 'settings-providers'] },
   { prefix: 'apps/web/src/terminal/', groups: ['terminal-preview-browser'] },
   { prefix: 'apps/web/src/tickets/', groups: ['tickets'] },

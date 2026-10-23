@@ -63,14 +63,12 @@ describe('task API', () => {
     expect(task.links.map((link) => link.url)).toEqual([FAKE_PR_URL]);
     expect(task.runs).toHaveLength(1);
     expect(task.runs[0]).not.toHaveProperty('request');
-    expect(task.items.map((item) => item.label)).toEqual([
-      'Understood the request',
-      'Made a plan',
+    expect(task.todo.map((item) => item.label)).toEqual([
       'Read the request',
       'Look through the code',
       'Write the answer',
-      'Worked on the request',
     ]);
+    expect(task.recorded).toEqual([]);
   });
 
   it('adds a link, classifies pull requests and ignores duplicates', async () => {

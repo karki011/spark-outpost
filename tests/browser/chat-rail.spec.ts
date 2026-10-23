@@ -298,31 +298,30 @@ test.describe('working chats', () => {
     await expect(members).toHaveCount(1);
   });
 
-  test('tasks read as a plain list: one row per step with its state, the current one marked, no filled rows', async ({
+  test("the agent's to-do reads as a plain list: one row per item with its state, the current one marked, no filled rows", async ({
     page,
   }) => {
     test.setTimeout(120_000);
-    await resetWithAgents();
+    await resetTestDatabase({ onboarded: true, catalog: true });
     await useSystemTheme(page);
     await page.emulateMedia({ colorScheme: 'light' });
-    repo = chatRepo();
     await page.setViewportSize({ width: 1440, height: 900 });
-    await projectChat(page, repo, 'Ask before edits');
-    await send(page, 'Fix the divider #build');
-    await expect(page.getByRole('group', { name: /Change a file\?/ })).toBeVisible({
-      timeout: 30_000,
-    });
+    await openChats(page);
+    await page.getByRole('button', { name: 'New chat' }).first().click();
+    await send(page, 'Fix the divider #plan #slow');
 
-    const tasks = rail(page).getByRole('region', { name: 'Tasks' });
-    await expect(tasks.getByRole('button', { name: /^1 of 3 tasks done/ })).toHaveText('1 of 3');
-    const steps = tasks.getByRole('list', { name: 'Task steps' });
+    const todo = rail(page).getByRole('region', { name: 'To-do' });
+    await expect(todo.getByRole('button', { name: /^1 of 3 to-do items done/ })).toHaveText(
+      '1 of 3',
+      { timeout: 30_000 },
+    );
+    const steps = todo.getByRole('list', { name: 'To-do items' });
     const rows = steps.getByRole('listitem');
     await expect(rows).toHaveCount(3);
     await expect(rows.first()).toHaveText(/^Done: /);
     await expect(rows.first()).not.toHaveAttribute('aria-current');
     const current = steps.locator('li[aria-current="step"]');
-    await expect(current.first()).toHaveText(/^(Waiting for you|In progress): /);
-    await expect(steps.locator('li[data-state="waiting"]')).toContainText('Waiting for you');
+    await expect(current).toHaveText('In progress: Look through the code');
 
     const layout = await steps.evaluate((list) =>
       [...list.querySelectorAll('li')].map((row) => {
@@ -354,8 +353,8 @@ test.describe('working chats', () => {
       const detail = (await response.json()) as ConversationDetail;
       const tasks = detail.tasks.map((task) => ({
         ...task,
-        items: Array.from({ length: 12 }, (_, index) => ({
-          ...task.items[index % task.items.length]!,
+        todo: Array.from({ length: 12 }, (_, index) => ({
+          ...task.todo[index % task.todo.length]!,
           id: `long-${index}`,
           label: LONG_TASKS[index % LONG_TASKS.length]!,
         })),

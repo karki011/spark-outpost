@@ -222,11 +222,6 @@
 }
 
 .ti-tag.ok,
-.ti-tag.crew {
-  color: var(--muted);
-  background: var(--raise);
-}
-
 .ti-tag.bad {
   color: var(--danger);
   background: var(--danger-soft);
