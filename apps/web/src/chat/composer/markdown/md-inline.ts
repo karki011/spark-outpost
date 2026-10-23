@@ -93,6 +93,7 @@ class Scanner {
   constructor(
     private readonly text: string,
     private readonly marks: readonly Mark[],
+    private readonly mentionable: readonly string[] | undefined,
   ) {}
 
   spans(): Span[] {
@@ -163,7 +164,7 @@ class Scanner {
     return {
       spans: [
         this.marker('['),
-        ...new Scanner(label, this.with('link')).spans(),
+        ...new Scanner(label, this.with('link'), this.mentionable).spans(),
         this.marker(']('),
         { text: url, marks: this.with('marker', 'url') },
         this.marker(')'),
@@ -177,7 +178,14 @@ class Scanner {
     MENTION.lastIndex = at;
     const match = MENTION.exec(this.text);
     if (!match) return null;
-    return { spans: [{ text: match[0], marks: this.with('mention') }], end: at + match[0].length };
+    const mention = this.mentionable === undefined ? match[0] : this.known(match[0]);
+    if (mention === null) return null;
+    return { spans: [{ text: mention, marks: this.with('mention') }], end: at + mention.length };
+  }
+
+  private known(typed: string): string | null {
+    const handle = typed.replace(/[.-]+$/, '');
+    return this.mentionable?.includes(handle.slice(1).toLowerCase()) ? handle : null;
   }
 
   private emphasis(at: number): Token | null {
@@ -194,7 +202,7 @@ class Scanner {
       return {
         spans: [
           this.marker(marker),
-          ...new Scanner(inner, this.with(delimiter.mark)).spans(),
+          ...new Scanner(inner, this.with(delimiter.mark), this.mentionable).spans(),
           this.marker(marker),
         ],
         end: close + marker.length,
@@ -206,6 +214,10 @@ class Scanner {
   }
 }
 
-export function inlineSpans(text: string, marks: readonly Mark[] = []): Span[] {
-  return new Scanner(text, marks).spans();
+export function inlineSpans(
+  text: string,
+  marks: readonly Mark[] = [],
+  mentionable?: readonly string[],
+): Span[] {
+  return new Scanner(text, marks, mentionable).spans();
 }

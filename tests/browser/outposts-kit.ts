@@ -172,3 +172,22 @@ export async function inBothThemes(
     else html.dataset.skin = value;
   }, before);
 }
+
+export async function expectTopmost(menu: Locator): Promise<void> {
+  await expect(menu).toBeVisible();
+  const covered = await menu.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const inset = 10;
+    const corners = [
+      [box.left + inset, box.top + inset],
+      [box.right - inset, box.top + inset],
+      [box.left + inset, box.bottom - inset],
+      [box.right - inset, box.bottom - inset],
+    ];
+    const inWindow =
+      box.left >= 0 && box.top >= 0 && box.right <= innerWidth && box.bottom <= innerHeight;
+    const hidden = corners.filter(([x, y]) => !element.contains(document.elementFromPoint(x!, y!)));
+    return { inWindow, hidden: hidden.length };
+  });
+  expect(covered).toEqual({ inWindow: true, hidden: 0 });
+}

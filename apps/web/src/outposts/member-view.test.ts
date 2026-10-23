@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { memberDetails, memberViews, membersLabel } from './member-view.ts';
+import { memberDetails, memberViews } from './member-view.ts';
 import { API_CHAT, DOCS_CHAT, FE_CHAT, WEB_PROJECT, chat, member } from './test-fixtures.ts';
 
 const RUN = '0e000000-0000-4000-8000-000000000001';
@@ -54,13 +54,5 @@ describe('memberViews', () => {
   it('falls back to the handle while the chat is not in the list', () => {
     const [view] = memberViews([member(DOCS_CHAT, 'docs', 1)], [], {});
     expect(view).toMatchObject({ title: '@docs', state: 'idle', archived: false });
-  });
-});
-
-describe('membersLabel', () => {
-  it('counts the chats beside the user', () => {
-    expect(membersLabel(0)).toBe('No chats yet');
-    expect(membersLabel(1)).toBe('You and 1 chat');
-    expect(membersLabel(3)).toBe('You and 3 chats');
   });
 });

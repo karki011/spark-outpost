@@ -11,6 +11,7 @@ import {
 import type { Db, Queryable } from '../persistence/db.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { newId } from '../persistence/ids.ts';
+import { ownRequestText } from '../persistence/outpost-own-request.ts';
 import { stackParentOf, type StackParent } from '../outposts/stack-base.ts';
 import {
   addChatWorktree,
@@ -287,7 +288,10 @@ async function freshPlace(deps: ChatPlaceDeps, input: RunInput, target: Target) 
     const record = await inPlace(deps, target, decision.branch);
     return { input, repoRoot: target.root, note: placeNote(record, null) };
   }
-  const planned = await plannedSource(deps, target, input.userRequest, branches, decision);
+  const asked = input.outpostRequest
+    ? await ownRequestText(deps.db, input.outpostRequest.postId)
+    : null;
+  const planned = await plannedSource(deps, target, asked ?? input.userRequest, branches, decision);
   if (!planned) return { input, repoRoot: target.root, note: null };
   const { record, prep } = await createCopy(deps, target, planned);
   const extra = decision.kind === 'new' ? decision.note : null;

@@ -15,6 +15,7 @@ You'll answer agents from Spark Island. About 2 minutes.
 3. Pick a **Spark Island size**.
 4. **Island chimes** sound for new requests.
 5. **Hide in screen sharing** keeps it out of shares; some apps may still show it.
+6. **Show in menu bar** adds Spark's icon there; it's off at first. Without it, right-click the Dock icon to show or hide Spark Island.
 
 ![The Spark Island settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 

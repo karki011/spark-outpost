@@ -43,16 +43,16 @@ A row reading **Flagged by Spark**: an unreviewed action crossed a protected pat
 
 ## Outpost requests
 
-| Status                  | Means                                                                 |
-| ----------------------- | --------------------------------------------------------------------- |
-| **Queued**              | The chat is busy, failed, stopped or paused.                          |
-| **Working**             | Its turn runs.                                                        |
-| **Held**                | Shows **Waiting for @api** until it's answered.                       |
-| **Waiting on you**      | An approval card waits, or the reply ends **Needs you: …**.           |
-| **Failed**              | Turn failed, or **Not delivered: …**; listed with **Waiting on you**. |
-| **Ready for review**    | Answered, pull request open.                                          |
-| **Idle**                | Answered, no open pull request.                                       |
-| **Done**, **Cancelled** | Pull request merged or closed, or you cancelled.                      |
+| Status                  | Means                                                                   |
+| ----------------------- | ----------------------------------------------------------------------- |
+| **Queued**              | The chat is busy, failed, stopped or paused.                            |
+| **Working**             | Its turn runs.                                                          |
+| **Held**                | Shows **Waiting for @api** until it's answered.                         |
+| **Waiting on you**      | An approval or question card waits, or the reply ends **Needs you: …**. |
+| **Failed**              | Turn failed, or **Not delivered: …**; listed with **Waiting on you**.   |
+| **Ready for review**    | Answered, pull request open.                                            |
+| **Idle**                | Answered, no open pull request.                                         |
+| **Done**, **Cancelled** | Pull request merged or closed, or you cancelled.                        |
 
 ## Ticket groups
 
