@@ -23,6 +23,32 @@ describe('activityFromEvents', () => {
     });
   });
 
+  it('keeps where a step started in the reply and when it started and finished', () => {
+    const activity = activityFromEvents([
+      {
+        run_id: 'a',
+        type: 'STEP_STARTED',
+        name: 'Read `x.ts`',
+        mark: { toolCallId: 't1', textOffset: 12, textBefore: 'First I look', textHeld: 0 },
+        at: 1_000,
+      },
+      { run_id: 'a', type: 'STEP_FINISHED', name: 'Read `x.ts`', mark: null, at: '4000' },
+      { run_id: 'a', type: 'STEP_STARTED', name: 'Old step', mark: null, at: null },
+    ]);
+    expect(activity.a).toEqual([
+      {
+        name: 'Read `x.ts`',
+        done: true,
+        textOffset: 12,
+        textBefore: 'First I look',
+        textHeld: 0,
+        startedAt: 1_000,
+        finishedAt: 4_000,
+      },
+      { name: 'Old step', done: false },
+    ]);
+  });
+
   it('links the thinking text to the Thinking step it was stored under', () => {
     const activity = activityFromEvents([
       { run_id: 'a', type: 'STEP_STARTED', name: 'Thinking' },

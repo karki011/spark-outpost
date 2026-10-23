@@ -41,7 +41,7 @@ function radios() {
   return within(group).getAllByRole('radio');
 }
 
-const checked = () => radios().map((radio) => radio.getAttribute('aria-checked'));
+const checked = () => radios().map((radio) => String((radio as HTMLInputElement).checked));
 const tabStops = () => radios().map((radio) => radio.tabIndex);
 
 describe('a single-choice question', () => {
@@ -49,7 +49,7 @@ describe('a single-choice question', () => {
     render(<QuestionsBody approval={card([store])} decide={decide} />);
     expect(checked()).toEqual(['false', 'false', 'false']);
     expect(tabStops()).toEqual([0, -1, -1]);
-    expect(screen.queryAllByRole('button', { pressed: false })).toHaveLength(0);
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
 
     fireEvent.click(radios()[1]!);
     expect(checked()).toEqual(['false', 'true', 'false']);
@@ -99,27 +99,27 @@ describe('a single-choice question', () => {
 });
 
 describe('a choose-any question', () => {
-  it('keeps toggle buttons with a checkbox', () => {
+  it('uses checkboxes', () => {
     const checks = { ...store, pick: 'many' as const };
     render(<QuestionsBody approval={card([checks])} decide={decide} />);
     expect(screen.queryByRole('radiogroup')).toBeNull();
-    const postgres = screen.getByRole('button', { name: 'Postgres', pressed: false });
+    const postgres = screen.getByRole('checkbox', { name: /Postgres/ });
     fireEvent.click(postgres);
-    fireEvent.click(screen.getByRole('button', { name: 'Redis' }));
-    expect(screen.getAllByRole('button', { pressed: true })).toHaveLength(2);
+    fireEvent.click(screen.getByRole('checkbox', { name: /Redis/ }));
+    expect(screen.getAllByRole('checkbox', { checked: true })).toHaveLength(2);
     fireEvent.click(postgres);
-    expect(postgres.getAttribute('aria-pressed')).toBe('false');
+    expect((postgres as HTMLInputElement).checked).toBe(false);
   });
 
   it('moves with Up and Down only, without checking', () => {
     render(<QuestionsBody approval={card([{ ...store, pick: 'many' }])} decide={decide} />);
-    const postgres = screen.getByRole('button', { name: 'Postgres' });
-    const redis = screen.getByRole('button', { name: 'Redis' });
+    const postgres = screen.getByRole('checkbox', { name: /Postgres/ });
+    const redis = screen.getByRole('checkbox', { name: /Redis/ });
     postgres.focus();
     fireEvent.keyDown(postgres, { key: 'ArrowRight' });
     expect(document.activeElement).toBe(postgres);
     fireEvent.keyDown(postgres, { key: 'ArrowDown' });
     expect(document.activeElement).toBe(redis);
-    expect(screen.queryAllByRole('button', { pressed: true })).toHaveLength(0);
+    expect(screen.queryAllByRole('checkbox', { checked: true })).toHaveLength(0);
   });
 });

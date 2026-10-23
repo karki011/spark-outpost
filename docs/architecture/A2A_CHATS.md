@@ -766,7 +766,7 @@ A real dev-app run of section 18 with two Claude chats found these; the behaviou
 - **Card lines.** The meta line is now two: the summary, then a git line that starts with the branch (ellipsized, full name in its tooltip) and the facts, so it never starts with "· Committed".
 - **Title menu** uses the shared `MenuShell` (a portal on `document.body`, fixed, clamped to the window) anchored to the title's leading edge, so the sidebar no longer covers it. No other outpost menu sits inside a clipping pane: the handle picker opens above the composer inside the conversation, and the create sheet's field popovers already use a portal.
 - **Header.** "You and N chats" is gone; the avatar stack names the members.
-- **Thread pane.** Replies show the member chat's own face and handle (`TurnFaceContext`, provided only by the pane, so chats keep the agent's blob); **Jump to latest** sits at the trailing edge with room under the last turn. Esc also returns when focus fell to the page because the focused card was removed (answering a question did that).
+- **Thread pane.** The clean chat rows (#122) dropped the per-turn agent blob, so a reply in the pane no longer shows Claude's face beside the member chat's; **Jump to latest** sits at the trailing edge with room under the last turn. Esc also returns when focus fell to the page because the focused card was removed (answering a question did that).
 - **Overview stories.** Story rows use the same status words and pill as the threads (Idle, Ready for review, Done, Queued) instead of "Answered", and the block is full width without its old bar padding.
 - **Composer.** Only member handles and `@all` are highlighted as mentions (`mentionable` on `MarkdownInput`); the chat composer still highlights any `@word`.
 

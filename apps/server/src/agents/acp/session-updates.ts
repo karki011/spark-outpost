@@ -17,7 +17,13 @@ import { planOutputs, usageOutputs } from './plan-limits.ts';
 import { createFocusTracker } from './file-focus.ts';
 import { messagePhase } from './message-phase.ts';
 import { artifactLinks } from './artifact-links.ts';
-import { awaitsAddress, describeTool, opensPullRequest, toolTarget } from './tool-titles.ts';
+import {
+  awaitsAddress,
+  describeTool,
+  opensPullRequest,
+  toolPath,
+  toolTarget,
+} from './tool-titles.ts';
 
 export const THINKING_STEP = 'Thinking';
 export const FAILED_PREFIX = 'Failed: ';
@@ -99,6 +105,7 @@ interface OpenTool {
   name: string;
   kind: string | null;
   target: string | null;
+  path: string | null;
   opensPr: boolean;
   linked: boolean;
   shown: boolean;
@@ -111,6 +118,7 @@ function stepOf(kind: 'step_started' | 'step_finished', open: OpenTool): Provide
     tool: true,
     ...(open.kind ? { toolKind: open.kind } : {}),
     ...(open.target ? { target: open.target } : {}),
+    ...(open.path ? { path: open.path } : {}),
   };
 }
 
@@ -226,6 +234,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
     if (!open) return;
     open.opensPr ||= opensPullRequest(update.title, update.rawInput);
     const title = update.title ? describeTool(update.title, update.kind ?? open.kind) : null;
+    open.path = toolPath(update.locations, update.rawInput) ?? open.path;
     open.target =
       toolTarget(update.locations, update.rawInput) ??
       (title && title !== open.name ? title : open.target);
@@ -328,6 +337,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
             name,
             kind: update.kind ?? null,
             target: toolTarget(update.locations, update.rawInput),
+            path: toolPath(update.locations, update.rawInput),
             opensPr: opensPullRequest(update.title, update.rawInput),
             linked: false,
             shown: !awaitsAddress(update.title, update.kind),

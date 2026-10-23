@@ -48,7 +48,6 @@
   padding: 0;
 }
 
-.home-compose .ctxbar-wrap,
 .home-compose .composer,
 .home-compose .composer-error {
   max-width: none;
@@ -67,6 +66,11 @@
 
 .home-compose .mpop.open {
   transform: none;
+}
+
+.home-compose .ctx-more:not([hidden]) {
+  top: calc(100% + 8px);
+  bottom: auto;
 }
 
 .home-error {

@@ -316,25 +316,7 @@ export function Composer({
         />
       }
       above={above}
-      context={
-        <ContextBar
-          conversationId={conversationId}
-          repos={repos}
-          popover={repoPopover}
-          lead={contextLead}
-          suggestion={
-            <SparkSuggestion
-              conversationId={conversationId}
-              sparks={sparks}
-              draft={draft}
-              onApply={(text) => {
-                setDraft(text);
-                textareaRef.current?.focus();
-              }}
-            />
-          }
-        />
-      }
+      lead={contextLead}
       bar={
         <>
           <PlusMenu
@@ -345,6 +327,22 @@ export function Composer({
             onAddRepo={openRepoMenu}
             chatId={conversationId}
             onAddChat={attachments.addChat}
+          />
+          <ContextBar
+            conversationId={conversationId}
+            repos={repos}
+            popover={repoPopover}
+            suggestion={
+              <SparkSuggestion
+                conversationId={conversationId}
+                sparks={sparks}
+                draft={draft}
+                onApply={(text) => {
+                  setDraft(text);
+                  textareaRef.current?.focus();
+                }}
+              />
+            }
           />
           <FormatToggle open={formatting} onToggle={setFormatting} />
           <span className={attachments.items.length > 0 ? 'hint shown' : 'hint'} title={hint}>

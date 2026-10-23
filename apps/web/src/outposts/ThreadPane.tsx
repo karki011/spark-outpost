@@ -1,13 +1,11 @@
 import './outpost-thread-pane.css';
 import { useEffect, useMemo, useRef, type KeyboardEvent, type RefObject } from 'react';
-import type { ChatFaceState } from '../brand/chat-face.ts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
 import { requestMessageJump } from '../chat/message-jump.ts';
 import { useQuotes } from '../chat/quotes/use-quotes.ts';
 import { useChatSend } from '../chat/send/use-chat-send.ts';
 import { Thread } from '../chat/Thread.tsx';
-import { TurnFaceContext, type TurnFace, type TurnState } from '../chat/turn-face.ts';
 import { latestReplyId } from '../chat/turns.ts';
 import { BackIcon, ExternalLinkIcon } from '../ui/icons.tsx';
 import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
@@ -32,26 +30,6 @@ interface ThreadPaneProps {
 
 const NO_REPOS: never[] = [];
 const ASK_ROW = '[data-ask-row]';
-
-const FACE_STATES: Record<TurnState, ChatFaceState> = {
-  working: 'working',
-  waiting: 'needs_you',
-  done: 'done',
-  failed: 'failed',
-  stopped: 'idle',
-};
-
-function useMemberFace(chatId: string, name: string): TurnFace {
-  return useMemo(
-    () => ({
-      name,
-      face: (state: TurnState) => (
-        <MemberFace chatId={chatId} state={FACE_STATES[state]} size="strip" />
-      ),
-    }),
-    [chatId, name],
-  );
-}
 
 function focusQuestion(body: RefObject<HTMLDivElement | null>): boolean {
   const row = body.current?.querySelector<HTMLElement>(ASK_ROW);
@@ -140,7 +118,6 @@ export function ThreadPane({
   const to = receiverName(post);
   const backRef = useRef<HTMLButtonElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
-  const face = useMemberFace(chatId, to);
   useEscapeFromNowhere(onBack);
   const { detail, sends, quotes } = useMemberChat(outpostId, chatId);
   const chat = detail.data?.conversation;
@@ -202,16 +179,14 @@ export function ThreadPane({
       </div>
       <div ref={bodyRef} className="op-thread-body">
         {detail.data ? (
-          <TurnFaceContext value={face}>
-            <Thread
-              detail={detail.data}
-              repos={NO_REPOS}
-              sends={sends}
-              taskId={null}
-              onOpenChat={onOpenChat}
-              quotes={quotes}
-            />
-          </TurnFaceContext>
+          <Thread
+            detail={detail.data}
+            repos={NO_REPOS}
+            sends={sends}
+            taskId={null}
+            onOpenChat={onOpenChat}
+            quotes={quotes}
+          />
         ) : (
           <LoadingBlob size="lg" className="thread-loading" line="Opening the thread…" />
         )}

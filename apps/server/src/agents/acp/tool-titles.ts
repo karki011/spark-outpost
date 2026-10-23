@@ -67,3 +67,20 @@ export function toolTarget(
   const target = [paths.join(','), input].filter(Boolean).join(' ');
   return target ? target.slice(0, TARGET_CHARS) : null;
 }
+
+const PATH_KEYS = ['file_path', 'notebook_path', 'path'];
+
+export function toolPath(
+  locations: readonly { path: string }[] | null | undefined,
+  rawInput: unknown,
+): string | null {
+  const located = locations?.find((location) => location.path)?.path;
+  if (located) return located;
+  if (typeof rawInput !== 'object' || rawInput === null) return null;
+  const input = rawInput as Record<string, unknown>;
+  for (const key of PATH_KEYS) {
+    const value = input[key];
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return null;
+}

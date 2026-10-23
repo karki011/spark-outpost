@@ -93,7 +93,7 @@ test('the panel lists the live feed and jumps to the waiting card', async ({ pag
 
   await status.getByRole('button', { name: 'Answer: Deploy the site' }).click();
   await expect(page.locator('.chat-title')).toHaveText('Deploy the site');
-  const approval = page.getByRole('group', { name: /Run a command\?/ });
+  const approval = page.getByRole('group', { name: /^Run .+\?$/ });
   await expect(approval).toBeInViewport();
   await expect(companion(page)).toHaveCount(0);
 });

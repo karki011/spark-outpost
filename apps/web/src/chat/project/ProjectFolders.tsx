@@ -1,7 +1,7 @@
 import './context-bar.css';
-import { useEffect, useId, type ReactNode } from 'react';
+import { useEffect, useId, type KeyboardEvent, type ReactNode } from 'react';
 import type { Project } from '@spark-outpost/contracts';
-import { ChevronIcon, FolderIcon } from '../../ui/icons.tsx';
+import { FolderIcon } from '../../ui/icons.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
 import { useAddFolder } from '../../projects/use-add-folder.tsx';
 import type { usePopover } from '../../ui/use-popover.ts';
@@ -15,15 +15,14 @@ type RepoPopover = ReturnType<typeof usePopover<HTMLButtonElement, HTMLDivElemen
 interface ContextDetails {
   id: string;
   open: boolean;
-  folder: boolean;
   items: ReactNode;
+  onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
 }
 
 interface ProjectFoldersProps {
   conversationId: string;
   repos: Project[];
   popover: RepoPopover;
-  lead?: ReactNode;
   details?: ContextDetails | undefined;
   children?: ReactNode;
 }
@@ -34,7 +33,6 @@ export function ProjectFolders({
   conversationId,
   repos,
   popover,
-  lead = null,
   details,
   children,
 }: ProjectFoldersProps) {
@@ -91,38 +89,29 @@ export function ProjectFolders({
       >
         <FolderIcon />
         <span className="ctx-name">{primary ? repoSummary(names) : 'Choose project'}</span>
-        <ChevronIcon />
       </button>
       {projectTip.tooltip}
     </>
   );
-  const folderInDetails = details?.folder ?? false;
-
   return (
-    <div className="ctxbar-wrap">
-      {details ? (
-        <div className="ctxbar compact">
-          {lead}
-          <div className="ctx-row">
-            {!folderInDetails && folderChip}
-            {children}
-          </div>
-          <div
-            id={details.id}
-            className="ctx-more"
-            role="group"
-            aria-label="Chat details"
-            hidden={!details.open}
-          >
-            {folderInDetails && folderChip}
-            {details.items}
-          </div>
-        </div>
-      ) : (
-        <div className="ctxbar">
-          {lead}
+    <div
+      className={details ? 'ctxbar compact' : 'ctxbar'}
+      role="group"
+      aria-label="Project and branch"
+      onKeyDown={details?.onKeyDown}
+    >
+      {!details && folderChip}
+      {children}
+      {details && (
+        <div
+          id={details.id}
+          className="ctx-more"
+          role="group"
+          aria-label="Chat details"
+          hidden={!details.open}
+        >
           {folderChip}
-          {children}
+          {details.items}
         </div>
       )}
       <RepoMenu
