@@ -54,6 +54,7 @@ export const API_PORT = ports.api;
 export const WEB_PORT = ports.web;
 export const WEB_BUILD_ENV = { VITE_SPARK_FEEDBACK_EMAIL: 'beta-feedback@example.test' };
 export const PACKAGED = process.env.SPARK_PACKAGED === '1';
+export const PACKAGED_DATA_DIR = path.join(TEST_TMPDIR, 'data');
 export const APP_ORIGIN = `http://127.0.0.1:${PACKAGED ? API_PORT : WEB_PORT}`;
 export const REJECTED_KEY_MARKER = 'rejected';
 export const FAKE_CODEX_STATE = path.join(TEST_TMPDIR, 'fake-codex-logged-in');

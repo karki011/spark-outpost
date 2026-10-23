@@ -25,6 +25,7 @@ import {
   FAKE_TAILSCALE_STATE,
   MAP_ROOT_PREFIX,
   PACKAGED,
+  PACKAGED_DATA_DIR,
   SERVER_LOG_DIR,
   SIGN_IN_FIXTURE,
   slot,
@@ -44,7 +45,16 @@ const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
 process.env.SPARK_BROWSER_API_TOKEN ??= randomBytes(32).toString('base64url');
 const apiToken = process.env.SPARK_BROWSER_API_TOKEN;
 
+const builtTmux = path.resolve('.local/tmux', process.arch, 'bin/tmux');
+const packagedEnv = PACKAGED
+  ? {
+      SPARK_DATA_DIR: PACKAGED_DATA_DIR,
+      ...(existsSync(builtTmux) ? { SPARK_TMUX_BIN: builtTmux } : {}),
+    }
+  : {};
+
 const serverEnv = {
+  ...packagedEnv,
   PATH: `${path.resolve('tests/browser/bin')}:${FAKE_CLAUDE_BIN}:/usr/bin:/bin`,
   CLI_LOOKUP_LOGIN_SHELL: 'false',
   FAKE_CODEX_STATE,
