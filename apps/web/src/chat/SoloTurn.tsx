@@ -21,6 +21,8 @@ import { ChatFiles } from './files/ChatFiles.tsx';
 import { ArtifactCards } from './artifacts/ArtifactCards.tsx';
 import { CheckpointCard } from './checkpoints/CheckpointCard.tsx';
 import { turnAgentTerminals } from './commands/agent-terminal-model.ts';
+import { commandAnswers } from './commands/command-answers.ts';
+import { hourCycle } from '../desktop/hour-cycle.ts';
 import { AgentTerminalsRunning } from './commands/AgentTerminalRow.tsx';
 import { runCommands, shownCommands } from './commands/command-model.ts';
 import { useChatAgentTerminals } from './commands/use-agent-terminals.ts';
@@ -233,6 +235,7 @@ export function SoloTurn({
           waiting,
           changes,
           todo: <TurnTodo entries={todoEntries} live={working} />,
+          answers: commandAnswers(approvals, hourCycle()),
         }}
       >
         {(part, last) => (

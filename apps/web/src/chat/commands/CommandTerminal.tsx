@@ -44,16 +44,35 @@ function useTerminalUi(command: CommandView) {
   };
 }
 
+function CommandTitle({ command, full }: { command: CommandView; full: boolean }) {
+  if (command.description) {
+    return (
+      <span className="trow-text">
+        <b className="run-cmd-title">{command.description}</b>
+      </span>
+    );
+  }
+  return (
+    <span className="trow-text">
+      <b>{command.status === 'running' ? 'Running' : 'Ran'}</b>
+      <code className={full ? 'run-cmd-line full' : 'run-cmd-line'}>{command.command}</code>
+    </span>
+  );
+}
+
 interface CommandTerminalProps {
   command: CommandView;
   waiting?: boolean;
+  answer?: string | null;
 }
 
 function sameTerminal(before: CommandTerminalProps, after: CommandTerminalProps): boolean {
   const [was, now] = [before.command, after.command];
   return (
     before.waiting === after.waiting &&
+    before.answer === after.answer &&
     was.id === now.id &&
+    was.description === now.description &&
     was.runId === now.runId &&
     was.status === now.status &&
     was.output === now.output &&
@@ -68,6 +87,7 @@ function sameTerminal(before: CommandTerminalProps, after: CommandTerminalProps)
 export const CommandTerminal = memo(function CommandTerminal({
   command,
   waiting = false,
+  answer = null,
 }: CommandTerminalProps) {
   const bodyId = useId();
   const dockChatId = use(CommandDockContext);
@@ -112,12 +132,7 @@ export const CommandTerminal = memo(function CommandTerminal({
           }}
         >
           <RowIcon name="run" />
-          <span className="trow-text">
-            <b>{running ? 'Running' : 'Ran'}</b>
-            <code className={tall && open ? 'run-cmd-line full' : 'run-cmd-line'}>
-              {command.command}
-            </code>
-          </span>
+          <CommandTitle command={command} full={tall && open} />
           <span className="trow-end run-cmd-state">
             <CommandWord command={command} waiting={waiting} />
             <ChevronIcon />
@@ -130,6 +145,7 @@ export const CommandTerminal = memo(function CommandTerminal({
       <div className="run-cmd-body" id={bodyId} hidden={!open}>
         {open && (
           <div className="run-cmd-tools">
+            <span className="run-cmd-label">Terminal</span>
             {!awaitsEnd && (
               <button
                 type="button"
@@ -179,6 +195,12 @@ export const CommandTerminal = memo(function CommandTerminal({
             </button>
           </div>
         )}
+        {open && (
+          <pre className="run-cmd-cmd">
+            <span aria-hidden="true">$ </span>
+            {command.command}
+          </pre>
+        )}
         {open && awaitsEnd && <p className="run-cmd-note">Output shows when the command ends.</p>}
         {open && !awaitsEnd && text === null && (
           <div className="run-cmd-wait-load">
@@ -208,6 +230,7 @@ export const CommandTerminal = memo(function CommandTerminal({
           </p>
         )}
         {open && note && <p className="run-cmd-note">{note}</p>}
+        {open && answer && <p className="run-cmd-note run-cmd-answer">{answer}</p>}
       </div>
     </section>
   );

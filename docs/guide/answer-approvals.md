@@ -47,6 +47,6 @@ A listed command covers longer forms too: `pnpm test` allows `pnpm test -- api`.
 
 Cards wait in the chat, on **Home** under **What needs you today**, in the chat list as a **Waiting for you** dot, and on [Spark Island](desktop-companion.md#answer-a-card).
 
-To see what was allowed, select **Audit this chat** in the chat's **…** menu.
+An allowed command says **You allowed it once** and the time when you open it. To see what was allowed, select **Audit this chat** in the chat's **…** menu.
 
 **Next:** [Plan before building](plan-card.md)

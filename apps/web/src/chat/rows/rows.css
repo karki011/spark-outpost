@@ -114,6 +114,13 @@ button.trow:hover {
   margin: 0 0 4px 14px;
 }
 
+.trow-group + .trow-nest,
+.trow-live {
+  margin-left: 7px;
+  padding-left: 13px;
+  border-left: 1px solid var(--line);
+}
+
 .trow-nest .step-thought {
   margin: 2px 0 6px;
 }

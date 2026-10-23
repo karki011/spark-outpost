@@ -22,6 +22,8 @@ const anchorFields = {
 export const commandStartedSchema = z.object({
   id: z.uuid(),
   command: z.string().max(COMMAND_TEXT_MAX),
+  description: z.string().max(COMMAND_TEXT_MAX).nullable().optional(),
+  toolCallId: z.string().max(COMMAND_TEXT_MAX).nullable().optional(),
   cwd: z.string().nullable(),
   live: z.boolean(),
   startedAt: z.string(),

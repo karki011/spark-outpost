@@ -56,15 +56,29 @@ describe('command output over ACP against a fake agent', { timeout: 20_000 }, ()
     expect(outputs[0]).toHaveProperty('cwd', expect.stringMatching(/^\//));
   });
 
-  it('reports end-only output once the command ends, named after its later title', async () => {
+  it('reports end-only output once the command ends, named after its later title and description', async () => {
     const outputs = commandOutputs(
       await collect(fake(agentDefinitions.claude), '#term=endpass,endfail'),
     );
     expect(outputs).toEqual([
-      { kind: 'command_started', id: 'term-0', command: 'pnpm test', cwd: null, live: false },
+      {
+        kind: 'command_started',
+        id: 'term-0',
+        command: 'pnpm test',
+        description: 'Runs the command',
+        cwd: null,
+        live: false,
+      },
       expect.objectContaining({ kind: 'command_output', id: 'term-0' }),
       { kind: 'command_finished', id: 'term-0', failed: false, exitCode: null },
-      { kind: 'command_started', id: 'term-1', command: 'pnpm lint', cwd: null, live: false },
+      {
+        kind: 'command_started',
+        id: 'term-1',
+        command: 'pnpm lint',
+        description: 'Runs the command',
+        cwd: null,
+        live: false,
+      },
       {
         kind: 'command_output',
         id: 'term-1',

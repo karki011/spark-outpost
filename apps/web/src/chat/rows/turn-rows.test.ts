@@ -1,13 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CommandView } from '../commands/command-model.ts';
 import type { StepView } from '../run-projection.ts';
-import {
-  groupSummary,
-  spanSeconds,
-  turnRowParts,
-  type Row,
-  type TurnRowPart,
-} from './turn-rows.ts';
+import { groupSeconds, groupSummary } from './group-summary.ts';
+import { spanSeconds, turnRowParts, type Row, type TurnRowPart } from './turn-rows.ts';
 
 const done = (name: string, extra: Partial<StepView> = {}): StepView => ({
   name,
@@ -58,7 +53,7 @@ describe('turn rows', () => {
     expect(rows).toHaveLength(1);
     const group = rows![0]!;
     expect(group.kind).toBe('group');
-    if (group.kind === 'group') expect(groupSummary(group)).toBe('2 files, 1 search');
+    if (group.kind === 'group') expect(groupSummary(group)).toBe('Read 2 files, searched once');
   });
 
   it("hides Spark's own bookkeeping steps", () => {
@@ -88,13 +83,69 @@ describe('turn rows', () => {
     expect(kinds(parts)).toEqual(['rows:group']);
   });
 
-  it('shows thinking as its own row, never grouped', () => {
+  it('lets thoughts join a group and counts them', () => {
+    const think = (id: string) => done('Thinking', { reasoningId: id });
     const parts = turnRowParts({
       text: '',
-      steps: [done('Thinking', { reasoningId: 'r1' }), done('Read `a.ts`'), done('Read `b.ts`')],
+      steps: [think('r1'), done('Read `a.ts`'), think('r2'), done('Read `b.ts`')],
       commands: [],
     });
-    expect(kinds(parts)).toEqual(['rows:thought,group']);
+    expect(kinds(parts)).toEqual(['rows:group']);
+    const group = rowsOf(parts)[0]![0]!;
+    if (group.kind === 'group') {
+      expect(group.items.map((item) => item.kind)).toEqual(['thought', 'tool', 'thought', 'tool']);
+      expect(groupSummary(group)).toBe('Read 2 files, thought 2 times');
+    }
+  });
+
+  it('keeps a lone step and its thought as rows', () => {
+    const parts = turnRowParts({
+      text: '',
+      steps: [done('Thinking', { reasoningId: 'r1' }), done('Read `a.ts`')],
+      commands: [],
+    });
+    expect(kinds(parts)).toEqual(['rows:thought,tool']);
+  });
+
+  it('words a mixed group by kind, commands first', () => {
+    const parts = turnRowParts({
+      text: '',
+      steps: [
+        done('Read `a.ts`'),
+        done('Edit `a.ts`'),
+        done('Search for `x`'),
+        done('Thinking', { reasoningId: 'r1' }),
+      ],
+      commands: [command('a', 'completed', 0), command('b', 'completed', 10)],
+    });
+    const group = rowsOf(parts)[0]![0]!;
+    expect(group.kind).toBe('group');
+    if (group.kind === 'group') {
+      expect(groupSummary(group)).toBe(
+        'Ran 2 commands, edited 1 file, read 1 file, searched once, thought once',
+      );
+    }
+  });
+
+  it('shows a live step under the group it follows', () => {
+    const parts = turnRowParts({
+      text: '',
+      steps: [done('Read `a.ts`'), done('Read `b.ts`'), { name: 'Thinking', status: 'open' }],
+      commands: [],
+    });
+    const [rows] = rowsOf(parts);
+    expect(rows).toHaveLength(1);
+    expect(rows![0]).toMatchObject({ kind: 'group', live: { kind: 'thought' } });
+  });
+
+  it('times a group across its commands and thoughts', () => {
+    const parts = turnRowParts({
+      text: '',
+      steps: [done('Thinking', { reasoningId: 'r1', startedAt: 500, finishedAt: 900 })],
+      commands: [command('a', 'completed', 0), command('b', 'completed', 4_000)],
+    });
+    const group = rowsOf(parts)[0]![0]!;
+    if (group.kind === 'group') expect(groupSeconds(group)).toBe(6);
   });
 
   it('drops run steps that a command record covers', () => {
@@ -120,7 +171,8 @@ describe('turn rows', () => {
     });
     const [rows] = rowsOf(parts);
     expect(rows).toHaveLength(1);
-    expect(rows![0]).toMatchObject({ kind: 'group', family: 'run' });
+    expect(rows![0]).toMatchObject({ kind: 'group' });
+    if (rows![0]!.kind === 'group') expect(groupSummary(rows![0]!)).toBe('Ran 2 commands');
   });
 
   it('places anchored steps between prose and never folds prose into a group', () => {
@@ -144,10 +196,15 @@ describe('turn rows', () => {
   it('keeps a running step out of a group', () => {
     const parts = turnRowParts({
       text: '',
-      steps: [done('Read `a.ts`'), done('Read `b.ts`'), { name: 'Read `c.ts`', status: 'open' }],
+      steps: [
+        done('Read `a.ts`'),
+        done('Read `b.ts`'),
+        { name: 'Read `c.ts`', status: 'open' },
+        done('Read `d.ts`'),
+      ],
       commands: [],
     });
-    expect(kinds(parts)).toEqual(['rows:group,tool']);
+    expect(kinds(parts)).toEqual(['rows:group,tool,tool']);
   });
 
   it('puts the to-do after the opening thought', () => {
@@ -184,10 +241,10 @@ describe('turn rows', () => {
     });
     const [rows] = rowsOf(parts);
     const group = rows![0]!;
-    expect(group).toMatchObject({ kind: 'group', family: 'edit' });
+    expect(group).toMatchObject({ kind: 'group' });
     if (group.kind !== 'group') return;
     expect(group.items[0]).toMatchObject({ target: 'My File.ts', path: '/repo/src/My File.ts' });
-    expect(groupSummary(group)).toBe('2 files');
+    expect(groupSummary(group)).toBe('Edited 2 files');
   });
 });
 
@@ -285,6 +342,6 @@ describe('turn rows named by the ACP tool name', () => {
     });
     const group = rowsOf(parts)[0]![0]!;
     expect(group.kind).toBe('group');
-    if (group.kind === 'group') expect(groupSummary(group)).toBe('2 files, 2 searches');
+    if (group.kind === 'group') expect(groupSummary(group)).toBe('Read 2 files, searched 2 times');
   });
 });

@@ -5,10 +5,17 @@ import { Counts } from '../changes/FileChangeList.tsx';
 import { CommandTerminal } from '../commands/CommandTerminal.tsx';
 import { CommandUiContext, shownBefore } from '../commands/command-ui.ts';
 import { StepThought } from '../StepThought.tsx';
+import type { CommandAnswers } from '../commands/command-answers.ts';
+import {
+  failedCount,
+  groupCommands,
+  groupSeconds,
+  groupWords,
+  onlyEdits,
+  type GroupKind,
+} from './group-summary.ts';
 import { RowIcon, type RowIconName } from './RowIcon.tsx';
 import {
-  groupSummary,
-  groupVerb,
   spanSeconds,
   type CommandItem,
   type GroupedItem,
@@ -25,6 +32,7 @@ export interface RowContext {
   waiting: boolean;
   changes: TurnChanges | null;
   todo: ReactNode;
+  answers: CommandAnswers;
 }
 
 const TONE_ICONS: Record<ToolItem['tone'], RowIconName> = {
@@ -36,10 +44,11 @@ const TONE_ICONS: Record<ToolItem['tone'], RowIconName> = {
   other: 'other',
 };
 
-const FAMILY_ICONS: Record<RowGroup['family'], RowIconName> = {
-  explore: 'search',
-  edit: 'edit',
+const KIND_ICONS: Record<GroupKind, RowIconName> = {
   run: 'run',
+  edit: 'edit',
+  read: 'read',
+  search: 'search',
 };
 
 export function Spinner() {
@@ -171,12 +180,13 @@ function countOf(items: readonly CommandItem[], status: CommandItem['command']['
   return items.filter((item) => item.command.status === status).length;
 }
 
-function commandsEnd(items: readonly CommandItem[]) {
+function statusWords(group: RowGroup) {
+  const commands = groupCommands(group);
   const words = [
-    { count: countOf(items, 'failed'), word: 'failed', tone: 'bad', icon: <XIcon /> },
-    { count: countOf(items, 'interrupted'), word: 'interrupted', tone: '', icon: <PauseIcon /> },
+    { count: failedCount(group), word: 'failed', tone: 'bad', icon: <XIcon /> },
+    { count: countOf(commands, 'interrupted'), word: 'interrupted', tone: '', icon: <PauseIcon /> },
     {
-      count: countOf(items, 'completed'),
+      count: countOf(commands, 'completed'),
       word: 'passed',
       tone: 'ok',
       icon: <CheckIcon className="ok" />,
@@ -194,12 +204,13 @@ function commandsEnd(items: readonly CommandItem[]) {
 }
 
 function needsLook(item: GroupedItem): boolean {
+  if (item.kind === 'tool') return item.status === 'failed';
   if (item.kind !== 'command') return false;
   return item.command.status === 'failed' || item.command.status === 'interrupted';
 }
 
 function groupCounts(group: RowGroup, changes: TurnChanges | null) {
-  if (group.family !== 'edit' || !changes) return null;
+  if (!onlyEdits(group) || !changes) return null;
   const entries = group.items.flatMap((item) => {
     const where = item.kind === 'tool' ? (item.path ?? item.target) : null;
     return where ? [changes.entry(where)] : [];
@@ -212,12 +223,20 @@ function groupCounts(group: RowGroup, changes: TurnChanges | null) {
 }
 
 function GroupEnd({ group, changes }: { group: RowGroup; changes: TurnChanges | null }) {
-  if (group.family === 'run') {
-    return commandsEnd(group.items.filter((item): item is CommandItem => item.kind === 'command'));
-  }
-  if (group.family === 'edit') return groupCounts(group, changes);
-  const seconds = spanSeconds(group.items.filter((item): item is ToolItem => item.kind === 'tool'));
-  return seconds ? <span className="trow-time">{seconds}s</span> : null;
+  const words = statusWords(group);
+  const seconds = failedCount(group) > 0 ? null : groupSeconds(group);
+  return (
+    <>
+      {words}
+      {groupCounts(group, changes)}
+      {seconds && (
+        <span className="trow-time">
+          {words.length > 0 && <span aria-hidden="true">· </span>}
+          {seconds}s
+        </span>
+      )}
+    </>
+  );
 }
 
 function GroupRow({ group, context }: { group: RowGroup; context: RowContext }) {
@@ -229,18 +248,20 @@ function GroupRow({ group, context }: { group: RowGroup; context: RowContext }) 
   const [choice, setChoice] = useState<boolean | null>(null);
   const open = choice ?? attention;
   const id = useId();
+  const words = groupWords(group);
   return (
     <>
       <button
         type="button"
-        className="trow"
+        className="trow trow-group"
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setChoice(!open)}
       >
-        <RowIcon name={FAMILY_ICONS[group.family]} />
+        <RowIcon name={KIND_ICONS[words.kind]} />
         <span className="trow-text">
-          <b>{groupVerb(group.family)}</b> {groupSummary(group)}
+          <b>{words.lead}</b>
+          {words.rest}
         </span>
         <span className="trow-end">
           <GroupEnd group={group} changes={context.changes} />
@@ -250,6 +271,11 @@ function GroupRow({ group, context }: { group: RowGroup; context: RowContext }) 
       <div className="trow-nest" id={id} hidden={!open}>
         {open && group.items.map((item) => <RowView key={item.key} row={item} context={context} />)}
       </div>
+      {group.live && (
+        <div className="trow-nest trow-live">
+          <RowView row={group.live} context={context} />
+        </div>
+      )}
     </>
   );
 }
@@ -259,7 +285,8 @@ export function RowView({ row, context }: { row: Row; context: RowContext }) {
   if (row.kind === 'thought') return <ThoughtRow item={row} context={context} />;
   if (row.kind === 'todo') return context.todo;
   if (row.kind === 'command') {
-    return <CommandTerminal command={row.command} waiting={context.waiting} />;
+    const answer = context.answers.get(row.command.toolCallId ?? '') ?? null;
+    return <CommandTerminal command={row.command} waiting={context.waiting} answer={answer} />;
   }
   return <ToolRow item={row} context={context} />;
 }

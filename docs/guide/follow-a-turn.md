@@ -10,8 +10,8 @@ Follow, stop and queue a turn. About 2 minutes.
 
 ## See what's happening
 
-1. A row per tool call, like **Read**; reads fold into **Explored 2 files**.
-2. **Thought for 4s** opens the thinking; a failed command opens itself.
+1. Steps fold into one line, like **Ran 4 commands, thought 2 times**.
+2. A command shows what it does; open it for the command. Failures open themselves.
 3. The to-do ticks off, then folds.
 4. Hover a reply for **Copy** and cost; **Agent TV** is under **…**.
 5. Sub-agents share one line; **View** shows their cards.
@@ -22,7 +22,7 @@ A waiting card sits at the turn's end; **⌘⇧Y** jumps there.
 
 ## Stop a turn
 
-1. Select **Stop** or press **Esc**; sub-agents and background work stop too.
+1. Select **Stop** or press **Esc**; sub-agents and background work stop.
 
 ## Background work
 

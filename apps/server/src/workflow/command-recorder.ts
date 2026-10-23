@@ -118,9 +118,13 @@ export function createCommandRecorder(options: CommandRecorderOptions): CommandR
 
   const start = async (output: Extract<CommandEvent, { kind: 'command_started' }>) => {
     if (open.has(output.id)) return;
+    const stored = (text: string) =>
+      redactSecrets(storableText(text), secretValues).slice(0, COMMAND_TEXT_MAX);
     const started: CommandStarted = {
       id: newId(),
-      command: redactSecrets(storableText(output.command), secretValues).slice(0, COMMAND_TEXT_MAX),
+      command: stored(output.command),
+      description: output.description ? stored(output.description) : null,
+      toolCallId: output.id.slice(0, COMMAND_TEXT_MAX),
       cwd: shownCwd(output.cwd ?? options.projectRoots[0] ?? null, options),
       live: output.live,
       startedAt: new Date(now()).toISOString(),

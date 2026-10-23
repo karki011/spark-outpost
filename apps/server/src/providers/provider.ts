@@ -317,7 +317,14 @@ export type ProviderOutput =
   | { kind: 'rail_flag'; flag: ObservedRail }
   | { kind: 'secret_read'; paths: string[] }
   | { kind: 'web_read'; labels: string[] }
-  | { kind: 'command_started'; id: string; command: string; cwd: string | null; live: boolean }
+  | {
+      kind: 'command_started';
+      id: string;
+      command: string;
+      description?: string | null;
+      cwd: string | null;
+      live: boolean;
+    }
   | { kind: 'command_output'; id: string; data: string; replace?: boolean }
   | { kind: 'command_finished'; id: string; failed: boolean; exitCode: number | null }
   | { kind: 'account'; account: ProviderAccount };

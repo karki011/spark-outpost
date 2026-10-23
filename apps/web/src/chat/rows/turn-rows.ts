@@ -9,7 +9,6 @@ const THINKING = 'Thinking';
 const WEB_STEP = /^(?:Fetched |Searched the web$)/;
 const WEB_SEARCHED = 'Searched the web';
 
-export type RowFamily = 'explore' | 'edit' | 'run';
 export type ToolTone = 'read' | 'search' | 'edit' | 'run' | 'web' | 'other';
 
 export interface ToolItem {
@@ -43,13 +42,14 @@ export interface TodoItem {
 }
 
 export type RowItem = ToolItem | ThoughtItem | CommandItem | TodoItem;
-export type GroupedItem = ToolItem | CommandItem;
+export type GroupedItem = ToolItem | CommandItem | ThoughtItem;
+export type LiveItem = ToolItem | CommandItem | ThoughtItem;
 
 export interface RowGroup {
   kind: 'group';
   key: string;
-  family: RowFamily;
   items: GroupedItem[];
+  live: LiveItem | null;
 }
 
 export type Row = RowItem | RowGroup;
@@ -246,41 +246,46 @@ function placedItems(input: TurnRowInput): Placed[] {
   );
 }
 
-function familyOf(item: RowItem): RowFamily | null {
-  if (item.kind === 'command') return item.command.status === 'running' ? null : 'run';
-  if (item.kind !== 'tool' || item.status === 'open') return null;
-  if (item.tone === 'read' || item.tone === 'search') return 'explore';
-  if (item.tone === 'edit') return 'edit';
-  if (item.tone === 'run') return 'run';
-  return null;
+const GROUPED_TONES = new Set<ToolTone>(['read', 'search', 'edit', 'run']);
+
+function groupable(item: RowItem): item is GroupedItem {
+  if (item.kind === 'command') return item.command.status !== 'running';
+  if (item.kind === 'thought') return item.step.status !== 'open';
+  return item.kind === 'tool' && item.status !== 'open' && GROUPED_TONES.has(item.tone);
+}
+
+function isLive(item: RowItem): item is LiveItem {
+  if (item.kind === 'command') return item.command.status === 'running';
+  if (item.kind === 'thought' || item.kind === 'tool') return !groupable(item);
+  return false;
+}
+
+function grouped(items: GroupedItem[]): Row[] {
+  const steps = items.filter((item) => item.kind !== 'thought');
+  if (steps.length < 2) return items;
+  return [{ kind: 'group', key: `group-${items[0]!.key}`, items, live: null }];
+}
+
+function withLiveTail(rows: Row[]): Row[] {
+  const last = rows.at(-1);
+  const before = rows.at(-2);
+  if (!last || before?.kind !== 'group' || last.kind === 'group' || !isLive(last)) return rows;
+  return [...rows.slice(0, -2), { ...before, live: last }];
 }
 
 export function groupRows(items: readonly RowItem[]): Row[] {
   const rows: Row[] = [];
-  let family: RowFamily | null = null;
   let run: GroupedItem[] = [];
-  const flush = () => {
-    if (run.length > 1 && family) {
-      rows.push({ kind: 'group', key: `group-${run[0]!.key}`, family, items: run });
-    } else {
-      rows.push(...run);
-    }
-    run = [];
-    family = null;
-  };
   for (const item of items) {
-    const next = familyOf(item);
-    if (next === null || (item.kind !== 'tool' && item.kind !== 'command')) {
-      flush();
-      rows.push(item);
+    if (groupable(item)) {
+      run.push(item);
       continue;
     }
-    if (next !== family) flush();
-    family = next;
-    run.push(item);
+    rows.push(...grouped(run), item);
+    run = [];
   }
-  flush();
-  return rows;
+  rows.push(...grouped(run));
+  return withLiveTail(rows);
 }
 
 function withTodo(items: readonly RowItem[]): RowItem[] {
@@ -332,35 +337,6 @@ export function turnRowParts(input: TurnRowInput): TurnRowPart[] {
   addText(text.length);
   flushRows();
   return parts;
-}
-
-export function groupSummary(group: RowGroup): string {
-  if (group.family === 'explore') {
-    const reads = group.items.filter((item) => item.kind === 'tool' && item.tone === 'read');
-    const searches = group.items.length - reads.length;
-    return [counted(fileCount(reads), 'file'), counted(searches, 'search', 'searches')]
-      .filter(Boolean)
-      .join(', ');
-  }
-  if (group.family === 'edit') return counted(fileCount(group.items), 'file');
-  return counted(group.items.length, 'command');
-}
-
-function fileCount(items: readonly GroupedItem[]): number {
-  const files = items.map((item) =>
-    item.kind === 'tool' ? (item.path ?? item.target ?? item.key) : item.key,
-  );
-  return new Set(files).size;
-}
-
-export function groupVerb(family: RowFamily): string {
-  if (family === 'explore') return 'Explored';
-  return family === 'edit' ? 'Edited' : 'Ran';
-}
-
-function counted(count: number, one: string, many = `${one}s`): string {
-  if (count === 0) return '';
-  return `${count} ${count === 1 ? one : many}`;
 }
 
 export function spanSeconds(items: readonly StepTimes[]): number | null {
