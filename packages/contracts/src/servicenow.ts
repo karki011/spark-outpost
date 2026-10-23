@@ -80,6 +80,7 @@ export function serviceNowInstanceUrl(input: string): string | null {
   const match = ADDRESS.exec(value);
   if (!match) return null;
   const [, scheme = 'https', host = '', port = ''] = match;
+  if (port && Number(port.slice(1)) > 65_535) return null;
   if (scheme === 'http' && !LOOPBACK.has(host)) return null;
   return `${scheme}://${host}${port}`;
 }

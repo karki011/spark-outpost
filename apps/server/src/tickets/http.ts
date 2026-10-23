@@ -9,6 +9,7 @@ export interface JsonCall {
   url: string;
   authorization?: string;
   headers?: Record<string, string>;
+  redirect?: 'follow' | 'manual';
   body?: unknown;
   timeoutMs?: number;
 }
@@ -45,6 +46,7 @@ export async function callJson(
         ...(call.body === undefined ? {} : { 'content-type': 'application/json' }),
       },
       ...(call.body === undefined ? {} : { body: JSON.stringify(call.body) }),
+      ...(call.redirect ? { redirect: call.redirect } : {}),
       signal: AbortSignal.timeout(call.timeoutMs ?? REQUEST_TIMEOUT_MS),
     });
   } catch {

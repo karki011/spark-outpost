@@ -1,3 +1,5 @@
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { SaveTicketConnectionRequest } from '@spark-outpost/contracts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
@@ -125,6 +127,31 @@ describe('connecting ServiceNow', () => {
     expect(await serviceNow()).toBeUndefined();
   });
 
+  it('never follows a redirect, so the API key stays with the instance', async () => {
+    const seen: (string | undefined)[] = [];
+    const elsewhere = createServer((req, res) => {
+      seen.push(req.headers['x-sn-apikey'] as string | undefined);
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end('{"result":[]}');
+    });
+    await new Promise<void>((resolve) => elsewhere.listen(0, '127.0.0.1', resolve));
+    stubs.servicenow.redirectTo = `http://127.0.0.1:${(elsewhere.address() as AddressInfo).port}`;
+    try {
+      await expect(
+        saveConnection(deps(), {
+          source: 'servicenow',
+          instanceUrl: stubs.serviceNowUrl,
+          authKind: 'api_key',
+          username: SERVICENOW_USER,
+          apiKey: SERVICENOW_API_KEY,
+        }),
+      ).rejects.toThrow('sent Spark to another address');
+      expect(seen).toEqual([]);
+    } finally {
+      await new Promise<void>((resolve) => elsewhere.close(() => resolve()));
+    }
+  });
+
   it('says when ServiceNow limits requests and saves nothing', async () => {
     stubs.servicenow.limited = 1;
     await expect(saveConnection(deps(), basic())).rejects.toThrow(
@@ -164,11 +191,11 @@ describe('connecting ServiceNow', () => {
     );
   });
 
-  it('keeps record types and Check connection to ServiceNow', async () => {
+  it('keeps record types and Check connection to ServiceNow, changing nothing else', async () => {
     await saveConnection(deps(), basic());
-    await expect(changeSettings(deps(), 'linear', { recheck: true })).rejects.toThrow(
-      'Record types and Check connection are for ServiceNow only.',
-    );
+    await expect(
+      changeSettings(deps(), 'linear', { recheck: true, moveOnShip: false }),
+    ).rejects.toThrow('Record types and Check connection are for ServiceNow only.');
   });
 
   it('opens as a ticket source and disconnects by deleting the keychain item', async () => {

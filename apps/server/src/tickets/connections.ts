@@ -260,6 +260,9 @@ export async function changeSettings(
   settings: UpdateTicketSettingsRequest,
 ): Promise<TicketConnections> {
   const { jiraOn, confluenceOn, serviceNowTypes, recheck, ...ticketSettings } = settings;
+  if (source !== 'servicenow' && (recheck || serviceNowTypes)) {
+    throw new TicketConflictError('Record types and Check connection are for ServiceNow only.');
+  }
   if (source === 'servicenow' && (ticketSettings.moveOnShip || ticketSettings.moveOnMerge)) {
     throw new TicketConflictError(
       'ServiceNow tickets never move when a chat ships or merges: resolving tells the caller.',
@@ -272,10 +275,8 @@ export async function changeSettings(
     await switchProducts(deps, source, { jiraOn, confluenceOn });
   }
   if (source === 'servicenow' && recheck) await recheckServiceNow(deps);
-  if (source === 'servicenow' && serviceNowTypes)
+  if (source === 'servicenow' && serviceNowTypes) {
     await switchServiceNowTypes(deps, serviceNowTypes);
-  if (source !== 'servicenow' && (recheck || serviceNowTypes)) {
-    throw new TicketConflictError('Record types and Check connection are for ServiceNow only.');
   }
   const changesTickets = Object.values(ticketSettings).some((value) => value !== undefined);
   const changed =

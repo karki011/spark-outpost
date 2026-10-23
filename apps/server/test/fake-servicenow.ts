@@ -30,6 +30,7 @@ export interface FakeServiceNow {
   denied: Set<string>;
   limited: number;
   foreign: boolean;
+  redirectTo: string | null;
   calls: string[];
   writes: { table: string; sysId: string; body: Record<string, string> }[];
   handles(path: string): boolean;
@@ -194,6 +195,7 @@ export function fakeServiceNow(): FakeServiceNow {
     denied: new Set(),
     limited: 0,
     foreign: false,
+    redirectTo: null,
     calls: [],
     writes: [],
     handles: (path) => path.startsWith('/api/now/'),
@@ -203,6 +205,7 @@ export function fakeServiceNow(): FakeServiceNow {
       fake.denied = new Set();
       fake.limited = 0;
       fake.foreign = false;
+      fake.redirectTo = null;
       fake.calls = [];
       fake.writes = [];
     },
@@ -210,6 +213,11 @@ export function fakeServiceNow(): FakeServiceNow {
       const url = new URL(req.url ?? '/', 'http://servicenow.test');
       fake.calls.push(`${req.method ?? 'GET'} ${url.pathname}${url.search}`);
       if (fake.foreign) return send(res, 200, { page: 'Welcome' });
+      if (fake.redirectTo) {
+        res.writeHead(302, { location: `${fake.redirectTo}${url.pathname}${url.search}` });
+        res.end();
+        return;
+      }
       if (!signedIn(req)) return failure(res, 401, 'User Not Authenticated');
       if (fake.limited > 0) {
         fake.limited -= 1;
