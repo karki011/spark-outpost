@@ -415,10 +415,10 @@ describe('a message the user sent to several chats', () => {
       }),
     );
 
-  it('names the other chats that were asked', async () => {
+  it('tells the chat its own handle and that only its part of the message is its work', async () => {
     const posts = [typed('q1', 'api', 'b1'), typed('q2', 'web', 'b1'), typed('q3', 'docs', 'b1')];
     expect(await told(posts)).toBe(
-      'The user sent this same message to @web and @docs as well. Each chat received it whole and answers for itself.',
+      'You are @api in this outpost. The user sent this one message to @api, @web and @docs. Do only what it asks of @api and reply as @api; the parts for @web and @docs are their work, context for you, not yours.',
     );
   });
 

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { BranchIcon, CheckIcon, FolderIcon, ShieldIcon } from '../../ui/icons.tsx';
+import { BookIcon, BranchIcon, CheckIcon, FolderIcon, ShieldIcon } from '../../ui/icons.tsx';
 import { WhoIcon } from '../../tasks/TaskIcons.tsx';
 import { Counts } from '../changes/FileChangeList.tsx';
 import { ChangesIcon, PullRequestIcon, UsageIcon } from './RailIcons.tsx';
@@ -14,6 +14,7 @@ interface RailSummaryProps {
 function rowIcon(id: RailRowId, provider: string): ReactNode {
   if (id === 'project') return <FolderIcon />;
   if (id === 'agent') return <WhoIcon provider={provider} />;
+  if (id === 'following') return <BookIcon />;
   if (id === 'autonomy') return <ShieldIcon />;
   if (id === 'changes') return <ChangesIcon />;
   if (id === 'checks') return <CheckIcon className="crail-check" />;

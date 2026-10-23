@@ -170,9 +170,13 @@ describe('project git info', () => {
     const [appRepo, libRepo] = await Promise.all([project(folders.app), project(folders.lib)]);
     expect((await get(`/api/projects/${libRepo.id}/git`).expect(200)).body).toEqual({
       branch: 'trunk',
+      repository: true,
+      problem: null,
     });
     expect((await get(`/api/projects/${appRepo.id}/git`).expect(200)).body).toEqual({
       branch: null,
+      repository: false,
+      problem: null,
     });
     await get(`/api/projects/${randomUUID()}/git`).expect(404);
   });

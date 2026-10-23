@@ -12,7 +12,7 @@ Use Spark from another device; work stays on the Mac. About 5 minutes. Needs Tai
 2. Select **Pair a device**, then scan the code, or open the address and type it.
 3. Check the codes match, then **Confirm**.
 
-**Passkey.** On the device, select **Save a passkey for this device**, then use **Sign in with a passkey** in another browser. It never pairs a new device. **Devices** has **Allow passkey sign-in** and **Remove passkeys**.
+**Passkey.** On the device, select **Save a passkey for this device**, then **Sign in with a passkey** in another browser. It never pairs a new device. **Devices** has **Allow passkey sign-in** and **Remove passkeys**.
 
 **Devices** renames or revokes a device, passkeys included; **Remove old entry** clears a duplicate. **What paired devices can do** holds the switches. On a phone, **More** holds **Pause Spark**, Remote control and Settings; Map and Mac-only tools are hidden.
 
@@ -20,7 +20,7 @@ Creating, deleting or changing an [outpost](outposts.md) stays on the Mac. A pro
 
 **Link a new folder or clone a repo** also allows **New folder**.
 
-Devices answer browser cards; the Browser pane stays on the Mac. **Open artifacts** (off) shows artifacts.
+Devices answer browser cards; the Browser pane stays Mac-only. **Open artifacts** (off) shows artifacts.
 
 **Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages and steps, with a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both start off.
 
@@ -28,7 +28,7 @@ Devices answer browser cards; the Browser pane stays on the Mac. **Open artifact
 
 Messages shown aren't stored.
 
-**Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device**. It names the chat, never a command; [meeting alerts](calendar.md) say "Meeting in 10 min". Seen chats aren't pushed. Push services see the **Sender contact**.
+**Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device**. Pushes name the chat, never a command; [meeting alerts](calendar.md) say "Meeting in 10 min". Seen chats aren't pushed. Push services see the **Sender contact**.
 
 A device you're using gets none. iPhone needs iOS 16.4 or later and Spark on the Home Screen: save a passkey first, then sign in with it there.
 

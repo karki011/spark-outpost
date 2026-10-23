@@ -1,66 +1,54 @@
-.ctxbar-wrap {
-  position: relative;
-  max-width: var(--chat-col, 700px);
-  margin: 0 auto -12px;
-  padding: 0 12px;
-}
-
 .ctxbar {
   display: flex;
-  flex-wrap: wrap;
+  flex: 0 1 auto;
   align-items: center;
-  gap: 2px 4px;
+  gap: 2px;
   min-width: 0;
-  padding: 4px 6px 16px;
-  border: 1px solid var(--line);
-  border-bottom: 0;
-  border-radius: var(--r) var(--r) 0 0;
-  background: var(--raise);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
-.ctx-repo {
+.ctx-repo,
+.ctx-branch {
   display: inline-flex;
+  flex: 0 1 auto;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
-  padding: 4px 8px;
+  height: 28px;
+  padding: 0 8px;
   border-radius: var(--r-sm);
-  color: var(--text);
+  color: var(--muted);
+  font-size: 13px;
   transition:
     background 0.15s,
     color 0.15s;
 }
-.ctx-repo.unset {
-  color: var(--muted);
-}
 .ctx-repo:hover,
-.ctx-repo[aria-expanded='true'] {
-  background: color-mix(in srgb, var(--panel) 70%, transparent);
+.ctx-repo[aria-expanded='true'],
+.ctx-place:hover,
+.ctx-place[aria-expanded='true'] {
+  background: var(--raise);
   color: var(--text);
 }
-.ctx-repo svg {
+.ctx-repo svg,
+.ctx-branch svg {
   flex-shrink: 0;
-  color: var(--muted);
 }
-.ctx-repo .chev {
+.ctx-repo .chev,
+.ctx-place .chev {
   color: var(--faint);
   transform: rotate(90deg);
-  transition: transform 0.2s var(--out);
 }
-.ctx-repo[aria-expanded='true'] .chev {
-  transform: rotate(-90deg);
-}
-.ctx-name {
+.ctx-name,
+.ctx-branch-name {
   min-width: 0;
-  max-width: 260px;
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 500;
 }
-.ctx-repo.unset .ctx-name {
-  font-weight: 400;
+.ctx-branch {
+  font-family: 'Geist Mono', ui-monospace, monospace;
 }
 
 .ctx-unlinked {
@@ -70,32 +58,6 @@
   white-space: nowrap;
   color: var(--faint);
   font-size: 12px;
-}
-
-.ctx-branch {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  padding: 4px 6px;
-  color: var(--muted);
-  font-family: 'Geist Mono', ui-monospace, monospace;
-  font-size: 12px;
-}
-.ctx-branch svg {
-  flex-shrink: 0;
-  color: var(--faint);
-}
-.ctx-branch-name {
-  min-width: 0;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ctxbar-wrap + .composer {
-  z-index: 1;
 }
 
 .mpop.repopop {
@@ -202,15 +164,25 @@
   }
 }
 
-@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+@container composer (max-width: 600px) {
   .ctx-unlinked {
     display: none;
   }
-  .ctx-name {
-    max-width: 150px;
-  }
+  .ctx-name,
   .ctx-branch-name {
-    max-width: 110px;
+    max-width: 120px;
+  }
+}
+
+@container composer (max-width: 400px) {
+  .ctxbar > .ctx-repo .ctx-name,
+  .ctxbar > .ctx-branch .ctx-branch-name {
+    display: none;
+  }
+  .ctxbar,
+  .ctxbar > .ctx-repo,
+  .ctxbar > .ctx-branch {
+    flex-shrink: 0;
   }
 }
 
@@ -219,9 +191,8 @@
   display: inline-grid;
   place-items: center;
   flex-shrink: 0;
-  width: 32px;
-  height: 26px;
-  margin-left: auto;
+  width: 28px;
+  height: 28px;
   border-radius: var(--r-sm);
   color: var(--muted);
   transition:
@@ -230,49 +201,32 @@
 }
 .ctx-details:hover,
 .ctx-details[aria-expanded='true'] {
-  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  background: var(--raise);
   color: var(--text);
 }
 
-.ctxbar.compact {
-  flex-direction: column;
-  flex-wrap: nowrap;
-  align-items: stretch;
-}
-.ctx-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-}
-
 .ctx-more:not([hidden]) {
+  position: absolute;
+  right: 8px;
+  bottom: calc(100% + 8px);
+  left: 8px;
+  z-index: 20;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 2px 4px;
+  gap: 4px;
   min-width: 0;
-  padding-top: 4px;
-  border-top: 1px solid var(--line);
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
 }
 .ctx-more .ctx-setup,
 .ctx-more .ctx-trust {
   margin-left: 0;
 }
-
-.ctx-place {
-  overflow: hidden;
-  border-radius: var(--r-sm);
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-.ctx-place:hover,
-.ctx-place[aria-expanded='true'] {
-  background: color-mix(in srgb, var(--panel) 70%, transparent);
-  color: var(--text);
-}
-.ctx-place .chev {
-  color: var(--faint);
-  transform: rotate(90deg);
+.ctx-more .ctx-name,
+.ctx-more .ctx-branch-name {
+  max-width: 220px;
 }

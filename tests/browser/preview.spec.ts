@@ -252,11 +252,11 @@ test('a finished turn says whether the change was checked in the browser', async
   await input.fill('Make the Save button wider #edit #build');
   await input.press('Enter');
   await page
-    .getByRole('group', { name: /Change a file\?/ })
+    .getByRole('group', { name: /^Edit .+\?$/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await expect(turns.nth(1).locator('.mood')).toHaveText('done', { timeout: 30_000 });
-  const second = turns.nth(1).locator('.turn-foot');
+  const second = turns.nth(1).locator('.turn-meta');
   await expect(second.getByText('Not checked in browser')).toBeVisible();
   await expect(turns.first().getByText('Not checked in browser')).toHaveCount(0);
   await shoot(page, 'browser-preview-summary-not-checked.png');
@@ -265,7 +265,7 @@ test('a finished turn says whether the change was checked in the browser', async
   await page.reload();
   const checked = turns
     .first()
-    .locator('.turn-foot')
+    .locator('.turn-meta')
     .getByRole('button', { name: 'Checked in browser. Open the screenshot of Lantern Quay' });
   await turns.first().hover();
   await expect(checked).toBeVisible();

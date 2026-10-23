@@ -65,6 +65,7 @@ describe('companion settings file', () => {
       autoExpand: true,
       hideInShare: true,
       notify: true,
+      menuBar: false,
     });
   });
 
@@ -111,6 +112,19 @@ describe('companion settings file', () => {
     expect(parseSettings(JSON.stringify({ notify: 0 })).notify).toBe(true);
   });
 
+  it('keeps the menu bar item off unless the user turned it on, existing files included', () => {
+    expect(DEFAULT_SETTINGS.menuBar).toBe(false);
+    expect(parseSettings('{}').menuBar).toBe(false);
+    const existing = { ...DEFAULT_SETTINGS } as Partial<typeof DEFAULT_SETTINGS>;
+    delete existing.menuBar;
+    expect(parseSettings(JSON.stringify({ ...existing, enabled: false }))).toEqual({
+      ...DEFAULT_SETTINGS,
+      enabled: false,
+    });
+    expect(parseSettings(JSON.stringify({ menuBar: true })).menuBar).toBe(true);
+    expect(parseSettings(JSON.stringify({ menuBar: 'yes' })).menuBar).toBe(false);
+  });
+
   it('falls back to the defaults when both shortcuts collide', () => {
     const parsed = parseSettings(
       JSON.stringify({ shortcuts: { quick: 'Alt+J', sessions: 'Alt+J' } }),
@@ -132,6 +146,7 @@ describe('companion settings file', () => {
       autoExpand: false,
       hideInShare: false,
       notify: false,
+      menuBar: true,
     };
     await saveSettings(file, settings);
     expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(settings);

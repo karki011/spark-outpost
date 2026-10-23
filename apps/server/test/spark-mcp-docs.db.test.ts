@@ -75,7 +75,7 @@ describe('spark_docs', () => {
     ['queue a message while the agent works', 'follow-a-turn'],
     ['delete a chat that is running', 'follow-a-turn'],
     ['provider will not connect', 'trouble-providers'],
-    ['what changed recently', 'whats-new'],
+    ['what changed since the last release', 'whats-new'],
     ['keep files away from agents', 'sparkignore'],
     ['open a pull request', 'ship-and-pull-requests'],
   ])('finds "%s" on %s', async (query, page) => {

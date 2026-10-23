@@ -43,7 +43,7 @@ async function changeInChat(page: Page, root: string, text: string) {
   await input.fill(text);
   await input.press('Enter');
   await page
-    .getByRole('group', { name: /Change a file\?/ })
+    .getByRole('group', { name: /^Edit .+\?$/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await turnDone(page, 30_000);
@@ -56,12 +56,16 @@ test('flags an instruction file the agent changed without asking, and reverts it
   const repo = await repoWithRemote(base, 'rails');
   await changeInChat(page, repo.root, 'Add a line to the notes #edit #plan #agentsedit');
 
+  const line = page.locator('.flag-line');
+  await expect(line).toContainText('changed agent instructions: AGENTS.md');
+  await line.getByRole('button', { name: 'Details' }).click();
   const flag = page.getByRole('region', { name: 'Flagged by Spark' });
   await expect(flag).toContainText('changed agent instructions: AGENTS.md');
   await expect(flag).toContainText("Spark didn't stop the run.");
   await flag.getByRole('button', { name: 'Revert' }).click();
   await expect(flag.getByRole('status')).toHaveText('Reverted to before this run.');
   await expect(flag.getByRole('button', { name: 'Revert' })).toHaveCount(0);
+  await expect(line).toContainText('Reverted to before this run.');
 });
 
 test('the branch chip names how pull requests open', async ({ page }) => {

@@ -32,6 +32,7 @@ interface TurnSectionProps {
   userMessage: Message | null;
   assistantMessage: Message | null;
   laterMessages: readonly Message[];
+  previous: Run | null;
   detail: ConversationDetail;
   repo: Project | null;
   onOpenChat: (conversationId: string) => void;
@@ -64,6 +65,7 @@ function sameSection(before: TurnSectionProps, after: TurnSectionProps): boolean
     before.userMessage === after.userMessage &&
     before.assistantMessage === after.assistantMessage &&
     sameMessages(before.laterMessages, after.laterMessages) &&
+    before.previous === after.previous &&
     before.repo === after.repo &&
     before.onOpenChat === after.onOpenChat &&
     sameTurnDetail(before.detail, after.detail, after.run)
@@ -75,6 +77,7 @@ export const TurnSection = memo(function TurnSection({
   userMessage,
   assistantMessage,
   laterMessages,
+  previous,
   detail,
   repo,
   onOpenChat,
@@ -140,6 +143,7 @@ export const TurnSection = memo(function TurnSection({
           detail={detail}
           assistantMessage={assistantMessage}
           laterMessages={laterMessages}
+          previous={previous}
           repo={repo}
         />
       )}
