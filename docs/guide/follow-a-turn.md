@@ -10,23 +10,23 @@ Follow, stop and queue a turn. About 2 minutes.
 
 ## See what's happening
 
-1. Read the header, like **Reading api.ts · 3 steps**.
-2. Select the step count, then **Thinking**.
-3. The to-do ticks off.
-4. **Show work panel** has the to-do, files and cost; **Agent TV** is under **…**.
-5. Sub-agents share one line; **View** shows a card each.
+1. A row per tool call, like **Read**; reads fold into **Explored 2 files**.
+2. **Thought for 4s** opens the thinking; a failed command opens itself.
+3. The to-do ticks off, then folds.
+4. Hover a reply for **Copy** and cost; **Agent TV** is under **…**.
+5. Sub-agents share one line; **View** shows their cards.
 
-When it needs you: **Waiting for you** or **⌘⇧Y**.
+A waiting card sits at the turn's end; **⌘⇧Y** jumps there.
 
 **Open in terminal** shows failed output in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 
-1. Select **Stop**; sub-agents and background work stop too.
+1. Select **Stop** or press **Esc**; sub-agents and background work stop too.
 
 ## Background work
 
-Background agents show **Waiting on 1 background agent**, then **Writing up results**. A sleeping Claude agent shows **Sleeping until 10:48**, then wakes in that turn. **Stop background tasks** or **Stop waiting** ends the wait.
+While background agents run, the chat shows **Waiting on 1 background agent**. A sleeping Claude agent shows **Sleeping until 10:48**, then wakes in that turn. **Stop background tasks** or **Stop waiting** ends the wait.
 
 The agent stays running up to 30 idle minutes. A turn it starts itself shows **Continued on its own**; after Quit, **Stopped by Quit**.
 

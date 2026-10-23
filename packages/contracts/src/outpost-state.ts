@@ -61,7 +61,13 @@ function runRequest(status: RunStatus, facts: RequestFacts): DerivedRequestState
     case 'running':
       return { state: 'working', reason: null };
     case 'awaiting_approval':
-      return { state: 'needs_you', reason: `${handle} is waiting for your approval` };
+      return {
+        state: 'needs_you',
+        reason:
+          facts.runAsksQuestion === true
+            ? `${handle} has a question`
+            : `${handle} is waiting for your approval`,
+      };
     case 'succeeded':
       return succeededRequest(facts);
     case 'failed':

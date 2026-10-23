@@ -1,6 +1,7 @@
 import { InfoIcon } from '../ui/icons.tsx';
 import { MemberFace } from './MemberFace.tsx';
 import { PrChip } from './PrChip.tsx';
+import { StatusPill } from './StatusPill.tsx';
 import { requestFaceState } from './post-text.ts';
 import type { StoryRowView } from './story-bar.ts';
 
@@ -25,7 +26,11 @@ export function StoryRow({ row, onOpenChat, onFill }: StoryRowProps) {
       </button>
       <span className="op-story-title">{row.title}</span>
       {row.order && <span className="op-story-order">{row.order}</span>}
-      <span className={`op-state ${row.state ?? 'sent'}`}>{row.stateLabel}</span>
+      {row.status === null ? (
+        <span className="op-state sent">{row.stateLabel}</span>
+      ) : (
+        <StatusPill status={row.status} label={row.stateLabel} />
+      )}
       {row.pull && <PrChip pull={row.pull} />}
       {row.note && <p className="op-story-note">{row.note}</p>}
       {row.warnings.map((warning) => (

@@ -37,19 +37,21 @@ test('in Auto, runs what the mode allows and explains a sandbox request', async 
   test.setTimeout(90_000);
   await chatInMode(page, 'Auto');
   await send(page, 'Run the tests and check the package #approve #sandbox');
-  const asked = card(page, /Run a command\?/);
-  await expect(asked.locator('pre')).toHaveText('$ npm view left-pad version', {
+  const asked = card(page, /^Run .+\?$/);
+  await expect(asked.locator('pre')).toHaveText('npm view left-pad version', {
     timeout: 15_000,
   });
-  await expect(card(page, /Run a command\?/)).toHaveCount(1);
-  await expect(asked.locator('.appr-reason')).toContainText(
+  await expect(card(page, /^Run .+\?$/)).toHaveCount(1);
+  await asked.getByRole('button', { name: 'Details' }).click();
+  await expect(asked.locator('.appr-det-body')).toContainText(
     "couldn't run this inside its sandbox, so it asks before running it without one",
   );
   await expect(asked).toContainText('The sandbox blocked network access');
   await expect(asked).not.toContainText("aren't sandboxed");
   mkdirSync(SHOTS, { recursive: true });
   await asked.screenshot({ path: path.join(SHOTS, 'sandbox-card.png') });
-  await asked.getByRole('button', { name: 'Always allow in this project' }).click();
+  await asked.getByRole('button', { name: 'Always allow' }).click();
+  await page.getByRole('menuitem', { name: 'Always allow in this project' }).click();
   await expect(
     page.locator('.md', { hasText: 'Done. fake-run=allowed fake-sandbox=allowed' }),
   ).toBeVisible({ timeout: 15_000 });
@@ -59,7 +61,7 @@ test('keeps the answer buttons in view for a long command', async ({ page }) => 
   test.setTimeout(90_000);
   await chatInMode(page, 'Manual');
   await send(page, 'Fix the broken notes with the script #longcommand');
-  const asked = card(page, /Run a command\?/);
+  const asked = card(page, /^Run .+\?$/);
   const more = asked.getByRole('button', { name: 'Show all (42 lines)' });
   await expect(more).toBeVisible({ timeout: 15_000 });
   await asked.scrollIntoViewIfNeeded();

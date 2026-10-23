@@ -231,20 +231,21 @@ test("the approval card offers every option the agent sent, with the agent's wor
   ];
   for (const [index, [label, optionId, result]] of choices.entries()) {
     await send(page, `Run the tests #fourkinds #build ${index}`);
-    const approval = card(page, /Run a command\?/).last();
+    const approval = card(page, /^Run .+\?$/).last();
     await expect(approval.getByRole('button')).toHaveText(
-      [
-        'Yes',
-        "Yes, and don't ask again for npm run lint commands",
-        'Always allow in this project',
-        'No',
-        "No, and don't ask again",
-      ],
+      [/^Yes/, /^Always allow/, /^No/, "No, and don't ask again", 'Details'],
       { timeout: 30_000 },
     );
     await expect(approval.getByRole('button', { name: 'Yes', exact: true })).toHaveClass(/primary/);
     await expect(approval.getByRole('button', { name: 'No', exact: true })).toHaveClass(/deny/);
-    await approval.getByRole('button', { name: label, exact: true }).click();
+    if (optionId === 'yes-always') {
+      await approval.getByRole('button', { name: 'Always allow' }).click();
+      const menu = page.getByRole('menu', { name: 'Always allow' });
+      await expect(menu.getByRole('menuitem')).toHaveText([label, 'Always allow in this project']);
+      await menu.getByRole('menuitem', { name: label }).click();
+    } else {
+      await approval.getByRole('button', { name: label, exact: true }).click();
+    }
     await expect(approval.getByRole('status')).toContainText(`Chose: ${label}.`);
     await expect(approval.getByRole('status')).toContainText(result);
     await expect(page.getByText(`permission=${optionId}`, { exact: true })).toBeVisible({
@@ -253,7 +254,7 @@ test("the approval card offers every option the agent sent, with the agent's wor
     await turnDone(page, 30_000);
   }
   await page.reload();
-  await expect(card(page, /Run a command\?/).getByRole('status')).toHaveText(
+  await expect(card(page, /^Run .+\?$/).getByRole('status')).toHaveText(
     choices.map(([, , result]) => result),
   );
 });

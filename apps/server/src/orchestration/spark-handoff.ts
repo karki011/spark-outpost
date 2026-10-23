@@ -14,6 +14,7 @@ import {
   loadOrchestration,
   updateOrchestration,
 } from '../persistence/orchestrations.ts';
+import { isCancelRequested } from '../persistence/run-events.ts';
 import { requestCancel } from '../persistence/runs.ts';
 import { mentionableSparks, type MentionableSpark } from '../persistence/spark-mentions.ts';
 import { taskOverviews } from '../persistence/task-views.ts';
@@ -113,6 +114,11 @@ async function runSpark(
   }
 }
 
+async function noticeCancelSeenBySpark(h: Handoff): Promise<void> {
+  if (h.control.signal.aborted) return;
+  if (await isCancelRequested(h.deps.db, h.lease.runId)) h.control.stop('cancelled');
+}
+
 async function finishWithNote(h: Handoff, results: readonly SparkResult[], note: string) {
   const identity = h.input.identity;
   await updateOrchestration(h.deps.db, h.lease.runId, { phase: 'finished' });
@@ -159,6 +165,7 @@ export async function handToSparks(h: Handoff): Promise<RunInput | 'finished'> {
     results.push(result);
   }
   if (h.control.reason() === 'lease_lost') return 'finished';
+  await noticeCancelSeenBySpark(h);
   const note = handoffNote(results, continues);
   if (!continues || h.control.signal.aborted) {
     await finishWithNote(h, results, note);

@@ -202,11 +202,15 @@ test('fits a narrow window and a dark theme', async ({ page }) => {
   expect(scrollWidth).toBeLessThanOrEqual(390);
 });
 
-test('the turn header names the instruction files the agent followed', async ({ page }) => {
+test('the chat context names the instruction files the agent followed', async ({ page }) => {
+  await page.setViewportSize({ width: 2000, height: 1100 });
   const input = await chatWithRepo(page);
   await input.fill('Hello there');
   await input.press('Enter');
-  await expect(page.locator('.ai-following')).toHaveText(
+  const rows = page
+    .getByRole('region', { name: 'Chat context' })
+    .getByRole('list', { name: 'This chat' });
+  await expect(rows.locator('[data-row="following"]')).toHaveText(
     'Following: CLAUDE.md, CLAUDE.local.md, AGENTS.md, .cursorrules, .github/copilot-instructions.md, .cursor/rules/style.mdc',
     { timeout: 15_000 },
   );

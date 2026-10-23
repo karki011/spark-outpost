@@ -86,7 +86,9 @@ test('a running turn shows no timer', async ({ page }) => {
   await cached(runId, 3600, 2);
   await open(page);
 
-  await expect(page.locator('.ctx-unlinked')).toBeVisible();
+  await expect(
+    page.locator('.comp-bar').getByRole('button', { name: 'Choose project' }),
+  ).toBeVisible();
   await expect(timer(page)).toHaveCount(0);
 });
 
@@ -99,7 +101,7 @@ test('no timer while the agent waits on a card', async ({ page }) => {
   await cached(runId, 3600, 2);
   await open(page);
 
-  await expect(page.getByRole('group', { name: /Run a command\?/ })).toBeVisible();
+  await expect(page.getByRole('group', { name: /^Run .+\?$/ })).toBeVisible();
   await expect(timer(page)).toHaveCount(0);
 });
 
