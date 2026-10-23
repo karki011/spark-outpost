@@ -21,6 +21,7 @@ import {
   awaitsAddress,
   describeTool,
   opensPullRequest,
+  toolNameOf,
   toolPath,
   toolTarget,
 } from './tool-titles.ts';
@@ -104,6 +105,7 @@ const PROVIDER_ISSUES = new Set([
 interface OpenTool {
   name: string;
   kind: string | null;
+  toolName: string | null;
   target: string | null;
   path: string | null;
   opensPr: boolean;
@@ -117,6 +119,7 @@ function stepOf(kind: 'step_started' | 'step_finished', open: OpenTool): Provide
     name: open.name,
     tool: true,
     ...(open.kind ? { toolKind: open.kind } : {}),
+    ...(open.toolName ? { toolName: open.toolName } : {}),
     ...(open.target ? { target: open.target } : {}),
     ...(open.path ? { path: open.path } : {}),
   };
@@ -233,6 +236,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
     const open = openTools.get(update.toolCallId);
     if (!open) return;
     open.opensPr ||= opensPullRequest(update.title, update.rawInput);
+    open.toolName = toolNameOf(update) ?? open.toolName;
     const title = update.title ? describeTool(update.title, update.kind ?? open.kind) : null;
     open.path = toolPath(update.locations, update.rawInput) ?? open.path;
     open.target =
@@ -336,6 +340,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
           const opened: OpenTool = {
             name,
             kind: update.kind ?? null,
+            toolName: toolNameOf(update),
             target: toolTarget(update.locations, update.rawInput),
             path: toolPath(update.locations, update.rawInput),
             opensPr: opensPullRequest(update.title, update.rawInput),

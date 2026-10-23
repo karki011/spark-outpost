@@ -1,4 +1,4 @@
-import { friendlyStep, isSparkNote, type BrowserShot } from '@spark-outpost/contracts';
+import { friendlyStep, isSparkNote, toolLabel, type BrowserShot } from '@spark-outpost/contracts';
 import { anchorIndex, outsideFence } from '../../browser/shot-order.ts';
 import type { AgentTerminalView } from '../commands/agent-terminal-model.ts';
 import type { CommandView } from '../commands/command-model.ts';
@@ -7,6 +7,7 @@ import { stepActivity } from '../status/step-activity.ts';
 
 const THINKING = 'Thinking';
 const WEB_STEP = /^(?:Fetched |Searched the web$)/;
+const WEB_SEARCHED = 'Searched the web';
 
 export type RowFamily = 'explore' | 'edit' | 'run';
 export type ToolTone = 'read' | 'search' | 'edit' | 'run' | 'web' | 'other';
@@ -140,6 +141,35 @@ function namedItem(step: StepView, base: ToolBase, open: boolean, ranCommands: b
   return { ...base, tone: 'other' as const, verb: base.label, target: null };
 }
 
+const NAME_TONES: Readonly<Record<string, ToolTone>> = {
+  Read: 'read',
+  view_image: 'read',
+  Grep: 'search',
+  Glob: 'search',
+  Edit: 'edit',
+  MultiEdit: 'edit',
+  Write: 'edit',
+  NotebookEdit: 'edit',
+  Bash: 'run',
+  PowerShell: 'run',
+  WebFetch: 'web',
+  WebSearch: 'web',
+};
+
+function namedTarget(item: ToolItem, toolName: string, verb: string): string | null {
+  if (item.tone === 'web') return item.label === WEB_SEARCHED ? null : item.target;
+  if (item.tone !== 'other') return item.target;
+  const restated = item.label === verb || item.label === plainName(toolName);
+  return restated ? null : item.label;
+}
+
+function named(item: ToolItem, toolName: string | undefined): ToolItem {
+  const verb = toolLabel(toolName);
+  if (!toolName || !verb) return item;
+  const target = namedTarget(item, toolName, verb);
+  return { ...item, tone: NAME_TONES[toolName] ?? item.tone, verb, target };
+}
+
 function toolItem(step: StepView, key: string, ranCommands: boolean): ToolItem | null {
   const open = step.status === 'open';
   const base: ToolBase = {
@@ -150,7 +180,8 @@ function toolItem(step: StepView, key: string, ranCommands: boolean): ToolItem |
     startedAt: step.startedAt,
     finishedAt: step.finishedAt,
   };
-  return fromToolKind(step, base, open) ?? fromName(step, base, open, ranCommands);
+  const item = fromToolKind(step, base, open) ?? fromName(step, base, open, ranCommands);
+  return item && named(item, step.toolName);
 }
 
 function isThought(step: StepView): boolean {

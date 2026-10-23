@@ -1,4 +1,4 @@
-import type { RunEvent, StepMark } from '@spark-outpost/contracts';
+import { TOOL_NAME_CHARS, type RunEvent, type StepMark } from '@spark-outpost/contracts';
 import { THINKING_STEP } from '../agents/acp/session-updates.ts';
 import { storableText } from '../audit/redact.ts';
 import { shotAnchor } from '../persistence/browser-screenshots.ts';
@@ -44,10 +44,15 @@ function filePath(path: string | undefined): string | null {
   return trimmed ? trimmed.slice(-TARGET_CHARS) : null;
 }
 
-function kindMark(output: { toolKind?: string; path?: string }): StepMark {
-  if (!output.toolKind) return {};
+function kindMark(output: { toolKind?: string; toolName?: string; path?: string }): StepMark {
+  const named = output.toolName ? { toolName: output.toolName.slice(0, TOOL_NAME_CHARS) } : {};
+  if (!output.toolKind) return named;
   const path = FILE_KINDS.has(output.toolKind) ? filePath(output.path) : null;
-  return { toolKind: output.toolKind.slice(0, 40), ...(path ? { target: path } : {}) };
+  return {
+    toolKind: output.toolKind.slice(0, 40),
+    ...named,
+    ...(path ? { target: path } : {}),
+  };
 }
 
 function anchorMark(reply: ReplySoFar | undefined): StepMark {
@@ -135,8 +140,11 @@ export function createTurnEvents({
     }
     if (!open) return;
     openSteps.delete(key);
-    const finished =
-      kind.target && !open.mark.target ? { ...open.mark, target: kind.target } : open.mark;
+    const finished = {
+      ...open.mark,
+      ...(kind.target && !open.mark.target ? { target: kind.target } : {}),
+      ...(kind.toolName && !open.mark.toolName ? { toolName: kind.toolName } : {}),
+    };
     await append(owned(runEvents.stepFinished(name, finished, now()), subagent));
   };
 

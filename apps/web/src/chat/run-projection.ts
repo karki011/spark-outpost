@@ -42,6 +42,7 @@ export interface StepTimes {
 
 export interface StepTool {
   toolKind?: string | undefined;
+  toolName?: string | undefined;
   target?: string | undefined;
 }
 
@@ -74,7 +75,8 @@ function thinkingOf(step: RunStep): Pick<StepView, 'reasoningId' | 'thought'> {
 }
 
 function startedStep(event: Extract<RunEvent, { type: typeof EventType.STEP_STARTED }>): RunStep {
-  const { toolCallId, waits, textOffset, textBefore, textHeld, toolKind, target } = stepMark(event);
+  const { toolCallId, waits, textOffset, textBefore, textHeld, toolKind, toolName, target } =
+    stepMark(event);
   return {
     name: event.stepName,
     done: false,
@@ -84,6 +86,7 @@ function startedStep(event: Extract<RunEvent, { type: typeof EventType.STEP_STAR
     ...(textOffset === undefined ? {} : { textOffset, textBefore, textHeld }),
     ...(event.timestamp === undefined ? {} : { startedAt: event.timestamp }),
     ...(toolKind ? { toolKind } : {}),
+    ...(toolName ? { toolName } : {}),
     ...(target ? { target } : {}),
   };
 }
@@ -91,6 +94,7 @@ function startedStep(event: Extract<RunEvent, { type: typeof EventType.STEP_STAR
 function toolOf(step: StepTool): StepTool {
   return {
     ...(step.toolKind ? { toolKind: step.toolKind } : {}),
+    ...(step.toolName ? { toolName: step.toolName } : {}),
     ...(step.target ? { target: step.target } : {}),
   };
 }
@@ -120,10 +124,16 @@ function finishStep(
   const index =
     called >= 0 ? called : steps.findIndex((step) => !step.done && step.name === event.stepName);
   const finishedAt = event.timestamp === undefined ? {} : { finishedAt: event.timestamp };
-  const { target } = stepMark(event);
+  const { target, toolName } = stepMark(event);
   return steps.map((step, position) =>
     position === index
-      ? { ...step, done: true, ...finishedAt, ...(target && !step.target ? { target } : {}) }
+      ? {
+          ...step,
+          done: true,
+          ...finishedAt,
+          ...(target && !step.target ? { target } : {}),
+          ...(toolName && !step.toolName ? { toolName } : {}),
+        }
       : step,
   );
 }
