@@ -54,6 +54,13 @@ describe('inline shortcuts', () => {
     expect(inline('***[word]***', 'italic')).toBe('**[word]**');
   });
 
+  it('sizes the code delimiters to the backticks in the selection', () => {
+    expect(inline('a [b`c] d', 'code')).toBe('a ``[b`c]`` d');
+    expect(inline('const [value = `x`]', 'code')).toBe('const `` [value = `x`] ``');
+    expect(inline('const `` [value = `x`] ``', 'code')).toBe('const [value = `x`]');
+    expect(inline('a [``b`` c``d``]', 'code')).toBe('a ``` [``b`` c``d``] ```');
+  });
+
   it('keeps spaces outside the markers', () => {
     expect(inline('a[ word ]b', 'bold')).toBe('a **[word]** b');
   });
@@ -93,6 +100,7 @@ describe('line formats', () => {
   it('wraps lines in a fence and unwraps the fence around the caret', () => {
     expect(lines('[a\nb]', toggleCodeBlock)).toBe('```\n[a\nb]\n```');
     expect(lines('|', toggleCodeBlock)).toBe('```\n|\n```');
+    expect(lines('[say ```x```]', toggleCodeBlock)).toBe('````\n[say ```x```]\n````');
     expect(lines('```ts\na|\n```\nafter', toggleCodeBlock)).toBe('[a]\nafter');
   });
 });

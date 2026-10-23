@@ -41,9 +41,15 @@ function canOpen(text: string, at: number, delimiter: Delimiter): boolean {
   return !(delimiter.marker[0] === '_' && isWord(text[at - 1]));
 }
 
+function isEscaped(text: string, at: number): boolean {
+  let backslashes = 0;
+  while (text[at - 1 - backslashes] === '\\') backslashes += 1;
+  return backslashes % 2 === 1;
+}
+
 function closesAt(text: string, at: number, delimiter: Delimiter): boolean {
   const { marker } = delimiter;
-  if (!text.startsWith(marker, at) || isSpace(text[at - 1])) return false;
+  if (!text.startsWith(marker, at) || isSpace(text[at - 1]) || isEscaped(text, at)) return false;
   const char = marker[0]!;
   const after = text[at + marker.length];
   if (marker.length === 1 && (after === char || text[at - 1] === char)) return false;
@@ -118,6 +124,7 @@ class Scanner {
   }
 
   private token(at: number): Token | null {
+    if (isEscaped(this.text, at)) return null;
     const char = this.text[at];
     if (char === '`') return this.code(at);
     if (char === '[') return this.link(at);

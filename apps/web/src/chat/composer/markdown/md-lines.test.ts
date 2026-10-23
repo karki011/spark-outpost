@@ -47,6 +47,15 @@ describe('inline styling', () => {
     expect(inline('`open')).toBe('`open');
   });
 
+  it('leaves backslash-escaped markers as plain text', () => {
+    expect(inline('\\*literal\\*')).toBe('\\*literal\\*');
+    expect(inline('\\*\\*not bold\\*\\*')).toBe('\\*\\*not bold\\*\\*');
+    expect(inline('\\`not code\\`')).toBe('\\`not code\\`');
+    expect(inline('\\[not](a link)')).toBe('\\[not](a link)');
+    expect(inline('*a\\*b*')).toBe('[marker:*][em:a\\*b][marker:*]');
+    expect(inline('\\\\**bold**')).toBe('\\\\[marker:**][strong:bold][marker:**]');
+  });
+
   it('keeps the text of every span equal to the input', () => {
     const samples = ['**a _b_ `c`** [d](e) ~~f~~ @g', '***x***', '_**', '[a](b', '`` ` ``'];
     for (const sample of samples) {

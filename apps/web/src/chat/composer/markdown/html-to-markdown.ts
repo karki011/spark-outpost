@@ -1,3 +1,5 @@
+import { codeFence, codeSpan } from './backticks.ts';
+
 const SKIPPED = new Set([
   'HEAD',
   'SCRIPT',
@@ -72,10 +74,9 @@ function wrap(text: string, marker: string): string {
   return `${lead}${marker}${core}${marker}${trail}`;
 }
 
-function codeSpan(text: string): string {
+function inlineCode(text: string): string {
   const flat = text.replace(/\s+/g, ' ');
-  const fence = flat.includes('`') ? '``' : '`';
-  return flat.trim() === '' ? flat : `${fence}${flat}${fence}`;
+  return flat.trim() === '' ? flat : codeSpan(flat);
 }
 
 class Converter {
@@ -109,8 +110,8 @@ class Converter {
     if (tag === 'HR') return '\n\n---\n\n';
     if (tag === 'IMG') return element.getAttribute('alt') ?? '';
     if (tag === 'PRE')
-      return `\n\n\`\`\`\n${(element.textContent ?? '').replace(/\n$/, '')}\n\`\`\`\n\n`;
-    if (CODE.has(tag) && !pre) return codeSpan(element.textContent ?? '');
+      return `\n\n${codeFence((element.textContent ?? '').replace(/\n$/, ''))}\n\n`;
+    if (CODE.has(tag) && !pre) return inlineCode(element.textContent ?? '');
     if (tag === 'UL' || tag === 'OL') return this.list(element, tag === 'OL');
     const heading = HEADINGS[tag];
     if (heading) return `\n\n${heading} ${this.children(element, pre).trim()}\n\n`;

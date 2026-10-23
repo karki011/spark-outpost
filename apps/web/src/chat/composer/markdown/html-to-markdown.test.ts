@@ -29,6 +29,13 @@ describe('htmlToMarkdown', () => {
     );
   });
 
+  it('picks code fences longer than any backticks inside', () => {
+    expect(htmlToMarkdown('<pre>```md\n# Title\n```\n</pre>')).toBe(
+      '````\n```md\n# Title\n```\n````',
+    );
+    expect(htmlToMarkdown('<p>Run <code>`ls`</code> now</p>')).toBe('Run `` `ls` `` now');
+  });
+
   it('reads Google Docs style spans and ignores its bold wrapper', () => {
     expect(
       htmlToMarkdown(

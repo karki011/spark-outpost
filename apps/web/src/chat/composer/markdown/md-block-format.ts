@@ -1,3 +1,4 @@
+import { codeFence } from './backticks.ts';
 import type { Edit } from './md-format.ts';
 import { lineAt, scanLines } from './md-lines.ts';
 
@@ -9,7 +10,6 @@ const PREFIXES: Record<LineFormat, RegExp> = {
   quote: /^ {0,3}> ?/,
 };
 const ANY_LIST = /^(\s*)(?:[-*+]|\d{1,9}[.)]) /;
-const FENCE_LINE = '```';
 
 interface LineRange {
   start: number;
@@ -86,8 +86,8 @@ export function toggleCodeBlock(text: string, start: number, end: number): Edit 
   }
   const range = lineRange(text, start, end);
   const body = text.slice(range.start, range.end);
-  const insert = `${FENCE_LINE}\n${body}\n${FENCE_LINE}`;
-  const bodyStart = range.start + FENCE_LINE.length + 1;
+  const insert = codeFence(body);
+  const bodyStart = range.start + insert.indexOf('\n') + 1;
   if (body === '') return { ...range, insert, selectStart: bodyStart, selectEnd: bodyStart };
   return { ...range, insert, selectStart: bodyStart, selectEnd: bodyStart + body.length };
 }
