@@ -69,6 +69,9 @@ import { useAgentConfig } from './project/use-agent-config.ts';
 import { repoFileKey, type RepoFile } from './project/use-file-search.ts';
 import { useMention } from './project/use-mention.ts';
 import { enterAction } from './queue/send-choice.ts';
+import { FormatToggle } from './composer/markdown/FormatToggle.tsx';
+import { MarkdownInput } from './composer/markdown/MarkdownInput.tsx';
+import { codeBlockEnter } from './composer/markdown/md-keys.ts';
 import { QuoteChips } from './quotes/QuoteChips.tsx';
 import { sendLabel } from './quotes/quote-text.ts';
 import type { QuotesState } from './quotes/use-quotes.ts';
@@ -141,6 +144,7 @@ export function Composer({
 }: ComposerProps) {
   const [draft, setDraft] = useState('');
   const [repoOpen, setRepoOpen] = useState(false);
+  const [formatting, setFormatting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastChoice = useRef(busyEnter);
   const secrets = useSecretGuard(draft);
@@ -293,8 +297,10 @@ export function Composer({
     if (slash.handleKey(event)) return;
     if (mention.handleKey(event)) return;
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+      const inCode = codeBlockEnter(event, event.currentTarget);
+      if (inCode === 'newline') return;
       event.preventDefault();
-      void submit(enterAction(event, busyEnter));
+      void submit(inCode === 'send' ? busyEnter : enterAction(event, busyEnter));
     }
   };
 
@@ -340,6 +346,7 @@ export function Composer({
             chatId={conversationId}
             onAddChat={attachments.addChat}
           />
+          <FormatToggle open={formatting} onToggle={setFormatting} />
           <span className={attachments.items.length > 0 ? 'hint shown' : 'hint'} title={hint}>
             {hint}
           </span>
@@ -450,8 +457,9 @@ export function Composer({
           onClose={closeRepo}
         />
       )}
-      <textarea
+      <MarkdownInput
         ref={textareaRef}
+        formatting={formatting}
         id={inputId}
         autoFocus={autoFocus}
         value={draft}

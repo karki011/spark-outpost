@@ -38,6 +38,7 @@ describe('appMenuTemplate', () => {
       'appMenu',
       'File',
       'editMenu',
+      'Format',
       'View',
       'windowMenu',
       'help',
@@ -55,7 +56,12 @@ describe('appMenuTemplate', () => {
 });
 
 describe('Close Window, Reload and Force Reload', () => {
-  type Item = { label?: string; accelerator?: string; click?: (...args: unknown[]) => void };
+  type Item = {
+    label?: string;
+    accelerator?: string;
+    registerAccelerator?: boolean;
+    click?: (...args: unknown[]) => void;
+  };
   const items = (paneShortcut: (shortcut: string) => boolean) => {
     const template = appMenuTemplate(actions({ paneShortcut }));
     return template.flatMap((menu) => (Array.isArray(menu.submenu) ? menu.submenu : [])) as Item[];
@@ -89,10 +95,10 @@ describe('Close Window, Reload and Force Reload', () => {
     for (const label of ['Close Window', 'Reload', 'Force Reload'])
       press(all, label, fakeWindow(did));
     expect(did).toEqual(['close', 'reload', 'hard_reload']);
-    expect(all.filter((item) => item.accelerator).map((item) => item.accelerator)).toEqual([
+    const registered = all.filter((item) => item.accelerator && item.registerAccelerator !== false);
+    expect(registered.map((item) => item.accelerator)).toEqual([
       'CommandOrControl+,',
       'CommandOrControl+W',
-      'Control+Command+S',
       'CommandOrControl+R',
       'Shift+CommandOrControl+R',
     ]);
@@ -132,6 +138,7 @@ describe('the View menu', () => {
     const hide = sidebarItem({ sidebarShown: true, toggleSidebar: () => (toggled += 1) });
     expect(hide.label).toBe('Hide Sidebar');
     expect(hide.accelerator).toBe('Control+Command+S');
+    expect(hide.registerAccelerator).toBe(false);
     (hide.click as () => void)();
     expect(toggled).toBe(1);
     expect(sidebarItem({ sidebarShown: false }).label).toBe('Show Sidebar');

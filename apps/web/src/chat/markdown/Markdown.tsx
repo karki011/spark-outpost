@@ -11,6 +11,7 @@ import './markdown.css';
 interface MarkdownProps {
   text: string;
   streaming?: boolean;
+  typed?: boolean;
 }
 
 const LANGUAGE_CLASS = /language-([\w+-]+)/;
@@ -73,7 +74,10 @@ const components: Components = {
 
 export const remarkPlugins = [remarkGfm];
 
-const MarkdownBlock = memo(function MarkdownBlock({ text, streaming }: Required<MarkdownProps>) {
+const MarkdownBlock = memo(function MarkdownBlock({
+  text,
+  streaming,
+}: Required<Omit<MarkdownProps, 'typed'>>) {
   return (
     <StreamingContext value={streaming}>
       <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
@@ -83,10 +87,14 @@ const MarkdownBlock = memo(function MarkdownBlock({ text, streaming }: Required<
   );
 });
 
-export const Markdown = memo(function Markdown({ text, streaming = false }: MarkdownProps) {
-  const blocks = splitBlocks(withoutClarifyBlock(text));
+export const Markdown = memo(function Markdown({
+  text,
+  streaming = false,
+  typed = false,
+}: MarkdownProps) {
+  const blocks = splitBlocks(typed ? text : withoutClarifyBlock(text));
   return (
-    <div className="md">
+    <div className={typed ? 'md md-typed' : 'md'}>
       {blocks.map((block, index) => (
         <MarkdownBlock
           key={index}

@@ -145,7 +145,7 @@ function ChatShell({ entering }: { entering: boolean }) {
   const view: AppView = hiddenView ? 'home' : storedView;
   useAttentionTitle(waiting);
   useAttentionReport(conversations.data);
-  useAppMenu({ sidebarShown: !layout.hidden, toggleSidebar: layout.toggle });
+  useAppMenu({ sidebarShown: !layout.hidden });
   const finished = chats.some((chat) => rowState(chat, false).tone === 'done');
   const mood =
     waiting > 0 ? 'alert' : chats.some(isRunning) ? 'working' : finished ? 'happy' : null;

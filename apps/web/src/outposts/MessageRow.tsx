@@ -58,7 +58,7 @@ export function MessageRow({ post, anchor, targets, body, createdAt, children }:
             </span>
           )}
         </div>
-        <PostText text={body} what={what} markdown />
+        <PostText text={body} what={what} />
         {post.files > 0 && (
           <p className="op-attached">
             <FileIcon />
