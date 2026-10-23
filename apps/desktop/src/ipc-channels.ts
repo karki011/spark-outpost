@@ -97,6 +97,8 @@ export const IPC = {
   browserViewSnapshot: 'browser-view:snapshot',
   browserViewShortcut: 'browser-view:shortcut',
   browserViewFound: 'browser-view:found',
+  browserViewHand: 'browser-view:hand',
+  browserToView: 'browser:to-view',
   macControlStatus: 'mac-control:status',
   macControlPrompt: 'mac-control:prompt',
   macControlOpenSettings: 'mac-control:open-settings',

@@ -155,6 +155,8 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     command: (profile: string, command: unknown) =>
       ipcRenderer.invoke(IPC.browserViewCommand, profile, command),
     start: (profile: string) => ipcRenderer.invoke(IPC.browserViewStart, profile),
+    handToChat: (request: unknown) => ipcRenderer.invoke(IPC.browserViewHand, request),
+    fromChat: (request: unknown) => ipcRenderer.invoke(IPC.browserToView, request),
     onState: (callback: (state: unknown) => void) => listen(IPC.browserViewStateChanged, callback),
     onSnapshot: (callback: (snapshot: unknown) => void) =>
       listen(IPC.browserViewSnapshot, callback),

@@ -2,6 +2,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { calls, withDesktopBrowser } from './desktop-browser.ts';
+import { toggleHeaderPane } from './header-menu.ts';
+import { seedChats } from './sidebar-seed.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude'] });
@@ -119,4 +121,108 @@ test('the Browser view passes an accessibility check', async ({ page }) => {
   await openBrowserView(page);
   const results = await new AxeBuilder({ page }).include('.bv').analyze();
   expect(results.violations).toEqual([]);
+});
+
+const DOCS = 'https://docs.example.com/';
+const NEWS = 'https://news.example.com/';
+
+async function pushView(page: Page, tabs: unknown[], favorites: unknown[] = []) {
+  await page.evaluate(
+    ([tabsArg, favoritesArg]) =>
+      (
+        window as unknown as {
+          browserViewPush: (p: string, t: unknown[], f: unknown[]) => void;
+        }
+      ).browserViewPush('personal', tabsArg as unknown[], favoritesArg as unknown[]),
+    [tabs, favorites],
+  );
+}
+
+test('favorites and pinned tabs sit above Today', async ({ page }) => {
+  const side = await openBrowserView(page);
+  await pushView(
+    page,
+    [
+      { title: 'Docs', url: DOCS, active: true, pinned: true, place: 'external' },
+      { title: 'News', url: NEWS, place: 'external' },
+    ],
+    [{ id: 'f1', url: 'https://mail.example.com/', title: 'Mail' }],
+  );
+  const pinned = side.getByRole('list', { name: 'Pinned tabs' });
+  await expect(pinned.getByRole('button', { name: 'Docs', exact: true })).toBeVisible();
+  await expect(
+    side.getByRole('list', { name: 'Tabs' }).getByRole('button', { name: 'News', exact: true }),
+  ).toBeVisible();
+
+  await pinned.getByRole('button', { name: 'Unpin Docs' }).click();
+  await expect
+    .poll(async () => (await viewCommands(page)).at(-1))
+    .toEqual({ profile: 'personal', command: { command: 'pin', tabId: 'v1', pinned: false } });
+
+  const favorites = side.getByRole('list', { name: 'Favorites' });
+  await favorites.getByRole('button', { name: 'Mail' }).click();
+  await expect
+    .poll(async () => (await viewCommands(page)).at(-1))
+    .toEqual({ profile: 'personal', command: { command: 'open_favorite', id: 'f1' } });
+
+  await favorites.getByRole('button', { name: 'Add this page to Favorites' }).click();
+  await expect
+    .poll(async () => (await viewCommands(page)).at(-1))
+    .toEqual({ profile: 'personal', command: { command: 'add_favorite', tabId: 'v1' } });
+
+  await pushView(
+    page,
+    [{ title: 'Docs', url: DOCS, active: true, place: 'external' }],
+    [{ id: 'f2', url: DOCS, title: 'Docs' }],
+  );
+  await favorites.getByRole('button', { name: 'Remove this page from Favorites' }).click();
+  await expect
+    .poll(async () => (await viewCommands(page)).at(-1))
+    .toEqual({ profile: 'personal', command: { command: 'remove_favorite', id: 'f2' } });
+});
+
+test('Hand to chat gives a chat the page and opens that chat', async ({ page }) => {
+  const [chatId] = await seedChats([{ title: 'Fix deploy docs' }]);
+  await openBrowserView(page);
+  await pushView(page, [{ title: 'Docs', url: DOCS, active: true, place: 'external' }]);
+  const hand = page.getByRole('button', { name: 'Hand to chat' });
+  await hand.click();
+  const menu = page.getByRole('menu', { name: 'Hand this tab to a chat' });
+  await expect(menu.getByRole('menuitem', { name: 'Fix deploy docs' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(hand).toBeFocused();
+
+  await hand.click();
+  await menu.getByRole('menuitem', { name: 'Fix deploy docs' }).click();
+  await expect
+    .poll(() => calls(page, 'view-hand'))
+    .toEqual([{ profile: 'personal', tabId: 'v1', chatId }]);
+  await expect(page.getByRole('region', { name: 'Browser' })).toBeVisible();
+});
+
+test('a chat’s page tab opens in the Browser view’s Work profile', async ({ page }) => {
+  const [chatId] = await seedChats([{ title: 'Status check' }]);
+  await withDesktopBrowser(page);
+  await page.goto('/');
+  await rail(page)
+    .getByRole('button', { name: /^Chats/ })
+    .click();
+  await page
+    .getByRole('button', { name: /Status check/ })
+    .first()
+    .click();
+  await toggleHeaderPane(page, 'Browser');
+  await page.evaluate(
+    (id) =>
+      (window as unknown as { browserPush: (c: string, t: unknown[]) => void }).browserPush(id, [
+        { title: 'Status', url: 'https://status.example.com/', active: true, place: 'external' },
+      ]),
+    chatId!,
+  );
+  await page.getByRole('button', { name: 'Open in Browser view (Work)' }).click();
+  await expect.poll(() => calls(page, 'view-from-chat')).toEqual([{ chatId, tabId: 't1' }]);
+  await expect(
+    page.getByRole('radiogroup', { name: 'Browser profile' }).getByRole('radio', { name: 'Work' }),
+  ).toBeChecked();
 });

@@ -6,6 +6,9 @@ import type {
   BrowserPlacement,
   BrowserProfile,
   BrowserViewPlacement,
+  BrowserHandToChat,
+  BrowserToView,
+  BrowserViewCommand,
   BrowserSelectedText,
   DesktopHelpInfo,
   DiagnosticsExport,
@@ -79,8 +82,10 @@ export interface DesktopBrowser {
 export interface DesktopBrowserView {
   state(profile: BrowserProfile): Promise<unknown>;
   place(placement: BrowserViewPlacement): Promise<unknown>;
-  command(profile: BrowserProfile, command: BrowserCommand): Promise<unknown>;
+  command(profile: BrowserProfile, command: BrowserViewCommand): Promise<unknown>;
   start(profile: BrowserProfile): Promise<unknown>;
+  handToChat(request: BrowserHandToChat): Promise<unknown>;
+  fromChat(request: BrowserToView): Promise<unknown>;
   onState(callback: (state: unknown) => void): Unsubscribe;
   onSnapshot(callback: (snapshot: unknown) => void): Unsubscribe;
   onShortcut(callback: (event: unknown) => void): Unsubscribe;

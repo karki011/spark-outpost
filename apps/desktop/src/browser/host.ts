@@ -39,6 +39,8 @@ import { removeRetiredPartitions } from './retired-partitions.ts';
 import { BROWSER_PARTITION } from './request-guard.ts';
 import { signOut, signedInSites, type SessionGuards } from './sessions.ts';
 import { startBrowserViewHost, type BrowserViewHost } from './view-host.ts';
+import { loadSavedView } from './view-saved.ts';
+import { handToChat, toView } from './view-transfer.ts';
 import type { PaneTab } from './tab.ts';
 
 export interface BrowserHostOptions {
@@ -63,6 +65,8 @@ const CHANNELS = [
   IPC.browserStart,
   IPC.browserSites,
   IPC.browserSignOut,
+  IPC.browserViewHand,
+  IPC.browserToView,
 ];
 
 function menuTemplate(
@@ -81,6 +85,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
   const blocked = new Set<number>(options.blockedPorts);
   await removeRetiredPartitions(options.userData, options.log);
   const origins = await loadRecentOrigins(options.userData, options.log);
+  const saved = await loadSavedView(options.userData, options.log);
   const picks = new Map<string, PickSession>();
   const send = (channel: string, payload: unknown) => {
     const window = options.window();
@@ -213,11 +218,20 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     window: options.window,
     blockedPorts: () => blocked,
     guards,
+    saved,
     send,
     guarded,
     log: options.log,
   });
   view = viewHost;
+  ipcMain.handle(
+    IPC.browserViewHand,
+    guarded((_event, raw) => handToChat(panes, viewHost, raw)),
+  );
+  ipcMain.handle(
+    IPC.browserToView,
+    guarded((_event, raw) => toView(panes, viewHost, raw)),
+  );
 
   ipcMain.on(IPC.browserPageCopyAllowed, (event) => {
     event.returnValue =

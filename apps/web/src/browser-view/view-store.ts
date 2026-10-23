@@ -1,20 +1,25 @@
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import {
   browserProfileSchema,
   browserViewSnapshotSchema,
   browserViewStateSchema,
-  type BrowserCommand,
+  type BrowserFavorite,
   type BrowserPaneTab,
   type BrowserProfile,
+  type BrowserViewCommand,
 } from '@spark-outpost/contracts';
 import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
 
 export interface ProfileTabs {
   tabs: readonly BrowserPaneTab[];
+  favorites: readonly BrowserFavorite[];
   snapshot: string | null;
 }
 
-const EMPTY: ProfileTabs = { tabs: [], snapshot: null };
+export type TransferResult = { ok: true } | { ok: false; reason: string };
+
+const EMPTY: ProfileTabs = { tabs: [], favorites: [], snapshot: null };
+const viewOpeners = new Set<() => void>();
 const PROFILE_KEY = 'spark-outpost.browser-view.profile';
 
 let profiles: ReadonlyMap<BrowserProfile, ProfileTabs> = new Map();
@@ -44,7 +49,8 @@ function update(profile: BrowserProfile, change: Partial<ProfileTabs>): void {
 
 export function acceptViewState(raw: unknown): void {
   const state = browserViewStateSchema.safeParse(raw);
-  if (state.success) update(state.data.profile, { tabs: state.data.tabs });
+  if (!state.success) return;
+  update(state.data.profile, { tabs: state.data.tabs, favorites: state.data.favorites });
 }
 
 function connect(): void {
@@ -91,6 +97,42 @@ function saveProfile(profile: BrowserProfile): void {
   }
 }
 
-export function sendViewCommand(profile: BrowserProfile, command: BrowserCommand): void {
+export function sendViewCommand(profile: BrowserProfile, command: BrowserViewCommand): void {
   void desktopBrowserView()?.command(profile, command);
+}
+
+function transferResult(raw: unknown): TransferResult {
+  const result = raw as TransferResult | null;
+  if (result?.ok === true) return { ok: true };
+  const reason = typeof result?.reason === 'string' ? result.reason : 'That didn’t work.';
+  return { ok: false, reason };
+}
+
+export async function handTabToChat(
+  profile: BrowserProfile,
+  tabId: string,
+  chatId: string,
+): Promise<TransferResult> {
+  const view = desktopBrowserView();
+  if (!view) return { ok: false, reason: 'The Browser view needs the Mac app.' };
+  return transferResult(await view.handToChat({ profile, tabId, chatId }).catch(() => null));
+}
+
+export async function openChatTabInView(chatId: string, tabId: string): Promise<TransferResult> {
+  const view = desktopBrowserView();
+  if (!view) return { ok: false, reason: 'The Browser view needs the Mac app.' };
+  const result = transferResult(await view.fromChat({ chatId, tabId }).catch(() => null));
+  if (!result.ok) return result;
+  chooseProfile('work');
+  viewOpeners.forEach((open) => open());
+  return result;
+}
+
+export function useBrowserViewOpener(open: () => void): void {
+  useEffect(() => {
+    viewOpeners.add(open);
+    return () => {
+      viewOpeners.delete(open);
+    };
+  }, [open]);
 }

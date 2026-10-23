@@ -5,6 +5,7 @@ import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
 import {
   DevtoolsIcon,
+  GlobeIcon,
   NavBackIcon,
   NavForwardIcon,
   PickElementIcon,
@@ -20,6 +21,7 @@ import {
   setPaneNotice,
   useChatBrowser,
 } from './browser-store.ts';
+import { browserViewAvailable, openChatTabInView } from '../browser-view/view-store.ts';
 import { AddressBar } from './AddressBar.tsx';
 import { ToolButton } from './ToolButton.tsx';
 import { BrowserTabs } from './BrowserTabs.tsx';
@@ -261,6 +263,20 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
         >
           <ExternalLinkIcon />
         </ToolButton>
+        {browserViewAvailable() && (
+          <ToolButton
+            label="Open in Browser view (Work)"
+            disabled={blank}
+            onClick={() => {
+              if (!tab) return;
+              void openChatTabInView(chatId, tab.id).then((result) => {
+                if (!result.ok) setPaneNotice(chatId, result.reason);
+              });
+            }}
+          >
+            <GlobeIcon />
+          </ToolButton>
+        )}
       </div>
       {finding && tab && finding.tabId === tab.id && !blank && (
         <FindBar
