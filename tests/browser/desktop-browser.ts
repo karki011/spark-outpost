@@ -14,6 +14,8 @@ export async function withDesktopBrowser(page: Page) {
     const textListeners = new Set<(selected: unknown) => void>();
     const shortcutListeners = new Set<(event: unknown) => void>();
     const foundListeners = new Set<(found: unknown) => void>();
+    const viewStateListeners = new Set<(state: unknown) => void>();
+    const viewShortcutListeners = new Set<(event: unknown) => void>();
     const noop = () => () => undefined;
     let signedIn = [
       { origin: 'http://localhost', cookies: 2 },
@@ -51,12 +53,41 @@ export async function withDesktopBrowser(page: Page) {
         textListeners.forEach((listener) => listener(selected)),
       browserShortcut: (event: unknown) => shortcutListeners.forEach((listener) => listener(event)),
       browserFound: (found: unknown) => foundListeners.forEach((listener) => listener(found)),
+      browserViewPush: (profile: string, tabs: Record<string, unknown>[]) => {
+        const state = { profile, tabs: tabs.map((item, index) => tab(`v${index + 1}`, item)) };
+        viewStateListeners.forEach((listener) => listener(state));
+      },
+      browserViewShortcut: (event: unknown) =>
+        viewShortcutListeners.forEach((listener) => listener(event)),
       sparkDesktop: {
         platform: 'darwin',
         companion: { get: async () => null, onChange: noop },
         island: { geometry: async () => null, onGeometry: noop, onCommand: noop },
         updates: { get: async () => null, onChange: noop },
         onOpenChat: noop,
+        browserView: {
+          state: async () => null,
+          place: async (placement: unknown) =>
+            calls.push({ kind: 'view-place', payload: placement }),
+          command: async (profile: string, command: unknown) => {
+            calls.push({ kind: 'view-command', payload: { profile, command } });
+            return true;
+          },
+          start: async (profile: string) => {
+            calls.push({ kind: 'view-start', payload: profile });
+            return { profile, tabs: [tab('v1', { active: true })] };
+          },
+          onState: (listener: (state: unknown) => void) => {
+            viewStateListeners.add(listener);
+            return () => viewStateListeners.delete(listener);
+          },
+          onSnapshot: noop,
+          onShortcut: (listener: (event: unknown) => void) => {
+            viewShortcutListeners.add(listener);
+            return () => viewShortcutListeners.delete(listener);
+          },
+          onFound: noop,
+        },
         browser: {
           state: async () => null,
           place: async (placement: unknown) => calls.push({ kind: 'place', payload: placement }),

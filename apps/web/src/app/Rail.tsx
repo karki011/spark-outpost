@@ -7,6 +7,7 @@ import { UserBlob } from '../brand/UserBlob.tsx';
 import { SIDEBAR_HINT, useSidebarLayout } from '../conversations/sidebar-layout.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { CALENDAR_PATH } from '../ui/icons.tsx';
+import { browserViewAvailable } from '../browser-view/view-store.ts';
 import { useSparkPause } from './pause/use-spark-pause.ts';
 import { RailClock } from './RailClock.tsx';
 import { RailMore } from './RailMore.tsx';
@@ -15,7 +16,7 @@ import { PlanRing } from './PlanRing.tsx';
 import './rail.css';
 
 export type AppView =
-  'home' | 'chats' | 'today' | 'analytics' | 'tickets' | 'map' | 'docs' | 'phone';
+  'home' | 'chats' | 'browser' | 'today' | 'analytics' | 'tickets' | 'map' | 'docs' | 'phone';
 
 interface RailProps {
   view: AppView;
@@ -57,6 +58,16 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
     icon: (
       <svg {...ICON}>
         <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'browser',
+    label: 'Browser',
+    icon: (
+      <svg {...ICON}>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18" />
       </svg>
     ),
   },
@@ -113,8 +124,10 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
   },
 ];
 
-const PHONE_VIEWS = VIEWS.filter((item) => item.id !== 'map' && item.id !== 'today');
-const REMOTE_VIEWS = VIEWS.filter((item) => item.id !== 'today');
+const MAC_ONLY: ReadonlySet<AppView> = new Set(['browser', 'today']);
+const PHONE_VIEWS = VIEWS.filter((item) => item.id !== 'map' && !MAC_ONLY.has(item.id));
+const REMOTE_VIEWS = VIEWS.filter((item) => !MAC_ONLY.has(item.id));
+const NO_BROWSER_VIEWS = VIEWS.filter((item) => item.id !== 'browser');
 
 const REMOTE_ICON = (
   <svg {...ICON}>
@@ -185,7 +198,13 @@ export function Rail({
   const phone = layout?.narrow ?? false;
   const { remote } = useRemoteClient();
   const reopens = layout?.collapsed && !phone;
-  const primary = phone ? PHONE_VIEWS : remote ? REMOTE_VIEWS : VIEWS;
+  const primary = phone
+    ? PHONE_VIEWS
+    : remote
+      ? REMOTE_VIEWS
+      : browserViewAvailable()
+        ? VIEWS
+        : NO_BROWSER_VIEWS;
   const pause = useSparkPause();
   const pauseLabel = pause.paused ? 'Resume Spark' : 'Pause Spark';
   const pauseIcon = pause.paused ? RESUME_ICON : PAUSE_ICON;

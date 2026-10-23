@@ -30,4 +30,19 @@ describe('codexPermissionProfiles', () => {
     });
     expect(profiles['agent-full-access']).not.toHaveProperty('extends');
   });
+
+  it("denies Spark's browser data in every mode, beside the project's secret files", () => {
+    const withData = codexPermissionProfiles('/nowhere/Spark Outpost') as Record<string, Profile>;
+    for (const profile of Object.values(withData)) {
+      expect(profile.filesystem).toMatchObject({
+        '/nowhere/Spark Outpost/Partitions': 'deny',
+        '/nowhere/Spark Outpost/postgres': 'deny',
+        '/nowhere/Spark Outpost/postgres-password': 'deny',
+        '/nowhere/Spark Outpost/browser-origins.json': 'deny',
+      });
+      expect(profile.filesystem).not.toHaveProperty('/nowhere/Spark Outpost');
+    }
+    const plain = codexPermissionProfiles(null) as Record<string, Profile>;
+    expect(Object.keys(plain.agent!.filesystem)).toEqual([':project_roots']);
+  });
 });

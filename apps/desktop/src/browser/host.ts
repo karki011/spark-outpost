@@ -1,6 +1,5 @@
 import {
   Menu,
-  clipboard,
   ipcMain,
   webContents,
   type BrowserWindow,
@@ -11,12 +10,10 @@ import {
 import {
   BROWSER_FOCUS_SHORTCUTS,
   BROWSER_TABS_MAX,
-  addressToUrl,
   browserCommandSchema,
   browserIdSchema,
   browserSignOutSchema,
   browserPlacementSchema,
-  type BrowserClosedTab,
   type BrowserCommand,
   type BrowserPick,
   type BrowserFound,
@@ -27,6 +24,7 @@ import {
 import { IPC } from '../ipc-channels.ts';
 import { runBrowserOp } from './agent-ops.ts';
 import { connectWorkerBridge, type BridgePort, type WorkerBridge } from './bridge.ts';
+import { runPaneCommand } from './pane-command.ts';
 import { BrowserPanes } from './panes.ts';
 import { startPick, type PickSession } from './picker.ts';
 import { loadRecentOrigins } from './recent-origins.ts';
@@ -38,7 +36,9 @@ import {
   type SelectionMenuItem,
 } from './selection-menu.ts';
 import { removeRetiredPartitions } from './retired-partitions.ts';
-import { signOut, signedInSites } from './sessions.ts';
+import { BROWSER_PARTITION } from './request-guard.ts';
+import { signOut, signedInSites, type SessionGuards } from './sessions.ts';
+import { startBrowserViewHost, type BrowserViewHost } from './view-host.ts';
 import type { PaneTab } from './tab.ts';
 
 export interface BrowserHostOptions {
@@ -91,8 +91,18 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     const event: BrowserShortcutEvent = { chatId: tab.chatId, shortcut };
     send(IPC.browserShortcut, event);
   };
-  const panes = new BrowserPanes({
+  let view: BrowserViewHost | null = null;
+  const guards: SessionGuards = {
+    blockedPorts: () => blocked,
+    roots: (contents) => panes.rootsOfContents(contents),
+    log: options.log,
+    inputMarks: (contents) =>
+      panes.inputMarks(contents) ?? view?.panes.inputMarks(contents) ?? null,
+  };
+  const panes: BrowserPanes = new BrowserPanes({
     window: options.window,
+    partition: () => BROWSER_PARTITION,
+    guards,
     blockedPorts: () => blocked,
     stateChanged: (state) => send(IPC.browserStateChanged, state),
     snapshot: (chatId, image) => send(IPC.browserSnapshot, { chatId, image }),
@@ -180,76 +190,12 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     picks.set(tab.id, session);
   };
 
-  const navigate = async (chatId: string, tab: PaneTab, typed: string) => {
-    const url = addressToUrl(typed);
-    if (!url) return;
-    if (!tab.handoff) {
-      tab.owner = 'user';
-      tab.runId = null;
-    }
-    tab.lastAction = null;
-    await tab.load(url);
-    panes.noteChange(chatId);
-    panes.layout();
-  };
-
-  const command = async (chatId: string, action: BrowserCommand) => {
-    if (action.command === 'new_tab') {
-      const url = action.url ? addressToUrl(action.url) : null;
-      const tab = panes.createTab(chatId, {
-        owner: 'user',
-        runId: null,
-        url: url ?? 'about:blank',
-      });
-      if (!tab) return;
-      panes.select(chatId, tab.id);
-      if (url) await navigate(chatId, tab, url);
-      return;
-    }
-    if (action.command === 'reopen') {
-      if (panes.tabsOf(chatId).length >= BROWSER_TABS_MAX) return;
-      const url = panes.takeClosed(chatId);
-      if (url) await command(chatId, { command: 'new_tab', url });
-      return;
-    }
-    const tab = panes.tab(chatId, action.tabId);
-    if (!tab) {
-      panes.resync(chatId);
-      return;
-    }
-    if (action.command === 'navigate') await navigate(chatId, tab, action.url);
-    else if (action.command === 'select')
-      panes.keepFocus(chatId, () => panes.select(chatId, tab.id));
-    else if (action.command === 'close') {
-      let closed: BrowserClosedTab = { handoff: null };
-      panes.keepFocus(chatId, () => {
-        closed = panes.closeByUser(chatId, tab.id);
-      });
-      void stopPick(tab).catch(() => undefined);
-      return closed;
-    } else if (action.command === 'copy_url') {
-      const url = tab.currentUrl();
-      if (url !== 'about:blank') clipboard.writeText(url);
-    } else if (action.command === 'find') {
-      await tab.wake();
-      tab.find(action.text, action.forward, action.next);
-    } else if (action.command === 'stop_find') {
-      tab.stopFind();
-    } else if (action.command === 'focus') {
-      tab.contents()?.focus();
-    } else if (action.command === 'pin') {
-      tab.pinned = action.pinned;
-      panes.noteChange(chatId);
-    } else if (action.command === 'devtools') {
-      tab.openDevtools();
-    } else if (action.command === 'pick') {
-      tab.keep();
-      await pick(tab, action.mode);
-    } else {
-      tab.keep();
-      tab.history(action.command);
-    }
-  };
+  const command = (chatId: string, action: BrowserCommand) =>
+    runPaneCommand(panes, chatId, action, {
+      tabsMax: BROWSER_TABS_MAX,
+      pick,
+      closed: (tab) => void stopPick(tab).catch(() => undefined),
+    });
 
   const guarded =
     <T>(run: (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<T> | T) =>
@@ -263,8 +209,19 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
       }
     };
 
+  const viewHost = startBrowserViewHost({
+    window: options.window,
+    blockedPorts: () => blocked,
+    guards,
+    send,
+    guarded,
+    log: options.log,
+  });
+  view = viewHost;
+
   ipcMain.on(IPC.browserPageCopyAllowed, (event) => {
-    event.returnValue = panes.pageCopyAllowed(event.sender);
+    event.returnValue =
+      panes.pageCopyAllowed(event.sender) || viewHost.panes.pageCopyAllowed(event.sender);
   });
   ipcMain.handle(
     IPC.browserState,
@@ -320,17 +277,27 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
         },
       });
     },
-    windowClosed: () => panes.sleepAll(),
+    windowClosed: () => {
+      panes.sleepAll();
+      viewHost.panes.sleepAll();
+    },
     menuShortcut(shortcut) {
-      const tab = panes.tabOfContents(webContents.getFocusedWebContents());
-      if (!tab) return false;
-      paneShortcut(tab, shortcut);
+      const focused = webContents.getFocusedWebContents();
+      const tab = panes.tabOfContents(focused);
+      if (tab) {
+        paneShortcut(tab, shortcut);
+        return true;
+      }
+      const viewTab = viewHost.panes.tabOfContents(focused);
+      if (!viewTab) return false;
+      viewHost.shortcut(viewTab, shortcut);
       return true;
     },
     dispose() {
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);
       ipcMain.removeAllListeners(IPC.browserPageCopyAllowed);
       try {
+        viewHost.dispose();
         panes.dispose();
       } catch (error) {
         options.log(`Could not close the browser pane cleanly: ${(error as Error).message}`);

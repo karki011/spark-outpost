@@ -149,6 +149,18 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     onShortcut: (callback: (event: unknown) => void) => listen(IPC.browserShortcut, callback),
     onFound: (callback: (found: unknown) => void) => listen(IPC.browserFound, callback),
   },
+  browserView: {
+    state: (profile: string) => ipcRenderer.invoke(IPC.browserViewState, profile),
+    place: (placement: unknown) => ipcRenderer.invoke(IPC.browserViewPlace, placement),
+    command: (profile: string, command: unknown) =>
+      ipcRenderer.invoke(IPC.browserViewCommand, profile, command),
+    start: (profile: string) => ipcRenderer.invoke(IPC.browserViewStart, profile),
+    onState: (callback: (state: unknown) => void) => listen(IPC.browserViewStateChanged, callback),
+    onSnapshot: (callback: (snapshot: unknown) => void) =>
+      listen(IPC.browserViewSnapshot, callback),
+    onShortcut: (callback: (event: unknown) => void) => listen(IPC.browserViewShortcut, callback),
+    onFound: (callback: (found: unknown) => void) => listen(IPC.browserViewFound, callback),
+  },
   help: {
     info: () => ipcRenderer.invoke(IPC.helpInfo),
     exportDiagnostics: () => ipcRenderer.invoke(IPC.helpExportDiagnostics),

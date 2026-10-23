@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react';
+import { useCallback, useEffect, type RefObject } from 'react';
 import type { BrowserBounds, BrowserPlacement } from '@spark-outpost/contracts';
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 
@@ -63,6 +63,8 @@ function overlapped(element: HTMLElement, bounds: BrowserBounds): boolean {
   });
 }
 
+export type PlaceView = (bounds: BrowserBounds | null, covered: boolean) => void;
+
 export function useViewPlacement(
   target: RefObject<HTMLElement | null>,
   home: BrowserHome,
@@ -70,14 +72,27 @@ export function useViewPlacement(
 ): void {
   const { chatId, projectId, sendsTo } = home;
   const rootsKey = home.roots.join('\n');
+  const place = useCallback<PlaceView>(
+    (bounds, covered) => {
+      const roots = rootsKey === '' ? [] : rootsKey.split('\n').slice(0, 16);
+      const placement: BrowserPlacement = { chatId, projectId, roots, bounds, covered, sendsTo };
+      void desktopBrowser()?.place(placement);
+    },
+    [chatId, projectId, rootsKey, sendsTo],
+  );
+  useNativePlacement(target, shown && desktopBrowser() !== null, place);
+}
 
+export function useNativePlacement(
+  target: RefObject<HTMLElement | null>,
+  shown: boolean,
+  place: PlaceView,
+): void {
   useEffect(() => {
-    const browser = desktopBrowser();
     const element = target.current;
-    if (!browser || !element) return;
+    if (!element) return;
     const panel = element.closest('.wp');
     const inner = panel?.querySelector(':scope > .wp-in') ?? null;
-    const roots = rootsKey === '' ? [] : rootsKey.split('\n').slice(0, 16);
     let sent = '';
     let frame = 0;
     let settle = 0;
@@ -97,18 +112,10 @@ export function useViewPlacement(
       const bounds = shown ? boundsOf(element) : null;
       const covered = bounds !== null && (dragging || overlapped(element, bounds));
       watchOverlay(covered);
-      const placement: BrowserPlacement = {
-        chatId,
-        projectId,
-        roots,
-        bounds,
-        covered,
-        sendsTo,
-      };
-      const key = JSON.stringify(placement);
+      const key = JSON.stringify({ bounds, covered });
       if (key === sent) return;
       sent = key;
-      void browser.place(placement);
+      place(bounds, covered);
     };
     function schedule() {
       frame ||= requestAnimationFrame(report);
@@ -168,14 +175,7 @@ export function useViewPlacement(
       cancelAnimationFrame(frame);
       cancelAnimationFrame(animating);
       clearTimeout(settle);
-      void browser.place({
-        chatId,
-        projectId,
-        roots,
-        bounds: null,
-        covered: false,
-        sendsTo,
-      });
+      place(null, false);
     };
-  }, [target, chatId, projectId, rootsKey, shown, sendsTo]);
+  }, [target, shown, place]);
 }

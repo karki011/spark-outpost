@@ -15,6 +15,7 @@ const DEFAULT_PORTS: Record<string, number> = {
 };
 const PAGE_SCHEMES = new Set(['http:', 'https:', 'ws:', 'wss:', 'data:', 'blob:', 'about:']);
 export const BROWSER_PARTITION = 'persist:spark-browser-profile';
+export const PERSONAL_PARTITION = 'persist:spark-browser-personal';
 
 export interface GuardFacts {
   blockedPorts: ReadonlySet<number>;

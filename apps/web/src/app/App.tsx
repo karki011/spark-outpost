@@ -56,7 +56,15 @@ import { ReconnectBanner } from './connection/ReconnectBanner.tsx';
 import { LivePausedHint } from './live/LivePausedHint.tsx';
 import { useAppEvents } from './live/use-app-events.ts';
 import { useFirstContent } from './first-content.ts';
-import { Analytics, OutpostView, Phone, preloadView, Tickets, Today } from './lazy-views.tsx';
+import {
+  Analytics,
+  BrowserView,
+  OutpostView,
+  Phone,
+  preloadView,
+  Tickets,
+  Today,
+} from './lazy-views.tsx';
 import { JoinShortcut } from '../calendar/JoinShortcut.tsx';
 import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
@@ -76,6 +84,7 @@ import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { startIdleMotion } from './idle-motion.ts';
 import '../ui/controls.css';
 import { openTodayEvent, useTodayOpener } from '../calendar/today-request.ts';
+import { browserViewAvailable } from '../browser-view/view-store.ts';
 
 const StableChatView = memo(ChatView);
 
@@ -141,7 +150,10 @@ function ChatShell({ entering }: { entering: boolean }) {
   const ticketNotices = unseenNotices(inbox.data?.tickets ?? []);
   const layout = useSidebarLayoutState(waiting > 0);
   const { remote } = useRemoteClient();
-  const hiddenView = (layout.narrow && storedView === 'map') || (remote && storedView === 'today');
+  const hiddenView =
+    (layout.narrow && (storedView === 'map' || storedView === 'browser')) ||
+    (remote && storedView === 'today') ||
+    (storedView === 'browser' && (remote || !browserViewAvailable()));
   const view: AppView = hiddenView ? 'home' : storedView;
   useAttentionTitle(waiting);
   useAttentionReport(conversations.data);
@@ -332,6 +344,11 @@ function ChatShell({ entering }: { entering: boolean }) {
               onProviders={() => setSettings('ai')}
             />
           )}
+          {view === 'browser' && (
+            <Suspense fallback={<main className="page" aria-label="Browser" aria-busy="true" />}>
+              <BrowserView />
+            </Suspense>
+          )}
           {view === 'today' && (
             <Suspense fallback={<main className="page" aria-label="Today" aria-busy="true" />}>
               <Today chats={chats} onStartChat={startCalendarChat} onOpenChat={openChat} />
@@ -384,7 +401,12 @@ function ChatShell({ entering }: { entering: boolean }) {
           )}
           <StatusCompanion
             chats={chats}
-            visible={!layout.narrow && view !== 'map' && (view !== 'chats' || activeId === null)}
+            visible={
+              !layout.narrow &&
+              view !== 'map' &&
+              view !== 'browser' &&
+              (view !== 'chats' || activeId === null)
+            }
             onOpenChat={openAtCard}
             onHome={() => setView('home')}
           />

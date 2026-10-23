@@ -1,5 +1,5 @@
 import { session, type Session, type WebContents } from 'electron';
-import type { SignedInSite } from '@spark-outpost/contracts';
+import type { BrowserProfile, SignedInSite } from '@spark-outpost/contracts';
 import { MEDIA_GUARD_ID, mediaGuardPreload } from '../media-guard.ts';
 import {
   COPY_GUARD_ID,
@@ -7,7 +7,12 @@ import {
   pagePermissionAllowed,
   type InputMarks,
 } from './clipboard-permission.ts';
-import { BROWSER_PARTITION, requestAllowed, withoutSparkToken } from './request-guard.ts';
+import {
+  BROWSER_PARTITION,
+  PERSONAL_PARTITION,
+  requestAllowed,
+  withoutSparkToken,
+} from './request-guard.ts';
 
 export interface SessionGuards {
   blockedPorts(): ReadonlySet<number>;
@@ -18,8 +23,12 @@ export interface SessionGuards {
 
 const configured = new WeakSet<Session>();
 
-export function browserSession(guards: SessionGuards): Session {
-  const target = session.fromPartition(BROWSER_PARTITION);
+export function profilePartition(profile: BrowserProfile): string {
+  return profile === 'personal' ? PERSONAL_PARTITION : BROWSER_PARTITION;
+}
+
+export function browserSession(partition: string, guards: SessionGuards): Session {
+  const target = session.fromPartition(partition);
   if (target === session.defaultSession) {
     throw new Error('The browser pane never uses the app session.');
   }

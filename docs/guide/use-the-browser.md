@@ -6,15 +6,14 @@ order: 227
 summary: Open a page in the chat's Browser pane, let the agent look, browse and click, and point at what you mean.
 ---
 
-Pages beside a chat for you and agents. About 2 minutes. Mac app only.
+Pages for you and agents. About 2 minutes. Mac app only.
 
 ## Open a page
 
 1. In a chat's **…** menu, select **Browser**, or press **⌘⇧B**.
 2. Type an address, like `localhost:5173`; press **Enter**.
-3. **+** adds a tab.
 
-Chat links open here; **⌘**-click opens yours. Copy buttons ignore agents' clicks. [Keys](keyboard-shortcuts.md#browser-pane-mac-app).
+Chat links open here; **⌘**-click opens yours. [Keys](keyboard-shortcuts.md#browser-pane-mac-app).
 
 ## Let the agent look and browse
 
@@ -34,7 +33,7 @@ Websites follow the [agent mode](agent-mode.md); your own tab always asks. Page 
 1. In **Settings** → **Projects**, select **Set up** beside **Preview**, enter the command and address; save.
 2. In the pane, select **Start preview**.
 
-It runs between turns; **Show output** shows it. Agents can't change it.
+It runs between turns; agents can't change it.
 
 ## Point at something
 
@@ -48,6 +47,6 @@ Right-click highlighted text: **Add to chat** or **Ask about this** (**⌘⇧A**
 1. In **Settings** → **Projects**, select **Add** beside **Saved sign-ins**: label, site, **Other sign-in sites**, test account.
 2. Ask the agent to sign in; allow the card once per chat.
 
-Spark types only there, unseen by the agent. Refused? **Add this site**. For SSO, the agent hands you its tab; sign in, then **Done**. Closing the tab cancels.
+Spark types only there, unseen by the agent. Refused? **Add this site**. For SSO, sign in in the agent's tab, then **Done**.
 
 **Next:** [Make a Spark](sparks.md)

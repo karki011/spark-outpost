@@ -1,16 +1,8 @@
 import './browser-pane.css';
-import {
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-  type KeyboardEvent,
-  type ReactNode,
-} from 'react';
-import { addressToUrl, type BrowserPaneTab } from '@spark-outpost/contracts';
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import type { BrowserPaneTab } from '@spark-outpost/contracts';
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
-import { useTooltip } from '../ui/Tooltip.tsx';
 import {
   DevtoolsIcon,
   NavBackIcon,
@@ -28,16 +20,18 @@ import {
   setPaneNotice,
   useChatBrowser,
 } from './browser-store.ts';
+import { AddressBar } from './AddressBar.tsx';
+import { ToolButton } from './ToolButton.tsx';
 import { BrowserTabs } from './BrowserTabs.tsx';
 import { FindBar } from './FindBar.tsx';
 import { HandoffBanner } from './HandoffBanner.tsx';
 import { defaultBrowserUrl, openInDefaultBrowser } from './chat-links.ts';
 import {
   PANE_KEYS,
+  chatPaneCommands,
   chromeShortcut,
   runPaneShortcut,
   usePageShortcuts,
-  type PaneKeys,
 } from './pane-shortcuts.ts';
 import { PreviewBadge, PreviewStart } from './PreviewControls.tsx';
 import { tabLabel } from './tab-label.ts';
@@ -51,99 +45,6 @@ interface BrowserPaneProps {
   shown: boolean;
   lead?: ReactNode;
   trail?: ReactNode;
-}
-
-interface ToolButtonProps {
-  label: string;
-  keys?: PaneKeys;
-  disabled?: boolean;
-  pressed?: boolean;
-  onClick(): void;
-  children: ReactNode;
-}
-
-function ToolButton({
-  label,
-  keys,
-  disabled = false,
-  pressed,
-  onClick,
-  children,
-}: ToolButtonProps) {
-  const tip = useTooltip(label, keys ? { side: 'top', keys: keys.shown } : { side: 'top' });
-  return (
-    <>
-      <button
-        type="button"
-        className="icon-btn bp-tool"
-        aria-label={label}
-        aria-pressed={pressed}
-        aria-keyshortcuts={keys?.aria}
-        disabled={disabled}
-        {...tip.triggerProps}
-        onClick={onClick}
-      >
-        {children}
-      </button>
-      {tip.tooltip}
-    </>
-  );
-}
-
-function AddressBar({ chatId, tab }: { chatId: string; tab: BrowserPaneTab | null }) {
-  const [draft, setDraft] = useState<string | null>(null);
-  const [invalid, setInvalid] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
-  const url = tab?.url ?? '';
-
-  useEffect(() => {
-    if (tab && tab.url === '' && !tab.loading) input.current?.focus();
-  }, [tab?.id, tab?.url, tab?.loading, tab]);
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const typed = draft ?? url;
-    if (!addressToUrl(typed)) {
-      setInvalid(true);
-      return;
-    }
-    setInvalid(false);
-    if (tab) sendBrowserCommand(chatId, { command: 'navigate', tabId: tab.id, url: typed });
-    else sendBrowserCommand(chatId, { command: 'new_tab', url: typed });
-    input.current?.blur();
-  };
-
-  return (
-    <form className="bp-address" onSubmit={submit}>
-      <input
-        ref={input}
-        className="inp bp-url"
-        type="text"
-        inputMode="url"
-        spellCheck={false}
-        autoCapitalize="off"
-        autoComplete="off"
-        aria-label="Address"
-        aria-invalid={invalid}
-        aria-describedby={invalid ? 'bp-address-error' : undefined}
-        placeholder="localhost:5173 or a web address"
-        value={draft ?? url}
-        onChange={(event) => {
-          setDraft(event.target.value);
-          setInvalid(false);
-        }}
-        onFocus={(event) => event.target.select()}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') setDraft(null);
-        }}
-      />
-      {invalid && (
-        <p id="bp-address-error" className="bp-address-error" role="alert">
-          Type a web address, like localhost:5173 or example.com.
-        </p>
-      )}
-    </form>
-  );
 }
 
 function StartPage({ chatId, tab }: { chatId: string; tab: BrowserPaneTab | null }) {
@@ -233,7 +134,7 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
     copiedUrl: () => setCopied((count) => count + 1),
   };
   const runShortcut = (shortcut: Parameters<typeof runPaneShortcut>[2]) =>
-    runPaneShortcut(chatId, browser.tabs, shortcut, shortcutUi);
+    runPaneShortcut(chatPaneCommands(chatId), browser.tabs, shortcut, shortcutUi);
   usePageShortcuts(chatId, runShortcut, shown);
   const shortcutAt = useRef(0);
   const tabKey = `${tab?.id ?? ''}:${tab?.url ?? ''}`;
@@ -329,7 +230,7 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
             Click or drag a box. Esc cancels.
           </p>
         ) : (
-          <AddressBar key={tabKey} chatId={chatId} tab={tab} />
+          <AddressBar key={tabKey} commands={chatPaneCommands(chatId)} tab={tab} />
         )}
         <ToolButton
           label={tab?.picking ? 'Stop selecting' : `Select an element for ${destination}`}
