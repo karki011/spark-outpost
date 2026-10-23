@@ -48,17 +48,32 @@ export function stackParent(
   return stacked ? parent : null;
 }
 
+export interface OrderParts {
+  after: string | null;
+  detail: string | null;
+}
+
+export function orderParts(
+  draft: CreateDraft,
+  chat: ChatDraft,
+  chats: readonly ConversationSummary[],
+): OrderParts {
+  const parent = parentOf(draft, chat);
+  if (parent === null) return { after: null, detail: null };
+  const detail =
+    stackParent(draft, chat, chats) === null
+      ? 'different repo, order only'
+      : 'stacked on its branch';
+  return { after: parent.handle, detail };
+}
+
 export function orderLine(
   draft: CreateDraft,
   chat: ChatDraft,
   chats: readonly ConversationSummary[],
 ): string {
-  const parent = parentOf(draft, chat);
-  if (parent === null) return 'Starts right away';
-  const after = `Starts after @${parent.handle}`;
-  return stackParent(draft, chat, chats) === null
-    ? `${after} · different repo, order only`
-    : `${after} · stacked on its branch`;
+  const { after, detail } = orderParts(draft, chat, chats);
+  return after === null ? 'Starts right away' : `Starts after @${after} · ${detail}`;
 }
 
 export interface PublishFacts {

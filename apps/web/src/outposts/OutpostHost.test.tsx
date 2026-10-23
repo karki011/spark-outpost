@@ -169,8 +169,12 @@ describe('OutpostHost', () => {
       });
       renderHost();
       fireEvent.click(screen.getByRole('button', { name: 'Review draft' }));
-      await screen.findByRole('dialog', { name: 'New outpost' }, { timeout: LAZY_SHEET_TIMEOUT });
-      expect(screen.getByRole<HTMLInputElement>('textbox', { name: /^Name/ }).value).toBe(
+      await screen.findByRole(
+        'dialog',
+        { name: /^Start a new outpost/ },
+        { timeout: LAZY_SHEET_TIMEOUT },
+      );
+      expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Outpost name' }).value).toBe(
         'Orders launch',
       );
     },
