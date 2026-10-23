@@ -12,7 +12,7 @@ You'll follow, stop and queue a turn. About 2 minutes.
 
 1. Read the header, like **Reading api.ts · 3 steps**.
 2. Select the step count, then **Thinking**.
-3. The agent's to-do ticks off, then folds.
+3. The to-do ticks off.
 4. **Show work panel** has the to-do, files and cost; **Agent TV** is under **…**.
 5. Sub-agents share one line; **View** shows a card each.
 
