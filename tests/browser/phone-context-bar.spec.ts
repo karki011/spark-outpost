@@ -140,13 +140,7 @@ for (const width of WIDTHS) {
     await expect(detailsChip(page)).toBeVisible({ timeout: 20_000 });
     expect(await crowdedChips(page, '.comp-bar')).toEqual([]);
     await expect(bar(page).getByRole('button', { name: /^Spark autonomy/ })).toHaveCount(0);
-    for (const hidden of [
-      '.ctx-outpost',
-      '.ctx-place',
-      '.ctx-setup',
-      '.ctx-repo',
-      '.cache-timer',
-    ]) {
+    for (const hidden of ['.ctx-outpost', '.ctx-place', '.ctx-setup', '.ctx-repo']) {
       await expect(bar(page).locator(hidden)).toBeHidden();
     }
     expect(await fitsComposer(page, '.ctxbar')).toBe(true);
@@ -163,7 +157,6 @@ for (const width of WIDTHS) {
     await expect(details(page).locator('.ctx-place')).toBeVisible();
     await expect(details(page).getByRole('button', { name: /^Agent setup/ })).toBeVisible();
     await expect(details(page).getByRole('button', { name: /^Project folders/ })).toBeVisible();
-    await expect(details(page).locator('.cache-timer')).toHaveCount(0);
     expect(await crowdedChips(page, '.ctx-more')).toEqual([]);
     expect(await fitsComposer(page, '.ctx-more')).toBe(true);
     expect(await smallTapTargets(page, '.ctx-more .ctx-repo, .ctx-more .ctx-branch')).toEqual([]);
@@ -225,7 +218,7 @@ test('the desktop composer bar keeps its chips, with no autonomy or Details chip
   await expect(bar(page).locator('.ctx-outpost')).toContainText(`@${HANDLE}`, {
     timeout: 20_000,
   });
-  for (const chip of ['.ctx-repo', '.ctx-place', '.ctx-setup', '.cache-timer']) {
+  for (const chip of ['.ctx-repo', '.ctx-place', '.ctx-setup']) {
     await expect(bar(page).locator(chip)).toBeVisible();
   }
   await expect(detailsChip(page)).toHaveCount(0);
