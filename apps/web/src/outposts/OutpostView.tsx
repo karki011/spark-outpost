@@ -123,8 +123,7 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
   const activity = useMemo(() => chatActivity(chats), [chats]);
   const pulls = useMemo(() => outpostPulls(posts, stories, chats), [posts, stories, chats]);
   const cards = useMemo(
-    () =>
-      threadCards(items, pulls, (chatId) => activity.get(chatId ?? '')),
+    () => threadCards(items, pulls, (chatId) => activity.get(chatId ?? '')),
     [items, pulls, activity],
   );
   const cardsById = useMemo(() => new Map(cards.map((card) => [card.post.id, card])), [cards]);

@@ -52,7 +52,9 @@ function CardMeta({ card }: { card: ThreadCard }) {
               {branch}
             </span>
           )}
-          {git !== '' && <span className="op-card-facts">{branch !== null ? ` · ${git}` : git}</span>}
+          {git !== '' && (
+            <span className="op-card-facts">{branch !== null ? ` · ${git}` : git}</span>
+          )}
         </p>
       )}
     </>

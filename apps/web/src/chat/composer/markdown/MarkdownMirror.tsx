@@ -43,12 +43,7 @@ export const MarkdownMirror = memo(function MarkdownMirror({
   return (
     <div ref={mirrorRef} className="mdf-mirror" aria-hidden="true">
       {lines.map((line, index) => (
-        <MirrorLine
-          key={index}
-          text={line.text}
-          block={line.block}
-          mentionable={mentionable}
-        />
+        <MirrorLine key={index} text={line.text} block={line.block} mentionable={mentionable} />
       ))}
     </div>
   );

@@ -1,14 +1,6 @@
 import '../chat/composer.css';
 import './outpost-composer.css';
-import {
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { FormatToggle } from '../chat/composer/markdown/FormatToggle.tsx';
 import { MarkdownInput } from '../chat/composer/markdown/MarkdownInput.tsx';
 import { codeBlockEnter } from '../chat/composer/markdown/md-keys.ts';
@@ -54,11 +46,7 @@ export function OutpostComposer({
   const [filled, setFilled] = useState(fill?.id ?? null);
   const [formatting, setFormatting] = useState(false);
   const handles = members.map((member) => member.handle);
-  const handleList = handles.join(' ');
-  const mentionable = useMemo(
-    () => [...handleList.split(' ').filter(Boolean), 'all'],
-    [handleList],
-  );
+  const mentionable = [...handles, 'all'];
   const picker = useHandlePicker(typed, members, answering === null);
   const fillId = fill?.id ?? null;
   if (fill && fill.id !== filled) {

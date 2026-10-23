@@ -8,12 +8,7 @@ import {
 } from '@spark-outpost/contracts';
 import { countLabel } from '../ui/count-label.ts';
 import { webLink } from './post-text.ts';
-import {
-  requestStatus,
-  statusLabel,
-  type PullMark,
-  type ThreadStatus,
-} from './request-status.ts';
+import { requestStatus, statusLabel, type PullMark, type ThreadStatus } from './request-status.ts';
 
 export interface PrChipView {
   label: string;

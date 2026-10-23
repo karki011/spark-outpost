@@ -61,7 +61,11 @@ function askedMentions(text: string, asked: readonly string[]): Mention[] {
   return [...text.matchAll(MENTION)]
     .map((match) => {
       const start = match.index + (match[1] ?? '').length;
-      return { handle: (match[2] ?? '').toLowerCase(), start, end: start + 1 + (match[2] ?? '').length };
+      return {
+        handle: (match[2] ?? '').toLowerCase(),
+        start,
+        end: start + 1 + (match[2] ?? '').length,
+      };
     })
     .filter((mention) => asked.includes(mention.handle));
 }
@@ -83,6 +87,8 @@ export function requestFor(text: string, handle: string, asked: readonly string[
   const mentions = askedMentions(text, asked);
   const at = mentions.findIndex((mention) => mention.handle === own);
   if (at === -1) return text;
-  const part = partOf(text, mentions, at).replace(/^[\s,:;]+/, '').trim();
+  const part = partOf(text, mentions, at)
+    .replace(/^[\s,:;]+/, '')
+    .trim();
   return saysSomething(part) ? part : text;
 }
