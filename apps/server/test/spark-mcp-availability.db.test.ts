@@ -105,6 +105,8 @@ describe('what a Spark tools session can use', () => {
       calendar_edit: false,
       jira: false,
       confluence: false,
+      servicenow: false,
+      ticket_create: false,
       howTo: {},
     });
   });
@@ -134,7 +136,11 @@ describe('what a Spark tools session can use', () => {
     await saveLinearRow();
     expect((await sparkAvailability(deps(), scopeOf(null))).tickets).toBe(false);
     await secrets.set('ticket:linear', 'lin_api_key');
-    expect((await sparkAvailability(deps(), scopeOf(null))).tickets).toBe(true);
+    expect(await sparkAvailability(deps(), scopeOf(null))).toMatchObject({
+      tickets: true,
+      ticket_create: true,
+      servicenow: false,
+    });
   });
 
   it('counts Slack only when its bot token is saved too', async () => {
