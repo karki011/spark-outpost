@@ -13,6 +13,7 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 | What changed                                                                                                            | What to do                                                     |
 | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | **ServiceNow**: connect it; records join Tickets; agents read and change them.                                          | See [Connect](tickets-and-github.md#connect-a-ticket-tracker). |
+| Chats idle 2 days, old ones too, move to **History** (**Archive inactive chats**). Empty projects leave **Projects**.   | See [Chat list](statuses-and-limits.md#chat-list).             |
 | Mac app: the menu bar icon is off; **Show in menu bar** brings it back.                                                 | See [Island](desktop-companion.md#turn-it-on-and-size-it).     |
 | Outposts: each chat does only its part of a message to several; questions offer **Answer**; title menu stays on top.    | See [Send a request](outposts.md#send-a-request).              |
 | Quieter chat: tool calls are rows named by tool, cards wait at the turn's end, details show on hover; **Esc** stops.    | See [Follow a turn](follow-a-turn.md#see-whats-happening).     |
@@ -30,4 +31,3 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 | Meeting lines count down on time, wrap-ups name the chat, joined meetings drop; **Alert at** sets the card earlier.     | See [Use it](calendar.md#use-it).                              |
 | Ask Spark has a chat’s tools. **Let agents read my calendar** is now on; turn it off if you had it off.                 | See [Ask Spark](companion-quick-chat.md#ask-spark).            |
 | No-project chats get a folder. Agents search the web and show artifacts; most edits show diffs; links ask.              | See [Agent tools](modes-and-levels.md#agent-tools).            |
-| Spark Island outlives Spark's window; clicks keep your app.                                                             | See [Spark Island](desktop-companion.md#open-it).              |

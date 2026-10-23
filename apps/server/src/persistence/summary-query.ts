@@ -2,7 +2,7 @@ import { NEEDS_YOU_PREFIX } from '@spark-outpost/contracts';
 import { workReply } from './work-reply.ts';
 
 export const summaryQuery = `
-  SELECT c.id, c.title, c.updated_at, c.archived_at, c.pinned_at, c.pinned_order, c.title_source,
+  SELECT c.id, c.title, c.updated_at, c.archived_at, c.auto_archived_days, c.pinned_at, c.pinned_order, c.title_source,
     tm.id AS teammate_id, tm.name AS teammate_name, tm.role AS teammate_role,
     tm.face_shape AS teammate_shape, tm.face_color AS teammate_color,
     COALESCE(

@@ -112,6 +112,7 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   latest_run_asking_reply?: string | null;
   latest_run_progress: { done: number; active: number; total: number } | null;
   archived_at: Date | null;
+  auto_archived_days?: number | null;
   pinned_at: Date | null;
   pinned_order: number | null;
   project_order: number | null;
@@ -288,6 +289,9 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
           }
         : null,
     archivedAt: iso(row.archived_at),
+    ...(row.archived_at && row.auto_archived_days
+      ? { autoArchivedDays: row.auto_archived_days }
+      : {}),
     pinnedAt: iso(row.pinned_at),
     pinnedOrder: row.pinned_order,
     projectOrder: row.project_order,
