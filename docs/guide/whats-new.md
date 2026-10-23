@@ -12,6 +12,7 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 
 | What changed                                                                                                            | What to do                                                 |
 | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Outposts: each chat does only its part of a message to several; questions offer **Answer**; title menu stays on top.    | See [Send a request](outposts.md#send-a-request).          |
 | Quieter chat: tool calls are rows named by tool, cards wait at the turn's end, details show on hover; **Esc** stops.    | See [Follow a turn](follow-a-turn.md#see-whats-happening). |
 | The message box styles Markdown as you type; **Aa** and a selection toolbar format it. **⌘B** now bolds.                | See [Write a message](start-a-chat.md#write-a-message).    |
 | Keyboard-reachable meeting cards; **⌃⌥⌘M**.                                                                             | See [Calendar](calendar.md#use-it).                        |

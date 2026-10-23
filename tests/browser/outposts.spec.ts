@@ -15,6 +15,7 @@ import {
   box,
   cancelRequest,
   cardOf,
+  expectTopmost,
   chip,
   openOutpost,
   openSettings,
@@ -59,6 +60,7 @@ test('typing @ offers the handles and the send button says what will happen', as
   const picker = page.getByRole('listbox', { name: 'Chats in this outpost' });
   await expect(picker.getByRole('option')).toHaveText([/^@fe/, /^@api/]);
   await expect(picker.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
+  await expectTopmost(picker);
   await box(page).press('ArrowDown');
   await expect(picker.getByRole('option').nth(1)).toHaveAttribute('aria-selected', 'true');
   await box(page).press('Enter');
