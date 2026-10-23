@@ -5,7 +5,7 @@ import { setConnected } from '../src/calendar/store.ts';
 import { MEETING_REFUSALS } from '../src/spark-mcp/actions/ask-spark-meetings.ts';
 import { meetingsOffer } from '../src/spark-mcp/tools/calendar/offered.ts';
 import { assistantRun, assistantScope, assistantSetup, setActs } from './ask-spark-support.ts';
-import { fakeHost, helperEvent, type FakeHost } from './calendar-host-support.ts';
+import { fakeHost, helperEvent, MINUTE, type FakeHost } from './calendar-host-support.ts';
 import {
   confirmCard,
   pendingCard,
@@ -18,14 +18,27 @@ import {
 import { createTestDb, type TestDb } from './support.ts';
 
 const ZOOM = { noteLinks: ['https://acme.zoom.us/j/1'] };
+const LATEST_START = 31 * MINUTE;
 
 let t: TestDb;
 let host: FakeHost;
 let recorded: RecordedHooks;
 let tools: SparkToolsHarness | null = null;
 let assistant: string;
+let shift = 0;
+
+function shiftPastMidnight(now: number): number {
+  const dayStart = new Date(now + LATEST_START);
+  dayStart.setHours(0, 0, 0, 0);
+  return dayStart.getTime() > now - MINUTE ? dayStart.getTime() + MINUTE - now : 0;
+}
+
+function meeting(title: string, startIn: number, extra: Parameters<typeof helperEvent>[3] = {}) {
+  return helperEvent(title, 'work-1', startIn + shift / MINUTE, extra);
+}
 
 beforeEach(async () => {
+  shift = shiftPastMidnight(Date.now());
   t = await createTestDb();
   assistant = await assistantSetup(t);
   host = fakeHost();
@@ -50,6 +63,7 @@ async function open(question = 'Handle my next meeting') {
   const runId = await assistantRun(t, assistant, question);
   tools = await startSparkTools(t, assistantScope(assistant, runId, recorded), {
     calendar: { host, google: null },
+    now: () => new Date(Date.now() + shift),
   });
   return tools;
 }
@@ -73,7 +87,7 @@ const keyOf = (event: ReturnType<typeof helperEvent>) =>
 
 describe('Ask Spark meeting actions', () => {
   it('in Manual asks first, then snoozes the showing alert through the island', async () => {
-    const standup = helperEvent('Standup', 'work-1', 0.5, { ...ZOOM, uid: 'evt-1' });
+    const standup = meeting('Standup', -0.5, { ...ZOOM, uid: 'evt-1' });
     await calendarWith([standup]);
     const harness = await open('Snooze my next meeting');
     const result = await harness.call('spark_meeting', { action: 'snooze' });
@@ -91,7 +105,7 @@ describe('Ask Spark meeting actions', () => {
 
   it('in Act dismisses with the saved mark and joins through the island at once', async () => {
     await setActs(t, 'act');
-    const review = helperEvent('Review', 'work-1', 5, { ...ZOOM, uid: 'evt-2' });
+    const review = meeting('Review', 5, { ...ZOOM, uid: 'evt-2' });
     await calendarWith([review]);
     const harness = await open();
     const dismissed = await harness.call('spark_meeting', { action: 'dismiss' });
@@ -111,7 +125,7 @@ describe('Ask Spark meeting actions', () => {
     ['join', 'manual'],
   ] as const)('does %s in %s with the meeting whose alert is showing', async (verb, acts) => {
     await setActs(t, acts);
-    const call = helperEvent('Call', 'work-1', 0.5, { ...ZOOM, uid: 'evt-3' });
+    const call = meeting('Call', -0.5, { ...ZOOM, uid: 'evt-3' });
     await calendarWith([call]);
     const harness = await open(`${verb} my next meeting`);
     const result = await harness.call('spark_meeting', { action: verb });
@@ -130,8 +144,8 @@ describe('Ask Spark meeting actions', () => {
 
   it('asks which meeting when two overlap, and takes the one the user named', async () => {
     await setActs(t, 'act');
-    const design = helperEvent('Design review', 'work-1', 2, ZOOM);
-    const sales = helperEvent('Sales sync', 'work-1', 3, ZOOM);
+    const design = meeting('Design review', 2, ZOOM);
+    const sales = meeting('Sales sync', 3, ZOOM);
     await calendarWith([design, sales]);
     const harness = await open('Join my meeting');
     const asked = await harness.call('spark_meeting', { action: 'join' });
@@ -146,8 +160,8 @@ describe('Ask Spark meeting actions', () => {
   it('refuses a join before the window or without an allowed link, and a snooze with no alert', async () => {
     await setActs(t, 'act');
     await calendarWith([
-      helperEvent('Later', 'work-1', 30, ZOOM),
-      helperEvent('Phone', 'work-1', 2, { noteLinks: ['https://evil.example/j/1'] }),
+      meeting('Later', 30, ZOOM),
+      meeting('Phone', 2, { noteLinks: ['https://evil.example/j/1'] }),
     ]);
     const harness = await open();
     const join = await harness.call('spark_meeting', { action: 'join' });
@@ -158,7 +172,7 @@ describe('Ask Spark meeting actions', () => {
   });
 
   it('fails a Manual card whose meeting ended before Do it', async () => {
-    const soon = helperEvent('Soon', 'work-1', 0.5, ZOOM);
+    const soon = meeting('Soon', 0.5, ZOOM);
     await calendarWith([soon]);
     const harness = await open();
     await harness.call('spark_meeting', { action: 'join' });
