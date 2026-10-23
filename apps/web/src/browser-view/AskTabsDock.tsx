@@ -5,13 +5,14 @@ import type { Approval, AssistantExchange } from '@spark-outpost/contracts';
 import { assistantApi, assistantKeys } from '../api/assistant.ts';
 import { queryKeys } from '../api/client.ts';
 import { Markdown } from '../chat/markdown/Markdown.tsx';
+import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
 import { assistantQuery, useAssistant } from '../island/ask-assistant.ts';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { EyeIcon, SparkleIcon, WarnIcon } from '../ui/icons.tsx';
 import { askAboutTabs } from './ask-tabs.ts';
 import { MentionComposer } from './MentionComposer.tsx';
 import type { PageRef } from './page-chat.ts';
-import { useProfileTabs } from './view-store.ts';
+import { acceptViewState, useProfileTabs } from './view-store.ts';
 
 interface AskTabsDockProps {
   first: PageRef | null;
@@ -26,15 +27,44 @@ interface Asked {
 }
 
 const WAIT_POLL_MS = 1_500;
+const NEAR_BOTTOM_PX = 48;
 const DOCK_HISTORY = ['spark-assistant', 'history', 'browser-view'] as const;
 
 function useOpenTabs() {
+  useEffect(() => {
+    const view = desktopBrowserView();
+    for (const profile of ['personal', 'work'] as const) {
+      void view
+        ?.start(profile)
+        .then(acceptViewState)
+        .catch(() => undefined);
+    }
+  }, []);
   const personal = useProfileTabs('personal').tabs;
   const work = useProfileTabs('work').tabs;
   return new Map([
     ['personal', personal],
     ['work', work],
   ] as const);
+}
+
+function useFollowLatest(content: string, sent: number) {
+  const thread = useRef<HTMLOListElement>(null);
+  const near = useRef(true);
+  const lastSent = useRef(sent);
+  useEffect(() => {
+    const list = thread.current;
+    if (!list) return;
+    const justSent = lastSent.current !== sent;
+    lastSent.current = sent;
+    if (justSent || near.current) list.scrollTop = list.scrollHeight;
+  }, [content, sent]);
+  const onScroll = () => {
+    const list = thread.current;
+    if (list)
+      near.current = list.scrollHeight - list.scrollTop - list.clientHeight < NEAR_BOTTOM_PX;
+  };
+  return { thread, onScroll };
 }
 
 function readLine(tabs: number): string {
@@ -101,6 +131,10 @@ export function AskTabsDock({ first, onOpenAssistant, onClose }: AskTabsDockProp
   const pendingCards = (assistant.detail?.approvals ?? []).filter(
     (card) => card.status === 'pending' && card.payload.sparkAction !== undefined,
   );
+  const shown = asked
+    .map((entry) => `${entry.id}:${stored.get(entry.id)?.answer?.length ?? 0}`)
+    .join(',');
+  const { thread, onScroll } = useFollowLatest(`${shown}:${pendingCards.length}`, asked.length);
   const waiting =
     asked.some((entry) => stored.get(entry.id)?.status !== 'answered') || pendingCards.length > 0;
 
@@ -170,7 +204,12 @@ export function AskTabsDock({ first, onOpenAssistant, onClose }: AskTabsDockProp
           opens, rereads or acts in them.
         </p>
       ) : (
-        <ol className="atd-thread" aria-label="Questions about your tabs">
+        <ol
+          ref={thread}
+          className="atd-thread"
+          aria-label="Questions about your tabs"
+          onScroll={onScroll}
+        >
           {asked.map((entry) => {
             const exchange = stored.get(entry.id);
             const cards = exchange?.runId
