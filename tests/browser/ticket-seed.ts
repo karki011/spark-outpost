@@ -74,6 +74,11 @@ export async function setServiceNowFaults(faults: {
   });
 }
 
+export async function serviceNowWrites(): Promise<{ body: Record<string, string> }[]> {
+  const response = await fetch(`${STUB_URL}/tickets-test/servicenow-writes`);
+  return ((await response.json()) as { writes: { body: Record<string, string> }[] }).writes;
+}
+
 export async function connectServiceNow(page: Page): Promise<void> {
   const response = await page.request.put('/api/tickets/connections/servicenow', {
     data: {

@@ -241,6 +241,17 @@ describe('remote policy', () => {
     expect(blockedFieldIn({ model: 'x' }, ['agentMode', 'level'])).toBeNull();
   });
 
+  it('needs High-risk cards for a ticket comment the caller sees', () => {
+    const path = '/api/tickets/servicenow/INC0010023/comments';
+    const off = remoteDecision('POST', path, { ...ALL_ON, highRiskCards: false });
+    expect(off).toMatchObject({ kind: 'allow', highRiskFields: ['visibility'] });
+    expect(remoteDecision('POST', path, ALL_ON)).toMatchObject({ highRiskFields: [] });
+    expect(blockedFieldIn({ body: 'hi', visibility: 'customer' }, ['visibility'])).toBe(
+      'visibility',
+    );
+    expect(blockedFieldIn({ body: 'a work note' }, ['visibility'])).toBeNull();
+  });
+
   it('sorts cards into ordinary, high-risk and sign-in', () => {
     const base = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
     expect(cardSwitch({ ...base, command: 'pnpm test' })).toBeNull();

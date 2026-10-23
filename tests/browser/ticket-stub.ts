@@ -264,6 +264,9 @@ export function ticketFakes() {
       confluence = fakeConfluence();
       servicenow.reset();
     },
+    serviceNowWrites() {
+      return servicenow.writes;
+    },
     serviceNowFaults(faults: { denied?: string[]; limited?: number }) {
       servicenow.denied = new Set(faults.denied ?? []);
       servicenow.limited = faults.limited ?? 0;

@@ -128,7 +128,7 @@ const HOW_TO_GET: Record<
   >,
   string
 > = {
-  tickets: 'ticket tools (connect Atlassian or Linear in Settings → Connectors)',
+  tickets: 'ticket tools (connect Atlassian, Linear or ServiceNow in Settings → Connectors)',
   confluence:
     'spark_confluence and spark_confluence_edit (connect Atlassian in Settings → Connectors and turn on its Confluence switch)',
   slack: 'Slack tools (connect Slack in Settings → Connectors)',

@@ -1,4 +1,5 @@
 import {
+  type CommentTicketRequest,
   assignTicketResponseSchema,
   attentionSettingsSchema,
   startTicketResponseSchema,
@@ -91,6 +92,11 @@ export const ticketsApi = {
     request(ticketSearchSchema, `/tickets/search?${searchParams(query)}`),
   view: (source: TicketSourceId, key: string): Promise<TicketView> =>
     request(ticketViewSchema, ticketPath(source, key)),
+  comment: (source: TicketSourceId, key: string, body: CommentTicketRequest) =>
+    request(z.object({ ok: z.boolean() }), `${ticketPath(source, key)}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   assign: (
     source: TicketSourceId,
     key: string,

@@ -204,16 +204,23 @@ export function ticketRoutes(routeDeps: TicketRouteDeps): Router {
   });
 
   router.post('/tickets/:source/:key/comments', async (req, res) => {
-    const { body } = parseBody(commentTicketRequestSchema, req);
+    const { body, visibility } = parseBody(commentTicketRequestSchema, req);
     const { source, key } = ticketRef(req);
     const open = await requireSource(deps, source);
-    await open.source.comment(key, body);
+    if (visibility === 'customer') {
+      if (!open.source.customerComment) {
+        throw new BadRequestError('Only ServiceNow has comments the caller sees.');
+      }
+      await open.source.customerComment(key, body);
+    } else {
+      await open.source.comment(key, body);
+    }
     await recordTicketEvent(deps.db, deps.workspaceId, {
       source,
       action: 'comment',
       ticketKey: key,
       outcome: 'succeeded',
-      detail: { length: body.length },
+      detail: { length: body.length, visibility: visibility ?? 'internal' },
     });
     res.status(201).json({ ok: true });
   });

@@ -12,7 +12,7 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 
 | What changed                                                                                                            | What to do                                                     |
 | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| Connect **ServiceNow** with a password or an API key; a switch per record type.                                         | See [Connect](tickets-and-github.md#connect-a-ticket-tracker). |
+| **ServiceNow**: connect it; records join Tickets, work notes apart from comments.                                       | See [Connect](tickets-and-github.md#connect-a-ticket-tracker). |
 | Chats idle 2 days, old ones too, move to **History** (**Archive inactive chats**). Empty projects leave **Projects**.   | See [Chat list](statuses-and-limits.md#chat-list).             |
 | Mac app: the menu bar icon is off; **Show in menu bar** brings it back.                                                 | See [Island](desktop-companion.md#turn-it-on-and-size-it).     |
 | Outposts: each chat does only its part of a message to several; questions offer **Answer**; title menu stays on top.    | See [Send a request](outposts.md#send-a-request).              |

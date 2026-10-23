@@ -106,7 +106,7 @@ describe('which Spark tools a session is offered', () => {
 describe('what a session is told about tools it was not offered', () => {
   it('says how to get each missing group and when it arrives', () => {
     const note = unavailableNote(NOTHING);
-    expect(note).toContain('connect Atlassian or Linear in Settings → Connectors');
+    expect(note).toContain('connect Atlassian, Linear or ServiceNow in Settings → Connectors');
     expect(note).toContain('connect Slack in Settings → Connectors');
     expect(note).toContain('connect GitHub in Settings → Connectors and link a project');
     expect(note).toContain('spark_map and spark_find (link a project to the chat)');

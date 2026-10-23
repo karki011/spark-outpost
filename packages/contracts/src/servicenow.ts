@@ -12,7 +12,30 @@ export const serviceNowTypeNames: Record<ServiceNowTypeId, string> = {
   problem: 'Problems',
 };
 
-export const serviceNowTables: Record<ServiceNowTypeId, readonly string[]> = {
+export const serviceNowTableSchema = z.enum([
+  'incident',
+  'sc_req_item',
+  'sc_task',
+  'change_request',
+  'problem',
+]);
+export type ServiceNowTable = z.infer<typeof serviceNowTableSchema>;
+
+export const serviceNowTableNames: Record<ServiceNowTable, string> = {
+  incident: 'Incident',
+  sc_req_item: 'Requested item',
+  sc_task: 'Catalog task',
+  change_request: 'Change',
+  problem: 'Problem',
+};
+
+export const SERVICENOW_READ_ONLY_TABLES: readonly ServiceNowTable[] = ['change_request'];
+
+export function isReadOnlyTable(table: string | null): boolean {
+  return SERVICENOW_READ_ONLY_TABLES.some((entry) => entry === table);
+}
+
+export const serviceNowTables: Record<ServiceNowTypeId, readonly ServiceNowTable[]> = {
   incident: ['incident'],
   request: ['sc_req_item', 'sc_task'],
   change: ['change_request'],
@@ -31,10 +54,14 @@ export type ServiceNowType = z.infer<typeof serviceNowTypeSchema>;
 export const serviceNowTypesSchema = z.record(serviceNowTypeIdSchema, serviceNowTypeSchema);
 export type ServiceNowTypes = z.infer<typeof serviceNowTypesSchema>;
 
+export const serviceNowInboxScopeSchema = z.enum(['me', 'groups']);
+export type ServiceNowInboxScope = z.infer<typeof serviceNowInboxScopeSchema>;
+
 export const serviceNowConnectionSchema = z.object({
   authKind: serviceNowAuthKindSchema,
   login: z.string(),
   types: serviceNowTypesSchema,
+  inboxScope: serviceNowInboxScopeSchema.default('groups'),
 });
 export type ServiceNowConnection = z.infer<typeof serviceNowConnectionSchema>;
 

@@ -191,7 +191,7 @@ describe('a running Spark tools session', () => {
     const before = (await running.listTools()).tools.map((tool) => tool.name);
     expect(before).not.toContain('spark_tickets');
     expect(running.getInstructions()).toContain(
-      'connect Atlassian or Linear in Settings → Connectors',
+      'connect Atlassian, Linear or ServiceNow in Settings → Connectors',
     );
 
     await saveLinearRow();

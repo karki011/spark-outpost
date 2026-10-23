@@ -13,6 +13,7 @@ import {
   serviceNowAccessOf,
   switchServiceNowTypes,
 } from '../servicenow/connect.ts';
+import { liveTables, serviceNowSource } from '../servicenow/source.ts';
 import { serviceNowView } from '../servicenow/view.ts';
 import type { Db } from '../persistence/db.ts';
 import {
@@ -66,12 +67,12 @@ export function atlassianAccessOf(
 
 function sourceFor(
   deps: TicketDeps,
-  connection: Pick<
-    TicketConnectionRow,
-    'source' | 'apiUrl' | 'email' | 'statusMap' | 'moveStatuses'
-  >,
+  connection: TicketConnectionRow,
   secret: string,
 ): TicketSource {
+  if (connection.source === 'servicenow') {
+    return serviceNowSource(serviceNowAccessOf(connection, secret), connection, deps.fetch);
+  }
   if (connection.source === 'linear') {
     return linearSource(secret, connection, deps.fetch, connection.apiUrl);
   }
@@ -185,7 +186,7 @@ async function whoIs(
     };
   }
   try {
-    return { who: await sourceFor(deps, row, secret).whoami() };
+    return { who: await linearSource(secret, row, deps.fetch, row.apiUrl).whoami() };
   } catch (error) {
     if (error instanceof TicketApiError && error.status === 401) {
       throw new TicketApiError(
@@ -262,6 +263,14 @@ export async function changeSettings(
   if (source !== 'servicenow' && (recheck || serviceNowTypes)) {
     throw new TicketConflictError('Record types and Check connection are for ServiceNow only.');
   }
+  if (source === 'servicenow' && (ticketSettings.moveOnShip || ticketSettings.moveOnMerge)) {
+    throw new TicketConflictError(
+      'ServiceNow tickets never move when a chat ships or merges: resolving tells the caller.',
+    );
+  }
+  if (source !== 'servicenow' && ticketSettings.inboxScope) {
+    throw new TicketConflictError('Me and my groups is for ServiceNow only.');
+  }
   if (jiraOn !== undefined || confluenceOn !== undefined) {
     await switchProducts(deps, source, { jiraOn, confluenceOn });
   }
@@ -301,7 +310,7 @@ export async function openSource(
   const connection = await getTicketConnection(deps.db, deps.workspaceId, source);
   if (!connection) return null;
   if (source === 'jira' && !jiraLive(connection)) return null;
-  if (source === 'servicenow') return null;
+  if (source === 'servicenow' && liveTables(connection.serviceNowTypes).length === 0) return null;
   const secret = await savedSecret(deps, source);
   if (!secret) return null;
   return { source: sourceFor(deps, connection, secret), connection };

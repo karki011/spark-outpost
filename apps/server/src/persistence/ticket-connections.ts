@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import {
   serviceNowAuthKindSchema,
+  serviceNowInboxScopeSchema,
   serviceNowTypeIdSchema,
   ticketMoveStatusesSchema,
   type ServiceNowAuthKind,
+  type ServiceNowInboxScope,
   type ServiceNowTypeId,
   ticketStatusMapSchema,
   type TicketMoveStatuses,
@@ -35,6 +37,7 @@ export interface ServiceNowRow {
 }
 
 export interface TicketConnectionRow extends AtlassianProductRow, ServiceNowRow {
+  inboxScope: ServiceNowInboxScope;
   source: TicketSourceId;
   apiUrl: string;
   email: string | null;
@@ -65,6 +68,7 @@ interface StoredTicketConnection {
   auth_kind: string | null;
   login: string | null;
   servicenow_types: unknown;
+  inbox_scope: string;
 }
 
 function toConnection(row: StoredTicketConnection): TicketConnectionRow {
@@ -90,6 +94,7 @@ function toConnection(row: StoredTicketConnection): TicketConnectionRow {
     authKind: authKind.success ? authKind.data : null,
     login: row.login,
     serviceNowTypes: types.success ? types.data : null,
+    inboxScope: serviceNowInboxScopeSchema.catch('groups').parse(row.inbox_scope),
   };
 }
 
@@ -135,8 +140,9 @@ export async function saveTicketConnection(
   const serviceNow = connection.serviceNow;
   await db.query(
     `INSERT INTO ticket_connections (workspace_id, source, api_url, email, account, account_id,
-       jira_on, jira_reach, confluence_on, confluence_reach, auth_kind, login, servicenow_types)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       jira_on, jira_reach, confluence_on, confluence_reach, auth_kind, login, servicenow_types,
+       move_on_ship, move_on_merge)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $14)
      ON CONFLICT (workspace_id, source) DO UPDATE SET api_url = EXCLUDED.api_url,
        email = EXCLUDED.email, account = EXCLUDED.account, account_id = EXCLUDED.account_id,
        jira_on = EXCLUDED.jira_on, jira_reach = EXCLUDED.jira_reach,
@@ -157,6 +163,7 @@ export async function saveTicketConnection(
       serviceNow?.authKind ?? null,
       serviceNow?.login ?? null,
       serviceNow?.serviceNowTypes ? JSON.stringify(serviceNow.serviceNowTypes) : null,
+      connection.source !== 'servicenow',
     ],
   );
 }
@@ -219,13 +226,15 @@ export async function updateTicketSettings(
     moveOnMerge?: boolean | undefined;
     statusMap?: TicketStatusMap | undefined;
     moveStatuses?: TicketMoveStatuses | undefined;
+    inboxScope?: ServiceNowInboxScope | undefined;
   },
 ): Promise<boolean> {
   const { rowCount } = await db.query(
     `UPDATE ticket_connections SET move_on_ship = COALESCE($3, move_on_ship),
        status_map = COALESCE($4::jsonb, status_map),
        move_on_merge = COALESCE($5, move_on_merge),
-       move_statuses = COALESCE($6::jsonb, move_statuses)
+       move_statuses = COALESCE($6::jsonb, move_statuses),
+       inbox_scope = COALESCE($7, inbox_scope)
      WHERE workspace_id = $1 AND source = $2`,
     [
       workspaceId,
@@ -234,6 +243,7 @@ export async function updateTicketSettings(
       settings.statusMap ? JSON.stringify(settings.statusMap) : null,
       settings.moveOnMerge ?? null,
       settings.moveStatuses ? JSON.stringify(settings.moveStatuses) : null,
+      settings.inboxScope ?? null,
     ],
   );
   return (rowCount ?? 0) > 0;

@@ -5,6 +5,8 @@ import { nativeTerminalProviderSchema, sessionTypeSchema } from './native-termin
 import { atlassianProductLive, atlassianProductsSchema } from './atlassian.ts';
 import {
   serviceNowConnectionSchema,
+  serviceNowInboxScopeSchema,
+  serviceNowTypeLive,
   serviceNowInstanceSchema,
   serviceNowTypeIdSchema,
   serviceNowUsernameSchema,
@@ -62,13 +64,18 @@ export const ticketSummarySchema = z.object({
   doneAt: z.string().nullable(),
   reporter: ticketReporterSchema.nullable(),
   createdAt: z.string().nullable(),
+  group: z.string().nullable().optional(),
 });
 export type TicketSummary = z.infer<typeof ticketSummarySchema>;
+
+export const ticketCommentVisibilitySchema = z.enum(['internal', 'customer']);
+export type TicketCommentVisibility = z.infer<typeof ticketCommentVisibilitySchema>;
 
 export const ticketCommentSchema = z.object({
   author: z.string().nullable(),
   body: z.string(),
   createdAt: z.string(),
+  visibility: ticketCommentVisibilitySchema.optional(),
 });
 export type TicketComment = z.infer<typeof ticketCommentSchema>;
 
@@ -89,6 +96,7 @@ export const ticketDetailSchema = ticketSummarySchema.extend({
   comments: z.array(ticketCommentSchema),
   links: z.array(ticketRefSchema),
   subtasks: z.array(ticketSubtaskSchema),
+  attachments: z.array(z.object({ name: z.string(), bytes: z.number().int().min(0) })).optional(),
 });
 export type TicketDetail = z.infer<typeof ticketDetailSchema>;
 
@@ -180,7 +188,10 @@ export const ticketConnectionSchema = z.object({
 export type TicketConnection = z.infer<typeof ticketConnectionSchema>;
 
 export function ticketsFlowFrom(connection: TicketConnection): boolean {
-  if (!connection.keySaved || connection.source === 'servicenow') return false;
+  if (!connection.keySaved) return false;
+  if (connection.source === 'servicenow') {
+    return Object.values(connection.servicenow?.types ?? {}).some(serviceNowTypeLive);
+  }
   return connection.source !== 'jira' || atlassianProductLive(connection.atlassian?.jira);
 }
 
@@ -238,6 +249,7 @@ export const updateTicketSettingsRequestSchema = z
     jiraOn: z.boolean().optional(),
     confluenceOn: z.boolean().optional(),
     serviceNowTypes: z.partialRecord(serviceNowTypeIdSchema, z.boolean()).optional(),
+    inboxScope: serviceNowInboxScopeSchema.optional(),
     recheck: z.literal(true).optional(),
   })
   .refine((body) => Object.values(body).some((value) => value !== undefined), {
@@ -286,4 +298,6 @@ export const transitionTicketRequestSchema = z.object({ status: ticketStatusSche
 
 export const commentTicketRequestSchema = z.object({
   body: z.string().trim().min(1).max(TICKET_COMMENT_MAX_LENGTH),
+  visibility: z.literal('customer').optional(),
 });
+export type CommentTicketRequest = z.infer<typeof commentTicketRequestSchema>;
