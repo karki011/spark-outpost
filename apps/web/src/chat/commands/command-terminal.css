@@ -70,7 +70,7 @@
   white-space: nowrap;
 }
 
-.run-cmd-head .icon-btn {
+.run-cmd-tools .icon-btn {
   flex-shrink: 0;
   width: 26px;
   height: 26px;
@@ -79,16 +79,23 @@
   color: var(--muted);
 }
 
-.run-cmd-head .icon-btn:hover:not(:disabled) {
+.run-cmd-tools .icon-btn:hover:not(:disabled) {
   color: var(--text);
 }
 
-.run-cmd-head .icon-btn:disabled {
+.run-cmd-tools .icon-btn:disabled {
   opacity: 0.4;
 }
 
-.run-cmd-head .icon-btn[aria-pressed='true'] {
+.run-cmd-tools .icon-btn[aria-pressed='true'] {
   color: var(--accent);
+}
+
+.run-cmd-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  padding: 2px 4px 0;
 }
 
 .run-cmd-body {
@@ -117,6 +124,10 @@
 .run-cmd-screen:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
+}
+
+.run-cmd-screen .xterm-viewport {
+  background: transparent !important;
 }
 
 .run-cmd-xterm {
@@ -151,7 +162,7 @@
 }
 
 @media (pointer: coarse) {
-  .run-cmd-head .icon-btn {
+  .run-cmd-tools .icon-btn {
     width: 44px;
     height: 44px;
   }

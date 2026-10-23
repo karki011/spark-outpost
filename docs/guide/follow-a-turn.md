@@ -10,23 +10,23 @@ You'll follow, stop and queue a turn. About 2 minutes.
 
 ## See what's happening
 
-1. Each tool call is a row, like **Read** `api.ts`; runs of reads fold into **Explored 2 files, 1 search**.
-2. Select **Thought for 4s** to read the thinking. A failed command opens its output.
-3. The agent's to-do ticks off, then folds to **To-do 3 of 3 done**.
-4. Hover a reply for its model, time, cost, **Copy** and ratings. **Show work panel** has the to-do, files and cost; **Agent TV** is under **…**.
-5. Sub-agents share one line; **View** shows a card each.
+1. Each tool call is a row; reads fold into **Explored 2 files**.
+2. **Thought for 4s** opens the thinking; a failed command opens itself.
+3. The to-do ticks off, then folds.
+4. Hover a reply for **Copy**, ratings and cost. **Agent TV** is under **…**.
+5. Sub-agents share one line; **View** shows their cards.
 
-A card waits at the end of the turn. Scrolled away? Select **Waiting for you** or press **⌘⇧Y**.
+A waiting card sits at the turn's end; **⌘⇧Y** jumps there.
 
 **Open in terminal** shows failed output in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 
-1. Select **Stop**. Its sub-agents and background work stop too.
+1. Select **Stop** or press **Esc**; sub-agents and background work stop too.
 
 ## Background work
 
-While background agents run, the chat shows **Waiting on 1 background agent**, then **Writing up results**. A sleeping Claude agent shows **Sleeping until 10:48**, then wakes in that turn. **Stop background tasks** or **Stop waiting** ends the wait.
+While background agents run, the chat shows **Waiting on 1 background agent**. A sleeping Claude agent shows **Sleeping until 10:48**, then wakes in that turn. **Stop background tasks** or **Stop waiting** ends the wait.
 
 The agent stays running up to 30 idle minutes. A turn it starts itself shows **Continued on its own**; after Quit, **Stopped by Quit**.
 
@@ -54,7 +54,7 @@ Other chats never wait; each starts when you send.
 
 | Under a reply                                  | Use it to                                                   |
 | ---------------------------------------------- | ----------------------------------------------------------- |
-| **Good result** / **Bad result** (on hover)    | Rate the reply locally.                                     |
+| **Good result** / **Bad result**               | Rate the reply locally.                                     |
 | Selected text                                  | **Add to chat**, **Ask about this**, **Comment**, **Copy**. |
 | `/fresh`, or **Start fresh** in the **…** menu | Restart without the old context.                            |
 | Ticks left of the thread                       | Jump to a message.                                          |

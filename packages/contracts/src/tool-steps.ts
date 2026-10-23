@@ -187,8 +187,15 @@ function snakeStep(title: string): string {
 }
 
 export const WRITE_UP_STEP = 'Writing up results';
+export const CONTINUED_SESSION_STEP = 'Continued session';
 
-const PLACE_NOTE = /^Working on \S+ in (?:this chat's worktree|your checkout)\./;
+const SPARK_NOTES = [
+  /^Working on \S+ in (?:this chat's worktree|your checkout)\./,
+  /^Allowed .+ \(you (?:allowed|always allow) it[^)]*\)$/s,
+  /^Denied: .+ \(you denied it\)$/s,
+  /^Using .+ · \S+ effort$/,
+  /^Using .+'s defaults$/,
+];
 
 export function placeNoteText(branch: string, inPlace: boolean): string {
   return inPlace
@@ -197,5 +204,6 @@ export function placeNoteText(branch: string, inPlace: boolean): string {
 }
 
 export function isSparkNote(name: string): boolean {
-  return name === WRITE_UP_STEP || PLACE_NOTE.test(name);
+  if (name === WRITE_UP_STEP || name === CONTINUED_SESSION_STEP) return true;
+  return SPARK_NOTES.some((note) => note.test(name));
 }

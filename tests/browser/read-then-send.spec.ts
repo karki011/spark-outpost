@@ -54,6 +54,7 @@ async function send(page: Page, text: string) {
 }
 
 const flags = (page: Page) => page.getByRole('region', { name: 'Flagged by Spark' });
+const flagLines = (page: Page) => page.locator('.flag-line');
 const pendingCards = (page: Page) => page.locator('.appr:not(.resolved)');
 
 for (const mode of ['Bypass permissions', 'Auto']) {
@@ -62,11 +63,15 @@ for (const mode of ['Bypass permissions', 'Auto']) {
     await send(page, 'Check the site #readenv #curl');
     await expect(page.locator('.md', { hasText: DONE })).toBeVisible({ timeout: 30_000 });
     await expect(pendingCards(page)).toHaveCount(0);
+    await expect(flagLines(page)).toHaveCount(1);
+    await expect(flagLines(page)).toContainText('sent data to example.com after reading .env');
+    await flagLines(page).getByRole('button', { name: 'Details' }).click();
     await expect(flags(page)).toHaveCount(1);
     await expect(flags(page)).toContainText('sent data to example.com after reading .env');
     await expect(flags(page)).toContainText("Spark didn't stop the run. Spark can't revert this.");
     await flags(page).getByRole('button', { name: 'Got it' }).click();
     await expect(flags(page).getByRole('status')).toHaveText('Dismissed.');
+    await expect(flagLines(page)).toContainText('Dismissed.');
   });
 }
 
@@ -88,7 +93,7 @@ test('Manual: curl after reading .env shows one ordinary card that carries the n
   await page.keyboard.press('Escape');
   await card.getByRole('button', { name: 'Allow', exact: true }).click();
   await expect(page.locator('.md', { hasText: DONE })).toBeVisible({ timeout: 30_000 });
-  await expect(flags(page)).toHaveCount(0);
+  await expect(flagLines(page)).toHaveCount(0);
 });
 
 for (const mode of ['Manual', 'Bypass permissions']) {

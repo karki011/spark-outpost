@@ -12,7 +12,9 @@ import { useNow } from '../status/use-status-line.ts';
 export function agentChanged(run: Run, previous: Run | null): boolean {
   if (!previous) return false;
   if (previous.provider !== run.provider) return true;
-  return Boolean(previous.model && run.model && previous.model !== run.model);
+  const before = previous.usedModel ?? previous.model;
+  const now = run.usedModel ?? run.model;
+  return Boolean(before && now && before !== now);
 }
 
 export function AgentMark({ provider, model }: { provider: string; model: string | null }) {

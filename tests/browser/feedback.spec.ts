@@ -13,10 +13,11 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(() => repo.remove());
 
 const keepCard = (page: Page) => page.locator('section.result');
+const lastMeta = (page: Page) => page.locator('.turn-meta').last();
 
 async function ask(page: Page, text: string, turns: number): Promise<void> {
   await send(page, text);
-  await expect(page.locator('.turn-foot')).toHaveCount(turns, { timeout: 60_000 });
+  await expect(page.locator('.turn-meta')).toHaveCount(turns, { timeout: 60_000 });
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 60_000 });
 }
 
@@ -45,12 +46,13 @@ async function keptChange(page: Page, choice: 'Keep' | 'Revert'): Promise<void> 
 test('asks how it went after Keep, and the answer can be changed later', async ({ page }) => {
   test.setTimeout(240_000);
   await keptChange(page, 'Keep');
-  const feedback = keepCard(page).getByRole('group', { name: 'How did it go?' });
+  await expect(keepCard(page).getByRole('group', { name: 'How did it go?' })).toHaveCount(0);
+  const feedback = lastMeta(page).getByRole('group', { name: 'How did it go?' });
   await expect(feedback).toBeVisible({ timeout: 15_000 });
   await expect(feedback.locator('.fb-q')).toHaveCount(0);
   const line = (await keepCard(page).locator('.result-line').boundingBox())!;
   const thumbs = (await feedback.boundingBox())!;
-  expect(thumbs.y + thumbs.height).toBeLessThanOrEqual(line.y + line.height + 1);
+  expect(thumbs.y).toBeGreaterThanOrEqual(line.y + line.height - 1);
   const good = feedback.getByRole('button', { name: 'Good result' });
   await good.focus();
   await page.keyboard.press('Enter');
@@ -58,7 +60,7 @@ test('asks how it went after Keep, and the answer can be changed later', async (
   await expect(feedback.getByRole('status')).toHaveText('Saved');
 
   await page.reload();
-  const again = keepCard(page).getByRole('group', { name: 'How did it go?' });
+  const again = lastMeta(page).getByRole('group', { name: 'How did it go?' });
   await expect(again.getByRole('button', { name: 'Good result' })).toHaveAttribute(
     'aria-pressed',
     'true',
@@ -79,7 +81,7 @@ test('after Revert, asks what went wrong with reasons and a comment', async ({ p
   test.setTimeout(60_000);
   await keptChange(page, 'Revert');
   await expect(keepCard(page)).toHaveAccessibleName('Reverted');
-  const wrong = keepCard(page).getByRole('group', { name: 'What went wrong?' });
+  const wrong = lastMeta(page).getByRole('group', { name: 'What went wrong?' });
   await expect(wrong).toBeVisible({ timeout: 15_000 });
   await expect(wrong.getByRole('button', { name: 'Good result' })).toHaveCount(0);
   for (const reason of ['Wrong approach', 'Broke something', 'Too much change', 'Other']) {
@@ -91,7 +93,7 @@ test('after Revert, asks what went wrong with reasons and a comment', async ({ p
   await expect(wrong.getByRole('status')).toHaveText('Saved');
 
   await page.reload();
-  const saved = keepCard(page).getByRole('group', { name: 'What went wrong?' });
+  const saved = lastMeta(page).getByRole('group', { name: 'What went wrong?' });
   await expect(saved.getByRole('button', { name: 'Too much change' })).toHaveAttribute(
     'aria-pressed',
     'true',
@@ -107,7 +109,7 @@ test('keeps the thumbs in the token row, nudging only from the third turn', asyn
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await twoEarlierTurns(page);
   await ask(page, 'What does the badge component do?', 3);
-  const turns = page.locator('.turn-foot');
+  const turns = page.locator('.turn-meta');
   await expect(turns.nth(0).locator('.fb')).toHaveClass(/quiet/, { timeout: 15_000 });
   await expect(turns.nth(1).locator('.fb')).toHaveClass(/quiet/);
   const feedback = turns.nth(2).getByRole('group', { name: 'How did it go?' });
@@ -121,7 +123,7 @@ test('keeps the thumbs in the token row, nudging only from the third turn', asyn
   const meta = (await turns.nth(2).locator('.run-meta').boundingBox())!;
   const thumb = (await bad.boundingBox())!;
   expect(Math.abs(meta.y + meta.height / 2 - (thumb.y + thumb.height / 2))).toBeLessThan(6);
-  expect(thumb.x).toBeGreaterThan(meta.x + meta.width);
+  expect(thumb.x + thumb.width).toBeLessThan(meta.x);
 
   await bad.click();
   await expect(feedback.getByRole('group', { name: 'Reasons' })).toBeVisible();

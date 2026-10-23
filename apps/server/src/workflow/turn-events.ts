@@ -36,6 +36,21 @@ interface OpenStep {
   mark: StepMark;
 }
 
+const FILE_KINDS = new Set(['read', 'edit', 'delete', 'move']);
+const TARGET_CHARS = 200;
+
+function fileLabel(target: string | undefined): string | null {
+  const path = target?.split(/[\s,]/)[0]?.replace(/:\d*$/, '') ?? '';
+  const name = path.split('/').filter(Boolean).at(-1) ?? '';
+  return name ? name.slice(0, TARGET_CHARS) : null;
+}
+
+function kindMark(output: { toolKind?: string; target?: string }): StepMark {
+  if (!output.toolKind) return {};
+  const label = FILE_KINDS.has(output.toolKind) ? fileLabel(output.target) : null;
+  return { toolKind: output.toolKind.slice(0, 40), ...(label ? { target: label } : {}) };
+}
+
 function anchorMark(reply: ReplySoFar | undefined): StepMark {
   if (!reply) return {};
   const { textOffset, textBefore, textHeld } = shotAnchor(reply.shown, reply.held);
@@ -87,7 +102,12 @@ export function createTurnEvents({
     await append(runEvents.reasoningEnd(id));
   };
 
-  const startStep = async (name: string, subagent?: string, waits?: boolean) => {
+  const startStep = async (
+    name: string,
+    subagent?: string,
+    waits?: boolean,
+    kind: StepMark = {},
+  ) => {
     const key = stepKey(name, subagent);
     const open = openSteps.get(key);
     if (open) {
@@ -96,13 +116,17 @@ export function createTurnEvents({
     }
     const toolCallId = announced.get(name);
     announced.delete(name);
-    const mark: StepMark = { ...(toolCallId ? { toolCallId } : {}), ...(waits ? { waits } : {}) };
+    const mark: StepMark = {
+      ...(toolCallId ? { toolCallId } : {}),
+      ...(waits ? { waits } : {}),
+      ...kind,
+    };
     openSteps.set(key, { calls: 1, mark });
     const anchor = subagent ? {} : anchorMark(replySoFar?.());
     await append(owned(runEvents.stepStarted(name, { ...mark, ...anchor }, now()), subagent));
   };
 
-  const finishStep = async (name: string, subagent?: string) => {
+  const finishStep = async (name: string, subagent?: string, kind: StepMark = {}) => {
     if (name === THINKING_STEP && !subagent) await stopThinking();
     const key = stepKey(name, subagent);
     const open = openSteps.get(key);
@@ -112,7 +136,8 @@ export function createTurnEvents({
     }
     if (!open) return;
     openSteps.delete(key);
-    await append(owned(runEvents.stepFinished(name, open.mark, now()), subagent));
+    const finished = kind.target && !open.mark.target ? { ...open.mark, target: kind.target } : open.mark;
+    await append(owned(runEvents.stepFinished(name, finished, now()), subagent));
   };
 
   const startCall = async (id: string, name: string, subagent?: string) => {
@@ -133,9 +158,11 @@ export function createTurnEvents({
   return {
     async observe(output) {
       if (output.kind === 'step_started') {
-        await startStep(output.name, output.subagent, output.waits);
+        await startStep(output.name, output.subagent, output.waits, kindMark(output));
       }
-      if (output.kind === 'step_finished') await finishStep(output.name, output.subagent);
+      if (output.kind === 'step_finished') {
+        await finishStep(output.name, output.subagent, kindMark(output));
+      }
       if (output.kind === 'file_focus') await append(runEvents.fileFocus(output));
       if (output.kind === 'thought_delta') await think(output.delta);
       if (output.kind === 'tool_started') {

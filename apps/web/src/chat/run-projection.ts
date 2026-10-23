@@ -40,7 +40,12 @@ export interface StepTimes {
   finishedAt?: number | undefined;
 }
 
-export interface RunStep extends StepAnchor, StepTimes {
+export interface StepTool {
+  toolKind?: string | undefined;
+  target?: string | undefined;
+}
+
+export interface RunStep extends StepAnchor, StepTimes, StepTool {
   name: string;
   done: boolean;
   toolCallId?: string | undefined;
@@ -52,7 +57,7 @@ export interface RunStep extends StepAnchor, StepTimes {
 
 export type StepStatus = 'done' | 'failed' | 'open';
 
-export interface StepView extends StepAnchor, StepTimes {
+export interface StepView extends StepAnchor, StepTimes, StepTool {
   name: string;
   status: StepStatus;
   reasoningId?: string | undefined;
@@ -69,7 +74,8 @@ function thinkingOf(step: RunStep): Pick<StepView, 'reasoningId' | 'thought'> {
 }
 
 function startedStep(event: Extract<RunEvent, { type: typeof EventType.STEP_STARTED }>): RunStep {
-  const { toolCallId, waits, textOffset, textBefore, textHeld } = stepMark(event);
+  const { toolCallId, waits, textOffset, textBefore, textHeld, toolKind, target } =
+    stepMark(event);
   return {
     name: event.stepName,
     done: false,
@@ -78,6 +84,15 @@ function startedStep(event: Extract<RunEvent, { type: typeof EventType.STEP_STAR
     ...(event.subagentRunId ? { subagent: true } : {}),
     ...(textOffset === undefined ? {} : { textOffset, textBefore, textHeld }),
     ...(event.timestamp === undefined ? {} : { startedAt: event.timestamp }),
+    ...(toolKind ? { toolKind } : {}),
+    ...(target ? { target } : {}),
+  };
+}
+
+function toolOf(step: StepTool): StepTool {
+  return {
+    ...(step.toolKind ? { toolKind: step.toolKind } : {}),
+    ...(step.target ? { target: step.target } : {}),
   };
 }
 
@@ -106,8 +121,11 @@ function finishStep(
   const index =
     called >= 0 ? called : steps.findIndex((step) => !step.done && step.name === event.stepName);
   const finishedAt = event.timestamp === undefined ? {} : { finishedAt: event.timestamp };
+  const { target } = stepMark(event);
   return steps.map((step, position) =>
-    position === index ? { ...step, done: true, ...finishedAt } : step,
+    position === index
+      ? { ...step, done: true, ...finishedAt, ...(target && !step.target ? { target } : {}) }
+      : step,
   );
 }
 
@@ -162,6 +180,7 @@ export function viewSteps(steps: readonly RunStep[]): StepView[] {
       status: step.done ? 'done' : 'open',
       ...anchorOf(step),
       ...timesOf(step),
+      ...toolOf(step),
       ...thinkingOf(step),
       ...(step.subagent ? { subagent: true } : {}),
       ...(step.waits ? { waits: true } : {}),

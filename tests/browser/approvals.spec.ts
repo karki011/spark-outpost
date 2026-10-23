@@ -110,8 +110,13 @@ test('asks before a command and runs it after Allow, from the keyboard', async (
 
   await page.reload();
   const status = page.locator('.cstatus').getByRole('button', { name: /^Waiting for you/ });
-  await expect(status).toContainText('approve pnpm lint -- groupMessages');
   const question = card(page, /^Run .+\?$/).locator('.appr-h');
+  await expect(question).toBeInViewport();
+  await expect(status).toHaveCount(0);
+  await page.locator('.thread .col').evaluate((element) => (element.style.paddingBottom = '200vh'));
+  await page.locator('.thread').evaluate((element) => (element.scrollTop = element.scrollHeight));
+  await expect(question).not.toBeInViewport();
+  await expect(status).toContainText('approve pnpm lint -- groupMessages');
   await status.focus();
   await page.keyboard.press('Enter');
   await expect(question).toBeFocused();
@@ -120,11 +125,8 @@ test('asks before a command and runs it after Allow, from the keyboard', async (
   await expect(page.locator('.md', { hasText: 'Done. fake-run=allowed' })).toBeVisible({
     timeout: 15_000,
   });
-  await page
-    .getByRole('button', { name: /worked for|steps/ })
-    .first()
-    .click();
-  await expect(page.getByText('(you allowed it)')).toBeVisible();
+  await expect(card(page, /^Run .+\?$/).getByRole('status')).toContainText('Chose: Allow.');
+  await expect(page.locator('.trow', { hasText: '(you allowed it)' })).toHaveCount(0);
 });
 
 test('shows the diff for an edit and leaves the file alone after Deny', async ({ page }) => {
@@ -445,6 +447,14 @@ test('reads .env and runs curl in an Ask chat at Automatic with no card, and fla
     page.locator('.md', { hasText: 'Done. fake-read-env=allowed fake-curl=allowed' }),
   ).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('.appr:not(.resolved)')).toHaveCount(0);
+  const line = page.locator('.flag-line');
+  await expect(line).toHaveCount(1);
+  await expect(line).toContainText('sent data to example.com after reading .env');
+  await line.getByRole('button', { name: 'Details' }).click();
+  await expect(line.getByRole('button', { name: 'Details' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
   const flag = page.getByRole('region', { name: 'Flagged by Spark' });
   await expect(flag).toHaveCount(1);
   await expect(flag).toContainText('sent data to example.com after reading .env');

@@ -377,6 +377,15 @@
   .appr .appr-acts .btn {
     flex: 1 1 0;
     min-width: 0;
+    height: auto;
+    min-height: 44px;
+    padding-block: 6px;
+    white-space: normal;
+    line-height: 1.25;
+    text-align: center;
+  }
+  .appr .appr-acts .btn kbd {
+    display: none;
   }
   .appr-det {
     flex-basis: 100%;

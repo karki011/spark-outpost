@@ -12,7 +12,7 @@ What changed recently, newest first.
 
 | What changed                                                                                                                                 | What to do                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Agents ask with a question card; cards ask in their title. ⏎ allows, Esc denies.                                                             | See [Cards](cards.md#approval-cards).                                    |
+| Quieter chat: tool calls are rows; cards ask in their title at the turn's end, ⏎ allows; **Esc** denies or stops.                            | See [Follow a turn](follow-a-turn.md#see-whats-happening).               |
 | The agent's to-do ticks off in the turn; **To-do** replaces **Tasks**.                                                                       | See [Follow a turn](follow-a-turn.md#see-whats-happening).               |
 | Claude agents can sleep: **Sleeping until 10:48**; the turn then picks up.                                                                   | See [Background work](follow-a-turn.md#background-work).                 |
 | An outpost no longer shows the last chat's Browser pane on its left.                                                                         | See [Outposts](outposts.md).                                             |

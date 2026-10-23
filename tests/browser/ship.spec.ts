@@ -130,6 +130,8 @@ test('Ship from the Changes tab commits the task file and opens a PR', async ({ 
   );
   await expect(reopened).not.toContainText('Opened by Ship');
   const kept = page.getByRole('region', { name: /^Kept · / });
+  await expect(kept.getByRole('link', { name: 'Pull request #1, Open' })).toHaveCount(0);
+  await kept.getByRole('button', { name: /^Kept · / }).click();
   await expect(kept.getByRole('link', { name: 'Pull request #1, Open' })).toHaveAttribute(
     'href',
     'https://github.com/acme/widgets/pull/1',
@@ -194,12 +196,12 @@ test('Full auto runs to a PR: the reply and the result line show the PR link', a
   await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toHaveCount(0);
   const kept = page.getByRole('region', { name: /^Kept · / });
   await expect(kept.locator('.result-note')).toHaveCount(0);
+  await expect(page.locator('.col .lchip')).toHaveCount(0);
+  await kept.getByRole('button', { name: /^Kept · 1 file/ }).click();
   await expect(kept.getByRole('link', { name: 'Pull request #1, Open' })).toHaveAttribute(
     'href',
     'https://github.com/acme/widgets/pull/1',
   );
-  await expect(page.locator('.col .lchip')).toHaveCount(0);
-  await kept.getByRole('button', { name: /^Kept · 1 file/ }).click();
   await expect(kept).toContainText('Kept by Full auto → PR.');
   const reply = page.locator('.msg.ai').last();
   await expect(reply).toContainText(

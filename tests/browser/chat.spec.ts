@@ -35,14 +35,14 @@ test('sends a message, streams the reply, and survives a reload without duplicat
   await expect(reply).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Chats' })).toContainText(marker);
-  const workLog = page.locator('.steps-head', { hasText: /worked for \d+s/ });
-  await expect(workLog).toHaveAttribute('aria-expanded', 'false');
+  const replyRow = page.locator('.msg.ai .trow', { hasText: 'Writing a reply' });
+  await expect(replyRow).toHaveCount(1);
 
   await page.reload();
   await page.getByRole('navigation', { name: 'Chats' }).getByText(marker).click();
   await expect(reply).toHaveCount(1);
-  await workLog.click();
-  await expect(page.locator('.steps li', { hasText: 'Writing a reply' })).toBeVisible();
+  await expect(replyRow).toHaveCount(1);
+  await expect(replyRow).toBeVisible();
   await expect(page.locator('.bubble', { hasText: marker })).toHaveCount(1);
   expect(missing).toEqual([]);
 });
@@ -177,9 +177,9 @@ test('the composer picks a model and effort per chat and shows context use', asy
 
   await input.fill('Hello');
   await input.press('Enter');
-  await expect(page.locator('.ai-avatar.working')).toBeVisible();
+  await expect(page.locator('.turn-working')).toBeVisible();
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('.ai-avatar.done svg')).toBeVisible();
+  await expect(page.locator('.turn-working')).toHaveCount(0);
   const ring = page.getByRole('button', { name: /Context window: 6% used/ });
   await expect(ring).toBeVisible();
 

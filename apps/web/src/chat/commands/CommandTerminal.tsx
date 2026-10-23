@@ -109,63 +109,65 @@ export const CommandTerminal = memo(function CommandTerminal({
             <ChevronIcon />
           </span>
         </button>
-        {open && !awaitsEnd && (
-          <button
-            type="button"
-            className="icon-btn run-cmd-size"
-            aria-pressed={tall}
-            aria-label="Taller output"
-            title={tall ? 'Shorter' : 'Taller'}
-            onClick={() => {
-              touch();
-              setTall(!tall);
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-              <path
-                d={
-                  tall
-                    ? 'M3.5 5 7 1.8 10.5 5M3.5 9 7 12.2 10.5 9'
-                    : 'M3.5 4 7 7.2 10.5 4M3.5 8 7 11.2 10.5 8'
-                }
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.4"
-              />
-            </svg>
-          </button>
-        )}
-        {open && dockChatId && (
-          <button
-            type="button"
-            className="icon-btn run-cmd-dock"
-            aria-label="Open in terminal"
-            title="Open in terminal"
-            onClick={() => {
-              touch();
-              openCommandTab(dockChatId, command.runId, command.id);
-            }}
-          >
-            <TerminalIcon />
-          </button>
-        )}
-        {open && (
-          <button
-            type="button"
-            className="icon-btn run-cmd-copy"
-            aria-label={copied ? 'Copied' : 'Copy output'}
-            title={copied ? 'Copied' : 'Copy output'}
-            disabled={awaitsEnd}
-            onClick={copyOutput}
-          >
-            {copied ? <CheckIcon className="run-cmd-ok" /> : <CopyIcon />}
-          </button>
-        )}
       </div>
       <span className="sr-only" role="status">
         {running ? `Running ${command.command.slice(0, 120)}` : commandOutcome(command)}
       </span>
       <div className="run-cmd-body" id={bodyId} hidden={!open}>
+        {open && (
+          <div className="run-cmd-tools">
+            {!awaitsEnd && (
+              <button
+                type="button"
+                className="icon-btn run-cmd-size"
+                aria-pressed={tall}
+                aria-label="Taller output"
+                title={tall ? 'Shorter' : 'Taller'}
+                onClick={() => {
+                  touch();
+                  setTall(!tall);
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                  <path
+                    d={
+                      tall
+                        ? 'M3.5 5 7 1.8 10.5 5M3.5 9 7 12.2 10.5 9'
+                        : 'M3.5 4 7 7.2 10.5 4M3.5 8 7 11.2 10.5 8'
+                    }
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                  />
+                </svg>
+              </button>
+            )}
+            {dockChatId && (
+              <button
+                type="button"
+                className="icon-btn run-cmd-dock"
+                aria-label="Open in terminal"
+                title="Open in terminal"
+                onClick={() => {
+                  touch();
+                  openCommandTab(dockChatId, command.runId, command.id);
+                }}
+              >
+                <TerminalIcon />
+              </button>
+            )}
+            <button
+              type="button"
+              className="icon-btn run-cmd-copy"
+              aria-label={copied ? 'Copied' : 'Copy output'}
+              title={copied ? 'Copied' : 'Copy output'}
+              disabled={awaitsEnd}
+              onClick={copyOutput}
+            >
+              {copied ? <CheckIcon className="run-cmd-ok" /> : <CopyIcon />}
+            </button>
+          </div>
+        )}
         {open && awaitsEnd && <p className="run-cmd-note">Output shows when the command ends.</p>}
         {open && !awaitsEnd && text === null && (
           <div className="run-cmd-wait-load">

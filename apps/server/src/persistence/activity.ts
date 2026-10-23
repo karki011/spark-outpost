@@ -33,6 +33,7 @@ export function activityFromEvents(rows: readonly StepEventRow[]): Record<string
         done: false,
         ...(row.subagent ? { subagent: true } : {}),
         ...anchorOf(row.mark),
+        ...kindOf(row.mark),
         ...(at === null ? {} : { startedAt: at }),
       };
       steps.push(step);
@@ -41,6 +42,8 @@ export function activityFromEvents(rows: readonly StepEventRow[]): Record<string
     }
     const finished = finishOldest(open.get(name));
     if (finished && at !== null) finished.finishedAt = at;
+    const { target } = kindOf(row.mark);
+    if (finished && target && !finished.target) finished.target = target;
   }
   return activity;
 }
@@ -49,6 +52,11 @@ function timeOf(value: StepEventRow['at']): number | null {
   if (value === null || value === undefined) return null;
   const time = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(time) ? time : null;
+}
+
+function kindOf(mark: unknown): Pick<ActivityStep, 'toolKind' | 'target'> {
+  const { toolKind, target } = stepMark({ metadata: { [SPARK_METADATA]: mark } });
+  return { ...(toolKind ? { toolKind } : {}), ...(target ? { target } : {}) };
 }
 
 function anchorOf(mark: unknown): Pick<ActivityStep, 'textOffset' | 'textBefore' | 'textHeld'> {

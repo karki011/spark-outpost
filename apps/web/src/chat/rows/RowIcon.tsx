@@ -19,7 +19,7 @@ const PATHS = {
     'M6 7v6M14 13V8a2 2 0 0 0-2-2H9',
     'M10.5 4.5L9 6l1.5 1.5',
   ],
-  other: ['M10 4v12M4 10h12'],
+  other: ['M10 7.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z'],
 } as const;
 
 export type RowIconName = keyof typeof PATHS;

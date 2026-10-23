@@ -82,39 +82,64 @@ function plainName(name: string): string {
   return friendlyStep(name).replaceAll('`', '');
 }
 
-function toolItem(step: StepView, key: string, ranCommands: boolean): ToolItem | null {
+type ToolBase = Omit<ToolItem, 'tone' | 'verb' | 'target'>;
+
+const FILE_KIND_VERBS: Record<string, [done: string, open: string]> = {
+  read: DONE_VERBS.read,
+  edit: DONE_VERBS.edit,
+  delete: ['Deleted', 'Deleting'],
+  move: ['Moved', 'Moving'],
+};
+
+function fromToolKind(step: StepView, base: ToolBase, open: boolean): ToolItem | null {
+  const kind = step.toolKind;
+  if (!kind) return null;
+  const verbs = FILE_KIND_VERBS[kind];
+  if (verbs && step.target) {
+    const tone = kind === 'read' ? 'read' : 'edit';
+    return { ...base, tone, verb: verbs[open ? 1 : 0], target: step.target };
+  }
+  return null;
+}
+
+function fromName(step: StepView, base: ToolBase, open: boolean, ranCommands: boolean) {
   const activity = stepActivity(step.name);
+  if (activity.kind === 'run' || step.toolKind === 'execute') {
+    if (ranCommands) return null;
+    const target = activity.kind === 'run' ? activity.target : base.label;
+    return { ...base, tone: 'run' as const, verb: open ? 'Running' : 'Ran', target };
+  }
+  if (WEB_STEP.test(base.label)) {
+    const [verb = '', ...rest] = base.label.split(' ');
+    return { ...base, tone: 'web' as const, verb, target: rest.join(' ') || null };
+  }
+  if (activity.kind === 'edit' && activity.target) {
+    const verb = DONE_VERBS.edit[open ? 1 : 0];
+    return { ...base, tone: 'edit' as const, verb, target: activity.target };
+  }
+  if (activity.kind === 'read' && activity.target) {
+    const verb = DONE_VERBS.read[open ? 1 : 0];
+    return { ...base, tone: 'read' as const, verb, target: activity.target };
+  }
+  if (activity.kind === 'search' || step.toolKind === 'search') {
+    const verb = DONE_VERBS.search[open ? 1 : 0];
+    const target = base.label.split(/\s+/).slice(1).join(' ') || null;
+    return { ...base, tone: 'search' as const, verb, target };
+  }
+  return { ...base, tone: 'other' as const, verb: base.label, target: null };
+}
+
+function toolItem(step: StepView, key: string, ranCommands: boolean): ToolItem | null {
   const open = step.status === 'open';
-  const base = {
-    kind: 'tool' as const,
+  const base: ToolBase = {
+    kind: 'tool',
     key,
     status: step.status,
     label: plainName(step.name),
     startedAt: step.startedAt,
     finishedAt: step.finishedAt,
   };
-  if (activity.kind === 'run') {
-    if (ranCommands) return null;
-    return { ...base, tone: 'run', verb: open ? 'Running' : 'Ran', target: activity.target };
-  }
-  if (WEB_STEP.test(base.label)) {
-    const [verb = '', ...rest] = base.label.split(' ');
-    return { ...base, tone: 'web', verb, target: rest.join(' ') || null };
-  }
-  if (activity.kind === 'edit' && activity.target) {
-    const verb = DONE_VERBS.edit[open ? 1 : 0];
-    return { ...base, tone: 'edit', verb, target: activity.target };
-  }
-  if (activity.kind === 'read' && activity.target) {
-    const verb = DONE_VERBS.read[open ? 1 : 0];
-    return { ...base, tone: 'read', verb, target: activity.target };
-  }
-  if (activity.kind === 'search') {
-    const verb = DONE_VERBS.search[open ? 1 : 0];
-    const target = base.label.split(/\s+/).slice(1).join(' ') || null;
-    return { ...base, tone: 'search', verb, target };
-  }
-  return { ...base, tone: 'other', verb: base.label, target: null };
+  return fromToolKind(step, base, open) ?? fromName(step, base, open, ranCommands);
 }
 
 function isThought(step: StepView): boolean {

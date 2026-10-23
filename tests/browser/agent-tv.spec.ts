@@ -107,7 +107,7 @@ test('clicking the agent shows its status, Go to scrolls, and Esc steps back', a
   await scrollThread(page, 'top');
   await bubble.getByRole('button', { name: 'Go to' }).click();
   await expect(bubble).toBeHidden();
-  await expect(turn(page).locator('.ai-head')).toBeInViewport();
+  await expect(turn(page)).toBeInViewport();
 
   await agent(page).click();
   await expect(bubble).toBeVisible();
@@ -136,7 +136,7 @@ test('keyboard: Enter opens the bubble and Enter again goes to the agent', async
   await expect(details(page)).toBeVisible();
   await scrollThread(page, 'top');
   await page.keyboard.press('Enter');
-  await expect(turn(page).locator('.ai-head')).toBeInViewport();
+  await expect(turn(page)).toBeInViewport();
 });
 
 test('the header controls explain themselves on keyboard focus, and mute is remembered', async ({

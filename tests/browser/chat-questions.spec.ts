@@ -7,7 +7,7 @@ import { openChats } from './navigation.ts';
 
 const SHOTS = process.env.CHAT_QUESTIONS_SHOTS ?? '';
 const BOXED =
-  '.head > *, .head-r > *, .ctxbar > *, .composer, .appr, .ai-head > *, .md pre, .cs-wrap';
+  '.head > *, .head-r > *, .ctxbar > *, .composer, .appr, .trow, .turn-working, .turn-meta > *, .md pre, .cs-wrap';
 
 const thread = (page: Page) => page.locator('.thread');
 const waitingCard = (page: Page) => thread(page).getByRole('group', { name: /^Edit .+\?$/ });
@@ -105,7 +105,7 @@ test.describe('one status', () => {
     await resetTestDatabase({ onboarded: true });
   });
 
-  test('a running turn shows its status once: in the turn header, or above the message box when the header is out of view', async ({
+  test('a running turn shows its status once: in the Working line, or above the message box when that line is out of view', async ({
     page,
   }) => {
     test.setTimeout(60_000);
@@ -113,8 +113,11 @@ test.describe('one status', () => {
     await openChats(page);
     await page.getByRole('button', { name: 'New chat' }).first().click();
     await send(page, 'Keep going until I stop you #slowbuild');
-    const turnHead = thread(page).locator('.ai-head').last();
-    await expect(turnHead.locator('.mood')).toHaveText('working');
+    const working = thread(page).locator('.turn-working').last();
+    const mood = thread(page).locator('.msg.ai .mood').last();
+    await expect(mood).toHaveText('working');
+    await expect(working).toBeInViewport();
+    await expect(working).toContainText('Esc to stop');
     await expect(statusLine(page)).toHaveCount(0);
     await expect(thread(page).locator('.dots')).toHaveCount(0);
     await expect(page.locator('.cstatus').getByRole('status')).toHaveText(/is thinking/);
@@ -123,10 +126,11 @@ test.describe('one status', () => {
 
     await page.addStyleTag({ content: '.thread .col { padding-bottom: 200vh; }' });
     await page.locator('.thread').evaluate((element) => (element.scrollTop = element.scrollHeight));
-    await expect(turnHead).not.toBeInViewport();
+    await expect(working).not.toBeInViewport();
     await expect(statusLine(page)).toHaveText(/is thinking…$/);
     await page.getByRole('button', { name: 'Stop', exact: true }).click();
-    await expect(turnHead.locator('.mood')).toHaveText('stopped');
+    await expect(mood).toHaveText('stopped');
+    await expect(thread(page).locator('.turn-working')).toHaveCount(0);
   });
 
   test('a finished to-do lists in the rail on a roomy window, and keeps one line in the thread', async ({

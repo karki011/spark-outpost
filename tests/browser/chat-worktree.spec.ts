@@ -68,7 +68,7 @@ test('a Do chat works on its own branch in a worktree and brings the change in o
   await sendAndKeep(page);
   const chip = page.getByRole('button', { name: /^This chat’s branch/ });
   await expect(chip).toContainText(/spark\/add-a-line-to-the-notes[a-z-]*-[0-9a-f]{8}/);
-  await expect(chip).toContainText('· worktree');
+  await expect(chip).toHaveAccessibleName(/, worktree$/);
   await expect(page.locator('.head .chat-branch')).toHaveCount(0);
   await expect(place).toHaveCount(0);
   await chip.click();

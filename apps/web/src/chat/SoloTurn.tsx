@@ -44,6 +44,8 @@ import { SubagentsLine } from './subagents/SubagentsLine.tsx';
 import { useShowAgents } from './subagents/agent-board.ts';
 import { shownSubagents } from './subagents/subagent-view.ts';
 import { runSeconds } from './turns.ts';
+import { clockText } from './status/status-text.ts';
+import { modelOf } from '../crew/chat-agent.ts';
 import { useRunStream } from './use-run-stream.ts';
 import { currentTodo, shownTodo, turnTodo } from '../todo/todo-model.ts';
 import { TurnTodo } from '../todo/TurnTodo.tsx';
@@ -89,7 +91,7 @@ function turnApprovals(
 
 function metaLine(run: Run, model: string | null): string | null {
   const seconds = runSeconds(run);
-  const parts = [model, seconds === null ? null : `${seconds}s`].filter(Boolean);
+  const parts = [model, seconds === null ? null : clockText(seconds * 1000)].filter(Boolean);
   return parts.length > 0 ? parts.join(' · ') : null;
 }
 
@@ -213,17 +215,16 @@ export function SoloTurn({
     started: steps.length > 0 || text !== '',
   });
   const usageRun = child?.usage ? child : run;
-  const meta = metaLine(run, usageRun.model ?? run.model ?? null);
+  const meta = metaLine(run, modelOf(usageRun) ?? modelOf(run));
 
   return (
     <div className="msg ai solo" data-state={finished ? run.status : 'working'}>
       <p className="sr-only">
         {providerName(provider)} <span className="mood">{mood}</span>
       </p>
-      {agentChanged(run, previous) && <AgentMark provider={provider} model={run.model ?? null} />}
+      {agentChanged(run, previous) && <AgentMark provider={provider} model={modelOf(run)} />}
       <SubagentsLine runId={run.id} rows={subagents} live={working} />
       <PlanSavedLine detail={detail} runId={run.id} />
-      {cards.decided.map(approvalCard)}
       <TurnRows
         parts={parts}
         context={{
@@ -242,6 +243,7 @@ export function SoloTurn({
         runId={run.id}
         background={working && !waiting ? stream.subagents.background : null}
       />
+      {cards.decided.map(approvalCard)}
       <ChatFiles files={(detail.chatFiles ?? []).filter((file) => file.runId === run.id)} />
       <ArtifactCards chatId={detail.conversation.id} runId={run.id} pages={detail.artifactPages} />
       <RailFlags detail={detail} runId={run.id} />
