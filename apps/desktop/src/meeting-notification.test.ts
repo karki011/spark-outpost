@@ -93,6 +93,19 @@ describe('the meeting notification', () => {
     expect(created[1]!.closed).toBe(true);
   });
 
+  it('replaces the notification when the meeting changes under the same alert', () => {
+    const { deps, created } = fakeNotices();
+    const notifier = meetingNotifier(deps);
+    notifier.post(alert([event('standup', false)]), vi.fn());
+    const linked = alert([event('standup', true)]);
+    notifier.post(linked, vi.fn());
+    notifier.post({ ...linked, notice: { title: 'Standup moved', body: 'Meet' } }, vi.fn());
+    expect(created).toHaveLength(3);
+    expect(created[0]!.closed).toBe(true);
+    expect(created[1]!.closed).toBe(true);
+    expect(created[2]!.options).toMatchObject({ title: 'Standup moved' });
+  });
+
   it('does nothing where notifications are not supported', () => {
     const { deps, created } = fakeNotices(false);
     meetingNotifier(deps).post(alert([event('standup', true)]), vi.fn());

@@ -15,6 +15,7 @@ const native = vi.hoisted(() => {
     setFocusable = vi.fn();
     setBounds = vi.fn();
     focus = vi.fn();
+    blur = vi.fn();
     loadURL = vi.fn(async () => undefined);
     showInactive = vi.fn(() => {
       this.visible = true;
@@ -74,7 +75,7 @@ afterEach(() => {
   native.windows.length = 0;
 });
 
-function startHost(assistive = false) {
+function startHost(assistive: boolean | (() => Promise<boolean>) = false) {
   const preventActivation = vi.fn();
   const sendToIsland = vi.fn();
   const registered = new Map<string, () => void>();
@@ -88,7 +89,7 @@ function startHost(assistive = false) {
     sendToIsland,
     hideInShare: () => false,
     preventActivation,
-    assistive: async () => assistive,
+    assistive: typeof assistive === 'function' ? assistive : async () => assistive,
     register: (accelerator, run) => {
       registered.set(accelerator, run);
       return true;
@@ -97,7 +98,8 @@ function startHost(assistive = false) {
     notifier,
     log: vi.fn(),
   });
-  const show = () => native.listeners.get(IPC.meetingAlertShow)?.({}, payload);
+  const show = (shown: unknown = payload) =>
+    native.listeners.get(IPC.meetingAlertShow)?.({}, shown);
   const hide = () => native.listeners.get(IPC.meetingAlertHide)?.({});
   return { host, preventActivation, sendToIsland, registered, notifier, show, hide };
 }
@@ -179,6 +181,51 @@ describe('meeting alert overlay', () => {
     expect(sentTakeFocus(native.windows[0]!)).toBe(true);
     hide();
     expect(notifier.close).toHaveBeenCalled();
+    host.dispose();
+  });
+
+  it('still takes focus when the card updates before the assistive check answers', async () => {
+    let answer: (on: boolean) => void = () => undefined;
+    const pending = new Promise<boolean>((resolve) => (answer = resolve));
+    const { host, show } = startHost(() => pending);
+    show();
+    show({ ...payload, countdown: { eventKey: 'standup', deadline: 1 } });
+    answer(true);
+    await settle();
+    expect(sentTakeFocus(native.windows[0]!)).toBe(true);
+    host.dispose();
+  });
+
+  it('gives key focus back as soon as the card is told to leave', async () => {
+    const { host, show, hide } = startHost(true);
+    show();
+    await settle();
+    const [window] = native.windows;
+    hide();
+    expect(window!.blur).toHaveBeenCalled();
+    expect(window!.setFocusable).toHaveBeenLastCalledWith(false);
+    host.dispose();
+  });
+
+  it('leaves key focus alone on leave when the card never took it', () => {
+    const { host, show, hide } = startHost(false);
+    show();
+    hide();
+    expect(native.windows[0]!.blur).not.toHaveBeenCalled();
+    host.dispose();
+  });
+
+  it('sends a notification button with the alert it was posted for', () => {
+    const { host, notifier, sendToIsland, show } = startHost(false);
+    show();
+    const first = notifier.post.mock.calls[0]![1] as (choice: unknown) => void;
+    show({ ...payload, key: 'review' });
+    first({ kind: 'snooze' });
+    expect(sendToIsland).toHaveBeenLastCalledWith(IPC.meetingAlertAction, {
+      kind: 'snooze',
+      key: 'standup',
+      eventKey: null,
+    });
     host.dispose();
   });
 });

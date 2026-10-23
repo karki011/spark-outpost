@@ -64,10 +64,11 @@ export function meetingNotifier(deps: NoticeDeps): MeetingNotifier {
   };
 
   const post = (payload: MeetingAlertPayload, onChoice: (choice: NoticeChoice) => void) => {
-    if (payload.key === shownKey) return;
+    const plan = noticePlan(payload);
+    const key = JSON.stringify([payload.key, plan]);
+    if (key === shownKey) return;
     close();
     if (!deps.supported()) return;
-    const plan = noticePlan(payload);
     const notice = deps.create({
       title: plan.title,
       body: plan.body,
@@ -84,7 +85,7 @@ export function meetingNotifier(deps: NoticeDeps): MeetingNotifier {
       deps.log(`Could not show the meeting notification: ${error}`),
     );
     current = notice;
-    shownKey = payload.key;
+    shownKey = key;
     notice.show();
   };
 

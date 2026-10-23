@@ -96,6 +96,7 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
   let asleep = false;
   let shortcutHeld = false;
   let focusWanted = false;
+  let focused = false;
 
   const fromOverlay = (event: SparkEvent) =>
     options.trusted(event) && window !== null && !window.isDestroyed()
@@ -144,7 +145,15 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
     window.setFocusable(true);
     window.focus();
     window.webContents.focus();
+    focused = true;
     return true;
+  };
+
+  const releaseFocus = () => {
+    if (!focused || !window || window.isDestroyed()) return;
+    focused = false;
+    window.blur();
+    window.setFocusable(false);
   };
 
   const takeFocus = () => {
@@ -167,20 +176,18 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
     shortcutHeld = false;
   };
 
-  const choose = (choice: NoticeChoice) => {
+  const choose = (alertKey: string) => (choice: NoticeChoice) => {
     if (choice.kind === 'show') {
-      takeFocus();
+      if (latestPayload?.key === alertKey) takeFocus();
       return;
     }
-    const key = latestPayload?.key;
-    if (!key) return;
     const eventKey = choice.kind === 'join' ? choice.eventKey : null;
-    options.sendToIsland(IPC.meetingAlertAction, { kind: choice.kind, key, eventKey });
+    options.sendToIsland(IPC.meetingAlertAction, { kind: choice.kind, key: alertKey, eventKey });
   };
 
-  const focusIfAssisted = (key: string) => {
+  const focusIfAssisted = (alertKey: string) => {
     void options.assistive().then((on) => {
-      if (!on || shownKey !== key) return;
+      if (!on || latestPayload?.key !== alertKey) return;
       takeFocus();
       options.log('Meeting alert took focus for assistive technology.');
     });
@@ -195,12 +202,12 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
     latestPayload = payload;
     if (fresh) place(shown);
     send(IPC.meetingAlertPayload, payload);
-    options.notifier.post(payload, choose);
+    options.notifier.post(payload, choose(payload.key));
     if (fresh) {
       shown.showInactive();
       pointer?.start();
       holdShortcut();
-      focusIfAssisted(key);
+      focusIfAssisted(payload.key);
       options.log('Meeting alert shown in the centre of the screen.');
     }
   };
@@ -208,6 +215,7 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
   const hide = () => {
     latestPayload = null;
     focusWanted = false;
+    releaseFocus();
     options.notifier.close();
     releaseShortcut();
     if (!window || window.isDestroyed() || !window.isVisible()) return;
@@ -218,6 +226,7 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
   const gone = () => {
     if (!window || window.isDestroyed()) return;
     pointer?.stop();
+    focused = false;
     window.setFocusable(false);
     window.hide();
   };
