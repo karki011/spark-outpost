@@ -57,6 +57,7 @@ interface FactsRow extends PostRow {
   run_status: RunStatus | null;
   run_error: string | null;
   run_asking_reply: string | null;
+  run_asks_question: boolean | null;
   waiting_handle: string | null;
   waiting_deleted: boolean;
   waiting_failed: boolean;
@@ -98,6 +99,11 @@ const FACTS_QUERY = `
       SELECT CASE WHEN strpos(work.text, '${NEEDS_YOU_PREFIX}') > 0 THEN work.text END
       FROM (${workReply('r.id')}) work
     ) END AS run_asking_reply,
+    CASE WHEN r.status = 'awaiting_approval' THEN (
+      SELECT a.kind = 'clarify' FROM approvals a JOIN runs ar ON ar.id = a.run_id
+      WHERE a.status = 'pending' AND (ar.id = r.id OR ar.parent_run_id = r.id)
+      ORDER BY a.created_at DESC LIMIT 1
+    ) END AS run_asks_question,
     CASE WHEN w.to_conversation_id IS NOT NULL THEN w.to_handle END AS waiting_handle,
     (w.id IS NOT NULL AND w.to_conversation_id IS NULL) AS waiting_deleted,
     COALESCE(
@@ -155,6 +161,7 @@ function toFacts(row: FactsRow): RequestFacts | null {
     queued: row.queued,
     runStatus: row.run_status,
     runNeedsYou: needsYouLines(row.run_asking_reply ?? '')[0] ?? null,
+    ...(row.run_asks_question ? { runAsksQuestion: true } : {}),
     paused: row.paused,
     held: row.held,
     chatDeleted: row.to_conversation_id === null,

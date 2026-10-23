@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addressees, mentionsSomeone, userAddress } from './outpost-addressees.ts';
+import { addressees, mentionsSomeone, requestFor, userAddress } from './outpost-addressees.ts';
 
 const HANDLES = ['fe', 'api', 'api-v2'];
 
@@ -175,5 +175,41 @@ describe('mentionsSomeone', () => {
   it('is false for a bare command or an address joined to other characters', () => {
     expect(mentionsSomeone('/compact')).toBe(false);
     expect(mentionsSomeone('/review someone@api.dev')).toBe(false);
+  });
+});
+
+describe('requestFor', () => {
+  const asked = ['api', 'web'];
+  const both =
+    '@api add a GET /health route (one line). @web add an <h1>Todos</h1> heading. Each of you: reply with your handle.';
+
+  it('gives each chat the text addressed to it, a shared tail going to the last part', () => {
+    expect(requestFor(both, 'api', asked)).toBe('add a GET /health route (one line).');
+    expect(requestFor(both, 'web', asked)).toBe(
+      'add an <h1>Todos</h1> heading. Each of you: reply with your handle.',
+    );
+  });
+
+  it('shares the text after handles that are typed together', () => {
+    expect(requestFor('@api @web review the README', 'api', asked)).toBe('review the README');
+    expect(requestFor('@api and @web: review the README', 'web', asked)).toBe('review the README');
+  });
+
+  it('keeps the whole message for @all, one chat, or a handle that was not asked', () => {
+    expect(requestFor('@all @api fix it', 'api', asked)).toBe('@all @api fix it');
+    expect(requestFor('@api fix it. @web too', 'api', ['api'])).toBe('@api fix it. @web too');
+    expect(requestFor('@api fix it. @docs check it', 'docs', asked)).toBe(
+      '@api fix it. @docs check it',
+    );
+  });
+
+  it('splits only on asked handles and leaves text before the first handle out', () => {
+    expect(requestFor('Today: @api fix @someone’s bug. @web restyle', 'api', asked)).toBe(
+      'fix @someone’s bug.',
+    );
+  });
+
+  it('falls back to the whole message when its part says nothing', () => {
+    expect(requestFor('please do it @api. @web', 'web', asked)).toBe('please do it @api. @web');
   });
 });

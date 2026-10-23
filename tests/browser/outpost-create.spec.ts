@@ -103,7 +103,7 @@ test('two existing chats become an outpost with the keyboard alone', async ({ pa
   const main = outpostPage(page, NAME);
   await expect(main).toBeVisible();
   await expect(outpostRow(page, NAME)).toHaveAttribute('aria-current', 'page');
-  await expect(main.getByText('You and 2 chats')).toBeVisible();
+  await expect(main.getByRole('toolbar', { name: 'Chats in this outpost' }).getByRole('button')).toHaveCount(2);
   await expect(notices(page)).toHaveCount(2);
   await expect(notices(page).filter({ hasText: '@frontend joined · Claude Opus 5.5' })).toHaveCount(
     1,

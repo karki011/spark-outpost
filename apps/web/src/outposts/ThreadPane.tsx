@@ -1,11 +1,13 @@
 import './outpost-thread-pane.css';
-import { useEffect, useMemo, useRef, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, type KeyboardEvent, type RefObject } from 'react';
+import type { ChatFaceState } from '../brand/chat-face.ts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
 import { requestMessageJump } from '../chat/message-jump.ts';
 import { useQuotes } from '../chat/quotes/use-quotes.ts';
 import { useChatSend } from '../chat/send/use-chat-send.ts';
 import { Thread } from '../chat/Thread.tsx';
+import { TurnFaceContext, type TurnFace, type TurnState } from '../chat/turn-face.ts';
 import { latestReplyId } from '../chat/turns.ts';
 import { BackIcon, ExternalLinkIcon } from '../ui/icons.tsx';
 import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
@@ -21,12 +23,66 @@ interface ThreadPaneProps {
   card: ThreadCard;
   canSteer: boolean;
   answerable: boolean;
+  question?: boolean | undefined;
+  answerNow?: boolean | undefined;
   onBack: () => void;
   onOpenChat: (conversationId: string) => void;
   onCancel: (postId: string) => void;
 }
 
 const NO_REPOS: never[] = [];
+const ASK_ROW = '[data-ask-row]';
+
+const FACE_STATES: Record<TurnState, ChatFaceState> = {
+  working: 'working',
+  waiting: 'needs_you',
+  done: 'done',
+  failed: 'failed',
+  stopped: 'idle',
+};
+
+function useMemberFace(chatId: string, name: string): TurnFace {
+  return useMemo(
+    () => ({
+      name,
+      face: (state: TurnState) => (
+        <MemberFace chatId={chatId} state={FACE_STATES[state]} size="strip" />
+      ),
+    }),
+    [chatId, name],
+  );
+}
+
+function focusQuestion(body: RefObject<HTMLDivElement | null>): void {
+  const row = body.current?.querySelector<HTMLElement>(ASK_ROW);
+  row?.scrollIntoView({ block: 'nearest' });
+  row?.focus();
+}
+
+function useEscapeFromNowhere(onBack: () => void): void {
+  useEffect(() => {
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      const active = document.activeElement;
+      if (active !== null && active !== document.body) return;
+      event.preventDefault();
+      onBack();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onBack]);
+}
+
+function QuestionBar({ handle, onAnswer }: { handle: string; onAnswer: () => void }) {
+  return (
+    <div className="op-steer answering op-question-bar">
+      <span>{handle} has a question above.</span>
+      <button type="button" className="btn sm primary" onClick={onAnswer}>
+        Answer {handle}
+      </button>
+    </div>
+  );
+}
 
 export function isBackKey(event: Pick<KeyboardEvent, 'key' | 'metaKey' | 'ctrlKey'>): boolean {
   if (event.key === 'Escape') return true;
@@ -59,6 +115,8 @@ export function ThreadPane({
   card,
   canSteer,
   answerable,
+  question = false,
+  answerNow = false,
   onBack,
   onOpenChat,
   onCancel,
@@ -67,6 +125,9 @@ export function ThreadPane({
   const chatId = post.toConversationId ?? '';
   const to = receiverName(post);
   const backRef = useRef<HTMLButtonElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const face = useMemberFace(chatId, to);
+  useEscapeFromNowhere(onBack);
   const { detail, sends, quotes } = useMemberChat(outpostId, chatId);
   const chat = detail.data?.conversation;
   const loaded = detail.data !== undefined;
@@ -79,6 +140,10 @@ export function ThreadPane({
     if (!loaded) return;
     requestMessageJump(chatId, { messageId: post.id, runId: post.runId, parts: [] });
   }, [chatId, post.id, post.runId, loaded]);
+
+  useEffect(() => {
+    if (loaded && question && answerNow) focusQuestion(bodyRef);
+  }, [loaded, question, answerNow]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (!isBackKey(event)) return;
@@ -123,21 +188,24 @@ export function ThreadPane({
           Open chat
         </button>
       </div>
-      <div className="op-thread-body">
+      <div ref={bodyRef} className="op-thread-body">
         {detail.data ? (
-          <Thread
-            detail={detail.data}
-            repos={NO_REPOS}
-            sends={sends}
-            taskId={null}
-            onOpenChat={onOpenChat}
-            quotes={quotes}
-          />
+          <TurnFaceContext value={face}>
+            <Thread
+              detail={detail.data}
+              repos={NO_REPOS}
+              sends={sends}
+              taskId={null}
+              onOpenChat={onOpenChat}
+              quotes={quotes}
+            />
+          </TurnFaceContext>
         ) : (
           <LoadingBlob size="lg" className="thread-loading" line="Opening the thread…" />
         )}
       </div>
-      {(canSteer || needsYou) && (
+      {question && <QuestionBar handle={to} onAnswer={() => focusQuestion(bodyRef)} />}
+      {!question && (canSteer || needsYou) && (
         <SteerBox
           handle={to}
           answering={needsYou}

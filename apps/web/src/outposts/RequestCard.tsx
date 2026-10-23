@@ -35,32 +35,27 @@ export function provenance(post: OutpostPost): string | null {
   return `Written by ${senderName(post)}, ${note}. It is not your request to push or open a pull request.`;
 }
 
-interface MetaLine {
-  lead: string;
-  facts: string | null;
-  branch: string | null;
-}
-
-export function metaLine(card: ThreadCard): MetaLine | null {
+function CardMeta({ card }: { card: ThreadCard }) {
   const { branch, facts } = card.git;
-  if (card.summary) {
-    return { lead: card.summary, facts: facts.length > 0 ? facts.join(' · ') : null, branch };
-  }
-  const git = [branch, ...facts].filter((part): part is string => part !== null);
-  return git.length > 0 ? { lead: git.join(' · '), facts: null, branch: null } : null;
-}
-
-function CardMeta({ meta }: { meta: MetaLine }) {
+  const git = facts.join(' · ');
   return (
-    <p className="op-card-meta">
-      <span className="op-card-lead">{meta.lead}</span>
-      {meta.facts && (
-        <span className="op-card-facts" title={meta.branch ?? undefined}>
-          {' · '}
-          {meta.facts}
-        </span>
+    <>
+      {card.summary && (
+        <p className="op-card-meta">
+          <span className="op-card-lead">{card.summary}</span>
+        </p>
       )}
-    </p>
+      {(branch !== null || git !== '') && (
+        <p className="op-card-git">
+          {branch !== null && (
+            <span className="op-card-branch" title={branch}>
+              {branch}
+            </span>
+          )}
+          {git !== '' && <span className="op-card-facts">{branch !== null ? ` · ${git}` : git}</span>}
+        </p>
+      )}
+    </>
   );
 }
 
@@ -80,7 +75,6 @@ export function RequestCard({
   const chatId = post.toConversationId;
   const pullUrl = card.pull ? webLink(card.pull.url) : undefined;
   const from = provenance(post);
-  const meta = metaLine(card);
   const classes = ['op-card', status, selected ? 'selected' : ''].filter(Boolean).join(' ');
   return (
     <article
@@ -98,7 +92,7 @@ export function RequestCard({
         <span className="op-card-title">{card.title}</span>
         <StatusPill status={status} label={card.pill} />
       </div>
-      {meta && <CardMeta meta={meta} />}
+      <CardMeta card={card} />
       <div className="op-card-foot">
         {post.state === 'needs_you' && chatId && answerable && (
           <button

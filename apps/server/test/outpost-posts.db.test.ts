@@ -154,6 +154,26 @@ describe('the facts a request state is derived from', () => {
     }
   });
 
+  it('says a waiting run has a question when its pending card asks one', async () => {
+    const card = async (kind: string) => {
+      const postId = await request();
+      const runId = await receivingRun(postId, 'awaiting_approval');
+      await t.db.query(
+        `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash,
+           options, status)
+         VALUES ($1, $2, $3, $4, 'Card', '{}', 'sha256:card', '[]', 'pending')`,
+        [randomUUID(), runId, `call-${randomUUID()}`, kind],
+      );
+      return stateOf(postId);
+    };
+
+    expect(await card('clarify')).toEqual({ state: 'needs_you', reason: '@api has a question' });
+    expect(await card('execute')).toEqual({
+      state: 'needs_you',
+      reason: '@api is waiting for your approval',
+    });
+  });
+
   it('reads Needs you with the question when the reply ends with one', async () => {
     const postId = await request();
     const runId = await receivingRun(postId, 'succeeded');

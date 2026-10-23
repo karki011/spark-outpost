@@ -48,3 +48,41 @@ export function userAddress(
   const rest = only === undefined ? null : afterLeadingHandle(body, only);
   return { kind: 'request', to, body: rest ?? body };
 }
+
+const JOINER = /^[\s.,:;!?()[\]{}"'&]*(?:(?:and|or)[\s.,:;!?()[\]{}"']*)?$/i;
+
+interface Mention {
+  handle: string;
+  start: number;
+  end: number;
+}
+
+function askedMentions(text: string, asked: readonly string[]): Mention[] {
+  return [...text.matchAll(MENTION)]
+    .map((match) => {
+      const start = match.index + (match[1] ?? '').length;
+      return { handle: (match[2] ?? '').toLowerCase(), start, end: start + 1 + (match[2] ?? '').length };
+    })
+    .filter((mention) => asked.includes(mention.handle));
+}
+
+function partOf(text: string, mentions: readonly Mention[], own: number): string {
+  let last = own;
+  while (last + 1 < mentions.length) {
+    const between = text.slice(mentions[last]!.end, mentions[last + 1]!.start);
+    if (!JOINER.test(between)) break;
+    last += 1;
+  }
+  const next = mentions[last + 1];
+  return text.slice(mentions[last]!.end, next?.start ?? text.length);
+}
+
+export function requestFor(text: string, handle: string, asked: readonly string[]): string {
+  const own = handle.toLowerCase();
+  if (asked.length < 2 || mentioned(text).includes(ALL_HANDLE)) return text;
+  const mentions = askedMentions(text, asked);
+  const at = mentions.findIndex((mention) => mention.handle === own);
+  if (at === -1) return text;
+  const part = partOf(text, mentions, at).replace(/^[\s,:;]+/, '').trim();
+  return saysSomething(part) ? part : text;
+}

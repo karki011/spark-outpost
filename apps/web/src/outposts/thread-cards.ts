@@ -1,10 +1,14 @@
-import { addressees, type OutpostPost, type ThreadItem } from '@spark-outpost/contracts';
+import {
+  addressees,
+  requestFor,
+  type OutpostPost,
+  type ThreadItem,
+} from '@spark-outpost/contracts';
 import { countLabel } from '../ui/count-label.ts';
 import { splitQuestion } from './answer-text.ts';
-import { isOpenPull, pullOf, type OutpostPull } from './outpost-pulls.ts';
+import { pullOf, type OutpostPull } from './outpost-pulls.ts';
 import { publishLabels } from './post-text.ts';
-
-export type ThreadStatus = 'waiting' | 'working' | 'held' | 'review' | 'idle' | 'done';
+import { requestStatus, statusLabel, type ThreadStatus } from './request-status.ts';
 
 export interface ThreadCard {
   post: OutpostPost;
@@ -30,28 +34,20 @@ export const GROUP_ORDER: readonly ThreadStatus[] = [
   'done',
 ];
 
-export const GROUP_LABELS: Record<ThreadStatus, string> = {
-  waiting: 'Waiting on you',
-  working: 'Working',
-  held: 'Held',
-  review: 'Ready for review',
-  idle: 'Idle',
-  done: 'Resolved',
-};
-
-const PILL_LABELS: Record<ThreadStatus, string> = {
-  ...GROUP_LABELS,
-  done: 'Done',
-};
-
 const TITLE_MAX = 80;
 const SUMMARY_MAX = 240;
 const LEADING_HANDLES = /^(?:@[a-z0-9][a-z0-9-]*[\s,]*)+/i;
-const MARKS = /[*`#>]+|~~|(?<![\w])_+|_+(?![\w])/g;
+const BLOCK_MARKS = /^[ \t]*(?:(?:>[ \t]?)+|#{1,6}[ \t]+|[-*+][ \t]+)/gm;
+const MARKS = /[*`]+|~~|(?<![\w])_+|_+(?![\w])/g;
 const LINK = /\[([^\]]*)\]\([^)]*\)/g;
 
 function plain(text: string): string {
-  return text.replace(LINK, '$1').replace(MARKS, '').replace(/\s+/g, ' ').trim();
+  return text
+    .replace(BLOCK_MARKS, '')
+    .replace(LINK, '$1')
+    .replace(MARKS, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function clip(text: string, max: number): string {
@@ -64,41 +60,21 @@ function linesFor(body: string, handle: string | null): string[] {
   return own === undefined ? lines : [own, ...lines];
 }
 
-export function requestTitle(body: string, handle: string | null = null): string {
-  const first = linesFor(body, handle)
+export function requestTitle(
+  body: string,
+  handle: string | null = null,
+  asked: readonly string[] = [],
+): string {
+  const own = handle === null ? body : requestFor(body, handle, asked);
+  const first = linesFor(own, handle)
     .map((line) => plain(line.replace(LEADING_HANDLES, '')))
     .find((line) => line !== '');
   return first ? clip(first, TITLE_MAX) : 'Request';
 }
 
-function answeredStatus(pull: OutpostPull | null): ThreadStatus {
-  if (pull === null) return 'idle';
-  return isOpenPull(pull) ? 'review' : 'done';
-}
-
 export function threadStatus(post: OutpostPost, pull: OutpostPull | null): ThreadStatus {
   if (post.held) return 'held';
-  switch (post.state ?? 'sent') {
-    case 'needs_you':
-    case 'failed':
-      return 'waiting';
-    case 'working':
-    case 'sent':
-      return 'working';
-    case 'cancelled':
-      return 'done';
-    case 'answered':
-      return answeredStatus(pull);
-  }
-}
-
-function pillOf(post: OutpostPost, status: ThreadStatus): string {
-  const state = post.state ?? 'sent';
-  if (status === 'held') return 'Held';
-  if (state === 'failed') return 'Failed';
-  if (state === 'cancelled') return 'Cancelled';
-  if (state === 'sent') return 'Queued';
-  return PILL_LABELS[status];
+  return requestStatus(post.state ?? 'sent', pull?.state ?? null);
 }
 
 function answerSummary(text: string): string | null {
@@ -130,14 +106,15 @@ export function threadCard(
   post: OutpostPost,
   pulls: readonly OutpostPull[],
   activity?: string,
+  asked: readonly string[] = [],
 ): ThreadCard {
   const pull = pullOf(post, pulls);
   const status = threadStatus(post, pull);
   return {
     post,
     status,
-    pill: pillOf(post, status),
-    title: requestTitle(post.body, post.toHandle),
+    pill: statusLabel(post.state ?? 'sent', status),
+    title: requestTitle(post.body, post.toHandle, asked),
     summary: cardSummary(post, activity),
     git: gitLine(post, pull),
     pull,
@@ -150,6 +127,32 @@ export function requestsOf(items: readonly ThreadItem[]): OutpostPost[] {
     if (item.kind === 'batch') return item.lines.map((line) => line.post);
     return [];
   });
+}
+
+function askedByBatch(requests: readonly OutpostPost[]): Map<string, string[]> {
+  const asked = new Map<string, string[]>();
+  for (const request of requests) {
+    if (request.batchId === null || request.toHandle === null) continue;
+    asked.set(request.batchId, [...(asked.get(request.batchId) ?? []), request.toHandle]);
+  }
+  return asked;
+}
+
+export function threadCards(
+  items: readonly ThreadItem[],
+  pulls: readonly OutpostPull[],
+  activityOf: (chatId: string | null) => string | undefined,
+): ThreadCard[] {
+  const requests = requestsOf(items);
+  const asked = askedByBatch(requests);
+  return requests.map((request) =>
+    threadCard(
+      request,
+      pulls,
+      activityOf(request.toConversationId),
+      request.batchId === null ? [] : asked.get(request.batchId),
+    ),
+  );
 }
 
 export function groupCards(

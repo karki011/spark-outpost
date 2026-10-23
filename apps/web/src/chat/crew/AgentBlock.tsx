@@ -13,7 +13,7 @@ import { CrewBlob } from '../../crew/CrewBlob.tsx';
 import { modelLabel, roleLabel, usageParts, type CrewAgent } from '../../crew/crew-model.ts';
 import { memberReplyText } from '../../crew/member-reply.ts';
 import { ChevronIcon } from '../../ui/icons.tsx';
-import type { TurnState } from '../AiTurn.tsx';
+import type { TurnState } from '../turn-face.ts';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
 import { decidedFirst } from '../approvals/approval-events.ts';
 import { EffortMeter } from '../composer/EffortMeter.tsx';

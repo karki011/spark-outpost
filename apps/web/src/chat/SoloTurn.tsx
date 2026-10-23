@@ -10,7 +10,8 @@ import {
 } from '@spark-outpost/contracts';
 import { CacheRebuildNote } from '../usage/CacheRebuildNote.tsx';
 import { RunUsageMeta } from '../usage/RunUsageMeta.tsx';
-import { AiTurn, type TurnState } from './AiTurn.tsx';
+import { AiTurn } from './AiTurn.tsx';
+import type { TurnState } from './turn-face.ts';
 import { waitLabel } from './wait-label.ts';
 import { ApprovalCard } from './approvals/ApprovalCard.tsx';
 import { decidedFirst, hasPending } from './approvals/approval-events.ts';

@@ -39,6 +39,12 @@ describe('requestState from the run', () => {
     });
   });
 
+  it('says a run waiting on a question card has a question, not that it waits for approval', () => {
+    expect(
+      requestState(facts({ runStatus: 'awaiting_approval', runAsksQuestion: true })),
+    ).toEqual({ state: 'needs_you', reason: '@api has a question' });
+  });
+
   it('reads a succeeded run as Answered', () => {
     expect(requestState(facts({ runStatus: 'succeeded' }))).toEqual({
       state: 'answered',

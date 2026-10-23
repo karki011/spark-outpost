@@ -1,15 +1,7 @@
 .op-stories {
-  flex-shrink: 0;
-  max-height: 40%;
-  overflow-y: auto;
-  padding: 0 var(--chat-gutter, 16px);
+  margin-top: 8px;
+  padding-bottom: 4px;
   border-bottom: 1px solid var(--line);
-  background: var(--bg);
-}
-
-.op-story {
-  max-width: var(--chat-col, 700px);
-  margin: 0 auto;
 }
 
 .op-story + .op-story {
@@ -20,7 +12,8 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding: 8px 10px;
+  min-height: 28px;
+  padding: 6px 8px;
   border-radius: var(--r-sm);
   cursor: pointer;
   font-size: 13px;
@@ -82,7 +75,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 2px 8px;
-  padding: 5px 10px;
+  padding: 5px 8px;
   font-size: 13px;
   line-height: 1.4;
 }
@@ -97,6 +90,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.op-story-row > .op-pill {
+  margin-left: auto;
 }
 
 .op-story-order {
