@@ -100,7 +100,7 @@ describe('task overviews in a chat', () => {
     expect(batch.count()).toBe(single.count());
   });
 
-  it('keeps each task its own plan, approvals and checks', async () => {
+  it('keeps each task its own plan and approvals, and drops old check rows', async () => {
     const { conversationId, tasks } = await chatWithTasks(3);
     const second = tasks[1]!;
     const third = tasks[2]!;
@@ -131,15 +131,11 @@ describe('task overviews in a chat', () => {
     expect(overviews.map((task) => task.planVersion)).toEqual([1, 1, 1]);
 
     const waiting = (index: number) =>
-      overviews[index]!.items.filter((item) => item.label === 'Run the deploy script');
+      overviews[index]!.recorded.filter((item) => item.label === 'Run the deploy script');
     expect(waiting(0)).toEqual([]);
     expect(waiting(1)).toMatchObject([{ detail: 'Allowed: Allow once' }]);
     expect(waiting(2)).toEqual([]);
-    const failedCheck = (index: number) =>
-      overviews[index]!.items.filter((item) => item.output?.includes('expected one to equal two'));
-    expect(failedCheck(0)).toEqual([]);
-    expect(failedCheck(1)).toEqual([]);
-    expect(failedCheck(2)).toHaveLength(1);
+    expect(overviews[2]!.recorded).toEqual([]);
 
     for (const [index, task] of tasks.entries()) {
       const single = await getTaskDetail(t.db, task.taskId);

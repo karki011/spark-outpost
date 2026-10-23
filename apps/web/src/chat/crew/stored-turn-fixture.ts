@@ -11,7 +11,7 @@ import { checkpoint, member, orchestration } from '../../crew/test-orchestration
 const CHAT = '00000000-0000-4000-8000-000000000002';
 export const TURN = '00000000-0000-4000-8000-000000000001';
 const ATLAS = '00000000-0000-4000-8000-0000000000a0';
-const BOLT = '00000000-0000-4000-8000-0000000000a1';
+export const BOLT = '00000000-0000-4000-8000-0000000000a1';
 const RIVET = '00000000-0000-4000-8000-0000000000a2';
 const ANSWER = '00000000-0000-4000-8000-0000000000a3';
 export const CLOSING_REPLY = 'Done: the store and the view are in. Checks passed.';

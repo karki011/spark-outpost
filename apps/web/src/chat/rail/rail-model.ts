@@ -170,7 +170,7 @@ export function railRows(facts: RailFacts): RailRow[] {
       text: checks.text,
       detail: null,
       label: checks.text,
-      action: facts.hasTask ? { kind: 'tab', tab: 'tasks' } : null,
+      action: facts.hasTask ? { kind: 'tab', tab: 'links' } : null,
       ...(checks.tone ? { tone: checks.tone } : {}),
     });
     rows.push(pullRow(facts.watch, facts.pulls ?? 1, facts.hasTask));

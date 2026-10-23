@@ -100,7 +100,7 @@ describe('railRows', () => {
     expect(rows.find((row) => row.id === 'checks')).toMatchObject({
       text: 'Checks failing',
       tone: 'bad',
-      action: { kind: 'tab', tab: 'tasks' },
+      action: { kind: 'tab', tab: 'links' },
     });
     expect(rows.find((row) => row.id === 'pr')).toMatchObject({
       text: 'PR #7',

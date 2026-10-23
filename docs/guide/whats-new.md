@@ -26,6 +26,6 @@ What changed recently, newest first.
 | Shared inbox: answer or set aside in place; flags never count; **Dismiss** sticks.                                  | See [Spark Island](desktop-companion.md#open-it).          |
 | Ask Spark has a chat’s tools. **Let agents read my calendar** is now on; turn it off if you had it off.             | See [Ask Spark](companion-quick-chat.md#ask-spark).        |
 | Browser: copy buttons, keys, find, developer tools, network log, SSO handoff.                                       | See [Keys](keyboard-shortcuts.md#browser-pane-mac-app).    |
-| Sub-agents: one line, work-panel cards; Agent TV in chat; most edits show diffs.                                    | See [Follow a turn](follow-a-turn.md#see-whats-happening). |
+| Sub-agents: one line, work-panel cards; Agent TV in chat; most edits show diffs. **To-do** replaces **Tasks**.      | See [Follow a turn](follow-a-turn.md#see-whats-happening). |
 | Picker shows the model, no **Auto**; no-project chats get a folder. Agents search, show artifacts; links ask.       | See [Agent tools](modes-and-levels.md#agent-tools).        |
 | Agents run between messages (**Continued on its own**, **Waiting on…**, **Stopped by Quit**).                       | See [Background work](follow-a-turn.md#background-work).   |
