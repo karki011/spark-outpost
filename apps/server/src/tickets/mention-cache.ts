@@ -1,4 +1,4 @@
-import type { TicketSourceId } from '@spark-outpost/contracts';
+import { isTicketKey, type TicketSourceId } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import { listTicketConnections } from '../persistence/ticket-connections.ts';
 import { cacheTickets, type CachedTicket } from '../persistence/tickets.ts';
@@ -24,7 +24,7 @@ const MISS_TTL_MS = 2 * 60_000;
 const misses = new Map<string, number>();
 
 function fromSources<T extends Connected>(sources: readonly T[], mention: TicketMention): T[] {
-  if (!mention.source) return [...sources];
+  if (!mention.source) return sources.filter((entry) => isTicketKey(mention.key, entry.source));
   return sources.filter(
     (entry) =>
       entry.source === mention.source &&

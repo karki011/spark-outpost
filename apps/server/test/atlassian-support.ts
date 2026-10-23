@@ -1,6 +1,7 @@
-import type { Approval } from '@spark-outpost/contracts';
+import type { Approval, SaveTicketConnectionRequest } from '@spark-outpost/contracts';
 import type { RunObservations, SentOutNote } from '../src/observations/run-observations.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
+import type { SparkScope } from '../src/spark-mcp/deps.ts';
 import { saveConnection } from '../src/tickets/connections.ts';
 import { JIRA_EMAIL, JIRA_TOKEN } from './fake-jira.ts';
 import {
@@ -38,18 +39,26 @@ function watchingObservations(
   };
 }
 
+type ConnectionOf = (stubs: TicketStubs) => SaveTicketConnectionRequest;
+
+const jiraConnection: ConnectionOf = (stubs) => ({
+  source: 'jira',
+  siteUrl: stubs.jiraUrl,
+  email: JIRA_EMAIL,
+  apiToken: JIRA_TOKEN,
+});
+
 export async function startAtlassian(
   message: string,
   mode: string | null,
   readBefore: readonly string[] = [],
+  connection: ConnectionOf = jiraConnection,
+  scope: Partial<SparkScope> = {},
 ): Promise<AtlassianHarness> {
   const t = await createTestDb();
   const secrets = memorySecretStore();
   const stubs = await startTicketStubs();
-  await saveConnection(
-    { db: t.db, workspaceId: t.workspaceId, secrets, fetch },
-    { source: 'jira', siteUrl: stubs.jiraUrl, email: JIRA_EMAIL, apiToken: JIRA_TOKEN },
-  );
+  await saveConnection({ db: t.db, workspaceId: t.workspaceId, secrets, fetch }, connection(stubs));
   const { conversationId, runId } = await startChat(t, message);
   if (mode) {
     await t.db.query(`UPDATE runs SET provider = 'claude', used_mode = $2 WHERE id = $1`, [
@@ -67,6 +76,7 @@ export async function startAtlassian(
       runId,
       actions: recorded.hooks,
       observations: watchingObservations(sent, recordedObservations, readBefore),
+      ...scope,
     },
     { secrets },
   );
