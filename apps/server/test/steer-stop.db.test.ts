@@ -7,6 +7,7 @@ import {
   getMemberMessage,
   insertMemberMessage,
   markUnreadOnStop,
+  setMemberMessageStatus,
 } from '../src/persistence/member-messages.ts';
 import { createTestApp, localClient } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
@@ -54,6 +55,13 @@ async function agentEvent(runId: string, type: string, secondsAfterNow: number) 
   );
 }
 
+async function stopRequested(runId: string, secondsAfterNow: number) {
+  await t.db.query(
+    'UPDATE runs SET cancel_requested_at = now() + make_interval(secs => $2) WHERE id = $1',
+    [runId, secondsAfterNow],
+  );
+}
+
 const status = async (id: string) => (await getMemberMessage(t.db, id))?.status;
 
 describe('stopping a turn with messages sent to it', () => {
@@ -84,11 +92,24 @@ describe('stopping a turn with messages sent to it', () => {
     const id = await steer(conversationId, runId);
     await agentEvent(runId, 'STEP_STARTED', -5);
     await claimMemberMessages(t.db, runId, runId, true);
+    await stopRequested(runId, 2);
     await agentEvent(runId, 'TEXT_MESSAGE_CONTENT', 5);
 
     await markUnreadOnStop(t.db, runId);
 
     expect(await status(id)).toBe('missed');
+  });
+
+  it('counts an answer the agent wrote before the stop as acting on it', async () => {
+    const { conversationId, runId } = await turn();
+    const id = await steer(conversationId, runId);
+    await claimMemberMessages(t.db, runId, runId, true);
+    await agentEvent(runId, 'TEXT_MESSAGE_CONTENT', 1);
+    await stopRequested(runId, 2);
+
+    await markUnreadOnStop(t.db, runId);
+
+    expect(await status(id)).toBe('delivered');
   });
 
   it('marks a send-now message still waiting as missed instead of starting a new turn', async () => {
@@ -130,6 +151,15 @@ describe('where a message was taken in', () => {
 
     expect(claimed).toMatchObject({ id, status: 'delivered', ...anchor });
     expect(await getMemberMessage(t.db, id)).toMatchObject(anchor);
+
+    await setMemberMessageStatus(t.db, [id], 'queued');
+    expect(await getMemberMessage(t.db, id)).toMatchObject({
+      status: 'queued',
+      deliveredAt: null,
+      textOffset: null,
+      textBefore: null,
+      textHeld: null,
+    });
   });
 });
 

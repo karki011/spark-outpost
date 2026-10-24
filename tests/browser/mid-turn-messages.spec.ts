@@ -110,3 +110,21 @@ test('a message the turn stopped before reading offers to send or edit it', asyn
   );
   await expect(page.getByRole('textbox', { name: 'Message' })).toBeFocused();
 });
+
+test('sending a stopped message on returns focus to the message box', async ({ page }) => {
+  test.setTimeout(90_000);
+  await longChat(page, ['Compare the queue backends in a table']);
+  await withSteers(page, 'cancelled');
+  await page.route(`**/api/conversations/*/steers/${REBASE}/resend`, (route) =>
+    route.fulfill({ status: 202, json: { queue: [] } }),
+  );
+
+  const missed = groups(page).filter({ hasText: 'as i rebase to develop' });
+  const send = missed.getByRole('button', { name: 'Send as next message' });
+  await send.focus();
+  await page.keyboard.press('Tab');
+  await expect(missed.getByRole('button', { name: 'Edit' })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('textbox', { name: 'Message' })).toBeFocused();
+});

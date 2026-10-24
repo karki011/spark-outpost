@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { MemberMessage } from '@spark-outpost/contracts';
 import { queryKeys } from '../../api/client.ts';
-import { queueDraft } from '../composer/pending-draft.ts';
+import { queueDraft, requestComposerFocus } from '../composer/pending-draft.ts';
 import { queueApi } from '../queue/queue-api.ts';
 
 type SteerAction = { kind: 'resend' | 'edit'; messages: readonly MemberMessage[] };
@@ -13,6 +13,8 @@ async function apply(conversationId: string, { kind, messages }: SteerAction): P
   }
   if (kind === 'edit') {
     queueDraft(conversationId, messages.map((message) => message.body).join('\n\n'));
+  } else {
+    requestComposerFocus(conversationId);
   }
 }
 

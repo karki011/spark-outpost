@@ -128,7 +128,10 @@ export async function setMemberMessageStatus(
   if (ids.length === 0) return;
   await db.query(
     `UPDATE member_messages SET status = $2,
-       delivered_at = CASE WHEN $2 = 'queued' THEN NULL ELSE delivered_at END
+       delivered_at = CASE WHEN $2 = 'queued' THEN NULL ELSE delivered_at END,
+       delivered_text_offset = CASE WHEN $2 = 'queued' THEN NULL ELSE delivered_text_offset END,
+       delivered_text_before = CASE WHEN $2 = 'queued' THEN NULL ELSE delivered_text_before END,
+       delivered_text_held = CASE WHEN $2 = 'queued' THEN NULL ELSE delivered_text_held END
      WHERE id = ANY($1::uuid[])`,
     [ids, status],
   );
@@ -147,7 +150,12 @@ export async function markMissedMessages(db: Queryable, runId: string): Promise<
   );
 }
 
-const TAKEN_IN_EVENTS = ['STEP_STARTED', 'REASONING_START', 'TOOL_CALL_START'];
+const TAKEN_IN_EVENTS = [
+  'STEP_STARTED',
+  'REASONING_START',
+  'TEXT_MESSAGE_CONTENT',
+  'TOOL_CALL_START',
+];
 
 export async function markUnreadOnStop(db: Queryable, runId: string): Promise<void> {
   await db.query(
@@ -155,8 +163,10 @@ export async function markUnreadOnStop(db: Queryable, runId: string): Promise<vo
      WHERE m.message_id IS NULL AND (
        (m.status = 'delivered' AND m.delivered_run_id = $1
          AND NOT EXISTS (
-           SELECT 1 FROM run_events e
-           WHERE e.run_id = $1 AND e.created_at > m.delivered_at AND e.type = ANY($2::text[])))
+           SELECT 1 FROM run_events e JOIN runs r ON r.id = e.run_id
+           WHERE e.run_id = $1 AND e.created_at > m.delivered_at
+             AND e.created_at < COALESCE(r.cancel_requested_at, 'infinity')
+             AND e.type = ANY($2::text[])))
        OR (m.status = 'queued' AND m.urgency = 'now' AND m.run_id = $1
          AND NOT EXISTS (
            SELECT 1 FROM member_messages i WHERE i.run_id = $1 AND i.status = 'interrupting')))`,
