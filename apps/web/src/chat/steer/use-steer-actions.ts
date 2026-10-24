@@ -6,23 +6,34 @@ import { queueApi } from '../queue/queue-api.ts';
 
 type SteerAction = { kind: 'resend' | 'edit'; messages: readonly MemberMessage[] };
 
-async function apply(conversationId: string, { kind, messages }: SteerAction): Promise<void> {
-  for (const message of messages) {
-    if (kind === 'resend') await queueApi.resendSteer(conversationId, message.id);
-    else await queueApi.dropSteer(conversationId, message.id);
+async function resend(conversationId: string, messages: readonly MemberMessage[]) {
+  for (const message of messages) await queueApi.resendSteer(conversationId, message.id);
+  requestComposerFocus(conversationId);
+}
+
+async function edit(conversationId: string, messages: readonly MemberMessage[]) {
+  const dropped: string[] = [];
+  try {
+    for (const message of messages) {
+      await queueApi.dropSteer(conversationId, message.id);
+      dropped.push(message.body);
+    }
+  } finally {
+    if (dropped.length > 0) queueDraft(conversationId, dropped.join('\n\n'));
   }
-  if (kind === 'edit') {
-    queueDraft(conversationId, messages.map((message) => message.body).join('\n\n'));
-  } else {
-    requestComposerFocus(conversationId);
-  }
+}
+
+function applySteerAction(conversationId: string, action: SteerAction): Promise<void> {
+  return action.kind === 'resend'
+    ? resend(conversationId, action.messages)
+    : edit(conversationId, action.messages);
 }
 
 export function useSteerActions(conversationId: string) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationKey: ['steer', conversationId],
-    mutationFn: (action: SteerAction) => apply(conversationId, action),
+    mutationFn: (action: SteerAction) => applySteerAction(conversationId, action),
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) }),
   });

@@ -27,6 +27,12 @@ export function requestComposerFocus(conversationId: string): void {
   listeners.forEach((listener) => listener());
 }
 
+export function consumeComposerFocus(conversationId: string, request: number): void {
+  if (focusRequests.get(conversationId) !== request) return;
+  focusRequests.delete(conversationId);
+  listeners.forEach((listener) => listener());
+}
+
 export function useComposerFocusRequest(conversationId: string): number {
   return useSyncExternalStore(subscribe, () => focusRequests.get(conversationId) ?? 0);
 }

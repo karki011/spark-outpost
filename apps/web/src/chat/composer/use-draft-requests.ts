@@ -1,6 +1,11 @@
 import { useEffect, useState, type RefObject } from 'react';
 import { focusAtEnd } from './composer-hint.ts';
-import { takeDraft, useComposerFocusRequest, usePendingDraft } from './pending-draft.ts';
+import {
+  consumeComposerFocus,
+  takeDraft,
+  useComposerFocusRequest,
+  usePendingDraft,
+} from './pending-draft.ts';
 
 export function useDraftRequests(
   conversationId: string,
@@ -28,6 +33,8 @@ export function useDraftRequests(
   useEffect(() => {
     if (focusRequest === 0 && storeFocusRequest === 0) return;
     const input = textareaRef.current;
-    if (input) focusAtEnd(input);
-  }, [focusRequest, storeFocusRequest, textareaRef]);
+    if (!input) return;
+    focusAtEnd(input);
+    if (storeFocusRequest !== 0) consumeComposerFocus(conversationId, storeFocusRequest);
+  }, [conversationId, focusRequest, storeFocusRequest, textareaRef]);
 }
