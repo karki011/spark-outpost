@@ -44,6 +44,80 @@ describe('command tracker', () => {
     ]);
   });
 
+  it("keeps Claude's description of a command as its title", () => {
+    const outputs = see(true, [
+      {
+        sessionUpdate: 'tool_call',
+        toolCallId: 'c1',
+        kind: 'execute',
+        title: 'Terminal',
+        rawInput: {},
+      },
+      {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'c1',
+        title: 'git fetch origin',
+        rawInput: { command: 'git fetch origin', description: ' Bring in the\n remote branch ' },
+      },
+    ]);
+    expect(outputs).toEqual([
+      {
+        kind: 'command_started',
+        id: 'c1',
+        command: 'git fetch origin',
+        description: 'Bring in the remote branch',
+        cwd: null,
+        live: true,
+      },
+    ]);
+  });
+
+  it('sends a description that arrives after the streamed command', () => {
+    const outputs = see(false, [
+      { sessionUpdate: 'tool_call', toolCallId: 'c1', kind: 'execute', title: 'Terminal' },
+      {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'c1',
+        title: 'git diff --stat HEAD',
+        rawInput: { command: 'git diff --stat HEAD' },
+      },
+      {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'c1',
+        title: 'git diff --stat HEAD',
+        rawInput: { command: 'git diff --stat HEAD', description: 'Show the change summary' },
+      },
+      {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'c1',
+        rawInput: { command: 'git diff --stat HEAD', description: 'Show the change summary' },
+      },
+    ]);
+    expect(outputs).toEqual([
+      {
+        kind: 'command_started',
+        id: 'c1',
+        command: 'git diff --stat HEAD',
+        cwd: null,
+        live: false,
+      },
+      { kind: 'command_described', id: 'c1', description: 'Show the change summary' },
+    ]);
+  });
+
+  it('leaves out a blank description', () => {
+    const [started] = see(true, [
+      {
+        sessionUpdate: 'tool_call',
+        toolCallId: 'c1',
+        kind: 'execute',
+        title: 'ls',
+        rawInput: { command: 'ls', description: '   ' },
+      },
+    ]);
+    expect(started).not.toHaveProperty('description');
+  });
+
   it('uses the whole output sent at the end when nothing was streamed', () => {
     const outputs = see(true, [
       { sessionUpdate: 'tool_call', toolCallId: 'c1', kind: 'execute', title: 'ls' },

@@ -1,13 +1,15 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import type { ProviderOutput, ProviderTurn } from './provider.ts';
 
-const TRIGGER = /#terminal(?:=([a-z,]+))?(?: (\d{1,4})ms)?/;
+const TRIGGER = /#(terminal|steps)(?:=([a-z,]+))?(?: (\d{1,4})ms)?/;
+const THINK = 'think';
 const DEFAULT_GAP_MS = 60;
 const HUGE_LINES = 40_000;
 export const FAKE_COMMAND_SECRET = 'ghp_abcdefghijklmnopqrstuvwxyz0123';
 
 interface FakeCommand {
   command: string;
+  description?: string;
   lines: readonly string[];
   exitCode: number;
   live?: boolean;
@@ -67,29 +69,67 @@ const COMMANDS: Record<string, () => FakeCommand> = {
     live: false,
   }),
   hang: () => ({ command: 'pnpm dev', lines: ['ready on http://localhost:5173\n'], exitCode: -1 }),
+  fetch: () => ({
+    command: 'git fetch origin spark/session-activity && git merge --ff-only FETCH_HEAD',
+    description: 'Bring in the remote branch',
+    lines: ['Already up to date.\n'],
+    exitCode: 0,
+  }),
+  count: () => ({
+    command:
+      'python -m scripts.run_query --format json --sql "SELECT org_id, count(*) FROM events"',
+    description: 'Count events per org',
+    lines: [
+      'Traceback (most recent call last):\n',
+      '  File "scripts/run_query.py", line 88, in main\n',
+      'ClientError: The security token included in the request is expired\n',
+    ],
+    exitCode: 1,
+  }),
+  whoami: () => ({
+    command: 'aws sts get-caller-identity --query Arn --output text',
+    description: 'Check which account the profile uses',
+    lines: ['arn:aws:sts::000000000000:assumed-role/Engineering/demo\n'],
+    exitCode: 0,
+  }),
 };
 
 export interface CommandPlan {
   names: string[];
   gapMs: number;
+  grouped: boolean;
 }
 
 export function commandPlan(prompt: string): CommandPlan | null {
   const match = TRIGGER.exec(prompt);
   if (!match) return null;
-  const names = (match[1] ?? 'pass').split(',').filter((name) => name in COMMANDS);
-  return { names, gapMs: match[2] ? Number(match[2]) : DEFAULT_GAP_MS };
+  const names = (match[2] ?? 'pass')
+    .split(',')
+    .filter((name) => name in COMMANDS || name === THINK);
+  return {
+    names,
+    gapMs: match[3] ? Number(match[3]) : DEFAULT_GAP_MS,
+    grouped: match[1] === 'steps',
+  };
 }
 
 async function* runCommand(
   turn: ProviderTurn,
   id: string,
-  { command, lines, exitCode, live = true }: FakeCommand,
+  { command, description, lines, exitCode, live = true }: FakeCommand,
   gapMs: number,
 ): AsyncGenerator<ProviderOutput> {
   const name = `\`${command}\``;
+  const cwd = turn.projectRoots?.[0] ?? null;
   yield { kind: 'step_started', name, tool: true, toolKind: 'execute' };
-  yield { kind: 'command_started', id, command, cwd: turn.projectRoots?.[0] ?? null, live };
+  yield {
+    kind: 'command_started',
+    id,
+    command,
+    ...(description ? { description } : {}),
+    cwd,
+    live,
+  };
   if (!live) {
     await delay(gapMs * lines.length, undefined, { signal: turn.signal });
     yield { kind: 'command_output', id, data: lines.join('') };
@@ -105,14 +145,25 @@ async function* runCommand(
   yield { kind: 'step_finished', name, tool: true, toolKind: 'execute' };
 }
 
+async function* thinking(turn: ProviderTurn, gapMs: number): AsyncGenerator<ProviderOutput> {
+  yield { kind: 'step_started', name: 'Thinking' };
+  yield { kind: 'thought_delta', delta: 'The first check passed, so I look at the next one.' };
+  await delay(gapMs, undefined, { signal: turn.signal });
+  yield { kind: 'step_finished', name: 'Thinking' };
+}
+
 export async function* fakeCommandTurn(
   turn: ProviderTurn,
   plan: CommandPlan,
 ): AsyncGenerator<ProviderOutput> {
   yield { kind: 'text_delta', delta: 'Running the commands now.\n\n' };
   for (const [index, name] of plan.names.entries()) {
+    if (name === THINK) {
+      yield* thinking(turn, plan.gapMs);
+      continue;
+    }
     yield* runCommand(turn, `fake-command-${index}`, COMMANDS[name]!(), plan.gapMs);
-    yield { kind: 'text_delta', delta: `Finished ${name}.\n\n` };
+    if (!plan.grouped) yield { kind: 'text_delta', delta: `Finished ${name}.\n\n` };
   }
   yield { kind: 'text_delta', delta: 'terminal=done' };
 }

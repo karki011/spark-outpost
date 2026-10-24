@@ -92,7 +92,7 @@ export function StepIcon({ step, working }: { step: StepView; working: boolean }
   if (step.status === 'done') {
     return (
       <svg width="12" height="12" viewBox="0 0 12 12" role="img" aria-label="Done">
-        <path d="m2.5 6.5 2.5 2.5 4.5-5" fill="none" stroke="var(--accent)" strokeWidth="1.6" />
+        <path d="m2.5 6.5 2.5 2.5 4.5-5" fill="none" stroke="var(--success)" strokeWidth="1.6" />
       </svg>
     );
   }

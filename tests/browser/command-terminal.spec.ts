@@ -224,6 +224,41 @@ test('at phone width the output scrolls sideways inside its box with large contr
   await page.context().close();
 });
 
+const WHOAMI = 'aws sts get-caller-identity --query Arn --output text';
+const COUNT =
+  'python -m scripts.run_query --format json --sql "SELECT org_id, count(*) FROM events"';
+
+test('groups commands and thoughts into one line, titled by the agent, and opens a failure', async ({
+  page,
+}) => {
+  await askInChats(page, 'Check live #steps=whoami,think,count,think,fetch 30ms');
+  await expect(done(page)).toBeVisible({ timeout: 20_000 });
+  const group = page.getByRole('button', { name: /^Ran 3 commands, thought 2 times/ });
+  await expect(group).toHaveAttribute('aria-expanded', 'true');
+  await expect(group.locator('.trow-word')).toHaveText(['1 failed', '2 passed']);
+  await expect(group.locator('.trow-word').first()).toHaveClass(/bad/);
+
+  const checked = terminal(page, WHOAMI);
+  await expect(toggle(checked)).toHaveText(/^Ran Check which account the profile uses/);
+  await expect(toggle(checked)).not.toContainText('aws sts');
+  await expect(toggle(checked)).toHaveAttribute('aria-expanded', 'false');
+  const failed = terminal(page, COUNT);
+  await expect(toggle(failed)).toHaveAttribute('aria-expanded', 'true');
+  await expect(failed.locator('.run-cmd-cmd')).toHaveText(`$ ${COUNT}`);
+  await expect(rows(failed)).toContainText('security token included in the request is expired');
+  await expect(page.locator('.msg.ai .trow', { hasText: /^Thought/ })).toHaveCount(2);
+  await expect(page.locator('.run-cmd-answer')).toHaveCount(0);
+
+  await group.click();
+  await expect(group).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('.run-cmd')).toHaveCount(0);
+  await page.reload();
+  await page.getByRole('navigation', { name: 'Chats' }).getByText('Check live').click();
+  await expect(
+    page.getByRole('button', { name: /^Ran 3 commands, thought 2 times/ }),
+  ).toBeVisible();
+});
+
 for (const theme of ['light', 'graphite', 'contrast']) {
   test(`open and folded terminals have no serious accessibility issues in the ${theme} theme`, async ({
     page,

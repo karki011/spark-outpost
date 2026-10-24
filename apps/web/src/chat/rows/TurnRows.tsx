@@ -2,6 +2,7 @@ import { Fragment, useState, type ReactNode } from 'react';
 import { BrowserShots } from '../../browser/BrowserShots.tsx';
 import { AgentTerminalRow } from '../commands/AgentTerminalRow.tsx';
 import { CommandUiContext, type CommandUiStore } from '../commands/command-ui.ts';
+import { BackgroundTerminals } from './BackgroundTerminals.tsx';
 import { RowView, type RowContext } from './Rows.tsx';
 import type { TurnRowPart } from './turn-rows.ts';
 
@@ -26,7 +27,11 @@ function Parts({ parts, context, children }: TurnRowsProps) {
   return parts.map((part, index) => {
     if (part.kind === 'shots') return <BrowserShots key={part.key} shots={part.shots} />;
     if (part.kind === 'terminal') {
-      return <AgentTerminalRow key={part.key} terminal={part.terminal} />;
+      const [only] = part.terminals;
+      if (part.terminals.length === 1 && only) {
+        return <AgentTerminalRow key={part.key} terminal={only} />;
+      }
+      return <BackgroundTerminals key={part.key} terminals={part.terminals} />;
     }
     if (part.kind === 'rows') {
       return (

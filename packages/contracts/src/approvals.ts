@@ -157,6 +157,8 @@ export const approvalSchema = z.object({
 });
 export type Approval = z.infer<typeof approvalSchema>;
 
+export const ANSWERED_BY_ASK_SPARK = 'Answered by Ask Spark';
+
 export const CHECK_TOOL_CALL_PREFIX = 'check:';
 
 export function isCheckApproval(approval: Pick<Approval, 'toolCallId'>): boolean {

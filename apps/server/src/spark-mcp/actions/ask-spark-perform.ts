@@ -1,4 +1,4 @@
-import type { AskSparkAction } from '@spark-outpost/contracts';
+import { ANSWERED_BY_ASK_SPARK, type AskSparkAction } from '@spark-outpost/contracts';
 import { sparkToolsOffered } from '../../agents/acp/spark-tools.ts';
 import { decideApproval } from '../../persistence/approvals.ts';
 import { addToQueue, takeQueued } from '../../persistence/chat-queue.ts';
@@ -16,8 +16,6 @@ import { performInbox } from './ask-spark-inbox.ts';
 import { ASK_SPARK_REFUSALS, cardRefusalFor } from './ask-spark-limits.ts';
 import { performMeeting } from './ask-spark-meetings.ts';
 import type { Performed } from './performed.ts';
-
-export const ANSWERED_BY_ASK_SPARK = 'Answered by Ask Spark';
 
 interface ChatFacts {
   title: string;

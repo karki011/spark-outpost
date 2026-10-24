@@ -1,5 +1,6 @@
 import {
   commandRunSchema,
+  type CommandDescribed,
   type CommandFinished,
   type CommandOutputResponse,
   type CommandRun,
@@ -11,6 +12,8 @@ interface CommandRow {
   id: string;
   run_id: string;
   command: string;
+  description: string | null;
+  tool_call_id: string | null;
   cwd: string | null;
   live: boolean;
   status: string;
@@ -33,6 +36,8 @@ function toCommand(row: CommandRow): CommandRun {
     id: row.id,
     runId: row.run_id,
     command: row.command,
+    description: row.description,
+    toolCallId: row.tool_call_id,
     cwd: row.cwd,
     live: row.live,
     status: cutShort ? 'interrupted' : row.status,
@@ -53,15 +58,17 @@ export async function insertCommand(
 ): Promise<void> {
   await db.query(
     `INSERT INTO run_commands
-       (id, run_id, conversation_id, command, cwd, live, started_at,
-        text_offset, text_before, text_held)
-     SELECT $1, r.id, r.conversation_id, $3, $4, $5, $6, $7, $8, $9
+       (id, run_id, conversation_id, command, description, tool_call_id, cwd, live,
+        started_at, text_offset, text_before, text_held)
+     SELECT $1, r.id, r.conversation_id, $3, $4, $5, $6, $7, $8, $9, $10, $11
      FROM runs r WHERE r.id = $2
      ON CONFLICT (id) DO NOTHING`,
     [
       command.id,
       runId,
       command.command,
+      command.description ?? null,
+      command.toolCallId ?? null,
       command.cwd,
       command.live,
       command.startedAt,
@@ -70,6 +77,13 @@ export async function insertCommand(
       command.textHeld,
     ],
   );
+}
+
+export async function describeCommand(db: Queryable, described: CommandDescribed): Promise<void> {
+  await db.query('UPDATE run_commands SET description = $2 WHERE id = $1', [
+    described.id,
+    described.description,
+  ]);
 }
 
 export async function saveCommandOutput(
@@ -107,8 +121,8 @@ export async function finishCommand(
 
 export async function listCommands(db: Queryable, conversationId: string): Promise<CommandRun[]> {
   const result = await db.query<CommandRow>(
-    `SELECT c.id, c.run_id, c.command, c.cwd, c.live, c.status, c.exit_code, c.output_chars,
-            c.text_offset, c.text_before, c.text_held, c.started_at, c.finished_at,
+    `SELECT c.id, c.run_id, c.command, c.description, c.tool_call_id, c.cwd, c.live, c.status,
+            c.exit_code, c.output_chars, c.text_offset, c.text_before, c.text_held, c.started_at, c.finished_at,
             ${RUN_ENDED} AS run_ended, r.finished_at AS run_finished_at
      FROM run_commands c JOIN runs r ON r.id = c.run_id
      WHERE c.conversation_id = $1

@@ -115,7 +115,8 @@ describe('a turn that ended with a publish step', () => {
     show(messages);
     const result = screen.getByRole('group', { name: 'Publish result' });
     expect(result.textContent).toContain(PUBLISHED);
-    expect(result.textContent).toContain('git push origin spark/fix');
+    expect(result.textContent).toContain('Ran git push…');
+    expect(screen.getByRole('region', { name: 'Command: git push origin spark/fix' })).toBeTruthy();
     expect(result.textContent).not.toContain(WORK);
   });
 
