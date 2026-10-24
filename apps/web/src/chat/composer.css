@@ -220,13 +220,15 @@
   }
 }
 
-@container composer (max-width: 300px) {
-  .mbtn {
-    flex-shrink: 0;
-  }
+@media not ((max-width: 640px) or ((max-height: 500px) and (pointer: coarse))) {
+  @container composer (max-width: 300px) {
+    .mbtn {
+      flex-shrink: 0;
+    }
 
-  .mbtn .mname {
-    display: none;
+    .mbtn .mname {
+      display: none;
+    }
   }
 }
 

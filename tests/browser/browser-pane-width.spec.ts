@@ -120,6 +120,13 @@ test('arrow keys step the page width by 10 px and by 50 px with Shift', async ({
   await expect.poll(() => lastBounds(page).then((bounds) => bounds?.width)).toBe(370);
   await page.keyboard.press('End');
   await expect.poll(() => chatWidth(page)).toBe(300);
+  const model = page.locator('main.main .mbtn');
+  await expect(model.locator('.mname')).toBeHidden();
+  const [chip, row] = await model.evaluate((button) => [
+    button.getBoundingClientRect().width,
+    button.scrollWidth,
+  ]);
+  expect(chip).toBeGreaterThanOrEqual(row);
 });
 
 test('page width presets size the page and say when the window is too narrow', async ({ page }) => {

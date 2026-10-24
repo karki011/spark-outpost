@@ -12,6 +12,7 @@ const READOUT_ROOM = 96;
 
 interface PaneResizerProps {
   label: string;
+  page: boolean;
   width: number | null;
   limits: PanelWidthLimits;
   onWidth(width: number | null): void;
@@ -51,7 +52,7 @@ function useReadout(handle: RefObject<HTMLElement | null>) {
   return [readout, show] as const;
 }
 
-export function PaneResizer({ label, width, limits, onWidth }: PaneResizerProps) {
+export function PaneResizer({ label, page, width, limits, onWidth }: PaneResizerProps) {
   const handle = useRef<HTMLDivElement>(null);
   const { range, inset } = usePaneRoom(handle, {
     range: paneRange(limits.max, 0),
@@ -83,7 +84,9 @@ export function PaneResizer({ label, width, limits, onWidth }: PaneResizerProps)
         targets={panelTargets}
         steps={{ step: PANE_STEP, big: PANE_BIG_STEP }}
         value={pageOf}
-        text={(pane) => `Page ${pageOf(pane)} pixels wide. Arrow keys resize, Enter resets.`}
+        text={(pane) =>
+          `${page ? 'Page ' : ''}${pageOf(pane)} pixels wide. Arrow keys resize, Enter resets.`
+        }
         onPaint={(pane) => showPage(pageOf(pane))}
         handleRef={handle}
       />

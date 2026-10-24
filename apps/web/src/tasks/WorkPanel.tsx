@@ -206,6 +206,7 @@ export function WorkPanel({
           <PaneResizer
             key={view}
             label={browsing ? 'Resize browser pane' : 'Resize work panel'}
+            page={browsing}
             width={width}
             limits={limits}
             onWidth={onWidth}
