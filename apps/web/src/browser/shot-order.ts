@@ -44,10 +44,17 @@ function foundIndex(text: string, shot: TextAnchor, before: string): number | nu
   return before === before.trimEnd() ? Math.min(trimmed + held, text.length) : trimmed;
 }
 
+function blankAnchorIndex(text: string, offset: number, before: string, held: number): number {
+  const shown = offset - held;
+  return shown <= before.length ? 0 : Math.min(offset, text.length);
+}
+
 function rawIndex(text: string, shot: TextAnchor): number | null {
   if (shot.textOffset === null) return null;
   if (shot.textBefore === null) return Math.min(shot.textOffset, text.length);
-  if (shot.textBefore.trim() === '') return 0;
+  if (shot.textBefore.trim() === '') {
+    return blankAnchorIndex(text, shot.textOffset, shot.textBefore, shot.textHeld ?? 0);
+  }
   return foundIndex(text, shot, shot.textBefore);
 }
 
