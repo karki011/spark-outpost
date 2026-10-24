@@ -5,20 +5,27 @@ import {
   takeDraft,
   useComposerFocusRequest,
   usePendingDraft,
+  type PendingDraft,
 } from './pending-draft.ts';
+
+function withTyped(typed: string, pending: PendingDraft): string {
+  if (!pending.afterTyped || typed.trim() === '') return pending.text;
+  return `${typed.trimEnd()}\n\n${pending.text}`;
+}
 
 export function useDraftRequests(
   conversationId: string,
+  draft: string,
   setDraft: (text: string) => void,
   textareaRef: RefObject<HTMLTextAreaElement | null>,
   focusRequest: number,
 ): void {
   const pendingDraft = usePendingDraft(conversationId);
   const storeFocusRequest = useComposerFocusRequest(conversationId);
-  const [appliedDraft, setAppliedDraft] = useState<string | null>(null);
+  const [appliedDraft, setAppliedDraft] = useState<PendingDraft | null>(null);
   if (pendingDraft !== appliedDraft) {
     setAppliedDraft(pendingDraft);
-    if (pendingDraft !== null) setDraft(pendingDraft);
+    if (pendingDraft !== null) setDraft(withTyped(draft, pendingDraft));
   }
 
   useEffect(() => {

@@ -40,7 +40,7 @@ describe('Edit on missed messages', () => {
       ]),
     );
     await waitFor(() => expect(result.current.actions.error).toBe('Network error'));
-    expect(result.current.draft).toBe('First');
+    expect(result.current.draft).toEqual({ text: 'First', afterTyped: true });
     expect(queueApi.dropSteer).toHaveBeenCalledTimes(2);
   });
 
@@ -53,6 +53,8 @@ describe('Edit on missed messages', () => {
       { wrapper },
     );
     act(() => result.current.actions.edit([message('a', 'First'), message('b', 'Second')]));
-    await waitFor(() => expect(result.current.draft).toBe('First\n\nSecond'));
+    await waitFor(() =>
+      expect(result.current.draft).toEqual({ text: 'First\n\nSecond', afterTyped: true }),
+    );
   });
 });
