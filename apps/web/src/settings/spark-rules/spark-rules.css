@@ -42,7 +42,8 @@
   min-width: 0;
 }
 
-.rules-label {
+.rules-label,
+.rules-allowed li .rules-what > span {
   font-size: 13.5px;
 }
 

@@ -95,6 +95,7 @@ export function RuleRow({ copy, state, editable, onChange }: RuleRowProps) {
             choices={choices}
             value={state.choice ?? ''}
             placeholder="Mixed"
+            showNote={false}
             onChange={(id) => onChange(id as SparkRuleChoice)}
           />
         </div>

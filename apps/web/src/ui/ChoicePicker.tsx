@@ -26,6 +26,7 @@ interface ChoicePickerProps {
   choices: readonly PickerChoice[];
   value: string;
   placeholder?: string;
+  showNote?: boolean;
   actions?: readonly PickerAction[];
   onChange: (id: string) => void;
 }
@@ -39,6 +40,7 @@ export function ChoicePicker({
   choices,
   value,
   placeholder = 'Choose',
+  showNote = true,
   actions = [],
   onChange,
 }: ChoicePickerProps) {
@@ -92,7 +94,7 @@ export function ChoicePicker({
         </span>
         <ChevronIcon />
       </button>
-      {current?.description && (
+      {showNote && current?.description && (
         <small className={current.risky ? 'note warn' : 'note'}>{current.description}</small>
       )}
       {createPortal(
