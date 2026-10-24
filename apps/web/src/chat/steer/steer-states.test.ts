@@ -107,15 +107,17 @@ describe('steerGroups', () => {
     ]);
   });
 
-  it('splits messages whose state differs', () => {
+  it('keeps messages taken in moments apart together, with the latest time', () => {
+    const later = '2026-10-05T10:01:20.000Z';
     const groups = steerGroups(
-      [delivered('a'), delivered('b', { deliveredAt: '2026-10-05T10:02:00.000Z' }), steer('c')],
+      [delivered('a'), delivered('b', { deliveredAt: later }), steer('c')],
       detail('running'),
       run('running'),
       false,
       TAKEN,
     );
-    expect(groups.map((group) => group.messages.length)).toEqual([1, 1, 1]);
+    expect(groups.map((group) => group.messages.length)).toEqual([2, 1]);
+    expect(groups[0]?.status.at).toBe(later);
   });
 });
 

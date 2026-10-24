@@ -23,7 +23,7 @@ import {
 import { cancelPost } from '../persistence/outpost-tasks.ts';
 import { stopRun } from '../workflow/stop-run.ts';
 import { MemberMessageError, messageMember } from '../workflow/member-message.ts';
-import { drainQueue, sendNow, type ResolveTarget } from '../workflow/queue-drain.ts';
+import { drainQueue, resendMissed, sendNow, type ResolveTarget } from '../workflow/queue-drain.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { BadRequestError, paramId, parseBody } from './validation.ts';
 
@@ -143,25 +143,23 @@ export function queueRoutes({ db, workspaceId, fixedRunProvider }: QueueRouteDep
     res.status(202).json(await reply(conversationId, outcome));
   });
 
-  const takeMissed = async (conversationId: string, id: string, requeue: boolean) => {
-    await withTransaction(db, async (client) => {
-      const missed = await missedMessage(client, conversationId, id);
-      if (!missed) throw new QueueError(404, 'That message is no longer waiting.');
-      if (requeue) await addToQueue(client, conversationId, { id, content: missed.body });
-      await removeMemberMessages(client, [id]);
-    });
-  };
+  const NOT_WAITING = 'That message is no longer waiting.';
 
   router.post('/conversations/:id/steers/:itemId/resend', async (req, res) => {
     const conversationId = paramId(req);
-    await takeMissed(conversationId, itemId(req), true);
-    await drainQueue(db, conversationId, resolveTarget);
+    const outcome = await resendMissed(db, conversationId, itemId(req), resolveTarget);
+    if (!outcome) throw new QueueError(404, NOT_WAITING);
     res.status(202).json(await reply(conversationId));
   });
 
   router.delete('/conversations/:id/steers/:itemId', async (req, res) => {
     const conversationId = paramId(req);
-    await takeMissed(conversationId, itemId(req), false);
+    await withTransaction(db, async (client) => {
+      if (!(await missedMessage(client, conversationId, itemId(req)))) {
+        throw new QueueError(404, NOT_WAITING);
+      }
+      await removeMemberMessages(client, [itemId(req)]);
+    });
     res.json(await reply(conversationId));
   });
 

@@ -187,7 +187,7 @@ export interface SteerGroupView {
 }
 
 const sameStatus = (left: SteerStatus, right: SteerStatus) =>
-  left.text === right.text && left.tone === right.tone && left.at === right.at;
+  left.text === right.text && left.tone === right.tone;
 
 export function steerGroups(
   messages: readonly MemberMessage[],
@@ -200,8 +200,12 @@ export function steerGroups(
   for (const message of messages) {
     const status = steerStatus(message, detail, run, crew, seen);
     const last = groups.at(-1);
-    if (last && sameStatus(last.status, status)) last.messages.push(message);
-    else groups.push({ messages: [message], status });
+    if (last && sameStatus(last.status, status)) {
+      last.messages.push(message);
+      last.status = status;
+    } else {
+      groups.push({ messages: [message], status });
+    }
   }
   return groups;
 }

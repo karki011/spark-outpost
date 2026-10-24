@@ -79,11 +79,12 @@ describe('stopping a turn with messages sent to it', () => {
     expect(await status(id)).toBe('delivered');
   });
 
-  it('ignores agent activity from before the message arrived', async () => {
+  it('ignores agent steps from before the message arrived and reply text flushed at the stop', async () => {
     const { conversationId, runId } = await turn();
     const id = await steer(conversationId, runId);
-    await agentEvent(runId, 'TEXT_MESSAGE_CONTENT', -5);
+    await agentEvent(runId, 'STEP_STARTED', -5);
     await claimMemberMessages(t.db, runId, runId, true);
+    await agentEvent(runId, 'TEXT_MESSAGE_CONTENT', 5);
 
     await markUnreadOnStop(t.db, runId);
 
@@ -133,7 +134,7 @@ describe('where a message was taken in', () => {
 });
 
 describe('a missed message', () => {
-  it('can be sent as the next message once, and is then gone from the turn', async () => {
+  it('starts the next turn with it at once when the chat is free, and only once', async () => {
     const app = localClient(createTestApp(t));
     const { conversationId, runId } = await turn();
     const id = await steer(conversationId, runId);
@@ -148,15 +149,29 @@ describe('a missed message', () => {
     );
     expect(resent.status).toBe(202);
     expect(await getMemberMessage(t.db, id)).toBeNull();
-    const queued = await listQueue(t.db, conversationId);
-    const sentAsMessage = await t.db.query('SELECT 1 FROM messages WHERE id = $1', [id]);
-    expect(queued.length + (sentAsMessage.rowCount ?? 0)).toBe(1);
+    expect(await listQueue(t.db, conversationId)).toEqual([]);
+    const next = await t.db.query('SELECT 1 FROM runs WHERE user_message_id = $1', [id]);
+    expect(next.rowCount).toBe(1);
 
     const again = await app.send(
       'post',
       `/api/conversations/${conversationId}/steers/${id}/resend`,
     );
     expect(again.status).toBe(404);
+  });
+
+  it('queues it behind a turn that is already running', async () => {
+    const app = localClient(createTestApp(t));
+    const { conversationId, runId } = await turn();
+    const id = await steer(conversationId, runId);
+    await markUnreadOnStop(t.db, runId);
+
+    const resent = await app.send(
+      'post',
+      `/api/conversations/${conversationId}/steers/${id}/resend`,
+    );
+    expect(resent.status).toBe(202);
+    expect((await listQueue(t.db, conversationId)).map((item) => item.id)).toEqual([id]);
   });
 
   it('can be taken back to edit, and only while it is missed', async () => {

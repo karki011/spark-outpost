@@ -147,12 +147,7 @@ export async function markMissedMessages(db: Queryable, runId: string): Promise<
   );
 }
 
-const TAKEN_IN_EVENTS = [
-  'STEP_STARTED',
-  'REASONING_START',
-  'TEXT_MESSAGE_CONTENT',
-  'TOOL_CALL_START',
-];
+const TAKEN_IN_EVENTS = ['STEP_STARTED', 'REASONING_START', 'TOOL_CALL_START'];
 
 export async function markUnreadOnStop(db: Queryable, runId: string): Promise<void> {
   await db.query(
