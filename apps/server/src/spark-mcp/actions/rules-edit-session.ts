@@ -116,6 +116,11 @@ export async function sessionGrant(
        AND a.payload->'sparkAction'->>'provider' = $5
        AND a.payload->'sparkAction'->>'agentMode' IS NOT DISTINCT FROM $6
        AND a.payload->'sparkAction'->>'sessionRow' = $7
+       AND NOT EXISTS (
+         SELECT 1 FROM runs later
+         WHERE later.conversation_id = $1 AND later.parent_run_id IS NULL
+           AND later.created_at > a.decided_at
+           AND (later.provider IS DISTINCT FROM $5 OR later.agent_mode IS DISTINCT FROM $6))
      ORDER BY a.decided_at DESC LIMIT 1`,
     [
       conversationId,

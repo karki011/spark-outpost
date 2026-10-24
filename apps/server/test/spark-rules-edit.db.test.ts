@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { RULES_SESSION_OPTION, SPARK_ACTION_OPTION, type Approval } from '@spark-outpost/contracts';
 import { getApproval } from '../src/persistence/approvals.ts';
+import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { saveSparkRules } from '../src/persistence/spark-rules.ts';
 import { RULES_RUN_REFUSALS } from '../src/spark-mcp/actions/rules-edit-session.ts';
 import { OUTSIDE_CHANGE_REFUSAL, sparkRulesFiles } from '../src/spark-rules/rules-store.ts';
@@ -46,6 +47,20 @@ async function openSession(provider = 'claude', sessionId = randomUUID()): Promi
     [id, chat.conversationId, provider, sessionId],
   );
   return id;
+}
+
+async function nextTurn(provider: string, mode: string): Promise<void> {
+  const sent = await sendUserMessage(
+    t.db,
+    chat.conversationId,
+    { id: randomUUID(), content: 'next' },
+    { provider: 'fake' },
+    t.workspaceId,
+  );
+  chat = { ...chat, runId: sent.run.id };
+  await setRun(provider, mode);
+  await tools.close();
+  await startTools();
 }
 
 async function startTools(scope: Record<string, unknown> = {}): Promise<void> {
@@ -197,6 +212,26 @@ describe('Allow for this session', () => {
     await setRun('codex', 'agent-full-access');
     await openSession('codex');
     await asksAgain();
+  });
+
+  it('asks again after switching the mode away and back', async () => {
+    await grantSession();
+    await nextTurn('claude', 'acceptEdits');
+    await nextTurn('claude', 'bypassPermissions');
+    await asksAgain();
+  });
+
+  it('asks again after switching the agent away and back to the same session', async () => {
+    await grantSession();
+    await nextTurn('codex', 'agent-full-access');
+    await nextTurn('claude', 'bypassPermissions');
+    await asksAgain();
+  });
+
+  it('keeps the grant over later turns in the same agent and mode', async () => {
+    await grantSession();
+    await nextTurn('claude', 'bypassPermissions');
+    await performsAtOnce();
   });
 
   it('asks again in a new agent session', async () => {
