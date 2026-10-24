@@ -24,17 +24,43 @@ function nearestEnd(text: string, snippet: string, offset: number): number | nul
 
 export type TextAnchor = Pick<BrowserShot, 'textOffset' | 'textBefore' | 'textHeld'>;
 
-export function anchorIndex(text: string, shot: TextAnchor): number | null {
-  if (shot.textOffset === null) return null;
-  const before = shot.textBefore ?? '';
+const WORD = /\S/;
+
+function wordEnd(text: string, index: number): number {
+  let end = index;
+  while (end > 0 && end < text.length && WORD.test(text[end - 1]!) && WORD.test(text[end]!)) {
+    end += 1;
+  }
+  return end;
+}
+
+function foundIndex(text: string, shot: TextAnchor, before: string): number | null {
   const held = shot.textHeld ?? 0;
-  if (before.trim() === '') return Math.min(shot.textOffset, text.length);
-  const expected = shot.textOffset - held;
+  const expected = (shot.textOffset ?? 0) - held;
   const exact = nearestEnd(text, before, expected);
   if (exact !== null) return Math.min(exact + held, text.length);
   const trimmed = nearestEnd(text, before.trim(), expected);
   if (trimmed === null) return null;
   return before === before.trimEnd() ? Math.min(trimmed + held, text.length) : trimmed;
+}
+
+function blankAnchorIndex(text: string, offset: number, before: string, held: number): number {
+  const shown = offset - held;
+  return shown <= before.length ? 0 : Math.min(offset, text.length);
+}
+
+function rawIndex(text: string, shot: TextAnchor): number | null {
+  if (shot.textOffset === null) return null;
+  if (shot.textBefore === null) return Math.min(shot.textOffset, text.length);
+  if (shot.textBefore.trim() === '') {
+    return blankAnchorIndex(text, shot.textOffset, shot.textBefore, shot.textHeld ?? 0);
+  }
+  return foundIndex(text, shot, shot.textBefore);
+}
+
+export function anchorIndex(text: string, shot: TextAnchor): number | null {
+  const index = rawIndex(text, shot);
+  return index === null ? null : wordEnd(text, index);
 }
 
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
