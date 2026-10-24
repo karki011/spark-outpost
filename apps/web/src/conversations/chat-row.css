@@ -256,3 +256,30 @@
     display: none;
   }
 }
+
+.pbody .row.faceless .row-open {
+  padding-left: 59px;
+}
+
+.row-state {
+  flex: none;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.row-state[data-state='working'] {
+  color: var(--accent-text);
+}
+
+.row-state[data-state='waiting'] {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.row-state[data-state='done'] {
+  color: var(--success);
+}
+
+.row-state[data-state='failed'] {
+  color: var(--danger);
+}

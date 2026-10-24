@@ -30,7 +30,13 @@ import { ChatRows } from './ChatRows.tsx';
 import { SidebarDndContext } from './SidebarDnd.tsx';
 import { HistoryChats } from './HistoryChats.tsx';
 import { ProjectMenu } from './ProjectMenu.tsx';
-import { membersByOutpost, memberships, outsideOutposts } from './outpost-members.ts';
+import {
+  membersByOutpost,
+  memberships,
+  outsideOutposts,
+  type MemberChat,
+} from './outpost-members.ts';
+import { roleLine } from '../outposts/member-roles.ts';
 import { attention } from './row-state.ts';
 import { useAlertingChats } from '../attention/use-attention.ts';
 import { activeGroups, mergedOrder, projectsWithChats } from './sidebar-groups.ts';
@@ -245,7 +251,7 @@ export const ConversationList = memo(function ConversationList({
     chat: ConversationSummary,
     sortable: boolean,
     index: number,
-    handle?: string,
+    member?: MemberChat,
   ) => (
     <ChatRow
       key={chat.id}
@@ -256,7 +262,9 @@ export const ConversationList = memo(function ConversationList({
       settling={dnd.busy}
       flash={chat.id === actions.flashId}
       index={index}
-      handle={handle}
+      handle={member?.handle}
+      faceless={member ? !member.face : false}
+      relation={member ? roleLine(member.role) : null}
       onOpen={handleOpen}
       onMenu={handleMenu}
       onRename={handleRename}

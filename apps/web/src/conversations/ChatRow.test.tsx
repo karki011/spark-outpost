@@ -43,6 +43,7 @@ function renderRow(
   row: ConversationSummary = chat,
   selected = false,
   onScreenId: string | null = null,
+  member: { faceless?: boolean; relation?: string | null } = {},
 ) {
   render(
     <OnScreenChat.Provider value={onScreenId}>
@@ -56,6 +57,7 @@ function renderRow(
           flash={false}
           index={0}
           handle={handle}
+          {...member}
           onOpen={vi.fn()}
           onMenu={vi.fn()}
           onRename={vi.fn()}
@@ -91,6 +93,23 @@ describe('ChatRow', () => {
     expect(open.querySelector('.sub')).toBeNull();
     expect(screen.getByRole('button', { name: 'Options for Orders API' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Move Orders API' })).toBeNull();
+  });
+
+  it('draws a sub-chat without a face, with its state as a word and its relation in the name', () => {
+    renderRow('web', finished, false, null, {
+      faceless: true,
+      relation: 'Sub-chat of @lead, starts after @api',
+    });
+    const open = screen.getByRole('button', {
+      name: /^Orders API, @web, Sub-chat of @lead, starts after @api/,
+    });
+    expect(open.getAttribute('title')).toContain('@web · Sub-chat of @lead, starts after @api');
+    expect(open.querySelector('.st')).toBeNull();
+    expect(open.querySelector('.row-state')?.textContent).toBe('Done');
+    cleanup();
+    renderRow('lead', finished, false, null, { relation: 'Lead of 2 sub-chats' });
+    expect(document.querySelector('.row-open .st')).toBeTruthy();
+    expect(document.querySelector('.row-state')).toBeNull();
   });
 
   it('names the blob of a chat that finished since it was seen', () => {

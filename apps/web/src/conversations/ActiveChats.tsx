@@ -5,7 +5,12 @@ import { useOutpostSeam } from '../chat/outpost/outpost-seam.ts';
 import { PlusIcon } from '../ui/icons.tsx';
 import { ChatRows } from './ChatRows.tsx';
 import { LooseChats, type RenderRows } from './LooseChats.tsx';
-import { outpostFoldKey, outpostRowsId, type OutpostMembers } from './outpost-members.ts';
+import {
+  outpostFoldKey,
+  outpostRowsId,
+  type MemberChat,
+  type OutpostMembers,
+} from './outpost-members.ts';
 import { OutpostRows } from './OutpostRows.tsx';
 import { ProjectGroup } from './ProjectGroup.tsx';
 import { NO_PROJECT, listIn, pinnedIn, LOOSE } from './sidebar-order.ts';
@@ -19,7 +24,7 @@ type RenderRow = (
   chat: ConversationSummary,
   sortable: boolean,
   index: number,
-  handle?: string,
+  member?: MemberChat,
 ) => ReactNode;
 
 interface ActiveChatsProps {
@@ -99,7 +104,7 @@ export function ActiveChats({
               id={outpostRowsId(id)}
               chats={listed.map((member) => member.chat)}
               sortable={false}
-              renderRow={(chat, index) => renderRow(chat, false, index, listed[index]?.handle)}
+              renderRow={(chat, index) => renderRow(chat, false, index, listed[index])}
             />
           )}
         />

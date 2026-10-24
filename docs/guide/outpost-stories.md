@@ -29,6 +29,8 @@ First messages are the proposing chat's, [not yours](outpost-permissions.md), so
 
 In **Overview**, a **Story** row reads like **Checkout · 1 of 3 answered · 2 PRs**; open it for each sub-task.
 
+Under **Outposts**, only the proposing chat has a face, and its chip says **· Lead**. Its sub-chats follow in order with their state as a word; point at one to see what it starts after.
+
 | You see                  | Means                                                                                                                    |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
 | **Waiting for @api**     | Held until `@api` is **Answered**, then it starts. **Waiting: @api's turn failed**: pick **Start anyway** or **Cancel**. |
