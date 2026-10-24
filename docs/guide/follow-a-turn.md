@@ -55,7 +55,7 @@ Other chats never wait.
 
 | Under a reply                                  | Use it to                                                   |
 | ---------------------------------------------- | ----------------------------------------------------------- |
-| **Good result** / **Bad result**               | Rate the reply locally.                                     |
+| **Good result** / **Bad result**               | Rate the PR turn.                                           |
 | Selected text                                  | **Add to chat**, **Ask about this**, **Comment**, **Copy**. |
 | `/fresh`, or **Start fresh** in the **…** menu | Restart without the old context.                            |
 | Ticks left of the thread                       | Jump to a message.                                          |

@@ -10,6 +10,6 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 
 ## October 2026
 
-| What changed                         | What to do                                                         |
-| ------------------------------------ | ------------------------------------------------------------------ |
-| Nothing yet since **0.1.0-beta.29**. | Open **Release notes** in **Settings → Updates** for that release. |
+| What changed                                                                                                                     | What to do                                                                 |
+| -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **Good result** and **Bad result** show once per chat, under the turn that opened its pull request, instead of after every turn. | Rate that turn when you want to; turns without a pull request ask nothing. |

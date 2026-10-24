@@ -109,6 +109,7 @@ test('Automatic keeps on one line with no pull request and nothing to look at', 
   await expect(block.locator('.result-note')).toHaveCount(0);
   await expect(page.locator('.col').getByRole('button', { name: /PR|Push/ })).toHaveCount(0);
   await expect(page.getByRole('region', { name: /^Files changed/ })).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'How did it go?' })).toHaveCount(0);
   const height = (await block.boundingBox())!.height;
   expect(height).toBeLessThan(48);
   await shoot(page, 'after-automatic');

@@ -51,7 +51,6 @@ export const SPEC_GROUPS = {
     'context-ring',
     'delete-busy-chat',
     'feedback',
-    'feedback-note',
     'interrupted-turn',
     'markdown-composer',
     'message-actions',
