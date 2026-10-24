@@ -24,6 +24,7 @@ const SCRIPTS: Record<string, ScriptFile> = {
   'build.js': changed('console.log(1 + 1);\n'),
   'server.js': committed("require('dotenv').config();\nrequire('./app').listen(3000);\n"),
   'show.sh': changed('#!/bin/bash\ncat config/.env.local\n'),
+  'show-both.sh': changed('#!/bin/bash\ncat .env\ncat config/.env.local\n'),
   'setup.sh': changed('set -a\n. ./.env\nset +a\n'),
   'each.sh': changed('for f in $(ls -A); do cat "$f"; done\n'),
   'build.sh': changed('echo building\nls src\n'),
@@ -323,6 +324,15 @@ describe('a secret a script reads counts for the send flag', () => {
     ['python3 report.py', []],
   ])('%s', (command, labels) => {
     expect(secretReadLabels(run(command), lister, null)).toEqual(labels);
+  });
+});
+
+describe('a secret-file card names every secret file a script uses', () => {
+  it('lists each one, not only the first', () => {
+    expect(fullAccess('bash show-both.sh')).toMatchObject({
+      verdict: 'ask',
+      secretFiles: ['.env', 'config/.env.local'],
+    });
   });
 });
 
