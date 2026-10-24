@@ -94,6 +94,26 @@ describe('outsideOutposts', () => {
   });
 });
 
+function storyOutpost(): Outpost {
+  const plain: Outpost = outpost(ORDERS, [
+    ['docs', 'docs', 0],
+    ['web', 'web', 1],
+    ['lead', 'lead', 2],
+    ['api', 'api', 3],
+  ]);
+  const places: Record<string, MemberStory> = {
+    web: { lead: 'lead', after: 'api', position: 1 },
+    api: { lead: 'lead', after: null, position: 0 },
+  };
+  return {
+    ...plain,
+    members: plain.members.map((member) => {
+      const place = places[member.conversationId];
+      return place ? { ...member, story: place } : member;
+    }),
+  };
+}
+
 describe('membersByOutpost', () => {
   it('lists the member chats of each outpost in member order with their handles', () => {
     const chats = [chat('api'), chat('docs'), chat('loose'), chat('fe')];
@@ -106,30 +126,25 @@ describe('membersByOutpost', () => {
   });
 
   it('puts the lead first with the only face, then its sub-chats, then chats added by hand', () => {
-    const plain: Outpost = outpost(ORDERS, [
-      ['docs', 'docs', 0],
-      ['web', 'web', 1],
-      ['lead', 'lead', 2],
-      ['api', 'api', 3],
-    ]);
-    const places: Record<string, MemberStory> = {
-      web: { lead: 'lead', after: 'api', position: 1 },
-      api: { lead: 'lead', after: null, position: 0 },
-    };
-    const story = {
-      ...plain,
-      members: plain.members.map((member) => {
-        const place = places[member.conversationId];
-        return place ? { ...member, story: place } : member;
-      }),
-    };
     const chats = ['docs', 'web', 'lead', 'api'].map((id) => chat(id));
-    const listed = membersByOutpost(chats, memberships([story])).get(ORDERS) ?? [];
+    const listed = membersByOutpost(chats, memberships([storyOutpost()])).get(ORDERS) ?? [];
     expect(listed.map((member) => [member.handle, member.face])).toEqual([
       ['lead', true],
       ['api', false],
       ['web', false],
       ['docs', false],
+    ]);
+  });
+
+  it('keeps story roles when a filter or the archive hides the lead', () => {
+    const chats = [chat('lead', { archivedAt: '2026-10-09T11:00:00Z' }), chat('web')];
+    const listed = membersByOutpost(chats, memberships([storyOutpost()])).get(ORDERS) ?? [];
+    expect(listed.map((member) => [member.handle, member.face, member.role])).toEqual([
+      ['web', false, { kind: 'sub', leadHandle: 'lead', afterHandle: 'api' }],
+    ]);
+    const lead = membersByOutpost([chat('lead')], memberships([storyOutpost()])).get(ORDERS);
+    expect(lead?.map((member) => [member.face, member.role])).toEqual([
+      [true, { kind: 'lead', subChats: 2 }],
     ]);
   });
 
