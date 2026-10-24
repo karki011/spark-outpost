@@ -137,6 +137,30 @@ describe('a proposal that names an existing chat', () => {
 });
 
 describe('starting a draft with an existing chat', () => {
+  it('refuses a stored draft that names one chat twice before it sends anything', async () => {
+    const drafted = await propose([fresh('api'), reused('usage')]);
+    const stored = await getDraft(t.db, t.workspaceId, drafted.draft);
+    const twice = {
+      ...stored!.body,
+      chats: [...stored!.body.chats, { ...stored!.body.chats[1]!, handle: 'again' }],
+    };
+    await t.db.query('UPDATE outpost_drafts SET body = $2::jsonb WHERE id = $1', [
+      drafted.draft,
+      JSON.stringify(twice),
+    ]);
+
+    const response = await request(app)
+      .post(`/api/outposts/drafts/${drafted.draft}/start`)
+      .send({});
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('@again names the same existing chat as @usage.');
+    const { rows } = await t.db.query('SELECT 1 FROM outpost_posts WHERE to_conversation_id = $1', [
+      usage,
+    ]);
+    expect(rows).toEqual([]);
+  });
+
   it('sends it a request from the lead and keeps its title, mode and branch', async () => {
     const drafted = await propose([fresh('api'), reused('usage', { dependsOn: 'api' })]);
 
