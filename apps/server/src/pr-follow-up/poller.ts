@@ -112,7 +112,7 @@ async function ingest(
       trusted,
       triage,
       triagedBy: by,
-      state: settledNow(item, onGitHub)
+      state: settledNow({ ...item, trusted }, onGitHub)
         ? ('done' as const)
         : stateFor({ kind: item.kind, trusted }, triage, settings),
     };

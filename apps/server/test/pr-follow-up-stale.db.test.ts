@@ -215,5 +215,25 @@ describe(
         ['review:52', 'held'],
       ]);
     });
+
+    it('keeps a writer’s review request open when they comment again, until they approve', async () => {
+      await roundsUsed();
+      fake.pull.reviews = [
+        {
+          id: 61,
+          user: alice,
+          body: 'Please add a test for the empty list.',
+          state: 'CHANGES_REQUESTED',
+        },
+      ];
+      await poll();
+      expect(await states()).toEqual([['review:61', 'needs_user']]);
+      fake.pull.reviews.push({ id: 62, user: alice, body: '', state: 'COMMENTED' });
+      await poll();
+      expect(await states()).toEqual([['review:61', 'needs_user']]);
+      fake.pull.reviews.push({ id: 63, user: alice, body: '', state: 'APPROVED' });
+      await poll();
+      expect(await states()).toEqual([['review:61', 'done']]);
+    });
   },
 );

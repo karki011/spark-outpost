@@ -14,7 +14,7 @@ export interface OnGitHub {
   checkRuns: readonly PrCheckRun[];
 }
 
-type Item = Pick<StoredFeedback, 'kind' | 'sourceKey' | 'githubId' | 'author'>;
+type Item = Pick<StoredFeedback, 'kind' | 'sourceKey' | 'githubId' | 'author' | 'trusted'>;
 
 function threadSettled(item: Item, now: OnGitHub): boolean {
   const id = Number(item.githubId);
@@ -35,8 +35,8 @@ function reviewSettled(item: Item, now: OnGitHub): boolean {
   return now.reviews.some(
     (review) =>
       review.id > id &&
-      review.state !== 'PENDING' &&
-      (review.user?.login ?? 'ghost').toLowerCase() === author,
+      (review.user?.login ?? 'ghost').toLowerCase() === author &&
+      (review.state === 'APPROVED' || (!item.trusted && review.state !== 'PENDING')),
   );
 }
 

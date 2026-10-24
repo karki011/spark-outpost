@@ -23,7 +23,15 @@ const item = (
   kind: 'check' | 'review_comment' | 'review' | 'issue_comment',
   sourceKey: string,
   state: 'queued' | 'held' | 'needs_user' | 'in_round' | 'planned' | 'done' = 'needs_user',
-) => ({ id, kind, sourceKey, githubId: sourceKey.split(':').at(-1)!, author: 'bob', state });
+) => ({
+  id,
+  kind,
+  sourceKey,
+  githubId: sourceKey.split(':').at(-1)!,
+  author: 'bob',
+  trusted: false,
+  state,
+});
 
 const run = (name: string, state: PrCheckRun['state']): PrCheckRun => ({
   name,
@@ -77,20 +85,17 @@ describe('settledOnGitHub', () => {
     expect(settledOnGitHub(items, now)).toEqual(['unit']);
   });
 
-  it('closes a review once the same reviewer submits a newer one, never for a pending one', () => {
+  it('closes an untrusted review once its reviewer reviews again, and a writer’s only on approval', () => {
     const later = (id: number, state: string) => ({ id, user: { login: 'BOB' }, body: '', state });
-    expect(
-      settledOnGitHub([item('a', 'review', 'review:5')], {
-        ...nothing,
-        reviews: [later(6, 'APPROVED')],
-      }),
-    ).toEqual(['a']);
-    expect(
-      settledOnGitHub([item('a', 'review', 'review:5')], {
-        ...nothing,
-        reviews: [later(6, 'PENDING')],
-      }),
-    ).toEqual([]);
+    const bot = item('a', 'review', 'review:5', 'held');
+    const writer = { ...item('b', 'review', 'review:5', 'queued'), trusted: true };
+    const settle = (entry: typeof bot, state: string) =>
+      settledOnGitHub([entry], { ...nothing, reviews: [later(6, state)] });
+    expect(settle(bot, 'COMMENTED')).toEqual(['a']);
+    expect(settle(bot, 'PENDING')).toEqual([]);
+    expect(settle(writer, 'COMMENTED')).toEqual([]);
+    expect(settle(writer, 'CHANGES_REQUESTED')).toEqual([]);
+    expect(settle(writer, 'APPROVED')).toEqual(['b']);
   });
 
   it('never closes a top-level PR comment', () => {
