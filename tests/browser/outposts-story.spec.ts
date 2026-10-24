@@ -176,6 +176,9 @@ test('a chat proposes sub-chats, the user starts them, held ones follow, and the
   await leadInPlanMode(page);
   await send(page, proposal());
   await reviewAndStart(page);
+  const opened = threadPane(page, 'api');
+  await expect(opened).toBeVisible();
+  await opened.getByRole('button', { name: 'Back to Overview' }).click();
 
   const [api, fe, docs] = [post(page, API_TASK), post(page, FE_TASK), post(page, DOCS_TASK)];
   await expect(api.locator('.op-post-head').first()).toContainText(

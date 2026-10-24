@@ -5,7 +5,7 @@ export interface OutpostSeam {
   outposts: readonly Outpost[];
   openOutpostId: string | null;
   canManage: boolean;
-  onOpenOutpost: (outpostId: string, postId?: string) => void;
+  onOpenOutpost: (outpostId: string, postId?: string, thread?: boolean) => void;
   onNewOutpost: (conversationId?: string) => void;
   onOpenDraft?: ((draftId: string) => void) | undefined;
   onAddToOutpost: (outpostId: string, member: MemberRequest) => Promise<unknown>;

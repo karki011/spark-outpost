@@ -21,6 +21,8 @@ To check first, ask it to propose sub-tasks. The reply shows **Proposed 3 chats 
 | **Starts after** | **Nothing**, or a handle such as `@api`: the chat waits until `@api` has answered.                                          |
 | **Pull request** | **Pull request, parallel**, **Pull request, stacked on @api** ([stacked](stacked-pull-requests.md)) or **No pull request**. |
 
+In an outpost, a draft a member chat proposed also shows under the conversation in **Suggested threads**. After you start it, the first sub-chat's thread opens beside the conversation.
+
 First messages are the proposing chat's, [not yours](outpost-permissions.md), so they open no pull request. A sub-chat's mode asks at least as often as the proposing chat's; only you raise it. A sub-chat can't start more chats.
 
 ## Follow the story

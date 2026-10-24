@@ -17,7 +17,7 @@ interface Creating {
 
 interface OutpostHostProps {
   openOutpostId: string | null;
-  onOpenOutpost: (outpostId: string, postId?: string) => void;
+  onOpenOutpost: (outpostId: string, postId?: string, thread?: boolean) => void;
   children: ReactNode;
 }
 
@@ -26,9 +26,9 @@ export function OutpostHost({ openOutpostId, onOpenOutpost, children }: OutpostH
   const addMember = useAddMember().mutateAsync;
   const { remote } = useRemoteClient();
   const [creating, setCreating] = useState<Creating | null>(null);
-  const openOutpost = (outpostId: string) => {
+  const openOutpost = (outpostId: string, threadId: string | null) => {
     setCreating(null);
-    onOpenOutpost(outpostId);
+    onOpenOutpost(outpostId, threadId ?? undefined, true);
   };
   const seam = useMemo<OutpostSeam>(
     () => ({

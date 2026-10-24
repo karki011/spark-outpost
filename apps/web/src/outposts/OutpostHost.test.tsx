@@ -114,7 +114,11 @@ describe('OutpostHost', () => {
       fireEvent.click(screen.getByRole('button', { name: /^Start outpost/ }));
       await waitFor(() => expect(onOpenOutpost).toHaveBeenCalledTimes(1));
       expect(calls[0]).toMatchObject({ method: 'POST', path: '/api/outposts' });
-      expect(onOpenOutpost).toHaveBeenCalledWith((calls[0]?.body as { id: string }).id);
+      expect(onOpenOutpost).toHaveBeenCalledWith(
+        (calls[0]?.body as { id: string }).id,
+        undefined,
+        true,
+      );
       await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     },
     LAZY_TEST_TIMEOUT,
@@ -143,7 +147,7 @@ describe('OutpostHost', () => {
       });
       const onOpenOutpost = renderHost();
       fireEvent.click(screen.getByRole('button', { name: 'Review draft' }));
-      await waitFor(() => expect(onOpenOutpost).toHaveBeenCalledWith(OUTPOST_ID), {
+      await waitFor(() => expect(onOpenOutpost).toHaveBeenCalledWith(OUTPOST_ID, undefined, true), {
         timeout: LAZY_SHEET_TIMEOUT,
       });
     },

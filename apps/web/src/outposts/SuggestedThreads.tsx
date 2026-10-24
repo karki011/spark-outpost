@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import type { ChatDraft } from '@spark-outpost/contracts';
 import { chatDraftsQuery } from '../chat/outpost/chat-drafts.ts';
@@ -31,6 +32,7 @@ export function openSuggestions(
 
 export function SuggestedThreads({ outpostId, members }: SuggestedThreadsProps) {
   const seam = useOutpostSeam();
+  const headingId = useId();
   const lists = useQueries({
     queries: members.map((member) => chatDraftsQuery(member.conversationId)),
   });
@@ -42,8 +44,8 @@ export function SuggestedThreads({ outpostId, members }: SuggestedThreadsProps) 
   const onOpenDraft = seam?.onOpenDraft;
   if (!seam || !onOpenDraft || suggestions.length === 0) return null;
   return (
-    <section className="op-suggested" aria-label="Suggested threads">
-      <h3>Suggested threads</h3>
+    <div className="op-suggested" role="region" aria-labelledby={headingId}>
+      <h3 id={headingId}>Suggested threads</h3>
       <p className="op-suggested-note">
         Proposed by a chat. Nothing starts until you start it, and the proposal is never your
         message.
@@ -52,7 +54,7 @@ export function SuggestedThreads({ outpostId, members }: SuggestedThreadsProps) 
         {suggestions.map(({ member, draft }) => (
           <li key={draft.id}>
             <MemberFace chatId={member.conversationId} size="row" />
-            <b>@{member.handle}</b>
+            <b className="op-suggested-from">@{member.handle}</b>
             <ChatDraftLine
               chatId={member.conversationId}
               draft={draft}
@@ -62,6 +64,6 @@ export function SuggestedThreads({ outpostId, members }: SuggestedThreadsProps) 
           </li>
         ))}
       </ul>
-    </section>
+    </div>
   );
 }
