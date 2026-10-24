@@ -7,6 +7,8 @@ import { railCrossings, type RailCrossing } from '../../approvals/rail-crossings
 import { observedSecretReads } from '../../approvals/secret-reads.ts';
 import { outsideRoots } from '../../approvals/request-place.ts';
 import { parseShell } from '../../approvals/shell-parse.ts';
+import { RECOMMENDED_RULES } from '../../spark-rules/recommended.ts';
+import type { SparkRuleSet } from '../../spark-rules/resolve.ts';
 import { createReviewTracker } from '../../audit/review-tracker.ts';
 import type { AgentCli } from './agent-cli.ts';
 import { stoppedByAgent } from './agent-stopped.ts';
@@ -40,6 +42,7 @@ export interface RailWatchContext {
   cwd: string;
   home?: string;
   cli?: AgentCli | null;
+  rules?: () => Promise<SparkRuleSet>;
 }
 
 const ORIGINAL_MAX_CHARS = 64 * 1024;
@@ -109,7 +112,8 @@ export function createRailWatch(context: RailWatchContext): RailWatch {
       const shell = request.kind === 'execute' ? await parseShell(request.command) : null;
       const secretReads = await observedSecretReads(request, shell);
       if (!ran) return { rails: [], secretReads };
-      const rails = (await railCrossings(request, { shell })).map((crossing) => ({
+      const rules = context.rules ? await context.rules() : RECOMMENDED_RULES;
+      const rails = (await railCrossings(request, { shell, rules })).map((crossing) => ({
         toolCallId: ran.toolCallId,
         rail: crossing.rail,
         paths: crossing.paths.map((target) => shown(target, home)),

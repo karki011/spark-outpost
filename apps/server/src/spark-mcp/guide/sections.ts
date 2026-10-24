@@ -67,15 +67,15 @@ Agent modes come from the provider, with its own names: Claude offers Manual, Ac
 
 Automatic: approval cards follow the agent's mode; Ask turns run commands without asking. Changes are kept ("Changes kept"); Revert is always there. Spark has no plan card and saves no plan of its own: to approve a plan first, use /plan or Plan mode; the approved plan shows as one line ("Plan saved"). In a Plan-mode chat every message plans first.
 
-Full auto → PR (default): the same; then, when the turn changed files, Spark sends the agent one publish prompt and the agent pushes the chat's branch and opens a PR (a draft only when you ask or Open pull requests as says so). Nothing merges. A failed or stopped publish keeps the change and says "Not published: …". The level never makes a Spark action skip its card.
+Full auto → PR (default): the same; then, when the turn changed files, Spark sends the agent one publish prompt and the agent pushes the chat's branch and opens a PR (a draft only when you ask or Open pull requests as says so). Nothing merges. A failed or stopped publish keeps the change ("Not published: …"). The level never makes a Spark action skip its card.
 
-The safety floor holds at every level.`,
+Spark's rules (none by default) apply at all levels.`,
   },
   {
     id: 'read-then-send',
     title: 'Read, then send',
     keywords: ['exfiltration', 'curl', 'sensitive', 'network', 'egress', 'secret', 'send data'],
-    text: `Once a turn has seen sensitive data (a secret file read directly or by a script, secret values in tool output such as env or config dumps, a web page, or private work data from spark_tickets, spark_slack, spark_pr and similar tools), a send off this computer gets a note, never a card of its own: when the mode would run it, it runs with an audit entry and a non-blocking flag ("sent data … after reading …"); when the mode asks, its card carries the note. The note names what was read (never values) and where the data went, and ends with the turn. Sends include curl, wget, ssh, git push, gh, cloud CLIs, publishing, user MCP tools and web fetches; localhost and the chat's own repo and PR don't count. A push or upload holding a secret file's value asks with hold to confirm.`,
+    text: `Once a turn has seen sensitive data (a secret file read directly or by a script, secret values in tool output such as env or config dumps, a web page, or private work data from spark_tickets, spark_slack, spark_pr and similar tools), a send off this computer gets a note, never a card of its own: when the mode would run it, it runs with an audit entry and a non-blocking flag ("sent data … after reading …"); when the mode asks, its card carries the note. The note names what was read (never values) and where the data went, and ends with the turn. Sends include curl, wget, ssh, git push, gh, cloud CLIs, publishing, user MCP tools and web fetches; localhost and the chat's own repo and PR don't count. With the recommended rules, a push or upload holding a secret file's value asks with hold to confirm.`,
   },
   {
     id: 'safety-floor',
@@ -94,11 +94,9 @@ The safety floor holds at every level.`,
       'budget',
       'spend cap',
     ],
-    text: `The backend's approval gate follows the agent's own mode: a card only when the mode asks or the agent asks itself (shown with its reason, e.g. a sandbox block). A floor no mode loosens: changing a secret file (.env, keys) asks or is refused, reading one follows the mode, audited by path (.sparkignore ones ask); agents push only the chat's own spark/ branch (or an adopted PR branch) and its gh PR, and only when asked, at Full auto → PR or in Auto/Bypass (else Ship pushes); no writes or deletes outside the linked folders (temp folders fine); everything goes to a hash-chained audit log.
+    text: `The approval gate follows the agent's mode: a card only when the mode or the agent asks. Spark's rules (settings.json in Spark's data folder; managed-settings.json) add a floor. With no file, the default, every rule follows the mode: Auto or Bypass may force push, push any branch, edit secret files, hooks and instruction files, write outside the project and publish unasked. With the recommended rules: changing a secret file asks or is refused (.sparkignore reads ask); agents push only the chat's own spark/ or adopted PR branch and its PR, only when asked, at Full auto → PR or in Auto/Bypass; writes outside the linked folders ask (temp folders fine); a --force-with-lease to a named, non-default branch asks with hold to confirm, other force pushes are refused.
 
-Force pushes: git push --force-with-lease to a named, non-default branch always asks with a "Force push?" card you press and hold to confirm, with no Always allow. Plain --force, +refspec, mirror, unnamed and default-branch force pushes are refused.
-
-No run budgets: Spark never caps time, tool calls or cost; usage is only measured. "Always allow" becomes a scoped rule, never a bypass of the floor.`,
+Always refused: Spark's rules files and ports, merges, approving or dismissing reviews, --admin, gh api writes, gh auth, --no-verify, Spark's browser data. All audited; no run budgets.`,
   },
   {
     id: 'worktrees',

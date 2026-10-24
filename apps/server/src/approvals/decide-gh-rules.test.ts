@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
 import { CHAT_PUBLISH_REASON, NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
-import { NO_GH_RULES, sparkRuleReason, type GhRules } from './gh-rules.ts';
+import { recommendedRulesText, userRules, type GhSeed } from '../spark-rules/recommended.ts';
+import { DEFAULT_RULE_CONTEXT, sparkRuleReason, type SparkRuleContext } from './gh-rules.ts';
 import { ghRailReason, type PublishGrant, type TaskBranch } from './publish-policy.ts';
 
 const ROOT = '/work/app/.spark/worktrees/chat-1';
@@ -13,7 +14,12 @@ const MANUAL: PublishGrant = { level: 'hands-off', requested: false };
 const FULL_AUTO: PublishGrant = { level: 'full-auto', requested: false };
 const AT_ONCE: readonly ModePosture[] = ['auto', 'full_access'];
 const CARDED: readonly ModePosture[] = ['asks', 'edits', 'unknown'];
-const WORKFLOWS_FOLLOW: GhRules = { ...NO_GH_RULES, workflows: 'mode' };
+function seeded(gh: Partial<GhSeed>): SparkRuleContext {
+  const rules = userRules(recommendedRulesText({ workflows: 'refused', ghAllowed: [], ...gh }));
+  return { rules, once: [] };
+}
+
+const WORKFLOWS_FOLLOW = seeded({ workflows: 'mode' });
 const WORKFLOW = { group: 'workflows' as const, prefix: 'gh workflow run' };
 
 function run(command: string, agentReason: string | null = null): ApprovalRequest {
@@ -34,11 +40,11 @@ function run(command: string, agentReason: string | null = null): ApprovalReques
   };
 }
 
-function chat(posture: ModePosture, command: string, ghRules: GhRules, grant = MANUAL) {
+function chat(posture: ModePosture, command: string, sparkRules: SparkRuleContext, grant = MANUAL) {
   return decide(posture, run(command, 'Spark sends gh to the gate'), NO_RUN_RULES, [], {
     changesProject: true,
     files,
-    ghRules,
+    sparkRules,
     publish: { grant, task: TASK },
   });
 }
@@ -64,7 +70,7 @@ describe('Run a workflow', () => {
     const rule = { group: 'workflows' as const, prefix };
     for (const posture of [...AT_ONCE, ...CARDED]) {
       for (const grant of [MANUAL, FULL_AUTO]) {
-        expect(chat(posture, command, NO_GH_RULES, grant)).toEqual({
+        expect(chat(posture, command, DEFAULT_RULE_CONTEXT, grant)).toEqual({
           verdict: 'reject',
           reason: sparkRuleReason(rule),
           sparkRule: rule,
@@ -82,7 +88,7 @@ describe('Run a workflow', () => {
   it('names the rule when a refused workflow rides along a push', () => {
     const command = `git push origin ${BRANCH} && gh workflow run cd.yml`;
     for (const posture of [...AT_ONCE, ...CARDED]) {
-      expect(chat(posture, command, NO_GH_RULES, FULL_AUTO)).toMatchObject({
+      expect(chat(posture, command, DEFAULT_RULE_CONTEXT, FULL_AUTO)).toMatchObject({
         verdict: 'reject',
         sparkRule: WORKFLOW,
       });
@@ -109,7 +115,7 @@ describe('Run a workflow', () => {
           askRun,
           planningWhy: 'Auto mode',
           files,
-          ghRules: WORKFLOWS_FOLLOW,
+          sparkRules: WORKFLOWS_FOLLOW,
         },
       );
       expect(decision.verdict, String(askRun)).not.toBe('allow');
@@ -119,7 +125,7 @@ describe('Run a workflow', () => {
   it('applies only to the chat agent, not to a run that changes nothing', () => {
     const decision = decide('full_access', run('gh workflow run cd.yml'), NO_RUN_RULES, [], {
       files,
-      ghRules: NO_GH_RULES,
+      sparkRules: DEFAULT_RULE_CONTEXT,
     });
     expect(decision).toEqual({ verdict: 'allow', by: 'level' });
   });
@@ -127,12 +133,12 @@ describe('Run a workflow', () => {
 
 describe('Other commands', () => {
   const release = 'gh release create v1.2.0 --notes x';
-  const allowed: GhRules = { ...NO_GH_RULES, allowed: ['gh release create'] };
+  const allowed = seeded({ ghAllowed: ['gh release create'] });
 
   it('is refused by default with a card the user can change', () => {
     const rule = { group: 'other' as const, prefix: 'gh release create' };
     for (const posture of [...AT_ONCE, ...CARDED]) {
-      expect(chat(posture, release, NO_GH_RULES)).toEqual({
+      expect(chat(posture, release, DEFAULT_RULE_CONTEXT)).toEqual({
         verdict: 'reject',
         reason: sparkRuleReason(rule),
         sparkRule: rule,
@@ -153,10 +159,7 @@ describe('Other commands', () => {
     ['gh pr review 12 -a', 'gh pr review'],
     ['gh release create v1 --admin', 'gh release create'],
   ])('never allows %s, even when added', (command, named) => {
-    const added: GhRules = {
-      ...NO_GH_RULES,
-      allowed: ['gh pr merge', 'gh pr review', 'gh release create'],
-    };
+    const added = seeded({ ghAllowed: ['gh pr merge', 'gh pr review', 'gh release create'] });
     expect(chat('full_access', command, added)).toEqual({
       verdict: 'reject',
       reason: ghRailReason(named),
@@ -168,7 +171,7 @@ describe('Other commands', () => {
   });
 
   it('lets a review comment through once gh pr review is added', () => {
-    const added: GhRules = { ...NO_GH_RULES, allowed: ['gh pr review'] };
+    const added = seeded({ ghAllowed: ['gh pr review'] });
     expect(chat('full_access', 'gh pr review 12 --comment -b "Looks fine"', added).verdict).toBe(
       'allow',
     );
@@ -177,7 +180,7 @@ describe('Other commands', () => {
 
 describe('Allow once', () => {
   const command = 'gh workflow run cd-alfa.yml';
-  const once: GhRules = { ...NO_GH_RULES, once: [command] };
+  const once: SparkRuleContext = { ...DEFAULT_RULE_CONTEXT, once: [command] };
 
   it('lets just that exact command follow the mode', () => {
     expect(chat('full_access', command, once)).toEqual({ verdict: 'allow', by: 'level' });
@@ -194,7 +197,7 @@ describe('Allow once', () => {
 
   it('never covers a merge', () => {
     const merge = 'gh pr merge 12';
-    const merging: GhRules = { ...NO_GH_RULES, once: [merge] };
+    const merging: SparkRuleContext = { ...DEFAULT_RULE_CONTEXT, once: [merge] };
     expect(chat('full_access', merge, merging).verdict).toBe('reject');
   });
 });

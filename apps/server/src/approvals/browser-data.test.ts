@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MODE_POSTURES } from '@spark-outpost/contracts';
 import {
   BROWSER_DATA_REASON,
@@ -6,6 +6,8 @@ import {
   browserDataRules,
   globReachesBrowserData,
   isBrowserData,
+  SPARK_RULES_REASON,
+  sparkRulesFlagRules,
 } from './browser-data.ts';
 import { LOCAL_DATA_DIR } from '../config.ts';
 import { NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
@@ -148,5 +150,115 @@ describe('browser data paths', () => {
     expect(rules.some((rule) => rule.includes('/spark/'))).toBe(false);
     expect(rules).not.toContain(`Read(/${DATA}/**)`);
     expect(browserDataRules(null)).toEqual([]);
+  });
+});
+
+describe("Spark's own rules file is refused to chats in every mode", () => {
+  const refused = MODE_POSTURES.map(() => SPARK_RULES_REASON);
+  const COMPANY = '/Library/Application Support/SparkOutpost/managed-settings.json';
+  const MOVED = '/Users/me/rules/spark-settings.json';
+
+  beforeEach(() => {
+    vi.stubEnv('SPARK_RULES_FILE', `${DATA}/spark/settings.json`);
+    vi.stubEnv('SPARK_MANAGED_RULES_FILE', COMPANY);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it.each([
+    `cat "${DATA}/spark/settings.json"`,
+    `echo '{}' > "${DATA}/spark/settings.json"`,
+    'cat ../../../settings.json',
+    `cat "${COMPANY}"`,
+  ])('%s', async (command) => {
+    expect(await verdicts(request({ command }))).toEqual(refused);
+  });
+
+  it('refuses an edit of the file', async () => {
+    const edit = request({
+      kind: 'edit',
+      toolKind: 'edit',
+      paths: [`${DATA}/spark/settings.json`],
+    });
+    expect(await verdicts(edit)).toEqual(refused);
+  });
+
+  it('guards the file wherever it is configured, and the company file', async () => {
+    vi.stubEnv('SPARK_RULES_FILE', MOVED);
+    expect(await verdicts(request({ command: `cat ${MOVED}` }))).toEqual(refused);
+    expect(await verdicts(request({ command: `cat "${DATA}/spark/settings.json"` }))).not.toEqual(
+      refused,
+    );
+  });
+
+  it.each([
+    'cat /Users/me/r*/*',
+    'cp /Users/me/rules/spark-* /tmp/x',
+    'cat /Users/*/rules/spark-settings.json',
+    "echo '{}' > /Users/me/rul?s/spark-settings.json",
+    'cat /Users/me/rules/spark-settings.jso[n]',
+  ])('refuses a glob that reaches the configured file: %s', async (command) => {
+    vi.stubEnv('SPARK_RULES_FILE', MOVED);
+    expect(await verdicts(request({ command }))).toEqual(refused);
+  });
+
+  it.each([
+    'cat /Users/me/{rules/spark-settings.json,other}',
+    'cat /Users/me/{a,{b,rules}}/spark-settings.json',
+    'cat /Users/me/rules/spark-settings.{json,txt}',
+    'cat ~me/rules/spark-settings.json',
+    'cat "$HOME/rules/spark-settings.json"',
+    'cat ${HOME}/rules/spark-settings.json',
+    'cat "$(echo /Users/me/rules)/spark-settings.json"',
+    'cat `echo /Users/me/rules`/spark-settings.json',
+    "bash -c 'cat /Users/me/rules/$(echo spark-settings.json)'",
+    'cat "$DIR/spark-settings.json"',
+    'cd /Users/me/rules && cat spark-settings.json',
+    'cd /Users/me/work && cd ../rules; cat spark-settings.json',
+    'cd "$SOMEWHERE" && cat spark-settings.json',
+    'cd ~me/rules && cat spark-settings.json',
+    'cd ~me && cd rules && cat spark-settings.json',
+    'pushd ~me/rules && cat spark-settings.json',
+    'cd $HOME/rules && cat spark-settings.json',
+    'cd ${HOME}/rules; cat spark-settings.json',
+    'cd - && cat spark-settings.json',
+    'cd $VAR/rules && cat spark-settings.json',
+  ])('refuses a shell expansion that can reach the configured file: %s', async (command) => {
+    vi.stubEnv('SPARK_RULES_FILE', MOVED);
+    expect(await verdicts(request({ command }))).toEqual(refused);
+  });
+
+  it.each([
+    'cat /Users/me/{notes,todo}.md',
+    'cat "$(pwd)/README.md"',
+    'cat $(cat list.txt)',
+    'cd /Users/me/rules && cat other.json',
+    'cat ~other/rules/spark-settings.json',
+    'cd ~other/rules && cat spark-settings.json',
+    'cd ~me/notes && cat spark-settings.json',
+  ])('leaves an expansion that cannot reach it alone: %s', async (command) => {
+    vi.stubEnv('SPARK_RULES_FILE', MOVED);
+    expect(await verdicts(request({ command }))).not.toEqual(refused);
+  });
+
+  it('leaves a glob that names other files alone', async () => {
+    vi.stubEnv('SPARK_RULES_FILE', MOVED);
+    expect(await verdicts(request({ command: 'ls /Users/me/r*/*.md' }))).not.toEqual(refused);
+    expect(await verdicts(request({ command: 'ls ~/*' }))).not.toEqual(refused);
+  });
+
+  it('gives Claude read and edit deny rules for both files', () => {
+    expect(sparkRulesFlagRules()).toEqual([
+      `Read(/${DATA}/spark/settings.json)`,
+      `Edit(/${DATA}/spark/settings.json)`,
+      `Read(/${COMPANY})`,
+      `Edit(/${COMPANY})`,
+    ]);
+  });
+
+  it('leaves the chats folder beside it alone', async () => {
+    expect(await verdicts(request({ command: 'cat notes.md' }))).not.toEqual(refused);
   });
 });

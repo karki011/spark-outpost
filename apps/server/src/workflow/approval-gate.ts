@@ -20,7 +20,7 @@ import { secretReadLabels } from '../approvals/secret-reads.ts';
 import { secretSend, withoutSentSecrets } from '../approvals/secret-send.ts';
 import {
   FS_WRITE_TOOL_KIND,
-  decide,
+  decideRuled,
   secretLabels,
   type ApprovalRequest,
   type DecideOptions,
@@ -38,7 +38,7 @@ import {
   type NewApproval,
 } from '../persistence/approvals.ts';
 import type { Db } from '../persistence/db.ts';
-import { ghRulesForRun } from '../persistence/spark-rules.ts';
+import { sparkRulesForRun } from '../persistence/spark-rules.ts';
 import { LeaseLostError, type AppendOptions } from '../persistence/run-events.ts';
 import type { GateAnswer, PermissionGate } from '../providers/provider.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
@@ -46,7 +46,7 @@ import type { Append } from './agent-turn.ts';
 import { waitForApproval, type ApprovalWaiters, type WaitResult } from './approval-waiters.ts';
 import { chosenModeWhy } from './ask-auto.ts';
 import { runEvents } from './run-events.ts';
-import { approvalPayload, displayTitle, subject } from './approval-payload.ts';
+import { approvalPayload, displayTitle, refusedSubject, subject } from './approval-payload.ts';
 import { parseShell } from '../approvals/shell-parse.ts';
 import { blockedNote, policyDenial } from '../approvals/policy-blocked.ts';
 import {
@@ -62,10 +62,15 @@ const afterQueuedUpdates = () => new Promise<void>((resolve) => setImmediate(res
 
 interface Weighed {
   decision: Decision;
+  rule: string | null;
   secretReads: string[];
 }
 
-const UNDECIDED: Weighed = { decision: { verdict: 'ask', reason: null }, secretReads: [] };
+const UNDECIDED: Weighed = {
+  decision: { verdict: 'ask', reason: null },
+  rule: null,
+  secretReads: [],
+};
 
 export const APPROVAL_TIMEOUT_MS = APPROVAL_WAIT_MINUTES * 60 * 1000;
 export const APPROVAL_POLL_MS = 1000;
@@ -113,9 +118,9 @@ export async function forcePushDefault(request: ApprovalRequest): Promise<string
   return defaultBranch(root).catch(() => null);
 }
 
-function policyBlocked(answer: GateAnswer): GateAnswer {
+function policyBlocked(answer: GateAnswer, denial: string): GateAnswer {
   if (answer.outcome !== 'selected') return answer;
-  return { ...answer, denial: policyDenial(answer.note) };
+  return { ...answer, denial };
 }
 
 export interface ApprovalGate extends PermissionGate {
@@ -382,13 +387,13 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       instructionGrants,
       shell: request.kind === 'execute' ? await parseShell(request.command) : null,
       agentAsks: Boolean(request.agentReason),
-      ghRules: await ghRulesForRun(deps.db, deps.runId),
+      sparkRules: await sparkRulesForRun(deps.db, deps.runId),
       ...(await publishContext(deps.db, deps.publish, request)),
     };
-    const { decision, secretReads } = await withPrefetchedFiles(
+    const { decision, rule, secretReads } = await withPrefetchedFiles(
       diskFiles,
       (files): Weighed => ({
-        decision: decide(postureOf(request), request, runRules, allowlist, { ...options, files }),
+        ...decideRuled(postureOf(request), request, runRules, allowlist, { ...options, files }),
         secretReads: secretReadLabels(request, files, options.shell ?? null),
       }),
       UNDECIDED,
@@ -405,7 +410,8 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       });
       observe(request, { verdict: 'reject', by: 'policy', approvalId: denied.id });
       if (decision.sparkRule) await emit(runEvents.approvalDecided(denied));
-      return policyBlocked(reject(request, blockedNote(what, decision.reason), denied.id));
+      const note = blockedNote(refusedSubject(request), decision.reason, rule ?? undefined);
+      return policyBlocked(reject(request, note, denied.id), policyDenial(what, decision.reason));
     }
     const option = allowOption(request.options);
     const recorded = await insertApproval(deps.db, newApproval(request, null), {

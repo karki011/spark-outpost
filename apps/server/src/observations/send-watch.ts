@@ -7,6 +7,7 @@ import type { ApprovalRequest } from '../approvals/decide.ts';
 import { diskFiles } from '../approvals/file-lister.ts';
 import { isGitPush } from '../approvals/git-commands.ts';
 import { withPrefetchedFiles } from '../approvals/prefetched-files.ts';
+import { holds } from '../approvals/floor-rules.ts';
 import { otherBranchPushes } from '../approvals/publish-policy.ts';
 import { observedSecretReads } from '../approvals/secret-reads.ts';
 import { parseShell } from '../approvals/shell-parse.ts';
@@ -17,6 +18,7 @@ import {
   sessionUpdateOf,
 } from '../audit/review-tracker.ts';
 import type { Queryable } from '../persistence/db.ts';
+import { floorRulesNow } from '../spark-rules/rules-store.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 import { subject } from '../workflow/approval-payload.ts';
 import { taskBranch } from '../workflow/publish-context.ts';
@@ -75,7 +77,7 @@ export function watchedSends(inner: ProtocolObserver, options: SendWatchOptions)
     if (!request.command || !isGitPush(request.command)) return;
     const task = await taskBranch(options.db, cwd);
     const branches = otherBranchPushes(request.command, task);
-    if (!branches) return;
+    if (!branches || !holds(await floorRulesNow(), 'Push(other)')) return;
     await raiseRailFlag(options.db, options.runId, inner, {
       toolCallId: request.toolCallId,
       rail: 'other_push',

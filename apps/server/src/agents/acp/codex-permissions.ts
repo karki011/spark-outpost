@@ -1,5 +1,4 @@
-import { join } from 'node:path';
-import { BROWSER_DATA_ENTRIES, browserDataDir } from '../../approvals/browser-data.ts';
+import { browserDataDir, entryPath, guardedDataEntries } from '../../approvals/browser-data.ts';
 import { SECRET_FILE_PATTERNS } from '../../projects/secret-files.ts';
 
 export const SECRET_GLOBS = SECRET_FILE_PATTERNS.map((pattern) => `**/${pattern}`);
@@ -13,13 +12,17 @@ function secretDenies(): Record<string, string> {
 
 function browserDataDenies(dataDir: string | null): Record<string, string> {
   if (!dataDir) return {};
-  return Object.fromEntries(BROWSER_DATA_ENTRIES.map((entry) => [join(dataDir, entry), 'deny']));
+  return Object.fromEntries(
+    guardedDataEntries().map((entry) => [entryPath(dataDir, entry), 'deny']),
+  );
 }
 
 export function codexPermissionProfiles(
   dataDir: string | null = browserDataDir(),
+  secrets = true,
 ): Record<string, object> {
-  const denied = { ':project_roots': secretDenies(), ...browserDataDenies(dataDir) };
+  const projectRoots = secrets ? { ':project_roots': secretDenies() } : {};
+  const denied = { ...projectRoots, ...browserDataDenies(dataDir) };
   return {
     [CODEX_READ_ONLY_MODE]: { extends: ':read-only', filesystem: denied },
     [CODEX_DO_MODE]: {

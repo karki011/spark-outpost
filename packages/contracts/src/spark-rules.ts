@@ -52,16 +52,18 @@ export const ghAllowedSchema = z
     message: 'Each allowed command is gh and two words, such as gh release create.',
   });
 
+export const ruleStandingSchema = z.enum(['refused', 'asks', 'mode']);
+export type RuleStanding = z.infer<typeof ruleStandingSchema>;
+
 export const sparkRulesSchema = z.object({
   workflows: ghRuleChoiceSchema,
+  workflowCommands: z.array(z.object({ prefix: z.string(), standing: ruleStandingSchema })),
   ghAllowed: z.array(z.string()),
+  otherCommands: ruleStandingSchema,
+  floor: z.array(z.object({ rule: z.string(), standing: ruleStandingSchema })),
+  problems: z.array(z.string()).optional(),
 });
 export type SparkRules = z.infer<typeof sparkRulesSchema>;
-
-export const DEFAULT_SPARK_RULES: SparkRules = {
-  workflows: DEFAULT_WORKFLOW_RULE,
-  ghAllowed: [],
-};
 
 export const updateSparkRulesRequestSchema = z
   .object({

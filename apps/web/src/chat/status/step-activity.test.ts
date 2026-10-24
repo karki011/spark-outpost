@@ -42,4 +42,18 @@ describe('live step lines', () => {
     expect(activity.full).not.toContain('ghp_');
     expect(line('Read sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123456789')).not.toContain('sk-ant');
   });
+
+  it('splits a refused step into what was refused and why', () => {
+    expect(stepActivity('Refused `gh pr create` — Spark rules: PullRequest')).toMatchObject({
+      verb: 'Refused',
+      target: 'gh pr create',
+      code: true,
+      detail: 'Spark rules: PullRequest',
+    });
+    expect(stepActivity('Refused Edit `notes.txt` — no project folder')).toMatchObject({
+      verb: 'Refused',
+      target: 'Edit notes.txt',
+      code: false,
+    });
+  });
 });

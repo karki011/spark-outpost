@@ -20,14 +20,14 @@ The first case covers every request [an agent sends](outpost-asks.md), a [story]
 
 **Auto** works like the third case. The request reads **Waiting on you** while that chat shows an approval card.
 
-## What never changes
+## What a request can't change
 
-| Rule                                              | Means                                       |
-| ------------------------------------------------- | ------------------------------------------- |
-| Nothing merges.                                   | You merge pull requests yourself.           |
-| No force pushes.                                  | In every mode.                              |
-| A chat pushes only its own branch.                | Never another chat's branch.                |
-| A request can't raise a chat's mode.              | You set mode and autonomy in each chat.     |
-| A proposed chat's mode is capped.                 | At the proposing chat's; only you raise it. |
-| A [stacked](stacked-pull-requests.md) push waits. | Until the branch under it is pushed.        |
-| [Protected paths](protected-paths.md) still ask.  | Whoever wrote the request.                  |
+| Rule                                                        | Means                                                                                                 |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Nothing merges.                                             | You merge them yourself.                                                                              |
+| Force pushes hold to confirm.                               | Lease only, under recommended [rules](protected-paths.md#spark-rules).                                |
+| A chat pushes only its own branch.                          | With the recommended rules.                                                                           |
+| A request can't raise a chat's mode.                        | You set each chat's mode and autonomy.                                                                |
+| A proposed chat's mode is capped.                           | At the proposer's; only you raise it.                                                                 |
+| A [stacked](stacked-pull-requests.md) push waits.           | Until its base is pushed.                                                                             |
+| An `ask` [rule](protected-paths.md#spark-rules) still asks. | Whoever wrote the request; [always refused](protected-paths.md#what-is-always-refused) stays refused. |

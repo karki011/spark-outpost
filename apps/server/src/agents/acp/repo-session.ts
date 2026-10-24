@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import type * as acp from '@agentclientprotocol/sdk';
 import { followedFiles, instructionsPrompt, isAgentsMd } from '../../agent-config/instructions.ts';
 import type { RepoLaunch } from '../../agent-config/launch.ts';
@@ -7,6 +8,7 @@ import type { RedirectSettings } from '../../agent-config/redirects.ts';
 import type { PermissionRules } from '../../agent-config/permission-rules.ts';
 import type { HooksConfig } from '../../agent-config/settings-files.ts';
 import { childEnvironment } from '../../setup/environment.ts';
+import { RECOMMENDED_FLOOR, type SparkFloor } from '../../spark-rules/floor-flags.ts';
 
 export type RepoStyle = 'claude' | 'codex';
 
@@ -20,6 +22,7 @@ export interface ClaudeRepoOptions {
   denyRules?: readonly string[];
   askRules?: readonly string[];
   redirects?: RedirectSettings | null;
+  floor?: SparkFloor;
 }
 
 export const NO_CLAUDE_REPO: ClaudeRepoOptions = {
@@ -36,6 +39,14 @@ export function withPermissionRules(
 ): ClaudeRepoOptions | null {
   if (rules.deny.length === 0 && rules.ask.length === 0) return repo;
   return { ...(repo ?? NO_CLAUDE_REPO), denyRules: rules.deny, askRules: rules.ask };
+}
+
+export function withSparkFloor(
+  repo: ClaudeRepoOptions | null,
+  floor: SparkFloor,
+): ClaudeRepoOptions | null {
+  if (isDeepStrictEqual(floor, RECOMMENDED_FLOOR)) return repo;
+  return { ...(repo ?? NO_CLAUDE_REPO), floor };
 }
 
 export interface CodexRepoOptions {

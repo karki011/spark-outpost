@@ -8,6 +8,8 @@ import {
   type PermissionRules,
 } from '../../agent-config/permission-rules.ts';
 import { ProviderError, type ProviderTurn } from '../../providers/provider.ts';
+import { sparkFloor, type SparkFloor } from '../../spark-rules/floor-flags.ts';
+import { floorRulesNow } from '../../spark-rules/rules-store.ts';
 import { resolveUserMcp } from '../../mcp/launch.ts';
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
 import { childEnvironment } from '../../setup/environment.ts';
@@ -51,6 +53,7 @@ export interface Workspace {
   mcpServers: NamedMcpServer[];
   spark: SparkToolsHint | null;
   rules: PermissionRules;
+  floor: SparkFloor;
 }
 
 export interface LaunchPlan {
@@ -80,6 +83,10 @@ function assertCanChange(definition: AgentDefinition, turn: ProviderTurn): void 
   if (!turn.approvals) {
     throw new ProviderError('Do mode needs the approval gate, so the run was stopped.');
   }
+}
+
+async function turnFloor(): Promise<SparkFloor> {
+  return sparkFloor(await floorRulesNow());
 }
 
 export async function planLaunch(
@@ -121,6 +128,7 @@ export async function planLaunch(
           claudeConfigDir(options.env ?? process.env),
         )
       : NO_PERMISSION_RULES;
+  const floor = await turnFloor();
   const notes = roots.length > 0 && !browsing ? [noFolderAccessNote(definition)] : [];
   if (roots.length < linked.length) notes.push(primaryOnlyNote(definition, roots[0]!));
   const changing = policy !== null && turn.mode === 'do';
@@ -143,6 +151,7 @@ export async function planLaunch(
     session: [turn.changesProject === true, turn.planning === true],
     codexServers: own,
     rules,
+    floor,
   });
   return {
     workspace: {
@@ -156,6 +165,7 @@ export async function planLaunch(
       mcpServers,
       spark,
       rules,
+      floor,
     },
     key,
     browsing,
@@ -193,7 +203,7 @@ export async function spawnConnection(
         ? await prepareCodexLaunch(located, launchDir, legacyPermissions)
         : { cli: located, profiles: !legacyPermissions };
     const launchEnv = await agentEnvironment(
-      { ...options, codexProfiles: prepared.profiles },
+      { ...options, codexProfiles: prepared.profiles, floor: workspace.floor },
       workspace.home,
       plan.browsing,
       codex,

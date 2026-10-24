@@ -40,6 +40,12 @@ button.trow:hover {
   white-space: nowrap;
 }
 
+.trow-text-wrap {
+  padding: 4px 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .trow-text b {
   font-weight: 500;
   color: var(--text);

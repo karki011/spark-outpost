@@ -3,11 +3,20 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import type { SessionConfigOption } from '@agentclientprotocol/sdk';
 import type { ProviderId } from '@spark-outpost/contracts';
-import { browserDataDir, browserDataRules } from '../../approvals/browser-data.ts';
+import {
+  browserDataDir,
+  browserDataRules,
+  sparkRulesFlagRules,
+} from '../../approvals/browser-data.ts';
 import { PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
 import { tempRoots } from '../../approvals/temp-dirs.ts';
 import { PLANS_DIR } from '../../plans/plan-mode.ts';
-import { EXACT_PROTECTED_GLOBS } from '../../projects/path-policy.ts';
+import { GIT_CONTROL_GLOBS, INSTRUCTION_GLOBS } from '../../projects/path-policy.ts';
+import {
+  RECOMMENDED_FLOOR,
+  type FlagEffect,
+  type SparkFloor,
+} from '../../spark-rules/floor-flags.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
 import type { AgentCli } from './agent-cli.ts';
 import {
@@ -77,6 +86,7 @@ export interface AgentDefinition {
     browsing?: boolean,
     repo?: CodexRepoOptions | null,
     profiles?: boolean,
+    floor?: SparkFloor,
   ) => Record<string, string>;
   projectSessionMeta?: (
     extraRoots: readonly string[],
@@ -127,15 +137,44 @@ function absoluteEditRules(globs: readonly string[]): string[] {
   return globs.map((glob) => `Edit(/${glob})`);
 }
 
+function floorRules(
+  tools: readonly string[],
+  extraRoots: readonly string[],
+  gitControlGlobs: readonly string[],
+  floor: SparkFloor,
+  effect: Exclude<FlagEffect, null>,
+): string[] {
+  const gitControl = floor.gitConfig === effect;
+  const globs = [
+    ...(floor.instructions === effect ? INSTRUCTION_GLOBS : []),
+    ...(gitControl ? GIT_CONTROL_GLOBS : []),
+  ];
+  const edits = tools.includes('Edit')
+    ? [...editRules(globs, extraRoots), ...(gitControl ? absoluteEditRules(gitControlGlobs) : [])]
+    : [];
+  return [...edits, ...(tools.includes('Bash') && gitControl ? [GIT_CONFIG_ASK_RULE] : [])];
+}
+
 export function floorAskRules(
   tools: readonly string[],
   extraRoots: readonly string[],
   gitControlGlobs: readonly string[] = [],
+  floor: SparkFloor = RECOMMENDED_FLOOR,
 ): string[] {
-  const edits = tools.includes('Edit')
-    ? [...editRules(EXACT_PROTECTED_GLOBS, extraRoots), ...absoluteEditRules(gitControlGlobs)]
-    : [];
-  return [...edits, ...(tools.includes('Bash') ? [GIT_CONFIG_ASK_RULE] : [])];
+  return floorRules(tools, extraRoots, gitControlGlobs, floor, 'ask');
+}
+
+export function floorDenyRules(
+  tools: readonly string[],
+  extraRoots: readonly string[],
+  gitControlGlobs: readonly string[] = [],
+  floor: SparkFloor = RECOMMENDED_FLOOR,
+): string[] {
+  return floorRules(tools, extraRoots, gitControlGlobs, floor, 'deny');
+}
+
+function remoteRules(changesProject: boolean, floor: SparkFloor, effect: FlagEffect): string[] {
+  return changesProject && floor.remotes === effect ? CHAT_RUN_DENY_RULES : [];
 }
 
 function unique(rules: readonly string[]): string[] {
@@ -155,19 +194,23 @@ export function claudeSessionMeta(
   allowBypass = false,
   gitControlGlobs: readonly string[] = [],
 ): Record<string, unknown> {
+  const floor = repo?.floor ?? RECOMMENDED_FLOOR;
   const ask = unique([
     ...(repo?.askRules ?? []),
     ...gatedAskRules(tools),
-    ...floorAskRules(tools, extraRoots, gitControlGlobs),
+    ...floorAskRules(tools, extraRoots, gitControlGlobs, floor),
     ...(changesProject ? PUBLISH_ASK_RULES : []),
+    ...remoteRules(changesProject, floor, 'ask'),
   ]);
   const deny = unique([
     ...(repo?.denyRules ?? []),
     ...toolDenyRules(tools),
-    ...secretRules([...extraRoots, ...tempRoots()]),
+    ...(floor.secretEdits ? secretRules([...extraRoots, ...tempRoots()]) : []),
     ...browserDataRules(browserDataDir()),
-    ...FORCE_PUSH_DENY_RULES,
-    ...(changesProject ? CHAT_RUN_DENY_RULES : []),
+    ...sparkRulesFlagRules(),
+    ...(floor.forcePush ? FORCE_PUSH_DENY_RULES : []),
+    ...remoteRules(changesProject, floor, 'deny'),
+    ...floorDenyRules(tools, extraRoots, gitControlGlobs, floor),
   ]);
   const allowRules = [...(repo?.allowRules ?? [])];
   const plugins = repo?.plugins ?? [];
@@ -211,6 +254,7 @@ export function codexConfig(
   browsing: boolean,
   repo: CodexRepoOptions | null,
   profiles = true,
+  floor: SparkFloor = RECOMMENDED_FLOOR,
 ): object {
   return {
     features: {
@@ -220,7 +264,10 @@ export function codexConfig(
       apps: false,
     },
     ...(profiles
-      ? { default_permissions: CODEX_READ_ONLY_MODE, permissions: codexPermissionProfiles() }
+      ? {
+          default_permissions: CODEX_READ_ONLY_MODE,
+          permissions: codexPermissionProfiles(browserDataDir(), floor.secretEdits),
+        }
       : {}),
     ...(repo && !repo.agentsMd ? { project_doc_max_bytes: 0 } : {}),
     ...(repo?.developerInstructions ? { developer_instructions: repo.developerInstructions } : {}),
@@ -233,11 +280,12 @@ function codexEnv(
   browsing = false,
   repo: CodexRepoOptions | null = null,
   profiles = true,
+  floor: SparkFloor = RECOMMENDED_FLOOR,
 ): Record<string, string> {
   return {
     INITIAL_AGENT_MODE: CODEX_READ_ONLY_MODE,
     TMPDIR: workdir,
-    CODEX_CONFIG: JSON.stringify(codexConfig(browsing, repo, profiles)),
+    CODEX_CONFIG: JSON.stringify(codexConfig(browsing, repo, profiles, floor)),
   };
 }
 

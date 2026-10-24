@@ -22,7 +22,7 @@ import {
   sessionOutput,
   type OpenedSession,
 } from './session-open.ts';
-import { withPermissionRules } from './repo-session.ts';
+import { withPermissionRules, withSparkFloor } from './repo-session.ts';
 import { newSessionRequest } from './session-request.ts';
 import { extraRoots, sessionMeta } from './session-start.ts';
 import { slashPrompt } from './slash-commands.ts';
@@ -71,7 +71,10 @@ async function startSession(context: TurnContext, gates: TurnGates): Promise<Ses
   assertProtocolVersion(definition.name, init);
   const spark = sparkAcpServer(tools, definition, init);
   const claude = withClaudeSpark(
-    withPermissionRules(workspace.repo?.claude ?? null, workspace.rules),
+    withSparkFloor(
+      withPermissionRules(workspace.repo?.claude ?? null, workspace.rules),
+      workspace.floor,
+    ),
     turn.spark,
     policy !== null,
     spark ? workspace.spark : null,

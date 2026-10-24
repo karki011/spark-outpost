@@ -22,6 +22,7 @@ import { writeKeptRecord } from '../workflow/kept-record-writer.ts';
 import { startRailFlags } from '../workflow/rail-flags.ts';
 import { createReplyText } from '../workflow/reply-text.ts';
 import type { RunInput } from '../workflow/run-input.ts';
+import { floorRulesNow } from '../spark-rules/rules-store.ts';
 import { createTurnEvents } from '../workflow/turn-events.ts';
 import {
   permissionAsked,
@@ -92,6 +93,7 @@ export async function startChatRecord(
     roots: roots.map((path) => ({ path, ignore: [] })),
     cwd,
     cli: 'claude',
+    rules: () => floorRulesNow(),
   });
   const mapper = createTurnMapper(AGENT_NAME, false);
   const tracker = createCommandTracker(false);

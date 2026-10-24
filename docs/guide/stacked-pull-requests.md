@@ -30,7 +30,7 @@ The **Story** bar shows each pull request as a chip, such as **#124 → #123** o
 
 ## What stays the same
 
-- A chat pushes only its own `spark/*` branch and never force pushes.
+- With the recommended [rules](protected-paths.md#spark-rules), a chat pushes only its own `spark/*` branch; force pushes need a lease and confirmation.
 - Nothing merges; you merge them, in the bar's order.
 - Once `@api`'s pull request merges or closes, `@fe`'s new pull request targets the default branch.
 

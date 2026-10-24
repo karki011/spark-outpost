@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { SPARK_TEXT_MAX, SPARK_TITLE_MAX } from '@spark-outpost/contracts';
 import { chatWorktreeAt } from '../../persistence/chat-worktrees.ts';
 import { opensDraftPullRequests } from '../../persistence/pr-settings.ts';
+import { sparkRulesForRun } from '../../persistence/spark-rules.ts';
+import { floorEffect } from '../../spark-rules/resolve.ts';
 import { pushForAgent, type PublishScope } from '../../ship/agent-push.ts';
 import { pickRemote, remoteHasBranch } from '../../ship/git.ts';
 import { connectionsFor } from '../../ship/github/access.ts';
@@ -28,11 +30,19 @@ function nextAfterPush(publish: PublishScope): string {
     : 'Open the pull request now (gh pr create, or spark_pull_request when you have it) and give the user its link.';
 }
 
+async function secretSendEffect(context: SparkToolContext) {
+  const { runId } = context.scope;
+  if (!runId) return undefined;
+  const { rules } = await sparkRulesForRun(context.deps.db, runId);
+  return floorEffect(rules, 'SecretSend');
+}
+
 async function push(context: SparkToolContext) {
   const publish = authorized(context);
   const result = await pushForAgent(gitHubDepsFor(context.deps, context.scope), publish, {
     signal: context.signal,
     audit: context.scope.actions?.audit,
+    secretSend: await secretSendEffect(context),
   });
   const pushed = result.outcome === 'pushed';
   return {

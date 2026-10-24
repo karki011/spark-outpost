@@ -1,5 +1,6 @@
 import { programName, resolveCommandPath, splitCommandLine, unwrapCommand } from './commands.ts';
 import { withTempVariable } from './temp-dirs.ts';
+import { homeExpanded } from './word-shapes.ts';
 
 export interface CommandTree {
   commands: string[][];
@@ -155,7 +156,8 @@ function deletedWords(program: readonly string[]): string[] {
 }
 
 function changedDirs(program: readonly string[], dirs: string[], home: string): string[] | null {
-  const target = program.slice(1).find((arg) => arg === '-' || !arg.startsWith('-'));
+  const given = program.slice(1).find((arg) => arg === '-' || !arg.startsWith('-'));
+  const target = given === undefined ? undefined : homeExpanded(given, home);
   if (target === '-' || (target !== undefined && UNKNOWN_WORD.test(target))) return null;
   const next =
     target === undefined ? [home] : dirs.map((dir) => resolveCommandPath(target, dir, home));

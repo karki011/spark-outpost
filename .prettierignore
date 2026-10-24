@@ -8,3 +8,4 @@ apps/desktop/release/
 apps/desktop/mac-control/.build/
 apps/desktop/mac-control/.swiftpm/
 releases/
+apps/server/src/approvals/fixtures/spark-rules-verdicts.json

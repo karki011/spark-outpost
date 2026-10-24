@@ -437,7 +437,8 @@ export async function recordTest(
 ): Promise<void> {
   await db.query(
     `UPDATE provider_connections
-     SET last_test_at = now(), last_test_ok = $3, last_test_message = $4
+     SET last_test_at = now(), last_test_ok = $3, last_test_message = $4,
+       verified_at = CASE WHEN $3 THEN now() ELSE verified_at END
      WHERE workspace_id = $1 AND provider = $2 AND disconnected_at IS NULL`,
     [workspaceId, provider, outcome.ok, outcome.message],
   );

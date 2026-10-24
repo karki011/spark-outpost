@@ -18,6 +18,7 @@ import { readTextFile, refuseWrite } from './fs-handlers.ts';
 import type { TurnHandlers } from './live-binding.ts';
 import { declineInConversation, nativePlan } from './permissions.ts';
 import type { AgentCli } from './agent-cli.ts';
+import { floorRulesNow } from '../../spark-rules/rules-store.ts';
 import { createRailWatch, type RailWatch } from './rail-watch.ts';
 import type { RequestLog } from './turn-loop.ts';
 import type { TurnMapper } from './subagent-updates.ts';
@@ -54,7 +55,14 @@ export function turnGates(
         }
       : null;
   const doing = changing ? gated : null;
-  const rails = gated ? createRailWatch({ roots: gated.policy.roots, cwd: gated.cwd, cli }) : null;
+  const rails = gated
+    ? createRailWatch({
+        roots: gated.policy.roots,
+        cwd: gated.cwd,
+        cli,
+        rules: () => floorRulesNow(),
+      })
+    : null;
   return { gated, doing, rails, questions: turn.questions ?? null };
 }
 

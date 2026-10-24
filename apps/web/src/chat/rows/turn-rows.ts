@@ -3,7 +3,7 @@ import { anchorIndex, outsideFence, type TextAnchor } from '../../browser/shot-o
 import type { AgentTerminalView } from '../commands/agent-terminal-model.ts';
 import type { CommandView } from '../commands/command-model.ts';
 import type { StepStatus, StepTimes, StepView } from '../run-projection.ts';
-import { stepActivity } from '../status/step-activity.ts';
+import { REFUSED_VERB, stepActivity } from '../status/step-activity.ts';
 
 const THINKING = 'Thinking';
 const WEB_STEP = /^(?:Fetched |Searched the web$)/;
@@ -20,6 +20,7 @@ export interface ToolItem {
   target: string | null;
   path: string | null;
   label: string;
+  detail?: string;
   startedAt: number | undefined;
   finishedAt: number | undefined;
 }
@@ -125,6 +126,10 @@ function fromName(step: StepView, base: ToolBase, open: boolean, ranCommands: bo
 
 function namedItem(step: StepView, base: ToolBase, open: boolean, ranCommands: boolean) {
   const activity = stepActivity(step.name);
+  if (activity.verb === REFUSED_VERB && activity.detail) {
+    const { target, detail } = activity;
+    return { ...base, tone: 'other' as const, verb: REFUSED_VERB, target, detail };
+  }
   if (activity.kind === 'run' || step.toolKind === 'execute') {
     if (ranCommands) return null;
     const target = activity.kind === 'run' ? activity.target : base.label;

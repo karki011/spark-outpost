@@ -3,6 +3,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { providerHealthSchema, spendSummarySchema } from '@spark-outpost/contracts';
 import { listConversations, sendUserMessage } from '../src/persistence/conversations.ts';
+import { recordTest } from '../src/persistence/setup.ts';
 import { createTestApp, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
@@ -128,6 +129,8 @@ describe('GET /api/usage/spend', () => {
 });
 
 describe('GET /api/providers/health', () => {
+  const SIGNED_OUT = "Claude isn't signed in. Open Settings, reconnect Claude, and try again.";
+
   async function issues() {
     const response = await get('/api/providers/health');
     expect(response.status).toBe(200);
@@ -135,12 +138,7 @@ describe('GET /api/providers/health', () => {
   }
 
   it('reports recent sign-in and limit errors that have not recovered', async () => {
-    await run({
-      provider: 'claude',
-      status: 'failed',
-      error: "Claude isn't signed in. Open Settings, reconnect Claude, and try again.",
-      hoursAgo: 1,
-    });
+    await run({ provider: 'claude', status: 'failed', error: SIGNED_OUT, hoursAgo: 1 });
     await run({
       provider: 'zai',
       status: 'failed',
@@ -160,6 +158,67 @@ describe('GET /api/providers/health', () => {
       ['claude', 'auth'],
       ['zai', 'rate_limit'],
     ]);
+  });
+
+  async function connectClaude(hoursAgo: number, test: { ok: boolean; hoursAgo: number } | null) {
+    const at = (hours: number) => new Date(Date.now() - hours * 3_600_000);
+    await t.db.query(
+      `INSERT INTO provider_connections
+         (workspace_id, provider, method, detail, models, model, permission, effort, verified_at,
+          last_test_at, last_test_ok, last_test_message)
+       VALUES ($1, 'claude', 'cli', 'claude test', '[]', NULL, 'ask', 'high', $2, $3, $4, $5)`,
+      [
+        t.workspaceId,
+        at(hoursAgo),
+        test ? at(test.hoursAgo) : null,
+        test?.ok ?? null,
+        test ? 'Hello' : null,
+      ],
+    );
+  }
+
+  it('clears a sign-in error once a test message passes after it', async () => {
+    await connectClaude(5, { ok: true, hoursAgo: 1 });
+    await run({ provider: 'claude', status: 'failed', error: SIGNED_OUT, hoursAgo: 2 });
+    expect(await issues()).toEqual([]);
+  });
+
+  it('clears a sign-in error once the CLI login check passes after it', async () => {
+    await connectClaude(1, null);
+    await run({ provider: 'claude', status: 'failed', error: SIGNED_OUT, hoursAgo: 2 });
+    expect(await issues()).toEqual([]);
+  });
+
+  it('keeps a sign-in error that came after the last passing check', async () => {
+    await connectClaude(5, { ok: true, hoursAgo: 3 });
+    await run({ provider: 'claude', status: 'failed', error: SIGNED_OUT, hoursAgo: 2 });
+    expect(await issues()).toMatchObject([{ provider: 'claude', kind: 'auth' }]);
+  });
+
+  it('keeps a sign-in error when the later test message failed', async () => {
+    await connectClaude(5, { ok: false, hoursAgo: 1 });
+    await run({ provider: 'claude', status: 'failed', error: SIGNED_OUT, hoursAgo: 2 });
+    expect(await issues()).toMatchObject([{ provider: 'claude', kind: 'auth' }]);
+  });
+
+  it('keeps a sign-in error cleared by a passing test after a later test fails', async () => {
+    await connectClaude(5, null);
+    await run({ provider: 'claude', status: 'failed', error: SIGNED_OUT, hoursAgo: 2 });
+    await recordTest(t.db, t.workspaceId, 'claude', { ok: true, message: 'Hello' });
+    await recordTest(t.db, t.workspaceId, 'claude', { ok: false, message: 'Timed out' });
+    expect(await issues()).toEqual([]);
+  });
+
+  it('keeps an older error hidden behind a cleared sign-in error', async () => {
+    await connectClaude(5, { ok: true, hoursAgo: 1 });
+    await run({
+      provider: 'claude',
+      status: 'failed',
+      error: 'Claude is rate limited.',
+      hoursAgo: 3,
+    });
+    await run({ provider: 'claude', status: 'failed', error: SIGNED_OUT, hoursAgo: 2 });
+    expect(await issues()).toEqual([]);
   });
 
   it('ignores failures older than a day and says nothing when all is well', async () => {

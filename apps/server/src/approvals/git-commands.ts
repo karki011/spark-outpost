@@ -1,6 +1,6 @@
 import { argumentWords, commandTree } from './command-tree.ts';
 import { programName } from './commands.ts';
-import { ghOnlyReads } from './gh-reads.ts';
+import { ghArgs, ghOnlyReads } from './gh-reads.ts';
 import { gitConfigUse, type GitConfigUse } from './git-config.ts';
 import { withoutDataHeredocs } from './inline-code.ts';
 
@@ -185,7 +185,8 @@ export function hostingCommands(command: string): string[][] {
   const tree = commandTree(withoutDataHeredocs(command));
   return tree.commands
     .filter((program) => HOSTING_CLIS.includes(programName(program)))
-    .map((program) => argumentWords(tree, program));
+    .map((program) => argumentWords(tree, program))
+    .map((words) => (programName(words) === 'gh' ? [words[0]!, ...ghArgs(words.slice(1))] : words));
 }
 
 export function hostingRead(program: readonly string[]): boolean {

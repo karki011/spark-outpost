@@ -4,12 +4,16 @@ import path from 'node:path';
 import type { RailKind } from '@spark-outpost/contracts';
 import { readGitDirs, WORKTREE_CONFIG_LABEL } from '../approvals/git-dirs.ts';
 import { REPO_GIT_CONFIG } from '../approvals/git-config.ts';
+import { holds } from '../approvals/floor-rules.ts';
 import { isSecretPath, protectedPath, type GitDirs } from '../projects/path-policy.ts';
 import type { Db } from '../persistence/db.ts';
 import type { NewRailFlag } from '../persistence/rail-flags.ts';
 import { raiseRailFlag } from '../observations/raise-flag.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 import { runGit } from '../ship/git.ts';
+import type { SparkRuleSet } from '../spark-rules/resolve.ts';
+import type { FloorRuleId } from '../spark-rules/rule-ids.ts';
+import { floorRulesNow } from '../spark-rules/rules-store.ts';
 
 const ORIGINAL_MAX_CHARS = 64 * 1024;
 
@@ -120,6 +124,17 @@ function changedProtected(before: RootState, after: Set<string>): NewRailFlag[] 
   }));
 }
 
+const RUN_END_RULES: Partial<Record<RailKind, FloorRuleId>> = {
+  git_control: 'GitConfig',
+  instructions: 'InstructionFile(edit)',
+  secret: 'SecretFile(edit)',
+};
+
+function heldRail(rules: SparkRuleSet, rail: RailKind): boolean {
+  const rule = RUN_END_RULES[rail];
+  return rule === undefined || holds(rules, rule);
+}
+
 async function approvedPaths(db: Db, runId: string): Promise<Set<string>> {
   const { rows } = await db.query<{ target: string }>(
     `SELECT DISTINCT target FROM approvals a,
@@ -144,12 +159,13 @@ export async function startRailFlags(options: RailFlagsOptions): Promise<RailFla
     record,
     async finish() {
       const approved = await approvedPaths(db, runId);
+      const rules = await floorRulesNow();
       for (const before of roots) {
         const control = changedControl(before, await controlFiles(before.dirs));
         const found = [
           ...(control ? [control] : []),
           ...changedProtected(before, await dirtyPaths(before.root)),
-        ];
+        ].filter((flag) => heldRail(rules, flag.rail));
         for (const flag of found) {
           const paths = flag.paths.filter((relative) => !approved.has(relative));
           if (paths.length > 0) await record({ ...flag, paths });

@@ -41,11 +41,28 @@ export function modelLabel(
   return label || id;
 }
 
-export function problemText(
-  connection: ProviderConnection | AdvisorConnection | null,
+type AnyConnection = ProviderConnection | AdvisorConnection;
+
+function signedInAt(connection: AnyConnection): number {
+  const verified = Date.parse(connection.verifiedAt);
+  const test = 'lastTest' in connection ? connection.lastTest : null;
+  return test?.ok ? Math.max(verified, Date.parse(test.testedAt)) : verified;
+}
+
+export function liveIssue(
+  connection: AnyConnection | null,
   issue: ProviderIssue | null,
+): ProviderIssue | null {
+  if (!issue || issue.kind !== 'auth' || !connection) return issue;
+  return signedInAt(connection) > Date.parse(issue.at) ? null : issue;
+}
+
+export function problemText(
+  connection: AnyConnection | null,
+  reported: ProviderIssue | null,
   when: (iso: string) => string,
 ): string | null {
+  const issue = liveIssue(connection, reported);
   if (issue) return `${ISSUE_LABEL[issue.kind]} · ${when(issue.at)}`;
   if (connection && 'lastTest' in connection && connection.lastTest?.ok === false) {
     return 'Verify failed';
