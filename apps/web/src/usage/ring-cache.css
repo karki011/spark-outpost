@@ -1,0 +1,76 @@
+.cache-badge {
+  --cb: var(--muted);
+  flex-shrink: 0;
+}
+.cache-badge.warm {
+  --cb: var(--cache-warm);
+}
+.cache-badge.expiring {
+  --cb: var(--cache-expiring);
+}
+.cb-halo {
+  fill: var(--cb-halo, var(--panel));
+}
+.cb-face {
+  fill: none;
+  stroke: var(--cb);
+  stroke-width: 1.5;
+}
+.cb-fill {
+  fill: var(--cb);
+}
+.cb-mark {
+  fill: none;
+  stroke: var(--cb);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ctxring {
+  position: relative;
+  display: inline-flex;
+}
+.ctxbtn .ctxring .cache-badge {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  transform: none;
+}
+.ctxbtn:hover .cache-badge,
+.ctxbtn[aria-expanded='true'] .cache-badge {
+  --cb-halo: var(--raise);
+}
+
+.ctx-cache {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.ctx-cache-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.ctx-cache-h b {
+  margin-left: auto;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ctx-cache-h b.warm {
+  color: var(--cache-warm);
+}
+.ctx-cache-h b.expiring {
+  color: var(--cache-expiring);
+}
+.ctx-cache-h b.expired,
+.ctx-cache-h b.unknown {
+  color: var(--muted);
+}
+.ctx-cache p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}

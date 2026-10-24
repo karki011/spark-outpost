@@ -22,6 +22,8 @@ import {
 } from '../../usage/format.ts';
 import '../../usage/usage.css';
 import { setupApi, setupKey } from '../../api/setup.ts';
+import { CacheBadgeGlyph, CacheRow, useRingCache } from '../../usage/RingCache.tsx';
+import { useIdleCache } from '../project/chat-cache.ts';
 import { formatTokens } from './model-options.ts';
 
 const RING = 50.27;
@@ -51,6 +53,7 @@ function useThresholds(): CompactionThresholds {
 }
 
 interface ContextRingProps {
+  conversationId: string;
   runs: Run[];
   provider: string | null;
   usageTotals: ConversationUsage;
@@ -85,7 +88,13 @@ function advisorLine(entry: AdvisorUsage): string {
   return [calls, usageLine(entry.inputTokens, entry.costUsd, 'estimated')].join(' · ');
 }
 
-export function ContextRing({ runs, provider, usageTotals, onAudit }: ContextRingProps) {
+export function ContextRing({
+  conversationId,
+  runs,
+  provider,
+  usageTotals,
+  onAudit,
+}: ContextRingProps) {
   const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
     HTMLButtonElement,
     HTMLDivElement
@@ -97,7 +106,10 @@ export function ContextRing({ runs, provider, usageTotals, onAudit }: ContextRin
   const percent = contextPercent(used, size);
   const thresholds = useThresholds();
   const level = contextLevel(percent, thresholds);
-  const label = ringLabel(reading, percent);
+  const cache = useRingCache(useIdleCache(conversationId));
+  const label = cache.badge
+    ? `${ringLabel(reading, percent)}. ${cache.badge.sentence}`
+    : ringLabel(reading, percent);
   const chat = chatLine(usageTotals);
   const showProviders = usageTotals.byProvider.length > 1;
 
@@ -115,16 +127,19 @@ export function ContextRing({ runs, provider, usageTotals, onAudit }: ContextRin
         title={chat ? `${label}\nThis chat: ${chat}` : label}
         onClick={toggle}
       >
-        <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true">
-          <circle cx="10" cy="10" r="8" className="ring-bg" />
-          <circle
-            cx="10"
-            cy="10"
-            r="8"
-            className="ring-fg"
-            style={{ strokeDashoffset: RING * (1 - Math.max(percent, reading ? 2 : 0) / 100) }}
-          />
-        </svg>
+        <span className="ctxring">
+          <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="10" cy="10" r="8" className="ring-bg" />
+            <circle
+              cx="10"
+              cy="10"
+              r="8"
+              className="ring-fg"
+              style={{ strokeDashoffset: RING * (1 - Math.max(percent, reading ? 2 : 0) / 100) }}
+            />
+          </svg>
+          {cache.badge && <CacheBadgeGlyph badge={cache.badge} />}
+        </span>
         {reading && <span className="ctxpct">{percent}%</span>}
       </button>
       <div
@@ -162,6 +177,7 @@ export function ContextRing({ runs, provider, usageTotals, onAudit }: ContextRin
             ? ringNote(level, thresholds)
             : 'Send a message to see how much of the context window it uses.'}
         </p>
+        {cache.badge && <CacheRow badge={cache.badge} />}
         {chat && (
           <div className="ctx-usage">
             <div title={costTip(usageTotals.costSource)}>
@@ -198,6 +214,10 @@ export function ContextRing({ runs, provider, usageTotals, onAudit }: ContextRin
           </button>
         )}
       </div>
+      <span className="sr-only" aria-live="polite">
+        {cache.announcement}
+      </span>
+      {cache.clock}
     </div>
   );
 }

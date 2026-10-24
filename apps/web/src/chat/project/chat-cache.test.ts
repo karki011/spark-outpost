@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Approval, ConversationDetail, Run } from '@spark-outpost/contracts';
-import { chatIdle } from './ChatCache.tsx';
+import { chatIdle } from './chat-cache.ts';
 
 const run = (status: Run['status']) => ({ id: 'r1', status, parentRunId: null }) as Run;
 
