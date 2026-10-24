@@ -317,3 +317,33 @@
   --c-zai: oklch(0.66 0.14 115);
   --c-jev: oklch(0.62 0.2 330);
 }
+
+:root,
+[data-skin] {
+  --cache-warm: #177a48;
+  --cache-expiring: #2456c4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-skin]) {
+    --cache-warm: #63d69c;
+    --cache-expiring: #8db1ff;
+  }
+}
+
+[data-skin='graphite'],
+[data-skin='dark'],
+[data-skin='void'],
+[data-skin='moss'],
+[data-skin='plum'],
+[data-skin='aurora'],
+[data-skin='loam'],
+[data-skin='contrast-dark'] {
+  --cache-warm: #63d69c;
+  --cache-expiring: #8db1ff;
+}
+
+[data-skin='contrast'] {
+  --cache-warm: #00682f;
+  --cache-expiring: #0038b8;
+}

@@ -7,6 +7,7 @@ import {
   type ModePosture,
   type Approval,
   type RunEvent,
+  ALLOWED_REASONS,
 } from '@spark-outpost/contracts';
 import { forcePush } from '../approvals/git-commands.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
@@ -175,8 +176,8 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     request: ApprovalRequest,
   ): string => {
     if (decision.why !== undefined) return decision.why;
-    if (decision.by === 'allowlist') return 'on the project allowlist';
-    if (decision.by === 'run_rule') return 'allowed for this run';
+    if (decision.by === 'allowlist') return ALLOWED_REASONS.allowlist;
+    if (decision.by === 'run_rule') return ALLOWED_REASONS.runRule;
     return `${modeLabel(modeOf(request))} mode`;
   };
 
