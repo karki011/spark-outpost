@@ -156,7 +156,7 @@ export async function answerOutsideChange(
   const loaded =
     answer.keep === 'file'
       ? await acceptOutsideChange(files, answer.fileHash)
-      : await restoreAcceptedRules(files);
+      : await restoreAcceptedRules(files, answer.fileHash);
   return settingsView(loaded);
 }
 

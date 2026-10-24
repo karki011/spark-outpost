@@ -16,6 +16,7 @@ import {
   sparkRules,
   sparkRulesForRun,
 } from '../src/persistence/spark-rules.ts';
+import { rulesTextHash } from '../src/spark-rules/accepted.ts';
 import { acceptRulesBaseline } from '../src/spark-rules/rules-store.ts';
 import { createApprovalGate } from '../src/workflow/approval-gate.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
@@ -264,10 +265,11 @@ describe("Spark's rules file", () => {
   });
 
   it('takes an allowed command out of ask too, so it really follows the mode', async () => {
-    await writeFile(
-      userFile(),
-      JSON.stringify({ permissions: { ask: ['Gh(release create)', 'Gh(workflow run)'] } }),
-    );
+    const text = JSON.stringify({
+      permissions: { ask: ['Gh(release create)', 'Gh(workflow run)'] },
+    });
+    await writeFile(userFile(), text);
+    await answerOutsideChange({ keep: 'file', fileHash: rulesTextHash({ kind: 'text', text }) });
     await saveSparkRules({ ghAllowed: ['gh release create'], workflows: 'mode' });
     const { permissions } = await fileRules();
     expect(permissions.ask).toEqual([]);

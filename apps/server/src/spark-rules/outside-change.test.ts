@@ -80,9 +80,20 @@ describe('a change made outside Spark', () => {
     await seedRecommended();
     const seeded = await userText();
     await tamper();
-    const restored = await restoreAcceptedRules(files);
+    const restored = await restoreAcceptedRules(files, await hashNow(files.user));
     expect(restored.outside).toBeNull();
     expect(await userText()).toBe(seeded);
+  });
+
+  it('refuses a put back for a file that changed again since the review', async () => {
+    await seedRecommended();
+    await tamper();
+    const reviewed = await hashNow(files.user);
+    await writeFile(files.user, '{"permissions":{"allow":["Push"]}}');
+    await expect(restoreAcceptedRules(files, reviewed)).rejects.toThrow(
+      'settings.json changed after you reviewed it',
+    );
+    expect(await userText()).toBe('{"permissions":{"allow":["Push"]}}');
   });
 
   it('refuses Spark’s own changes until the user reviews it', async () => {
@@ -102,14 +113,27 @@ describe('a change made outside Spark', () => {
     expect(saved.rules.user.deny).not.toContain('Push');
   });
 
-  it('accepts what is on disk the first time, for files written before this check', async () => {
+  it('never accepts a file it has no record of, keeping the recommended rules until review', async () => {
     await seedRecommended();
     await rm(acceptedRecordPath(files.user));
     await tamper();
     await acceptRulesBaseline(files);
     const loaded = await loadSparkRules(files);
+    expect(loaded.outside).not.toBeNull();
+    expect(loaded.rules.user).toEqual(RECOMMENDED_RULES.user);
+    await restoreAcceptedRules(files, await hashNow(files.user));
+    expect(await userText()).toBe(recommendedRulesText());
+  });
+
+  it('records the baseline in turn with Spark’s own writes', async () => {
+    await Promise.all([
+      changeSparkRules(files, () => ({ add: [['allow', 'Gh(release create)']] })),
+      acceptRulesBaseline(files),
+      acceptRulesBaseline(files),
+    ]);
+    const loaded = await loadSparkRules(files);
     expect(loaded.outside).toBeNull();
-    expect(loaded.rules.user.ask).not.toContain('Push(force)');
+    expect(loaded.rules.user.allow).toEqual(['Gh(release create)']);
   });
 });
 
@@ -126,18 +150,19 @@ describe('a change checked against the card', () => {
   });
 
   it('writes the company file through the given writer, keeping its other keys', async () => {
-    await writeFile(files.managed, JSON.stringify({ team: 'x', permissions: { deny: [] } }));
+    const shown = JSON.stringify({ team: 'x', permissions: { deny: [] } });
+    await writeFile(files.managed, shown);
     const writes: string[] = [];
     const loaded = await changeManagedRules(
       files,
       { add: [['deny', 'Gh(repo delete)']] },
       await hashNow(files.managed),
-      async (target, text) => {
-        writes.push(target);
+      async (target, text, previousHash) => {
+        writes.push(target, previousHash);
         await writeFile(target, text);
       },
     );
-    expect(writes).toEqual([files.managed]);
+    expect(writes).toEqual([files.managed, rulesTextHash({ kind: 'text', text: shown })]);
     expect(loaded.rules.managed.deny).toEqual(['Gh(repo delete)']);
     expect(JSON.parse(await readFile(files.managed, 'utf8')).team).toBe('x');
   });

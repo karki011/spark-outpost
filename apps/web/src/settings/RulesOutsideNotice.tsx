@@ -8,7 +8,7 @@ import { RuleDiffList } from '../chat/approvals/RulesEditFacts.tsx';
 
 export const OUTSIDE_TITLE = 'Rules file changed outside Spark';
 const OUTSIDE_TEXT =
-  'Spark keeps using the rules you last accepted until you choose. Something other than Spark changed settings.json, perhaps an agent in a mode Spark can’t see.';
+  'Spark keeps using the rules you last accepted, or its recommended rules if you never accepted any, until you choose. Something other than Spark changed settings.json, perhaps an agent in a mode Spark can’t see.';
 
 function ChangeList({ change }: { change: OutsideChangeView }) {
   if (change.added.length === 0 && change.removed.length === 0) {

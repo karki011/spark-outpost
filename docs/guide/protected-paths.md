@@ -54,7 +54,7 @@ Fixed: Spark's ports, the [always refused](#what-is-always-refused) list and the
 
 **Settings → Spark rules** shows each rule and edits the `Gh` rules. A refusal shows a [card](cards.md#around-the-result).
 
-`spark_rules_edit` always asks on the Mac; **Allow for this session** lasts until the agent or mode changes. Outside edits wait for your **Review**.
+`spark_rules_edit` asks on the Mac; **Allow for this session** ends when the agent or mode changes. Outside edits wait for **Review**.
 
 ## Secret files
 

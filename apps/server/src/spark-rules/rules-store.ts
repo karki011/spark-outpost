@@ -3,7 +3,7 @@ import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join } from 'node:path';
 import { sparkDataDir } from '../config.ts';
 import { DEFAULT_BRANCH_PREFIX } from '../projects/worktrees.ts';
-import { RECOMMENDED_RULES } from './recommended.ts';
+import { RECOMMENDED_RULES, recommendedRulesText } from './recommended.ts';
 import {
   acceptedOf,
   acceptedRead,
@@ -101,12 +101,18 @@ function tierFrom(read: RulesFileRead): Tier {
 }
 
 export const OUTSIDE_CHANGE_PROBLEM =
-  'The file changed outside Spark, so Spark keeps the rules you last accepted until you review the change';
+  'The file changed outside Spark, so Spark keeps the rules you last accepted (its recommended rules if you never accepted any) until you review the change';
 
 export interface OutsideChange {
   fileHash: string;
   acceptedHash: string;
   accepted: string | null;
+}
+
+const RECOMMENDED_BASELINE = acceptedOf({ kind: 'text', text: recommendedRulesText() });
+
+function acceptedFor(read: RulesFileRead, recorded: AcceptedRules | null): AcceptedRules | null {
+  return recorded ?? (read.kind === 'text' ? RECOMMENDED_BASELINE : null);
 }
 
 function outsideChangeOf(read: RulesFileRead, accepted: AcceptedRules | null) {
@@ -159,12 +165,11 @@ async function recordAccepted(files: SparkRulesFiles, accepted: AcceptedRules): 
   await writeAtomically(acceptedRecordPath(files.user), acceptedRecordText(accepted));
 }
 
-export async function acceptRulesBaseline(
-  files: SparkRulesFiles = sparkRulesFiles(),
-): Promise<void> {
+async function ensureBaseline(files: SparkRulesFiles): Promise<void> {
   if (await readAccepted(files.user)) return;
   const read = await readRulesFile(files.user);
-  if (read.kind !== 'unreadable') await recordAccepted(files, acceptedOf(read));
+  if (read.kind === 'unreadable') return;
+  await recordAccepted(files, acceptedFor(read, null) ?? acceptedOf(read));
 }
 
 export class StaleRulesError extends RulesFileError {}
@@ -180,11 +185,21 @@ function serialized<T>(work: () => Promise<T>): Promise<T> {
   return next;
 }
 
-function checkedHash(read: RulesFileRead, expectedHash: string | undefined, name: string) {
+export function acceptRulesBaseline(files: SparkRulesFiles = sparkRulesFiles()): Promise<void> {
+  return serialized(() => ensureBaseline(files));
+}
+
+const SHOWN = 'the card was shown';
+const REVIEWED = 'you reviewed it';
+
+function checkedHash(
+  read: RulesFileRead,
+  expectedHash: string | undefined,
+  name: string,
+  moment = SHOWN,
+) {
   if (expectedHash !== undefined && rulesTextHash(read) !== expectedHash) {
-    throw new StaleRulesError(
-      `${name} changed after the card was shown, so Spark changed nothing.`,
-    );
+    throw new StaleRulesError(`${name} changed after ${moment}, so Spark changed nothing.`);
   }
 }
 
@@ -201,7 +216,7 @@ export function changeSparkRules(
   expectedHash?: string,
 ): Promise<LoadedRules> {
   return serialized(async () => {
-    await acceptRulesBaseline(files);
+    await ensureBaseline(files);
     const loaded = await loadSparkRules(files);
     if (loaded.outside) throw new RulesFileError(OUTSIDE_CHANGE_REFUSAL);
     checkedHash(loaded.userFile, expectedHash, USER_RULES_NAME);
@@ -212,7 +227,7 @@ export function changeSparkRules(
   });
 }
 
-export type ManagedWrite = (file: string, text: string) => Promise<void>;
+export type ManagedWrite = (file: string, text: string, previousHash: string) => Promise<void>;
 
 export function changeManagedRules(
   files: SparkRulesFiles,
@@ -223,10 +238,8 @@ export function changeManagedRules(
   return serialized(async () => {
     const read = await readRulesFile(files.managed);
     checkedHash(read, expectedHash, basename(files.managed));
-    await write(
-      files.managed,
-      changedRulesText(currentText(read, basename(files.managed)), change),
-    );
+    const text = changedRulesText(currentText(read, basename(files.managed)), change);
+    await write(files.managed, text, rulesTextHash(read));
     return loadSparkRules(files);
   });
 }
@@ -237,18 +250,25 @@ export function acceptOutsideChange(
 ): Promise<LoadedRules> {
   return serialized(async () => {
     const read = await readRulesFile(files.user);
-    checkedHash(read, fileHash, USER_RULES_NAME);
+    checkedHash(read, fileHash, USER_RULES_NAME, REVIEWED);
     currentText(read, USER_RULES_NAME);
     await recordAccepted(files, acceptedOf(read));
     return loadSparkRules(files);
   });
 }
 
-export function restoreAcceptedRules(files: SparkRulesFiles): Promise<LoadedRules> {
+export function restoreAcceptedRules(
+  files: SparkRulesFiles,
+  fileHash: string,
+): Promise<LoadedRules> {
   return serialized(async () => {
-    const accepted = await readAccepted(files.user);
-    if (accepted?.text != null) await writeAtomically(files.user, accepted.text);
-    else if (accepted) await rm(files.user, { force: true });
+    const read = await readRulesFile(files.user);
+    checkedHash(read, fileHash, USER_RULES_NAME, REVIEWED);
+    const accepted = acceptedFor(read, await readAccepted(files.user));
+    if (!accepted) return loadSparkRules(files);
+    if (accepted.text === null) await rm(files.user, { force: true });
+    else await writeAtomically(files.user, accepted.text);
+    await recordAccepted(files, accepted);
     return loadSparkRules(files);
   });
 }
