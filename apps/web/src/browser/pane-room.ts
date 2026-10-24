@@ -1,4 +1,5 @@
 import { useLayoutEffect, useState, type RefObject } from 'react';
+import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 import { dockedRoom, overlayRoom, paneRange, type PaneRange } from './pane-width.ts';
 
 const PANE_EDGE = 8;
@@ -8,6 +9,12 @@ const CAP = '--wp-cap';
 export interface PaneMeasure {
   range: PaneRange;
   inset: number;
+  zoom: number;
+}
+
+function appZoom(): number {
+  const zoom = desktopBrowser()?.zoom?.();
+  return zoom !== undefined && Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
 }
 
 function pageInset(panel: HTMLElement): number {
@@ -32,11 +39,17 @@ function room(panel: HTMLElement): number {
 
 export function measurePane(panel: HTMLElement): PaneMeasure {
   const inset = pageInset(panel);
-  return { range: paneRange(room(panel), inset), inset };
+  const zoom = appZoom();
+  return { range: paneRange(room(panel), inset, zoom), inset, zoom };
 }
 
 function same(a: PaneMeasure, b: PaneMeasure): boolean {
-  return a.inset === b.inset && a.range.min === b.range.min && a.range.max === b.range.max;
+  return (
+    a.inset === b.inset &&
+    a.zoom === b.zoom &&
+    a.range.min === b.range.min &&
+    a.range.max === b.range.max
+  );
 }
 
 export function usePaneRoom(handle: RefObject<HTMLElement | null>, initial: PaneMeasure) {

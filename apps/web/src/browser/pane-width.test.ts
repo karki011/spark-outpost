@@ -4,6 +4,7 @@ import {
   PAGE_MIN_WIDTH,
   dockedRoom,
   overlayRoom,
+  pageWidth,
   paneRange,
   presetNotice,
   presetPaneWidth,
@@ -68,5 +69,29 @@ describe('page width presets', () => {
 
   it('accepts a preset that exactly fills the room', () => {
     expect(presetPaneWidth(1082, INSET, range)).toEqual({ ok: true, width: 1100 });
+  });
+});
+
+describe('page widths under app zoom', () => {
+  const zoom = 1.25;
+  const range = paneRange(1100, INSET, zoom);
+
+  it('reads the page width the shell gives the page, not the pane in app pixels', () => {
+    expect(pageWidth(330, INSET, zoom)).toBe(390);
+    expect(pageWidth(330, INSET, 1)).toBe(312);
+  });
+
+  it('keeps the smallest pane a 320 px page', () => {
+    expect(range.min).toBe(256 + INSET);
+    expect(pageWidth(range.min, INSET, zoom)).toBe(PAGE_MIN_WIDTH);
+  });
+
+  it('sizes a preset so the page gets that width at the zoom', () => {
+    expect(presetPaneWidth(390, INSET, range, zoom)).toEqual({ ok: true, width: 330 });
+    expect(presetPaneWidth(1280, INSET, range, zoom)).toEqual({ ok: true, width: 1042 });
+    expect(presetPaneWidth(1280, INSET, paneRange(1000, INSET, zoom), zoom)).toEqual({
+      ok: false,
+      widest: 1228,
+    });
   });
 });

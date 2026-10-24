@@ -7,7 +7,13 @@ import { usePopover } from '../ui/use-popover.ts';
 import { holdTransitions, releaseAfterPaint } from '../ui/width-drag.ts';
 import { PageWidthIcon } from './BrowserIcons.tsx';
 import { measurePane, type PaneMeasure } from './pane-room.ts';
-import { PAGE_WIDTH_PRESETS, presetNotice, presetPaneWidth, shownPaneWidth } from './pane-width.ts';
+import {
+  PAGE_WIDTH_PRESETS,
+  pageWidth,
+  presetNotice,
+  presetPaneWidth,
+  shownPaneWidth,
+} from './pane-width.ts';
 
 const ROW_HEIGHT = 36;
 const MENU_ITEMS = '[role="menuitemradio"]:not(:disabled)';
@@ -28,7 +34,7 @@ function measured(anchor: HTMLElement): Opened | null {
   if (!pane) return null;
   const measure = measurePane(pane);
   const shown = shownPaneWidth(pane.getBoundingClientRect().width, measure.range);
-  return { ...measure, page: shown - measure.inset, pane, anchor };
+  return { ...measure, page: pageWidth(shown, measure.inset, measure.zoom), pane, anchor };
 }
 
 export function PageWidthMenu({ setWidth, onNotice }: PageWidthMenuProps) {
@@ -66,8 +72,8 @@ export function PageWidthMenu({ setWidth, onNotice }: PageWidthMenuProps) {
     if (!opened) return;
     const { pane, anchor } = opened;
     anchor.focus();
-    const { range, inset } = measurePane(pane);
-    const fit = presetPaneWidth(page, inset, range);
+    const { range, inset, zoom } = measurePane(pane);
+    const fit = presetPaneWidth(page, inset, range, zoom);
     if (!fit.ok) {
       onNotice(presetNotice(page as number, fit.widest));
       return;
@@ -77,7 +83,7 @@ export function PageWidthMenu({ setWidth, onNotice }: PageWidthMenuProps) {
     releaseAfterPaint(release);
   };
 
-  const widest = opened ? opened.range.max - opened.inset : 0;
+  const widest = opened ? pageWidth(opened.range.max, opened.inset, opened.zoom) : 0;
   const items = [
     ...PAGE_WIDTH_PRESETS.map((page) => ({
       id: String(page),

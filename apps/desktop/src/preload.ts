@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, webFrame, webUtils, type IpcRendererEvent } from 'electron';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 import { applySeed } from './storage-seed.ts';
 import { hourCycleFromArgs } from './hour-cycle-arg.ts';
@@ -148,6 +148,7 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
       listen(IPC.browserSelectedText, callback),
     onShortcut: (callback: (event: unknown) => void) => listen(IPC.browserShortcut, callback),
     onFound: (callback: (found: unknown) => void) => listen(IPC.browserFound, callback),
+    zoom: () => webFrame.getZoomFactor(),
   },
   browserView: {
     state: (profile: string) => ipcRenderer.invoke(IPC.browserViewState, profile),

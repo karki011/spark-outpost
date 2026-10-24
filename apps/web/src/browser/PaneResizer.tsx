@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { PanelResizer } from '../ui/PanelResizer.tsx';
 import type { PanelWidthLimits } from '../ui/panel-width.ts';
 import { usePaneRoom } from './pane-room.ts';
-import { PANE_BIG_STEP, PANE_STEP, paneRange, shownPaneWidth } from './pane-width.ts';
+import { PANE_BIG_STEP, PANE_STEP, pageWidth, paneRange, shownPaneWidth } from './pane-width.ts';
 
 const READOUT_MS = 1200;
 const READOUT_GAP = 8;
@@ -54,13 +54,14 @@ function useReadout(handle: RefObject<HTMLElement | null>) {
 
 export function PaneResizer({ label, page, width, limits, onWidth }: PaneResizerProps) {
   const handle = useRef<HTMLDivElement>(null);
-  const { range, inset } = usePaneRoom(handle, {
+  const { range, inset, zoom } = usePaneRoom(handle, {
     range: paneRange(limits.max, 0),
     inset: 0,
+    zoom: 1,
   });
   const shown = shownPaneWidth(width ?? limits.fallback, range);
   const [readout, showPage] = useReadout(handle);
-  const pageOf = (pane: number) => pane - inset;
+  const pageOf = (pane: number) => pageWidth(pane, inset, zoom);
   const changed = useRef(width);
 
   useEffect(() => {
