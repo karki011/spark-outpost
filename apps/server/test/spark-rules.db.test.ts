@@ -11,6 +11,7 @@ import {
 } from '../src/persistence/approvals.ts';
 import { listQueue } from '../src/persistence/chat-queue.ts';
 import {
+  answerOutsideChange,
   saveSparkRules,
   seedWorkspaceRules,
   sparkRules,
@@ -225,6 +226,10 @@ describe('the refused card', () => {
 
 describe("Spark's rules file", () => {
   const userFile = () => process.env.SPARK_RULES_FILE!;
+  const acceptFile = async () => {
+    const change = (await sparkRules(t.db, t.workspaceId)).outsideChange!;
+    await answerOutsideChange(t.db, t.workspaceId, { keep: 'file', fileHash: change.fileHash });
+  };
   const fileRules = async () =>
     JSON.parse(await readFile(userFile(), 'utf8')) as { permissions: Record<string, string[]> };
 
@@ -261,6 +266,7 @@ describe("Spark's rules file", () => {
     await seedWorkspaceRules(t.db, t.workspaceId);
     const text = await readFile(userFile(), 'utf8');
     await writeFile(userFile(), text.replace('"Gh(*)"', '"Gh(issue create)"'));
+    await acceptFile();
     const run = await doRun(t, root);
     const { gate } = gateFor(run.runId, 'bypassPermissions');
     const answer = await gate.review(commandRequest(root, RELEASE), signal());
@@ -270,13 +276,35 @@ describe("Spark's rules file", () => {
   it('reports what it could not use and keeps the recommended rules for a broken file', async () => {
     await seedWorkspaceRules(t.db, t.workspaceId);
     await writeFile(userFile(), '{ "permissions": { "deny": ["Push", "Nope"] }, "theme": 1 }');
+    await acceptFile();
     expect((await sparkRules(t.db, t.workspaceId)).problems).toEqual([
       `settings.json: "theme" is kept but Spark doesn't use it`,
       `settings.json: "Nope" in deny isn't a Spark rule, so it is not applied`,
     ]);
     await writeFile(userFile(), '{ nope');
+    await acceptFile();
     const run = await doRun(t, root);
     const { answer } = await refusedCard(run, RELEASE);
     expect(answer).toMatchObject({ allowed: false });
+  });
+
+  it('keeps the accepted rules in the gate until the user reviews a change made outside Spark', async () => {
+    await seedWorkspaceRules(t.db, t.workspaceId);
+    const text = await readFile(userFile(), 'utf8');
+    await writeFile(userFile(), text.replace('"Gh(*)"', '"Gh(issue create)"'));
+    const view = await sparkRules(t.db, t.workspaceId);
+    expect(view.outsideChange).toMatchObject({
+      added: [{ effect: 'deny', rule: 'Gh(issue create)' }],
+      removed: [{ effect: 'deny', rule: 'Gh(*)' }],
+    });
+    const run = await doRun(t, root);
+    const { answer } = await refusedCard(run, RELEASE);
+    expect(answer).toMatchObject({ allowed: false });
+    const kept = await answerOutsideChange(t.db, t.workspaceId, {
+      keep: 'spark',
+      fileHash: view.outsideChange!.fileHash,
+    });
+    expect(kept.outsideChange).toBeUndefined();
+    expect(await readFile(userFile(), 'utf8')).toBe(text);
   });
 });

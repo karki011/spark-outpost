@@ -3,6 +3,8 @@ import {
   GH_ALLOWED_MAX,
   WORKFLOW_PREFIXES,
   type GhRuleChoice,
+  type OutsideChangeAnswer,
+  type OutsideChangeView,
   type SparkRules,
 } from '@spark-outpost/contracts';
 import { normalizeCommand } from '../approvals/commands.ts';
@@ -10,9 +12,19 @@ import type { SparkRuleContext } from '../approvals/gh-rules.ts';
 import { WORKFLOW_RULES, type GhSeed } from '../spark-rules/recommended.ts';
 import { ghCommandRuling } from '../spark-rules/resolve.ts';
 import { ghPrefixOfRule, ghRuleId } from '../spark-rules/rule-ids.ts';
-import type { RuleChange, RuleEffect } from '../spark-rules/rules-file.ts';
+import { listsDiff } from '../spark-rules/rule-diff.ts';
 import {
+  NO_RULE_LISTS,
+  parseRulesFile,
+  type RuleChange,
+  type RuleEffect,
+  type RuleLists,
+} from '../spark-rules/rules-file.ts';
+import {
+  acceptOutsideChange,
   changeSparkRules,
+  restoreAcceptedRules,
+  type RulesFileRead,
   loadSparkRules,
   seedSparkRules,
   sparkRulesFiles,
@@ -31,7 +43,7 @@ function seedOf(row: SeedRow | undefined): GhSeed {
   return { workflows: row.gh_workflows, ghAllowed: row.gh_allowed };
 }
 
-async function ghSeed(db: Queryable, workspaceId: string): Promise<GhSeed> {
+export async function ghSeed(db: Queryable, workspaceId: string): Promise<GhSeed> {
   const { rows } = await db.query<SeedRow>(
     'SELECT gh_workflows, gh_allowed FROM profiles WHERE workspace_id = $1',
     [workspaceId],
@@ -46,8 +58,24 @@ function allowedPrefixes(loaded: LoadedRules): string[] {
   });
 }
 
+function listsOf(read: RulesFileRead): RuleLists {
+  if (read.kind !== 'text') return NO_RULE_LISTS;
+  return parseRulesFile(read.text).lists;
+}
+
+function outsideView(loaded: LoadedRules): OutsideChangeView | null {
+  if (!loaded.outside) return null;
+  const accepted: RulesFileRead =
+    loaded.outside.accepted === null
+      ? { kind: 'missing' }
+      : { kind: 'text', text: loaded.outside.accepted };
+  const diff = listsDiff(listsOf(accepted), listsOf(loaded.userFile));
+  return { fileHash: loaded.outside.fileHash, added: diff.add, removed: diff.remove };
+}
+
 function settingsView(loaded: LoadedRules): SparkRules {
   const workflow = ghCommandRuling(loaded.rules, WORKFLOW_PREFIXES[0]);
+  const outside = outsideView(loaded);
   const problems = loaded.problems.map(
     (problem) =>
       `${problem.file === 'managed' ? 'managed-settings.json' : 'settings.json'}: ${problem.message}`,
@@ -56,6 +84,7 @@ function settingsView(loaded: LoadedRules): SparkRules {
     workflows: workflow?.effect === 'deny' ? 'refused' : 'mode',
     ghAllowed: allowedPrefixes(loaded),
     ...(problems.length > 0 ? { problems } : {}),
+    ...(outside ? { outsideChange: outside } : {}),
   };
 }
 
@@ -133,6 +162,20 @@ export async function allowGhPrefix(
     return fits ? allowedChange(loaded, [...new Set([...current, prefix])]) : {};
   });
   return fits && allowedPrefixes(saved).includes(prefix);
+}
+
+export async function answerOutsideChange(
+  db: Queryable,
+  workspaceId: string,
+  answer: OutsideChangeAnswer,
+  files: SparkRulesFiles = sparkRulesFiles(),
+): Promise<SparkRules> {
+  const gh = await ghSeed(db, workspaceId);
+  const loaded =
+    answer.keep === 'file'
+      ? await acceptOutsideChange(files, gh, answer.fileHash)
+      : await restoreAcceptedRules(files, gh);
+  return settingsView(loaded);
 }
 
 interface RunRulesRow extends SeedRow {

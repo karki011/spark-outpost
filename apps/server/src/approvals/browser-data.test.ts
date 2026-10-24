@@ -174,13 +174,27 @@ describe("Spark's own rules file is refused to chats in every mode", () => {
     expect(await verdicts(edit)).toEqual(refused);
   });
 
-  it('gives Claude read and edit deny rules for the file and its marker', () => {
+  it('gives Claude read and edit deny rules for the files, the marker and the accepted copy', () => {
+    const managed = process.env.SPARK_MANAGED_RULES_FILE!;
     expect(sparkRulesFlagRules(DATA)).toEqual([
       `Read(/${DATA}/spark/settings.json)`,
       `Edit(/${DATA}/spark/settings.json)`,
       `Read(/${DATA}/spark/.settings-seeded)`,
       `Edit(/${DATA}/spark/.settings-seeded)`,
+      `Read(/${DATA}/spark/.settings-accepted.json)`,
+      `Edit(/${DATA}/spark/.settings-accepted.json)`,
+      `Read(/${managed})`,
+      `Edit(/${managed})`,
     ]);
+  });
+
+  it('refuses the company file and the accepted copy too', async () => {
+    const managed = process.env.SPARK_MANAGED_RULES_FILE!;
+    expect(await verdicts(request({ command: `cat '${managed}'` }))).toEqual(refused);
+    const edit = request({ kind: 'edit', toolKind: 'edit', paths: [managed] });
+    expect(await verdicts(edit)).toEqual(refused);
+    const accepted = `echo x > "${DATA}/spark/.settings-accepted.json"`;
+    expect(await verdicts(request({ command: accepted }))).toEqual(refused);
   });
 
   it('leaves the chats folder beside it alone', async () => {

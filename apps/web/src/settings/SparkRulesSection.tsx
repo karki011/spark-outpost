@@ -16,6 +16,7 @@ import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { LockIcon } from '../ui/icons.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
+import { RulesOutsideNotice } from './RulesOutsideNotice.tsx';
 import { SettingRow } from './SettingRow.tsx';
 
 export const READ_LABEL = 'Read anything';
@@ -232,6 +233,7 @@ export function SparkRulesSection() {
       <QueryWait query={rules} what="Spark rules">
         <Skeleton label="Loading Spark rules" rows={4} />
       </QueryWait>
+      {rules.data?.outsideChange && <RulesOutsideNotice change={rules.data.outsideChange} />}
       {rules.data && <RulesRows rules={rules.data} />}
     </>
   );

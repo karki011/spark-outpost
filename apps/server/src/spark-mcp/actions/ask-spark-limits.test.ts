@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Approval } from '@spark-outpost/contracts';
 import { EVERYTHING_AVAILABLE } from '../availability.ts';
 import { CHAT_TURN_ONLY, sparkToolsFor } from '../server.ts';
+import { macOnlyCard } from '../../remote/policy.ts';
 import { ASK_SPARK_REFUSALS, askedToAnswer, cardRefusal, namesChat } from './ask-spark-limits.ts';
 
 const TITLE = 'deploy';
@@ -43,6 +44,30 @@ describe('cardRefusal', () => {
     expect(
       cardRefusal(card({ payload: { ...payload, sparkAction: mac } as never }), chat('c'), 'a'),
     ).toBe(ASK_SPARK_REFUSALS.macOnly);
+  });
+
+  it('never answers a card that changes Spark rules, which only the Mac answers', () => {
+    const rules = {
+      action: 'rules_edit',
+      target: 'user',
+      add: [{ effect: 'allow', rule: 'Gh(release create)' }],
+      remove: [],
+      fileHash: 'h',
+      agent: 'Claude',
+      modeName: 'Auto',
+      provider: 'claude',
+      agentMode: 'auto',
+      sessionRow: null,
+    };
+    const payload = { ...card().payload, sparkAction: rules };
+    expect(cardRefusal(card({ payload } as never), chat('c'), 'a')).toBe(ASK_SPARK_REFUSALS.rules);
+    expect(macOnlyCard(payload)).toBe(true);
+  });
+
+  it('never offers spark_rules_edit to Ask Spark', () => {
+    expect(CHAT_TURN_ONLY.has('spark_rules_edit')).toBe(true);
+    const names = sparkToolsFor({ assistant: true }, EVERYTHING_AVAILABLE).map((tool) => tool.name);
+    expect(names).not.toContain('spark_rules_edit');
   });
 
   it('leaves a ServiceNow comment or resolve card with the user, but not a work note', () => {

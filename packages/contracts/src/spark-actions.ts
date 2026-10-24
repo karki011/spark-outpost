@@ -14,6 +14,7 @@ import {
   updateMcpServerActionSchema,
 } from './spark-mcp-actions.ts';
 import { SLACK_POST_TEXT_MAX, slackChannelIdSchema } from './slack.ts';
+import { rulesEditActionSchema, rulesEditLabels, rulesEditQuestion } from './spark-rules-edit.ts';
 import {
   calendarEditActionSchema,
   calendarEditQuestion,
@@ -233,6 +234,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   startOutpostActionSchema,
   askSparkActionSchema,
   publishArtifactActionSchema,
+  rulesEditActionSchema,
 ]);
 export type SparkAction = z.infer<typeof sparkActionSchema>;
 export type SparkActionName = SparkAction['action'];
@@ -286,6 +288,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   start_outpost: [],
   ask_spark: [],
   publish_artifact: [],
+  rules_edit: [],
 };
 
 export function editableFields(action: SparkActionName): readonly (keyof SparkActionEdits)[] {
@@ -409,6 +412,7 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
   ...startOutpostLabels,
   ...askSparkLabels,
   ...publishArtifactLabels,
+  ...rulesEditLabels,
 };
 
 const SLACK_POST_AS_YOU_QUESTION = 'Post this to Slack as you?';
@@ -421,6 +425,7 @@ export function sparkActionQuestion(action: SparkAction): string {
   if (action.action === 'mac_act') return `Let the agent press buttons and menus in ${action.app}?`;
   if (action.action === 'mac_press') return `Press ${action.what} in ${action.app}?`;
   if (action.action === 'calendar_edit') return calendarEditQuestion(action);
+  if (action.action === 'rules_edit') return rulesEditQuestion(action);
   return (
     atlassianQuestion(action) ??
     serviceNowQuestion(action) ??

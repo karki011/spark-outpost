@@ -7,12 +7,14 @@ import {
   isAtlassianAction,
   isCalendarAction,
   isServiceNowAction,
+  rulesEditAuditFacts,
   serviceNowAuditFacts,
   SPARK_ACTION_OPTION,
   sparkActionLabels,
   sparkActionQuestion,
   sparkResultFinished,
   type Approval,
+  type ApprovalOption,
   type SparkAction,
 } from '@spark-outpost/contracts';
 import { redactValue } from '../../audit/redact.ts';
@@ -75,6 +77,7 @@ async function quietly(work: Promise<unknown>): Promise<void> {
 
 function cardTitle(action: SparkAction): string {
   if (action.action === 'ask_spark') return action.summary;
+  if (action.action === 'rules_edit') return sparkActionQuestion(action);
   const question = sparkActionQuestion(action);
   if (
     action.action === 'browser_sign_in' ||
@@ -130,14 +133,32 @@ export interface CardPlan {
   secretSend?: readonly string[];
   confirmName?: string;
   declineName?: string;
+  options?: readonly ApprovalOption[];
+}
+
+function cardOptions(action: SparkAction, plan: CardPlan): ApprovalOption[] {
+  if (plan.options) return [...plan.options];
+  return [
+    {
+      optionId: SPARK_ACTION_OPTION.confirm,
+      name: plan.confirmName ?? sparkActionLabels[action.action].confirm,
+      kind: 'allow_once',
+    },
+    {
+      optionId: SPARK_ACTION_OPTION.decline,
+      name: plan.declineName ?? 'Don’t',
+      kind: 'reject_once',
+    },
+  ];
 }
 
 export async function postCard(
   db: Queryable,
   run: ActionRun,
   action: SparkAction,
-  { path, requested, observed, secretSend, confirmName, declineName }: CardPlan,
+  plan: CardPlan,
 ): Promise<Approval> {
+  const { path, requested, observed, secretSend } = plan;
   const card = await insertApproval(
     db,
     {
@@ -158,18 +179,7 @@ export async function postCard(
         ...(observed.length > 0 ? { observed: [...observed] } : {}),
         ...(secretSend && secretSend.length > 0 ? { secretSend: [...secretSend] } : {}),
       },
-      options: [
-        {
-          optionId: SPARK_ACTION_OPTION.confirm,
-          name: confirmName ?? sparkActionLabels[action.action].confirm,
-          kind: 'allow_once',
-        },
-        {
-          optionId: SPARK_ACTION_OPTION.decline,
-          name: declineName ?? 'Don’t',
-          kind: 'reject_once',
-        },
-      ],
+      options: cardOptions(action, plan),
       reason: null,
     },
     path === 'perform'
@@ -196,6 +206,7 @@ export function auditedAction(action: SparkAction): unknown {
   if (action.action === 'servicenow_read' || action.action === 'servicenow_edit') {
     return serviceNowAuditFacts(action);
   }
+  if (action.action === 'rules_edit') return rulesEditAuditFacts(action);
   return action;
 }
 
@@ -242,6 +253,9 @@ function finished(approval: Approval) {
 
 export interface ProposeOptions {
   alwaysAsk?: boolean;
+  path?: ActionPath;
+  options?: readonly ApprovalOption[];
+  audit?: Record<string, unknown>;
   sendsTo?: string | null;
   sendSubject?: string;
   confirmName?: string;
@@ -269,11 +283,13 @@ export async function proposeAction(
   }
   const observed = (await run.scope.observations?.labels()) ?? [];
   const facts = await actionFacts(context.deps.db, run.runId, action.action);
-  const path = options.alwaysAsk
-    ? 'confirm'
-    : assistant
-      ? await assistantPath(context.deps.db, run.scope.workspaceId, run.runId, action)
-      : actionPath(facts);
+  const path = options.path
+    ? options.path
+    : options.alwaysAsk
+      ? 'confirm'
+      : assistant
+        ? await assistantPath(context.deps.db, run.scope.workspaceId, run.runId, action)
+        : actionPath(facts);
   const failedBefore = await lastFailedAttempt(
     context.deps.db,
     run.scope.conversationId,
@@ -285,9 +301,14 @@ export async function proposeAction(
     observed,
     ...(options.confirmName ? { confirmName: options.confirmName } : {}),
     ...(options.declineName ? { declineName: options.declineName } : {}),
+    ...(options.options ? { options: options.options } : {}),
   });
   if (path === 'confirm') {
-    auditAction(run, action, { outcome: 'waiting_for_user', approvalId: card.id });
+    auditAction(run, action, {
+      outcome: 'waiting_for_user',
+      approvalId: card.id,
+      ...options.audit,
+    });
     return {
       outcome: 'waiting_for_user',
       approvalId: card.id,
@@ -298,6 +319,7 @@ export async function proposeAction(
   auditAction(run, action, {
     outcome: 'performing',
     approvalId: card.id,
+    ...options.audit,
     ...(isCalendarAction(action.action) ||
     isAtlassianAction(action.action) ||
     isServiceNowAction(action.action)

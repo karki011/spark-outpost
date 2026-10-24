@@ -1,0 +1,16 @@
+.sac-rules {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  font: 12.5px/1.7 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+.sac-rule-add {
+  color: var(--success);
+}
+.sac-rule-del {
+  color: var(--danger);
+}

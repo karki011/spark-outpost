@@ -5,7 +5,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_SPARK_RULES } from '@spark-outpost/contracts';
 import { RECOMMENDED_RULES, recommendedRulesText } from './recommended.ts';
 import { RulesFileError } from './rules-file.ts';
+import { rulesTextHash } from './accepted.ts';
 import {
+  acceptOutsideChange,
   changeSparkRules,
   loadSparkRules,
   MANAGED_RULES_FILE,
@@ -29,6 +31,11 @@ afterEach(async () => {
 });
 
 const userText = () => readFile(files.user, 'utf8');
+const accept = async () => {
+  const text = await readFile(files.user, 'utf8').catch(() => null);
+  const read = text === null ? { kind: 'missing' as const } : { kind: 'text' as const, text };
+  await acceptOutsideChange(files, gh, rulesTextHash(read));
+};
 const denied = async () => (await loadSparkRules(files, gh)).rules.user.deny;
 
 describe('where the files live', () => {
@@ -59,6 +66,7 @@ describe('seeding', () => {
     await seedSparkRules(files, gh);
     const edited = (await userText()).replace('"Push",', '');
     await writeFile(files.user, edited);
+    await accept();
     await seedSparkRules(files, gh);
     expect(await denied()).not.toContain('Push');
   });
@@ -66,6 +74,7 @@ describe('seeding', () => {
   it('never writes the file again after the user deleted it', async () => {
     await seedSparkRules(files, gh);
     await rm(files.user);
+    await accept();
     expect(await seedSparkRules(files, gh)).toBe(false);
     expect((await loadSparkRules(files, gh)).rules.user.deny).toEqual([]);
   });
@@ -81,6 +90,7 @@ describe('a broken file', () => {
   it('fails safe to the recommended rules and reports it', async () => {
     await seedSparkRules(files, gh);
     await writeFile(files.user, '{ "permissions": { "deny": "Push" } }');
+    await accept();
     const loaded = await loadSparkRules(files, gh);
     expect(loaded.rules.user).toEqual(RECOMMENDED_RULES.user);
     expect(loaded.problems).toEqual([
@@ -111,6 +121,7 @@ describe('changes', () => {
     await seedSparkRules(files, gh);
     const seeded = JSON.parse(await userText());
     await writeFile(files.user, JSON.stringify({ ...seeded, note: 'mine' }));
+    await accept();
     const loaded = await changeSparkRules(files, gh, () => ({
       add: [['allow', 'Gh(release create)']],
     }));

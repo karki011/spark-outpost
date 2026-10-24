@@ -6,7 +6,7 @@ order: 616
 summary: The hard rails - what always asks or is refused in a chat, in every agent mode and at both autonomy levels.
 ---
 
-These hold in every chat, agent mode and autonomy level, not in [Terminal sessions](terminals.md), with Spark's recommended [rules](#spark-rules).
+These hold in every chat, mode and autonomy level, not [Terminal sessions](terminals.md), under Spark's recommended [rules](#spark-rules).
 
 ## What always asks
 
@@ -26,10 +26,10 @@ Where a mode runs commands unasked, changes are [flagged](approvals.md#actions-t
 
 ## What is always refused
 
-- Pushing any branch, the base branch included, but the chat's `spark/` or [adopted pull request branch](where-spark-works.md#work-on-a-pull-request).
+- Pushing any branch but the chat's `spark/` or [adopted pull request branch](where-spark-works.md#work-on-a-pull-request).
 - Plain `--force`, `+refspec`, mirror and default-branch force pushes.
 - Changing remotes.
-- Reading, copying or changing Spark's browser data: Browser profiles, **Personal** included, sign-in storage and the history database.
+- Reading, copying or changing Spark's browser data: profiles, **Personal** included, sign-ins and history.
 - Your ChatGPT or Claude account's own apps and connectors in a chat; add MCP servers in Spark instead.
 - Merging a pull request, approving or dismissing reviews, `--admin`, `gh api` writes and `gh auth`.
 
@@ -39,7 +39,7 @@ A blocked step reads "Refused gh pr create — …", unlike your own **Deny**. A
 
 Spark keeps its rules in `settings.json` in its data folder, written once with recommended rules. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.
 
-Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then ask. A rule in no list, or in allow, is left to the agent's mode, unflagged. A broken file means recommended rules.
+Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then ask. Other rules follow the agent's mode, unflagged. A broken file means recommended rules.
 
 | Rule                                                                              | Covers                                                                         | Recommended  |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------ |
@@ -50,9 +50,15 @@ Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then a
 | `SecretFile(edit)`, `SecretFile(read)`                                            | Secret files; `.sparkignore` reads                                             | ask          |
 | `Push(force)`, `InstructionFile(edit)`, `GitConfig`, `WriteOutside`, `SecretSend` | Their rows above                                                               | ask          |
 
-Fixed: agents can't touch these files or Spark's ports; Mac control, Browser pane, Calendar, web address and always-refused rules stay.
+Fixed: agents can't touch these files directly or reach Spark's ports; Mac control, Browser pane, Calendar, web address and always-refused rules stay.
 
-**Settings → Spark rules** edits the `Gh` rules. Following the mode: at once in **Auto**, **Bypass permissions**, **Approve for me** and **Full access**; a card otherwise. A refusal shows a [card](cards.md#around-the-result).
+**Settings → Spark rules** edits the `Gh` rules, which follow the mode like [actions](spark-tools.md#when-actions-ask-first). A refusal shows a [card](cards.md#around-the-result).
+
+### Let an agent change the rules
+
+`spark_rules_edit` always asks on the Mac; **Allow for this session** lasts until the agent or mode changes. The company file needs an admin password too.
+
+Edits made outside Spark wait for your **Review**.
 
 ## Secret files
 
@@ -62,13 +68,13 @@ Fixed: agents can't touch these files or Spark's ports; Mac control, Browser pan
 | Keys             | SSH keys (`id_rsa`, `id_ed25519`), `*.pem`, `*.key`, `*.p12`, `*.pfx`                          |
 | Credential files | `.npmrc`, `.netrc`, `.pgpass`, `.pypirc`, `.git-credentials`, `credentials` files, `api-token` |
 
-Scripts that only read one follow your mode; ones that change files ask, as do shell scripts, `--env-file` and `source`. Ship leaves these out of commits.
+Scripts that only read one follow your mode; ones that change files ask, as do shell scripts, `--env-file` and `source`. Ship never commits them.
 
 ## When an agent may publish
 
 An agent may push the chat's own branch and open its pull request only when:
 
-- your message asks, such as "open a PR" or "push it" ("push it, but don't open a PR" allows only the push);
+- your message asks, such as "open a PR" or "push it" (which allows only the push);
 - the chat is at **Full auto → PR**;
 - the agent's mode is **Auto**, **Bypass permissions** or **Full access**;
 - the turn fixes [feedback](pr-follow-up.md) on the chat's own open pull request.

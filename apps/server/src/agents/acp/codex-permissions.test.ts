@@ -41,8 +41,15 @@ describe('codexPermissionProfiles', () => {
         '/nowhere/Spark Outpost/browser-origins.json': 'deny',
       });
       expect(profile.filesystem).not.toHaveProperty('/nowhere/Spark Outpost');
+      expect(profile.filesystem).toMatchObject({
+        '/nowhere/Spark Outpost/spark/.settings-accepted.json': 'deny',
+        [process.env.SPARK_MANAGED_RULES_FILE!]: 'deny',
+      });
     }
     const plain = codexPermissionProfiles(null) as Record<string, Profile>;
-    expect(Object.keys(plain.agent!.filesystem)).toEqual([':project_roots']);
+    expect(Object.keys(plain.agent!.filesystem)).toEqual([
+      ':project_roots',
+      process.env.SPARK_MANAGED_RULES_FILE,
+    ]);
   });
 });

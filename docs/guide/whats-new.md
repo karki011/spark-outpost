@@ -12,8 +12,7 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 
 | What changed                                                                                                                     | What to do                                                                 |
 | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Spark's rules live in `settings.json` in its data folder, matching what Spark did before.                                        | Edit it as in [Spark rules](protected-paths.md#spark-rules).               |
-| A refused step says what and why, such as "Refused gh pr create — …".                                                            | Nothing.                                                                   |
-| Reads such as `gh -R owner/repo pr checks 5` aren't refused as publishing.                                                       | Nothing.                                                                   |
+| Spark's rules live in `settings.json`; agents ask to change them on a card.                                                      | See [Spark rules](protected-paths.md#spark-rules).                         |
+| A refused step says what and why, such as "Refused gh pr create — …"; `gh -R owner/repo pr checks 5` is a read.                  | Nothing.                                                                   |
 | **Needs sign-in** clears once a test passes or you sign in again.                                                                | Nothing.                                                                   |
 | **Good result** and **Bad result** show once per chat, under the turn that opened its pull request, instead of after every turn. | Rate that turn when you want to; turns without a pull request ask nothing. |

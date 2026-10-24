@@ -1,7 +1,13 @@
 import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import { sparkDataDir } from '../config.ts';
-import { SEEDED_MARKER, sparkChannel, USER_RULES_NAME } from '../spark-rules/rules-store.ts';
+import { ACCEPTED_RECORD } from '../spark-rules/accepted.ts';
+import {
+  SEEDED_MARKER,
+  sparkChannel,
+  sparkRulesFiles,
+  USER_RULES_NAME,
+} from '../spark-rules/rules-store.ts';
 import { commandTree, treeWords } from './command-tree.ts';
 import { resolveCommandPath } from './commands.ts';
 import type { ApprovalRequest } from './decide.ts';
@@ -38,11 +44,15 @@ export const BROWSER_DATA_ENTRIES = [
 ] as const;
 
 export const SPARK_RULES_REASON =
-  "Spark's own rules (settings.json in Spark's data folder) can't be read or changed by an agent; the user changes them";
+  "Spark's own rules (settings.json in Spark's data folder and the company's managed-settings.json) can't be read or changed by an agent directly; ask with spark_rules_edit and the user decides on a card";
 
 export function sparkRulesEntries(env: NodeJS.ProcessEnv = process.env): string[] {
   const channel = sparkChannel(env);
-  return [path.join(channel, USER_RULES_NAME), path.join(channel, SEEDED_MARKER)];
+  return [USER_RULES_NAME, SEEDED_MARKER, ACCEPTED_RECORD].map((name) => path.join(channel, name));
+}
+
+export function managedRulesFile(env: NodeJS.ProcessEnv = process.env): string {
+  return sparkRulesFiles(env).managed;
 }
 
 export function guardedDataEntries(): string[] {
@@ -117,8 +127,8 @@ export function globReachesBrowserData(
 }
 
 export function sparkRulesFlagRules(dataDir: string | null): string[] {
-  if (!dataDir) return [];
-  const patterns = sparkRulesEntries().map((entry) => `/${dataDir}/${entry}`);
+  const entries = dataDir ? sparkRulesEntries().map((entry) => `/${dataDir}/${entry}`) : [];
+  const patterns = [...entries, `/${managedRulesFile()}`];
   return patterns.flatMap((pattern) => [`Read(${pattern})`, `Edit(${pattern})`]);
 }
 
@@ -166,6 +176,12 @@ export function touchesBrowserData(request: ApprovalRequest, dataDir: string | n
   return dataDir !== null && touchesEntries(request, dataDir, BROWSER_DATA_ENTRIES, true);
 }
 
+function touchesManagedRules(request: ApprovalRequest): boolean {
+  const managed = managedRulesFile();
+  return touchesEntries(request, path.dirname(managed), [path.basename(managed)], false);
+}
+
 export function touchesSparkRules(request: ApprovalRequest, dataDir: string | null): boolean {
+  if (touchesManagedRules(request)) return true;
   return dataDir !== null && touchesEntries(request, dataDir, sparkRulesEntries(), false);
 }

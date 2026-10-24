@@ -23,6 +23,7 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   confluence: false,
   servicenow: false,
   ticket_create: false,
+  rules_edit: true,
 };
 
 export const SESSION_CASES = {

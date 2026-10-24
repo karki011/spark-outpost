@@ -174,6 +174,7 @@ POST /api/browser-history
 GET /api/browser-history
 POST /api/browser-history/clear
 PUT /api/spark-rules
+POST /api/spark-rules/outside-change
 GET /api/artifacts/:id/versions/:version/file
 GET /api/chat-files/:id/content
 GET /api/projects/:id/pull-requests/open

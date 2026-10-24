@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import {
+  outsideChangeAnswerSchema,
   sparkRuleAnswerRequestSchema,
   updateSparkRulesRequestSchema,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
-import { saveSparkRules, sparkRules } from '../persistence/spark-rules.ts';
+import { answerOutsideChange, saveSparkRules, sparkRules } from '../persistence/spark-rules.ts';
 import type { ResolveTarget } from '../workflow/queue-drain.ts';
 import { answerRuleCard } from '../workflow/spark-rule-cards.ts';
 import { resolveRunTarget } from './run-target.ts';
@@ -28,6 +29,11 @@ export function sparkRulesRoutes({ db, workspaceId, fixedRunProvider }: SparkRul
   router.put('/spark-rules', async (req, res) => {
     const update = parseBody(updateSparkRulesRequestSchema, req);
     res.json(await saveSparkRules(db, workspaceId, update));
+  });
+
+  router.post('/spark-rules/outside-change', async (req, res) => {
+    const answer = parseBody(outsideChangeAnswerSchema, req);
+    res.json(await answerOutsideChange(db, workspaceId, answer));
   });
 
   router.post('/approvals/:id/spark-rule', async (req, res) => {

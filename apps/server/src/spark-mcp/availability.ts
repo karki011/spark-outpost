@@ -1,6 +1,7 @@
 import { conversationProjectIds } from '../agent-config/store.ts';
 import { calendarOffer, meetingsOffer } from './tools/calendar/offered.ts';
 import { macRunRefusal, type MacRefusedRun } from '../mac-control/offered.ts';
+import { rulesRunRefusal, type RulesRefusedRun } from './actions/rules-edit-session.ts';
 import { listProjects } from '../projects/projects.ts';
 import { outpostNeeds } from '../outposts/outpost-availability.ts';
 import { gitHubStatus } from '../ship/github/access.ts';
@@ -39,6 +40,7 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   confluence: true,
   servicenow: true,
   ticket_create: true,
+  rules_edit: true,
 };
 
 async function chatHasProject(deps: SparkToolDeps, scope: SparkScope): Promise<boolean> {
@@ -54,6 +56,11 @@ const MAC_HOW_TO: Partial<Record<MacRefusedRun, string>> = {
   off: 'spark_mac_* (turn on Let agents control other Mac apps in Settings → Mac control and allow Accessibility)',
   voice: 'spark_mac_* (never for a spoken question; type it instead)',
   remote: 'spark_mac_* (not in a turn started from a paired device; ask from the Mac)',
+};
+
+const RULES_HOW_TO: Partial<Record<RulesRefusedRun, string>> = {
+  voice: 'spark_rules_edit (never for a spoken message; type it on the Mac)',
+  remote: 'spark_rules_edit (not in a turn started from a paired device; ask from the Mac)',
 };
 
 const ASK_SPARK_HOW_TO: Partial<Record<SparkToolNeed, string>> = {
@@ -74,21 +81,33 @@ export async function sparkAvailability(
   scope: SparkScope,
 ): Promise<SparkAvailability> {
   const tickets = ticketDepsFor(deps, scope);
-  const [sources, slack, project, outposts, macRefused, calendar, jira, confluence, meetings] =
-    await Promise.all([
-      connectedSources(tickets),
-      openSlack(slackDepsFor(deps, scope)),
-      scope.assistant ? anyProject(deps, scope) : chatHasProject(deps, scope),
-      outpostNeeds(deps.db, scope),
-      deps.mac ? macRunRefusal(deps.db, scope) : Promise.resolve(undefined),
-      calendarOffer(deps, scope),
-      productLive(tickets, 'jira'),
-      productLive(tickets, 'confluence'),
-      meetingsOffer(deps, scope),
-    ]);
+  const [
+    sources,
+    slack,
+    project,
+    outposts,
+    macRefused,
+    calendar,
+    jira,
+    confluence,
+    meetings,
+    rulesRefused,
+  ] = await Promise.all([
+    connectedSources(tickets),
+    openSlack(slackDepsFor(deps, scope)),
+    scope.assistant ? anyProject(deps, scope) : chatHasProject(deps, scope),
+    outpostNeeds(deps.db, scope),
+    deps.mac ? macRunRefusal(deps.db, scope) : Promise.resolve(undefined),
+    calendarOffer(deps, scope),
+    productLive(tickets, 'jira'),
+    productLive(tickets, 'confluence'),
+    meetingsOffer(deps, scope),
+    rulesRunRefusal(deps.db, scope),
+  ]);
   const gitHub = project ? await gitHubReach(deps, scope) : { connected: false, ownLogin: false };
   const chat = scope.assistant !== true;
   const macHowTo = macRefused ? MAC_HOW_TO[macRefused] : undefined;
+  const rulesHowTo = rulesRefused ? RULES_HOW_TO[rulesRefused] : undefined;
   return {
     tickets: sources.length > 0,
     ticket_create: sources.some((open) => open.connection.source !== 'servicenow'),
@@ -105,11 +124,13 @@ export async function sparkAvailability(
     meetings,
     jira,
     confluence,
+    rules_edit: rulesRefused === null,
     ...outposts,
     howTo: {
       ...(calendar.howTo.read ? { calendar_read: calendar.howTo.read } : {}),
       ...(calendar.howTo.edit ? { calendar_edit: calendar.howTo.edit } : {}),
       ...(macHowTo ? { mac: macHowTo } : {}),
+      ...(rulesHowTo ? { rules_edit: rulesHowTo } : {}),
       ...(chat ? {} : ASK_SPARK_HOW_TO),
     },
   };
@@ -131,6 +152,7 @@ const HOW_TO_GET: Record<
     | 'jira'
     | 'servicenow'
     | 'ticket_create'
+    | 'rules_edit'
   >,
   string
 > = {
