@@ -79,6 +79,7 @@ export interface DesktopBrowser {
   onSelectedText(callback: (selected: BrowserSelectedText) => void): Unsubscribe;
   onShortcut(callback: (event: unknown) => void): Unsubscribe;
   onFound(callback: (found: unknown) => void): Unsubscribe;
+  zoom?(): number;
 }
 
 export interface DesktopBrowserView {

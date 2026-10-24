@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
@@ -95,11 +96,30 @@ async function expectInMessageColumn(page: Page): Promise<void> {
   expect((await action.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(28);
 }
 
-async function reviewAndStart(page: Page): Promise<void> {
+async function expectSheetFits(page: Page, dialog: Locator): Promise<void> {
+  const title = dialog.locator('.op-draft-title').first();
+  await expect(title).toContainText('Usage endpoint');
+  const cut = await title.evaluate((node) => node.scrollWidth > node.clientWidth);
+  expect(cut).toBe(false);
+  const start = dialog.getByRole('button', { name: 'Start 1 chat' });
+  expect((await start.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(28);
+  const results = await new AxeBuilder({ page })
+    .include('[role="dialog"]')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze();
+  expect(results.violations.map((violation) => violation.id)).toEqual([]);
+}
+
+async function reviewAndStart(page: Page, shots: string): Promise<void> {
   await suggested(page).getByRole('button', { name: 'Review and start' }).click();
-  const dialog = sheet(page, `Add chats to ${NAME}`);
-  await dialog.getByRole('button', { name: /^Continue/ }).click();
-  await dialog.getByRole('button', { name: /^Start chats/ }).click();
+  const dialog = sheet(page, `Start 1 chat in ${NAME}`);
+  const start = dialog.getByRole('button', { name: 'Start 1 chat' });
+  await expect(start).toBeFocused();
+  await expect(dialog.getByRole('button', { name: /^Continue/ })).toHaveCount(0);
+  await expect(dialog.locator('.op-draft-message')).toContainText(TASK);
+  await expect(dialog).toContainText("First messages are sent as @lead's, not yours.");
+  await inBothThemes(page, shots, () => expectSheetFits(page, dialog));
+  await page.keyboard.press('Enter');
   await expect(dialog).toBeHidden({ timeout: TURN_TIMEOUT });
 }
 
@@ -112,7 +132,7 @@ test('suggested threads sit in the message column and Start opens the started ch
   await expect(suggested(page)).toContainText('Proposed 1 chat');
   await inBothThemes(page, 'suggested', () => expectInMessageColumn(page));
 
-  await reviewAndStart(page);
+  await reviewAndStart(page, 'sheet');
   const pane = threadPane(page, 'api');
   await expect(pane).toBeVisible({ timeout: TURN_TIMEOUT });
   await expect(pane).toContainText(TASK);
@@ -136,7 +156,7 @@ test('at phone width the box fits the column and Start lands on the started thre
   await expectNoSidewaysScroll(page);
   await inBothThemes(page, 'suggested-phone', () => expectInMessageColumn(page));
 
-  await reviewAndStart(page);
+  await reviewAndStart(page, 'sheet-phone');
   await expect(threadPane(page, 'api')).toBeVisible({ timeout: TURN_TIMEOUT });
   await expectNoSidewaysScroll(page);
 });

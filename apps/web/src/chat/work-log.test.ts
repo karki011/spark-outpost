@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { turnHeading } from './WorkLog.tsx';
+import { loggedSteps, turnHeading } from './WorkLog.tsx';
 import type { StepView } from './run-projection.ts';
 
 const steps = (count: number): StepView[] =>
@@ -41,5 +41,16 @@ describe('turnHeading', () => {
     expect(turnHeading(steps(1), 'working', null)).toBe('1 step');
     expect(turnHeading(steps(4), 'stopped', 12)).toBe('4 steps');
     expect(turnHeading(steps(2), 'done', null)).toBe('2 steps');
+  });
+});
+
+describe('loggedSteps', () => {
+  it("leaves out the gate's allowed notes, including ones earlier runs stored", () => {
+    const names = loggedSteps([
+      { name: 'Read `a.ts`', done: true },
+      { name: 'Allowed `pnpm test` (Bypass permissions mode)', done: true },
+      { name: 'Allowed `ls` (you allowed it)', done: true },
+    ]).map((step) => step.name);
+    expect(names).toEqual(['Read `a.ts`']);
   });
 });

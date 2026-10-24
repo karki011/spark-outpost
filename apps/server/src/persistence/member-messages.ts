@@ -3,6 +3,7 @@ import type {
   MemberMessageStatus,
   MemberMessageUrgency,
 } from '@spark-outpost/contracts';
+import type { ShotAnchor } from './browser-screenshots.ts';
 import type { Queryable } from './db.ts';
 
 interface MemberMessageRow {
@@ -15,6 +16,9 @@ interface MemberMessageRow {
   created_at: Date;
   delivered_at: Date | null;
   delivered_run_id: string | null;
+  delivered_text_offset: number | null;
+  delivered_text_before: string | null;
+  delivered_text_held: number | null;
 }
 
 export interface NewMemberMessage {
@@ -38,6 +42,9 @@ function toMemberMessage(row: MemberMessageRow): MemberMessage {
     createdAt: row.created_at.toISOString(),
     deliveredAt: row.delivered_at ? row.delivered_at.toISOString() : null,
     deliveredRunId: row.delivered_run_id,
+    textOffset: row.delivered_text_offset,
+    textBefore: row.delivered_text_before,
+    textHeld: row.delivered_text_held,
   };
 }
 
@@ -92,14 +99,23 @@ export async function claimMemberMessages(
   runId: string,
   topRunId: string,
   urgentOnly: boolean,
+  anchor: ShotAnchor | null = null,
 ): Promise<MemberMessage[]> {
   const { rows } = await db.query<MemberMessageRow>(
-    `UPDATE member_messages SET status = 'delivered', delivered_at = now(), delivered_run_id = $1
+    `UPDATE member_messages SET status = 'delivered', delivered_at = now(), delivered_run_id = $1,
+       delivered_text_offset = $4, delivered_text_before = $5, delivered_text_held = $6
      WHERE status = 'queued'
        AND (run_id = $1 OR (urgency = 'now' AND run_id = $2))
        AND ($3::boolean IS FALSE OR urgency = 'now')
      RETURNING *`,
-    [runId, topRunId, urgentOnly],
+    [
+      runId,
+      topRunId,
+      urgentOnly,
+      anchor?.textOffset ?? null,
+      anchor?.textBefore ?? null,
+      anchor?.textHeld ?? null,
+    ],
   );
   return inOrder(rows);
 }
@@ -112,7 +128,10 @@ export async function setMemberMessageStatus(
   if (ids.length === 0) return;
   await db.query(
     `UPDATE member_messages SET status = $2,
-       delivered_at = CASE WHEN $2 = 'queued' THEN NULL ELSE delivered_at END
+       delivered_at = CASE WHEN $2 = 'queued' THEN NULL ELSE delivered_at END,
+       delivered_text_offset = CASE WHEN $2 = 'queued' THEN NULL ELSE delivered_text_offset END,
+       delivered_text_before = CASE WHEN $2 = 'queued' THEN NULL ELSE delivered_text_before END,
+       delivered_text_held = CASE WHEN $2 = 'queued' THEN NULL ELSE delivered_text_held END
      WHERE id = ANY($1::uuid[])`,
     [ids, status],
   );
@@ -129,6 +148,44 @@ export async function markMissedMessages(db: Queryable, runId: string): Promise<
      WHERE run_id = $1 AND status = 'queued' AND urgency = 'next'`,
     [runId],
   );
+}
+
+const TAKEN_IN_EVENTS = [
+  'STEP_STARTED',
+  'REASONING_START',
+  'TEXT_MESSAGE_CONTENT',
+  'TOOL_CALL_START',
+];
+
+export async function markUnreadOnStop(db: Queryable, runId: string): Promise<void> {
+  await db.query(
+    `UPDATE member_messages m SET status = 'missed'
+     WHERE m.message_id IS NULL AND (
+       (m.status = 'delivered' AND m.delivered_run_id = $1
+         AND NOT EXISTS (
+           SELECT 1 FROM run_events e JOIN runs r ON r.id = e.run_id
+           WHERE e.run_id = $1 AND e.created_at > m.delivered_at
+             AND e.created_at < COALESCE(r.cancel_requested_at, 'infinity')
+             AND e.type = ANY($2::text[])))
+       OR (m.status = 'queued' AND m.urgency = 'now' AND m.run_id = $1
+         AND NOT EXISTS (
+           SELECT 1 FROM member_messages i WHERE i.run_id = $1 AND i.status = 'interrupting')))`,
+    [runId, TAKEN_IN_EVENTS],
+  );
+}
+
+export async function missedMessage(
+  db: Queryable,
+  conversationId: string,
+  id: string,
+): Promise<MemberMessage | null> {
+  const { rows } = await db.query<MemberMessageRow>(
+    `SELECT * FROM member_messages
+     WHERE id = $1 AND conversation_id = $2 AND status = 'missed' AND message_id IS NULL
+     FOR UPDATE`,
+    [id, conversationId],
+  );
+  return rows[0] ? toMemberMessage(rows[0]) : null;
 }
 
 export async function urgentLeftovers(

@@ -286,7 +286,7 @@
 }
 
 .crail-tasks li[data-state='done'] .crail-task-mark {
-  color: var(--accent);
+  color: var(--success);
 }
 
 .crail-tasks li[data-state='failed'] .crail-task-mark {

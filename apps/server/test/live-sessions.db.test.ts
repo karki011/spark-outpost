@@ -255,12 +255,15 @@ describe('one live agent session per chat', { timeout: 60_000 }, () => {
       [run.id],
     );
     expect(rows.filter((row) => row.status === 'pending')).toEqual([]);
+    expect(rows).toContainEqual({ status: 'allowed' });
     const steps = await t.db.query<{ name: string }>(
       `SELECT payload->>'stepName' AS name FROM run_events
        WHERE run_id = $1 AND type = 'STEP_STARTED'`,
       [run.id],
     );
-    expect(steps.rows.map((row) => row.name)).toContainEqual(expect.stringMatching(/^Allowed /));
+    expect(steps.rows.map((row) => row.name)).not.toContainEqual(
+      expect.stringMatching(/^Allowed /),
+    );
   });
 
   it('closes the live session when the chat is archived', async () => {

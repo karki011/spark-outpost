@@ -12,7 +12,7 @@ import { updateChatSettings } from '../persistence/chat-settings.ts';
 import { createConversation } from '../persistence/conversations.ts';
 import { withTransaction, type Queryable } from '../persistence/db.ts';
 import { getDraft } from '../persistence/outpost-drafts.ts';
-import { insertTasks } from '../persistence/outpost-stories.ts';
+import { insertTasks, storyTaskOf } from '../persistence/outpost-stories.ts';
 import { getOutpost, notifyOutpostChanged, OutpostError } from '../persistence/outposts.ts';
 import { InvalidDefaultError } from '../persistence/setup.ts';
 import { chatPosture } from './chat-posture.ts';
@@ -27,7 +27,13 @@ import {
   type PostServiceDeps,
 } from './post-service.ts';
 import { claimDraft, refuseEmptyStart } from './story-claim.ts';
-import { DRAFT_ALREADY_STARTED, planStory, type StoryLead, type StoryPlan } from './story-start.ts';
+import {
+  DRAFT_ALREADY_STARTED,
+  inAnotherStory,
+  planStory,
+  type StoryLead,
+  type StoryPlan,
+} from './story-start.ts';
 
 export const CHAT_ID_IN_USE = 'That chat id is already in use.';
 export const PROJECT_GONE = 'That project no longer exists. Choose another project.';
@@ -160,6 +166,20 @@ function failure(member: StartMember, message: string): FailedMember {
   return { conversationId: startMemberChatId(member), handle: member.handle, message };
 }
 
+async function refuseOtherStories(
+  db: Queryable,
+  draftId: string,
+  request: CreateOutpostRequest,
+): Promise<void> {
+  for (const member of request.members) {
+    if ('new' in member || !member.firstMessage) continue;
+    const task = await storyTaskOf(db, member.conversationId);
+    if (task && task.task.draftId !== draftId) {
+      throw new OutpostError(409, inAnotherStory(member.handle));
+    }
+  }
+}
+
 async function storyOf(
   { db, workspaceId }: StartDeps,
   request: CreateOutpostRequest,
@@ -181,6 +201,7 @@ async function storyOf(
   if (plan.kind === 'refusal') {
     throw new OutpostError(plan.message === DRAFT_ALREADY_STARTED ? 409 : 400, plan.message);
   }
+  await refuseOtherStories(db, draft.id, request);
   return { draft, plan, proposed: draft.body.chats };
 }
 

@@ -5,6 +5,7 @@ import type { SessionConfigOption } from '@agentclientprotocol/sdk';
 import type { ProviderId } from '@spark-outpost/contracts';
 import { browserDataDir, browserDataRules } from '../../approvals/browser-data.ts';
 import { PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
+import { tempRoots } from '../../approvals/temp-dirs.ts';
 import { PLANS_DIR } from '../../plans/plan-mode.ts';
 import { EXACT_PROTECTED_GLOBS } from '../../projects/path-policy.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
@@ -163,7 +164,7 @@ export function claudeSessionMeta(
   const deny = unique([
     ...(repo?.denyRules ?? []),
     ...toolDenyRules(tools),
-    ...secretRules(extraRoots),
+    ...secretRules([...extraRoots, ...tempRoots()]),
     ...browserDataRules(browserDataDir()),
     ...FORCE_PUSH_DENY_RULES,
     ...(changesProject ? CHAT_RUN_DENY_RULES : []),
@@ -195,6 +196,7 @@ export function claudeSessionMeta(
             deny,
             ...(ask.length > 0 ? { ask } : {}),
             ...(allowRules.length > 0 ? { allow: allowRules } : {}),
+            additionalDirectories: tempRoots(),
             blockReadsOutsideWorkingDirectories: true,
             ...(allowBypass ? {} : { disableBypassPermissionsMode: 'disable' }),
           },

@@ -5,6 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   archivedInactiveLine,
   categoryLabel,
+  shownChatTitle,
   type ConversationSummary,
 } from '@spark-outpost/contracts';
 import { DotsIcon, GripIcon, MergedIcon, PinIcon, RestoreIcon, TrashIcon } from '../ui/icons.tsx';
@@ -13,7 +14,7 @@ import { reveal } from '../ui/transitions.tsx';
 import { MatchSnippet } from './MatchSnippet.tsx';
 import { recencyLabel } from './recency.ts';
 import { rowFaceState, rowState } from './row-state.ts';
-import { chatBlob } from './chat-blob.ts';
+import { BLOB_LABELS, chatBlob } from './chat-blob.ts';
 import { ChatBlob } from './ChatBlob.tsx';
 import { useChatOnScreen } from './on-screen.ts';
 import { RowTitle, useMarquee } from './RowTitle.tsx';
@@ -30,6 +31,8 @@ interface ChatRowProps {
   flash: boolean;
   index: number;
   handle?: string | undefined;
+  faceless?: boolean;
+  relation?: string | null;
   onOpen: (id: string) => void;
   onMenu: (id: string, element: HTMLElement, point: { x: number; y: number } | null) => void;
   onRename: (chat: ConversationSummary, title: string | null) => void;
@@ -126,6 +129,7 @@ function HistoryActions({
 
 export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   const { chat, selected, renaming, sortable, settling, flash, handle } = props;
+  const { faceless = false, relation = null } = props;
   const { onOpen, onMenu, onRename } = props;
   const history = chat.archivedAt !== null;
   const draggable = sortable && !renaming && !history;
@@ -152,6 +156,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   const classes = [
     'row',
     `st-${state.tone}`,
+    faceless ? 'faceless' : '',
     selected ? 'active' : '',
     isDragging ? 'placeholder' : '',
     flash ? 'flash' : '',
@@ -179,10 +184,12 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   const terminal = chat.sessionType === 'terminal';
   const autoArchived =
     history && chat.autoArchivedDays ? archivedInactiveLine(chat.autoArchivedDays) : null;
+  const title = shownChatTitle(chat.title);
   const tooltip = [
-    chat.title,
+    title,
     terminal ? 'Terminal session' : null,
     handle ? `@${handle}` : null,
+    relation,
     chat.teammate ? `with ${chat.teammate.name}` : null,
     chat.titleSource === 'auto' ? 'Renamed by Spark' : null,
     chat.category ? categoryLabel(chat.category) : null,
@@ -195,7 +202,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
     <>
       {renaming ? (
         <div className="row-open">
-          <span className="st">{face}</span>
+          {!faceless && <span className="st">{face}</span>}
           <span className="rt">
             <RenameInput
               title={chat.title}
@@ -217,11 +224,11 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
           onBlur={marquee.stop}
           {...pointerListeners}
         >
-          <span className="st">{face}</span>
+          {!faceless && <span className="st">{face}</span>}
           <span className="rt">
             <span className="row-title-line">
               <RowTitle
-                text={chat.title}
+                text={title}
                 overflow={marquee.overflow}
                 running={marquee.running}
                 titleRef={marquee.ref}
@@ -229,11 +236,17 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
               {chat.pullRequestMerged && <MergedMark />}
             </span>
             {handle && <span className="sr-only">{`, @${handle}`}</span>}
+            {relation && <span className="sr-only">{`, ${relation}`}</span>}
             {terminal && <span className="sr-only">, Terminal session</span>}
             {chat.match && <MatchSnippet match={chat.match} />}
             {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}
             {autoArchived && <span className="sr-only">, {autoArchived}</span>}
           </span>
+          {faceless && blob && (
+            <span className="row-state" data-state={blob} aria-hidden="true">
+              {BLOB_LABELS[blob]}
+            </span>
+          )}
           <ChatBlob kind={blob} />
         </button>
       )}

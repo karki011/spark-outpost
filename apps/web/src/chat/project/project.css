@@ -99,14 +99,39 @@
   border-top: 1px solid var(--line);
 }
 .mpop.left.chatpop {
-  width: 340px;
+  width: max-content;
+  min-width: min(300px, 100cqw, calc(100vw - 20px));
+  max-width: min(460px, 100cqw, calc(100vw - 20px));
 }
-.chatpop .fname b {
-  flex-shrink: 1;
+.chatopt .fname b {
+  flex: 0 1 auto;
+  min-width: 0;
 }
-.chatpop .fname small {
-  flex-shrink: 0;
+.chatopt .chat-proj {
+  flex: 1 1 0;
+  display: flex;
+  min-width: 8ch;
+  max-width: max-content;
+  gap: 4px;
   direction: ltr;
+}
+.chat-proj > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chat-proj-more {
+  flex-shrink: 0;
+}
+.chat-state {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
 }
 .mentionpop .flist {
   max-height: 240px;

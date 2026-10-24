@@ -224,11 +224,16 @@ test("the approval card offers every option the agent sent, with the agent's wor
   test.setTimeout(120_000);
   await projectChat(page, repo, 'Ask before edits');
   const choices: [string, string, RegExp][] = [
-    ['Yes', 'yes', /^Chose: Yes\./],
-    ["Yes, and don't ask again for npm run lint commands", 'yes-always', /Allowed for this run\./],
-    ['No', 'no', /^Chose: No\./],
-    ["No, and don't ask again", 'no-always', /Rejected for the rest of this run\./],
+    ['Yes', 'yes', /^You allowed it once · /],
+    [
+      "Yes, and don't ask again for npm run lint commands",
+      'yes-always',
+      /^You allowed it for this run · /,
+    ],
+    ['No', 'no', /^You denied it · /],
+    ["No, and don't ask again", 'no-always', /^You denied it · /],
   ];
+  const answers = page.locator('.run-cmd-answer');
   for (const [index, [label, optionId, result]] of choices.entries()) {
     await send(page, `Run the tests #fourkinds #build ${index}`);
     const approval = card(page, /^Run .+\?$/).last();
@@ -246,17 +251,17 @@ test("the approval card offers every option the agent sent, with the agent's wor
     } else {
       await approval.getByRole('button', { name: label, exact: true }).click();
     }
-    await expect(approval.getByRole('status')).toContainText(`Chose: ${label}.`);
-    await expect(approval.getByRole('status')).toContainText(result);
     await expect(page.getByText(`permission=${optionId}`, { exact: true })).toBeVisible({
       timeout: 30_000,
     });
     await turnDone(page, 30_000);
+    await expect(card(page, /^Run .+\?$/)).toHaveCount(0);
+    const step = page.locator('.msg.ai').last().locator('.run-cmd-toggle').last();
+    if ((await step.getAttribute('aria-expanded')) !== 'true') await step.click();
+    await expect(answers.last()).toHaveText(result);
   }
   await page.reload();
-  await expect(card(page, /^Run .+\?$/).getByRole('status')).toHaveText(
-    choices.map(([, , result]) => result),
-  );
+  await expect(card(page, /^Run .+\?$/)).toHaveCount(0);
 });
 
 test('retiring models stay hidden until you ask for them', async ({ page }) => {

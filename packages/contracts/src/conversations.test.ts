@@ -4,6 +4,7 @@ import {
   UNTITLED_CONVERSATION,
   clipAtWord,
   sendMessageRequestSchema,
+  shownChatTitle,
   titleFromMessage,
 } from './conversations.ts';
 import { queueAddRequestSchema, queueEditRequestSchema } from './chat-queue.ts';
@@ -57,5 +58,12 @@ describe('clipAtWord', () => {
     const title = titleFromMessage(`${'word '.repeat(30)}end`);
     expect(title.endsWith('word…')).toBe(true);
     expect(title.length).toBeLessThanOrEqual(TITLE_MAX_LENGTH);
+  });
+});
+
+describe('shownChatTitle', () => {
+  it('keeps a title and names a blank one', () => {
+    expect(shownChatTitle('Fix login')).toBe('Fix login');
+    expect(shownChatTitle(' \n ')).toBe(UNTITLED_CONVERSATION);
   });
 });

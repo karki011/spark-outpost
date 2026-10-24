@@ -126,8 +126,9 @@
 
 .bp-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: 2px;
+  gap: 4px 2px;
   padding: 0 8px 6px 10px;
 }
 
@@ -142,7 +143,7 @@
 }
 
 .bp-address {
-  flex: 1;
+  flex: 1 1 140px;
   min-width: 0;
   margin: 0 4px;
 }
@@ -213,7 +214,7 @@
 }
 
 .bp-picking {
-  flex: 1;
+  flex: 1 1 140px;
   min-width: 0;
   height: 30px;
   margin: 0 4px;
@@ -367,7 +368,7 @@
 }
 
 .wp.browser {
-  --wp-cap: max(380px, min(64vw, calc(100vw - 820px)));
+  --wp-cap: calc(100vw - 16px);
 }
 
 .wp-body.browser {

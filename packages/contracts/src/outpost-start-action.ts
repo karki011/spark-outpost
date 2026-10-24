@@ -17,6 +17,7 @@ export const startOutpostChatSchema = z.object({
   agentMode: z.string().max(200).nullable(),
   dependsOn: handle.nullable(),
   stacked: z.boolean(),
+  existing: z.boolean().default(false),
   task: z.string().max(START_OUTPOST_TASK_MAX),
 });
 export type StartOutpostChat = z.infer<typeof startOutpostChatSchema>;

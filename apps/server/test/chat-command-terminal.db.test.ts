@@ -99,6 +99,13 @@ describe('command output from an ACP agent', { timeout: 120_000 }, () => {
       ['pnpm lint', 'failed', 2],
     ]);
     expect(commands.every((command) => command.cwd === './' && command.finishedAt)).toBe(true);
+    expect(commands.map((command) => command.description ?? null)).toEqual([
+      null,
+      null,
+      'Runs the command',
+      'Runs the command',
+    ]);
+    expect(commands.every((command) => command.toolCallId)).toBe(true);
     expect(await storedOutput(commands[0]!.id)).toBe(
       `RUN v5\n${ESC}[32m✓${ESC}[0m one.test.ts\nTests 1 passed\n`,
     );

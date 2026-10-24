@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const COMMAND_STARTED = 'command_started';
 export const COMMAND_OUTPUT = 'command_output';
 export const COMMAND_FINISHED = 'command_finished';
+export const COMMAND_DESCRIBED = 'spark.command_described';
 
 export const COMMAND_TEXT_MAX = 4_000;
 export const COMMAND_STORED_CHARS = 64 * 1024;
@@ -22,12 +23,20 @@ const anchorFields = {
 export const commandStartedSchema = z.object({
   id: z.uuid(),
   command: z.string().max(COMMAND_TEXT_MAX),
+  description: z.string().max(COMMAND_TEXT_MAX).nullable().optional(),
+  toolCallId: z.string().max(COMMAND_TEXT_MAX).nullable().optional(),
   cwd: z.string().nullable(),
   live: z.boolean(),
   startedAt: z.string(),
   ...anchorFields,
 });
 export type CommandStarted = z.infer<typeof commandStartedSchema>;
+
+export const commandDescribedSchema = z.object({
+  id: z.uuid(),
+  description: z.string().max(COMMAND_TEXT_MAX),
+});
+export type CommandDescribed = z.infer<typeof commandDescribedSchema>;
 
 export const commandOutputSchema = z.object({
   id: z.uuid(),

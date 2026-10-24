@@ -29,7 +29,7 @@ export function AgentMark({ provider, model }: { provider: string; model: string
   );
 }
 
-export function WorkingLine({ run }: { run: Run }) {
+export function WorkingLine({ run, doing = 'Working' }: { run: Run; doing?: string }) {
   const headRef = useLiveHead(run.id);
   const now = useNow(true);
   const since = Date.parse(run.startedAt ?? run.createdAt);
@@ -37,7 +37,7 @@ export function WorkingLine({ run }: { run: Run }) {
   return (
     <p className="turn-working" ref={headRef}>
       <Spinner />
-      <b>Working</b>
+      <b>{doing}</b>
       <span className="turn-working-meta">
         {Number.isFinite(since) && <> · {clockText(Math.max(0, now - since))}</>}
         {tokens !== null && tokens > 0 && <> · {formatTokens(tokens)} tokens</>}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FailedMember } from '@spark-outpost/contracts';
 import { CreateSheet } from './create/CreateSheet.tsx';
+import { DraftSheet } from './create/DraftSheet.tsx';
 import {
   emptyChat,
   listedChats,
@@ -10,7 +11,7 @@ import {
 } from './create/create-draft.ts';
 import { buildCreateRequest } from './create/create-request.ts';
 import { DraftGone } from './create/DraftGone.tsx';
-import type { DraftChange } from './create/StepChats.tsx';
+import type { DraftChange } from './create/use-chat-actions.ts';
 import { useCreateBase, useCreateData, type CreateBase } from './create/use-create-data.ts';
 import { useDraftStart, type ReadyDraft } from './create/use-draft-start.ts';
 import { startedThread } from './started-thread.ts';
@@ -70,8 +71,9 @@ function CreateFlow({ base, seed, intoOutpostId, onCreated, onClose }: CreateFlo
     }
   };
 
+  const Sheet = initial.origin ? DraftSheet : CreateSheet;
   return (
-    <CreateSheet
+    <Sheet
       initial={initial}
       draft={draft}
       data={data}

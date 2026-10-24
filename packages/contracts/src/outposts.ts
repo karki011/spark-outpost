@@ -64,11 +64,19 @@ export interface DerivedRequestState {
   reason: string | null;
 }
 
+export const memberStorySchema = z.object({
+  lead: z.uuid().nullable(),
+  after: z.uuid().nullable(),
+  position: z.number().int(),
+});
+export type MemberStory = z.infer<typeof memberStorySchema>;
+
 export const outpostMemberSchema = z.object({
   conversationId: z.uuid(),
   handle: outpostHandleSchema,
   position: z.number(),
   joinedAt: z.string(),
+  story: memberStorySchema.optional(),
 });
 export type OutpostMember = z.infer<typeof outpostMemberSchema>;
 
@@ -305,6 +313,7 @@ export const draftChatSchema = z.object({
   handle: outpostHandleSchema,
   title: storyTitleSchema,
   projectId: z.uuid(),
+  chatId: z.uuid().optional(),
   agent: providerIdSchema.optional(),
   agentMode: z.string().min(1).max(200).optional(),
   task: postTextSchema,

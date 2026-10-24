@@ -25,6 +25,10 @@ function command(id: string, textOffset: number | null, startedAt: string): Comm
   };
 }
 
+function anchored(id: string, textOffset: number, textBefore: string, textHeld: number) {
+  return { ...command(id, textOffset, '2026-01-01T00:00:01Z'), textBefore, textHeld };
+}
+
 function shot(id: string, textOffset: number, createdAt: string): BrowserShot {
   return { id, textOffset, textBefore: null, textHeld: 0, createdAt } as BrowserShot;
 }
@@ -86,5 +90,22 @@ describe('turnParts', () => {
       [command('a', 5, '2026-01-01T00:00:01Z'), command('b', 10, '2026-01-01T00:00:02Z')],
     );
     expect(parts).toEqual(['One. ', '<a>', 'Two. ', '<b>', '<shots>', 'Three.']);
+  });
+
+  describe("in the publish result, where Spark's line leads the agent's reply", () => {
+    const led = [
+      'Opened pull request #353: https://github.com/acme/app/pull/353',
+      "The change is on spark/session-activity in this chat's worktree.",
+      'There was nothing new to publish.',
+    ].join('\n\n');
+
+    it.each([
+      ['held back its first letter', anchored('a', 1, '', 1)],
+      ['had only a line break', anchored('a', 1, '\n', 0)],
+    ])('never splits a word when the agent %s before the command', (_, ran) => {
+      const parts = kinds(led, [], [ran]);
+      expect(parts[0]).toBe('<a>');
+      expect(parts.slice(1).join('')).toBe(led);
+    });
   });
 });

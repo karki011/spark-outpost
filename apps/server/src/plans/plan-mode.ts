@@ -3,6 +3,7 @@ import {
   PERMISSION_ASK,
   PLAN_DOCUMENT_MAX_LENGTH,
   type RunMode,
+  ALLOWED_REASONS,
 } from '@spark-outpost/contracts';
 import { objectFields } from '../agents/acp/object-fields.ts';
 
@@ -10,7 +11,7 @@ const SWITCH_MODE_KIND = 'switch_mode';
 export const PLAN_MODE_ID = 'plan';
 const EXIT_PLAN_PREFIX = 'exit-plan-';
 export const ENTER_PLAN_MODE_TITLE = 'EnterPlanMode';
-export const ENTER_PLAN_MODE_WHY = 'planning changes no files';
+export const ENTER_PLAN_MODE_WHY = ALLOWED_REASONS.planning;
 
 interface PlanToolContent {
   type: string;

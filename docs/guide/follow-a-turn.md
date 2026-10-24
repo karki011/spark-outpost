@@ -10,8 +10,8 @@ Follow, stop and queue a turn. About 2 minutes.
 
 ## See what's happening
 
-1. A row per tool call, like **Read**; reads fold into **Explored 2 files**.
-2. **Thought for 4s** opens the thinking; a failed command opens itself.
+1. Steps fold into one line, like **Ran 4 commands, thought 2 times**.
+2. A command shows what it does; open it for the command. Failures open themselves.
 3. The to-do ticks off, then folds.
 4. Hover a reply for **Copy** and cost; **Agent TV** is under **…**.
 5. Sub-agents share one line; **View** shows their cards.
@@ -22,28 +22,29 @@ A waiting card sits at the turn's end; **⌘⇧Y** jumps there.
 
 ## Stop a turn
 
-1. Select **Stop** or press **Esc**; sub-agents and background work stop too.
+1. Select **Stop** or press **Esc**; sub-agents and background work stop.
 
 ## Background work
 
-While background agents run, the chat shows **Waiting on 1 background agent**. A sleeping Claude agent shows **Sleeping until 10:48**, then wakes in that turn. **Stop background tasks** or **Stop waiting** ends the wait.
+The chat shows **Waiting on 1 background agent**, or **Sleeping until 10:48** for Claude; **Stop background tasks** or **Stop waiting** ends it.
 
-The agent stays running up to 30 idle minutes. A turn it starts itself shows **Continued on its own**; after Quit, **Stopped by Quit**.
+It stays up to 30 idle minutes; a turn it starts shows **Continued on its own**, and after Quit **Stopped by Quit**.
 
 ## Queue messages
 
-Other chats never wait; each starts when you send.
+Other chats never wait.
 
 1. While a turn runs, **Enter** queues a message.
-2. **⌘Enter** sends it now.
+2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.
 3. While the agent waits, **Enter** sends now.
 4. Use **Edit**, **Move up**, **Move down**, **Remove** or **Send now** on a queued message.
 
-| When                     | Spark                                |
-| ------------------------ | ------------------------------------ |
-| The turn finishes        | Sends queued messages in order.      |
-| You stop it, or it fails | Pauses the queue until **Send now**. |
-| You reload or restart    | Keeps the queue.                     |
+| When                      | Spark                                 |
+| ------------------------- | ------------------------------------- |
+| The turn finishes         | Sends queued messages in order.       |
+| You stop it, or it fails  | Pauses the queue until **Send now**.  |
+| You reload or restart     | Keeps the queue.                      |
+| You stop before it's read | **Send as next message** or **Edit**. |
 
 ## Delete a running chat
 

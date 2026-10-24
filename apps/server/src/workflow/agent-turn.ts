@@ -234,6 +234,7 @@ export async function runAgentTurn(
         topRunId: input.parentRunId ?? lease.runId,
         pollMs: deps.inboxPollMs ?? INBOX_POLL_MS,
         append,
+        replySoFar: () => replySoFar(),
       });
   const redaction = createRedactionFilter(secretValues);
   const parking = backgroundParking(deps.parked, () => control.stop('quit'));
@@ -491,7 +492,7 @@ export async function runAgentTurn(
     parking.release();
     modeWatch?.dispose();
     await inbox
-      ?.dispose()
+      ?.dispose(control.reason() === 'cancelled')
       .catch((error: unknown) => console.error('Could not close the message inbox', error));
     audit.discard();
   }

@@ -1,6 +1,7 @@
 .mpop.branchpop {
   left: 12px;
   width: 320px;
+  max-width: calc(100cqw - 24px);
 }
 .branchpop-head {
   padding: 8px 10px;

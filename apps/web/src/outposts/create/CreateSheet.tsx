@@ -1,9 +1,8 @@
 import '../outposts.css';
 import '../outpost-sheet.css';
 import './outpost-create.css';
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { FailedMember } from '@spark-outpost/contracts';
-import { wrapTabFocus } from '../../ui/focus-trap.ts';
 import { XIcon } from '../../ui/icons.tsx';
 import { OutpostFaces } from '../MemberFace.tsx';
 import {
@@ -15,9 +14,11 @@ import {
 } from './create-draft.ts';
 import { faceIds } from './create-labels.ts';
 import { continueBlock, isFinished, nameProblem } from './create-problems.ts';
+import { sheetKeys, useReturnFocus } from './sheet-keys.ts';
 import { SheetFooter } from './SheetFooter.tsx';
 import { StartResult } from './StartResult.tsx';
-import { StepChats, type DraftChange } from './StepChats.tsx';
+import { StepChats } from './StepChats.tsx';
+import type { DraftChange } from './use-chat-actions.ts';
 import { StepName } from './StepName.tsx';
 import { Stepper } from './Stepper.tsx';
 import { StepReview } from './StepReview.tsx';
@@ -36,40 +37,23 @@ interface CreateSheetProps {
   onClose: () => void;
 }
 
-const FOCUSABLE =
-  'button:not([disabled]), a[href], input:not([disabled]):not([hidden]), textarea, [tabindex]:not([tabindex="-1"])';
 const NAME = 0;
 const CHATS = 1;
 const REVIEW = 2;
 
-function shown(panel: HTMLElement): HTMLElement[] {
-  return [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-    (element) => !element.closest('[hidden]'),
-  );
-}
-
-function typedInField(event: KeyboardEvent): boolean {
-  return event.target instanceof HTMLInputElement && event.target.type !== 'file';
-}
-
 export function CreateSheet(props: CreateSheetProps) {
   const { initial, draft, data, starting, failed, onChange } = props;
+  useReturnFocus();
   const ids = useId();
   const nameRef = useRef<HTMLInputElement>(null);
   const primaryRef = useRef<HTMLButtonElement>(null);
-  const into = draft.into ?? null;
-  const [step, setStep] = useState(into ? CHATS : NAME);
+  const [step, setStep] = useState(NAME);
   const [nameTried, setNameTried] = useState(false);
-  const [chatsFocus, setChatsFocus] = useState(into ? 1 : 0);
+  const [chatsFocus, setChatsFocus] = useState(0);
   const [discarding, setDiscarding] = useState(false);
   const block = continueBlock(draft, data.chats);
   const finished = (chat: ChatDraft, current: CreateDraft) => isFinished(chat, current, data.chats);
   const openFinished = draft.chats.some((chat) => chat.open && finished(chat, draft));
-
-  useEffect(() => {
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    return () => opener?.focus();
-  }, []);
 
   useEffect(() => {
     if (step === NAME) nameRef.current?.focus();
@@ -118,25 +102,13 @@ export function CreateSheet(props: CreateSheetProps) {
     else props.onClose();
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape' && !event.defaultPrevented) {
-      event.stopPropagation();
-      if (discarding) setDiscarding(false);
-      else requestClose();
-      return;
-    }
-    if (event.key === 'Enter' && !event.nativeEvent.isComposing && !event.defaultPrevented) {
-      const commanded = event.metaKey || event.ctrlKey;
-      if (commanded || typedInField(event)) {
-        event.preventDefault();
-        if (commanded) primary();
-        else enter();
-        return;
-      }
-    }
-    const panel = event.currentTarget;
-    wrapTabFocus(event, () => shown(panel));
-  };
+  const onKeyDown = sheetKeys({
+    discarding,
+    onKeep: () => setDiscarding(false),
+    onClose: requestClose,
+    onPrimary: primary,
+    onEnterInField: enter,
+  });
 
   return (
     <div
@@ -151,7 +123,7 @@ export function CreateSheet(props: CreateSheetProps) {
         onKeyDown={onKeyDown}
       >
         <header className="op-sheet-head">
-          <h2 id={`${ids}title`}>{into ? `Add chats to ${into.name}` : 'New outpost'}</h2>
+          <h2 id={`${ids}title`}>New outpost</h2>
           <button type="button" className="icon-btn" aria-label="Close" onClick={requestClose}>
             <XIcon />
           </button>
@@ -165,7 +137,6 @@ export function CreateSheet(props: CreateSheetProps) {
                 inputRef={nameRef}
                 name={draft.name}
                 problem={nameTried ? nameProblem(draft.name) : null}
-                locked={into !== null}
                 onName={(name) => onChange((current) => ({ ...current, name }))}
               />
             )}
@@ -198,7 +169,6 @@ export function CreateSheet(props: CreateSheetProps) {
           block={block}
           addsOpenChat={openFinished}
           discarding={discarding}
-          adding={into !== null}
           onBack={() => (step === NAME ? requestClose() : goTo(step - 1))}
           onPrimary={primary}
           onOpenOutpost={props.onOpenOutpost}

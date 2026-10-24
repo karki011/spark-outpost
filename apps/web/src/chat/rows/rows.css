@@ -92,7 +92,8 @@ button.trow:hover {
   height: 12px;
 }
 
-.trow-word.ok {
+.trow-word.ok,
+.trow-word.ok .ok {
   color: var(--success);
 }
 
@@ -112,6 +113,34 @@ button.trow:hover {
 
 .trow-nest {
   margin: 0 0 4px 14px;
+}
+
+.trow-card {
+  margin: 2px 0 6px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+
+.trow-card > * + * {
+  border-top: 1px solid var(--line);
+}
+
+.trow-card > .trow,
+.trow-card > .run-cmd > .run-cmd-head > .trow {
+  border-radius: 0;
+}
+
+.trow-card > .trow-nest {
+  border-top: 0;
+}
+
+.trow-verb {
+  color: var(--muted);
+}
+
+.trow-name {
+  color: var(--text);
 }
 
 .trow-nest .step-thought {

@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { calendarEventDetailSchema, calendarRangeSchema } from '@spark-outpost/contracts';
+import {
+  addLocalDays,
+  calendarEventDetailSchema,
+  calendarRangeSchema,
+  localDayStart,
+} from '@spark-outpost/contracts';
 import { dateKey } from '../src/calendar/service.ts';
 import {
   EMAIL,
@@ -29,7 +34,7 @@ afterEach(async () => {
 });
 
 function dayKey(daysFromToday: number): string {
-  return dateKey(Date.now() + daysFromToday * DAY_MINUTES * MINUTE);
+  return dateKey(addLocalDays(localDayStart(Date.now()), daysFromToday));
 }
 
 const eventCalls = () => h.fake.requests.filter((request) => request.path.endsWith('/events'));
@@ -130,8 +135,7 @@ describe('a Google range just after midnight', () => {
   });
 
   it('reads the range from Google until the next poll moves the stored window', async () => {
-    const lateEvening = new Date();
-    lateEvening.setHours(23, 50, 0, 0);
+    const lateEvening = new Date(2026, 5, 10, 23, 50);
     vi.useFakeTimers({ toFake: ['Date'], now: lateEvening });
     h.fake.putEvent(SUBJECT, EMAIL, meeting('edge', 8 * DAY_MINUTES));
     await signIn(h);

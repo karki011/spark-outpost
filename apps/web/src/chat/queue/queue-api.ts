@@ -45,4 +45,14 @@ export const queueApi = {
       method: 'POST',
       body: '{}',
     }),
+  resendSteer: (conversationId: string, id: string): Promise<QueueResponse> =>
+    request(queueResponseSchema, `/conversations/${conversationId}/steers/${id}/resend`, {
+      method: 'POST',
+      body: '{}',
+    }),
+  dropSteer: (conversationId: string, id: string): Promise<QueueResponse> =>
+    request(queueResponseSchema, `/conversations/${conversationId}/steers/${id}`, {
+      method: 'DELETE',
+      body: '{}',
+    }),
 };

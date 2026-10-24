@@ -5,37 +5,67 @@ import {
   type Run,
 } from '@spark-outpost/contracts';
 import { providerName } from '../provider-name.ts';
+import type { SteerMark, TurnRowPart } from '../rows/turn-rows.ts';
 import { turnRunIds } from '../turn-props.ts';
 import { activeRun } from '../turns.ts';
 
-export type SteerTone = 'wait' | 'ok' | 'miss';
+export type SteerTone = 'wait' | 'ok' | 'miss' | 'stopped';
 
-function messageState(message: MemberMessage, live: boolean, name: string): string {
-  switch (message.status) {
-    case 'queued':
-      return live ? `${name} reads this at its next step` : `${name} finished before reading this`;
-    case 'delivered':
-      return `${name} has it`;
-    case 'interrupting':
-      return 'Stopping the turn to send this first';
-    case 'sent':
-      return 'Sent as your next message';
-    case 'missed':
-      return `${name} finished before reading this`;
-    case 'continued':
-      return `${name} picked this up in a new turn`;
-  }
+export interface SteerSeen {
+  taken: boolean;
+  answered: boolean;
 }
 
-function messageTone(message: MemberMessage, live: boolean): SteerTone {
-  if (message.status === 'missed' || (message.status === 'queued' && !live)) return 'miss';
-  if (message.status === 'queued' || message.status === 'interrupting') return 'wait';
-  return 'ok';
+const ASSUMED_SEEN: SteerSeen = { taken: true, answered: true };
+
+interface StateFacts {
+  live: boolean;
+  name: string;
+  stopped: boolean;
+  seen: SteerSeen;
+}
+
+function sentState(name: string): SteerStatus {
+  return { text: `Sent · ${name} reads it at its next step`, tone: 'wait' };
+}
+
+function deliveredState(message: MemberMessage, facts: StateFacts): SteerStatus {
+  const { live, name, stopped, seen } = facts;
+  if (live && !seen.taken) return sentState(name);
+  if (!live && stopped && !seen.answered) {
+    return { text: `Stopped before ${name} answered this`, tone: 'stopped' };
+  }
+  const taken = { text: `${name} took this in`, tone: 'ok' as const };
+  return message.deliveredAt ? { ...taken, at: message.deliveredAt } : taken;
+}
+
+function messageState(message: MemberMessage, facts: StateFacts): SteerStatus {
+  const { live, name, stopped } = facts;
+  switch (message.status) {
+    case 'queued':
+      return live
+        ? sentState(name)
+        : { text: `${name} finished before reading this`, tone: 'miss' };
+    case 'delivered':
+      return deliveredState(message, facts);
+    case 'interrupting':
+      return { text: 'Stopping the turn to send this first', tone: 'wait' };
+    case 'sent':
+      return { text: 'Sent as your next message', tone: 'ok' };
+    case 'missed':
+      return {
+        text: stopped ? `Stopped before ${name} read this` : `${name} finished before reading this`,
+        tone: 'miss',
+      };
+    case 'continued':
+      return { text: `${name} picked this up in a new turn`, tone: 'ok' };
+  }
 }
 
 export interface SteerStatus {
   text: string;
   tone: SteerTone;
+  at?: string;
 }
 
 const BECAME_MESSAGE = new Set<MemberMessage['status']>(['sent', 'continued']);
@@ -115,15 +145,18 @@ export function steerStatus(
   detail: ConversationDetail,
   run: Run,
   crew: boolean,
+  seen: SteerSeen = ASSUMED_SEEN,
 ): SteerStatus {
   const live = targetIsLive(message, detail, run);
   if (message.urgency === 'now' && message.status === 'queued' && !live) {
     return { text: 'Sending this as your next message', tone: 'wait' };
   }
-  return {
-    text: messageState(message, live, readerName(message, detail, run, crew)),
-    tone: messageTone(message, live),
-  };
+  const name = readerName(message, detail, run, crew);
+  return messageState(message, { live, name, stopped: run.status === 'cancelled', seen });
+}
+
+export function canResend(message: MemberMessage): boolean {
+  return message.status === 'missed' && message.messageId === null;
 }
 
 export function withSteer(
@@ -146,4 +179,60 @@ export function withSteer(
     deliveredAt: null,
   };
   return { ...detail, memberMessages: [...known, steer] };
+}
+
+export interface SteerGroupView {
+  messages: MemberMessage[];
+  status: SteerStatus;
+}
+
+const sameStatus = (left: SteerStatus, right: SteerStatus) =>
+  left.text === right.text && left.tone === right.tone;
+
+export function steerGroups(
+  messages: readonly MemberMessage[],
+  detail: ConversationDetail,
+  run: Run,
+  crew: boolean,
+  seen?: SteerSeen,
+): SteerGroupView[] {
+  const groups: SteerGroupView[] = [];
+  for (const message of messages) {
+    const status = steerStatus(message, detail, run, crew, seen);
+    const last = groups.at(-1);
+    if (last && sameStatus(last.status, status)) {
+      last.messages.push(message);
+      last.status = status;
+    } else {
+      groups.push({ messages: [message], status });
+    }
+  }
+  return groups;
+}
+
+const UNSEEN_TIME = Number.MAX_SAFE_INTEGER;
+
+export function steerMarks(messages: readonly MemberMessage[]): SteerMark[] {
+  return messages.map((message) => ({
+    id: message.id,
+    anchor:
+      message.textOffset === null || message.textOffset === undefined
+        ? null
+        : {
+            textOffset: message.textOffset,
+            textBefore: message.textBefore ?? null,
+            textHeld: message.textHeld ?? null,
+          },
+    time: message.deliveredAt ? Date.parse(message.deliveredAt) : UNSEEN_TIME,
+  }));
+}
+
+export function seenAfter(parts: readonly TurnRowPart[], index: number): SteerSeen {
+  const own = parts[index];
+  const wrote = own?.kind === 'steers' && own.wroteAfter;
+  const later = parts.slice(index + 1).filter((part) => part.kind !== 'steers');
+  return {
+    taken: wrote || later.length > 0,
+    answered: wrote || later.some((part) => part.kind === 'text'),
+  };
 }

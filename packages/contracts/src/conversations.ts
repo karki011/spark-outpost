@@ -36,6 +36,10 @@ import {
 export const TITLE_MAX_LENGTH = 40;
 export const UNTITLED_CONVERSATION = 'New chat';
 
+export function shownChatTitle(title: string): string {
+  return title.trim() || UNTITLED_CONVERSATION;
+}
+
 export const messageSchema = z.object({
   id: z.uuid(),
   conversationId: z.uuid(),

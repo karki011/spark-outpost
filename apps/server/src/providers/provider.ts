@@ -127,8 +127,13 @@ export type GateAnswer =
       note: string;
       approvalId?: string;
       denial?: string;
+      quiet?: boolean;
     }
   | { outcome: 'cancelled'; note: string };
+
+export function isQuiet(answer: GateAnswer): boolean {
+  return answer.outcome === 'selected' && answer.quiet === true;
+}
 
 export interface PermissionGate {
   review(request: ApprovalRequest, signal: AbortSignal): Promise<GateAnswer>;
@@ -312,8 +317,16 @@ export type ProviderOutput =
   | { kind: 'rail_flag'; flag: ObservedRail }
   | { kind: 'secret_read'; paths: string[] }
   | { kind: 'web_read'; labels: string[] }
-  | { kind: 'command_started'; id: string; command: string; cwd: string | null; live: boolean }
+  | {
+      kind: 'command_started';
+      id: string;
+      command: string;
+      description?: string | null;
+      cwd: string | null;
+      live: boolean;
+    }
   | { kind: 'command_output'; id: string; data: string; replace?: boolean }
+  | { kind: 'command_described'; id: string; description: string }
   | { kind: 'command_finished'; id: string; failed: boolean; exitCode: number | null }
   | { kind: 'account'; account: ProviderAccount };
 

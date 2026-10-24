@@ -65,6 +65,32 @@ describe('OutpostChip', () => {
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
+  it('says Lead on the lead chat and keeps a sub-chat relation to its label', () => {
+    render(
+      <OutpostChip
+        name="Orders launch"
+        handle="lead"
+        lead
+        relation="Lead of 2 sub-chats"
+        onOpen={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button').textContent).toBe('Orders launch@lead· Lead');
+    cleanup();
+    render(
+      <OutpostChip
+        name="Orders launch"
+        handle="web"
+        relation="Sub-chat of @lead, starts after @api"
+        onOpen={vi.fn()}
+      />,
+    );
+    const chip = screen.getByRole('button', {
+      name: 'Open outpost Orders launch. This chat is @web in Orders launch. Sub-chat of @lead, starts after @api.',
+    });
+    expect(chip.textContent).toBe('Orders launch@web');
+  });
+
   it('is plain text when there is nowhere to open', () => {
     render(<OutpostChip name="Orders launch" handle="fe" />);
     expect(screen.queryByRole('button')).toBeNull();

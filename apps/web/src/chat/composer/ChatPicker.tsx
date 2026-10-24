@@ -1,12 +1,35 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { ConversationSummary } from '@spark-outpost/contracts';
+import {
+  shownChatTitle,
+  type ChatShareState,
+  type ConversationSummary,
+  type TaskItemState,
+} from '@spark-outpost/contracts';
 import { api, queryKeys } from '../../api/client.ts';
+import { TaskStateIcon } from '../../tasks/TaskIcons.tsx';
+import '../../tasks/task-list.css';
 import { FileIcon } from '../attachments/attachment-icons.tsx';
-import { summaryChatView } from '../attachments/shared-chat.ts';
+import {
+  projectSummary,
+  summaryChatView,
+  type SharedChatTone,
+} from '../attachments/shared-chat.ts';
 import { useProjects } from '../project/use-chat-repos.ts';
 
 const SHOWN_MAX = 30;
+
+const stateIcons: Record<ChatShareState, TaskItemState> = {
+  working: 'active',
+  needs_you: 'waiting',
+  failed: 'failed',
+  done: 'done',
+  idle: 'pending',
+};
+
+function stateIcon(tone: SharedChatTone): TaskItemState {
+  return tone === 'archived' || tone === 'deleted' ? 'pending' : stateIcons[tone];
+}
 
 interface ChatPickerProps {
   currentId: string;
@@ -25,7 +48,7 @@ function matching(
       (chat) =>
         chat.id !== currentId &&
         chat.archivedAt === null &&
-        chat.title.toLowerCase().includes(needle),
+        shownChatTitle(chat.title).toLowerCase().includes(needle),
     )
     .slice(0, SHOWN_MAX);
 }
@@ -101,17 +124,17 @@ export function ChatPicker({ currentId, onPick, onClose }: ChatPickerProps) {
       />
       <div id={listId} className="flist" role="listbox" aria-label="Chats">
         {shown.map((chat, index) => {
-          const view = summaryChatView(
-            chat,
-            chat.projectIds.flatMap((id) => names.get(id) ?? []),
-          );
+          const projectNames = chat.projectIds.flatMap((id) => names.get(id) ?? []);
+          const view = summaryChatView(chat, projectNames);
+          const summary = projectSummary(projectNames);
           return (
             <div
               key={chat.id}
               id={optionId(index)}
-              className="fopt"
+              className="fopt chatopt"
               role="option"
               aria-selected={index === active}
+              aria-label={`${view.title}, ${view.project}, ${view.state}`}
               title={`${view.title}\n${view.project} · ${view.state}`}
               onPointerDown={(event) => event.preventDefault()}
               onPointerMove={() => {
@@ -122,9 +145,17 @@ export function ChatPicker({ currentId, onPick, onClose }: ChatPickerProps) {
               <FileIcon />
               <span className="fname">
                 <b>{view.title}</b>
-                <small>{view.project}</small>
+                <small className="chat-proj">
+                  <span>{summary.name}</span>
+                  {summary.more && <span className="chat-proj-more">{summary.more}</span>}
+                </small>
               </span>
-              <small>{view.state}</small>
+              <span className="chat-state" data-tone={view.tone}>
+                <span aria-hidden="true">
+                  <TaskStateIcon state={stateIcon(view.tone)} />
+                </span>
+                {view.state}
+              </span>
             </div>
           );
         })}

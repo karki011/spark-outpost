@@ -21,6 +21,8 @@ import { ChatFiles } from './files/ChatFiles.tsx';
 import { ArtifactCards } from './artifacts/ArtifactCards.tsx';
 import { CheckpointCard } from './checkpoints/CheckpointCard.tsx';
 import { turnAgentTerminals } from './commands/agent-terminal-model.ts';
+import { cardsLeft, commandAnswers } from './commands/command-answers.ts';
+import { hourCycle } from '../desktop/hour-cycle.ts';
 import { AgentTerminalsRunning } from './commands/AgentTerminalRow.tsx';
 import { runCommands, shownCommands } from './commands/command-model.ts';
 import { useChatAgentTerminals } from './commands/use-agent-terminals.ts';
@@ -55,6 +57,9 @@ import { useTurnChanges } from './rows/use-turn-changes.ts';
 import { AgentMark, TurnMeta, WorkingLine, agentChanged } from './turn/TurnParts.tsx';
 import { TurnChangesLine } from './turn/TurnChangesLine.tsx';
 import { turnMood } from './turn/turn-mood.ts';
+import { liveLabel } from './turn/live-label.ts';
+import { SteerGroup } from './steer/SteeredMessage.tsx';
+import { seenAfter, steerMarks, turnSteers } from './steer/steer-model.ts';
 
 interface SoloTurnProps {
   run: Run;
@@ -199,14 +204,31 @@ export function SoloTurn({
     : null;
   const changes = useTurnChanges(changeTask?.id ?? null, changeRunIds);
   const todoEntries = turnTodo(detail.runs, run.id, todo);
+  const answers = commandAnswers(approvals, hourCycle());
+  const commandCalls = new Set(
+    [...commands.reply, ...commands.publish].flatMap((command) =>
+      command.toolCallId ? [command.toolCallId] : [],
+    ),
+  );
+  const steers = turnSteers(detail, run.id);
   const parts = turnRowParts({
     text,
     steps: viewSteps(steps),
     commands: commands.reply,
     shots: turnShots(detail, run.id),
     terminals: terminalParts.reply,
+    steers: steerMarks(steers),
     todo: todoEntries.length > 0,
   });
+  const steersAt = (ids: readonly string[], index: number) => (
+    <SteerGroup
+      messages={steers.filter((message) => ids.includes(message.id))}
+      detail={detail}
+      run={run}
+      crew={false}
+      seen={seenAfter(parts, index)}
+    />
+  );
   const mood = turnMood({
     run,
     live: stream.status,
@@ -233,7 +255,9 @@ export function SoloTurn({
           waiting,
           changes,
           todo: <TurnTodo entries={todoEntries} live={working} />,
+          answers,
         }}
+        steers={steersAt}
       >
         {(part, last) => (
           <Markdown text={part} streaming={last && leads && active && !publishing} />
@@ -243,7 +267,7 @@ export function SoloTurn({
         runId={run.id}
         background={working && !waiting ? stream.subagents.background : null}
       />
-      {cards.decided.map(approvalCard)}
+      {cardsLeft(cards.decided, answers, commandCalls).map(approvalCard)}
       <ChatFiles files={(detail.chatFiles ?? []).filter((file) => file.runId === run.id)} />
       <ArtifactCards chatId={detail.conversation.id} runId={run.id} pages={detail.artifactPages} />
       <RailFlags detail={detail} runId={run.id} />
@@ -269,6 +293,7 @@ export function SoloTurn({
         terminals={terminalParts.publish}
         waiting={waiting}
         streaming={leads && active}
+        answers={answers}
       />
       {cards.pending.map(approvalCard)}
       <AgreedReplyLine detail={detail} message={assistantMessage} finished={finished} />
@@ -290,7 +315,12 @@ export function SoloTurn({
           retryIn: isLatestTurn(detail, run.id) ? detail.conversation.id : null,
         }}
       />
-      {working && !waiting && <WorkingLine run={run} />}
+      {working && !waiting && (
+        <WorkingLine
+          run={run}
+          doing={liveLabel(subagents, [...commands.reply, ...commands.publish])}
+        />
+      )}
       {finished && (
         <TurnMeta>
           {text && (

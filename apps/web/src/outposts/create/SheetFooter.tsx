@@ -1,6 +1,7 @@
-import { useEffect, useId, useRef, type Ref } from 'react';
+import { useId, type Ref } from 'react';
 import { Keys } from '../../ui/Keys.tsx';
 import { MAC } from '../../ui/shortcuts.ts';
+import { DiscardBar } from './DiscardBar.tsx';
 
 export type FooterStep = 'name' | 'chats' | 'review' | 'result';
 
@@ -11,7 +12,6 @@ interface SheetFooterProps {
   block: string | null;
   addsOpenChat: boolean;
   discarding: boolean;
-  adding?: boolean;
   onBack: () => void;
   onPrimary: () => void;
   onOpenOutpost: () => void;
@@ -20,7 +20,6 @@ interface SheetFooterProps {
 }
 
 const ADDS_OPEN_CHAT = 'Continue adds the open chat';
-const ADD_CHATS = 'Start chats';
 const ENTER = ['↵'] as const;
 const COMMAND_ENTER = MAC ? (['⌘', '↵'] as const) : (['Ctrl', '↵'] as const);
 
@@ -38,7 +37,6 @@ export function SheetFooter({
   block,
   addsOpenChat,
   discarding,
-  adding = false,
   onBack,
   onPrimary,
   onOpenOutpost,
@@ -46,28 +44,11 @@ export function SheetFooter({
   onDiscard,
 }: SheetFooterProps) {
   const ids = useId();
-  const keepRef = useRef<HTMLButtonElement>(null);
   const blocked = step === 'chats' && block !== null;
   const hint = blocked ? block : step === 'chats' && addsOpenChat ? ADDS_OPEN_CHAT : null;
 
-  useEffect(() => {
-    if (discarding) keepRef.current?.focus();
-  }, [discarding]);
-
   if (discarding) {
-    return (
-      <footer className="op-sheet-foot op-create-foot" role="alertdialog" aria-labelledby={ids}>
-        <span id={ids} className="op-foot-ask">
-          {adding ? 'Discard these chats?' : 'Discard this outpost?'}
-        </span>
-        <button ref={keepRef} type="button" className="btn sm ghost" onClick={onKeep}>
-          Keep editing
-        </button>
-        <button type="button" className="btn sm line" onClick={onDiscard}>
-          Discard
-        </button>
-      </footer>
-    );
+    return <DiscardBar question="Discard this outpost?" onKeep={onKeep} onDiscard={onDiscard} />;
   }
 
   return (
@@ -92,7 +73,7 @@ export function SheetFooter({
         aria-describedby={hint ? `${ids}hint` : undefined}
         onClick={onPrimary}
       >
-        {starting ? 'Starting…' : adding && step === 'review' ? ADD_CHATS : PRIMARY[step]}
+        {starting ? 'Starting…' : PRIMARY[step]}
         {!starting && <Keys keys={step === 'chats' ? COMMAND_ENTER : ENTER} />}
       </button>
     </footer>

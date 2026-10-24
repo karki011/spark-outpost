@@ -12,6 +12,7 @@ export interface FakeFeedbackPull {
   merged: boolean;
   draft: boolean;
   sha: string;
+  author: string;
   checkRuns: {
     id: number;
     name: string;
@@ -20,7 +21,15 @@ export interface FakeFeedbackPull {
     output?: { title: string; summary: string };
   }[];
   annotations: Record<number, { path: string; start_line: number; message: string }[]>;
-  reviewComments: { id: number; user: Login; body: string; path: string; line: number }[];
+  reviewComments: {
+    id: number;
+    user: Login;
+    body: string;
+    path: string;
+    line: number;
+    in_reply_to_id?: number;
+  }[];
+  resolvedThreads: number[];
   reviews: { id: number; user: Login; body: string; state: string }[];
   issueComments: { id: number; user: Login; body: string }[];
 }
@@ -36,6 +45,16 @@ export interface FakeFeedbackGitHub {
 const ok = (data: unknown) => ({ status: 200, data, header: () => null });
 const missing = () => ({ status: 404, data: { message: 'Not Found' }, header: () => null });
 
+function reviewThreads(p: FakeFeedbackPull) {
+  const nodes = p.reviewComments
+    .filter((comment) => !comment.in_reply_to_id)
+    .map((comment) => ({
+      isResolved: p.resolvedThreads.includes(comment.id),
+      comments: { nodes: [{ databaseId: comment.id }] },
+    }));
+  return { data: { repository: { pullRequest: { reviewThreads: { nodes } } } } };
+}
+
 export function fakeFeedbackGitHub(pull: Partial<FakeFeedbackPull> = {}): FakeFeedbackGitHub {
   const state: FakeFeedbackGitHub = {
     pull: {
@@ -46,9 +65,11 @@ export function fakeFeedbackGitHub(pull: Partial<FakeFeedbackPull> = {}): FakeFe
       merged: false,
       draft: false,
       sha: 'sha-1',
+      author: 'alice',
       checkRuns: [],
       annotations: {},
       reviewComments: [],
+      resolvedThreads: [],
       reviews: [],
       issueComments: [],
       ...pull,
@@ -67,7 +88,7 @@ export function fakeFeedbackGitHub(pull: Partial<FakeFeedbackPull> = {}): FakeFe
     state.reads.push(`${method} ${route}`);
     const page = Number(url.searchParams.get('page') ?? 1);
     const list = (items: unknown[]) => ok(page === 1 ? items : []);
-    if (route === '/graphql') return { status: 404, data: null, header: () => null };
+    if (route === '/graphql') return ok(reviewThreads(p));
     if (method === 'POST') {
       state.posted.push({ path: route, body: String(body?.body ?? '') });
       nextId += 1;
@@ -80,9 +101,12 @@ export function fakeFeedbackGitHub(pull: Partial<FakeFeedbackPull> = {}): FakeFe
         merged: p.merged,
         merged_at: p.merged ? '2026-10-01T10:00:00Z' : null,
         head: { sha: p.sha },
+        user: { login: p.author },
       });
     }
-    if (route === `${base}/commits/${p.sha}/check-runs`) return ok({ check_runs: p.checkRuns });
+    if (route === `${base}/commits/${p.sha}/check-runs`) {
+      return ok({ check_runs: page === 1 ? p.checkRuns : [] });
+    }
     const annotations = /\/check-runs\/(\d+)\/annotations$/.exec(route);
     if (annotations) return ok(p.annotations[Number(annotations[1])] ?? []);
     if (route === `${base}/pulls/${p.number}/comments`) return list(p.reviewComments);

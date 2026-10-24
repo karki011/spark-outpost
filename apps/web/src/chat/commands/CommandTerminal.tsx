@@ -8,7 +8,9 @@ import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 import { useCopyFeedback } from '../../ui/use-copy-feedback.ts';
 import { commandOutputKey, fetchCommandOutput } from './command-api.ts';
 import { CommandDockContext } from './command-dock.ts';
+import type { CommandAnswer } from './command-answers.ts';
 import { commandOutcome, type CommandView } from './command-model.ts';
+import { commandTitle } from './command-title.ts';
 import { CommandScreen } from './CommandScreen.tsx';
 import { CommandWord } from './CommandStatus.tsx';
 import { useCommandUi } from './command-ui.ts';
@@ -44,16 +46,28 @@ function useTerminalUi(command: CommandView) {
   };
 }
 
+function CommandTitle({ command }: { command: CommandView }) {
+  return (
+    <span className="trow-text">
+      <span className="trow-verb">{command.status === 'running' ? 'Running' : 'Ran'}</span>{' '}
+      <span className="trow-name">{commandTitle(command)}</span>
+    </span>
+  );
+}
+
 interface CommandTerminalProps {
   command: CommandView;
   waiting?: boolean;
+  answer?: CommandAnswer | null;
 }
 
 function sameTerminal(before: CommandTerminalProps, after: CommandTerminalProps): boolean {
   const [was, now] = [before.command, after.command];
   return (
     before.waiting === after.waiting &&
+    before.answer?.line === after.answer?.line &&
     was.id === now.id &&
+    was.description === now.description &&
     was.runId === now.runId &&
     was.status === now.status &&
     was.output === now.output &&
@@ -68,6 +82,7 @@ function sameTerminal(before: CommandTerminalProps, after: CommandTerminalProps)
 export const CommandTerminal = memo(function CommandTerminal({
   command,
   waiting = false,
+  answer = null,
 }: CommandTerminalProps) {
   const bodyId = useId();
   const dockChatId = use(CommandDockContext);
@@ -112,14 +127,9 @@ export const CommandTerminal = memo(function CommandTerminal({
           }}
         >
           <RowIcon name="run" />
-          <span className="trow-text">
-            <b>{running ? 'Running' : 'Ran'}</b>
-            <code className={tall && open ? 'run-cmd-line full' : 'run-cmd-line'}>
-              {command.command}
-            </code>
-          </span>
+          <CommandTitle command={command} />
           <span className="trow-end run-cmd-state">
-            <CommandWord command={command} waiting={waiting} />
+            <CommandWord command={command} waiting={waiting} denied={answer?.denied ?? false} />
             <ChevronIcon />
           </span>
         </button>
@@ -130,6 +140,7 @@ export const CommandTerminal = memo(function CommandTerminal({
       <div className="run-cmd-body" id={bodyId} hidden={!open}>
         {open && (
           <div className="run-cmd-tools">
+            <span className="run-cmd-label">Terminal</span>
             {!awaitsEnd && (
               <button
                 type="button"
@@ -179,6 +190,12 @@ export const CommandTerminal = memo(function CommandTerminal({
             </button>
           </div>
         )}
+        {open && (
+          <pre className="run-cmd-cmd">
+            <span aria-hidden="true">$ </span>
+            {command.command}
+          </pre>
+        )}
         {open && awaitsEnd && <p className="run-cmd-note">Output shows when the command ends.</p>}
         {open && !awaitsEnd && text === null && (
           <div className="run-cmd-wait-load">
@@ -208,6 +225,7 @@ export const CommandTerminal = memo(function CommandTerminal({
           </p>
         )}
         {open && note && <p className="run-cmd-note">{note}</p>}
+        {open && answer && <p className="run-cmd-note run-cmd-answer">{answer.line}</p>}
       </div>
     </section>
   );

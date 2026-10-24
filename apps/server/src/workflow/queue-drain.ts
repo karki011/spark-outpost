@@ -2,6 +2,7 @@ import { PERMISSION_DO, type QueuedMessage, type SendNowOutcome } from '@spark-o
 import { resolveRunTarget } from '../api/run-target.ts';
 import { BadRequestError } from '../api/validation.ts';
 import {
+  addToQueue,
   alreadySent,
   PAUSED_OUTPOST_ITEM,
   QueueError,
@@ -18,6 +19,8 @@ import {
   getMemberMessage,
   insertMemberMessage,
   markMessageSent,
+  missedMessage,
+  removeMemberMessages,
   urgentLeftovers,
 } from '../persistence/member-messages.ts';
 
@@ -280,4 +283,26 @@ export async function drainWaiting(db: Db, resolveTarget: ResolveTarget): Promis
     if (outcome === 'sent') sent += 1;
   }
   return sent;
+}
+
+export async function resendMissed(
+  db: Db,
+  conversationId: string,
+  id: string,
+  resolveTarget: ResolveTarget,
+): Promise<'sent' | 'queued' | null> {
+  const target = await resolveTarget(conversationId);
+  return withTransaction(db, async (client) => {
+    if (!(await lockConversation(client, conversationId))) return null;
+    const missed = await missedMessage(client, conversationId, id);
+    if (!missed) return null;
+    await removeMemberMessages(client, [id]);
+    if (await activeTurn(client, conversationId)) {
+      await addToQueue(client, conversationId, { id, content: missed.body });
+      return 'queued';
+    }
+    const item = { id, content: missed.body, continueRunId: null, outpostPostId: null };
+    await sendQueued(client, conversationId, item, target);
+    return 'sent';
+  });
 }

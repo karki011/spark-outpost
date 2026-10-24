@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import type { Attachment } from '@spark-outpost/contracts';
 import { useAttachments } from '../../chat/attachments/use-attachments.ts';
 import type { ChatDraft } from './create-draft.ts';
@@ -21,11 +21,12 @@ interface ChatEntryProps extends ChatFormActions {
   problems: readonly ChatProblem[];
   finished: boolean;
   focusOnMount: boolean;
+  closed?: ReactNode;
   onFiles: (files: Attachment[], pending: boolean) => void;
   onEdit: () => void;
 }
 
-export function ChatEntry({ onFiles, onEdit, afterHandle, ...props }: ChatEntryProps) {
+export function ChatEntry({ onFiles, onEdit, afterHandle, closed, ...props }: ChatEntryProps) {
   const attachments = useAttachments();
   const { uploaded } = attachments;
   const pending = attachments.uploading || attachments.failed;
@@ -36,9 +37,9 @@ export function ChatEntry({ onFiles, onEdit, afterHandle, ...props }: ChatEntryP
 
   return (
     <li>
-      {props.chat.open ? (
-        <ChatForm {...props} attachments={attachments} />
-      ) : (
+      {props.chat.open && <ChatForm {...props} attachments={attachments} />}
+      {!props.chat.open && closed}
+      {!props.chat.open && closed === undefined && (
         <ChatRow
           chat={props.chat}
           view={props.view}

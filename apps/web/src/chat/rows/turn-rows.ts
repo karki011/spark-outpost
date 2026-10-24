@@ -1,5 +1,5 @@
 import { friendlyStep, isSparkNote, toolLabel, type BrowserShot } from '@spark-outpost/contracts';
-import { anchorIndex, outsideFence } from '../../browser/shot-order.ts';
+import { anchorIndex, outsideFence, type TextAnchor } from '../../browser/shot-order.ts';
 import type { AgentTerminalView } from '../commands/agent-terminal-model.ts';
 import type { CommandView } from '../commands/command-model.ts';
 import type { StepStatus, StepTimes, StepView } from '../run-projection.ts';
@@ -9,7 +9,6 @@ const THINKING = 'Thinking';
 const WEB_STEP = /^(?:Fetched |Searched the web$)/;
 const WEB_SEARCHED = 'Searched the web';
 
-export type RowFamily = 'explore' | 'edit' | 'run';
 export type ToolTone = 'read' | 'search' | 'edit' | 'run' | 'web' | 'other';
 
 export interface ToolItem {
@@ -43,13 +42,14 @@ export interface TodoItem {
 }
 
 export type RowItem = ToolItem | ThoughtItem | CommandItem | TodoItem;
-export type GroupedItem = ToolItem | CommandItem;
+export type GroupedItem = ToolItem | CommandItem | ThoughtItem;
+export type LiveItem = ToolItem | CommandItem | ThoughtItem;
 
 export interface RowGroup {
   kind: 'group';
   key: string;
-  family: RowFamily;
   items: GroupedItem[];
+  live: LiveItem | null;
 }
 
 export type Row = RowItem | RowGroup;
@@ -57,8 +57,15 @@ export type Row = RowItem | RowGroup;
 export type TurnRowPart =
   | { kind: 'text'; key: string; text: string }
   | { kind: 'shots'; key: string; shots: BrowserShot[] }
-  | { kind: 'terminal'; key: string; terminal: AgentTerminalView }
-  | { kind: 'rows'; key: string; rows: Row[] };
+  | { kind: 'terminal'; key: string; terminals: AgentTerminalView[] }
+  | { kind: 'rows'; key: string; rows: Row[] }
+  | { kind: 'steers'; key: string; ids: string[]; wroteAfter: boolean };
+
+export interface SteerMark {
+  id: string;
+  anchor: TextAnchor | null;
+  time: number;
+}
 
 export interface TurnRowInput {
   text: string;
@@ -66,13 +73,15 @@ export interface TurnRowInput {
   commands: readonly CommandView[];
   shots?: readonly BrowserShot[];
   terminals?: readonly AgentTerminalView[];
+  steers?: readonly SteerMark[];
   todo?: boolean;
 }
 
 type Placed =
   | { kind: 'item'; at: number; time: number | null; item: RowItem }
   | { kind: 'shot'; at: number; time: number | null; shot: BrowserShot }
-  | { kind: 'terminal'; at: number; time: number | null; terminal: AgentTerminalView };
+  | { kind: 'terminal'; at: number; time: number | null; terminal: AgentTerminalView }
+  | { kind: 'steer'; at: number; time: number | null; id: string; wroteAfter: boolean };
 
 const DONE_VERBS: Record<'read' | 'search' | 'edit', [done: string, open: string]> = {
   read: ['Read', 'Reading'],
@@ -211,8 +220,21 @@ function stepAt(text: string, step: StepView): number {
   });
 }
 
+function paragraphEnd(text: string, at: number): number {
+  if (at === 0 || at >= text.length || text[at - 1] === '\n') return at;
+  const end = text.indexOf('\n\n', at);
+  return outsideFence(text, end === -1 ? text.length : end);
+}
+
+function steerPlace(text: string, steer: SteerMark): { at: number; wroteAfter: boolean } {
+  if (!steer.anchor) return { at: text.length, wroteAfter: false };
+  const anchor = placeAt(text, steer.anchor);
+  const at = paragraphEnd(text, anchor);
+  return { at, wroteAfter: text.slice(anchor, at).trim() !== '' };
+}
+
 function placedItems(input: TurnRowInput): Placed[] {
-  const { text, steps, commands, shots = [], terminals = [] } = input;
+  const { text, steps, commands, shots = [], terminals = [], steers = [] } = input;
   const items = stepItems(steps, commands.length > 0);
   const stepsByKey = new Map(steps.map((step, index) => [`step-${index}`, step]));
   const placed: Placed[] = [
@@ -238,6 +260,12 @@ function placedItems(input: TurnRowInput): Placed[] {
       time: Date.parse(terminal.startedAt),
       terminal,
     })),
+    ...steers.map((steer): Placed => ({
+      kind: 'steer',
+      ...steerPlace(text, steer),
+      time: steer.time,
+      id: steer.id,
+    })),
   ];
   return placed.sort(
     (left, right) =>
@@ -246,41 +274,47 @@ function placedItems(input: TurnRowInput): Placed[] {
   );
 }
 
-function familyOf(item: RowItem): RowFamily | null {
-  if (item.kind === 'command') return item.command.status === 'running' ? null : 'run';
-  if (item.kind !== 'tool' || item.status === 'open') return null;
-  if (item.tone === 'read' || item.tone === 'search') return 'explore';
-  if (item.tone === 'edit') return 'edit';
-  if (item.tone === 'run') return 'run';
-  return null;
+const GROUPED_TONES = new Set<ToolTone>(['read', 'search', 'edit', 'run']);
+
+function groupable(item: RowItem): item is GroupedItem {
+  if (item.kind === 'command') return item.command.status !== 'running';
+  if (item.kind === 'thought') return item.step.status !== 'open';
+  return item.kind === 'tool' && item.status !== 'open' && GROUPED_TONES.has(item.tone);
+}
+
+function isLive(item: RowItem): item is LiveItem {
+  if (item.kind === 'command') return item.command.status === 'running';
+  if (item.kind === 'thought') return item.step.status === 'open';
+  if (item.kind === 'tool') return item.status === 'open';
+  return false;
+}
+
+function grouped(items: GroupedItem[]): Row[] {
+  const steps = items.filter((item) => item.kind !== 'thought');
+  if (steps.length < 2) return items;
+  return [{ kind: 'group', key: `group-${items[0]!.key}`, items, live: null }];
+}
+
+function withLiveTail(rows: Row[]): Row[] {
+  const last = rows.at(-1);
+  const before = rows.at(-2);
+  if (!last || before?.kind !== 'group' || last.kind === 'group' || !isLive(last)) return rows;
+  return [...rows.slice(0, -2), { ...before, live: last }];
 }
 
 export function groupRows(items: readonly RowItem[]): Row[] {
   const rows: Row[] = [];
-  let family: RowFamily | null = null;
   let run: GroupedItem[] = [];
-  const flush = () => {
-    if (run.length > 1 && family) {
-      rows.push({ kind: 'group', key: `group-${run[0]!.key}`, family, items: run });
-    } else {
-      rows.push(...run);
-    }
-    run = [];
-    family = null;
-  };
   for (const item of items) {
-    const next = familyOf(item);
-    if (next === null || (item.kind !== 'tool' && item.kind !== 'command')) {
-      flush();
-      rows.push(item);
+    if (groupable(item)) {
+      run.push(item);
       continue;
     }
-    if (next !== family) flush();
-    family = next;
-    run.push(item);
+    rows.push(...grouped(run), item);
+    run = [];
   }
-  flush();
-  return rows;
+  rows.push(...grouped(run));
+  return withLiveTail(rows);
 }
 
 function withTodo(items: readonly RowItem[]): RowItem[] {
@@ -320,9 +354,21 @@ export function turnRowParts(input: TurnRowInput): TurnRowPart[] {
       continue;
     }
     flushRows();
+    if (placed.kind === 'steer') {
+      const last = parts.at(-1);
+      if (last?.kind === 'steers' && last.wroteAfter === placed.wroteAfter) {
+        last.ids.push(placed.id);
+      } else {
+        const { id, wroteAfter } = placed;
+        parts.push({ kind: 'steers', key: `steers-${id}`, ids: [id], wroteAfter });
+      }
+      continue;
+    }
     if (placed.kind === 'terminal') {
       const { terminal } = placed;
-      parts.push({ kind: 'terminal', key: `terminal-${terminal.id}`, terminal });
+      const last = parts.at(-1);
+      if (last?.kind === 'terminal') last.terminals.push(terminal);
+      else parts.push({ kind: 'terminal', key: `terminal-${terminal.id}`, terminals: [terminal] });
       continue;
     }
     const last = parts.at(-1);
@@ -332,35 +378,6 @@ export function turnRowParts(input: TurnRowInput): TurnRowPart[] {
   addText(text.length);
   flushRows();
   return parts;
-}
-
-export function groupSummary(group: RowGroup): string {
-  if (group.family === 'explore') {
-    const reads = group.items.filter((item) => item.kind === 'tool' && item.tone === 'read');
-    const searches = group.items.length - reads.length;
-    return [counted(fileCount(reads), 'file'), counted(searches, 'search', 'searches')]
-      .filter(Boolean)
-      .join(', ');
-  }
-  if (group.family === 'edit') return counted(fileCount(group.items), 'file');
-  return counted(group.items.length, 'command');
-}
-
-function fileCount(items: readonly GroupedItem[]): number {
-  const files = items.map((item) =>
-    item.kind === 'tool' ? (item.path ?? item.target ?? item.key) : item.key,
-  );
-  return new Set(files).size;
-}
-
-export function groupVerb(family: RowFamily): string {
-  if (family === 'explore') return 'Explored';
-  return family === 'edit' ? 'Edited' : 'Ran';
-}
-
-function counted(count: number, one: string, many = `${one}s`): string {
-  if (count === 0) return '';
-  return `${count} ${count === 1 ? one : many}`;
 }
 
 export function spanSeconds(items: readonly StepTimes[]): number | null {

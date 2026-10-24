@@ -21,14 +21,22 @@
 .sa-steps {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
 }
 
 .sa-steps li {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 28px;
   padding: 2px 0;
+  font-size: 13px;
+}
+
+.sa-steps li + li {
+  border-top: 1px solid var(--line);
 }
 
 .sa-list {

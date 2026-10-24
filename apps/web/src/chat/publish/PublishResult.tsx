@@ -1,5 +1,6 @@
 import './publish-result.css';
 import type { AgentTerminalView } from '../commands/agent-terminal-model.ts';
+import type { CommandAnswers } from '../commands/command-answers.ts';
 import type { CommandView } from '../commands/command-model.ts';
 import { TurnReply } from '../commands/TurnReply.tsx';
 import { Markdown } from '../markdown/Markdown.tsx';
@@ -11,6 +12,7 @@ interface PublishResultProps {
   terminals: readonly AgentTerminalView[];
   waiting: boolean;
   streaming: boolean;
+  answers: CommandAnswers;
 }
 
 const NO_SHOTS = [] as const;
@@ -21,6 +23,7 @@ export function PublishResult({
   terminals,
   waiting,
   streaming,
+  answers,
 }: PublishResultProps) {
   if (text.trim() === '' && commands.length === 0 && terminals.length === 0) return null;
   return (
@@ -33,6 +36,7 @@ export function PublishResult({
           commands={commands}
           terminals={terminals}
           waiting={waiting}
+          answers={answers}
         >
           {(part, last) => <Markdown text={part} streaming={last && streaming} />}
         </TurnReply>
