@@ -158,6 +158,9 @@ export function DraftSheet(props: DraftSheetProps) {
                   value={draft.name}
                   maxLength={OUTPOST_NAME_MAX}
                   aria-invalid={nameTried && name !== null}
+                  aria-describedby={
+                    nameTried && name !== null && block === name ? `${ids}hint` : undefined
+                  }
                   onChange={(event) =>
                     onChange((current) => ({ ...current, name: event.target.value }))
                   }
