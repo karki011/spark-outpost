@@ -18,6 +18,7 @@ import { MAP } from './map-pairs.ts';
 import { PHONE } from './phone-pairs.ts';
 import { PULL_REQUESTS } from './pull-request-pairs.ts';
 import { RAIL_CLOCK } from './rail-clock-pairs.ts';
+import { CACHE_BADGE, CACHE_BADGE_HUES } from './cache-badge-pairs.ts';
 import { CALENDAR_SELECTION } from './calendar-selection-pairs.ts';
 import { TICKETS } from './ticket-pairs.ts';
 import { surfaceText, type HuePair, type Pair, type PairKind } from './pair-types.ts';
@@ -68,6 +69,7 @@ export const PAIRS: Pair[] = [
   ...COMMANDS,
   ...RAIL_CLOCK,
   ...CALENDAR_SELECTION,
+  ...CACHE_BADGE,
 ];
 
 export const HUE_PAIRS: HuePair[] = [
@@ -78,4 +80,5 @@ export const HUE_PAIRS: HuePair[] = [
     second: 'var(--danger)',
     minDegrees: 60,
   },
+  ...CACHE_BADGE_HUES,
 ];
