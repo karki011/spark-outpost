@@ -8,7 +8,11 @@ const HTML_TAG = /<\/?[a-zA-Z][^>]*>/g;
 const FENCE = /^\s*(?:```|~~~).*$/gm;
 const LINE_PREFIX = /^\s{0,3}(?:#{1,6}\s+|>+\s?|[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)/gm;
 const EMPHASIS = /(\*\*|__|~~|\*|_|`)(?=\S)([\s\S]*?\S)\1/g;
-const STRONG = /\*\*/g;
+const STRONG = /(?<!\S)\*\*\s+([\s\S]*?\S)\*\*(?!\S)/g;
+const CODE_SPAN = /`([^`\n]+)`/g;
+const CODE_OPEN = '\u0003';
+const CODE_CLOSE = '\u0004';
+const CODE_HELD = new RegExp(`${CODE_OPEN}(\\d+)${CODE_CLOSE}`, 'g');
 const BADGE_WORD = /\s*\bbadge$/i;
 const OPEN_MARK = '\u0001';
 const CLOSE_MARK = '\u0002';
@@ -28,20 +32,29 @@ function withBadge(text: string): string {
   return body ? `${lead[1]} · ${body}` : lead[1]!;
 }
 
+function withoutEmphasis(text: string): string {
+  const spans: string[] = [];
+  const held = text.replace(CODE_SPAN, (_match, code: string) => {
+    spans.push(code);
+    return `${CODE_OPEN}${spans.length - 1}${CODE_CLOSE}`;
+  });
+  return held
+    .replace(STRONG, '$1')
+    .replace(EMPHASIS, '$2')
+    .replace(EMPHASIS, '$2')
+    .replace(CODE_HELD, (_match, index: string) => spans[Number(index)]!);
+}
+
 export function plainText(markdown: string): string {
-  const marked = markdown
+  const stripped = markdown
     .replace(HTML_COMMENT, ' ')
     .replace(FENCE, ' ')
     .replace(IMAGE, (_match, alt: string) => imageWord(alt))
     .replace(HTML_IMAGE, (_match, double?: string, single?: string) => imageWord(double ?? single))
     .replace(LINK, '$1')
     .replace(HTML_TAG, ' ')
-    .replace(LINE_PREFIX, '')
-    .replace(STRONG, '')
-    .replace(EMPHASIS, '$2')
-    .replace(EMPHASIS, '$2')
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(LINE_PREFIX, '');
+  const marked = withoutEmphasis(stripped).replace(/\s+/g, ' ').trim();
   return withBadge(marked);
 }
 
