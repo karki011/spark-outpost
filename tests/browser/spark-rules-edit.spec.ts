@@ -7,7 +7,12 @@ import { openTestDb, resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { SPARK_RULES_FILE } from './stub-config.ts';
 
-const rules = async (page: Page) => (await page.request.get('/api/spark-rules')).json();
+const allowedPrefixes = async (page: Page): Promise<string[]> => {
+  const rules = (await (await page.request.get('/api/spark-rules')).json()) as {
+    ghAllowed: { prefix: string }[];
+  };
+  return rules.ghAllowed.map((entry) => entry.prefix);
+};
 
 function fileHash(): string {
   return createHash('sha256').update(readFileSync(SPARK_RULES_FILE, 'utf8')).digest('hex');
@@ -65,7 +70,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('the user allows an agent’s Spark rules change once on the card', async ({ page }) => {
-  await page.request.put('/api/spark-rules', { data: { workflows: 'mode' } });
+  await page.request.put('/api/spark-rules/rule', { data: { row: 'workflows', choice: 'mode' } });
   await rulesCardChat();
   await openChats(page);
   await page
@@ -82,16 +87,16 @@ test('the user allows an agent’s Spark rules change once on the card', async (
   await expect(card.getByRole('button', { name: 'Allow for this session' })).toBeVisible();
   await card.getByRole('button', { name: 'Allow once' }).click();
   await expect
-    .poll(async () => (await rules(page)).ghAllowed, { timeout: 15_000 })
+    .poll(async () => allowedPrefixes(page), { timeout: 15_000 })
     .toEqual(['gh release create']);
 });
 
 test('a rules file changed outside Spark waits for review in Settings', async ({ page }) => {
-  await page.request.put('/api/spark-rules', { data: { workflows: 'mode' } });
+  await page.request.put('/api/spark-rules/rule', { data: { row: 'workflows', choice: 'mode' } });
   const file = JSON.parse(readFileSync(SPARK_RULES_FILE, 'utf8'));
   file.permissions.allow.push('Gh(release create)');
   writeFileSync(SPARK_RULES_FILE, JSON.stringify(file));
-  expect((await rules(page)).ghAllowed).toEqual([]);
+  expect(await allowedPrefixes(page)).toEqual([]);
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
@@ -106,5 +111,5 @@ test('a rules file changed outside Spark waits for review in Settings', async ({
   );
   await notice.getByRole('button', { name: 'Use the changed file' }).click();
   await expect(notice).toHaveCount(0);
-  expect((await rules(page)).ghAllowed).toEqual(['gh release create']);
+  expect(await allowedPrefixes(page)).toEqual(['gh release create']);
 });

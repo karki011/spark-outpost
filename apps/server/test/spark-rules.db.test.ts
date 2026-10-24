@@ -313,7 +313,7 @@ describe("Spark's rules file", () => {
     expect(view.malformed).toBe(false);
     await writeFile(userFile(), '{ nope');
     expect(await sparkRules()).toMatchObject({ malformed: true });
-    await expect(setSparkRule('Push', 'ask')).rejects.toThrow("can't be read");
+    await expect(setSparkRule('Push', 'ask')).rejects.toThrow('changed outside Spark');
     const run = await doRun(t, root);
     const { answer } = await refusedCard(run, RELEASE);
     expect(answer).toMatchObject({ allowed: false });

@@ -1,5 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import {
+  acceptedOf,
+  acceptedRecordPath,
+  acceptedRecordText,
+} from '../../apps/server/src/spark-rules/accepted.ts';
 import { resetTestDatabase } from './database.ts';
 import { SPARK_MANAGED_RULES_FILE, SPARK_RULES_DIR, SPARK_RULES_FILE } from './stub-config.ts';
 
@@ -21,7 +26,11 @@ const userFile = () => JSON.parse(readFileSync(SPARK_RULES_FILE, 'utf8')) as Rul
 
 function writeRules(file: string, value: unknown) {
   mkdirSync(SPARK_RULES_DIR, { recursive: true });
-  writeFileSync(file, typeof value === 'string' ? value : JSON.stringify(value, null, 2));
+  const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  writeFileSync(file, text);
+  if (file !== SPARK_RULES_FILE) return;
+  const record = acceptedRecordText(acceptedOf({ kind: 'text', text }));
+  writeFileSync(acceptedRecordPath(file), record);
 }
 
 const savedRule = (page: Page) =>
