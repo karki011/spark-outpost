@@ -70,7 +70,8 @@ export interface RoundItem {
 
 const PUSHED_BACK_REPLY = /^\W*push(?:ed|ing)? back\b/i;
 
-const checkName = (item: RoundItem) => item.sourceKey.split(':').slice(1, -1).join(':');
+export const checkName = (item: Pick<RoundItem, 'sourceKey'>) =>
+  item.sourceKey.split(':').slice(1, -1).join(':');
 
 function sameFailure(item: RoundItem, earlier: readonly RoundItem[], lastRound: number): boolean {
   return earlier.some(

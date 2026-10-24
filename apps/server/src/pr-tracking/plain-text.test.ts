@@ -23,6 +23,30 @@ describe('plainText', () => {
   });
 });
 
+describe('plainText on review bot comments', () => {
+  it('turns a Codex priority badge into a word before the title', () => {
+    expect(
+      plainText(
+        '**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub> Match email parameters against the email field**\n\nThe handlers require emails.',
+      ),
+    ).toBe('P1 · Match email parameters against the email field The handlers require emails.');
+  });
+
+  it('keeps the alt text of a Greptile HTML badge and drops the markup', () => {
+    expect(
+      plainText(
+        '<a href="#"><img alt="P2" src="https://greptile-static-assets.s3.amazonaws.com/badges/p2.svg" align="top"></a> **Test helpers lack required types**',
+      ),
+    ).toBe('P2 · Test helpers lack required types');
+  });
+
+  it('keeps an image later in the text as its alt word', () => {
+    expect(plainText('See ![the chart](https://example.com/c.png) above')).toBe(
+      'See the chart above',
+    );
+  });
+});
+
 describe('plainExcerpt', () => {
   it('cuts long text with an ellipsis', () => {
     expect(plainExcerpt('word '.repeat(100), 20)).toBe('word word word word…');

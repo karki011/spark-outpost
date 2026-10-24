@@ -4,6 +4,7 @@ import type {
   FeedbackState,
   FeedbackTriage,
 } from '@spark-outpost/contracts';
+import { plainExcerpt } from '../pr-tracking/plain-text.ts';
 import type { Queryable } from './db.ts';
 import { newId } from './ids.ts';
 import {
@@ -144,14 +145,6 @@ function toItem(row: ItemRow): StoredFeedback {
   };
 }
 
-export async function knownSourceKeys(db: Queryable, watchId: string): Promise<Set<string>> {
-  const { rows } = await db.query<{ source_key: string }>(
-    'SELECT source_key FROM pr_feedback_items WHERE watch_id = $1',
-    [watchId],
-  );
-  return new Set(rows.map((row) => row.source_key));
-}
-
 export type TriagedFeedback = NewFeedback & Pick<StoredFeedback, 'triage' | 'triagedBy' | 'state'>;
 
 export async function insertFeedback(
@@ -243,8 +236,7 @@ export async function updateFeedback(
 }
 
 export function feedbackView(item: StoredFeedback, excerptChars = 280): FeedbackItem {
-  const excerpt =
-    item.body.length > excerptChars ? `${item.body.slice(0, excerptChars - 1)}…` : item.body;
+  const excerpt = plainExcerpt(item.body, excerptChars);
   return {
     id: item.id,
     label: item.label,

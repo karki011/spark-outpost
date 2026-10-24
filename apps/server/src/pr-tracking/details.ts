@@ -282,13 +282,28 @@ export async function readDiscussion(
   return { reviews, inline, issue };
 }
 
+export async function threadResolution(
+  connection: GitHubConnection,
+  repo: RepoRef,
+  number: number,
+  discussion: Pick<Discussion, 'inline'>,
+): Promise<Set<number> | null> {
+  const hasThreads = discussion.inline.some((comment) => !comment.in_reply_to_id);
+  return hasThreads ? readResolved(connection, repo, number) : null;
+}
+
+export function detailsOf(
+  discussion: Discussion,
+  resolved: ReadonlySet<number> | null,
+): Omit<StoredDetails, 'checkRuns'> {
+  return { reviewers: reviewersOf(discussion.reviews), ...threadsOf(discussion, resolved) };
+}
+
 export async function discussionDetails(
   connection: GitHubConnection,
   repo: RepoRef,
   number: number,
   discussion: Discussion,
 ): Promise<Omit<StoredDetails, 'checkRuns'>> {
-  const hasThreads = discussion.inline.some((comment) => !comment.in_reply_to_id);
-  const resolved = hasThreads ? await readResolved(connection, repo, number) : null;
-  return { reviewers: reviewersOf(discussion.reviews), ...threadsOf(discussion, resolved) };
+  return detailsOf(discussion, await threadResolution(connection, repo, number, discussion));
 }
