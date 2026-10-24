@@ -325,6 +325,19 @@ describe('storyProblems', () => {
     ]);
   });
 
+  it('reports an existing chat named under two handles', () => {
+    const reused = { chatId: '00000000-0000-4000-8000-0000000000aa' };
+    expect(
+      storyProblems([{ ...chat('api'), ...reused }, chat('web'), { ...chat('docs'), ...reused }]),
+    ).toEqual([
+      {
+        kind: 'duplicate_chat',
+        handle: 'docs',
+        text: '@docs names the same existing chat as @api.',
+      },
+    ]);
+  });
+
   it('reports every problem of a draft, duplicates first and cycles last', () => {
     const problems = storyProblems([
       chat('a', 'b'),

@@ -126,6 +126,9 @@ describe('a proposal that names an existing chat', () => {
     await expect(propose([reused('me', { chat: lead.conversationId })])).rejects.toThrow(
       'this chat cannot send a request to itself',
     );
+    await expect(propose([reused('usage'), reused('again')])).rejects.toThrow(
+      '@again names the same existing chat as @usage.',
+    );
     const first = await propose([fresh('api'), reused('usage')]);
     const started = await request(app).post(`/api/outposts/drafts/${first.draft}/start`).send({});
     expect(started.status).toBe(201);
