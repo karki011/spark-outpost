@@ -36,21 +36,21 @@ export function sparkRulesRoutes({ db, workspaceId, fixedRunProvider }: SparkRul
     resolveRunTarget({ db, workspaceId, fixedRunProvider }, conversationId);
 
   router.get('/spark-rules', async (_req, res) => {
-    res.json(await sparkRules(db, workspaceId));
+    res.json(await sparkRules());
   });
 
   router.put('/spark-rules/rule', async (req, res) => {
     const { row, choice } = parseBody(setSparkRuleRequestSchema, req);
-    res.json(await setSparkRule(db, workspaceId, row, choice));
+    res.json(await setSparkRule(row, choice));
   });
 
   router.put('/spark-rules/gh-allowed', async (req, res) => {
     const { prefix, allowed } = parseBody(ghAllowedRequestSchema, req);
-    res.json(await setGhAllowed(db, workspaceId, prefix, allowed));
+    res.json(await setGhAllowed(prefix, allowed));
   });
 
   router.post('/spark-rules/recommended', async (_req, res) => {
-    res.json(await useRecommendedRules(db, workspaceId));
+    res.json(await useRecommendedRules());
   });
 
   router.post('/approvals/:id/spark-rule', async (req, res) => {

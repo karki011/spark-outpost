@@ -5,7 +5,6 @@ import { chatFoldersBase } from '../chat-files/folders.ts';
 import { startArtifactOrigin } from '../artifacts/origin-server.ts';
 import { startMorningBrief } from '../digest/morning.ts';
 import { ensureLocalWorkspace } from '../persistence/conversations.ts';
-import { seedWorkspaceRules } from '../persistence/spark-rules.ts';
 import { seedModelStats } from '../model-cards/ingest.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
@@ -80,9 +79,6 @@ await migrateOrExit(db, { backup: configuredBackup(config) });
 
 const workspaceId = await ensureLocalWorkspace(db);
 await seedModelStats(db);
-await seedWorkspaceRules(db, workspaceId).catch((error: unknown) => {
-  console.error("Could not write Spark's recommended rules", error);
-});
 const hub = new RunEventHub();
 const activeWork = new ActiveWork();
 const stopLagMonitor = startLagMonitor({ processName: 'API', work: activeWork });

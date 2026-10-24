@@ -293,7 +293,7 @@ function ruledDecide(
   if (touchesBrowserData(request, browserData)) {
     return { verdict: 'reject', reason: BROWSER_DATA_REASON };
   }
-  if (touchesSparkRules(request, browserData)) {
+  if (touchesSparkRules(request)) {
     return { verdict: 'reject', reason: SPARK_RULES_REASON };
   }
   const forced = heldForce(

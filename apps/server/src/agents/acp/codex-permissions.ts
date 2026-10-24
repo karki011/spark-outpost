@@ -1,5 +1,4 @@
-import { join } from 'node:path';
-import { browserDataDir, guardedDataEntries } from '../../approvals/browser-data.ts';
+import { browserDataDir, entryPath, guardedDataEntries } from '../../approvals/browser-data.ts';
 import { SECRET_FILE_PATTERNS } from '../../projects/secret-files.ts';
 
 export const SECRET_GLOBS = SECRET_FILE_PATTERNS.map((pattern) => `**/${pattern}`);
@@ -13,7 +12,9 @@ function secretDenies(): Record<string, string> {
 
 function browserDataDenies(dataDir: string | null): Record<string, string> {
   if (!dataDir) return {};
-  return Object.fromEntries(guardedDataEntries().map((entry) => [join(dataDir, entry), 'deny']));
+  return Object.fromEntries(
+    guardedDataEntries().map((entry) => [entryPath(dataDir, entry), 'deny']),
+  );
 }
 
 export function codexPermissionProfiles(

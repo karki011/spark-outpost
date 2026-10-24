@@ -6,6 +6,7 @@ import {
   FAKE_CODEX_STATE,
   FAKE_GH_STATE,
   SPARK_RULES_DIR,
+  SPARK_RULES_FILE,
   TEST_DATABASE_URL,
 } from './stub-config.ts';
 import { DEFAULT_INVOLVEMENT_LEVEL } from '../../packages/contracts/src/approvals.ts';
@@ -14,6 +15,7 @@ import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import { truncateTables } from '../../apps/server/src/persistence/truncate.ts';
 import { FAKE_CLAUDE_MODES, FAKE_CODEX_MODES } from '../../apps/server/src/providers/fake.ts';
+import { recommendedRulesText } from '../../apps/server/src/spark-rules/recommended.ts';
 import { stopLeftoverTerminals } from './leftover-terminals.ts';
 
 export function testDatabaseUrl(): string {
@@ -45,6 +47,7 @@ interface ResetOptions {
   jev?: boolean;
   catalog?: boolean;
   defaultLevel?: InvolvementLevel;
+  sparkRules?: 'recommended' | 'none';
 }
 
 const RESET_TABLES = [
@@ -115,10 +118,15 @@ export async function resetTestDatabase({
   jev = false,
   catalog = false,
   defaultLevel = DEFAULT_INVOLVEMENT_LEVEL,
+  sparkRules = 'recommended',
 }: ResetOptions): Promise<void> {
   rmSync(FAKE_CODEX_STATE, { force: true });
   rmSync(FAKE_GH_STATE, { force: true });
   rmSync(SPARK_RULES_DIR, { recursive: true, force: true });
+  if (sparkRules === 'recommended') {
+    mkdirSync(SPARK_RULES_DIR, { recursive: true });
+    writeFileSync(SPARK_RULES_FILE, recommendedRulesText());
+  }
   installFakeClaude();
   const db = openTestDb();
   try {

@@ -207,7 +207,7 @@ export function claudeSessionMeta(
     ...toolDenyRules(tools),
     ...(floor.secretEdits ? secretRules([...extraRoots, ...tempRoots()]) : []),
     ...browserDataRules(browserDataDir()),
-    ...sparkRulesFlagRules(browserDataDir()),
+    ...sparkRulesFlagRules(),
     ...(floor.forcePush ? FORCE_PUSH_DENY_RULES : []),
     ...remoteRules(changesProject, floor, 'deny'),
     ...floorDenyRules(tools, extraRoots, gitControlGlobs, floor),

@@ -1,10 +1,13 @@
 import { randomUUID } from 'node:crypto';
+import { writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import type { Db } from '../../apps/server/src/persistence/db.ts';
+import { recommendedRulesText } from '../../apps/server/src/spark-rules/recommended.ts';
 import { seedConversation, seedTurn } from '../../apps/server/test/outcome-seed.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { SPARK_RULES_FILE } from './stub-config.ts';
 
 const WORKFLOW = 'gh workflow run cd-alfa.yml';
 const RELEASE = 'gh release create v1.2.0';
@@ -44,9 +47,7 @@ async function refusedChat(refused: readonly Refused[]): Promise<void> {
   const db = openTestDb();
   try {
     const workspaceId = await ensureLocalWorkspace(db);
-    await db.query(`UPDATE profiles SET gh_workflows = 'refused' WHERE workspace_id = $1`, [
-      workspaceId,
-    ]);
+    writeFileSync(SPARK_RULES_FILE, recommendedRulesText({ workflows: 'refused', ghAllowed: [] }));
     const conversationId = await seedConversation(db, workspaceId);
     const runId = await seedTurn(db, conversationId, { request: 'Deploy alfa' });
     for (const card of refused) await storeRefused(db, runId, card);

@@ -3,7 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ProviderTurn } from '../../providers/provider.ts';
-import { RECOMMENDED_RULES, userRules } from '../../spark-rules/recommended.ts';
+import {
+  RECOMMENDED_RULES,
+  recommendedRulesText,
+  userRules,
+} from '../../spark-rules/recommended.ts';
 import { RECOMMENDED_FLOOR, sparkFloor } from '../../spark-rules/floor-flags.ts';
 import {
   agentDefinitions,
@@ -102,6 +106,7 @@ describe('a live session', () => {
       signal: new AbortController().signal,
     } as unknown as ProviderTurn;
     const options = { definition: agentDefinitions.claude, launch: { command: 'x', args: [] } };
+    await writeFile(process.env.SPARK_RULES_FILE!, recommendedRulesText());
     const first = await planLaunch(options, turn, false);
     await writeFile(process.env.SPARK_RULES_FILE!, JSON.stringify({ permissions: {} }));
     const second = await planLaunch(options, turn, false);

@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { SPARK_MANAGED_RULES_FILE, SPARK_RULES_DIR, SPARK_RULES_FILE } from './stub-config.ts';
@@ -181,4 +181,31 @@ test('allowed gh commands take gh prefixes, send the ones with their own rule to
   await settings.getByRole('button', { name: 'Remove gh release create' }).click();
   await expect(list).toHaveCount(0);
   await expect.poll(() => userFile().permissions.allow).not.toContain('Gh(release create)');
+});
+
+test("with no rules file every rule shows the agent's mode until one is set", async ({ page }) => {
+  await resetTestDatabase({ onboarded: true, sparkRules: 'none' });
+  await page.goto('/');
+  const settings = await openSparkRules(page);
+  const pickers = settings.locator('.rules-choice .field-button');
+  await expect(pickers).toHaveCount(18);
+  for (const picker of await pickers.all()) await expect(picker).toHaveText("Agent's mode");
+  await expect(settings.getByText('Your file')).toHaveCount(0);
+  expect(existsSync(SPARK_RULES_FILE)).toBe(false);
+
+  await settings.getByRole('button', { name: 'Use recommended rules' }).click();
+  await page
+    .getByRole('alertdialog', { name: 'Use recommended rules?' })
+    .getByRole('button', { name: 'Use recommended rules' })
+    .click();
+  await expect(settings.getByRole('button', { name: 'Merge a pull request' })).toHaveText('Refuse');
+  expect(userFile().permissions.deny).toEqual(
+    expect.arrayContaining([
+      'Gh(pr merge)',
+      'Gh(pr review)',
+      'GhAdmin',
+      'Gh(auth)',
+      'Gh(api write)',
+    ]),
+  );
 });

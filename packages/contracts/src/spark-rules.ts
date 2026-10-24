@@ -116,11 +116,6 @@ export const sparkRulesSchema = z.object({
 });
 export type SparkRules = z.infer<typeof sparkRulesSchema>;
 
-export const DEFAULT_SPARK_RULES = {
-  workflows: DEFAULT_WORKFLOW_RULE,
-  ghAllowed: [] as string[],
-};
-
 export const setSparkRuleRequestSchema = z.object({
   row: sparkRuleRowSchema,
   choice: sparkRuleChoiceSchema,

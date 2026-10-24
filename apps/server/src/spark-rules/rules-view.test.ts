@@ -1,14 +1,9 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { recommendedRulesText } from './recommended.ts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_SPARK_RULES } from '@spark-outpost/contracts';
-import {
-  changeSparkRules,
-  loadSparkRules,
-  seedSparkRules,
-  type SparkRulesFiles,
-} from './rules-store.ts';
+import { changeSparkRules, loadSparkRules, type SparkRulesFiles } from './rules-store.ts';
 import {
   choiceChange,
   ghAllowedChange,
@@ -24,19 +19,19 @@ interface RulesJson {
 
 let dir: string;
 let files: SparkRulesFiles;
-const gh = DEFAULT_SPARK_RULES;
 
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), 'spark-rules-view-'));
   files = { user: join(dir, 'spark', 'settings.json'), managed: join(dir, 'managed.json') };
-  await seedSparkRules(files, gh);
+  await mkdir(dirname(files.user), { recursive: true });
+  await writeFile(files.user, recommendedRulesText());
 });
 
 afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-const view = async () => sparkRulesView(await loadSparkRules(files, gh));
+const view = async () => sparkRulesView(await loadSparkRules(files));
 const row = async (id: string) => (await view()).rows.find((entry) => entry.row === id);
 const fileJson = async () => JSON.parse(await readFile(files.user, 'utf8')) as RulesJson;
 const writeUser = (value: unknown) => writeFile(files.user, JSON.stringify(value, null, 2));
@@ -68,7 +63,7 @@ describe('the Spark rules page view', () => {
 
   it('locks a row the company file names and shows the winning rule', async () => {
     await writeFile(files.managed, JSON.stringify({ permissions: { deny: ['WriteOutside'] } }));
-    const loaded = await loadSparkRules(files, gh);
+    const loaded = await loadSparkRules(files);
     expect(rowLocked(loaded.rules, 'WriteOutside')).toBe(true);
     expect(rowLocked(loaded.rules, 'Push')).toBe(false);
     expect(await row('WriteOutside')).toMatchObject({ choice: 'deny', source: 'managed' });
@@ -76,7 +71,7 @@ describe('the Spark rules page view', () => {
 
   it('marks an allowed gh command the company refuses', async () => {
     await writeFile(files.managed, JSON.stringify({ permissions: { deny: ['Gh(*)'] } }));
-    await changeSparkRules(files, gh, () => ghAllowedChange('gh release create', true));
+    await changeSparkRules(files, () => ghAllowedChange('gh release create', true));
     expect((await view()).ghAllowed).toEqual([{ prefix: 'gh release create', overridden: true }]);
   });
 
@@ -106,18 +101,18 @@ describe('the Spark rules page view', () => {
 
 describe('changes the page writes', () => {
   it('moves a rule to one list, or out of every list for the agent’s mode', async () => {
-    await changeSparkRules(files, gh, () => choiceChange('Push(force)', 'deny'));
+    await changeSparkRules(files, () => choiceChange('Push(force)', 'deny'));
     let permissions = (await fileJson()).permissions;
     expect(permissions.deny).toContain('Push(force)');
     expect(permissions.ask).not.toContain('Push(force)');
-    await changeSparkRules(files, gh, () => choiceChange('workflows', 'mode'));
+    await changeSparkRules(files, () => choiceChange('workflows', 'mode'));
     permissions = (await fileJson()).permissions;
     expect(JSON.stringify(permissions)).not.toMatch(/workflow run|run rerun|run cancel/);
   });
 
   it('removes only the allow entry for a gh command', async () => {
-    await changeSparkRules(files, gh, () => ghAllowedChange('gh release create', true));
-    await changeSparkRules(files, gh, () => ghAllowedChange('gh release create', false));
+    await changeSparkRules(files, () => ghAllowedChange('gh release create', true));
+    await changeSparkRules(files, () => ghAllowedChange('gh release create', false));
     expect((await fileJson()).permissions.allow).not.toContain('Gh(release create)');
   });
 
@@ -126,7 +121,7 @@ describe('changes the page writes', () => {
       theme: 'dark',
       permissions: { allow: ['Push(force)', 'Gh(release create)', 'Bash(ls)'], ask: [], deny: [] },
     });
-    await changeSparkRules(files, gh, () => recommendedChange());
+    await changeSparkRules(files, () => recommendedChange());
     const file = await fileJson();
     expect(file.theme).toBe('dark');
     expect(file.permissions.allow).toEqual(

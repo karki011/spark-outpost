@@ -1,5 +1,7 @@
 import { SPARK_FLOOR_RULE_IDS, type SparkFloorRuleId } from '@spark-outpost/contracts';
 
+export const FLOOR_RULE_IDS = SPARK_FLOOR_RULE_IDS;
+
 export type FloorRuleId = SparkFloorRuleId;
 
 export const GH_ANY = 'Gh(*)';

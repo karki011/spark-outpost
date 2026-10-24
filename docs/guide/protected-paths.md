@@ -3,10 +3,10 @@ title: Protected paths
 section: Reference
 type: reference
 order: 616
-summary: The hard rails - what always asks or is refused in a chat, in every agent mode and at both autonomy levels.
+summary: The hard rails - what Spark's rules make ask or refuse in a chat, and what is refused even with no rules.
 ---
 
-These hold in every chat, agent mode and autonomy level, not in [Terminal sessions](terminals.md), with Spark's recommended [rules](#spark-rules).
+By default there are no [rules](#spark-rules): **Auto** or **Bypass permissions** can force push, push any branch, edit secret files, hooks and instruction files, and publish unasked. The recommended rules give the table below, outside [Terminal sessions](terminals.md).
 
 ## What always asks
 
@@ -22,23 +22,23 @@ These hold in every chat, agent mode and autonomy level, not in [Terminal sessio
 
 ![The Change agent instructions card with Allow once, Allow for this chat and Deny](images/approvals-instructions-light.png)
 
-Where a mode runs commands unasked, changes are [flagged](approvals.md#actions-that-ran-without-review) instead.
+The recommended rules also refuse pushing any branch but the chat's `spark/` or [adopted pull request branch](where-spark-works.md#work-on-a-pull-request), plain `--force`, mirror and default-branch force pushes, and changing remotes. Unasked changes are [flagged](approvals.md#actions-that-ran-without-review).
 
 ## What is always refused
 
-- Pushing any branch, the base branch included, but the chat's `spark/` or [adopted pull request branch](where-spark-works.md#work-on-a-pull-request).
-- Plain `--force`, `+refspec`, mirror and default-branch force pushes.
-- Changing remotes.
+Even with no rules:
+
 - Reading, copying or changing Spark's browser data: Browser profiles, **Personal** included, sign-in storage and the history database.
 - Your ChatGPT or Claude account's own apps and connectors in a chat; add MCP servers in Spark instead.
+- `--no-verify`, and reading or changing Spark's rules files.
 
-A blocked step reads "Refused gh pr create — …", unlike your own **Deny**. An unseen push is [flagged](approvals.md#actions-that-ran-without-review) instead.
+A blocked step reads "Refused gh pr create — …", unlike your own **Deny**.
 
 ## Spark rules
 
-Spark keeps its rules in `settings.json` in its data folder, written once with recommended rules. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.
+Spark reads rules from `settings.json` in its data folder and writes none until you set one. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.
 
-Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then ask. A rule in no list, or in allow, is left to the agent's mode, unflagged. A broken file means recommended rules.
+Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then ask. A rule in no list, or in allow, is left to the mode, unflagged. A broken or unreadable file means recommended rules.
 
 | Rule                                                                              | Covers                                                                         | Recommended  |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------ |
@@ -50,9 +50,9 @@ Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then a
 | `SecretFile(edit)`, `SecretFile(read)`                                            | Secret files; `.sparkignore` reads                                             | ask          |
 | `Push(force)`, `InstructionFile(edit)`, `GitConfig`, `WriteOutside`, `SecretSend` | Their rows above                                                               | ask          |
 
-Fixed: agents can't touch these files or Spark's ports; Mac control, Browser pane, Calendar, web address and always-refused rules stay.
+Fixed: Spark's ports, the [always refused](#what-is-always-refused) list and the Mac control, Browser pane, Calendar and web address rules.
 
-**Settings → Spark rules** (Mac) sets each rule to **Agent's mode** (none), **Allow**, **Ask** or **Refuse** in your file; company rules are locked. A refusal shows a [card](cards.md#around-the-result).
+**Settings → Spark rules** (Mac) sets each rule to **Agent's mode** (no rule), **Ask** or **Refuse** in your file; **Use recommended rules** adds the table's choices. Company rules are locked. A refusal shows a [card](cards.md#around-the-result).
 
 ## Secret files
 
@@ -62,7 +62,7 @@ Fixed: agents can't touch these files or Spark's ports; Mac control, Browser pan
 | Keys             | SSH keys (`id_rsa`, `id_ed25519`), `*.pem`, `*.key`, `*.p12`, `*.pfx`                          |
 | Credential files | `.npmrc`, `.netrc`, `.pgpass`, `.pypirc`, `.git-credentials`, `credentials` files, `api-token` |
 
-Scripts that only read one follow your mode; ones that change files ask, as do shell scripts, `--env-file` and `source`. Ship leaves these out of commits.
+Ship leaves these out of commits.
 
 ## When an agent may publish
 
@@ -73,4 +73,4 @@ An agent may push the chat's own branch and open its pull request only when:
 - the agent's mode is **Auto**, **Bypass permissions** or **Full access**;
 - the turn fixes [feedback](pr-follow-up.md) on the chat's own open pull request.
 
-Otherwise the push is refused, not asked about, and you [ship](ship-and-pull-requests.md).
+Otherwise the recommended rules refuse it, and you [ship](ship-and-pull-requests.md).

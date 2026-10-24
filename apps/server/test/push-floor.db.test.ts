@@ -4,7 +4,6 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_SPARK_RULES } from '@spark-outpost/contracts';
 import { CHAT_PUBLISH_REASON } from '../src/approvals/decide.ts';
 import { PLAIN_FORCE_REASON } from '../src/approvals/git-commands.ts';
 import {
@@ -234,7 +233,7 @@ function watchFor(chat: LinkedRun) {
 }
 
 async function removeRule(rule: FloorRuleId) {
-  await changeSparkRules(sparkRulesFiles(), DEFAULT_SPARK_RULES, () => ({
+  await changeSparkRules(sparkRulesFiles(), () => ({
     remove: [
       ['ask', rule],
       ['deny', rule],

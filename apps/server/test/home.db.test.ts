@@ -3,6 +3,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { providerHealthSchema, spendSummarySchema } from '@spark-outpost/contracts';
 import { listConversations, sendUserMessage } from '../src/persistence/conversations.ts';
+import { recordTest } from '../src/persistence/setup.ts';
 import { createTestApp, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
@@ -198,6 +199,14 @@ describe('GET /api/providers/health', () => {
     await connectClaude(5, { ok: false, hoursAgo: 1 });
     await run({ provider: 'claude', status: 'failed', error: SIGNED_OUT, hoursAgo: 2 });
     expect(await issues()).toMatchObject([{ provider: 'claude', kind: 'auth' }]);
+  });
+
+  it('keeps a sign-in error cleared by a passing test after a later test fails', async () => {
+    await connectClaude(5, null);
+    await run({ provider: 'claude', status: 'failed', error: SIGNED_OUT, hoursAgo: 2 });
+    await recordTest(t.db, t.workspaceId, 'claude', { ok: true, message: 'Hello' });
+    await recordTest(t.db, t.workspaceId, 'claude', { ok: false, message: 'Timed out' });
+    expect(await issues()).toEqual([]);
   });
 
   it('keeps an older error hidden behind a cleared sign-in error', async () => {
