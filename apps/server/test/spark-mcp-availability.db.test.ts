@@ -107,8 +107,20 @@ describe('what a Spark tools session can use', () => {
       confluence: false,
       servicenow: false,
       ticket_create: false,
+      rules_edit: false,
       howTo: {},
     });
+  });
+
+  it('offers spark_rules_edit to a chat turn on the Mac, never to Ask Spark or a spoken turn', async () => {
+    const chat = await startChat(t, 'Let gh release create follow my mode');
+    const turn = { ...scopeOf(chat.conversationId), runId: chat.runId };
+    expect((await sparkAvailability(deps(), turn)).rules_edit).toBe(true);
+    expect((await sparkAvailability(deps(), { ...turn, assistant: true })).rules_edit).toBe(false);
+    await t.db.query("UPDATE runs SET source = 'voice' WHERE id = $1", [chat.runId]);
+    const spoken = await sparkAvailability(deps(), turn);
+    expect(spoken.rules_edit).toBe(false);
+    expect(spoken.howTo?.rules_edit).toContain('never for a spoken message');
   });
 
   it('offers the outpost tools to a turn of a chat that is in an outpost', async () => {
