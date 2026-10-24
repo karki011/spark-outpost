@@ -29,7 +29,22 @@ async function openPane(page: Page): Promise<Locator> {
     );
   }, started[0]!.chatId);
   await expect(pane.getByRole('tab', { name: 'Site', exact: true })).toBeVisible();
+  await settled(page);
   return pane;
+}
+
+async function settled(page: Page): Promise<void> {
+  await expect
+    .poll(async () => (await lastBounds(page))?.width === (await pageWidth(page)))
+    .toBe(true);
+}
+
+async function hideSidebar(page: Page): Promise<void> {
+  const handle = page.getByRole('separator', { name: 'Resize browser pane' });
+  const before = await handle.getAttribute('aria-valuemax');
+  await page.getByRole('button', { name: 'Hide sidebar' }).click();
+  await expect(handle).not.toHaveAttribute('aria-valuemax', before!);
+  await page.waitForTimeout(400);
 }
 
 async function lastBounds(page: Page): Promise<Placement['bounds']> {
@@ -62,7 +77,7 @@ async function dragBy(page: Page, handle: Locator, dx: number): Promise<void> {
 
 test('the browser pane drags from a 320 px page to nearly the whole window', async ({ page }) => {
   await openPane(page);
-  await page.getByRole('button', { name: 'Hide sidebar' }).click();
+  await hideSidebar(page);
   const handle = page.getByRole('separator', { name: 'Resize browser pane' });
   await expect(handle).toHaveAttribute('aria-valuemin', '320');
 
@@ -109,7 +124,7 @@ test('arrow keys step the page width by 10 px and by 50 px with Shift', async ({
 
 test('page width presets size the page and say when the window is too narrow', async ({ page }) => {
   const pane = await openPane(page);
-  await page.getByRole('button', { name: 'Hide sidebar' }).click();
+  await hideSidebar(page);
   const choose = async (name: string) => {
     await pane.getByRole('button', { name: 'Page width' }).click();
     await page.getByRole('menuitemradio', { name }).click();
@@ -140,7 +155,7 @@ test('page width presets size the page and say when the window is too narrow', a
 
 test('the pane follows the sidebar and stays on screen', async ({ page }) => {
   await openPane(page);
-  await page.getByRole('button', { name: 'Hide sidebar' }).click();
+  await hideSidebar(page);
   const handle = page.getByRole('separator', { name: 'Resize browser pane' });
   await handle.focus();
   await page.keyboard.press('End');

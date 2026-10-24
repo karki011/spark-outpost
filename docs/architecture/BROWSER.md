@@ -413,6 +413,8 @@ On 2026-10-20 (Apple silicon, Electron 44.4.5, the signed Spark Outpost Dev app,
 - The agent clicking the same buttons with `spark_browser_act`: `writeText` was refused, `execCommand` returned `false`, and the clipboard kept the test text. Before the copy guard the agent's `execCommand` click did copy. A borrowed `execCommand` from a script-made frame still copied ([Clipboard](#clipboard)).
 - Every key above from the page and from the address bar; ⌘W and ⌘R never closed or reloaded the window from the pane, and ⌘L, ⌘1, ⌘F and ⌘T did nothing in the chat composer. ⌘C, ⌘X, ⌘V and ⌘A worked in a page field and the address bar, and ⌘C on selected page text.
 
+On 2026-10-23 (Apple silicon, Electron 44.4.5, the signed Spark Outpost Dev app, a throwaway data folder, a 1440-point window, a local page that prints its own `innerWidth`, driven over a debugging port on that instance only), the page's `innerWidth` equalled the separator's value and the readout at every point: 320 at the narrow end, 1028 at the wide end with the sidebar hidden (the chat at 300), 732 after showing the sidebar and 1028 again after hiding it, 390, 768 and 1024 from **Page width**, and 1028 from **Fit**, with 1280 disabled; arrow keys gave 330 and Shift 380. The drags were sent as CDP mouse events to the app's page, not by a real pointer, and the overlay mode below the dock width was covered only by `tests/browser/browser-pane-width.spec.ts`.
+
 ## Not verified
 
 Keys while an input method is composing were checked only in unit and browser specs, not with a real IME.
