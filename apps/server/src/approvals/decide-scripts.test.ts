@@ -45,6 +45,17 @@ const SCRIPTS: Record<string, ScriptFile> = {
   ),
   'arrow.js': changed("require('dotenv').config();\nconst ok = () => 'ok';\nconsole.log('<b>');\n"),
   'notes.py': changed("print(open('private/notes.md').read())\n"),
+  'open-sync.js': changed("const fs = require('fs');\nfs.openSync('.env', 'w');\n"),
+  'write-sync.js': changed(
+    "const fs = require('fs');\nfs.writeSync(fs.openSync('.env', 'w'), 'x');\n",
+  ),
+  'alias.js': changed("const { writeFileSync: w } = require('fs');\nw('.env', 'x');\n"),
+  'computed.js': changed("const fs = require('fs');\nfs['writeFileSync']('credentials', 'x');\n"),
+  'rm.js': changed("require('fs').rmSync('credentials');\n"),
+  'pandas.py': changed("import pandas as pd\npd.read_csv('a.csv').to_csv('.env')\n"),
+  'shell-out.py': changed("import subprocess\nsubprocess.run(['rm', 'credentials'])\n"),
+  'write.rb': changed("File.write('credentials', 'x')\n"),
+  'read.rb': changed("puts File.read('credentials')\n"),
 };
 
 const lister: FileLister = {
@@ -247,10 +258,37 @@ describe('decide() judges what a script names the way it judges a typed command'
   });
 });
 
+describe('decide() sees code that changes a secret file however it is written', () => {
+  it.each([
+    ['node open-sync.js', '.env'],
+    ['node write-sync.js', '.env'],
+    ['node alias.js', '.env'],
+    ['node computed.js', 'credentials'],
+    ['node rm.js', 'credentials'],
+    ['python3 pandas.py', '.env'],
+    ['python3 shell-out.py', 'credentials'],
+    ['ruby write.rb', 'credentials'],
+    ["ruby -e \"File.write('credentials', 'x')\"", 'credentials'],
+    ["node -e \"require('fs').openSync('.env', 'w')\"", '.env'],
+  ])('asks in every mode: %s', (command, file) => {
+    for (const posture of ['auto', 'full_access', 'asks', 'edits'] as ModePosture[]) {
+      expect(decideAt(posture, command), posture).toMatchObject({
+        verdict: 'ask',
+        secretFiles: [file],
+      });
+    }
+  });
+
+  it('lets the mode decide when Ruby code only reads a secret', () => {
+    expect(fullAccess('ruby read.rb')).toEqual({ verdict: 'allow', by: 'level' });
+  });
+});
+
 describe('a secret a script reads counts for the send flag', () => {
   it.each([
     ['python3 dump.py', ['.env']],
     ['python3 -c "from dotenv import load_dotenv; load_dotenv()"', ['.env']],
+    ['ruby read.rb', ['credentials']],
     ['python3 q.py', []],
     ['python3 report.py', []],
   ])('%s', (command, labels) => {

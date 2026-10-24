@@ -14,15 +14,23 @@ const HEREDOC = /<<-?\s*(['"]?)([A-Za-z_]\w*)\1([^\n]*)\n([\s\S]*?)\n[ \t]*\2[ \
 const HERESTRING = /<<<\s*(?:'([^']*)'|"((?:[^"\\]|\\.)*)"|([^\s;&|<>()]+))/g;
 const WRITE_MODE = `(['"])(?:[rbtU]*[wax+][rwabxt+U]*|\\s*(?:\\+?>|\\+<|\\|)[^'"]*)\\1`;
 const WRITE_MODE_OPEN = new RegExp(
-  `\\b(?:f?open|os\\.open)\\s*\\([^)]*?,\\s*(?:mode\\s*=\\s*)?${WRITE_MODE}`,
+  `\\b(?:f?open(?:Sync)?|os\\.open)\\s*\\([^)]*?,\\s*(?:mode\\s*=\\s*)?${WRITE_MODE}`,
 );
 const WRITE_MODE_METHOD = new RegExp(`\\.open\\s*\\(\\s*(?:mode\\s*=\\s*)?${WRITE_MODE}`);
 const REDIRECT_WRITE = /(?:^|[\s)]|\bprintf?)(?:>>?|\|)\s*['"]/;
 const OPEN_FLAGS = /\bO_(?:WRONLY|RDWR|CREAT|TRUNC|APPEND)\b/;
-const CHANGE_CALL =
-  /\b(?:write_text|write_bytes|writeFileSync|writeFile|writeTextFileSync|writeTextFile|appendFileSync|appendFile|createWriteStream|unlinkSync|unlink|rmSync|rmdirSync|rmdir|rmtree|renameSync|rename|copyFileSync|copyFile|copyfile|copy2|copytree|cpSync|truncateSync|truncate|chmodSync|chmod|symlinkSync|symlink|file_put_contents|set_key|unset_key|touch|execSync|execFileSync|spawnSync|spawn|execFile|system|popen|check_output|check_call|Popen)\s*\(/;
+const FILE_CHANGE_FUNCTIONS =
+  'write_text|write_bytes|writeFileSync|writeFile|writeTextFileSync|writeTextFile|appendFileSync|appendFile|createWriteStream|openSync|writeSync|writevSync|ftruncateSync|unlinkSync|unlink|rmSync|rmdirSync|rmdir|rmtree|renameSync|rename|copyFileSync|copyFile|copyfile|copy2|copytree|cpSync|truncateSync|truncate|chmodSync|chmod|symlinkSync|symlink|linkSync|file_put_contents|set_key|unset_key|touch|to_csv|to_json|to_excel|to_pickle|to_parquet|to_feather|to_hdf|savetxt|File\\.write|File\\.binwrite|File\\.delete|File\\.unlink|File\\.rename|IO\\.write|IO\\.binwrite';
+export const FILE_FUNCTIONS = `${READ_FUNCTIONS}|File\\.readlines|File\\.binread|File\\.foreach|IO\\.readlines|IO\\.binread|${FILE_CHANGE_FUNCTIONS}`;
+const CHANGE_CALL = new RegExp(
+  `\\b(?:${FILE_CHANGE_FUNCTIONS}|execSync|execFileSync|spawnSync|spawn|execFile|system|popen|check_output|check_call|Popen)\\s*\\(`,
+);
 const CHANGE_NAME =
-  /\b(?:os\.(?:remove|replace|makedirs|mkdir)|shutil\.\w+|subprocess|child_process|Bun\.write|Bun\.spawn|Deno\.(?:remove|writeFile|writeTextFile|rename|copyFile|truncate|Command|run)|File\.(?:write|delete|rename|unlink|binwrite)|FileUtils\.\w+|fs\.(?:rm|cp)\b|exec\s*\()/;
+  /\b(?:os\.(?:remove|replace|makedirs|mkdir)|shutil\.\w+|subprocess|child_process|Bun\.write|Bun\.spawn|Deno\.(?:remove|writeFile|writeTextFile|rename|copyFile|truncate|Command|run)|File\.(?:write|delete|rename|unlink|binwrite)|IO\.(?:write|binwrite)|FileUtils\.\w+|fs\.(?:rm|cp)\b|exec\s*\()/;
+const WRITER_NAME =
+  /\b(?:writeFileSync|writeFile|appendFileSync|appendFile|createWriteStream|openSync|writeSync|writevSync|ftruncateSync|truncateSync|unlinkSync|rmSync|rmdirSync|renameSync|copyFileSync|cpSync|symlinkSync|linkSync|chmodSync|writeTextFileSync|writeTextFile|write_text|write_bytes|file_put_contents|set_key|unset_key|execSync|execFileSync|spawnSync)\b/;
+const DYNAMIC_CALL =
+  /\b(?:eval|getattr|__import__|send|public_send|instance_eval|Function)\s*\(|\bimportlib\b|\[\s*(['"`])[^'"`]*\1\s*\]\s*\(/;
 const ENV_FILE_LOADERS = /\b(?:load_dotenv|dotenv_values|dotenv|loadEnvFile|Dotenv)\b|--env-file/;
 
 function count(code: string, pattern: RegExp): number {
@@ -43,6 +51,8 @@ export function changesFiles(code: string): boolean {
     OPEN_FLAGS,
     CHANGE_CALL,
     CHANGE_NAME,
+    WRITER_NAME,
+    DYNAMIC_CALL,
   ].some((pattern) => pattern.test(code));
 }
 
