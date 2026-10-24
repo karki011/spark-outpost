@@ -22,6 +22,7 @@ import {
 import { appMenuTemplate, type HelpActions } from './help-menu.ts';
 import { IPC } from './ipc-channels.ts';
 import { startSettingsWindow } from './settings-window.ts';
+import { openRulesFile } from './spark-rules-file.ts';
 
 const EXPORT_TIMEOUT_MS = 60_000;
 const HELP_ROUTE = '#/settings/help';
@@ -30,6 +31,7 @@ const TOGGLE_SIDEBAR_COMMAND = 'toggle-sidebar';
 export interface HelpOptions {
   version: string;
   logsFolder: string;
+  rulesFile: string;
   apiUrl: string;
   token: string;
   trusted: (event: IpcMainInvokeEvent | IpcMainEvent) => boolean;
@@ -95,7 +97,12 @@ async function exportFromMenu(options: HelpOptions): Promise<void> {
   }
 }
 
-const CHANNELS = [IPC.helpInfo, IPC.helpExportDiagnostics, IPC.helpShowLogs];
+const CHANNELS = [
+  IPC.helpInfo,
+  IPC.helpExportDiagnostics,
+  IPC.helpShowLogs,
+  IPC.sparkRulesOpenFile,
+];
 
 export function startHelp(options: HelpOptions): Help {
   const info: DesktopHelpInfo = {
@@ -113,6 +120,7 @@ export function startHelp(options: HelpOptions): Help {
   handle(IPC.helpInfo, () => info);
   handle(IPC.helpExportDiagnostics, () => saveDiagnostics(options));
   handle(IPC.helpShowLogs, () => showLogs(options.logsFolder));
+  handle(IPC.sparkRulesOpenFile, () => openRulesFile(options.rulesFile, shell.openPath));
   let sidebarShown = true;
   const settingsWindow = startSettingsWindow({
     origin: options.apiUrl,

@@ -53,6 +53,15 @@ const EXAMPLES: Example[] = [
   { rule: 'PullRequest', asked: request('gh pr create --fill'), manual: 'ask' },
   { rule: 'GitRemote', asked: request('git remote add fork https://e.net/f.git'), manual: 'ask' },
   { rule: GH_ANY, asked: request('gh release create v1.2.0 --notes x'), manual: 'ask' },
+  { rule: 'Gh(pr merge)', asked: request('gh pr merge 12 --squash'), manual: 'ask' },
+  { rule: 'Gh(pr review)', asked: request('gh pr review 12 --approve'), manual: 'ask' },
+  { rule: 'GhAdmin', asked: request('gh pr edit 12 --admin'), manual: 'ask' },
+  { rule: 'Gh(auth)', asked: request('gh auth logout'), manual: 'ask' },
+  {
+    rule: 'Gh(api write)',
+    asked: request('gh api -X POST repos/o/r/issues -f title=x'),
+    manual: 'ask',
+  },
   { rule: 'SecretFile(edit)', asked: request(null, '.env'), manual: 'ask' },
   { rule: 'SecretFile(read)', asked: request('cat private/notes.md'), manual: 'allow' },
   { rule: 'InstructionFile(edit)', asked: request(null, 'AGENTS.md'), manual: 'ask' },
@@ -155,12 +164,9 @@ describe('with no Spark rules, what is fixed in v1 still holds', () => {
   const REFUSED = [
     `cat "${DATA}/spark/settings.json"`,
     `cat "${DATA}/postgres-password"`,
-    'gh pr merge 12 --squash',
-    'gh pr review 12 --approve',
-    'gh pr merge 12 --admin',
-    'gh api -X POST repos/o/r/issues -f title=x',
-    'gh auth token',
     `git push --no-verify origin ${BRANCH}`,
+    'gh auth token',
+    'gh auth status --show-token',
   ];
 
   it.each(REFUSED)('%s is refused in every mode', async (command) => {

@@ -10,7 +10,12 @@ import {
   pushTargets,
   type ForcePush,
 } from './git-commands.ts';
-import { DEFAULT_RULE_CONTEXT, followsRule, type SparkRuleContext } from './gh-rules.ts';
+import {
+  DEFAULT_RULE_CONTEXT,
+  followsRule,
+  ownGhRules,
+  type SparkRuleContext,
+} from './gh-rules.ts';
 import {
   firstStop,
   onlyRepliesOnOwnPull,
@@ -50,6 +55,9 @@ function* unaskedStops(command: string, rules: SparkRuleContext) {
       yield tag('GitRemote');
       continue;
     }
+    const owned = ownGhRules(program.slice(1));
+    for (const rule of owned) yield tag(rule);
+    if (owned.length > 0) continue;
     const [, group, verb = ''] = program;
     yield tag(group === 'pr' && PULL_WRITES.has(verb) ? 'PullRequest' : null);
   }

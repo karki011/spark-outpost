@@ -1,3 +1,4 @@
+import './rules-outside.css';
 import { useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { OutsideChangeAnswer, OutsideChangeView } from '@spark-outpost/contracts';

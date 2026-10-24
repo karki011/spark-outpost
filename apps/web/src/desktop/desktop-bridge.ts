@@ -22,6 +22,7 @@ import type {
   MacControlStatus,
   MacIndicator,
   SignedInSite,
+  SparkRulesOpenResult,
   UpdateChannel,
   UpdateStatus,
 } from '@spark-outpost/contracts';
@@ -209,6 +210,9 @@ export interface SparkDesktop {
   };
   privacy?: {
     openFullDiskAccess(): Promise<void>;
+  };
+  sparkRules?: {
+    openFile(): Promise<SparkRulesOpenResult | null>;
   };
   browser?: DesktopBrowser;
   browserView?: DesktopBrowserView;

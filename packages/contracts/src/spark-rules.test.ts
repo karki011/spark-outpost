@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { ghAllowedSchema, ghPrefixProblem, updateSparkRulesRequestSchema } from './spark-rules.ts';
+import {
+  ghAllowedRequestSchema,
+  ghPrefixProblem,
+  setSparkRuleRequestSchema,
+} from './spark-rules.ts';
 
 describe('ghPrefixProblem()', () => {
   it.each([
@@ -20,7 +24,8 @@ describe('ghPrefixProblem()', () => {
     ['gh -R x release', 'two words'],
     ['gh api graphql', 'gh api'],
     ['gh auth token', 'gh auth'],
-    ['gh pr merge', 'never merges'],
+    ['gh pr merge', 'Merge a pull request'],
+    ['gh pr review', 'Review or approve a pull request'],
     ['gh pr create', 'publish rules'],
     ['gh workflow run', 'Run a workflow'],
     ['gh run rerun', 'Run a workflow'],
@@ -31,26 +36,29 @@ describe('ghPrefixProblem()', () => {
   });
 });
 
-describe('ghAllowedSchema', () => {
-  it('tidies and removes duplicates', () => {
-    expect(ghAllowedSchema.parse(['gh release create', ' GH release  create'])).toEqual([
-      'gh release create',
-    ]);
+describe('ghAllowedRequestSchema', () => {
+  it('tidies the command', () => {
+    expect(ghAllowedRequestSchema.parse({ prefix: ' GH release  create', allowed: true })).toEqual({
+      prefix: 'gh release create',
+      allowed: true,
+    });
   });
 
-  it('refuses a list holding a never-allowed command', () => {
-    expect(ghAllowedSchema.safeParse(['gh release create', 'gh pr merge']).success).toBe(false);
-  });
-
-  it('refuses more than twenty commands', () => {
-    const many = Array.from({ length: 21 }, (_, index) => `gh release c${index}`);
-    expect(ghAllowedSchema.safeParse(many).success).toBe(false);
+  it('refuses a never-allowed command', () => {
+    expect(ghAllowedRequestSchema.safeParse({ prefix: 'gh pr merge', allowed: true }).success).toBe(
+      false,
+    );
   });
 });
 
-describe('updateSparkRulesRequestSchema', () => {
-  it('needs at least one change', () => {
-    expect(updateSparkRulesRequestSchema.safeParse({}).success).toBe(false);
-    expect(updateSparkRulesRequestSchema.safeParse({ workflows: 'refused' }).success).toBe(true);
+describe('setSparkRuleRequestSchema', () => {
+  it('takes a row the page shows and one of its choices', () => {
+    expect(setSparkRuleRequestSchema.safeParse({ row: 'Push', choice: 'mode' }).success).toBe(true);
+    expect(
+      setSparkRuleRequestSchema.safeParse({ row: 'Gh(pr close)', choice: 'allow' }).success,
+    ).toBe(false);
+    expect(setSparkRuleRequestSchema.safeParse({ row: 'Push', choice: 'hold' }).success).toBe(
+      false,
+    );
   });
 });

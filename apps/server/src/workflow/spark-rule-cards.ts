@@ -15,7 +15,8 @@ import {
 } from '../persistence/approvals.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
-import { allowGhPrefix, saveSparkRules } from '../persistence/spark-rules.ts';
+import { setGhAllowed, setSparkRule, SparkRulesInputError } from '../persistence/spark-rules.ts';
+import { RulesFileError } from '../spark-rules/rules-file.ts';
 import { drainQueue, type ResolveTarget } from './queue-drain.ts';
 
 export function retryMessage(command: string, rule: SparkRuleRefusal, answer: SparkRuleAnswer) {
@@ -23,7 +24,7 @@ export function retryMessage(command: string, rule: SparkRuleRefusal, answer: Sp
     answer === 'allow_once'
       ? 'the user allowed it once, for this command only'
       : rule.group === 'workflows'
-        ? 'the user set Run a workflow to follow your mode'
+        ? 'the user allowed Run a workflow'
         : `the user added ${rule.prefix} to the allowed commands`;
   return `Spark rules now allow the command Spark refused (${allowed}). Run it again:\n\n\`${command}\``;
 }
@@ -47,16 +48,25 @@ async function lockedCard(client: Queryable, workspaceId: string, id: string) {
   return rows[0] ?? null;
 }
 
+async function writeRule(write: () => Promise<unknown>) {
+  try {
+    await write();
+  } catch (error) {
+    if (error instanceof SparkRulesInputError || error instanceof RulesFileError) {
+      throw new ApprovalInputError(error.message);
+    }
+    throw error;
+  }
+}
+
 async function allowGroup(rule: SparkRuleRefusal) {
   if (rule.group === 'workflows') {
-    await saveSparkRules({ workflows: 'mode' });
+    await writeRule(() => setSparkRule('workflows', 'allow'));
     return;
   }
   const problem = ghPrefixProblem(rule.prefix);
   if (problem) throw new ApprovalInputError(`${rule.prefix} can't be added: ${problem}`);
-  if (!(await allowGhPrefix(rule.prefix))) {
-    throw new ApprovalInputError('Spark rules hold 20 allowed commands. Remove one first.');
-  }
+  await writeRule(() => setGhAllowed(rule.prefix, true));
 }
 
 export async function answerRuleCard(

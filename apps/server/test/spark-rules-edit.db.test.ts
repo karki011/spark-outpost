@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { RULES_SESSION_OPTION, SPARK_ACTION_OPTION, type Approval } from '@spark-outpost/contracts';
 import { getApproval } from '../src/persistence/approvals.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
-import { saveSparkRules } from '../src/persistence/spark-rules.ts';
+import { setSparkRule } from '../src/persistence/spark-rules.ts';
 import { RULES_RUN_REFUSALS } from '../src/spark-mcp/actions/rules-edit-session.ts';
 import { OUTSIDE_CHANGE_REFUSAL, sparkRulesFiles } from '../src/spark-rules/rules-store.ts';
 import {
@@ -186,7 +186,7 @@ describe('spark_rules_edit always asks first', () => {
 
   it('refuses a stale card: the file changed after it was shown', async () => {
     await edit(RELEASE);
-    await saveSparkRules({ workflows: 'refused' });
+    await setSparkRule('workflows', 'deny');
     const done = await answer(SPARK_ACTION_OPTION.confirm);
     expect(done.payload.sparkResult).toMatchObject({
       state: 'failed',

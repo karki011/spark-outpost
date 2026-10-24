@@ -173,7 +173,9 @@ const NEVER = `
 POST /api/browser-history
 GET /api/browser-history
 POST /api/browser-history/clear
-PUT /api/spark-rules
+PUT /api/spark-rules/rule
+PUT /api/spark-rules/gh-allowed
+POST /api/spark-rules/recommended
 POST /api/spark-rules/outside-change
 GET /api/artifacts/:id/versions/:version/file
 GET /api/chat-files/:id/content
