@@ -27,6 +27,10 @@ button.ctx-outpost:hover {
   color: var(--faint);
 }
 
+.ctx-outpost:has(.ctx-role) .ctx-handle {
+  flex-shrink: 0;
+}
+
 .ctx-handle {
   min-width: 0;
   overflow: hidden;
