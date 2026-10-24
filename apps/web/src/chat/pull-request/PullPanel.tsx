@@ -21,13 +21,15 @@ import { WatchDetail } from './WatchIndicator.tsx';
 
 const STATE_LABELS: Record<FeedbackItem['state'], string> = {
   queued: 'Up next',
-  held: 'Shown only',
+  held: 'Not acted on',
   needs_user: 'Needs you',
   in_round: 'Fixing',
   planned: 'Waiting for you',
   done: 'Handled',
   skipped: 'Left out',
 };
+
+const isBotAuthor = (author: string) => author.endsWith('[bot]');
 
 function itemWhere(item: FeedbackItem): string {
   if (item.kind === 'check') return `check from ${item.author}`;
@@ -49,9 +51,10 @@ function Items({ items }: { items: FeedbackItem[] }) {
             <span className="prc-triage">{feedbackTriageLabels[item.triage]}</span>
             <span className="prc-text">
               {itemWhere(item)}
-              {!item.trusted && (
-                <span className="prc-untrusted"> · can’t write to the repo</span>
-              )}: {item.excerpt}
+              {!item.trusted && !isBotAuthor(item.author) && (
+                <span className="prc-untrusted"> · no write access</span>
+              )}
+              : {item.excerpt}
             </span>
             <span className="prc-kept">{STATE_LABELS[item.state]}</span>
           </li>

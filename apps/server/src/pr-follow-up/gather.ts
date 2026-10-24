@@ -236,6 +236,25 @@ export async function readChecks(
 
 const fromSpark = (body: string) => body.includes(SPARK_REPLY_MARKER);
 
+export function authorReply(
+  comment: { user: z.infer<typeof loginSchema>; in_reply_to_id?: number | null | undefined },
+  prAuthor: string | null,
+): boolean {
+  if (!comment.in_reply_to_id || prAuthor === null) return false;
+  return login(comment.user).toLowerCase() === prAuthor.toLowerCase();
+}
+
+export type InlineComment = z.infer<typeof reviewCommentSchema>;
+export type ReviewEntry = z.infer<typeof reviewSchema>;
+
+export interface ReadComments {
+  gathered: Gathered[];
+  review: PrReview;
+  discussion: Discussion;
+  inline: InlineComment[];
+  reviews: ReviewEntry[];
+}
+
 function verdictOf(reviews: readonly z.infer<typeof reviewSchema>[]): PrReview {
   return reviewVerdict(
     reviews.map((review) => ({ user: login(review.user), state: review.state })),
@@ -246,7 +265,8 @@ export async function readComments(
   connection: GitHubConnection,
   repo: RepoRef,
   number: number,
-): Promise<{ gathered: Gathered[]; review: PrReview; discussion: Discussion }> {
+  prAuthor: string | null,
+): Promise<ReadComments> {
   const pull = `${repoPath(repo)}/pulls/${number}`;
   const [inline, reviews, issue] = await Promise.all([
     pages(connection, `${pull}/comments`, reviewCommentSchema, 'reading review comments'),
@@ -260,7 +280,7 @@ export async function readComments(
   ]);
   const gathered: Gathered[] = [];
   for (const comment of inline) {
-    if (fromSpark(comment.body) || !comment.body.trim()) continue;
+    if (fromSpark(comment.body) || !comment.body.trim() || authorReply(comment, prAuthor)) continue;
     gathered.push({
       sourceKey: `review_comment:${comment.id}`,
       kind: 'review_comment',
@@ -301,5 +321,11 @@ export async function readComments(
       url: comment.html_url ?? null,
     });
   }
-  return { gathered, review: verdictOf(reviews), discussion: { reviews, inline, issue } };
+  return {
+    gathered,
+    review: verdictOf(reviews),
+    discussion: { reviews, inline, issue },
+    inline,
+    reviews,
+  };
 }

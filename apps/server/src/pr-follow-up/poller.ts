@@ -7,7 +7,6 @@ import {
   feedbackFor,
   insertFeedback,
   isWatch,
-  knownSourceKeys,
   updateFeedback,
   WATCHING_LINE,
   type Watch,
@@ -24,7 +23,7 @@ import {
   trackOpenPull,
   withFacts,
 } from '../pr-tracking/status.ts';
-import { discussionDetails } from '../pr-tracking/details.ts';
+import { detailsOf, threadResolution } from '../pr-tracking/details.ts';
 import type { JevAccess } from '../advisor/jev-calls.ts';
 import type { GitHubConnection } from '../ship/github/connection.ts';
 import { connectTo, nowOf, type FollowUpDeps } from './deps.ts';
@@ -41,6 +40,7 @@ import {
   stateFor,
 } from './rounds.ts';
 import { triageFeedback } from './triage.ts';
+import { settledNow, settledOnGitHub, type OnGitHub } from './sweep.ts';
 import { isTrusted, writersAmong } from './trust.ts';
 
 const TICK_MS = 15_000;
@@ -68,20 +68,28 @@ async function ingest(
   watch: Watch,
   connection: GitHubConnection,
   settings: PrFollowUpSettings,
+  prAuthor: string | null,
 ): Promise<number> {
   const repo = { owner: watch.owner, name: watch.repo };
   const checks = await readChecks(connection, repo, watch.headSha!);
   watch.checks = checks.state;
   watch.failingChecks = checks.failingChecks;
-  const comments = await readComments(connection, repo, watch.number);
+  const comments = await readComments(connection, repo, watch.number, prAuthor);
+  const resolved = await threadResolution(connection, repo, watch.number, comments.discussion);
   watch.review = comments.review;
-  watch.details = {
+  watch.details = { checkRuns: checks.checkRuns, ...detailsOf(comments.discussion, resolved) };
+  const onGitHub: OnGitHub = {
+    prAuthor,
+    resolved,
+    inline: comments.inline,
+    reviews: comments.reviews,
     checkRuns: checks.checkRuns,
-    ...(await discussionDetails(connection, repo, watch.number, comments.discussion)),
   };
+  const known = await feedbackFor(deps.db, watch.id);
+  await updateFeedback(deps.db, settledOnGitHub(known, onGitHub), { state: 'done' });
   const fresh = newSourceKeys(
     [...checks.failing, ...comments.gathered],
-    await knownSourceKeys(deps.db, watch.id),
+    new Set(known.map((item) => item.sourceKey)),
   );
   if (fresh.length === 0) return 0;
   const writers = await writersAmong(
@@ -104,7 +112,9 @@ async function ingest(
       trusted,
       triage,
       triagedBy: by,
-      state: stateFor({ kind: item.kind, trusted }, triage, settings),
+      state: settledNow({ ...item, trusted }, onGitHub)
+        ? ('done' as const)
+        : stateFor({ kind: item.kind, trusted }, triage, settings),
     };
   });
   return (await insertFeedback(deps.db, watch.id, triaged)).length;
@@ -148,8 +158,9 @@ async function follow(
   seen: Watch,
   connection: GitHubConnection,
   settings: PrFollowUpSettings,
+  prAuthor: string | null,
 ): Promise<TrackedPull> {
-  const added = await ingest(deps, seen, connection, settings);
+  const added = await ingest(deps, seen, connection, settings, prAuthor);
   const next = await decideNext(deps, seen);
   return {
     ...next,
@@ -170,7 +181,7 @@ async function observe(
   const seen = reopenedPull(read);
   if (busy(pull)) return seen;
   if (settings.enabled && isWatch(seen) && isWatch(pull)) {
-    return follow(deps, pull, seen, connection, settings);
+    return follow(deps, pull, seen, connection, settings, facts.author);
   }
   const tracked = await trackOpenPull(connection, seen);
   const next = isWatch(seen) ? { ...tracked, doing: FOLLOW_UP_OFF_LINE } : tracked;

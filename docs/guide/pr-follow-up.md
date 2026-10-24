@@ -30,6 +30,8 @@ To approve each push, turn on **Ask before pushing and replying** in **Settings 
 | Anyone else's comments, bots included  | Shows them, never acts               |
 | A disagreement                         | Always goes to you                   |
 
+Items from bots or people without write access say **Not acted on**. An item closes by itself when its thread is resolved, its check passes or the same reviewer reviews again. Your own replies on a thread are never gathered.
+
 ## Limits
 
 - At most 3 rounds per PR; ask the chat for another.
