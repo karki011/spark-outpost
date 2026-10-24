@@ -37,6 +37,25 @@ export interface StepActivity {
   target: string | null;
   code: boolean;
   full: string;
+  detail?: string;
+}
+
+export const REFUSED_VERB = 'Refused';
+const REFUSED_STEP = /^Refused (.+?) — (.+)$/s;
+
+function refusedActivity(safe: string, full: string): StepActivity | null {
+  const match = REFUSED_STEP.exec(safe);
+  if (!match) return null;
+  const [, what = '', reason = ''] = match;
+  const code = /^`[^`]+`$/.test(what);
+  return {
+    kind: 'other',
+    verb: REFUSED_VERB,
+    target: plain(what),
+    code,
+    full,
+    detail: plain(reason),
+  };
 }
 
 const FILE_TOKEN = /[\\/]|^[\w@.-]+\.[a-z0-9]{1,8}$/i;
@@ -59,6 +78,8 @@ function plain(text: string): string {
 export function stepActivity(name: string): StepActivity {
   const safe = hideSecrets(friendlyStep(name)).trim();
   const full = plain(safe);
+  const refused = refusedActivity(safe, full);
+  if (refused) return refused;
   if (safe.startsWith('`')) {
     const command = quoted(safe) ?? full;
     return { kind: 'run', verb: 'Running', target: commandSummary(command), code: true, full };

@@ -33,7 +33,7 @@ Reading git config follows the mode. Where a mode runs commands unasked, other c
 - Your ChatGPT or Claude account's own apps and connectors, in a chat (a [Terminal session](terminals.md) keeps them); add MCP servers in Spark instead.
 - Merging a pull request, approving or dismissing reviews, `--admin`, `gh api` writes and `gh auth`, even if added in [Spark rules](#spark-rules).
 
-A blocked step says "Spark's policy blocked", unlike your own **Deny**. An unseen push, in a mode that doesn't ask, is [flagged](approvals.md#actions-that-ran-without-review) instead.
+A blocked step says "Refused", the command and why, such as "Refused gh pr create — …", unlike your own **Deny**. An unseen push, in a mode that doesn't ask, is [flagged](approvals.md#actions-that-ran-without-review) instead.
 
 ## Spark rules
 

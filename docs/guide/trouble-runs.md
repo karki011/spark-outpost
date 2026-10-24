@@ -28,7 +28,7 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 
 ## Spark blocked a step
 
-- **You see:** "Spark's policy blocked", or "Declined: … (This changes .env, a secret file)".
+- **You see:** "Refused" with the command and why, such as "Refused gh pr create — …", or "Declined: … (This changes .env, a secret file)".
 - **Why:** it crossed a [protected path](protected-paths.md), or a read-only mode tried to change files.
 - **Fix:** leave the read-only mode, or answer the path's card.
 - **Still stuck:** do it in a [terminal](terminals.md).

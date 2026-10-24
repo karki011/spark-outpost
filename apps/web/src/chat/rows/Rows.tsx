@@ -73,11 +73,19 @@ function ToolEnd({ item, live }: { item: ToolItem; live: boolean }) {
   return null;
 }
 
-function RowText({ verb, target, code }: { verb: string; target: string | null; code: boolean }) {
+interface RowTextProps {
+  verb: string;
+  target: string | null;
+  code: boolean;
+  detail?: string | undefined;
+}
+
+function RowText({ verb, target, code, detail }: RowTextProps) {
   return (
-    <span className="trow-text">
+    <span className={detail ? 'trow-text trow-text-wrap' : 'trow-text'}>
       <b>{verb}</b>
       {target && (code ? <code className="trow-target">{target}</code> : <span> {target}</span>)}
+      {detail && <span> — {detail}</span>}
     </span>
   );
 }
@@ -123,7 +131,7 @@ function ToolRow({ item, context }: { item: ToolItem; context: RowContext }) {
   return (
     <div className="trow" title={item.label}>
       <RowIcon name={TONE_ICONS[item.tone]} />
-      <RowText verb={item.verb} target={item.target} code={code} />
+      <RowText verb={item.verb} target={item.target} code={code} detail={item.detail} />
       <span className="trow-end">
         <ToolEnd item={item} live={context.working} />
       </span>

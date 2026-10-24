@@ -46,7 +46,7 @@ import type { Append } from './agent-turn.ts';
 import { waitForApproval, type ApprovalWaiters, type WaitResult } from './approval-waiters.ts';
 import { chosenModeWhy } from './ask-auto.ts';
 import { runEvents } from './run-events.ts';
-import { approvalPayload, displayTitle, subject } from './approval-payload.ts';
+import { approvalPayload, displayTitle, refusedSubject, subject } from './approval-payload.ts';
 import { parseShell } from '../approvals/shell-parse.ts';
 import { blockedNote, policyDenial } from '../approvals/policy-blocked.ts';
 import {
@@ -113,9 +113,9 @@ export async function forcePushDefault(request: ApprovalRequest): Promise<string
   return defaultBranch(root).catch(() => null);
 }
 
-function policyBlocked(answer: GateAnswer): GateAnswer {
+function policyBlocked(answer: GateAnswer, denial: string): GateAnswer {
   if (answer.outcome !== 'selected') return answer;
-  return { ...answer, denial: policyDenial(answer.note) };
+  return { ...answer, denial };
 }
 
 export interface ApprovalGate extends PermissionGate {
@@ -405,7 +405,8 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       });
       observe(request, { verdict: 'reject', by: 'policy', approvalId: denied.id });
       if (decision.sparkRule) await emit(runEvents.approvalDecided(denied));
-      return policyBlocked(reject(request, blockedNote(what, decision.reason), denied.id));
+      const note = blockedNote(refusedSubject(request), decision.reason);
+      return policyBlocked(reject(request, note, denied.id), policyDenial(what, decision.reason));
     }
     const option = allowOption(request.options);
     const recorded = await insertApproval(deps.db, newApproval(request, null), {

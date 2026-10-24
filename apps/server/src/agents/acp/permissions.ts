@@ -2,7 +2,7 @@ import type { RequestPermissionRequest, RequestPermissionResponse } from '@agent
 import { exitPlanText, isExitPlanKind } from '../../plans/plan-mode.ts';
 import type { ProviderOutput } from '../../providers/provider.ts';
 import { ASK_RUN_REASON } from '../../approvals/ask-run.ts';
-import { blockedNote, policyDenial } from '../../approvals/policy-blocked.ts';
+import { policyDenial } from '../../approvals/policy-blocked.ts';
 
 export interface PermissionDecision {
   response: RequestPermissionResponse;
@@ -27,7 +27,7 @@ export function declineInConversation(
     return { response, note: `Kept planning: ${title} (${KEPT_PLANNING_REASON})` };
   }
   const reason = inProject ? ASK_RUN_REASON : NO_FOLDER_REASON;
-  const denial = policyDenial(blockedNote(title, reason));
+  const denial = policyDenial(title, reason);
   return {
     response: reject ? { ...response, _meta: { denyMessage: denial } } : response,
     note: `Declined: ${title} (${reason})`,

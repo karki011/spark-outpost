@@ -175,6 +175,19 @@ describe('turn rows', () => {
     expect(rows![0]).toMatchObject({ kind: 'tool', tone: 'run', verb: 'Ran' });
   });
 
+  it('shows a refused step with what was refused and the whole reason', () => {
+    const reason =
+      "this chat's message didn't ask to open a pull request, and it isn't at Full auto";
+    const step = done(`Refused \`gh pr create\` — ${reason}`);
+    const [rows] = rowsOf(turnRowParts({ text: '', steps: [step], commands: [] }));
+    expect(rows![0]).toMatchObject({
+      kind: 'tool',
+      verb: 'Refused',
+      target: 'gh pr create',
+      detail: reason,
+    });
+  });
+
   it('groups two or more commands', () => {
     const parts = turnRowParts({
       text: '',
