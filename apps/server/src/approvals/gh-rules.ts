@@ -8,7 +8,7 @@ import {
   type SparkRuleSet,
 } from '../spark-rules/resolve.ts';
 import { normalizeCommand, programName } from './commands.ts';
-import { ghArgs } from './gh-reads.ts';
+import { ghArgs, ghRevealsToken } from './gh-reads.ts';
 import { hostingCommands, hostingRead, publishesThroughGit } from './git-commands.ts';
 
 export interface SparkRuleContext {
@@ -45,7 +45,7 @@ export function ownGhRules(args: readonly string[]): FloorRuleId[] {
   const [group = '', verb = '', ...rest] = ghArgs(args);
   const found: FloorRuleId[] = [];
   if (group === 'api') found.push('Gh(api write)');
-  if (group === 'auth') found.push('Gh(auth)');
+  if (group === 'auth' && !ghRevealsToken(args)) found.push('Gh(auth)');
   if (group === 'pr' && verb === 'merge') found.push('Gh(pr merge)');
   if (group === 'pr' && verb === 'review' && rest.some((token) => APPROVES.test(token))) {
     found.push('Gh(pr review)');

@@ -9,7 +9,14 @@ import type {
 import { refusalFor, type GitDirs } from '../projects/path-policy.ts';
 import { commandTree } from './command-tree.ts';
 import { allowlistCovers, normalizeCommand } from './commands.ts';
-import { forcePush, isGitPush, skipsPushHooks, type ForcePush } from './git-commands.ts';
+import {
+  forcePush,
+  GH_TOKEN_REASON,
+  isGitPush,
+  revealsGhToken,
+  skipsPushHooks,
+  type ForcePush,
+} from './git-commands.ts';
 import { guardedTargets, heldGuards } from './guarded-targets.ts';
 export { secretLabels } from './guarded-targets.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
@@ -295,6 +302,9 @@ function ruledDecide(
   }
   if (touchesSparkRules(request)) {
     return { verdict: 'reject', reason: SPARK_RULES_REASON };
+  }
+  if (request.command && revealsGhToken(request.command)) {
+    return { verdict: 'reject', reason: GH_TOKEN_REASON };
   }
   const forced = heldForce(
     adoptedForce(

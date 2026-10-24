@@ -56,7 +56,7 @@ const EXAMPLES: Example[] = [
   { rule: 'Gh(pr merge)', asked: request('gh pr merge 12 --squash'), manual: 'ask' },
   { rule: 'Gh(pr review)', asked: request('gh pr review 12 --approve'), manual: 'ask' },
   { rule: 'GhAdmin', asked: request('gh pr edit 12 --admin'), manual: 'ask' },
-  { rule: 'Gh(auth)', asked: request('gh auth token'), manual: 'ask' },
+  { rule: 'Gh(auth)', asked: request('gh auth logout'), manual: 'ask' },
   {
     rule: 'Gh(api write)',
     asked: request('gh api -X POST repos/o/r/issues -f title=x'),
@@ -165,6 +165,8 @@ describe('with no Spark rules, what is fixed in v1 still holds', () => {
     `cat "${DATA}/spark/settings.json"`,
     `cat "${DATA}/postgres-password"`,
     `git push --no-verify origin ${BRANCH}`,
+    'gh auth token',
+    'gh auth status --show-token',
   ];
 
   it.each(REFUSED)('%s is refused in every mode', async (command) => {

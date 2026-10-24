@@ -1,6 +1,6 @@
 import { argumentWords, commandTree } from './command-tree.ts';
 import { programName } from './commands.ts';
-import { ghArgs, ghOnlyReads } from './gh-reads.ts';
+import { ghArgs, ghOnlyReads, ghRevealsToken } from './gh-reads.ts';
 import { gitConfigUse, type GitConfigUse } from './git-config.ts';
 import { withoutDataHeredocs } from './inline-code.ts';
 
@@ -191,6 +191,24 @@ export function hostingCommands(command: string): string[][] {
 
 export function hostingRead(program: readonly string[]): boolean {
   return programName(program) === 'gh' && ghOnlyReads(program.slice(1));
+}
+
+export const GH_TOKEN_REASON =
+  'Commands that print the GitHub token (gh auth token, gh auth status --show-token, gh auth git-credential get, gh config get oauth_token) are refused in every mode';
+
+const GH_IN_TEXT = /(?:^|[^\w.-])gh((?:[ \t]+[^\s;|&()`$"'<>]+)+)/g;
+
+function textRevealsGhToken(command: string): boolean {
+  return [...command.matchAll(GH_IN_TEXT)].some((found) =>
+    ghRevealsToken(found[1]!.trim().split(/\s+/)),
+  );
+}
+
+export function revealsGhToken(command: string): boolean {
+  const found = hostingCommands(command).some(
+    (program) => programName(program) === 'gh' && ghRevealsToken(program.slice(1)),
+  );
+  return found || (commandTree(command).opaque && textRevealsGhToken(command));
 }
 
 function publishes(command: string, publishing: readonly string[]): boolean {

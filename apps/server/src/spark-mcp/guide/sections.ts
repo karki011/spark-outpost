@@ -96,7 +96,7 @@ Spark's rules (none by default) apply at all levels.`,
     ],
     text: `The approval gate follows the agent's mode: a card only when the mode or the agent asks. Spark's rules (settings.json in Spark's data folder; managed-settings.json) add a floor. With no file, the default, every rule follows the mode: Auto or Bypass may force push, push any branch, edit secret files, hooks and instruction files, write outside the project and publish unasked. With the recommended rules: changing a secret file asks or is refused (.sparkignore reads ask); agents push only the chat's own spark/ or adopted PR branch and its PR, only when asked, at Full auto → PR or in Auto/Bypass; writes outside the linked folders ask (temp folders fine); a --force-with-lease to a named, non-default branch asks with hold to confirm, other force pushes are refused.
 
-The recommended rules also refuse merges, approving reviews, --admin, gh api writes and gh auth. Always refused: Spark's rules files and ports, --no-verify, Spark's browser data. All audited; no run budgets.`,
+Recommended rules also refuse merges, approvals, --admin, gh api writes and gh auth. Always refused: Spark's rules files and ports, --no-verify, printing the GitHub token, Spark's browser data. All audited; no run budgets.`,
   },
   {
     id: 'worktrees',
