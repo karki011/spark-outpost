@@ -150,7 +150,17 @@ describe('outsideFence', () => {
 
 describe('anchorIndex', () => {
   it('clamps a bare position to the text there is', () => {
-    expect(anchorIndex('abc', { ...shot('a', ''), textOffset: 9 })).toBe(3);
+    expect(anchorIndex('abc', { ...shot('a', ''), textOffset: 9, textBefore: null })).toBe(3);
+  });
+
+  it('puts an anchor taken before any visible text at the start', () => {
+    expect(anchorIndex('There it is.', { textOffset: 1, textBefore: '', textHeld: 1 })).toBe(0);
+    expect(anchorIndex('There it is.', { textOffset: 1, textBefore: '\n', textHeld: 0 })).toBe(0);
+  });
+
+  it('moves a position inside a word to the end of that word', () => {
+    expect(anchorIndex('Opened it.', { textOffset: 1, textBefore: null, textHeld: 0 })).toBe(6);
+    expect(anchorIndex('Check out. Next.', shot('a', 'Check ou'))).toBe(10);
   });
 });
 

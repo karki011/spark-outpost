@@ -12,5 +12,6 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 
 | What changed                                                                       | What to do                                                  |
 | ---------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| A command row no longer splits the first word of the publish result or a reply.    | Nothing; older turns show the fix too.                      |
 | Mac app: the Settings window opens larger.                                         | Nothing; it still fits smaller screens.                     |
 | The prompt cache moved from the message box's chip to a badge on the context ring. | Hover or select the ring to read **Prompt cache** in words. |
