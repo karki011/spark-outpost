@@ -193,7 +193,6 @@ export const CONTINUED_SESSION_STEP = 'Continued session';
 
 const SPARK_NOTES = [
   /^Working on \S+ in (?:this chat's worktree|your checkout)\./,
-  /^Allowed .+ \(you (?:allowed|always allow) it[^)]*\)$/s,
   /^Denied: .+ \(you denied it\)$/s,
   /^Using .+ · \S+ effort$/,
   /^Using .+'s defaults$/,
@@ -205,9 +204,35 @@ export function placeNoteText(branch: string, inPlace: boolean): string {
     : `Working on ${branch} in this chat's worktree.`;
 }
 
+const ALLOWED_NOTE = /^Allowed .+ \(((?:[^()]|\([^()]*\))+)\)$/s;
+export const ALLOWED_REASONS = {
+  allowlist: 'on the project allowlist',
+  runRule: 'allowed for this run',
+  safeRead: 'a read-only command inside the project',
+  planning: 'planning changes no files',
+  publishAsked: 'you asked to push or open a PR',
+  publishFullAuto: 'Full auto → PR',
+  publishFollowUp: "a fix for this chat's open pull request",
+  askAuto: 'Automatic in an Ask turn',
+} as const;
+const GATE_REASONS: ReadonlySet<string> = new Set(Object.values(ALLOWED_REASONS));
+
+function isGateReason(reason: string): boolean {
+  return (
+    GATE_REASONS.has(reason) ||
+    reason.endsWith(' mode') ||
+    /^you (?:allowed|always allow) it/.test(reason)
+  );
+}
+
+function isAllowedNote(name: string): boolean {
+  const reason = ALLOWED_NOTE.exec(name)?.[1];
+  return reason !== undefined && isGateReason(reason);
+}
+
 export function isSparkNote(name: string): boolean {
   if (name === WRITE_UP_STEP || name === CONTINUED_SESSION_STEP) return true;
-  return SPARK_NOTES.some((note) => note.test(name));
+  return isAllowedNote(name) || SPARK_NOTES.some((note) => note.test(name));
 }
 
 const TOOL_LABELS: Readonly<Record<string, string>> = {

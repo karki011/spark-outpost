@@ -1,4 +1,4 @@
-import type { SubagentRow } from '@spark-outpost/contracts';
+import { isSparkNote, type SubagentRow } from '@spark-outpost/contracts';
 import { StepIcon, StepName } from '../WorkLog.tsx';
 import { fileLabel } from './subagent-view.ts';
 
@@ -11,12 +11,13 @@ interface SubagentDetailProps {
 
 export function SubagentDetail({ id, row, task, live }: SubagentDetailProps) {
   const said = row.message ?? row.summary ?? null;
+  const steps = row.steps.filter((step) => !isSparkNote(step.name));
   return (
     <div id={id} className="sa-detail">
       {task && <p className="sa-task open">{task}</p>}
-      {row.steps.length > 0 && (
+      {steps.length > 0 && (
         <ol className="sa-steps" aria-label={`Steps of ${row.name}`}>
-          {row.steps.map((step, index) => (
+          {steps.map((step, index) => (
             <li key={`${step.name}-${index}`}>
               <StepIcon
                 step={{ name: step.name, status: step.done ? 'done' : 'open' }}

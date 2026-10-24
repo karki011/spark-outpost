@@ -7,6 +7,7 @@ import {
   type ModePosture,
   type Approval,
   type RunEvent,
+  ALLOWED_REASONS,
 } from '@spark-outpost/contracts';
 import { forcePush } from '../approvals/git-commands.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
@@ -175,8 +176,8 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     request: ApprovalRequest,
   ): string => {
     if (decision.why !== undefined) return decision.why;
-    if (decision.by === 'allowlist') return 'on the project allowlist';
-    if (decision.by === 'run_rule') return 'allowed for this run';
+    if (decision.by === 'allowlist') return ALLOWED_REASONS.allowlist;
+    if (decision.by === 'run_rule') return ALLOWED_REASONS.runRule;
     return `${modeLabel(modeOf(request))} mode`;
   };
 
@@ -212,6 +213,9 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       ...(approvalId ? { approvalId } : {}),
     };
   };
+
+  const quietly = (answer: GateAnswer): GateAnswer =>
+    answer.outcome === 'selected' ? { ...answer, quiet: true } : answer;
 
   const reject = (
     request: ApprovalRequest,
@@ -414,10 +418,8 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       by: decision.by,
       approvalId: recorded.id,
     });
-    const allowed = await allow(
-      request,
-      `Allowed ${what} (${allowedWhy(decision, request)})`,
-      recorded.id,
+    const allowed = quietly(
+      await allow(request, `Allowed ${what} (${allowedWhy(decision, request)})`, recorded.id),
     );
     if (decision.sent && allowed.outcome === 'selected') {
       deps.observations?.sentOut({

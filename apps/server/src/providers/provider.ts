@@ -127,8 +127,13 @@ export type GateAnswer =
       note: string;
       approvalId?: string;
       denial?: string;
+      quiet?: boolean;
     }
   | { outcome: 'cancelled'; note: string };
+
+export function isQuiet(answer: GateAnswer): boolean {
+  return answer.outcome === 'selected' && answer.quiet === true;
+}
 
 export interface PermissionGate {
   review(request: ApprovalRequest, signal: AbortSignal): Promise<GateAnswer>;

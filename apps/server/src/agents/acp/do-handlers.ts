@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import type * as acp from '@agentclientprotocol/sdk';
 import type { PathPolicy } from '../../projects/path-policy.ts';
-import type { PermissionGate } from '../../providers/provider.ts';
+import { isQuiet, type PermissionGate } from '../../providers/provider.ts';
 import { writeTextFile } from './fs-handlers.ts';
 import { approvalRequestFrom, permissionResponse } from './permission-request.ts';
 import { toolNameOf } from './tool-titles.ts';
@@ -42,7 +42,7 @@ export async function reviewPermission(
     subagent: asker?.name ?? null,
   });
   const answer = await workspace.gate.review(request, workspace.signal);
-  workspace.annotate(answer.note, asker?.id);
+  if (!isQuiet(answer)) workspace.annotate(answer.note, asker?.id);
   return permissionResponse(answer);
 }
 

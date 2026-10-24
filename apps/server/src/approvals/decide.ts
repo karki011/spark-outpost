@@ -1,3 +1,4 @@
+import { ALLOWED_REASONS } from '@spark-outpost/contracts';
 import type {
   ApprovalKind,
   ApprovalOption,
@@ -102,8 +103,8 @@ export const PUSH_HOOKS_REASON =
 export const CHAT_PUBLISH_REASON =
   "This chat's agent pushes and opens a pull request only when the user's message asks for it, the chat is at Full auto → PR, or its mode is Auto or Bypass permissions (Full access)";
 export { OUTSIDE_DELETE_REASON, OUTSIDE_WRITE_REASON, SECRET_REASON } from './rails.ts';
-export const SAFE_READ_WHY = 'a read-only command inside the project';
-export const ASK_AUTO_WHY = 'Automatic in an Ask turn';
+export const SAFE_READ_WHY = ALLOWED_REASONS.safeRead;
+export const ASK_AUTO_WHY = ALLOWED_REASONS.askAuto;
 export const ASK_TURN_ASKS =
   'Spark asks before commands in a question turn, unless they only read files';
 
@@ -467,9 +468,9 @@ function publishing(
   return publishVerdict(request.command, posture, options.publish, options.own ?? null, rules);
 }
 
-export const PUBLISH_ASKED_WHY = 'you asked to push or open a PR';
-export const PUBLISH_FULL_AUTO_WHY = 'Full auto → PR';
-export const PUBLISH_FOLLOW_UP_WHY = "a fix for this chat's open pull request";
+export const PUBLISH_ASKED_WHY = ALLOWED_REASONS.publishAsked;
+export const PUBLISH_FULL_AUTO_WHY = ALLOWED_REASONS.publishFullAuto;
+export const PUBLISH_FOLLOW_UP_WHY = ALLOWED_REASONS.publishFollowUp;
 
 function publishAllowed(basis: PublishBasis): Decision {
   if (basis === 'requested') return { verdict: 'allow', by: 'level', why: PUBLISH_ASKED_WHY };
