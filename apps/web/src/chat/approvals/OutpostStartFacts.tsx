@@ -9,6 +9,7 @@ function placeOf(chat: StartOutpostChat): string {
 
 function detailOf(chat: StartOutpostChat): string {
   const parts = [chat.project ?? 'No project', placeOf(chat)];
+  if (chat.existing) parts.unshift('Existing chat · gets a request');
   if (chat.agentMode) parts.push(`Mode: ${chat.agentMode}`);
   return parts.join(' · ');
 }

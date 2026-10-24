@@ -11,6 +11,12 @@ import type { OrderParts } from './story-draft.ts';
 
 const LONG_MESSAGE = 160;
 const LEAD_META = 'Joins the outpost and gets one wrap-up when its sub-chats end';
+const EXISTING_TAG = 'Existing chat · gets a request';
+
+function tagOf(chat: ChatDraft, lead: boolean, view: ChatView): string {
+  if (lead) return 'Proposing chat';
+  return chat.kind === 'existing' ? EXISTING_TAG : view.tag;
+}
 
 interface DraftCardProps {
   chat: ChatDraft;
@@ -25,13 +31,13 @@ interface DraftCardProps {
   onRemove: () => void;
 }
 
-function MessagePreview({ text, files }: { text: string; files: number }) {
+function MessagePreview({ label, text, files }: { label: string; text: string; files: number }) {
   const id = useId();
   const [all, setAll] = useState(false);
   const long = text.length > LONG_MESSAGE || text.includes('\n');
   return (
     <div className="op-draft-message">
-      <span className="op-draft-label">First message</span>
+      <span className="op-draft-label">{label}</span>
       <p id={id} className={long && !all ? 'clamped' : undefined}>
         {text}
       </p>
@@ -86,7 +92,7 @@ export function DraftCard(props: DraftCardProps) {
         <MemberFace chatId={view.faceId} size="strip" />
         <div className="op-draft-who">
           <h4 className="op-draft-title">
-            {view.title} <i className="op-tag">{lead ? 'Proposing chat' : view.tag}</i>
+            {view.title} <i className="op-tag">{tagOf(chat, lead, view)}</i>
           </h4>
           <p className="op-draft-meta">{lead ? LEAD_META : view.meta}</p>
         </div>
@@ -121,7 +127,13 @@ export function DraftCard(props: DraftCardProps) {
         />
         {!lead && <OrderLine order={props.order} pull={props.pull} />}
       </div>
-      {message !== '' && <MessagePreview text={message} files={chat.files.length} />}
+      {message !== '' && (
+        <MessagePreview
+          label={chat.kind === 'existing' && !lead ? 'Request' : 'First message'}
+          text={message}
+          files={chat.files.length}
+        />
+      )}
       {props.warning && (
         <p className="op-review-order warn">
           <InfoIcon />

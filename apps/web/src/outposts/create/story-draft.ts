@@ -40,7 +40,7 @@ export function stackParent(
   chats: readonly ConversationSummary[],
 ): ChatDraft | null {
   const parent = parentOf(draft, chat);
-  if (parent === null) return null;
+  if (parent === null || chat.kind !== 'new') return null;
   const stacked = isStacked(
     { projectId: projectOf(chat, chats) },
     { projectId: projectOf(parent, chats) },
@@ -61,9 +61,11 @@ export function orderParts(
   const parent = parentOf(draft, chat);
   if (parent === null) return { after: null, detail: null };
   const detail =
-    stackParent(draft, chat, chats) === null
-      ? 'different repo, order only'
-      : 'stacked on its branch';
+    stackParent(draft, chat, chats) !== null
+      ? 'stacked on its branch'
+      : chat.kind !== 'new'
+        ? 'order only, it keeps its own branch'
+        : 'different repo, order only';
   return { after: parent.handle, detail };
 }
 
@@ -118,7 +120,7 @@ export function unpushedParent(
   facts: PublishFacts,
 ): string | null {
   const parent = stackParent(draft, chat, facts.chats);
-  if (parent === null || chat.kind !== 'new' || parent.kind !== 'new') return null;
+  if (parent === null || chat.kind !== 'new') return null;
   if (!publishes(chat, facts) || publishes(parent, facts)) return null;
   return `@${parent.handle} opens no pull request, so @${chat.handle} cannot push until @${parent.handle}'s branch is pushed.`;
 }

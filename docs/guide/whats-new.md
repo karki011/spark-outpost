@@ -12,6 +12,10 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 
 | What changed | What to do |
 | --- | --- |
+| A chat's draft opens on one sheet that shows every proposed chat in full, with its first message, **Edit** and **Remove**.          | Select **Review and start**, then **Start outpost** or **Start N chats**. |
+| **Suggested threads** in an outpost lines up with the messages, and starting a draft opens the first sub-chat's thread.             | Select **Review and start**, then start the chats.                        |
+| A chat proposing sub-chats can give one to a chat already working in that repo: the sheet shows **Existing chat · gets a request**. | Nothing; that chat keeps its own title, mode and branch.                  |
+| Mac app: the Settings window opens larger.                                                                                          | Nothing; it still fits smaller screens.                                   |
 | Outposts in the sidebar: only the chat that started sub-chats has a face; its sub-chats follow in order with their state as a word, and its chip says **· Lead**. | Point at a row to see what it starts after.                 |
 | Mac app: the Settings window opens larger.                                                                                                                        | Nothing; it still fits smaller screens.                     |
 | The prompt cache moved from the message box's chip to a badge on the context ring.                                                                                | Hover or select the ring to read **Prompt cache** in words. |

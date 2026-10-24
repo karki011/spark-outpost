@@ -57,6 +57,7 @@
 .op-draft-title .op-tag {
   display: inline-block;
   margin-left: 4px;
+  white-space: nowrap;
   background: var(--panel);
   vertical-align: 1px;
 }
