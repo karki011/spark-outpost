@@ -29,6 +29,16 @@ export interface RailAsk {
   paths: string[];
 }
 
+export type RailRuleId = 'WriteOutside' | 'SecretFile(edit)' | 'SecretFile(read)';
+export type RailsWanted = (rule: RailRuleId) => boolean;
+
+export const EVERY_RAIL: RailsWanted = () => true;
+
+export function railRule(rail: RailAsk['rail'], reading: boolean): RailRuleId {
+  if (rail !== 'secret') return 'WriteOutside';
+  return reading ? 'SecretFile(read)' : 'SecretFile(edit)';
+}
+
 const SHOWN_PATHS = 2;
 
 function shortList(names: readonly string[]): string {
@@ -209,18 +219,19 @@ function commandRail(
   request: ApprovalRequest,
   files: FileLister,
   reading: boolean,
+  wanted: RailsWanted,
 ): RailAsk | null {
   const tree = request.command ? commandTree(request.command) : null;
+  const secrets = wanted(railRule('secret', reading));
+  if (!wanted('WriteOutside')) return secrets ? secretRail(request, tree, files, reading) : null;
   const deleted = outsideDeletes(request, tree);
   if (deleted === null) return { rail: 'outside_delete', reason: OUTSIDE_DELETE_REASON, paths: [] };
   if (deleted.length > 0) {
     const reason = outsideDeleteReason(deleted, request.home);
     return { rail: 'outside_delete', reason, paths: deleted };
   }
-  const secrets = secretTargets(request, tree, reading);
-  if (secrets.length > 0) return secretAsk(request, tree, secrets, reading);
-  const reached = secretsReached(request, tree, files, reading);
-  if (reached) return secretAsk(request, tree, reached.targets, reading, reached.inCode);
+  const secret = secrets ? secretRail(request, tree, files, reading) : null;
+  if (secret) return secret;
   const written = outsideWrites(request);
   if (written === null) return { rail: 'outside_write', reason: OUTSIDE_WRITE_REASON, paths: [] };
   if (written.length === 0) return null;
@@ -228,14 +239,31 @@ function commandRail(
   return { rail: 'outside_write', reason, paths: written };
 }
 
-function redirectRail(view: ShellView | null): RailAsk | null {
+function secretRail(
+  request: ApprovalRequest,
+  tree: CommandTree | null,
+  files: FileLister,
+  reading: boolean,
+): RailAsk | null {
+  const secrets = secretTargets(request, tree, reading);
+  if (secrets.length > 0) return secretAsk(request, tree, secrets, reading);
+  const reached = secretsReached(request, tree, files, reading);
+  return reached ? secretAsk(request, tree, reached.targets, reading, reached.inCode) : null;
+}
+
+function redirectRail(
+  view: ShellView | null,
+  reading: boolean,
+  wanted: RailsWanted,
+): RailAsk | null {
   const kinds = view?.redirects ?? [];
-  if (kinds.includes('secret')) return SECRET_ASK;
-  if (!kinds.includes('writes_outside')) return null;
+  if (kinds.includes('secret') && wanted(railRule('secret', reading))) return SECRET_ASK;
+  if (!kinds.includes('writes_outside') || !wanted('WriteOutside')) return null;
   return { rail: 'outside_write', reason: OUTSIDE_WRITE_REASON, paths: [] };
 }
 
-function editRail(request: ApprovalRequest): RailAsk | null {
+function editRail(request: ApprovalRequest, wanted: RailsWanted): RailAsk | null {
+  if (!wanted('WriteOutside')) return null;
   if (request.kind !== 'edit' && request.toolKind !== 'move') return null;
   const outside = request.paths.filter((target) => leavesProject(request, target));
   if (outside.length === 0) return null;
@@ -243,16 +271,23 @@ function editRail(request: ApprovalRequest): RailAsk | null {
   return { rail: 'outside_write', reason, paths: outside };
 }
 
+export interface RailFound extends RailAsk {
+  rule: RailRuleId;
+}
+
 export function alwaysAsk(
   request: ApprovalRequest,
   files: FileLister,
   view: ShellView | null,
-): RailAsk | null {
+  wanted: RailsWanted = EVERY_RAIL,
+): RailFound | null {
   const parts = view ? [request, ...partRequests(request, view)] : [request];
   const reading = readsWithoutChanging(request, view);
+  const found = (asked: RailAsk | null) =>
+    asked ? { ...asked, rule: railRule(asked.rail, reading) } : null;
   for (const part of parts) {
-    const asked = commandRail(part, files, reading);
-    if (asked) return asked;
+    const asked = commandRail(part, files, reading, wanted);
+    if (asked) return found(asked);
   }
-  return redirectRail(view) ?? editRail(request);
+  return found(redirectRail(view, reading, wanted) ?? editRail(request, wanted));
 }

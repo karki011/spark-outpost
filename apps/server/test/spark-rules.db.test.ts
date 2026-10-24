@@ -10,7 +10,7 @@ import {
   shownApprovalsForConversation,
 } from '../src/persistence/approvals.ts';
 import { listQueue } from '../src/persistence/chat-queue.ts';
-import { ghRulesForRun, saveSparkRules, sparkRules } from '../src/persistence/spark-rules.ts';
+import { sparkRulesForRun, saveSparkRules, sparkRules } from '../src/persistence/spark-rules.ts';
 import { createApprovalGate } from '../src/workflow/approval-gate.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import { publishGrant } from '../src/workflow/publish-context.ts';
@@ -161,7 +161,7 @@ describe('the refused card', () => {
     await answerRuleCard(t.db, t.workspaceId, card.id, 'allow_once', target);
     expect((await sparkRules(t.db, t.workspaceId)).ghAllowed).toEqual([]);
     const retry = await retryRunOf(card.id);
-    expect((await ghRulesForRun(t.db, retry)).once).toEqual([RELEASE]);
+    expect((await sparkRulesForRun(t.db, retry)).once).toEqual([RELEASE]);
 
     const { gate } = gateFor(retry, 'bypassPermissions');
     const same = await gate.review(commandRequest(root, RELEASE, randomUUID()), signal());

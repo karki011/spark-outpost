@@ -55,6 +55,7 @@ export const ghAllowedSchema = z
 export const sparkRulesSchema = z.object({
   workflows: ghRuleChoiceSchema,
   ghAllowed: z.array(z.string()),
+  problems: z.array(z.string()).optional(),
 });
 export type SparkRules = z.infer<typeof sparkRulesSchema>;
 

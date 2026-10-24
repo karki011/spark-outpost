@@ -21,6 +21,24 @@ export function flagName(token: string): string {
   return token.split('=')[0]!;
 }
 
+const GLOBAL_VALUE_FLAGS: ReadonlySet<string> = new Set(['-R', '--repo', '--hostname']);
+const JOINED_REPO = /^-R./;
+
+function globalFlagWidth(args: readonly string[], index: number): number {
+  const token = args[index]!;
+  if (GLOBAL_VALUE_FLAGS.has(flagName(token))) return token.includes('=') ? 1 : 2;
+  return JOINED_REPO.test(token) ? 1 : 0;
+}
+
+export function ghArgs(args: readonly string[]): string[] {
+  let index = 0;
+  for (let width = 0; index < args.length; index += width) {
+    width = globalFlagWidth(args, index);
+    if (width === 0) break;
+  }
+  return [...args.slice(index), ...args.slice(0, index)];
+}
+
 export function flagValues(args: readonly string[], flags: ReadonlySet<string>): string[] {
   return args.flatMap((token, index) => {
     if (!flags.has(flagName(token))) return [];
@@ -79,7 +97,8 @@ export function ghPullRead(group: string, verb: string): boolean {
   return PULL_READS[group]?.has(verb) ?? false;
 }
 
-export function ghOnlyReads(args: readonly string[]): boolean {
+export function ghOnlyReads(given: readonly string[]): boolean {
+  const args = ghArgs(given);
   const [group, verb, ...rest] = args;
   if (!group) return false;
   if (group === 'api') return apiReads(args.slice(1));
@@ -90,5 +109,5 @@ export function ghOnlyReads(args: readonly string[]): boolean {
 }
 
 export function ghSendsQuery(args: readonly string[]): boolean {
-  return args[0] === 'search';
+  return ghArgs(args)[0] === 'search';
 }

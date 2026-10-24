@@ -38,7 +38,7 @@ import {
   type NewApproval,
 } from '../persistence/approvals.ts';
 import type { Db } from '../persistence/db.ts';
-import { ghRulesForRun } from '../persistence/spark-rules.ts';
+import { sparkRulesForRun } from '../persistence/spark-rules.ts';
 import { LeaseLostError, type AppendOptions } from '../persistence/run-events.ts';
 import type { GateAnswer, PermissionGate } from '../providers/provider.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
@@ -382,7 +382,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       instructionGrants,
       shell: request.kind === 'execute' ? await parseShell(request.command) : null,
       agentAsks: Boolean(request.agentReason),
-      ghRules: await ghRulesForRun(deps.db, deps.runId),
+      sparkRules: await sparkRulesForRun(deps.db, deps.runId),
       ...(await publishContext(deps.db, deps.publish, request)),
     };
     const { decision, secretReads } = await withPrefetchedFiles(
