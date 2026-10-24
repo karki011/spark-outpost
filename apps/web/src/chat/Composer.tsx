@@ -359,6 +359,7 @@ export function Composer({
             />
           )}
           <ContextRing
+            conversationId={conversationId}
             runs={runs}
             provider={settings?.provider ?? null}
             usageTotals={usageTotals}
