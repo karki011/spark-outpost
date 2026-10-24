@@ -73,6 +73,37 @@ describe('messages sent during a turn', () => {
     ]);
   });
 
+  it('note text the agent added to that paragraph after they arrived', () => {
+    const [grown] = turnRowParts({
+      text: 'Checking CI and the review comments.',
+      steps: [],
+      commands: [],
+      steers: [anchored('mid', 'Checking CI', 2_000)],
+    }).filter((part) => part.kind === 'steers');
+    expect(grown).toMatchObject({ ids: ['mid'], wroteAfter: true });
+
+    const [waiting] = turnRowParts({
+      text: OPENING,
+      steps: [],
+      commands: [],
+      steers: [anchored('end', OPENING, 2_000)],
+    }).filter((part) => part.kind === 'steers');
+    expect(waiting).toMatchObject({ ids: ['end'], wroteAfter: false });
+  });
+
+  it('note added text for a group only when it follows every message in it', () => {
+    const [group] = turnRowParts({
+      text: 'Checking CI and the review comments.',
+      steps: [],
+      commands: [],
+      steers: [
+        anchored('early', 'Checking CI', 2_000),
+        anchored('late', 'Checking CI and the review comments.', 3_000),
+      ],
+    }).filter((part) => part.kind === 'steers');
+    expect(group).toMatchObject({ ids: ['early', 'late'], wroteAfter: false });
+  });
+
   it('follow a step that started at the same point in the reply but before they arrived', () => {
     const parts = turnRowParts({
       text: OPENING,

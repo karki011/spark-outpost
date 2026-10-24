@@ -59,7 +59,7 @@ export type TurnRowPart =
   | { kind: 'shots'; key: string; shots: BrowserShot[] }
   | { kind: 'terminal'; key: string; terminals: AgentTerminalView[] }
   | { kind: 'rows'; key: string; rows: Row[] }
-  | { kind: 'steers'; key: string; ids: string[] };
+  | { kind: 'steers'; key: string; ids: string[]; wroteAfter: boolean };
 
 export interface SteerMark {
   id: string;
@@ -81,7 +81,7 @@ type Placed =
   | { kind: 'item'; at: number; time: number | null; item: RowItem }
   | { kind: 'shot'; at: number; time: number | null; shot: BrowserShot }
   | { kind: 'terminal'; at: number; time: number | null; terminal: AgentTerminalView }
-  | { kind: 'steer'; at: number; time: number | null; id: string };
+  | { kind: 'steer'; at: number; time: number | null; id: string; wroteAfter: boolean };
 
 const DONE_VERBS: Record<'read' | 'search' | 'edit', [done: string, open: string]> = {
   read: ['Read', 'Reading'],
@@ -226,8 +226,11 @@ function paragraphEnd(text: string, at: number): number {
   return outsideFence(text, end === -1 ? text.length : end);
 }
 
-function steerAt(text: string, steer: SteerMark): number {
-  return steer.anchor ? paragraphEnd(text, placeAt(text, steer.anchor)) : text.length;
+function steerPlace(text: string, steer: SteerMark): { at: number; wroteAfter: boolean } {
+  if (!steer.anchor) return { at: text.length, wroteAfter: false };
+  const anchor = placeAt(text, steer.anchor);
+  const at = paragraphEnd(text, anchor);
+  return { at, wroteAfter: text.slice(anchor, at).trim() !== '' };
 }
 
 function placedItems(input: TurnRowInput): Placed[] {
@@ -259,7 +262,7 @@ function placedItems(input: TurnRowInput): Placed[] {
     })),
     ...steers.map((steer): Placed => ({
       kind: 'steer',
-      at: steerAt(text, steer),
+      ...steerPlace(text, steer),
       time: steer.time,
       id: steer.id,
     })),
@@ -353,8 +356,13 @@ export function turnRowParts(input: TurnRowInput): TurnRowPart[] {
     flushRows();
     if (placed.kind === 'steer') {
       const last = parts.at(-1);
-      if (last?.kind === 'steers') last.ids.push(placed.id);
-      else parts.push({ kind: 'steers', key: `steers-${placed.id}`, ids: [placed.id] });
+      if (last?.kind === 'steers') {
+        last.ids.push(placed.id);
+        last.wroteAfter &&= placed.wroteAfter;
+      } else {
+        const { id, wroteAfter } = placed;
+        parts.push({ kind: 'steers', key: `steers-${id}`, ids: [id], wroteAfter });
+      }
       continue;
     }
     if (placed.kind === 'terminal') {

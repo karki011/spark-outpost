@@ -228,6 +228,11 @@ export function steerMarks(messages: readonly MemberMessage[]): SteerMark[] {
 }
 
 export function seenAfter(parts: readonly TurnRowPart[], index: number): SteerSeen {
+  const own = parts[index];
+  const wrote = own?.kind === 'steers' && own.wroteAfter;
   const later = parts.slice(index + 1).filter((part) => part.kind !== 'steers');
-  return { taken: later.length > 0, answered: later.some((part) => part.kind === 'text') };
+  return {
+    taken: wrote || later.length > 0,
+    answered: wrote || later.some((part) => part.kind === 'text'),
+  };
 }

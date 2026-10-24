@@ -138,7 +138,7 @@ describe('steerMarks', () => {
 });
 
 describe('seenAfter', () => {
-  const steers: TurnRowPart = { kind: 'steers', key: 's', ids: ['a'] };
+  const steers: TurnRowPart = { kind: 'steers', key: 's', ids: ['a'], wroteAfter: false };
   const rows: TurnRowPart = { kind: 'rows', key: 'r', rows: [] };
   const text: TurnRowPart = { kind: 'text', key: 't', text: 'On it.' };
 
@@ -147,5 +147,9 @@ describe('seenAfter', () => {
     expect(seenAfter([steers, { ...steers, key: 's2' }], 0)).toEqual(NOT_SEEN);
     expect(seenAfter([steers, rows], 0)).toEqual(TAKEN);
     expect(seenAfter([steers, rows, text], 0)).toEqual(ANSWERED);
+  });
+
+  it('counts text the agent added to the paragraph the message sits after', () => {
+    expect(seenAfter([text, { ...steers, wroteAfter: true }], 1)).toEqual(ANSWERED);
   });
 });
