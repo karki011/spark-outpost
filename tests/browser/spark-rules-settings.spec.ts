@@ -51,6 +51,8 @@ test('every rule shows its choice and changing one writes settings.json', async 
   await expect(settings.getByRole('button', { name: 'Push any other branch' })).toHaveText(
     'Refuse',
   );
+  await expect(settings.getByRole('button', { name: 'Merge a pull request' })).toHaveText('Refuse');
+  await expect(settings.getByText(/Asked means your message asks/)).toBeVisible();
   await expect(
     settings.getByText("Always kept, so an agent can't give itself more", { exact: false }),
   ).toBeVisible();
@@ -58,6 +60,7 @@ test('every rule shows its choice and changing one writes settings.json', async 
   await force.focus();
   await page.keyboard.press('Enter');
   const menu = page.getByRole('menu', { name: 'Force push' });
+  await expect(menu.getByRole('menuitemradio', { name: /^Allow/ })).toHaveCount(0);
   await expect(menu.getByRole('menuitemradio', { name: /Ask, hold to confirm/ })).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(menu.getByRole('menuitemradio', { name: /Refuse/ })).toBeFocused();
@@ -85,11 +88,11 @@ test('an edit made in the file shows when the page gets focus again', async ({ p
   writeRules(SPARK_RULES_FILE, { permissions: { allow: [], ask: [], deny: ['GitRemote'] } });
   await page.goto('/');
   const settings = await openSparkRules(page);
-  const remotes = settings.getByRole('button', { name: 'Add or change git remotes' });
+  const remotes = settings.getByRole('button', { name: 'Change remotes or publish another way' });
   await expect(remotes).toHaveText('Refuse');
-  await expect(settings.getByRole('button', { name: "Push the chat's own branch" })).toHaveText(
-    "Agent's mode",
-  );
+  await expect(
+    settings.getByRole('button', { name: "Push the chat's branch without being asked" }),
+  ).toHaveText("Agent's mode");
   writeRules(SPARK_RULES_FILE, {
     theme: 'dark',
     permissions: { allow: ['Bash(npm test)'], ask: [], deny: [] },
@@ -154,7 +157,7 @@ test('Use recommended rules asks first and keeps the rest of the file @packaged'
   expect(file.permissions.deny).toContain('Gh(*)');
 });
 
-test('allowed gh commands take gh prefixes, refuse the never-allowed ones and can be removed', async ({
+test('allowed gh commands take gh prefixes, send the ones with their own rule to that row, and can be removed', async ({
   page,
 }) => {
   await page.goto('/');
@@ -164,7 +167,7 @@ test('allowed gh commands take gh prefixes, refuse the never-allowed ones and ca
 
   await input.fill('gh pr merge');
   await add.click();
-  await expect(settings.getByText('Spark never merges a pull request.')).toBeVisible();
+  await expect(settings.getByText('Merging has its own rule: Merge a pull request.')).toBeVisible();
   await expect(input).toHaveAttribute('aria-invalid', 'true');
 
   await input.fill('  GH release   create ');

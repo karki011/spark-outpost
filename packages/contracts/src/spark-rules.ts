@@ -21,7 +21,7 @@ const READ_VERBS: Readonly<Record<string, readonly string[]>> = {
 };
 
 export const NEVER_ALLOWED_NOTE =
-  'Merging, approving or dismissing reviews and --admin stay refused even when added.';
+  'Merging, reviews, --admin, gh auth and gh api writes have their own rules above.';
 
 export function tidyGhPrefix(text: string): string {
   return text.trim().replace(/\s+/g, ' ').toLowerCase();
@@ -31,9 +31,11 @@ export function ghPrefixProblem(text: string): string | null {
   const prefix = tidyGhPrefix(text);
   if (!GH_PREFIX.test(prefix)) return 'Use gh and two words, such as gh release create.';
   const [, group = '', verb = ''] = prefix.split(' ');
-  if (group === 'api') return 'gh api can change anything, so only its reads are allowed.';
-  if (group === 'auth') return 'gh auth reaches your GitHub sign-in, so it stays refused.';
-  if (prefix === 'gh pr merge') return 'Spark never merges a pull request.';
+  if (group === 'api') return 'gh api writes have their own rule: Write with gh api.';
+  if (group === 'auth') return 'gh auth has its own rule: Change the gh sign-in.';
+  if (prefix === 'gh pr merge') return 'Merging has its own rule: Merge a pull request.';
+  if (prefix === 'gh pr review')
+    return 'Reviews have their own rule: Review or approve a pull request.';
   if (prefix === 'gh pr create') return 'Opening pull requests follows the publish rules.';
   if ((WORKFLOW_PREFIXES as readonly string[]).includes(prefix)) {
     return 'Workflows have their own rule: Run a workflow.';
@@ -56,6 +58,11 @@ export const SPARK_FLOOR_RULE_IDS = [
   'WriteOutside',
   'SecretSend',
   'GitRemote',
+  'Gh(pr merge)',
+  'Gh(pr review)',
+  'GhAdmin',
+  'Gh(auth)',
+  'Gh(api write)',
 ] as const;
 export type SparkFloorRuleId = (typeof SPARK_FLOOR_RULE_IDS)[number];
 

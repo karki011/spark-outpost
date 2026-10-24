@@ -19,6 +19,21 @@ function seeded(gh: Partial<GhSeed>): SparkRuleContext {
   return { rules, once: [] };
 }
 
+function without(context: SparkRuleContext, id: string): SparkRuleContext {
+  const lists = context.rules.user;
+  const user = {
+    allow: lists.allow.filter((rule) => rule !== id),
+    ask: lists.ask.filter((rule) => rule !== id),
+    deny: lists.deny.filter((rule) => rule !== id),
+  };
+  return { ...context, rules: { ...context.rules, user } };
+}
+
+function asking(context: SparkRuleContext, id: string): SparkRuleContext {
+  const user = { ...context.rules.user, ask: [...context.rules.user.ask, id] };
+  return { ...context, rules: { ...context.rules, user } };
+}
+
 const WORKFLOWS_FOLLOW = seeded({ workflows: 'mode' });
 const WORKFLOW = { group: 'workflows' as const, prefix: 'gh workflow run' };
 
@@ -154,12 +169,14 @@ describe('Other commands', () => {
   });
 
   it.each([
-    ['gh pr merge 12 --squash', 'gh pr merge'],
-    ['gh pr review 12 --approve', 'gh pr review'],
-    ['gh pr review 12 -a', 'gh pr review'],
-    ['gh release create v1 --admin', 'gh release create'],
-  ])('never allows %s, even when added', (command, named) => {
-    const added = seeded({ ghAllowed: ['gh pr merge', 'gh pr review', 'gh release create'] });
+    ['gh pr merge 12 --squash', 'gh pr merge', 'Gh(pr merge)'],
+    ['gh pr review 12 --approve', 'gh pr review', 'Gh(pr review)'],
+    ['gh pr review 12 -a', 'gh pr review', 'Gh(pr review)'],
+    ['gh release create v1 --admin', 'gh release create', 'GhAdmin'],
+    ['gh auth logout', 'gh auth logout', 'Gh(auth)'],
+    ['gh api -X DELETE repos/a/b', 'gh api', 'Gh(api write)'],
+  ])('refuses %s by its own rule, and hands it to the mode without it', (command, named, id) => {
+    const added = seeded({ ghAllowed: ['gh release create'] });
     expect(chat('full_access', command, added)).toEqual({
       verdict: 'reject',
       reason: ghRailReason(named),
@@ -168,6 +185,9 @@ describe('Other commands', () => {
       verdict: 'reject',
       reason: CHAT_PUBLISH_REASON,
     });
+    const lifted = without(added, id);
+    expect(chat('full_access', command, lifted).verdict).toBe('allow');
+    expect(chat('full_access', command, asking(lifted, id)).verdict).toBe('ask');
   });
 
   it('lets a review comment through once gh pr review is added', () => {

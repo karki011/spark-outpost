@@ -6,13 +6,12 @@ import { LockIcon } from '../../ui/icons.tsx';
 import { QueryWait } from '../../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 import { GhAllowedList } from './GhAllowedList.tsx';
-import { MERGE_LABEL, RULE_GROUPS } from './rule-rows.ts';
-import { FixedChoice, RuleLine, RuleRow, SourceTag } from './RuleRow.tsx';
+import { RULE_GROUPS } from './rule-rows.ts';
+import { RuleRow } from './RuleRow.tsx';
 import { RulesActions } from './RulesActions.tsx';
 import { RulesFileProblems, UnusedEntries } from './UnusedEntries.tsx';
 import { useRulesWrite, useSparkRules } from './use-spark-rules.ts';
 
-const MERGE_IDS = ['gh pr merge', 'gh pr review --approve', '--admin'];
 const ON_THE_MAC = 'Spark rules change on the Mac.';
 
 function RuleGroups({ rules, editable }: { rules: SparkRules; editable: boolean }) {
@@ -28,6 +27,7 @@ function RuleGroups({ rules, editable }: { rules: SparkRules; editable: boolean 
       {RULE_GROUPS.map((group) => (
         <section key={group.id} className="rules-group" aria-labelledby={`rules-${group.id}`}>
           <h4 id={`rules-${group.id}`}>{group.title}</h4>
+          {group.note && <p className="set-hint rules-group-note">{group.note}</p>}
           {group.rows.map((copy) => {
             const state = stateOf(copy.row);
             return (
@@ -42,15 +42,7 @@ function RuleGroups({ rules, editable }: { rules: SparkRules; editable: boolean 
               )
             );
           })}
-          {group.id === 'github' && (
-            <>
-              <RuleLine label={MERGE_LABEL} ids={MERGE_IDS}>
-                <SourceTag source="fixed" />
-                <FixedChoice label="Refuse" choice="deny" />
-              </RuleLine>
-              <GhAllowedList entries={rules.ghAllowed} editable={editable} />
-            </>
-          )}
+          {group.id === 'github' && <GhAllowedList entries={rules.ghAllowed} editable={editable} />}
         </section>
       ))}
     </>

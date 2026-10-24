@@ -8,7 +8,7 @@ import {
 } from '@spark-outpost/contracts';
 import { RECOMMENDED_RULES, WORKFLOW_RULES } from './recommended.ts';
 import { ghCommandRuling, NO_SPARK_RULES, type SparkRuleSet } from './resolve.ts';
-import { ghPrefixOfRule, ghRuleId } from './rule-ids.ts';
+import { ghPrefixOfRule, ghRuleId, isFloorRuleId } from './rule-ids.ts';
 import { RULE_EFFECTS, type RuleChange, type RuleLists } from './rules-file.ts';
 import type { LoadedRules } from './rules-store.ts';
 import { unusedEntries } from './unused-entries.ts';
@@ -50,7 +50,7 @@ export function rowLocked(rules: SparkRuleSet, row: SparkRuleRow): boolean {
 }
 
 function namedGhRule(rule: string): string | null {
-  return WORKFLOW_RULES.includes(rule) ? null : ghPrefixOfRule(rule);
+  return WORKFLOW_RULES.includes(rule) || isFloorRuleId(rule) ? null : ghPrefixOfRule(rule);
 }
 
 export function allowedGhPrefixes(rules: SparkRuleSet): string[] {

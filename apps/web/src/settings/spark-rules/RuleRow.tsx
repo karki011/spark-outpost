@@ -3,9 +3,9 @@ import type { SparkRuleChoice, SparkRuleRowState } from '@spark-outpost/contract
 import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
 import { CheckIcon, LockIcon, XIcon } from '../../ui/icons.tsx';
 import { useSettingFocus } from '../setting-focus.ts';
-import { choiceLabel, choicesFor, type RuleRowCopy } from './rule-rows.ts';
+import { choiceLabel, choicesFor, shownChoice, type RuleRowCopy } from './rule-rows.ts';
 
-export function ChoiceMark({ choice }: { choice: SparkRuleChoice }) {
+function ChoiceMark({ choice }: { choice: SparkRuleChoice }) {
   if (choice === 'allow') {
     return (
       <span className="rule-mark allow">
@@ -30,7 +30,7 @@ interface RuleLineProps {
   children: ReactNode;
 }
 
-export function RuleLine({ label, ids, children }: RuleLineProps) {
+function RuleLine({ label, ids, children }: RuleLineProps) {
   const row = useRef<HTMLDivElement>(null);
   const control = useRef<HTMLDivElement>(null);
   useSettingFocus(label, row, control);
@@ -51,18 +51,18 @@ export function RuleLine({ label, ids, children }: RuleLineProps) {
   );
 }
 
-export function SourceTag({ source }: { source: SparkRuleRowState['source'] | 'fixed' }) {
+function SourceTag({ source }: { source: SparkRuleRowState['source'] }) {
   if (source === 'user') return <span className="rules-source">Your file</span>;
   if (source === null) return null;
   return (
     <span className="rules-source">
       <LockIcon />
-      {source === 'managed' ? 'Your company' : 'Always'}
+      Your company
     </span>
   );
 }
 
-export function FixedChoice({ label, choice }: { label: string; choice: SparkRuleChoice | null }) {
+function FixedChoice({ label, choice }: { label: string; choice: SparkRuleChoice | null }) {
   return (
     <span className="rules-fixed-choice">
       {choice && <ChoiceMark choice={choice} />}
@@ -80,7 +80,8 @@ interface RuleRowProps {
 
 export function RuleRow({ copy, state, editable, onChange }: RuleRowProps) {
   const locked = state.source === 'managed';
-  const current = state.choice === null ? 'Mixed' : choiceLabel(copy.row, state.choice);
+  const choice = state.choice === null ? null : shownChoice(copy.row, state.choice);
+  const current = choice === null ? 'Mixed' : choiceLabel(copy.row, choice);
   const choices = choicesFor(copy.row).map((choice) => ({
     ...choice,
     icon: <ChoiceMark choice={choice.id} />,
@@ -89,18 +90,18 @@ export function RuleRow({ copy, state, editable, onChange }: RuleRowProps) {
     <RuleLine label={copy.label} ids={state.ids}>
       <SourceTag source={state.source} />
       {editable && !locked ? (
-        <div className={`rules-choice${state.choice === 'mode' ? ' is-mode' : ''}`}>
+        <div className={`rules-choice${choice === 'mode' ? ' is-mode' : ''}`}>
           <ChoicePicker
             label={copy.label}
             choices={choices}
-            value={state.choice ?? ''}
+            value={choice ?? ''}
             placeholder="Mixed"
             showNote={false}
             onChange={(id) => onChange(id as SparkRuleChoice)}
           />
         </div>
       ) : (
-        <FixedChoice label={current} choice={state.choice} />
+        <FixedChoice label={current} choice={choice} />
       )}
     </RuleLine>
   );

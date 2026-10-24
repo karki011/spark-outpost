@@ -26,6 +26,10 @@
   font-weight: 600;
 }
 
+.rules-group-note {
+  margin: 6px 0 0;
+}
+
 .rules-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

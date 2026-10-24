@@ -31,7 +31,6 @@ Where a mode runs commands unasked, changes are [flagged](approvals.md#actions-t
 - Changing remotes.
 - Reading, copying or changing Spark's browser data: Browser profiles, **Personal** included, sign-in storage and the history database.
 - Your ChatGPT or Claude account's own apps and connectors in a chat; add MCP servers in Spark instead.
-- Merging a pull request, approving or dismissing reviews, `--admin`, `gh api` writes and `gh auth`.
 
 A blocked step reads "Refused gh pr create — …", unlike your own **Deny**. An unseen push is [flagged](approvals.md#actions-that-ran-without-review) instead.
 
@@ -47,6 +46,7 @@ Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then a
 | `Push(other)`, `GitRemote`                                                        | Other branches; remotes, other hosting CLIs                                    | deny         |
 | `Gh(workflow run)`, `Gh(run rerun)`, `Gh(run cancel)`                             | **Run a workflow**                                                             | allow        |
 | `Gh(<group> <verb>)`, `Gh(*)`                                                     | Other `gh` commands; a named one escapes `Gh(*)`                               | deny `Gh(*)` |
+| `Gh(pr merge)`, `Gh(pr review)`, `GhAdmin`, `Gh(auth)`, `Gh(api write)`           | Merging, reviews, `--admin`, `gh auth`, `gh api` writes                        | deny         |
 | `SecretFile(edit)`, `SecretFile(read)`                                            | Secret files; `.sparkignore` reads                                             | ask          |
 | `Push(force)`, `InstructionFile(edit)`, `GitConfig`, `WriteOutside`, `SecretSend` | Their rows above                                                               | ask          |
 

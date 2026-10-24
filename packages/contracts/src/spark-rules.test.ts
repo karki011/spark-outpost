@@ -24,7 +24,8 @@ describe('ghPrefixProblem()', () => {
     ['gh -R x release', 'two words'],
     ['gh api graphql', 'gh api'],
     ['gh auth token', 'gh auth'],
-    ['gh pr merge', 'never merges'],
+    ['gh pr merge', 'Merge a pull request'],
+    ['gh pr review', 'Review or approve a pull request'],
     ['gh pr create', 'publish rules'],
     ['gh workflow run', 'Run a workflow'],
     ['gh run rerun', 'Run a workflow'],
@@ -54,7 +55,7 @@ describe('setSparkRuleRequestSchema', () => {
   it('takes a row the page shows and one of its choices', () => {
     expect(setSparkRuleRequestSchema.safeParse({ row: 'Push', choice: 'mode' }).success).toBe(true);
     expect(
-      setSparkRuleRequestSchema.safeParse({ row: 'Gh(pr merge)', choice: 'allow' }).success,
+      setSparkRuleRequestSchema.safeParse({ row: 'Gh(pr close)', choice: 'allow' }).success,
     ).toBe(false);
     expect(setSparkRuleRequestSchema.safeParse({ row: 'Push', choice: 'hold' }).success).toBe(
       false,
