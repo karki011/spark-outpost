@@ -4,6 +4,7 @@ import { DOCK_QUERY, PHONE_QUERY, ROOMY_DOCK_QUERY, useMediaQuery } from '../ui/
 import type { TaskOverview } from '@spark-outpost/contracts';
 import type { BrowserPaneChoice } from '../browser/pane-open.ts';
 import type { ArtifactPaneChoice } from '../chat/artifacts/artifact-pane-store.ts';
+import { PAGE_MIN_WIDTH } from '../browser/pane-width.ts';
 import {
   clampPanelWidth,
   readPanelWidth,
@@ -26,8 +27,8 @@ export const WORK_PANEL_LIMITS: PanelWidthLimits = {
 
 export const BROWSER_PANEL_LIMITS: PanelWidthLimits = {
   key: 'spark-outpost.browser-pane.width',
-  min: 380,
-  max: 1200,
+  min: PAGE_MIN_WIDTH,
+  max: 8000,
   fallback: 640,
 };
 

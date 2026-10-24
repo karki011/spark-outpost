@@ -16,6 +16,8 @@ import { CloseIcon, PanelIcon } from './TaskIcons.tsx';
 import type { PanelWidthLimits } from '../ui/panel-width.ts';
 import { WORK_PANEL_LIMITS, type PanelView } from './work-panel-state.ts';
 import { WorkPanelResizer } from './WorkPanelResizer.tsx';
+import { PaneResizer } from '../browser/PaneResizer.tsx';
+import { usePhone } from '../ui/breakpoints.ts';
 
 interface AutonomySetting {
   level: InvolvementLevel;
@@ -49,6 +51,7 @@ interface WorkPanelProps {
 export interface PanelChrome {
   views: ReactNode;
   close: ReactNode;
+  setWidth: ((width: number) => void) | null;
 }
 
 interface PanelTab {
@@ -148,6 +151,8 @@ export function WorkPanel({
   const reading = artifact !== null && view === 'artifact';
   const wideView = browsing || reading;
   const tabs = panelTabs(hasWork, browser !== null, artifact?.title ?? null);
+  const phone = usePhone();
+  const resizable = open && onWidth !== undefined && (wide || (wideView && !phone));
   const heading = useRef<HTMLHeadingElement>(null);
   const title = useRef<HTMLElement>(null);
   const closeTip = useTooltip('Hide work panel');
@@ -197,7 +202,16 @@ export function WorkPanel({
           if (event.key === 'Escape' && !wide) onClose();
         }}
       >
-        {wide && open && onWidth && (
+        {resizable && wideView && (
+          <PaneResizer
+            key={view}
+            label={browsing ? 'Resize browser pane' : 'Resize work panel'}
+            width={width}
+            limits={limits}
+            onWidth={onWidth}
+          />
+        )}
+        {resizable && !wideView && (
           <WorkPanelResizer width={width} onWidth={onWidth} limits={limits} />
         )}
         <div className="wp-in">
@@ -215,9 +229,9 @@ export function WorkPanel({
             {!wideView && <AgentsSection />}
             {!wideView && !terminal && <AdoptPullSection conversationId={conversationId} />}
             {reading ? (
-              artifact.render({ views, close })
+              artifact.render({ views, close, setWidth: null })
             ) : browsing ? (
-              browser({ views, close })
+              browser({ views, close, setWidth: resizable ? onWidth : null })
             ) : task ? (
               <TaskDetails
                 conversationId={conversationId}

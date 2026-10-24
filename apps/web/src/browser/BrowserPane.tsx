@@ -35,6 +35,7 @@ import {
   runPaneShortcut,
   usePageShortcuts,
 } from './pane-shortcuts.ts';
+import { PageWidthMenu } from './PageWidthMenu.tsx';
 import { PreviewBadge, PreviewStart } from './PreviewControls.tsx';
 import { tabLabel } from './tab-label.ts';
 import { hiddenPlacement, useViewPlacement, type BrowserHome } from './use-view-placement.ts';
@@ -47,6 +48,7 @@ interface BrowserPaneProps {
   shown: boolean;
   lead?: ReactNode;
   trail?: ReactNode;
+  setWidth?: ((width: number) => void) | null;
 }
 
 function StartPage({ chatId, tab }: { chatId: string; tab: BrowserPaneTab | null }) {
@@ -107,7 +109,13 @@ function AgentTabNote({ chatId, tab }: { chatId: string; tab: BrowserPaneTab }) 
   );
 }
 
-export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserPaneProps) {
+export function BrowserPane({
+  home,
+  shown,
+  lead = null,
+  trail = null,
+  setWidth = null,
+}: BrowserPaneProps) {
   const { chatId } = home;
   const browser = useChatBrowser(chatId);
   const view = useRef<HTMLDivElement>(null);
@@ -256,6 +264,9 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
         >
           <DevtoolsIcon />
         </ToolButton>
+        {setWidth && (
+          <PageWidthMenu setWidth={setWidth} onNotice={(notice) => setPaneNotice(chatId, notice)} />
+        )}
         <ToolButton
           label="Open in default browser"
           disabled={outside === null}

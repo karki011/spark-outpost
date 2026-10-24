@@ -96,6 +96,7 @@ export const SPEC_GROUPS = {
     'browser-pane',
     'browser-pane-input',
     'browser-pane-keys',
+    'browser-pane-width',
     'browser-tab-close',
     'browser-tab-life',
     'browser-view',
