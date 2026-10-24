@@ -20,7 +20,7 @@ import { secretReadLabels } from '../approvals/secret-reads.ts';
 import { secretSend, withoutSentSecrets } from '../approvals/secret-send.ts';
 import {
   FS_WRITE_TOOL_KIND,
-  decide,
+  decideRuled,
   secretLabels,
   type ApprovalRequest,
   type DecideOptions,
@@ -62,10 +62,15 @@ const afterQueuedUpdates = () => new Promise<void>((resolve) => setImmediate(res
 
 interface Weighed {
   decision: Decision;
+  rule: string | null;
   secretReads: string[];
 }
 
-const UNDECIDED: Weighed = { decision: { verdict: 'ask', reason: null }, secretReads: [] };
+const UNDECIDED: Weighed = {
+  decision: { verdict: 'ask', reason: null },
+  rule: null,
+  secretReads: [],
+};
 
 export const APPROVAL_TIMEOUT_MS = APPROVAL_WAIT_MINUTES * 60 * 1000;
 export const APPROVAL_POLL_MS = 1000;
@@ -385,10 +390,10 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       sparkRules: await sparkRulesForRun(deps.db, deps.runId),
       ...(await publishContext(deps.db, deps.publish, request)),
     };
-    const { decision, secretReads } = await withPrefetchedFiles(
+    const { decision, rule, secretReads } = await withPrefetchedFiles(
       diskFiles,
       (files): Weighed => ({
-        decision: decide(postureOf(request), request, runRules, allowlist, { ...options, files }),
+        ...decideRuled(postureOf(request), request, runRules, allowlist, { ...options, files }),
         secretReads: secretReadLabels(request, files, options.shell ?? null),
       }),
       UNDECIDED,
@@ -405,7 +410,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       });
       observe(request, { verdict: 'reject', by: 'policy', approvalId: denied.id });
       if (decision.sparkRule) await emit(runEvents.approvalDecided(denied));
-      const note = blockedNote(refusedSubject(request), decision.reason);
+      const note = blockedNote(refusedSubject(request), decision.reason, rule ?? undefined);
       return policyBlocked(reject(request, note, denied.id), policyDenial(what, decision.reason));
     }
     const option = allowOption(request.options);

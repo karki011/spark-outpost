@@ -5,6 +5,7 @@ import {
   FAKE_CLAUDE_BIN,
   FAKE_CODEX_STATE,
   FAKE_GH_STATE,
+  SPARK_RULES_DIR,
   TEST_DATABASE_URL,
 } from './stub-config.ts';
 import { DEFAULT_INVOLVEMENT_LEVEL } from '../../packages/contracts/src/approvals.ts';
@@ -117,6 +118,7 @@ export async function resetTestDatabase({
 }: ResetOptions): Promise<void> {
   rmSync(FAKE_CODEX_STATE, { force: true });
   rmSync(FAKE_GH_STATE, { force: true });
+  rmSync(SPARK_RULES_DIR, { recursive: true, force: true });
   installFakeClaude();
   const db = openTestDb();
   try {

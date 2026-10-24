@@ -65,15 +65,16 @@ export function ownAgentStop(
   const rules = contextOf(options);
   if (!options.changesProject || !command || !publishesUnder(command, rules)) return null;
   if (published) {
-    if (published.kind === 'allow') return null;
+    if (published.kind === 'allow' || published.kind === 'mode') return null;
     return { kind: published.kind, reason: published.reason, rule: published.rule ?? null };
   }
   if (onlyRepliesOnOwnPull(command, options.own ?? null)) return null;
   if (!soloLeasePush(command, forced)) {
     const unasked = firstStop(unaskedStops(command, rules), rules.rules);
-    if (unasked) return unasked;
+    if (unasked && unasked.kind !== 'mode') return unasked;
   }
-  return publishStop(command, options.publish?.task ?? null, null, rules);
+  const stop = publishStop(command, options.publish?.task ?? null, null, rules);
+  return stop?.kind === 'mode' ? null : stop;
 }
 
 export function publishing(

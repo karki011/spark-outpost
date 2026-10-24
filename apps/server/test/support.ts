@@ -1,4 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import pg from 'pg';
 import {
   providerIdSchema,
@@ -102,12 +105,20 @@ async function openSchema(url: string): Promise<{ schema: string; db: Db }> {
   return { schema, db };
 }
 
+async function useFreshRulesFiles(): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), 'spark-rules-db-'));
+  process.env.SPARK_RULES_FILE = join(dir, 'settings.json');
+  process.env.SPARK_MANAGED_RULES_FILE = join(dir, 'managed-settings.json');
+  return dir;
+}
+
 export async function createTestDb(options: { workPlace?: WorkPlace } = {}): Promise<TestDb> {
   const url = testDatabaseUrl();
   const { schema, db } = await openSchema(url);
   const place = workPlaceSchema.parse(options.workPlace ?? 'checkout');
   await db.query(`ALTER TABLE projects ALTER COLUMN work_place SET DEFAULT '${place}'`);
   const workspaceId = await ensureLocalWorkspace(db);
+  const rulesDir = await useFreshRulesFiles();
   let closed = false;
   return {
     db,
@@ -116,6 +127,7 @@ export async function createTestDb(options: { workPlace?: WorkPlace } = {}): Pro
       if (closed) return;
       closed = true;
       await db.end();
+      await rm(rulesDir, { recursive: true, force: true });
       spareSchemas.push(schema);
     },
   };

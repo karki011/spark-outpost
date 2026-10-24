@@ -65,6 +65,7 @@ export interface PublishBrief {
 
 export type PublishVerdict =
   | { kind: 'allow'; basis: PublishBasis }
+  | { kind: 'mode' }
   | { kind: 'refuse' | 'ask'; reason: string; rule?: FloorRuleId };
 
 export function ruled(rule: FloorRuleId | null): { rule?: FloorRuleId } {
@@ -275,19 +276,21 @@ function* stopsAmong(
 }
 
 export interface PublishStop {
-  kind: 'refuse' | 'ask';
+  kind: 'refuse' | 'ask' | 'mode';
   reason: string;
   rule: FloorRuleId | null;
 }
 
 export function firstStop(stops: Iterable<Stop>, rules: SparkRuleSet): PublishStop | null {
   let asked: PublishStop | null = null;
+  let lifted: PublishStop | null = null;
   for (const [reason, rule] of stops) {
     const effect = rule ? floorEffect(rules, rule) : 'deny';
     if (effect === 'deny') return { kind: 'refuse', reason, rule };
     if (effect === 'ask') asked ??= { kind: 'ask', reason, rule };
+    else lifted ??= { kind: 'mode', reason, rule };
   }
-  return asked;
+  return asked ?? lifted;
 }
 
 export function publishStop(
@@ -332,8 +335,10 @@ export function publishVerdict(
   rules: SparkRuleContext = DEFAULT_RULE_CONTEXT,
 ): PublishVerdict | null {
   const verdict = ruledPublishVerdict(command, posture, context, own, rules);
-  if (verdict?.kind === 'allow') return verdict;
-  return verdict && { kind: verdict.kind, reason: verdict.reason };
+  if (verdict?.kind === 'refuse' || verdict?.kind === 'ask') {
+    return { kind: verdict.kind, reason: verdict.reason };
+  }
+  return verdict;
 }
 
 export function ruledPublishVerdict(
@@ -351,7 +356,6 @@ export function ruledPublishVerdict(
   }
   const stop = publishStop(command, context.task, own, rules);
   if (!stop) return { kind: 'allow', basis };
-  return stop.kind === 'refuse'
-    ? { kind: 'refuse', reason: stop.reason, ...ruled(stop.rule) }
-    : { kind: 'ask', reason: stop.reason, ...ruled(stop.rule) };
+  if (stop.kind === 'mode') return { kind: 'mode' };
+  return { kind: stop.kind, reason: stop.reason, ...ruled(stop.rule) };
 }
