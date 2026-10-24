@@ -29,6 +29,7 @@ import { CheckpointCard } from '../checkpoints/CheckpointCard.tsx';
 import type { CheckpointApproval } from '../checkpoints/checkpoint-model.ts';
 import { keepCardHost } from '../outcomes/feedback-host.ts';
 import { TurnFeedback } from '../outcomes/TurnFeedback.tsx';
+import { useFeedbackTurn } from '../outcomes/use-feedback-turn.ts';
 import { ResultBlock } from '../outcomes/ResultBlock.tsx';
 import { AgreedReplyLine } from '../plans/AgreedReplyLine.tsx';
 import { PlanSavedLine } from '../plans/PlanSavedLine.tsx';
@@ -124,6 +125,7 @@ export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
   });
   const crewTimedOut = orchestration.crew.some((member) => timedOut(member.error));
   const kept = checkpoints.find((approval) => approval.id === host?.approvalId) ?? null;
+  const feedbackTurn = useFeedbackTurn(detail.conversation.id, crewRunIds);
   const checkpointCard = (approval: CheckpointApproval) =>
     approval === kept ? null : <CheckpointCard key={approval.id} approval={approval} />;
 
@@ -260,7 +262,7 @@ export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
             runIds={crewRunIds}
           />
         )}
-        {finished && (
+        {finished && feedbackTurn && (
           <TurnFeedback
             key={host?.variant ?? 'turn'}
             runId={run.id}

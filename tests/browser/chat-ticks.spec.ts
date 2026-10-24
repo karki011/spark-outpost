@@ -146,7 +146,7 @@ test.describe('plain chats', () => {
     test.setTimeout(120_000);
     await longChat(page);
     await widenSecondReply(page);
-    await expect(page.getByRole('group', { name: 'How did it go?' })).toHaveCount(4);
+    await expect(page.locator('.turn-meta')).toHaveCount(4);
     await animationsSettled(page);
     const thread = page.locator('.thread');
     const place = async () => ({

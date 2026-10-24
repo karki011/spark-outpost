@@ -35,6 +35,8 @@ import { keepCardHost } from './outcomes/feedback-host.ts';
 import { AgreedReplyLine } from './plans/AgreedReplyLine.tsx';
 import { PlanSavedLine } from './plans/PlanSavedLine.tsx';
 import { TurnFeedback } from './outcomes/TurnFeedback.tsx';
+import { useFeedbackTurn } from './outcomes/use-feedback-turn.ts';
+import { turnRunIds } from './turn-props.ts';
 import { PublishResult } from './publish/PublishResult.tsx';
 import { copiedReply, splitAtPublish, turnReplies } from './publish/turn-replies.ts';
 import { shownSteps, streamLeads, viewSteps, type RunProjection } from './run-projection.ts';
@@ -196,6 +198,7 @@ export function SoloTurn({
     : undefined;
   const host = finished ? keepCardHost(checkpoints, Boolean(revertible?.revertedAt)) : null;
   const kept = checkpoints.find((approval) => approval.id === host?.approvalId) ?? null;
+  const feedbackTurn = useFeedbackTurn(detail.conversation.id, turnRunIds(detail, run.id));
 
   const turnRuns = [run, child].filter((candidate): candidate is Run => Boolean(candidate));
   const changeRunIds = turnRuns.map((candidate) => candidate.id);
@@ -331,11 +334,13 @@ export function SoloTurn({
               side="assistant"
             />
           )}
-          <TurnFeedback
-            key={host?.variant ?? 'turn'}
-            runId={run.id}
-            variant={host?.variant ?? 'turn'}
-          />
+          {feedbackTurn && (
+            <TurnFeedback
+              key={host?.variant ?? 'turn'}
+              runId={run.id}
+              variant={host?.variant ?? 'turn'}
+            />
+          )}
           {meta && <span className="turn-meta-line">{meta}</span>}
           <RunUsageMeta run={usageRun} />
           <CacheRebuildNote rebuild={detail.promptCache?.rebuilds[run.id]} />
