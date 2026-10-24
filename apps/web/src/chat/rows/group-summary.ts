@@ -104,6 +104,15 @@ function itemTimes(item: GroupedItem): StepTimes {
   };
 }
 
+export function groupStart(group: RowGroup): number | null {
+  const items: GroupedItem[] = group.live ? [...group.items, group.live] : group.items;
+  const starts = items.flatMap((item) => {
+    const at = itemTimes(item).startedAt;
+    return at === undefined || Number.isNaN(at) ? [] : [at];
+  });
+  return starts.length > 0 ? Math.min(...starts) : null;
+}
+
 export function groupSeconds(group: RowGroup): number | null {
   const known = group.items
     .map(itemTimes)

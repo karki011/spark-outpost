@@ -57,7 +57,7 @@ export type Row = RowItem | RowGroup;
 export type TurnRowPart =
   | { kind: 'text'; key: string; text: string }
   | { kind: 'shots'; key: string; shots: BrowserShot[] }
-  | { kind: 'terminal'; key: string; terminal: AgentTerminalView }
+  | { kind: 'terminal'; key: string; terminals: AgentTerminalView[] }
   | { kind: 'rows'; key: string; rows: Row[] };
 
 export interface TurnRowInput {
@@ -327,7 +327,9 @@ export function turnRowParts(input: TurnRowInput): TurnRowPart[] {
     flushRows();
     if (placed.kind === 'terminal') {
       const { terminal } = placed;
-      parts.push({ kind: 'terminal', key: `terminal-${terminal.id}`, terminal });
+      const last = parts.at(-1);
+      if (last?.kind === 'terminal') last.terminals.push(terminal);
+      else parts.push({ kind: 'terminal', key: `terminal-${terminal.id}`, terminals: [terminal] });
       continue;
     }
     const last = parts.at(-1);

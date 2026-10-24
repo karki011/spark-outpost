@@ -2,7 +2,9 @@ import './rows.css';
 import { Fragment, use, useId, useState, type ReactNode } from 'react';
 import { CheckIcon, ChevronIcon, PauseIcon, XIcon } from '../../ui/icons.tsx';
 import { Counts } from '../changes/FileChangeList.tsx';
-import { CommandTerminal } from '../commands/CommandTerminal.tsx';
+import { CommandTerminal, commandTitle } from '../commands/CommandTerminal.tsx';
+import { clockText } from '../status/status-text.ts';
+import { useNow } from '../status/use-status-line.ts';
 import { CommandUiContext, shownBefore } from '../commands/command-ui.ts';
 import { StepThought } from '../StepThought.tsx';
 import type { CommandAnswers } from '../commands/command-answers.ts';
@@ -10,6 +12,7 @@ import {
   failedCount,
   groupCommands,
   groupSeconds,
+  groupStart,
   groupWords,
   onlyEdits,
   type GroupKind,
@@ -19,6 +22,7 @@ import {
   spanSeconds,
   type CommandItem,
   type GroupedItem,
+  type LiveItem,
   type Row,
   type RowGroup,
   type ThoughtItem,
@@ -247,6 +251,30 @@ function GroupEnd({ group, context }: { group: RowGroup; context: RowContext }) 
   );
 }
 
+function liveTitle(item: LiveItem): [verb: string, name: string] {
+  if (item.kind === 'command') return ['Running', commandTitle(item.command)];
+  if (item.kind === 'thought') return ['Thinking', ''];
+  return [item.verb, item.target ?? ''];
+}
+
+function LiveHead({ group, live }: { group: RowGroup; live: LiveItem }) {
+  const now = useNow(true);
+  const start = groupStart(group);
+  const [verb, name] = liveTitle(live);
+  return (
+    <>
+      <Spinner />
+      <span className="trow-text">
+        <span className="trow-verb">{verb}</span> <span className="trow-name">{name}</span>
+      </span>
+      <span className="trow-end">
+        {start !== null && <span className="trow-time">{clockText(Math.max(0, now - start))}</span>}
+        <ChevronIcon />
+      </span>
+    </>
+  );
+}
+
 function GroupRow({ group, context }: { group: RowGroup; context: RowContext }) {
   const remembered = use(CommandUiContext);
   const attention = group.items.some(
@@ -257,6 +285,7 @@ function GroupRow({ group, context }: { group: RowGroup; context: RowContext }) 
   const open = choice ?? attention;
   const id = useId();
   const words = groupWords(group);
+  const live = context.working ? group.live : null;
   return (
     <>
       <button
@@ -266,24 +295,28 @@ function GroupRow({ group, context }: { group: RowGroup; context: RowContext }) 
         aria-controls={id}
         onClick={() => setChoice(!open)}
       >
-        <RowIcon name={KIND_ICONS[words.kind]} />
-        <span className="trow-text">
-          <b>{words.lead}</b>
-          {words.rest}
-        </span>
-        <span className="trow-end">
-          <GroupEnd group={group} context={context} />
-          <ChevronIcon />
-        </span>
+        {live ? (
+          <LiveHead group={group} live={live} />
+        ) : (
+          <>
+            <RowIcon name={KIND_ICONS[words.kind]} />
+            <span className="trow-text">
+              <b>{words.lead}</b>
+              {words.rest}
+            </span>
+            <span className="trow-end">
+              <GroupEnd group={group} context={context} />
+              <ChevronIcon />
+            </span>
+          </>
+        )}
       </button>
-      <div className="trow-nest" id={id} hidden={!open}>
-        {open && group.items.map((item) => <RowView key={item.key} row={item} context={context} />)}
+      <div className="trow-card" id={id} hidden={!open}>
+        {open &&
+          [...group.items, ...(group.live ? [group.live] : [])].map((item) => (
+            <RowView key={item.key} row={item} context={context} />
+          ))}
       </div>
-      {group.live && (
-        <div className="trow-nest trow-live">
-          <RowView row={group.live} context={context} />
-        </div>
-      )}
     </>
   );
 }

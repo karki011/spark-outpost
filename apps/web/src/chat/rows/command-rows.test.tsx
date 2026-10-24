@@ -116,7 +116,7 @@ describe('command rows', () => {
     expect(toggle(/pnpm lint/).getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('shows the live command under a closed group', () => {
+  it('heads a live group with the running step and keeps it in the card', () => {
     render(
       <Turn
         commands={[
@@ -126,9 +126,12 @@ describe('command rows', () => {
         ]}
       />,
     );
-    expect(toggle(/Ran 2 commands/).getAttribute('aria-expanded')).toBe('false');
-    expect(toggle(/pnpm build/)).toBeTruthy();
+    const head = toggle(/^In progressRunning pnpm build\d/);
+    expect(head.getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByRole('button', { name: /pnpm lint/ })).toBeNull();
+    fireEvent.click(head);
+    expect(toggle(/^Ran pnpm lint/)).toBeTruthy();
+    expect(toggle(/^Running pnpm build/).closest('.trow-card')).toBeTruthy();
   });
 
   it('says a command was denied, in the step and in its group', () => {

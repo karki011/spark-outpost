@@ -115,11 +115,32 @@ button.trow:hover {
   margin: 0 0 4px 14px;
 }
 
-.trow-group + .trow-nest,
-.trow-live {
-  margin-left: 7px;
-  padding-left: 13px;
-  border-left: 1px solid var(--line);
+.trow-card {
+  margin: 2px 0 6px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+
+.trow-card > * + * {
+  border-top: 1px solid var(--line);
+}
+
+.trow-card > .trow,
+.trow-card > .run-cmd > .run-cmd-head > .trow {
+  border-radius: 0;
+}
+
+.trow-card > .trow-nest {
+  border-top: 0;
+}
+
+.trow-verb {
+  color: var(--muted);
+}
+
+.trow-name {
+  color: var(--text);
 }
 
 .trow-nest .step-thought {

@@ -10,6 +10,7 @@ import { commandOutputKey, fetchCommandOutput } from './command-api.ts';
 import { CommandDockContext } from './command-dock.ts';
 import type { CommandAnswer } from './command-answers.ts';
 import { commandOutcome, type CommandView } from './command-model.ts';
+import { commandName } from './command-name.ts';
 import { CommandScreen } from './CommandScreen.tsx';
 import { CommandWord } from './CommandStatus.tsx';
 import { useCommandUi } from './command-ui.ts';
@@ -45,18 +46,15 @@ function useTerminalUi(command: CommandView) {
   };
 }
 
-function CommandTitle({ command, full }: { command: CommandView; full: boolean }) {
-  if (command.description) {
-    return (
-      <span className="trow-text">
-        <b className="run-cmd-title">{command.description}</b>
-      </span>
-    );
-  }
+export function commandTitle(command: Pick<CommandView, 'description' | 'command'>): string {
+  return command.description || commandName(command.command);
+}
+
+function CommandTitle({ command }: { command: CommandView }) {
   return (
     <span className="trow-text">
-      <b>{command.status === 'running' ? 'Running' : 'Ran'}</b>
-      <code className={full ? 'run-cmd-line full' : 'run-cmd-line'}>{command.command}</code>
+      <span className="trow-verb">{command.status === 'running' ? 'Running' : 'Ran'}</span>{' '}
+      <span className="trow-name">{commandTitle(command)}</span>
     </span>
   );
 }
@@ -133,7 +131,7 @@ export const CommandTerminal = memo(function CommandTerminal({
           }}
         >
           <RowIcon name="run" />
-          <CommandTitle command={command} full={tall && open} />
+          <CommandTitle command={command} />
           <span className="trow-end run-cmd-state">
             <CommandWord command={command} waiting={waiting} denied={answer?.denied ?? false} />
             <ChevronIcon />

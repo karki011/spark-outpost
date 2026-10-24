@@ -239,7 +239,7 @@ test('groups commands and thoughts into one line, titled by the agent, and opens
   await expect(group.locator('.trow-word').first()).toHaveClass(/bad/);
 
   const checked = terminal(page, WHOAMI);
-  await expect(toggle(checked)).toHaveText(/^Check which account the profile uses/);
+  await expect(toggle(checked)).toHaveText(/^Ran Check which account the profile uses/);
   await expect(toggle(checked)).not.toContainText('aws sts');
   await expect(toggle(checked)).toHaveAttribute('aria-expanded', 'false');
   const failed = terminal(page, COUNT);

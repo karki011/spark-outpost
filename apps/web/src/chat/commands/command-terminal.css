@@ -56,15 +56,6 @@
   color: var(--text);
 }
 
-.run-cmd-line.full {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.run-cmd-toggle .trow-text:has(.run-cmd-line.full) {
-  white-space: normal;
-}
-
 .run-cmd-state {
   color: var(--muted);
   white-space: nowrap;
@@ -104,10 +95,6 @@
   padding-left: 6px;
   font-size: 12px;
   color: var(--muted);
-}
-
-.run-cmd-title {
-  font-weight: 500;
 }
 
 .run-cmd-cmd {
