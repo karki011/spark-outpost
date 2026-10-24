@@ -253,6 +253,15 @@ describe("Spark's rules file", () => {
     expect(permissions.ask).toContain('Push(force)');
   });
 
+  it('shows the workflow row as mixed when a hand-edited file mixes its commands', async () => {
+    await writeFile(userFile(), JSON.stringify({ permissions: { deny: ['Gh(workflow run)'] } }));
+    expect(await workflows()).toMatchObject({
+      ids: ['Gh(workflow run)', 'Gh(run rerun)', 'Gh(run cancel)'],
+      choice: null,
+      source: 'user',
+    });
+  });
+
   it('takes an allowed command out of ask too, so it really follows the mode', async () => {
     await writeFile(
       userFile(),

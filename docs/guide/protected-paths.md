@@ -6,7 +6,7 @@ order: 616
 summary: The hard rails - what Spark's rules make ask or refuse in a chat, and what is refused even with no rules.
 ---
 
-By default there are no [rules](#spark-rules), so **Auto** or **Bypass permissions** may do all of this. The recommended rules give the table below, outside [Terminal sessions](terminals.md).
+With no [rules](#spark-rules), the default, the mode decides all of this. Recommended rules give the table below, outside [Terminal sessions](terminals.md).
 
 ## What always asks
 
@@ -29,17 +29,17 @@ The recommended rules also refuse pushing any branch but the chat's `spark/` or 
 Even with no rules:
 
 - Reading, copying or changing Spark's browser data: Browser profiles, **Personal** included, sign-in storage and the history database.
-- Your ChatGPT or Claude account's own apps and connectors in a chat; add MCP servers in Spark instead.
+- Your ChatGPT or Claude account's own apps and connectors; add MCP servers in Spark.
 - `--no-verify`, and reading or changing Spark's rules files.
-- Printing the GitHub token, such as `gh auth token` or `gh auth status --show-token`.
+- Printing the GitHub token (`gh auth token`).
 
-A blocked step reads "Refused gh pr create — …", unlike your own **Deny**.
+A blocked step reads "Refused gh pr create — …".
 
 ## Spark rules
 
 Rules live in `settings.json` in Spark's data folder. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.
 
-Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then ask. Otherwise the mode decides, unflagged. A broken or unreadable file means recommended rules.
+Rules go in `permissions.allow`, `ask` or `deny`; deny wins, then ask. Unlisted or allowed rules follow the mode, unflagged. A broken or unreadable file means recommended rules.
 
 | Rule                                                                              | Covers                                                                         | Recommended  |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------ |

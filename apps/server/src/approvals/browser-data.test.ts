@@ -193,6 +193,23 @@ describe("Spark's own rules file is refused to chats in every mode", () => {
     );
   });
 
+  it.each([
+    'cat /Users/me/r*/*',
+    'cp /Users/me/rules/spark-* /tmp/x',
+    'cat /Users/*/rules/spark-settings.json',
+    "echo '{}' > /Users/me/rul?s/spark-settings.json",
+    'cat /Users/me/rules/spark-settings.jso[n]',
+  ])('refuses a glob that reaches the configured file: %s', async (command) => {
+    vi.stubEnv('SPARK_RULES_FILE', MOVED);
+    expect(await verdicts(request({ command }))).toEqual(refused);
+  });
+
+  it('leaves a glob that names other files alone', async () => {
+    vi.stubEnv('SPARK_RULES_FILE', MOVED);
+    expect(await verdicts(request({ command: 'ls /Users/me/r*/*.md' }))).not.toEqual(refused);
+    expect(await verdicts(request({ command: 'ls ~/*' }))).not.toEqual(refused);
+  });
+
   it('gives Claude read and edit deny rules for both files', () => {
     expect(sparkRulesFlagRules()).toEqual([
       `Read(/${DATA}/spark/settings.json)`,
