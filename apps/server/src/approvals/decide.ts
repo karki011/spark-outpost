@@ -6,18 +6,12 @@ import type {
   ModePosture,
   SparkRuleRefusal,
 } from '@spark-outpost/contracts';
-import { protectedPath, refusalFor, type GitDirs } from '../projects/path-policy.ts';
-import { commandTree, treeWords } from './command-tree.ts';
-import { allowlistCovers, normalizeCommand, resolveCommandPath } from './commands.ts';
-import {
-  forcePush,
-  isGitPush,
-  skipsPushHooks,
-  gitConfigUses,
-  type ForcePush,
-} from './git-commands.ts';
-import { GLOBAL_GIT_CONFIG, REPO_GIT_CONFIG, SYSTEM_GIT_CONFIG } from './git-config.ts';
-import { gitControlLabel } from './git-dirs.ts';
+import { refusalFor, type GitDirs } from '../projects/path-policy.ts';
+import { commandTree } from './command-tree.ts';
+import { allowlistCovers, normalizeCommand } from './commands.ts';
+import { forcePush, isGitPush, skipsPushHooks, type ForcePush } from './git-commands.ts';
+import { guardedTargets, heldGuards } from './guarded-targets.ts';
+export { secretLabels } from './guarded-targets.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
@@ -44,13 +38,17 @@ import type { OwnRepo } from './own-repo.ts';
 import type { SecretSend } from './secret-send.ts';
 import { secretSendReason, sentOut, type SentOut } from './taint.ts';
 import { webAddressRefusal } from './web-address.ts';
-import { BROWSER_DATA_REASON, browserDataDir, touchesBrowserData } from './browser-data.ts';
-import { writeTargets } from './write-targets.ts';
-import { commandCwd, isSecretTarget, outsideRoots, place, placedLabel } from './request-place.ts';
+import {
+  BROWSER_DATA_REASON,
+  browserDataDir,
+  SPARK_RULES_REASON,
+  touchesBrowserData,
+  touchesSparkRules,
+} from './browser-data.ts';
+import { commandCwd, outsideRoots, place, placedLabel } from './request-place.ts';
 import { alwaysAsk, type RailFound } from './rails.ts';
 import type { ShellScript } from './shell-parse.ts';
 import { withResolvedVariables } from './shell-variables.ts';
-import type { SparkRuleSet } from '../spark-rules/resolve.ts';
 import { isFloorRuleId, type FloorRuleId } from '../spark-rules/rule-ids.ts';
 import { onlyReads, partRequests, shellView, type ShellView } from './shell-view.ts';
 
@@ -127,50 +125,6 @@ export function forcePushReason(branches: readonly string[]): string {
   return `This rewrites history on ${branches.join(', ')} on the remote`;
 }
 
-interface Guarded {
-  instructions: string[];
-  gitControl: string[];
-}
-
-function writtenPaths(request: ApprovalRequest): string[] {
-  if (request.kind === 'edit' || request.toolKind === 'move') return request.paths;
-  if (!request.command) return [];
-  return writeTargets(request.command, commandCwd(request), request.home) ?? [];
-}
-
-function configTargets(request: ApprovalRequest): { files: string[]; labels: string[] } {
-  const writes = request.command ? gitConfigUses(request.command).filter((use) => use.writes) : [];
-  const cwd = commandCwd(request);
-  const places = new Set(writes.map((use) => use.where));
-  return {
-    files: writes.flatMap((use) =>
-      use.file === null ? [] : [resolveCommandPath(use.file, cwd, request.home)],
-    ),
-    labels: [
-      ...(places.has('repo') ? [REPO_GIT_CONFIG] : []),
-      ...(places.has('global') ? [GLOBAL_GIT_CONFIG] : []),
-      ...(places.has('system') ? [SYSTEM_GIT_CONFIG] : []),
-    ],
-  };
-}
-
-export function guardedTargets(asked: ApprovalRequest): Guarded {
-  const request = withResolvedVariables(asked);
-  const config = configTargets(request);
-  const targets = [...writtenPaths(request), ...config.files];
-  const relatives = targets.flatMap((target) => {
-    const { relative } = place(request.roots, target);
-    return relative === null ? [] : [relative];
-  });
-  const unique = [...new Set(relatives)];
-  const control = unique.filter((relative) => protectedPath(relative) === 'git_control');
-  const realGitDir = targets.flatMap((target) => gitControlLabel(request.roots, target) ?? []);
-  return {
-    instructions: unique.filter((relative) => protectedPath(relative) === 'instructions'),
-    gitControl: [...new Set([...control, ...realGitDir, ...config.labels])],
-  };
-}
-
 export interface DecideOptions {
   changesProject?: boolean;
   files?: FileLister;
@@ -189,38 +143,8 @@ export interface DecideOptions {
   browserData?: string | null;
 }
 
-export function namedSecrets(
-  request: ApprovalRequest,
-  secret: (target: string) => boolean,
-): string[] {
-  const cwd = commandCwd(request);
-  const words = request.command ? treeWords(commandTree(request.command)) : [];
-  const targets = [
-    ...request.paths,
-    ...words
-      .filter((word) => word !== '' && !word.startsWith('-'))
-      .map((word) => resolveCommandPath(word, cwd, request.home)),
-  ].filter(secret);
-  return [...new Set(targets.map((target) => placedLabel(request.roots, request.home, target)))];
-}
-
-export const UNNAMED_SECRET = 'a secret file';
-
-export function secretLabels(asked: ApprovalRequest): string[] {
-  const request = withResolvedVariables(asked);
-  const labels = namedSecrets(request, (target) => isSecretTarget(request.roots, target));
-  return labels.length > 0 ? labels : [UNNAMED_SECRET];
-}
-
 function asRule(rule: string | null | undefined): FloorRuleId | null {
   return rule && isFloorRuleId(rule) ? rule : null;
-}
-
-function heldGuards(guarded: Guarded, rules: SparkRuleSet): Guarded {
-  return {
-    instructions: holds(rules, 'InstructionFile(edit)') ? guarded.instructions : [],
-    gitControl: holds(rules, 'GitConfig') ? guarded.gitControl : [],
-  };
 }
 
 function noted(decision: Decision, sent: SentOut | null): Decision {
@@ -368,6 +292,9 @@ function ruledDecide(
   const browserData = options.browserData === undefined ? browserDataDir() : options.browserData;
   if (touchesBrowserData(request, browserData)) {
     return { verdict: 'reject', reason: BROWSER_DATA_REASON };
+  }
+  if (touchesSparkRules(request, browserData)) {
+    return { verdict: 'reject', reason: SPARK_RULES_REASON };
   }
   const forced = heldForce(
     adoptedForce(

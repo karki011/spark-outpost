@@ -3,6 +3,7 @@ import { childEnvironment } from '../../setup/environment.ts';
 import type { SecretStore } from '../../setup/secrets.ts';
 import type { AgentDefinition } from './agents.ts';
 import { codexUserMcpNames, disabledCodexServers } from './codex-mcp.ts';
+import type { SparkFloor } from '../../spark-rules/floor-flags.ts';
 import type { CodexRepoOptions } from './repo-session.ts';
 import { withBackgroundSubagents } from './subagent-env.ts';
 
@@ -20,6 +21,7 @@ export interface AgentEnvironmentOptions {
   env?: Record<string, string> | undefined;
   secrets?: Pick<SecretStore, 'get'> | undefined;
   codexProfiles?: boolean | undefined;
+  floor?: SparkFloor | undefined;
 }
 
 export const NO_PUSH_URL = 'spark-outpost-no-push:///';
@@ -54,14 +56,14 @@ async function baseEnvironment(
   if (definition.repoStyle !== 'codex') {
     return {
       ...base,
-      ...definition.conversationEnv?.(home, browsing, repo, options.codexProfiles),
+      ...definition.conversationEnv?.(home, browsing, repo, options.codexProfiles, options.floor),
     };
   }
   const kept = { ...base };
   delete kept.APP_SERVER_LOGS;
   const env = {
     ...kept,
-    ...definition.conversationEnv?.(home, browsing, repo, options.codexProfiles),
+    ...definition.conversationEnv?.(home, browsing, repo, options.codexProfiles, options.floor),
   };
   return withHiddenServers(env, await codexUserMcpNames(base));
 }

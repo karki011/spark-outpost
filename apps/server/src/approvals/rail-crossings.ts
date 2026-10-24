@@ -1,5 +1,6 @@
 import type { RailKind } from '@spark-outpost/contracts';
-import { guardedTargets, secretLabels, type ApprovalRequest } from './decide.ts';
+import type { ApprovalRequest } from './decide.ts';
+import { guardedTargets, secretLabels } from './guarded-targets.ts';
 import { browserDataDir, touchesBrowserData } from './browser-data.ts';
 import { diskFiles, type FileLister } from './file-lister.ts';
 import { withPrefetchedFiles } from './prefetched-files.ts';

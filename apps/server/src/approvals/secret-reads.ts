@@ -1,5 +1,6 @@
 import { commandTree } from './command-tree.ts';
-import { namedSecrets, UNNAMED_SECRET, type ApprovalRequest } from './decide.ts';
+import type { ApprovalRequest } from './decide.ts';
+import { namedSecrets, UNNAMED_SECRET } from './guarded-targets.ts';
 import { diskFiles, type FileLister } from './file-lister.ts';
 import { readConcern } from './file-reads.ts';
 import { withPrefetchedFiles } from './prefetched-files.ts';

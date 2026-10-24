@@ -1,6 +1,7 @@
 import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import { sparkDataDir } from '../config.ts';
+import { SEEDED_MARKER, sparkChannel, USER_RULES_NAME } from '../spark-rules/rules-store.ts';
 import { commandTree, treeWords } from './command-tree.ts';
 import { resolveCommandPath } from './commands.ts';
 import type { ApprovalRequest } from './decide.ts';
@@ -36,6 +37,18 @@ export const BROWSER_DATA_ENTRIES = [
   'web-storage.json',
 ] as const;
 
+export const SPARK_RULES_REASON =
+  "Spark's own rules (settings.json in Spark's data folder) can't be read or changed by an agent; the user changes them";
+
+export function sparkRulesEntries(env: NodeJS.ProcessEnv = process.env): string[] {
+  const channel = sparkChannel(env);
+  return [path.join(channel, USER_RULES_NAME), path.join(channel, SEEDED_MARKER)];
+}
+
+export function guardedDataEntries(): string[] {
+  return [...BROWSER_DATA_ENTRIES, ...sparkRulesEntries()];
+}
+
 const GLOB = /[*?[{]/;
 
 export function browserDataDir(
@@ -63,15 +76,21 @@ function within(root: string, target: string): boolean {
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
-function protectedEntries(dataDir: string): string[] {
-  return BROWSER_DATA_ENTRIES.map((entry) => comparable(path.join(dataDir, entry)));
+type Entries = readonly string[];
+
+function protectedEntries(dataDir: string, entries: Entries): string[] {
+  return entries.map((entry) => comparable(path.join(dataDir, entry)));
+}
+
+function isEntry(target: string, dataDir: string, entries: Entries, whole: boolean): boolean {
+  const folder = comparable(dataDir);
+  const wanted = comparable(target);
+  if (whole && wanted === folder) return true;
+  return protectedEntries(dataDir, entries).some((entry) => within(entry, wanted));
 }
 
 export function isBrowserData(target: string, dataDir: string): boolean {
-  const folder = comparable(dataDir);
-  const wanted = comparable(target);
-  if (wanted === folder) return true;
-  return protectedEntries(dataDir).some((entry) => within(entry, wanted));
+  return isEntry(target, dataDir, BROWSER_DATA_ENTRIES, true);
 }
 
 export function globReachesBrowserData(
@@ -79,6 +98,7 @@ export function globReachesBrowserData(
   cwd: string,
   home: string,
   dataDir: string,
+  entries: Entries = BROWSER_DATA_ENTRIES,
 ): boolean {
   const expanded = word === '~' || word.startsWith('~/') ? path.join(home, word.slice(1)) : word;
   const wild = expanded.search(GLOB);
@@ -87,13 +107,19 @@ export function globReachesBrowserData(
   const slash = staticPart.lastIndexOf('/');
   const parent = comparable(path.resolve(cwd, slash < 0 ? '.' : staticPart.slice(0, slash) || '/'));
   const prefix = caseFolded(staticPart.slice(slash + 1));
-  const named = [comparable(dataDir), ...protectedEntries(dataDir)];
+  const named = [comparable(dataDir), ...protectedEntries(dataDir, entries)];
   return named.some((entry) => {
     if (within(entry, parent)) return entry !== comparable(dataDir);
     const relative = path.relative(parent, entry);
     if (relative === '' || relative.startsWith('..') || relative.includes(path.sep)) return false;
     return relative.startsWith(prefix);
   });
+}
+
+export function sparkRulesFlagRules(dataDir: string | null): string[] {
+  if (!dataDir) return [];
+  const patterns = sparkRulesEntries().map((entry) => `/${dataDir}/${entry}`);
+  return patterns.flatMap((pattern) => [`Read(${pattern})`, `Edit(${pattern})`]);
 }
 
 export function browserDataRules(dataDir: string | null): string[] {
@@ -107,9 +133,9 @@ export function browserDataRules(dataDir: string | null): string[] {
   ]);
 }
 
-function namesAnEntry(command: string, dataDir: string): boolean {
+function namesAnEntry(command: string, dataDir: string, entries: Entries): boolean {
   const text = caseFolded(command);
-  return BROWSER_DATA_ENTRIES.some((entry) => text.includes(caseFolded(path.join(dataDir, entry))));
+  return entries.some((entry) => text.includes(caseFolded(path.join(dataDir, entry))));
 }
 
 function wordPaths(word: string): string[] {
@@ -118,16 +144,28 @@ function wordPaths(word: string): string[] {
   return [word, value].filter((part) => part !== '');
 }
 
-export function touchesBrowserData(request: ApprovalRequest, dataDir: string | null): boolean {
-  if (!dataDir) return false;
-  if (request.paths.some((target) => isBrowserData(target, dataDir))) return true;
+function touchesEntries(
+  request: ApprovalRequest,
+  dataDir: string,
+  entries: Entries,
+  whole: boolean,
+): boolean {
+  if (request.paths.some((target) => isEntry(target, dataDir, entries, whole))) return true;
   if (!request.command) return false;
-  if (namesAnEntry(request.command, dataDir)) return true;
+  if (namesAnEntry(request.command, dataDir, entries)) return true;
   const cwd = commandCwd(request);
   const words = treeWords(commandTree(request.command)).flatMap(wordPaths);
   return words.some(
     (word) =>
-      isBrowserData(resolveCommandPath(word, cwd, request.home), dataDir) ||
-      globReachesBrowserData(word, cwd, request.home, dataDir),
+      isEntry(resolveCommandPath(word, cwd, request.home), dataDir, entries, whole) ||
+      globReachesBrowserData(word, cwd, request.home, dataDir, entries),
   );
+}
+
+export function touchesBrowserData(request: ApprovalRequest, dataDir: string | null): boolean {
+  return dataDir !== null && touchesEntries(request, dataDir, BROWSER_DATA_ENTRIES, true);
+}
+
+export function touchesSparkRules(request: ApprovalRequest, dataDir: string | null): boolean {
+  return dataDir !== null && touchesEntries(request, dataDir, sparkRulesEntries(), false);
 }
