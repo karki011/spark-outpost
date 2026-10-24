@@ -43,29 +43,40 @@ async function open(page: Page) {
   await expect(page.locator('.chat-title')).toHaveText(/./);
 }
 
-const timer = (page: Page) => page.locator('.cache-timer');
+const ring = (page: Page) => page.locator('.ctxbtn');
+const badge = (page: Page) => ring(page).locator('[data-cache-badge]');
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
 });
 
-test('the context bar counts the cache down, then says what the next message re-writes', async ({
+test('the context ring badge counts the cache down, then says what the next message re-writes', async ({
   page,
 }) => {
   const { runId } = await claudeChat('succeeded');
   await cached(runId, 3600, 18);
   await open(page);
 
-  await expect(timer(page)).toHaveText('Cache warm · 42 min left');
-  await expect(timer(page)).toHaveAttribute('data-cache-state', 'warm');
-  await timer(page).hover();
-  await page.clock.runFor(500);
-  await expect(page.getByRole('tooltip')).toContainText('1 hour after the last request');
+  await expect(page.locator('.comp-bar').getByText(/Cache warm|Cache cold/)).toHaveCount(0);
+  await expect(badge(page)).toHaveAttribute('data-cache-badge', 'warm');
+  await expect(ring(page)).toHaveAccessibleName(/\. Prompt cache warm · 42 min left$/);
+  await expect(ring(page)).toHaveAttribute('title', /Prompt cache warm · 42 min left/);
+  await ring(page).click();
+  const row = page.locator('.ctx-cache');
+  await expect(row).toContainText('Warm · 42 min left');
+  await expect(row).toContainText('1 hour after the last request');
+  await page.keyboard.press('Escape');
 
   await page.clock.fastForward(MINUTE);
-  await expect(timer(page)).toHaveText('Cache warm · 41 min left');
-  await page.clock.fastForward(41 * MINUTE);
-  await expect(timer(page)).toHaveText('Cache cold · next message re-writes ~182K tokens (~$1.46)');
+  await expect(ring(page)).toHaveAccessibleName(/Prompt cache warm · 41 min left$/);
+  await page.clock.fastForward(36 * MINUTE);
+  await expect(badge(page)).toHaveAttribute('data-cache-badge', 'expiring');
+  await expect(ring(page)).toHaveAccessibleName(/Prompt cache expires in 5 min$/);
+  await page.clock.fastForward(5 * MINUTE);
+  await expect(badge(page)).toHaveAttribute('data-cache-badge', 'expired');
+  await expect(ring(page)).toHaveAccessibleName(
+    /Prompt cache expired, next message re-writes ~182K tokens \(~\$1\.46\)$/,
+  );
   await expect(
     page.locator('[aria-live="polite"]').filter({ hasText: 'Prompt cache expired' }),
   ).toHaveCount(1);
@@ -76,12 +87,11 @@ test('without a known lifetime it shows only when the cache was last used', asyn
   await cached(runId, null, 12);
   await open(page);
 
-  await expect(timer(page)).toHaveText('Cache last used 12 min ago');
-  await expect(timer(page)).toHaveAttribute('data-cache-state', 'unknown');
-  await expect(page.getByText(/Cache warm|Cache cold/)).toHaveCount(0);
+  await expect(badge(page)).toHaveAttribute('data-cache-badge', 'unknown');
+  await expect(ring(page)).toHaveAccessibleName(/Prompt cache last used 12 min ago$/);
 });
 
-test('a running turn shows no timer', async ({ page }) => {
+test('a running turn shows no cache badge', async ({ page }) => {
   const { runId } = await claudeChat('running');
   await cached(runId, 3600, 2);
   await open(page);
@@ -89,10 +99,11 @@ test('a running turn shows no timer', async ({ page }) => {
   await expect(
     page.locator('.comp-bar').getByRole('button', { name: 'Choose project' }),
   ).toBeVisible();
-  await expect(timer(page)).toHaveCount(0);
+  await expect(badge(page)).toHaveCount(0);
+  await expect(ring(page)).not.toHaveAccessibleName(/Prompt cache/);
 });
 
-test('no timer while the agent waits on a card', async ({ page }) => {
+test('no cache badge while the agent waits on a card', async ({ page }) => {
   const { runId } = await claudeChat('awaiting_approval', {
     kind: 'execute',
     title: 'Run a command?',
@@ -102,7 +113,8 @@ test('no timer while the agent waits on a card', async ({ page }) => {
   await open(page);
 
   await expect(page.getByRole('group', { name: /^Run .+\?$/ })).toBeVisible();
-  await expect(timer(page)).toHaveCount(0);
+  await expect(badge(page)).toHaveCount(0);
+  await expect(ring(page)).not.toHaveAccessibleName(/Prompt cache/);
 });
 
 test('a turn that re-wrote the cache carries a dim note', async ({ page }) => {
@@ -130,5 +142,5 @@ test('a turn that re-wrote the cache carries a dim note', async ({ page }) => {
   await open(page);
 
   await expect(page.getByText('This turn re-wrote 182K tokens (~$1.46)')).toBeVisible();
-  await expect(timer(page)).toHaveText('Cache warm · 59 min left');
+  await expect(ring(page)).toHaveAccessibleName(/Prompt cache warm · 59 min left$/);
 });

@@ -12,7 +12,6 @@ import { OutpostChip } from '../outpost/OutpostChip.tsx';
 import { useOutpostSeam } from '../outpost/outpost-seam.ts';
 import { AgentSetup, useSetupAttention } from './AgentSetup.tsx';
 import { ChatBranch } from './ChatBranch.tsx';
-import { ChatCache } from './ChatCache.tsx';
 import { ProjectFolders } from './ProjectFolders.tsx';
 import { showsPlaceMenu } from './place-picker-model.ts';
 import { WorkPlaceMenu } from './WorkPlaceMenu.tsx';
@@ -161,7 +160,6 @@ export function ContextBar({
       {placeMenu}
       {people}
       {setupChip}
-      <ChatCache conversationId={conversationId} />
       {suggestion}
     </ProjectFolders>
   );
