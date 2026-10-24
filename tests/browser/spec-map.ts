@@ -46,6 +46,7 @@ export const SPEC_GROUPS = {
     'chat-share',
     'chat-ticks',
     'compaction',
+    'composer-menus-fit',
     'composer-status',
     'context-ring',
     'delete-busy-chat',

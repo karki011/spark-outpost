@@ -63,6 +63,7 @@
 .mpop.repopop {
   left: 12px;
   width: 340px;
+  max-width: calc(100cqw - 24px);
 }
 .repopop .mopt > span:not(.mi) {
   flex: 1;
