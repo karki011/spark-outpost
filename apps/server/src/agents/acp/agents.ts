@@ -12,7 +12,11 @@ import { PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
 import { tempRoots } from '../../approvals/temp-dirs.ts';
 import { PLANS_DIR } from '../../plans/plan-mode.ts';
 import { GIT_CONTROL_GLOBS, INSTRUCTION_GLOBS } from '../../projects/path-policy.ts';
-import { RECOMMENDED_FLOOR, type FlagEffect, type SparkFloor } from '../../spark-rules/floor-flags.ts';
+import {
+  RECOMMENDED_FLOOR,
+  type FlagEffect,
+  type SparkFloor,
+} from '../../spark-rules/floor-flags.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
 import type { AgentCli } from './agent-cli.ts';
 import {

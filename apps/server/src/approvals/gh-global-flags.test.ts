@@ -36,7 +36,13 @@ function chat(command: string, grant: PublishGrant) {
 
 describe('gh flags before the command group', () => {
   it('moves -R, --repo and --hostname with their values after the command', () => {
-    expect(ghArgs(['-R', 'o/r', 'pr', 'checks', '512'])).toEqual(['pr', 'checks', '512', '-R', 'o/r']);
+    expect(ghArgs(['-R', 'o/r', 'pr', 'checks', '512'])).toEqual([
+      'pr',
+      'checks',
+      '512',
+      '-R',
+      'o/r',
+    ]);
     expect(ghArgs(['--repo=o/r', '--hostname', 'h', 'pr', 'view'])).toEqual([
       'pr',
       'view',

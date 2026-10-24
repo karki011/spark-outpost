@@ -368,6 +368,10 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
     prefix: 'apps/server/src/approvals/',
     groups: ['approvals', 'chat', 'ship-pr', 'sparks'],
   },
+  {
+    prefix: 'apps/server/src/spark-rules/',
+    groups: ['approvals', 'ship-pr', 'settings-providers'],
+  },
   { prefix: 'apps/server/src/audit/', groups: ['analytics-audit', 'approvals'] },
   { prefix: 'apps/server/src/browser/', groups: ['terminal-preview-browser'] },
   { prefix: 'apps/server/src/calendar/', groups: ['home'] },

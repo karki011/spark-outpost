@@ -302,16 +302,6 @@ export function publishStop(
   return firstStop(stopsAmong(command, task, writesUnder(command, rules), own), rules.rules);
 }
 
-export function publishRefusal(
-  command: string,
-  task: TaskBranch | null,
-  own: OwnRepo | null = null,
-  rules: SparkRuleContext = DEFAULT_RULE_CONTEXT,
-): string | null {
-  const stop = publishStop(command, task, own, rules);
-  return stop?.kind === 'refuse' ? stop.reason : null;
-}
-
 export function onlyRepliesOnOwnPull(command: string, own: OwnRepo | null): boolean {
   if (!own || namesAnotherRepo(command) || publishesThroughGit(command)) return false;
   const writes = hostingCommands(command).filter(writesHosting);

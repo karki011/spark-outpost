@@ -153,8 +153,6 @@ export const INSTRUCTION_GLOBS: readonly string[] = [
 
 export const GIT_CONTROL_GLOBS: readonly string[] = ['.git/hooks/*', GIT_CONFIG];
 
-export const EXACT_PROTECTED_GLOBS: readonly string[] = [...INSTRUCTION_GLOBS, ...GIT_CONTROL_GLOBS];
-
 export function protectedPath(relative: string): ProtectedKind | null {
   if (GIT_HOOK.test(relative) || relative === GIT_CONFIG) return 'git_control';
   const name = relative.split('/').pop() ?? '';

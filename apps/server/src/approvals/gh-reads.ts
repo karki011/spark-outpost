@@ -32,9 +32,10 @@ function globalFlagWidth(args: readonly string[], index: number): number {
 
 export function ghArgs(args: readonly string[]): string[] {
   let index = 0;
-  for (let width = 0; index < args.length; index += width) {
-    width = globalFlagWidth(args, index);
+  while (index < args.length) {
+    const width = globalFlagWidth(args, index);
     if (width === 0) break;
+    index += width;
   }
   return [...args.slice(index), ...args.slice(0, index)];
 }

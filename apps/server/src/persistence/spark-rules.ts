@@ -78,7 +78,8 @@ export async function sparkRules(
 type Pairs = (readonly [RuleEffect, string])[];
 
 function workflowChange(choice: GhRuleChoice): RuleChange {
-  const [to, from]: [RuleEffect, RuleEffect] = choice === 'refused' ? ['deny', 'allow'] : ['allow', 'deny'];
+  const [to, from]: [RuleEffect, RuleEffect] =
+    choice === 'refused' ? ['deny', 'allow'] : ['allow', 'deny'];
   return {
     add: WORKFLOW_RULES.map((rule) => [to, rule] as const),
     remove: WORKFLOW_RULES.map((rule) => [from, rule] as const),

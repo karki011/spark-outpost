@@ -84,4 +84,3 @@ export function heldGuards(guarded: Guarded, rules: SparkRuleSet): Guarded {
     gitControl: holds(rules, 'GitConfig') ? guarded.gitControl : [],
   };
 }
-

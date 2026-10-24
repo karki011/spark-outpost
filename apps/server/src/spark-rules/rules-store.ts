@@ -47,8 +47,7 @@ export function sparkChannel(env: NodeJS.ProcessEnv = process.env): string {
 export function sparkRulesFiles(env: NodeJS.ProcessEnv = process.env): SparkRulesFiles {
   const dataDir = () => sparkDataDir({ SPARK_DATA_DIR: env.SPARK_DATA_DIR });
   return {
-    user:
-      absolute(env.SPARK_RULES_FILE) ?? join(dataDir(), sparkChannel(env), USER_RULES_NAME),
+    user: absolute(env.SPARK_RULES_FILE) ?? join(dataDir(), sparkChannel(env), USER_RULES_NAME),
     managed: absolute(env.SPARK_MANAGED_RULES_FILE) ?? MANAGED_RULES_FILE,
   };
 }

@@ -56,7 +56,7 @@ describe('the recommended rules', () => {
     expect(userRules(changedRulesText(text, {}))).toEqual(RECOMMENDED_RULES);
   });
 
-  it("give exactly the verdicts Spark gave before the rules file, case by case", async () => {
+  it('give exactly the verdicts Spark gave before the rules file, case by case', async () => {
     await seedSparkRules(files, DEFAULT_SPARK_RULES);
     const { rules, problems } = await loadSparkRules(files, DEFAULT_SPARK_RULES);
     expect(problems).toEqual([]);

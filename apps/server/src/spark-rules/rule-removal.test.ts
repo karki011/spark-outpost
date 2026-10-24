@@ -181,7 +181,10 @@ describe('each Spark rule', () => {
     example.unaskedOnly ? [MANUAL, 'edits'] : [MANUAL, AUTO, 'full_access'];
 
   it.each(EXAMPLES)('$rule: deny refuses it in every mode it covers', (example) => {
-    const rules = { ...RECOMMENDED_RULES, user: moved(RECOMMENDED_RULES.user, example.rule, 'deny') };
+    const rules = {
+      ...RECOMMENDED_RULES,
+      user: moved(RECOMMENDED_RULES.user, example.rule, 'deny'),
+    };
     for (const posture of covered(example)) {
       expect(judged(example, posture, rules).verdict, posture).toBe('reject');
     }
@@ -195,7 +198,10 @@ describe('each Spark rule', () => {
   });
 
   it.each(EXAMPLES)('$rule: ask shows a card in every mode it covers', (example) => {
-    const rules = { ...RECOMMENDED_RULES, user: moved(RECOMMENDED_RULES.user, example.rule, 'ask') };
+    const rules = {
+      ...RECOMMENDED_RULES,
+      user: moved(RECOMMENDED_RULES.user, example.rule, 'ask'),
+    };
     for (const posture of covered(example)) {
       expect(judged(example, posture, rules).verdict, posture).toBe('ask');
     }

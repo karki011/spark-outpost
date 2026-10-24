@@ -96,7 +96,9 @@ export function changedRulesText(text: string | null, change: RuleChange): strin
   const file = editableFile(text);
   const permissions = isRecord(file.permissions) ? { ...file.permissions } : {};
   for (const effect of RULE_EFFECTS) {
-    const removed = new Set(change.remove?.flatMap(([from, rule]) => (from === effect ? [rule] : [])));
+    const removed = new Set(
+      change.remove?.flatMap(([from, rule]) => (from === effect ? [rule] : [])),
+    );
     const kept = listOf(permissions, effect).filter(
       (entry) => typeof entry !== 'string' || !removed.has(entry),
     );
