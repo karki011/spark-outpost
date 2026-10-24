@@ -22,7 +22,7 @@ With no [rules](#spark-rules), the default, the mode decides all of this. Recomm
 
 ![The Change agent instructions card with Allow once, Allow for this chat and Deny](images/approvals-instructions-light.png)
 
-The recommended rules also refuse pushing any branch but the chat's `spark/` or [adopted pull request branch](where-spark-works.md#work-on-a-pull-request), plain `--force`, mirror and default-branch force pushes, and changing remotes. Unasked changes are [flagged](approvals.md#actions-that-ran-without-review).
+The recommended rules also refuse other branches than the chat's or its [adopted one](where-spark-works.md#work-on-a-pull-request), other force pushes and remote changes. Unasked changes are [flagged](approvals.md#actions-that-ran-without-review).
 
 ## What is always refused
 
@@ -33,11 +33,11 @@ Even with no rules:
 - `--no-verify`, and reading or changing Spark's rules files.
 - Printing the GitHub token (`gh auth token`).
 
-A blocked step reads "Refused gh pr create — …".
+A blocked step reads "Refused …".
 
 ## Spark rules
 
-Rules live in `settings.json` in Spark's data folder. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.
+Rules live in Spark's data folder, in `settings.json`. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.
 
 Rules go in `permissions.allow`, `ask` or `deny`; deny wins, then ask. Unlisted or allowed rules follow the mode, unflagged. A broken or unreadable file means recommended rules.
 
