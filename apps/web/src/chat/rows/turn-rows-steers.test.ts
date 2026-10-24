@@ -91,8 +91,8 @@ describe('messages sent during a turn', () => {
     expect(waiting).toMatchObject({ ids: ['end'], wroteAfter: false });
   });
 
-  it('note added text for a group only when it follows every message in it', () => {
-    const [group] = turnRowParts({
+  it('group messages only when text after them is the same, so each keeps its own state', () => {
+    const groups = turnRowParts({
       text: 'Checking CI and the review comments.',
       steps: [],
       commands: [],
@@ -101,7 +101,20 @@ describe('messages sent during a turn', () => {
         anchored('late', 'Checking CI and the review comments.', 3_000),
       ],
     }).filter((part) => part.kind === 'steers');
-    expect(group).toMatchObject({ ids: ['early', 'late'], wroteAfter: false });
+    expect(groups).toMatchObject([
+      { ids: ['early'], wroteAfter: true },
+      { ids: ['late'], wroteAfter: false },
+    ]);
+  });
+
+  it('group messages that share a place and a state', () => {
+    const groups = turnRowParts({
+      text: 'Checking CI.',
+      steps: [],
+      commands: [],
+      steers: [anchored('one', 'Checking CI.', 2_000), anchored('two', 'Checking CI.', 3_000)],
+    }).filter((part) => part.kind === 'steers');
+    expect(groups).toMatchObject([{ ids: ['one', 'two'], wroteAfter: false }]);
   });
 
   it('follow a step that started at the same point in the reply but before they arrived', () => {

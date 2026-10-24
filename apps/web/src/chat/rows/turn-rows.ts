@@ -356,9 +356,8 @@ export function turnRowParts(input: TurnRowInput): TurnRowPart[] {
     flushRows();
     if (placed.kind === 'steer') {
       const last = parts.at(-1);
-      if (last?.kind === 'steers') {
+      if (last?.kind === 'steers' && last.wroteAfter === placed.wroteAfter) {
         last.ids.push(placed.id);
-        last.wroteAfter &&= placed.wroteAfter;
       } else {
         const { id, wroteAfter } = placed;
         parts.push({ kind: 'steers', key: `steers-${id}`, ids: [id], wroteAfter });
