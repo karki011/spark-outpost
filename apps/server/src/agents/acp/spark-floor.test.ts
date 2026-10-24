@@ -17,6 +17,11 @@ import {
   FORCE_PUSH_DENY_RULES,
   GIT_CONFIG_ASK_RULE,
 } from './agents.ts';
+import {
+  browserDataDir,
+  browserDataRules,
+  sparkRulesFlagRules,
+} from '../../approvals/browser-data.ts';
 import { CLAUDE_DO_TOOLS } from './claude-tools.ts';
 import { withSparkFloor } from './repo-session.ts';
 import { discardScratch, planLaunch } from './turn-launch.ts';
@@ -113,5 +118,51 @@ describe('a live session', () => {
     await Promise.all([discardScratch(first), discardScratch(second)]);
     expect(first.workspace.floor).toEqual(RECOMMENDED_FLOOR);
     expect(second.key).not.toEqual(first.key);
+  });
+
+  async function launchedFloor(text: string) {
+    const turn = {
+      prompt: 'hi',
+      history: [],
+      settings: { method: 'cli', model: null, modelLabel: null, effort: null },
+      signal: new AbortController().signal,
+    } as unknown as ProviderTurn;
+    await writeFile(process.env.SPARK_RULES_FILE!, text);
+    const options = { definition: agentDefinitions.claude, launch: { command: 'x', args: [] } };
+    const plan = await planLaunch(options, turn, false);
+    await discardScratch(plan);
+    return plan.workspace.floor;
+  }
+
+  type Profiles = { permissions: Record<string, { filesystem: Record<string, unknown> }> };
+
+  it('with no rules gives the unseen modes no floor, but keeps the fixed denies', async () => {
+    const floor = await launchedFloor('{ "permissions": {} }');
+    const permissions = doSession(floor);
+    expect(permissions.deny).not.toContain('Edit(**/.env)');
+    expect(permissions.deny).not.toEqual(expect.arrayContaining(FORCE_PUSH_DENY_RULES));
+    expect(permissions.deny).not.toEqual(expect.arrayContaining(CHAT_RUN_DENY_RULES));
+    expect([...permissions.deny, ...(permissions.ask ?? [])]).not.toContain('Edit(**/AGENTS.md)');
+    expect([...permissions.deny, ...(permissions.ask ?? [])]).not.toContain(GIT_CONFIG_ASK_RULE);
+    expect(permissions.deny).toEqual(
+      expect.arrayContaining([...sparkRulesFlagRules(), ...browserDataRules(browserDataDir())]),
+    );
+    const codex = codexConfig(true, null, true, floor) as Profiles;
+    const filesystem = codex.permissions['agent']!.filesystem;
+    expect(filesystem).not.toHaveProperty(':project_roots');
+    expect(JSON.stringify(filesystem)).toContain(process.env.SPARK_RULES_FILE!);
+  });
+
+  it('with the recommended rules keeps every floor flag rule', async () => {
+    const floor = await launchedFloor(recommendedRulesText());
+    const permissions = doSession(floor);
+    expect(permissions.deny).toContain('Edit(**/.env)');
+    expect(permissions.deny).toEqual(expect.arrayContaining(FORCE_PUSH_DENY_RULES));
+    expect(permissions.deny).toEqual(expect.arrayContaining(CHAT_RUN_DENY_RULES));
+    expect(permissions.ask).toEqual(
+      expect.arrayContaining(['Edit(**/AGENTS.md)', GIT_CONFIG_ASK_RULE]),
+    );
+    const codex = codexConfig(true, null, true, floor) as Profiles;
+    expect(codex.permissions['agent']!.filesystem).toHaveProperty(':project_roots');
   });
 });
