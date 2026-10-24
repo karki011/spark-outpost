@@ -113,12 +113,30 @@ describe('the sheet for a draft a chat proposed', () => {
     render(
       <Harness initial={{ ...storyDraft([lead, api, old], DOCS_CHAT), name: 'Orders launch' }} />,
     );
+    expect(
+      screen.getByRole('dialog', {
+        name: 'Start a new outpost with 1 new chat and 1 existing chat',
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText('1 new chat · 1 existing chat')).toBeTruthy();
     const card = cards()[2];
     expect(card?.querySelector('.op-tag')?.textContent).toBe('Existing chat · gets a request');
     expect(card?.querySelector('.op-draft-label')?.textContent).toBe('Request');
     expect(card?.querySelector('.op-draft-order')?.textContent).toBe(
       'Starts after @apiorder only, it keeps its own branch',
     );
+    cleanup();
+    render(
+      <Harness
+        initial={{
+          ...storyDraft([lead, { ...old, dependsOn: null }], DOCS_CHAT),
+          name: 'Orders launch',
+        }}
+      />,
+    );
+    expect(
+      screen.getByRole('dialog', { name: 'Start a new outpost with 1 existing chat' }),
+    ).toBeTruthy();
   });
 
   it('clamps a long first message until Show all', () => {

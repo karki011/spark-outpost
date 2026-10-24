@@ -14,7 +14,7 @@ import { DiscardBar } from './DiscardBar.tsx';
 import { DraftChats } from './DraftChats.tsx';
 import { sheetKeys, useReturnFocus } from './sheet-keys.ts';
 import { StartResult } from './StartResult.tsx';
-import { leadHandle } from './story-draft.ts';
+import { isLead, leadHandle } from './story-draft.ts';
 import type { DraftChange } from './use-chat-actions.ts';
 import type { CreateData } from './use-create-data.ts';
 
@@ -31,10 +31,21 @@ interface DraftSheetProps {
   onClose: () => void;
 }
 
+function chatCounts(draft: CreateDraft): string[] {
+  const reused = listedChats(draft).filter(
+    (chat) => chat.kind === 'existing' && !isLead(draft, chat),
+  ).length;
+  const fresh = startSummary(draft).newChats;
+  return [
+    ...(fresh > 0 || reused === 0 ? [countLabel(fresh, 'new chat')] : []),
+    ...(reused > 0 ? [countLabel(reused, 'existing chat')] : []),
+  ];
+}
+
 function sheetTitle(draft: CreateDraft): string {
   const summary = startSummary(draft);
   if (draft.into) return `Start ${countLabel(summary.chats, 'chat')} in ${draft.into.name}`;
-  return `Start a new outpost with ${countLabel(summary.newChats, 'new chat')}`;
+  return `Start a new outpost with ${chatCounts(draft).join(' and ')}`;
 }
 
 function lede(draft: CreateDraft): string {
@@ -48,8 +59,7 @@ function lede(draft: CreateDraft): string {
 }
 
 function footNote(draft: CreateDraft): string {
-  const summary = startSummary(draft);
-  const chats = countLabel(summary.newChats, 'new chat');
+  const chats = chatCounts(draft).join(' · ');
   return draft.into ? `${chats} · in ${draft.into.name}` : chats;
 }
 
