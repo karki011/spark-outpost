@@ -164,7 +164,7 @@ async function recordAccepted(files: SparkRulesFiles, accepted: AcceptedRules): 
   await writeAtomically(acceptedRecordPath(files.user), acceptedRecordText(accepted));
 }
 
-async function acceptFirstRead(files: SparkRulesFiles): Promise<void> {
+export async function acceptRulesBaseline(files: SparkRulesFiles): Promise<void> {
   if (await readAccepted(files.user)) return;
   const read = await readRulesFile(files.user);
   if (read.kind !== 'unreadable') await recordAccepted(files, acceptedOf(read));
@@ -172,7 +172,7 @@ async function acceptFirstRead(files: SparkRulesFiles): Promise<void> {
 
 export async function seedSparkRules(files: SparkRulesFiles, gh: GhSeed): Promise<boolean> {
   if ((await exists(files.user)) || (await exists(seededMarker(files)))) {
-    await acceptFirstRead(files);
+    await acceptRulesBaseline(files);
     return false;
   }
   const text = recommendedRulesText(gh);
@@ -218,6 +218,7 @@ export function changeSparkRules(
 ): Promise<LoadedRules> {
   return serialized(async () => {
     await seedSparkRules(files, gh);
+    await acceptRulesBaseline(files);
     const loaded = await loadSparkRules(files, gh);
     if (loaded.outside) throw new RulesFileError(OUTSIDE_CHANGE_REFUSAL);
     checkedHash(loaded.userFile, expectedHash, USER_RULES_NAME);

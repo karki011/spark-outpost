@@ -6,6 +6,7 @@ import { startArtifactOrigin } from '../artifacts/origin-server.ts';
 import { startMorningBrief } from '../digest/morning.ts';
 import { ensureLocalWorkspace } from '../persistence/conversations.ts';
 import { seedWorkspaceRules } from '../persistence/spark-rules.ts';
+import { acceptRulesBaseline, sparkRulesFiles } from '../spark-rules/rules-store.ts';
 import { seedModelStats } from '../model-cards/ingest.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
@@ -82,6 +83,9 @@ const workspaceId = await ensureLocalWorkspace(db);
 await seedModelStats(db);
 await seedWorkspaceRules(db, workspaceId).catch((error: unknown) => {
   console.error("Could not write Spark's recommended rules", error);
+});
+await acceptRulesBaseline(sparkRulesFiles()).catch((error: unknown) => {
+  console.error("Could not record Spark's accepted rules", error);
 });
 const hub = new RunEventHub();
 const activeWork = new ActiveWork();

@@ -8,6 +8,7 @@ import { RECOMMENDED_RULES } from './recommended.ts';
 import { RulesFileError } from './rules-file.ts';
 import {
   acceptOutsideChange,
+  acceptRulesBaseline,
   changeManagedRules,
   changeSparkRules,
   loadSparkRules,
@@ -150,5 +151,21 @@ describe('a change checked against the card', () => {
       StaleRulesError,
     );
     expect(called).toBe(false);
+  });
+});
+
+describe('with no rules file yet', () => {
+  it('sees a created file as a change outside Spark', async () => {
+    await acceptRulesBaseline(files);
+    await writeFile(files.user, JSON.stringify({ permissions: { allow: ['Gh(release create)'] } }));
+    const loaded = await loadSparkRules(files, gh);
+    expect(loaded.outside).not.toBeNull();
+    expect(loaded.rules.user.allow).not.toContain('Gh(release create)');
+  });
+
+  it('sees an empty file as a change outside Spark', async () => {
+    await acceptRulesBaseline(files);
+    await writeFile(files.user, '');
+    expect((await loadSparkRules(files, gh)).outside).not.toBeNull();
   });
 });
