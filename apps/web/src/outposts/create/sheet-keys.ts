@@ -37,7 +37,12 @@ export function sheetKeys(keys: SheetKeys) {
       else keys.onClose();
       return;
     }
-    if (event.key === 'Enter' && !event.nativeEvent.isComposing && !event.defaultPrevented) {
+    if (
+      event.key === 'Enter' &&
+      !keys.discarding &&
+      !event.nativeEvent.isComposing &&
+      !event.defaultPrevented
+    ) {
       const commanded = event.metaKey || event.ctrlKey;
       if (commanded || typedInField(event)) {
         event.preventDefault();

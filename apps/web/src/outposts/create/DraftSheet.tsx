@@ -69,6 +69,8 @@ export function DraftSheet(props: DraftSheetProps) {
   const ids = useId();
   const nameRef = useRef<HTMLInputElement>(null);
   const primaryRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [settledCount, setSettledCount] = useState(0);
   const sentRef = useRef(false);
   const [discarding, setDiscarding] = useState(false);
   const [nameTried, setNameTried] = useState(false);
@@ -84,6 +86,15 @@ export function DraftSheet(props: DraftSheetProps) {
   useEffect(() => {
     firstFocus.current.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (settledCount === 0) return;
+    const primary = primaryRef.current;
+    if (primary && !primary.disabled) primary.focus();
+    else panelRef.current?.focus();
+  }, [settledCount]);
+
+  const focusAfterSettle = () => setSettledCount((count) => count + 1);
 
   const send = () => {
     sentRef.current = true;
@@ -106,7 +117,7 @@ export function DraftSheet(props: DraftSheetProps) {
 
   const settleOpen = () => {
     onChange((current) => settled(current, (chat) => finished(chat, current)));
-    primaryRef.current?.focus();
+    focusAfterSettle();
   };
 
   const requestClose = () => {
@@ -135,7 +146,9 @@ export function DraftSheet(props: DraftSheetProps) {
       onMouseDown={(event) => event.target === event.currentTarget && requestClose()}
     >
       <div
+        ref={panelRef}
         className="op-sheet op-create op-draft-sheet"
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${ids}title`}
@@ -172,7 +185,7 @@ export function DraftSheet(props: DraftSheetProps) {
                 draft={draft}
                 data={data}
                 onChange={onChange}
-                onSettled={() => primaryRef.current?.focus()}
+                onSettled={focusAfterSettle}
               />
             )}
           </OutpostFaces>

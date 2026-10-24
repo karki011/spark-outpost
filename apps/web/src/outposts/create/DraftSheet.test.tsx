@@ -195,6 +195,21 @@ describe('the sheet for a draft a chat proposed', () => {
     expect(screen.getByText('1 thing to fix')).toBeTruthy();
   });
 
+  it('keeps focus in the sheet after a remove that leaves Start blocked, and moves it to Start once unblocked', () => {
+    const draft = story();
+    const [lead, api, fe, docs] = draft.chats;
+    const looped = { ...draft, chats: [lead!, { ...api!, dependsOn: fe!.key }, fe!, docs!] };
+    render(<Harness initial={looped} />);
+    fireEvent.click(button('Remove New chat in web'));
+    expect(document.activeElement).toBe(
+      screen.getByRole('dialog', { name: /^Start a new outpost/ }),
+    );
+    const removes = screen.getAllByRole('button', { name: /^Remove New chat in / });
+    fireEvent.click(removes[removes.length - 1]!);
+    expect(button('Start outpost').hasAttribute('disabled')).toBe(false);
+    expect(document.activeElement).toBe(button('Start outpost'));
+  });
+
   it('warns on the card when a stacked chat would push before its parent', () => {
     const draft = story();
     const [lead, api, fe, docs] = draft.chats;
@@ -249,5 +264,15 @@ describe('the sheet for a draft into an outpost', () => {
     fireEvent.click(button('Cancel'));
     fireEvent.click(button('Discard'));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not start from Command-Enter while it asks to discard', () => {
+    const onStart = vi.fn();
+    render(<Harness initial={joining()} onStart={onStart} />);
+    fireEvent.click(button('Remove New chat in web'));
+    fireEvent.click(button('Cancel'));
+    fireEvent.keyDown(button('Keep editing'), { key: 'Enter', metaKey: true });
+    expect(onStart).not.toHaveBeenCalled();
+    expect(screen.getByText('Discard these chats?')).toBeTruthy();
   });
 });
