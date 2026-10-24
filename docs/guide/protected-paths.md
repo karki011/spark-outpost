@@ -28,16 +28,18 @@ The recommended rules also refuse pushing any branch but the chat's `spark/` or 
 
 Even with no rules:
 
-- Reading, copying or changing Spark's browser data: profiles, **Personal** included, sign-ins and history.
+- Reading, copying or changing Spark's browser data: Browser profiles, **Personal** included, sign-in storage and the history database.
 - Your ChatGPT or Claude account's own apps and connectors; add MCP servers in Spark.
 - Merging a pull request, approving or dismissing reviews, `--admin`, `gh api` writes, `gh auth` and `--no-verify`.
 - Reading or changing Spark's rules files directly.
 
+A blocked step reads "Refused gh pr create — …".
+
 ## Spark rules
 
-Spark reads rules from `settings.json` in its data folder and writes none; copy the recommended rules in for the protection above. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.
+Spark reads rules from `settings.json` in its data folder and writes none; copy in the recommended rules below. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.
 
-Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then ask. A rule in no list, or in allow, is left to the mode, unflagged. A broken or unreadable file means recommended rules.
+Rules go in `permissions.allow`, `ask` or `deny`; deny wins, then ask. Unlisted or allowed rules follow the mode, unflagged. A broken or unreadable file means recommended rules.
 
 | Rule                                                                              | Covers                                                                         | Recommended  |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------ |

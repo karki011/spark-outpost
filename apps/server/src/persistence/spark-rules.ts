@@ -63,7 +63,10 @@ function outsideView(loaded: LoadedRules): OutsideChangeView | null {
 }
 
 function settingsView(loaded: LoadedRules): SparkRules {
-  const workflow = ghCommandRuling(loaded.rules, WORKFLOW_PREFIXES[0]);
+  const workflowCommands = WORKFLOW_PREFIXES.map((prefix) => ({
+    prefix,
+    standing: standing(ghCommandRuling(loaded.rules, prefix)?.effect),
+  }));
   const other = ghCommandRuling(loaded.rules, UNNAMED_GH_COMMAND);
   const outside = outsideView(loaded);
   const problems = loaded.problems.map(
@@ -71,7 +74,10 @@ function settingsView(loaded: LoadedRules): SparkRules {
       `${problem.file === 'managed' ? 'managed-settings.json' : 'settings.json'}: ${problem.message}`,
   );
   return {
-    workflows: workflow?.effect === 'deny' ? 'refused' : 'mode',
+    workflows: workflowCommands.every((command) => command.standing === 'refused')
+      ? 'refused'
+      : 'mode',
+    workflowCommands,
     ghAllowed: allowedPrefixes(loaded),
     otherCommands: standing(other?.effect),
     floor: FLOOR_RULE_IDS.map((rule) => ({

@@ -252,6 +252,17 @@ describe("Spark's rules file", () => {
     );
   });
 
+  it('shows each workflow command when a hand-edited file mixes them', async () => {
+    await writeFile(userFile(), JSON.stringify({ permissions: { deny: ['Gh(workflow run)'] } }));
+    const view = await sparkRules();
+    expect(view.workflows).toBe('mode');
+    expect(view.workflowCommands).toEqual([
+      { prefix: 'gh workflow run', standing: 'refused' },
+      { prefix: 'gh run rerun', standing: 'mode' },
+      { prefix: 'gh run cancel', standing: 'mode' },
+    ]);
+  });
+
   it('takes an allowed command out of ask too, so it really follows the mode', async () => {
     await writeFile(
       userFile(),

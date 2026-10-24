@@ -58,6 +58,7 @@ export type RuleStanding = z.infer<typeof ruleStandingSchema>;
 
 export const sparkRulesSchema = z.object({
   workflows: ghRuleChoiceSchema,
+  workflowCommands: z.array(z.object({ prefix: z.string(), standing: ruleStandingSchema })),
   ghAllowed: z.array(z.string()),
   otherCommands: ruleStandingSchema,
   floor: z.array(z.object({ rule: z.string(), standing: ruleStandingSchema })),
