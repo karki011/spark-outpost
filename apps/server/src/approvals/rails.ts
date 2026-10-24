@@ -107,25 +107,58 @@ function secretTargets(
     .flatMap((word) => {
       const target = resolveCommandPath(word, cwd, request.home);
       const secret = (!reading && isSecretPath(path.basename(word))) || asks(target);
-      return secret ? [target] : [];
+      if (!secret) return [];
+      if (!CODE_WORD.test(word)) return [target];
+      const quoted = quotedSecrets(word, (literal) => {
+        const inner = resolveCommandPath(literal, cwd, request.home);
+        return (!reading && isSecretPath(path.basename(literal))) || asks(inner) ? inner : null;
+      });
+      return quoted.length > 0 ? quoted : [target];
     });
   return unique([...named, ...words]);
 }
 
-function readsSecret(
+const CODE_WORD = /['"()\s]/;
+const QUOTED_LITERAL = /(['"])([^'"\n]+)\1/g;
+
+function quotedSecrets(word: string, secretTarget: (literal: string) => string | null): string[] {
+  return [...word.matchAll(QUOTED_LITERAL)].flatMap(([, , literal]) => {
+    const target = secretTarget(literal!);
+    return target ? [target] : [];
+  });
+}
+
+interface SecretsFound {
+  targets: string[];
+  inCode: boolean;
+}
+
+function secretsReached(
   request: ApprovalRequest,
   tree: CommandTree | null,
   files: FileLister,
   reading: boolean,
-) {
-  if (!request.command || !tree) return false;
+): SecretsFound | null {
+  if (!request.command || !tree) return null;
+  const reached: string[] = [];
+  const inCode: string[] = [];
+  const asks = secretAsks(request, reading);
   const concern = readConcern(request.command, tree, {
     cwd: commandCwd(request),
     home: request.home,
-    isSecret: secretAsks(request, reading),
+    isSecret: (target) => {
+      const secret = asks(target);
+      if (secret) reached.push(target);
+      return secret;
+    },
+    readAsks: (target) => secretReadAsks(request.roots, target),
     files,
+    inCode: (targets) => inCode.push(...targets),
   });
-  return concern === 'secret';
+  if (concern !== 'secret') return null;
+  return inCode.length > 0
+    ? { targets: unique(inCode), inCode: true }
+    : { targets: unique(reached), inCode: false };
 }
 
 const SECRET_ASK: RailAsk = { rail: 'secret', reason: SECRET_REASON, paths: [] };
@@ -142,11 +175,15 @@ function changedTargets(request: ApprovalRequest, tree: CommandTree | null): str
   ];
 }
 
-type SecretUse = 'changes' | 'reads' | 'uses';
+type SecretUse = 'changes' | 'reads' | 'uses' | 'runs';
 
 function secretReason(names: string, count: number, use: SecretUse, ignored: boolean): string {
   const kind = count > 1 ? 'secret files' : 'a secret file';
   if (use === 'changes') return `This changes ${names}, ${kind}`;
+  if (use === 'runs' && ignored)
+    return `This runs code that reads ${names}, which .sparkignore lists`;
+  if (use === 'runs')
+    return `This runs code that uses ${names}, ${kind}, and does more than read it`;
   if (ignored) return `This ${use} ${names}, which .sparkignore lists`;
   return `This uses ${names}, ${kind}, in a command that does more than read it`;
 }
@@ -156,11 +193,12 @@ function secretAsk(
   tree: CommandTree | null,
   targets: readonly string[],
   reading: boolean,
+  inCode = false,
 ): RailAsk {
   if (targets.length === 0) return SECRET_ASK;
   const changed = changedTargets(request, tree);
   const changes = targets.some((target) => changed.includes(target));
-  const use = changes ? 'changes' : reading ? 'reads' : 'uses';
+  const use = changes ? 'changes' : inCode ? 'runs' : reading ? 'reads' : 'uses';
   const ignored = targets.every((target) => secretReadAsks(request.roots, target));
   const labels = unique(targets.map((target) => placedLabel(request.roots, request.home, target)));
   const reason = secretReason(shortList(labels), labels.length, use, ignored);
@@ -180,9 +218,9 @@ function commandRail(
     return { rail: 'outside_delete', reason, paths: deleted };
   }
   const secrets = secretTargets(request, tree, reading);
-  if (secrets.length > 0 || readsSecret(request, tree, files, reading)) {
-    return secretAsk(request, tree, secrets, reading);
-  }
+  if (secrets.length > 0) return secretAsk(request, tree, secrets, reading);
+  const reached = secretsReached(request, tree, files, reading);
+  if (reached) return secretAsk(request, tree, reached.targets, reading, reached.inCode);
   const written = outsideWrites(request);
   if (written === null) return { rail: 'outside_write', reason: OUTSIDE_WRITE_REASON, paths: [] };
   if (written.length === 0) return null;

@@ -12,6 +12,7 @@ import {
   FORCE_PUSH_DENY_RULES,
   secretRules,
 } from './agents.ts';
+import { tempRoots } from '../../approvals/temp-dirs.ts';
 import { CLAUDE_DO_TOOLS, CLAUDE_GATED_TOOLS, CLAUDE_READ_TOOLS } from './claude-tools.ts';
 import { CODEX_DO_MODE, codexPermissionProfiles } from './codex-permissions.ts';
 import { zaiEnvironment, zaiModelId } from './zai.ts';
@@ -55,6 +56,17 @@ describe('Claude session options', () => {
       'AskUserQuestion',
     ]);
     expect(chat.tools).toEqual(['AskUserQuestion']);
+  });
+
+  it('lets Claude read the temp folders Spark treats as scratch, and keeps secret edits there denied', () => {
+    const doing = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
+    for (const options of [project, chat, doing]) {
+      expect(options.settings.permissions.additionalDirectories).toEqual(tempRoots());
+      expect(options.settings.permissions.blockReadsOutsideWorkingDirectories).toBe(true);
+    }
+    expect(tempRoots()).toContain('/tmp');
+    expect(doing.disallowedTools).toContain('Edit(//tmp/**/.env)');
+    expect(doing.settings.permissions.deny).toContain('Edit(//private/tmp/**/.env)');
   });
 
   it('passes extra repos only as deny-rule anchors, never as directories in _meta', () => {
