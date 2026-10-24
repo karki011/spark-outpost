@@ -187,6 +187,7 @@ describe('Other commands', () => {
     });
     const lifted = without(added, id);
     expect(chat('full_access', command, lifted).verdict).toBe('allow');
+    expect(chat('asks', command, lifted).verdict).toBe('ask');
     expect(chat('full_access', command, asking(lifted, id)).verdict).toBe('ask');
   });
 

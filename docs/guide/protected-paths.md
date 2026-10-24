@@ -38,7 +38,7 @@ A blocked step reads "Refused gh pr create — …", unlike your own **Deny**.
 
 Spark reads rules from `settings.json` in its data folder and writes none until you set one. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.
 
-Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then ask. A rule in no list, or in allow, is left to the mode, unflagged. A broken or unreadable file means recommended rules.
+Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then ask. Otherwise the mode decides, unflagged. A broken or unreadable file means recommended rules.
 
 | Rule                                                                              | Covers                                                                         | Recommended  |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------ |
@@ -52,7 +52,7 @@ Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then a
 
 Fixed: Spark's ports, the [always refused](#what-is-always-refused) list and the Mac control, Browser pane, Calendar and web address rules.
 
-**Settings → Spark rules** (Mac) sets each rule to **Agent's mode** (no rule), **Ask** or **Refuse** in your file; **Use recommended rules** adds the table's choices. Company rules are locked. A refusal shows a [card](cards.md#around-the-result).
+**Settings → Spark rules** (Mac) sets each rule in your file; **Use recommended rules** adds the table's choices. Company rules are locked. A refusal shows a [card](cards.md#around-the-result).
 
 ## Secret files
 
