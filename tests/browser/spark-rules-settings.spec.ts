@@ -147,7 +147,7 @@ test('Use recommended rules asks first and keeps the rest of the file @packaged'
 
   await button.click();
   await dialog.getByRole('button', { name: 'Use recommended rules' }).click();
-  await expect(settings.getByText('Recommended rules are back in settings.json.')).toBeVisible();
+  await expect(settings.getByText('Recommended rules are in settings.json.')).toBeVisible();
   await expect(settings.getByRole('button', { name: 'Force push', exact: true })).toHaveText(
     'Ask, hold to confirm',
   );

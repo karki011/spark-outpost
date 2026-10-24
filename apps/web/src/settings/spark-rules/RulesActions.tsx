@@ -7,7 +7,7 @@ import { useRulesWrite } from './use-spark-rules.ts';
 
 const RECOMMENDED_COPY = {
   title: 'Use recommended rules?',
-  text: 'Spark puts its recommended choice back on every rule on this page. Your allowed gh commands and anything else in settings.json stay.',
+  text: 'Spark sets its recommended choice on every rule on this page. Your allowed gh commands and anything else in settings.json stay.',
 };
 
 function useOpenFile() {
@@ -32,7 +32,7 @@ export function RulesActions({ malformed }: { malformed: boolean }) {
   const note =
     file.problem ??
     recommended.error?.message ??
-    (recommended.isSuccess ? 'Recommended rules are back in settings.json.' : null);
+    (recommended.isSuccess ? 'Recommended rules are in settings.json.' : null);
   return (
     <>
       <div className="rules-actions">
