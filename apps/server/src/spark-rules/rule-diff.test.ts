@@ -29,6 +29,15 @@ describe('what a rules edit really changes', () => {
     expect(effectiveDiff(lists, [line], [line])).toEqual({ add: [], remove: [] });
   });
 
+  it('moves a rule out of its other lists, so a looser line really takes effect', () => {
+    const diff = effectiveDiff(lists, [{ effect: 'allow', rule: 'Push' }], []);
+    expect(diff).toEqual({
+      add: [{ effect: 'allow', rule: 'Push' }],
+      remove: [{ effect: 'deny', rule: 'Push' }],
+    });
+    expect(diffLine(diff)).toBe('+ allow Push; − deny Push');
+  });
+
   it('names rules Spark does not know', () => {
     expect(
       unrecognisedRules([

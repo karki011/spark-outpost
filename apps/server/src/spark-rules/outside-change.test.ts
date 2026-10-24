@@ -167,6 +167,26 @@ describe('a change checked against the card', () => {
     expect(JSON.parse(await readFile(files.managed, 'utf8')).team).toBe('x');
   });
 
+  it('lets other rules writes through while the company prompt waits', async () => {
+    let release = () => {};
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const company = changeManagedRules(
+      files,
+      { add: [['deny', 'Gh(repo delete)']] },
+      await hashNow(files.managed),
+      async (target, text) => {
+        await waiting;
+        await writeFile(target, text);
+      },
+    );
+    const saved = await changeSparkRules(files, () => ({ add: [['allow', 'Gh(release create)']] }));
+    expect(saved.rules.user.allow).toEqual(['Gh(release create)']);
+    release();
+    expect((await company).rules.managed.deny).toEqual(['Gh(repo delete)']);
+  });
+
   it('never calls the company writer for a stale card', async () => {
     let called = false;
     const write = () => {

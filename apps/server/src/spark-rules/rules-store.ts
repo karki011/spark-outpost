@@ -232,19 +232,23 @@ export function changeSparkRules(
 
 export type ManagedWrite = (file: string, text: string, previousHash: string) => Promise<void>;
 
-export function changeManagedRules(
+export async function changeManagedRules(
   files: SparkRulesFiles,
   change: RuleChange,
   expectedHash: string,
   write: ManagedWrite,
 ): Promise<LoadedRules> {
-  return serialized(async () => {
+  const name = basename(files.managed);
+  const planned = await serialized(async () => {
     const read = await readRulesFile(files.managed);
-    checkedHash(read, expectedHash, basename(files.managed));
-    const text = changedRulesText(currentText(read, basename(files.managed)), change);
-    await write(files.managed, text, rulesTextHash(read));
-    return loadSparkRules(files);
+    checkedHash(read, expectedHash, name);
+    return {
+      text: changedRulesText(currentText(read, name), change),
+      previous: rulesTextHash(read),
+    };
   });
+  await write(files.managed, planned.text, planned.previous);
+  return loadSparkRules(files);
 }
 
 export function acceptOutsideChange(

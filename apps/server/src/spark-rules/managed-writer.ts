@@ -6,7 +6,12 @@ import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import { RulesFileError } from './rules-file.ts';
 import { rulesTextHash } from './accepted.ts';
-import { MANAGED_RULES_FILE, StaleRulesError, type ManagedWrite } from './rules-store.ts';
+import {
+  MANAGED_RULES_FILE,
+  readRulesFile,
+  StaleRulesError,
+  type ManagedWrite,
+} from './rules-store.ts';
 
 const run = promisify(execFile);
 
@@ -98,7 +103,10 @@ export function adminManagedWrite(runner: ScriptRunner = osascript): ManagedWrit
   };
 }
 
-async function plainWrite(target: string, text: string): Promise<void> {
+async function plainWrite(target: string, text: string, previousHash: string): Promise<void> {
+  if (rulesTextHash(await readRulesFile(target)) !== previousHash) {
+    throw new StaleRulesError(STALE_COMPANY);
+  }
   await mkdir(dirname(target), { recursive: true });
   const temp = join(dirname(target), `.managed-settings.${randomUUID()}.tmp`);
   await writeFile(temp, text, { mode: 0o644 });

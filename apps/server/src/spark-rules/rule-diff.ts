@@ -27,10 +27,17 @@ export function effectiveDiff(
 ): RuleDiff {
   const adding = new Set(add.map(key));
   const removing = new Set(remove.map(key));
+  const kept = add.filter((line) => !removing.has(key(line)));
+  const moved = kept.flatMap((line) =>
+    RULE_EFFECTS.filter((effect) => effect !== line.effect).map((effect) => ({
+      effect,
+      rule: line.rule,
+    })),
+  );
   const present = (line: RuleLine) => lists[line.effect].includes(line.rule);
   return {
-    add: unique(add).filter((line) => !present(line) && !removing.has(key(line))),
-    remove: unique(remove).filter((line) => present(line) && !adding.has(key(line))),
+    add: unique(kept).filter((line) => !present(line)),
+    remove: unique([...remove, ...moved]).filter((line) => present(line) && !adding.has(key(line))),
   };
 }
 
