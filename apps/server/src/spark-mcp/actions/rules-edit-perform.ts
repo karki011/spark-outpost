@@ -1,6 +1,7 @@
 import { RULES_FILE_NAMES, type RulesEditAction } from '@spark-outpost/contracts';
 import { managedWriteFor } from '../../spark-rules/managed-writer.ts';
-import { diffLine, ruleChangeOf } from '../../spark-rules/rule-diff.ts';
+import { diffLine, ruleChangeOf, unrecognisedRules } from '../../spark-rules/rule-diff.ts';
+import { RulesFileError } from '../../spark-rules/rules-file.ts';
 import {
   changeManagedRules,
   changeSparkRules,
@@ -9,6 +10,10 @@ import {
 import type { Performed } from './performed.ts';
 
 export async function performRulesEdit(action: RulesEditAction): Promise<Performed> {
+  const unknown = unrecognisedRules([...action.add, ...action.remove]);
+  if (unknown.length > 0) {
+    throw new RulesFileError(`Not Spark rules: ${unknown.join(', ')}. Spark changed nothing.`);
+  }
   const files = sparkRulesFiles();
   const change = ruleChangeOf(action);
   if (action.target === 'managed') {
