@@ -57,6 +57,7 @@ import { useTurnChanges } from './rows/use-turn-changes.ts';
 import { AgentMark, TurnMeta, WorkingLine, agentChanged } from './turn/TurnParts.tsx';
 import { TurnChangesLine } from './turn/TurnChangesLine.tsx';
 import { turnMood } from './turn/turn-mood.ts';
+import { liveLabel } from './turn/live-label.ts';
 
 interface SoloTurnProps {
   run: Run;
@@ -299,7 +300,9 @@ export function SoloTurn({
           retryIn: isLatestTurn(detail, run.id) ? detail.conversation.id : null,
         }}
       />
-      {working && !waiting && <WorkingLine run={run} />}
+      {working && !waiting && (
+        <WorkingLine run={run} doing={liveLabel(subagents, commands.reply)} />
+      )}
       {finished && (
         <TurnMeta>
           {text && (

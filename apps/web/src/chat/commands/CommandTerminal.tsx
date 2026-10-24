@@ -10,7 +10,7 @@ import { commandOutputKey, fetchCommandOutput } from './command-api.ts';
 import { CommandDockContext } from './command-dock.ts';
 import type { CommandAnswer } from './command-answers.ts';
 import { commandOutcome, type CommandView } from './command-model.ts';
-import { commandName } from './command-name.ts';
+import { commandTitle } from './command-title.ts';
 import { CommandScreen } from './CommandScreen.tsx';
 import { CommandWord } from './CommandStatus.tsx';
 import { useCommandUi } from './command-ui.ts';
@@ -44,10 +44,6 @@ function useTerminalUi(command: CommandView) {
     setTall: (tall: boolean) => update({ open, tall }),
     focus: (focused: boolean) => update({ focused }),
   };
-}
-
-export function commandTitle(command: Pick<CommandView, 'description' | 'command'>): string {
-  return command.description || commandName(command.command);
 }
 
 function CommandTitle({ command }: { command: CommandView }) {
