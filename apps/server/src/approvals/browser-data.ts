@@ -4,10 +4,11 @@ import { sparkDataDir } from '../config.ts';
 import { globToRegExp } from '../projects/path-policy.ts';
 import { acceptedRecordPath } from '../spark-rules/accepted.ts';
 import { sparkRulesFiles, type SparkRulesFiles } from '../spark-rules/rules-store.ts';
-import { commandTree, treeWords } from './command-tree.ts';
+import { commandDirs, commandTree, treeWords } from './command-tree.ts';
 import { resolveCommandPath } from './commands.ts';
 import type { ApprovalRequest } from './decide.ts';
 import { commandCwd } from './request-place.ts';
+import { substitutedCommand, wordShapes, type WordShape } from './word-shapes.ts';
 
 export const BROWSER_DATA_REASON =
   "Spark's browser data (Browser pane profiles, the app's own cookies and storage, history and the database holding it) can't be read, copied or changed by an agent";
@@ -177,12 +178,41 @@ function touchesEntries(
   if (!request.command) return false;
   if (namesAnEntry(request.command, dataDir, entries)) return true;
   const cwd = commandCwd(request);
-  const words = treeWords(commandTree(request.command)).flatMap(wordPaths);
-  return words.some(
-    (word) =>
-      isEntry(resolveCommandPath(word, cwd, request.home), dataDir, entries, whole) ||
-      globReachesBrowserData(word, cwd, request.home, dataDir, entries) ||
-      globNamesEntry(word, cwd, request.home, dataDir, entries),
+  const tree = commandTree(request.command);
+  const place: Place = { dirs: commandDirs(tree, cwd, request.home), home: request.home };
+  const substituted = substitutedCommand(request.command);
+  const words = [
+    ...treeWords(tree),
+    ...(substituted === request.command ? [] : treeWords(commandTree(substituted))),
+  ].flatMap(wordPaths);
+  return words.some((word) =>
+    wordShapes(word, request.home).some((shape) =>
+      shapeTouches(shape, place, cwd, { dataDir, entries, whole }),
+    ),
+  );
+}
+
+interface Place {
+  dirs: string[] | null;
+  home: string;
+}
+
+interface Guarded {
+  dataDir: string;
+  entries: Entries;
+  whole: boolean;
+}
+
+function shapeTouches(shape: WordShape, place: Place, cwd: string, guarded: Guarded): boolean {
+  const { dataDir, entries, whole } = guarded;
+  const anchoredShape = shape.anywhere || path.isAbsolute(shape.text);
+  const text = !anchoredShape && place.dirs === null ? `/**/${shape.text}` : shape.text;
+  const dirs = anchoredShape || place.dirs === null ? [cwd] : place.dirs;
+  return dirs.some(
+    (dir) =>
+      isEntry(resolveCommandPath(text, dir, place.home), dataDir, entries, whole) ||
+      globReachesBrowserData(text, dir, place.home, dataDir, entries) ||
+      globNamesEntry(text, dir, place.home, dataDir, entries),
   );
 }
 
