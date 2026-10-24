@@ -2,6 +2,18 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.29
+
+- Quieter turns: steps between replies fold into one line, like Ran 4 commands, thought 2 times, titled by what each command does. Open it for the commands and output; a failed step opens by itself. Commands your mode ran without asking no longer add an Allowed row, and an answered card shows inside its step.
+- Messages you send while a turn runs show where the agent took them in: Sent, then Claude took this in, with its answer below. After a stop, Send as next message or Edit.
+- Bypass permissions: scripts in /tmp, and scripts that only read a secret file, follow your mode instead of asking. Changing a secret file still asks, and the card names the file.
+- Browser pane: resize it from a 320 px page to nearly the whole window, with the width shown as you drag and Page width presets.
+- Outposts: a draft opens on one sheet with every proposed chat, Edit and Remove; a lead can give a sub-task to a chat already working in that repo; the sidebar shows the lead with its face and · Lead on its chip. Suggested threads lines up with the messages, and starting one opens its thread.
+- Pull requests: items close once their thread is resolved, their check passes or the reviewer reviews again, review comments read as plain text, and your agent's own replies no longer come back as work.
+- The prompt cache shows as a small badge on the context ring instead of a chip in the message box.
+- Mac app: Settings opens larger.
+- Fixes: the add-a-chat picker and other composer menus no longer cut titles or overlap, a command row no longer splits a word in the reply, and Tab stays inside dialogs opened from Settings.
+
 ## 0.1.0-beta.28
 
 - Browser view: Browser in the left bar keeps your own tabs apart from every chat, in a Personal profile no agent or phone can reach, or a Work profile that shares agents' sign-ins. Favorites, pinned tabs and tabs that come back after a relaunch; Hand to chat gives a chat the page.
