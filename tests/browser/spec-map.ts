@@ -54,6 +54,7 @@ export const SPEC_GROUPS = {
     'interrupted-turn',
     'markdown-composer',
     'message-actions',
+    'mid-turn-messages',
     'phone-context-bar',
     'prompt-cache',
     'queue-strip',

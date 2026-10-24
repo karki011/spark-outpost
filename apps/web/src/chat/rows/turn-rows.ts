@@ -1,5 +1,5 @@
 import { friendlyStep, isSparkNote, toolLabel, type BrowserShot } from '@spark-outpost/contracts';
-import { anchorIndex, outsideFence } from '../../browser/shot-order.ts';
+import { anchorIndex, outsideFence, type TextAnchor } from '../../browser/shot-order.ts';
 import type { AgentTerminalView } from '../commands/agent-terminal-model.ts';
 import type { CommandView } from '../commands/command-model.ts';
 import type { StepStatus, StepTimes, StepView } from '../run-projection.ts';
@@ -58,7 +58,14 @@ export type TurnRowPart =
   | { kind: 'text'; key: string; text: string }
   | { kind: 'shots'; key: string; shots: BrowserShot[] }
   | { kind: 'terminal'; key: string; terminals: AgentTerminalView[] }
-  | { kind: 'rows'; key: string; rows: Row[] };
+  | { kind: 'rows'; key: string; rows: Row[] }
+  | { kind: 'steers'; key: string; ids: string[] };
+
+export interface SteerMark {
+  id: string;
+  anchor: TextAnchor | null;
+  time: number;
+}
 
 export interface TurnRowInput {
   text: string;
@@ -66,13 +73,15 @@ export interface TurnRowInput {
   commands: readonly CommandView[];
   shots?: readonly BrowserShot[];
   terminals?: readonly AgentTerminalView[];
+  steers?: readonly SteerMark[];
   todo?: boolean;
 }
 
 type Placed =
   | { kind: 'item'; at: number; time: number | null; item: RowItem }
   | { kind: 'shot'; at: number; time: number | null; shot: BrowserShot }
-  | { kind: 'terminal'; at: number; time: number | null; terminal: AgentTerminalView };
+  | { kind: 'terminal'; at: number; time: number | null; terminal: AgentTerminalView }
+  | { kind: 'steer'; at: number; time: number | null; id: string };
 
 const DONE_VERBS: Record<'read' | 'search' | 'edit', [done: string, open: string]> = {
   read: ['Read', 'Reading'],
@@ -211,8 +220,18 @@ function stepAt(text: string, step: StepView): number {
   });
 }
 
+function paragraphEnd(text: string, at: number): number {
+  if (at === 0 || at >= text.length || text[at - 1] === '\n') return at;
+  const end = text.indexOf('\n\n', at);
+  return outsideFence(text, end === -1 ? text.length : end);
+}
+
+function steerAt(text: string, steer: SteerMark): number {
+  return steer.anchor ? paragraphEnd(text, placeAt(text, steer.anchor)) : text.length;
+}
+
 function placedItems(input: TurnRowInput): Placed[] {
-  const { text, steps, commands, shots = [], terminals = [] } = input;
+  const { text, steps, commands, shots = [], terminals = [], steers = [] } = input;
   const items = stepItems(steps, commands.length > 0);
   const stepsByKey = new Map(steps.map((step, index) => [`step-${index}`, step]));
   const placed: Placed[] = [
@@ -237,6 +256,12 @@ function placedItems(input: TurnRowInput): Placed[] {
       at: placeAt(text, terminal),
       time: Date.parse(terminal.startedAt),
       terminal,
+    })),
+    ...steers.map((steer): Placed => ({
+      kind: 'steer',
+      at: steerAt(text, steer),
+      time: steer.time,
+      id: steer.id,
     })),
   ];
   return placed.sort(
@@ -325,6 +350,12 @@ export function turnRowParts(input: TurnRowInput): TurnRowPart[] {
       continue;
     }
     flushRows();
+    if (placed.kind === 'steer') {
+      const last = parts.at(-1);
+      if (last?.kind === 'steers') last.ids.push(placed.id);
+      else parts.push({ kind: 'steers', key: `steers-${placed.id}`, ids: [placed.id] });
+      continue;
+    }
     if (placed.kind === 'terminal') {
       const { terminal } = placed;
       const last = parts.at(-1);

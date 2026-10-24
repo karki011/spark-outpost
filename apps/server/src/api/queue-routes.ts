@@ -9,7 +9,8 @@ import {
   type QueueResponse,
   type SendNowOutcome,
 } from '@spark-outpost/contracts';
-import type { Db } from '../persistence/db.ts';
+import { withTransaction, type Db } from '../persistence/db.ts';
+import { missedMessage, removeMemberMessages } from '../persistence/member-messages.ts';
 import {
   addToQueue,
   editQueued,
@@ -22,7 +23,7 @@ import {
 import { cancelPost } from '../persistence/outpost-tasks.ts';
 import { stopRun } from '../workflow/stop-run.ts';
 import { MemberMessageError, messageMember } from '../workflow/member-message.ts';
-import { drainQueue, sendNow, type ResolveTarget } from '../workflow/queue-drain.ts';
+import { drainQueue, resendMissed, sendNow, type ResolveTarget } from '../workflow/queue-drain.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { BadRequestError, paramId, parseBody } from './validation.ts';
 
@@ -140,6 +141,26 @@ export function queueRoutes({ db, workspaceId, fixedRunProvider }: QueueRouteDep
     const outcome = await sendNow(db, conversationId, { id: itemId(req) }, resolveTarget);
     if (!outcome) throw new QueueError(404, 'That message has already been sent.');
     res.status(202).json(await reply(conversationId, outcome));
+  });
+
+  const NOT_WAITING = 'That message is no longer waiting.';
+
+  router.post('/conversations/:id/steers/:itemId/resend', async (req, res) => {
+    const conversationId = paramId(req);
+    const outcome = await resendMissed(db, conversationId, itemId(req), resolveTarget);
+    if (!outcome) throw new QueueError(404, NOT_WAITING);
+    res.status(202).json(await reply(conversationId));
+  });
+
+  router.delete('/conversations/:id/steers/:itemId', async (req, res) => {
+    const conversationId = paramId(req);
+    await withTransaction(db, async (client) => {
+      if (!(await missedMessage(client, conversationId, itemId(req)))) {
+        throw new QueueError(404, NOT_WAITING);
+      }
+      await removeMemberMessages(client, [itemId(req)]);
+    });
+    res.json(await reply(conversationId));
   });
 
   router.post('/runs/:id/messages', async (req, res) => {

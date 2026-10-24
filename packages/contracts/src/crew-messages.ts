@@ -24,6 +24,9 @@ export const memberMessageSchema = z.object({
   createdAt: z.string(),
   deliveredAt: z.string().nullable(),
   deliveredRunId: z.uuid().nullable().optional(),
+  textOffset: z.number().int().nonnegative().nullable().optional(),
+  textBefore: z.string().nullable().optional(),
+  textHeld: z.number().int().nonnegative().nullable().optional(),
 });
 export type MemberMessage = z.infer<typeof memberMessageSchema>;
 
