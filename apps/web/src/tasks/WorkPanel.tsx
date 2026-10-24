@@ -17,6 +17,7 @@ import type { PanelWidthLimits } from '../ui/panel-width.ts';
 import { WORK_PANEL_LIMITS, type PanelView } from './work-panel-state.ts';
 import { WorkPanelResizer } from './WorkPanelResizer.tsx';
 import { PaneResizer } from '../browser/PaneResizer.tsx';
+import { openingPaneWidth } from '../browser/pane-width.ts';
 import { usePhone } from '../ui/breakpoints.ts';
 
 interface AutonomySetting {
@@ -153,6 +154,7 @@ export function WorkPanel({
   const tabs = panelTabs(hasWork, browser !== null, artifact?.title ?? null);
   const phone = usePhone();
   const resizable = open && onWidth !== undefined && (wide || (wideView && !phone));
+  const fallback = wideView ? openingPaneWidth(limits.fallback, !wide) : limits.fallback;
   const heading = useRef<HTMLHeadingElement>(null);
   const title = useRef<HTMLElement>(null);
   const closeTip = useTooltip('Hide work panel');
@@ -197,7 +199,7 @@ export function WorkPanel({
         aria-label="Work panel"
         data-chat-links=""
         inert={!open}
-        style={{ '--wp-w': `${width ?? limits.fallback}px` } as CSSProperties}
+        style={{ '--wp-w': `${width ?? fallback}px` } as CSSProperties}
         onKeyDown={(event) => {
           if (event.key === 'Escape' && !wide) onClose();
         }}
@@ -208,7 +210,7 @@ export function WorkPanel({
             label={browsing ? 'Resize browser pane' : 'Resize work panel'}
             page={browsing}
             width={width}
-            limits={limits}
+            limits={{ ...limits, fallback }}
             onWidth={onWidth}
           />
         )}

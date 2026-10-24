@@ -3,6 +3,7 @@ export const CHAT_MIN_WIDTH = 300;
 export const PAGE_WIDTH_PRESETS = [320, 390, 768, 1024, 1280] as const;
 export const PANE_STEP = 10;
 export const PANE_BIG_STEP = 50;
+export const OVERLAY_OPEN_WIDTH = 420;
 
 export interface PaneRange {
   min: number;
@@ -17,6 +18,10 @@ export interface DockedRow {
 
 export function dockedRoom(row: DockedRow): number {
   return Math.floor(row.rowRight - row.chatLeft - row.gaps - CHAT_MIN_WIDTH);
+}
+
+export function openingPaneWidth(fallback: number, overlay: boolean): number {
+  return overlay ? Math.min(fallback, OVERLAY_OPEN_WIDTH) : fallback;
 }
 
 export function overlayRoom(viewport: number, gaps: number): number {

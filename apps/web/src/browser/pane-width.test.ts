@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   CHAT_MIN_WIDTH,
   PAGE_MIN_WIDTH,
+  OVERLAY_OPEN_WIDTH,
   dockedRoom,
+  openingPaneWidth,
   overlayRoom,
   pageWidth,
   paneRange,
@@ -24,6 +26,12 @@ describe('pane room', () => {
     const collapsed = dockedRoom({ rowRight: 1432, chatLeft: 76, gaps: 8 });
     const open = dockedRoom({ rowRight: 1432, chatLeft: 376, gaps: 8 });
     expect(collapsed - open).toBe(300);
+  });
+
+  it('opens an overlay pane narrower than a docked one until a width is saved', () => {
+    expect(openingPaneWidth(640, false)).toBe(640);
+    expect(openingPaneWidth(640, true)).toBe(OVERLAY_OPEN_WIDTH);
+    expect(openingPaneWidth(360, true)).toBe(360);
   });
 
   it('lets an overlay pane cover the window less its edges', () => {
