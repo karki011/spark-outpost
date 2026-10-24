@@ -96,6 +96,7 @@ describe('isSparkNote', () => {
       'Allowed `make build` (allowed for this run)',
       'Allowed `ls -la` (a read-only command inside the project)',
       'Allowed `echo "(x)"` (Automatic in an Ask turn)',
+      'Allowed `ls` (Default (recommended) mode)',
       'Denied: Run `rm x` (you denied it)',
       'Using Opus 5.5 · medium effort',
       "Using Claude's defaults",
@@ -114,6 +115,7 @@ describe('isSparkNote', () => {
       'Installing dependencies in this chat’s copy',
       'Allowed list',
       'Allowed hosts (example.com) were updated by the agent',
+      'Allowed origins (example.com)',
     ]) {
       expect(isSparkNote(step)).toBe(false);
     }
