@@ -15,6 +15,10 @@ Pages for you and agents. About 2 minutes. Mac app only.
 
 Chat links open here; **⌘**-click opens yours. [Keys](keyboard-shortcuts.md#browser-pane-mac-app).
 
+## Test a page width
+
+Drag the pane's edge from a 320 px page to nearly full width. **Page width** sets presets. Arrows on the edge step 10 px, **Shift** 50.
+
 ## Let the agent look and browse
 
 | The agent can                            | It can't                          |

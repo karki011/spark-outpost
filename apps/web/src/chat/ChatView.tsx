@@ -468,8 +468,14 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             onView={panel.setView}
             browser={
               hasBrowser
-                ? ({ views, close }) => (
-                    <BrowserPane home={browserHome} shown={browsing} lead={views} trail={close} />
+                ? ({ views, close, setWidth }) => (
+                    <BrowserPane
+                      home={browserHome}
+                      shown={browsing}
+                      lead={views}
+                      trail={close}
+                      setWidth={setWidth}
+                    />
                   )
                 : null
             }
