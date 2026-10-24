@@ -301,10 +301,7 @@ describe("Spark's rules file", () => {
   it('reports what it could not use and keeps the recommended rules for a broken file', async () => {
     await writeFile(userFile(), '{ "permissions": { "deny": ["Push", "Nope"] }, "theme": 1 }');
     const view = await sparkRules();
-    expect(view.problems).toEqual([
-      { file: 'user', message: `"theme" is kept but Spark doesn't use it` },
-      { file: 'user', message: `"Nope" in deny isn't a Spark rule, so it is not applied` },
-    ]);
+    expect(view.problems).toEqual([]);
     expect(view.unused).toEqual([
       { entry: '"theme": 1', kind: 'key' },
       { entry: '"Nope"', kind: 'rule' },

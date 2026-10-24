@@ -75,6 +75,16 @@ describe('the Spark rules page view', () => {
     expect((await view()).ghAllowed).toEqual([{ prefix: 'gh release create', overridden: true }]);
   });
 
+  it('reports rules past the limit, and leaves entries the unused list shows out of problems', async () => {
+    const many = Array.from({ length: 201 }, (_, index) => `Gh(release v${index})`);
+    await writeUser({ theme: 'dark', permissions: { allow: ['Bash(npm test)'], deny: many } });
+    const { problems, malformed } = await view();
+    expect(malformed).toBe(false);
+    expect(problems).toEqual([
+      { file: 'user', message: 'deny holds more than 200 rules; the rest are not applied' },
+    ]);
+  });
+
   it('lists entries Spark does not use, by kind', async () => {
     await writeUser({
       theme: 'dark',

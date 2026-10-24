@@ -28,10 +28,10 @@ export function UnusedEntries({ rules }: { rules: SparkRules }) {
 
 export function RulesFileProblems({ rules }: { rules: SparkRules }) {
   const company = rules.problems.filter((problem) => problem.file === 'managed');
-  const broken = rules.malformed
-    ? rules.problems.find((problem) => problem.file === 'user')
-    : undefined;
-  if (!broken && company.length === 0) return null;
+  const user = rules.problems.filter((problem) => problem.file === 'user');
+  const broken = rules.malformed ? user[0] : undefined;
+  const notes = rules.malformed ? [] : user;
+  if (!broken && notes.length === 0 && company.length === 0) return null;
   return (
     <div className="rules-alert" role="alert">
       <WarnIcon />
@@ -42,6 +42,9 @@ export function RulesFileProblems({ rules }: { rules: SparkRules }) {
             here.
           </p>
         )}
+        {notes.map((problem) => (
+          <p key={problem.message}>settings.json: {problem.message}.</p>
+        ))}
         {company.map((problem) => (
           <p key={problem.message}>Your company&apos;s file: {problem.message}.</p>
         ))}

@@ -105,6 +105,17 @@ test('an edit made in the file shows when the page gets focus again', async ({ p
   await expect(unused).toContainText("Agent tool rule: put it in Claude's settings");
 });
 
+test('rules past the limit are reported while the page stays editable', async ({ page }) => {
+  const many = Array.from({ length: 201 }, (_, index) => `Gh(release v${index})`);
+  writeRules(SPARK_RULES_FILE, { permissions: { allow: [], ask: [], deny: many } });
+  await page.goto('/');
+  const settings = await openSparkRules(page);
+  await expect(settings.getByRole('alert')).toContainText(
+    'settings.json: deny holds more than 200 rules; the rest are not applied.',
+  );
+  await expect(settings.getByRole('button', { name: 'Use recommended rules' })).toBeEnabled();
+});
+
 test('a rule the company file sets is locked', async ({ page }) => {
   writeRules(SPARK_MANAGED_RULES_FILE, { permissions: { deny: ['WriteOutside'] } });
   await page.goto('/');

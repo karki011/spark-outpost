@@ -9,7 +9,7 @@ import {
 import { RECOMMENDED_RULES, WORKFLOW_RULES } from './recommended.ts';
 import { ghCommandRuling, NO_SPARK_RULES, type SparkRuleSet } from './resolve.ts';
 import { ghPrefixOfRule, ghRuleId, isFloorRuleId } from './rule-ids.ts';
-import { RULE_EFFECTS, type RuleChange, type RuleLists } from './rules-file.ts';
+import { namesOneEntry, RULE_EFFECTS, type RuleChange, type RuleLists } from './rules-file.ts';
 import type { LoadedRules } from './rules-store.ts';
 import { unusedEntries } from './unused-entries.ts';
 
@@ -74,7 +74,10 @@ export function sparkRulesView(loaded: LoadedRules): SparkRules {
     rows: sparkRuleRowSchema.options.map((row) => rowState(rules, row)),
     ghAllowed: allowedEntries(rules),
     unused: userFile.kind === 'text' ? unusedEntries(userFile.text) : [],
-    problems: loaded.problems,
+    problems: loaded.problems.filter(
+      (problem) =>
+        problem.file === 'managed' || loaded.userFailedSafe || !namesOneEntry(problem.message),
+    ),
     malformed: loaded.userFailedSafe,
   };
 }
