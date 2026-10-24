@@ -90,15 +90,16 @@ With **Reduce motion** on, only faces change.
 
 ## Prompt cache
 
-Idle Claude chats and Terminal sessions show it, never during a turn, sub-agent or card.
+Idle Claude chats show a badge on the context ring, worded in its label and popover; Terminal sessions say **Cache warm · …** in their bar. Never during a turn, sub-agent or card.
 
-| Shows                                                         | Means                                   |
-| ------------------------------------------------------------- | --------------------------------------- |
-| **Cache warm · 42 min left**                                  | Time left in the last write's lifetime. |
-| **Cache cold · next message re-writes ~182K tokens (~$3.64)** | About tokens × cache-write price.       |
-| **Cache last used 12 min ago**                                | Lifetime unknown.                       |
-| **This turn re-wrote …**                                      | At least half the last context.         |
-| **Cache hit** in **Cost**                                     | Cache reads ÷ all input tokens.         |
+| Shows                                                                                 | Means                                   |
+| ------------------------------------------------------------------------------------- | --------------------------------------- |
+| Green badge, **Prompt cache warm · 42 min left**                                      | Time left in the last write's lifetime. |
+| Blue badge, **Prompt cache expires in 1 min**                                         | Last minute of 5, or last 5 of 60.      |
+| Slashed badge, **Prompt cache expired, next message re-writes ~182K tokens (~$3.64)** | About tokens × cache-write price.       |
+| Clock badge, **Prompt cache last used 12 min ago**                                    | Lifetime unknown.                       |
+| **This turn re-wrote …**                                                              | At least half the last context.         |
+| **Cache hit** in **Cost**                                                             | Cache reads ÷ all input tokens.         |
 
 ## Limits
 

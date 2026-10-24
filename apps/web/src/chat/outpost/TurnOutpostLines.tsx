@@ -44,6 +44,7 @@ function useStartDraft(
         .fetchQuery({
           queryKey: outpostKeys.detail(outpostId),
           queryFn: () => outpostsApi.get(outpostId),
+          staleTime: 0,
         })
         .catch(() => null);
       onStarted(outpostId, startedThread(detail?.stories ?? [], draftId));

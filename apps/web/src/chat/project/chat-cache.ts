@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import type { ConversationDetail } from '@spark-outpost/contracts';
+import type { ConversationDetail, PromptCacheLast } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../../api/client.ts';
-import { CacheTimer } from '../../usage/CacheTimer.tsx';
 import { activeRun } from '../turns.ts';
 
 export function chatIdle(detail: ConversationDetail): boolean {
@@ -10,11 +9,11 @@ export function chatIdle(detail: ConversationDetail): boolean {
   return !detail.approvals.some((approval) => approval.status === 'pending');
 }
 
-export function ChatCache({ conversationId }: { conversationId: string }) {
+export function useIdleCache(conversationId: string): PromptCacheLast | null {
   const detail = useQuery({
     queryKey: queryKeys.conversation(conversationId),
     queryFn: () => api.getConversation(conversationId),
   }).data;
-  const last = detail?.promptCache?.last ?? null;
-  return <CacheTimer last={last} idle={detail ? chatIdle(detail) : false} />;
+  if (!detail || !chatIdle(detail)) return null;
+  return detail.promptCache?.last ?? null;
 }
