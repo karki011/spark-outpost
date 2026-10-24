@@ -27,10 +27,10 @@ Spark, not the model, runs the checks, so no agent can approve its own request.
 
 ## Actions that ran without review
 
-In **Bypass permissions**, **Approve for me** or **Full access**, Spark watches without stopping the agent:
+In **Bypass permissions**, **Approve for me** or **Full access**, Spark watches without stopping:
 
 - Each tool call is marked **Ran without review** in the audit log.
-- Crossing a protected path, or pushing a branch not the chat's own, gets a flag with **Revert** and **Got it**, pinned until you choose; it never counts as needing you.
+- Crossing a rule you [set](protected-paths.md#spark-rules), such as pushing a branch not the chat's own, gets a flag with **Revert** and **Got it**, pinned until you choose; it never counts as needing you.
 
 ## Sending data out after reading secrets
 
