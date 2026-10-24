@@ -70,6 +70,38 @@ describe('the settlement sweep reads all of GitHub, not the shown slice', () => 
     expect(settledOnGitHub([item], { ...now, checkRuns: checks.latest })).toEqual(['unit']);
   });
 
+  it('reads check runs past the first page of 100', async () => {
+    const failing = Array.from({ length: 100 }, (_, index) => ({
+      id: index + 1,
+      name: `lint-${String(index).padStart(3, '0')}`,
+      status: 'completed',
+      conclusion: 'failure',
+    }));
+    const rerun = { id: 200, name: 'unit', status: 'completed', conclusion: 'success' };
+    const read: string[] = [];
+    const github = connection({
+      get: (path) => {
+        read.push(path);
+        if (path.includes('/annotations')) return [];
+        if (path.includes('page=2')) return { check_runs: [rerun] };
+        return { check_runs: path.includes('page=1') ? failing : [] };
+      },
+    });
+    const checks = await readChecks(github, REPO, 'sha-2');
+    expect(read.filter((path) => path.includes('/check-runs?'))).toHaveLength(2);
+    const item = {
+      id: 'unit',
+      kind: 'check' as const,
+      sourceKey: 'check:unit:sha-1',
+      githubId: '9',
+      author: 'CI',
+      trusted: true,
+      state: 'needs_user' as const,
+    };
+    const now = { prAuthor: 'alice', resolved: null, inline: [], reviews: [] };
+    expect(settledOnGitHub([item], { ...now, checkRuns: checks.latest })).toEqual(['unit']);
+  });
+
   it('reads resolved threads past the first 100', async () => {
     const github = connection({
       post: (query) =>

@@ -104,7 +104,9 @@ export function fakeFeedbackGitHub(pull: Partial<FakeFeedbackPull> = {}): FakeFe
         user: { login: p.author },
       });
     }
-    if (route === `${base}/commits/${p.sha}/check-runs`) return ok({ check_runs: p.checkRuns });
+    if (route === `${base}/commits/${p.sha}/check-runs`) {
+      return ok({ check_runs: page === 1 ? p.checkRuns : [] });
+    }
     const annotations = /\/check-runs\/(\d+)\/annotations$/.exec(route);
     if (annotations) return ok(p.annotations[Number(annotations[1])] ?? []);
     if (route === `${base}/pulls/${p.number}/comments`) return list(p.reviewComments);

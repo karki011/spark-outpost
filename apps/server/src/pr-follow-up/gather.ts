@@ -147,6 +147,25 @@ async function pages<T>(
   return all;
 }
 
+async function checkRunPages(
+  connection: GitHubConnection,
+  repo: RepoRef,
+  headSha: string,
+): Promise<CheckRun[]> {
+  const path = `${repoPath(repo)}/commits/${encodeURIComponent(headSha)}/check-runs`;
+  const all: CheckRun[] = [];
+  for (let page = 1; page <= MAX_PAGES; page += 1) {
+    const { check_runs: runs } = await connection.get(
+      `${path}?per_page=${GITHUB_PAGE_SIZE}&page=${page}`,
+      checkRunsSchema,
+      'reading the checks',
+    );
+    all.push(...runs);
+    if (runs.length < GITHUB_PAGE_SIZE) break;
+  }
+  return all;
+}
+
 async function annotations(connection: GitHubConnection, repo: RepoRef, id: number) {
   const list = await connection
     .get(
@@ -198,11 +217,7 @@ async function failedRuns(
   repo: RepoRef,
   headSha: string,
 ): Promise<CheckSummary & { failed: CheckRun[]; latest: PrCheckRun[] }> {
-  const { check_runs: runs } = await connection.get(
-    `${repoPath(repo)}/commits/${encodeURIComponent(headSha)}/check-runs?per_page=${GITHUB_PAGE_SIZE}`,
-    checkRunsSchema,
-    'reading the checks',
-  );
+  const runs = await checkRunPages(connection, repo, headSha);
   const state = checkRunsState(runs);
   const failed = state === 'failing' ? failedCheckRuns(runs) : [];
   return {
