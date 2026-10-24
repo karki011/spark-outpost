@@ -30,7 +30,9 @@ const CHANGE_NAME =
 const WRITER_NAME =
   /\b(?:writeFileSync|writeFile|appendFileSync|appendFile|createWriteStream|openSync|writeSync|writevSync|ftruncateSync|truncateSync|unlinkSync|rmSync|rmdirSync|renameSync|copyFileSync|cpSync|symlinkSync|linkSync|chmodSync|writeTextFileSync|writeTextFile|write_text|write_bytes|file_put_contents|set_key|unset_key|execSync|execFileSync|spawnSync)\b/;
 const DYNAMIC_CALL =
-  /\b(?:eval|getattr|__import__|send|public_send|instance_eval|Function)\s*\(|\bimportlib\b|\[\s*(['"`])[^'"`]*\1\s*\]\s*\(/;
+  /\b(?:eval|getattr|__import__|instance_eval|Function)\s*\(|\bimportlib\b|\[\s*(['"`])[^'"`]*\1\s*\]\s*\(/;
+const RUBY_SEND_CHANGE =
+  /\b(?:send|public_send|__send__)\s*\(\s*[:'"](?:write|binwrite|syswrite|delete|unlink|rename|truncate|chmod|symlink|link|open|rm\w*|cp\w*|mv|move|copy\w*|touch|system|exec|spawn)\b/;
 const ENV_FILE_LOADERS = /\b(?:load_dotenv|dotenv_values|dotenv|loadEnvFile|Dotenv)\b|--env-file/;
 
 function count(code: string, pattern: RegExp): number {
@@ -53,6 +55,7 @@ export function changesFiles(code: string): boolean {
     CHANGE_NAME,
     WRITER_NAME,
     DYNAMIC_CALL,
+    RUBY_SEND_CHANGE,
   ].some((pattern) => pattern.test(code));
 }
 

@@ -56,6 +56,8 @@ const SCRIPTS: Record<string, ScriptFile> = {
   'shell-out.py': changed("import subprocess\nsubprocess.run(['rm', 'credentials'])\n"),
   'write.rb': changed("File.write('credentials', 'x')\n"),
   'read.rb': changed("puts File.read('credentials')\n"),
+  'send.rb': changed("File.send(:write, 'credentials', 'x')\n"),
+  'reply.js': changed("require('dotenv').config();\napp.get('/', (q, r) => r.send('ok'));\n"),
 };
 
 const lister: FileLister = {
@@ -268,6 +270,7 @@ describe('decide() sees code that changes a secret file however it is written', 
     ['python3 pandas.py', '.env'],
     ['python3 shell-out.py', 'credentials'],
     ['ruby write.rb', 'credentials'],
+    ['ruby send.rb', 'credentials'],
     ["ruby -e \"File.write('credentials', 'x')\"", 'credentials'],
     ["node -e \"require('fs').openSync('.env', 'w')\"", '.env'],
   ])('asks in every mode: %s', (command, file) => {
@@ -279,9 +282,14 @@ describe('decide() sees code that changes a secret file however it is written', 
     }
   });
 
-  it('lets the mode decide when Ruby code only reads a secret', () => {
-    expect(fullAccess('ruby read.rb')).toEqual({ verdict: 'allow', by: 'level' });
-  });
+  it.each(['ruby read.rb', 'node reply.js'])(
+    'lets the mode decide when the code only reads a secret: %s',
+    (command) => {
+      for (const posture of ['auto', 'full_access'] as ModePosture[]) {
+        expect(decideAt(posture, command), posture).toEqual({ verdict: 'allow', by: 'level' });
+      }
+    },
+  );
 });
 
 describe('a secret a script reads counts for the send flag', () => {
