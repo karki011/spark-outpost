@@ -32,7 +32,7 @@ const WRITER_NAME =
 const DYNAMIC_CALL =
   /\b(?:eval|getattr|__import__|instance_eval|Function)\s*\(|\bimportlib\b|\[\s*(['"`])[^'"`]*\1\s*\]\s*\(/;
 const RUBY_SEND_CHANGE =
-  /\b(?:send|public_send|__send__)\s*\(\s*[:'"](?:write|binwrite|syswrite|delete|unlink|rename|truncate|chmod|symlink|link|open|rm\w*|cp\w*|mv|move|copy\w*|touch|system|exec|spawn)\b/;
+  /\b(?:send|public_send|__send__)\s*\(\s*[:'"](?:(?:delete|unlink|rm\w*)\b|(?:write|binwrite|syswrite|rename|truncate|chmod|symlink|link|open|cp\w*|mv|move|copy\w*|touch|system|exec|spawn)\b(?!['"]?\s*\)))/;
 const ENV_FILE_LOADERS = /\b(?:load_dotenv|dotenv_values|dotenv|loadEnvFile|Dotenv)\b|--env-file/;
 
 function count(code: string, pattern: RegExp): number {

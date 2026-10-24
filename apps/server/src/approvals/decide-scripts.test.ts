@@ -58,6 +58,14 @@ const SCRIPTS: Record<string, ScriptFile> = {
   'read.rb': changed("puts File.read('credentials')\n"),
   'send.rb': changed("File.send(:write, 'credentials', 'x')\n"),
   'reply.js': changed("require('dotenv').config();\napp.get('/', (q, r) => r.send('ok'));\n"),
+  'reply-write.js': changed(
+    "require('dotenv').config();\napp.get('/', (q, r) => r.send('write'));\n",
+  ),
+  'send-string.rb': changed("File.send('write', 'credentials', 'x')\n"),
+  'send-delete.rb': changed("File.send(:delete, 'credentials')\n"),
+  'pathname-delete.rb': changed(
+    "require 'dotenv'\nDotenv.load\nPathname.new('.env').send(:delete)\n",
+  ),
 };
 
 const lister: FileLister = {
@@ -271,6 +279,9 @@ describe('decide() sees code that changes a secret file however it is written', 
     ['python3 shell-out.py', 'credentials'],
     ['ruby write.rb', 'credentials'],
     ['ruby send.rb', 'credentials'],
+    ['ruby send-string.rb', 'credentials'],
+    ['ruby send-delete.rb', 'credentials'],
+    ['ruby pathname-delete.rb', '.env'],
     ["ruby -e \"File.write('credentials', 'x')\"", 'credentials'],
     ["node -e \"require('fs').openSync('.env', 'w')\"", '.env'],
   ])('asks in every mode: %s', (command, file) => {
@@ -282,7 +293,7 @@ describe('decide() sees code that changes a secret file however it is written', 
     }
   });
 
-  it.each(['ruby read.rb', 'node reply.js'])(
+  it.each(['ruby read.rb', 'node reply.js', 'node reply-write.js'])(
     'lets the mode decide when the code only reads a secret: %s',
     (command) => {
       for (const posture of ['auto', 'full_access'] as ModePosture[]) {
