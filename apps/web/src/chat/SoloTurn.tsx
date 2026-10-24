@@ -293,6 +293,7 @@ export function SoloTurn({
         terminals={terminalParts.publish}
         waiting={waiting}
         streaming={leads && active}
+        answers={answers}
       />
       {cards.pending.map(approvalCard)}
       <AgreedReplyLine detail={detail} message={assistantMessage} finished={finished} />
@@ -315,7 +316,10 @@ export function SoloTurn({
         }}
       />
       {working && !waiting && (
-        <WorkingLine run={run} doing={liveLabel(subagents, commands.reply)} />
+        <WorkingLine
+          run={run}
+          doing={liveLabel(subagents, [...commands.reply, ...commands.publish])}
+        />
       )}
       {finished && (
         <TurnMeta>

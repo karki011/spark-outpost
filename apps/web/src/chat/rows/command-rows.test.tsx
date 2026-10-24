@@ -134,6 +134,31 @@ describe('command rows', () => {
     expect(toggle(/^Running pnpm build/).closest('.trow-card')).toBeTruthy();
   });
 
+  it('keeps an opened thought open when it finishes and joins the group', () => {
+    const reads: StepView[] = [
+      { name: 'Read `a.ts`', status: 'done' },
+      { name: 'Read `b.ts`', status: 'done' },
+    ];
+    const thinking: StepView = {
+      name: 'Thinking',
+      status: 'open',
+      reasoningId: 'r1',
+      thought: 'Weighing it',
+    };
+    const view = render(<Turn commands={[]} steps={[...reads, thinking]} />);
+    fireEvent.click(toggle(/^In progressThinking/));
+    const thought = screen
+      .getAllByRole('button', { name: /^Thinking/ })
+      .find((button) => button.closest('.trow-card'))!;
+    fireEvent.click(thought);
+    expect(thought.getAttribute('aria-expanded')).toBe('true');
+
+    view.rerender(<Turn commands={[]} steps={[...reads, { ...thinking, status: 'done' }]} />);
+    expect(toggle(/^Read 2 files, thought once/).getAttribute('aria-expanded')).toBe('true');
+    expect(toggle(/^Thought/).getAttribute('aria-expanded')).toBe('true');
+    expect(toggle(/^Thought/)).toBe(thought);
+  });
+
   it('says a command was denied, in the step and in its group', () => {
     render(
       <Turn

@@ -281,7 +281,8 @@ function groupable(item: RowItem): item is GroupedItem {
 
 function isLive(item: RowItem): item is LiveItem {
   if (item.kind === 'command') return item.command.status === 'running';
-  if (item.kind === 'thought' || item.kind === 'tool') return !groupable(item);
+  if (item.kind === 'thought') return item.step.status === 'open';
+  if (item.kind === 'tool') return item.status === 'open';
   return false;
 }
 

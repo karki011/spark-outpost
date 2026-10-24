@@ -138,6 +138,18 @@ describe('turn rows', () => {
     expect(rows![0]).toMatchObject({ kind: 'group', live: { kind: 'thought' } });
   });
 
+  it('leaves a finished web step after a group as its own row', () => {
+    const fetch = { toolKind: 'fetch', toolName: 'WebFetch' };
+    const parts = turnRowParts({
+      text: '',
+      steps: [done('Read `a.ts`'), done('Read `b.ts`'), done('Fetched example.com', fetch)],
+      commands: [],
+    });
+    const [rows] = rowsOf(parts);
+    expect(rows!.map((row) => row.kind)).toEqual(['group', 'tool']);
+    expect(rows![0]).toMatchObject({ kind: 'group', live: null });
+  });
+
   it('times a group across its commands and thoughts', () => {
     const parts = turnRowParts({
       text: '',
