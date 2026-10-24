@@ -10,7 +10,8 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 
 ## October 2026
 
-| What changed                                                                       | What to do                                                  |
-| ---------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Mac app: the Settings window opens larger.                                         | Nothing; it still fits smaller screens.                     |
-| The prompt cache moved from the message box's chip to a badge on the context ring. | Hover or select the ring to read **Prompt cache** in words. |
+| What changed                                                                                                                                                    | What to do                                                     |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| The **Add another chat** picker gives each chat's title the room, then its first project and its state with an icon, without overlapping or scrolling sideways. | Nothing; hover a row to read its full title and every project. |
+| Mac app: the Settings window opens larger.                                                                                                                      | Nothing; it still fits smaller screens.                        |
+| The prompt cache moved from the message box's chip to a badge on the context ring.                                                                              | Hover or select the ring to read **Prompt cache** in words.    |

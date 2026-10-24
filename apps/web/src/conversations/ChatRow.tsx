@@ -5,6 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   archivedInactiveLine,
   categoryLabel,
+  shownChatTitle,
   type ConversationSummary,
 } from '@spark-outpost/contracts';
 import { DotsIcon, GripIcon, MergedIcon, PinIcon, RestoreIcon, TrashIcon } from '../ui/icons.tsx';
@@ -179,8 +180,9 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   const terminal = chat.sessionType === 'terminal';
   const autoArchived =
     history && chat.autoArchivedDays ? archivedInactiveLine(chat.autoArchivedDays) : null;
+  const title = shownChatTitle(chat.title);
   const tooltip = [
-    chat.title,
+    title,
     terminal ? 'Terminal session' : null,
     handle ? `@${handle}` : null,
     chat.teammate ? `with ${chat.teammate.name}` : null,
@@ -221,7 +223,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
           <span className="rt">
             <span className="row-title-line">
               <RowTitle
-                text={chat.title}
+                text={title}
                 overflow={marquee.overflow}
                 running={marquee.running}
                 titleRef={marquee.ref}

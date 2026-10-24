@@ -54,6 +54,10 @@
     transform: translate(-50%, -50%);
   }
 
+  :is(.fopt, .mopt) {
+    min-height: 44px;
+  }
+
   :is(
     input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
     textarea,

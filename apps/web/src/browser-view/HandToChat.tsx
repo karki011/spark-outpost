@@ -1,6 +1,11 @@
 import '../conversations/chat-menu.css';
 import { useRef, useState } from 'react';
-import type { BrowserPaneTab, BrowserProfile, ConversationSummary } from '@spark-outpost/contracts';
+import {
+  shownChatTitle,
+  type BrowserPaneTab,
+  type BrowserProfile,
+  type ConversationSummary,
+} from '@spark-outpost/contracts';
 import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
 import { CommentIcon, HandOffIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
@@ -77,7 +82,7 @@ export function HandToChat({ profile, tab, chats, onHanded, onProblem }: HandToC
             <MenuItem
               key={chat.id}
               icon={<CommentIcon />}
-              label={chat.title.trim() || 'New chat'}
+              label={shownChatTitle(chat.title)}
               onSelect={() => void hand(chat.id)}
             />
           ))}
