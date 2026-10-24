@@ -12,7 +12,7 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 | --------------------------------------- | ---------------------------- |
 | **Not set up**                          | Nothing connected.           |
 | **CLI not installed**                   | Install `claude` or `codex`. |
-| **Needs sign-in**                       | Sign in to the CLI.          |
+| **Needs sign-in**                       | Sign in, or pass a **Test**. |
 | **Connected · Local CLI** / **API key** | Ready.                       |
 | **Error**                               | **Test** says what's wrong.  |
 
