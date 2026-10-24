@@ -6,6 +6,8 @@ import {
   browserDataRules,
   globReachesBrowserData,
   isBrowserData,
+  SPARK_RULES_REASON,
+  sparkRulesFlagRules,
 } from './browser-data.ts';
 import { LOCAL_DATA_DIR } from '../config.ts';
 import { NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
@@ -148,5 +150,40 @@ describe('browser data paths', () => {
     expect(rules.some((rule) => rule.includes('/spark/'))).toBe(false);
     expect(rules).not.toContain(`Read(/${DATA}/**)`);
     expect(browserDataRules(null)).toEqual([]);
+  });
+});
+
+describe("Spark's own rules file is refused to chats in every mode", () => {
+  const refused = MODE_POSTURES.map(() => SPARK_RULES_REASON);
+
+  it.each([
+    `cat "${DATA}/spark/settings.json"`,
+    `echo '{}' > "${DATA}/spark/settings.json"`,
+    `rm "${DATA}/spark/.settings-seeded"`,
+    'cat ../../../settings.json',
+  ])('%s', async (command) => {
+    expect(await verdicts(request({ command }))).toEqual(refused);
+  });
+
+  it('refuses an edit of the file', async () => {
+    const edit = request({
+      kind: 'edit',
+      toolKind: 'edit',
+      paths: [`${DATA}/spark/settings.json`],
+    });
+    expect(await verdicts(edit)).toEqual(refused);
+  });
+
+  it('gives Claude read and edit deny rules for the file and its marker', () => {
+    expect(sparkRulesFlagRules(DATA)).toEqual([
+      `Read(/${DATA}/spark/settings.json)`,
+      `Edit(/${DATA}/spark/settings.json)`,
+      `Read(/${DATA}/spark/.settings-seeded)`,
+      `Edit(/${DATA}/spark/.settings-seeded)`,
+    ]);
+  });
+
+  it('leaves the chats folder beside it alone', async () => {
+    expect(await verdicts(request({ command: 'cat notes.md' }))).not.toEqual(refused);
   });
 });

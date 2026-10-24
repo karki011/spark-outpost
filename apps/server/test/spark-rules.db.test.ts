@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -10,7 +10,12 @@ import {
   shownApprovalsForConversation,
 } from '../src/persistence/approvals.ts';
 import { listQueue } from '../src/persistence/chat-queue.ts';
-import { sparkRulesForRun, saveSparkRules, sparkRules } from '../src/persistence/spark-rules.ts';
+import {
+  saveSparkRules,
+  seedWorkspaceRules,
+  sparkRules,
+  sparkRulesForRun,
+} from '../src/persistence/spark-rules.ts';
 import { createApprovalGate } from '../src/workflow/approval-gate.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import { publishGrant } from '../src/workflow/publish-context.ts';
@@ -215,5 +220,63 @@ describe('the refused card', () => {
     await expect(
       answerRuleCard(t.db, t.workspaceId, card.id, 'allow_once', target),
     ).rejects.toBeInstanceOf(ApprovalConflictError);
+  });
+});
+
+describe("Spark's rules file", () => {
+  const userFile = () => process.env.SPARK_RULES_FILE!;
+  const fileRules = async () =>
+    JSON.parse(await readFile(userFile(), 'utf8')) as { permissions: Record<string, string[]> };
+
+  it('moves the old Settings choices into the file it seeds', async () => {
+    await t.db.query(
+      `INSERT INTO profiles (workspace_id, gh_workflows, gh_allowed) VALUES ($1, 'refused', $2)
+       ON CONFLICT (workspace_id) DO UPDATE
+         SET gh_workflows = EXCLUDED.gh_workflows, gh_allowed = EXCLUDED.gh_allowed`,
+      [t.workspaceId, ['gh release create']],
+    );
+    expect(await seedWorkspaceRules(t.db, t.workspaceId)).toBe(true);
+    const { permissions } = await fileRules();
+    expect(permissions.deny).toEqual(expect.arrayContaining(['Gh(workflow run)', 'Gh(*)']));
+    expect(permissions.allow).toEqual(['Gh(release create)']);
+    expect(await sparkRules(t.db, t.workspaceId)).toEqual({
+      workflows: 'refused',
+      ghAllowed: ['gh release create'],
+    });
+  });
+
+  it('saves Settings changes in the file, not the database', async () => {
+    await saveSparkRules(t.db, t.workspaceId, { workflows: 'refused', ghAllowed: ['gh pr ready'] });
+    const { permissions } = await fileRules();
+    expect(permissions.deny).toContain('Gh(run cancel)');
+    expect(permissions.allow).toEqual(['Gh(pr ready)']);
+    const { rows } = await t.db.query<{ gh_workflows: string }>(
+      'SELECT gh_workflows FROM profiles WHERE workspace_id = $1',
+      [t.workspaceId],
+    );
+    expect(rows[0]?.gh_workflows ?? 'mode').toBe('mode');
+  });
+
+  it('hands a rule the user deleted to the agent’s mode in the gate', async () => {
+    await seedWorkspaceRules(t.db, t.workspaceId);
+    const text = await readFile(userFile(), 'utf8');
+    await writeFile(userFile(), text.replace('"Gh(*)"', '"Gh(issue create)"'));
+    const run = await doRun(t, root);
+    const { gate } = gateFor(run.runId, 'bypassPermissions');
+    const answer = await gate.review(commandRequest(root, RELEASE), signal());
+    expect(answer).toMatchObject({ allowed: true });
+  });
+
+  it('reports what it could not use and keeps the recommended rules for a broken file', async () => {
+    await seedWorkspaceRules(t.db, t.workspaceId);
+    await writeFile(userFile(), '{ "permissions": { "deny": ["Push", "Nope"] }, "theme": 1 }');
+    expect((await sparkRules(t.db, t.workspaceId)).problems).toEqual([
+      `settings.json: "theme" is kept but Spark doesn't use it`,
+      `settings.json: "Nope" in deny isn't a Spark rule, so it is not applied`,
+    ]);
+    await writeFile(userFile(), '{ nope');
+    const run = await doRun(t, root);
+    const { answer } = await refusedCard(run, RELEASE);
+    expect(answer).toMatchObject({ allowed: false });
   });
 });
