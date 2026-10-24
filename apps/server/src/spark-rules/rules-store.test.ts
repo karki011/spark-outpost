@@ -5,7 +5,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { RECOMMENDED_RULES, recommendedRulesText } from './recommended.ts';
 import { NO_SPARK_RULES } from './resolve.ts';
 import { RulesFileError } from './rules-file.ts';
+import { rulesTextHash } from './accepted.ts';
 import {
+  acceptOutsideChange,
   changeSparkRules,
   loadSparkRules,
   MANAGED_RULES_FILE,
@@ -116,7 +118,9 @@ describe('changes', () => {
 
   it('keep what Spark does not use', async () => {
     await mkdir(join(dir, 'spark'));
-    await writeFile(files.user, JSON.stringify({ permissions: {}, note: 'mine' }));
+    const text = JSON.stringify({ permissions: {}, note: 'mine' });
+    await writeFile(files.user, text);
+    await acceptOutsideChange(files, rulesTextHash({ kind: 'text', text }));
     const loaded = await changeSparkRules(files, () => ({
       add: [['allow', 'Gh(release create)']],
     }));

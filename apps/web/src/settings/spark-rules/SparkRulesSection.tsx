@@ -5,6 +5,7 @@ import { useRemoteClient } from '../../phone/use-remote-client.ts';
 import { LockIcon } from '../../ui/icons.tsx';
 import { QueryWait } from '../../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
+import { RulesOutsideNotice } from '../RulesOutsideNotice.tsx';
 import { GhAllowedList } from './GhAllowedList.tsx';
 import { RULE_GROUPS } from './rule-rows.ts';
 import { RuleRow } from './RuleRow.tsx';
@@ -59,6 +60,7 @@ function RulesPage({ rules }: { rules: SparkRules }) {
       ) : (
         <RulesActions malformed={rules.malformed} />
       )}
+      {rules.outsideChange && <RulesOutsideNotice change={rules.outsideChange} />}
       <RulesFileProblems rules={rules} />
       <RuleGroups rules={rules} editable={editable} />
       <UnusedEntries rules={rules} />

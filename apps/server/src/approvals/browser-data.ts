@@ -2,6 +2,7 @@ import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import { sparkDataDir } from '../config.ts';
 import { globToRegExp } from '../projects/path-policy.ts';
+import { acceptedRecordPath } from '../spark-rules/accepted.ts';
 import { sparkRulesFiles, type SparkRulesFiles } from '../spark-rules/rules-store.ts';
 import { commandDirs, commandTree, treeWords } from './command-tree.ts';
 import { resolveCommandPath } from './commands.ts';
@@ -40,10 +41,12 @@ export const BROWSER_DATA_ENTRIES = [
 ] as const;
 
 export const SPARK_RULES_REASON =
-  "Spark's own rules (settings.json in Spark's data folder, or the company's managed-settings.json) can't be read or changed by an agent; the user changes them";
+  "Spark's own rules (settings.json in Spark's data folder, or the company's managed-settings.json) can't be read or changed by an agent directly; ask with spark_rules_edit and the user decides on a card";
 
 export function sparkRulesEntries(files: SparkRulesFiles = sparkRulesFiles()): string[] {
-  return [path.resolve(files.user), path.resolve(files.managed)];
+  return [files.user, acceptedRecordPath(files.user), files.managed].map((file) =>
+    path.resolve(file),
+  );
 }
 
 export function entryPath(dataDir: string, entry: string): string {

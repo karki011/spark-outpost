@@ -4,6 +4,7 @@ import {
   type Approval,
   type GhAllowedRequest,
   type SetSparkRuleRequest,
+  type OutsideChangeAnswer,
   type SparkRuleAnswer,
   type SparkRules,
 } from '@spark-outpost/contracts';
@@ -25,6 +26,11 @@ export const sparkRulesApi = {
     }),
   useRecommended: (): Promise<SparkRules> =>
     request(sparkRulesSchema, '/spark-rules/recommended', { method: 'POST' }),
+  answerOutside: (answer: OutsideChangeAnswer): Promise<SparkRules> =>
+    request(sparkRulesSchema, '/spark-rules/outside-change', {
+      method: 'POST',
+      body: JSON.stringify(answer),
+    }),
   answer: (id: string, answer: SparkRuleAnswer): Promise<Approval> =>
     request(approvalSchema, `/approvals/${id}/spark-rule`, {
       method: 'POST',

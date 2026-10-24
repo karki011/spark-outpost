@@ -3,6 +3,11 @@ import { writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import type { Db } from '../../apps/server/src/persistence/db.ts';
+import {
+  acceptedOf,
+  acceptedRecordPath,
+  acceptedRecordText,
+} from '../../apps/server/src/spark-rules/accepted.ts';
 import { recommendedRulesText } from '../../apps/server/src/spark-rules/recommended.ts';
 import { seedConversation, seedTurn } from '../../apps/server/test/outcome-seed.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
@@ -47,7 +52,10 @@ async function refusedChat(refused: readonly Refused[]): Promise<void> {
   const db = openTestDb();
   try {
     const workspaceId = await ensureLocalWorkspace(db);
-    writeFileSync(SPARK_RULES_FILE, recommendedRulesText({ workflows: 'refused', ghAllowed: [] }));
+    const text = recommendedRulesText({ workflows: 'refused', ghAllowed: [] });
+    writeFileSync(SPARK_RULES_FILE, text);
+    const record = acceptedRecordText(acceptedOf({ kind: 'text', text }));
+    writeFileSync(acceptedRecordPath(SPARK_RULES_FILE), record);
     const conversationId = await seedConversation(db, workspaceId);
     const runId = await seedTurn(db, conversationId, { request: 'Deploy alfa' });
     for (const card of refused) await storeRefused(db, runId, card);

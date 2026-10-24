@@ -2,10 +2,12 @@ import { Router } from 'express';
 import {
   ghAllowedRequestSchema,
   setSparkRuleRequestSchema,
+  outsideChangeAnswerSchema,
   sparkRuleAnswerRequestSchema,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import {
+  answerOutsideChange,
   setGhAllowed,
   setSparkRule,
   sparkRules,
@@ -51,6 +53,11 @@ export function sparkRulesRoutes({ db, workspaceId, fixedRunProvider }: SparkRul
 
   router.post('/spark-rules/recommended', async (_req, res) => {
     res.json(await useRecommendedRules());
+  });
+
+  router.post('/spark-rules/outside-change', async (req, res) => {
+    const answer = parseBody(outsideChangeAnswerSchema, req);
+    res.json(await answerOutsideChange(answer));
   });
 
   router.post('/approvals/:id/spark-rule', async (req, res) => {

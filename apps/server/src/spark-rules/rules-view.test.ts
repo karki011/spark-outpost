@@ -1,9 +1,15 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { rulesTextHash } from './accepted.ts';
 import { recommendedRulesText } from './recommended.ts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { changeSparkRules, loadSparkRules, type SparkRulesFiles } from './rules-store.ts';
+import {
+  acceptOutsideChange,
+  changeSparkRules,
+  loadSparkRules,
+  type SparkRulesFiles,
+} from './rules-store.ts';
 import {
   choiceChange,
   ghAllowedChange,
@@ -34,7 +40,11 @@ afterEach(async () => {
 const view = async () => sparkRulesView(await loadSparkRules(files));
 const row = async (id: string) => (await view()).rows.find((entry) => entry.row === id);
 const fileJson = async () => JSON.parse(await readFile(files.user, 'utf8')) as RulesJson;
-const writeUser = (value: unknown) => writeFile(files.user, JSON.stringify(value, null, 2));
+const writeUser = async (value: unknown) => {
+  const text = JSON.stringify(value, null, 2);
+  await writeFile(files.user, text);
+  await acceptOutsideChange(files, rulesTextHash({ kind: 'text', text }));
+};
 
 describe('the Spark rules page view', () => {
   it('shows the recommended rules as set by your file', async () => {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { outsideChangeSchema } from './spark-rules-edit.ts';
 
 export const ghRuleChoiceSchema = z.enum(['refused', 'mode']);
 export type GhRuleChoice = z.infer<typeof ghRuleChoiceSchema>;
@@ -113,6 +114,7 @@ export const sparkRulesSchema = z.object({
   unused: z.array(unusedRuleEntrySchema),
   problems: z.array(sparkRulesProblemSchema),
   malformed: z.boolean(),
+  outsideChange: outsideChangeSchema.optional(),
 });
 export type SparkRules = z.infer<typeof sparkRulesSchema>;
 

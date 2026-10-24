@@ -7,6 +7,7 @@ const BROWSER_GROUP_MAX_CHARS = 7_500;
 const ATLASSIAN_GROUPS_MAX_CHARS = 4_600;
 const SERVICENOW_GROUP_MAX_CHARS = 3_000;
 const ARTIFACT_TOOL_MAX_CHARS = 1_500;
+const RULES_EDIT_TOOL_MAX_CHARS = 1_000;
 
 describe('the size of the Spark tool list a session is sent', () => {
   it('stays within the budget for a plain chat with nothing connected', async () => {
@@ -17,9 +18,11 @@ describe('the size of the Spark tool list a session is sent', () => {
       'artifacts',
       'mcp_servers',
       'other',
+      'rules_edit',
       'sparks',
     ]);
     expect(size.groups.artifacts).toBeLessThanOrEqual(ARTIFACT_TOOL_MAX_CHARS);
+    expect(size.groups.rules_edit).toBeLessThanOrEqual(RULES_EDIT_TOOL_MAX_CHARS);
   });
 
   it('adds the outpost tools only for a chat that can use them', async () => {

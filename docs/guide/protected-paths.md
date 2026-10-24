@@ -30,7 +30,7 @@ Even with no rules:
 
 - Reading, copying or changing Spark's browser data: Browser profiles, **Personal** included, sign-in storage and the history database.
 - Your ChatGPT or Claude account's own apps and connectors; add MCP servers in Spark.
-- `--no-verify`, and reading or changing Spark's rules files.
+- `--no-verify`, and reading or changing Spark's rules files directly.
 - Printing the GitHub token (`gh auth token`).
 
 A blocked step reads "Refused …".
@@ -55,6 +55,8 @@ Fixed: Spark's ports, the [always refused](#what-is-always-refused) list and the
 
 **Settings → Spark rules** (Mac) sets each rule in your file; **Use recommended rules** adds the table's choices. Company rules are locked. A refusal shows a [card](cards.md#around-the-result).
 
+`spark_rules_edit` asks on the Mac. **Allow for this session**: one file, that chat, your turns, same agent and mode. Outside edits wait for **Review**.
+
 ## Secret files
 
 | Kind             | Patterns                                                                                       |
@@ -69,7 +71,7 @@ Ship leaves these out of commits.
 
 An agent may push the chat's own branch and open its pull request only when:
 
-- your message asks, such as "open a PR" or "push it" ("push it, but don't open a PR" allows only the push);
+- your message asks, such as "open a PR" or "push it" (which allows only the push);
 - the chat is at **Full auto → PR**;
 - the agent's mode is **Auto**, **Bypass permissions** or **Full access**;
 - the turn fixes [feedback](pr-follow-up.md) on the chat's own open pull request.

@@ -48,7 +48,8 @@ export type SparkToolNeed =
   | 'jira'
   | 'confluence'
   | 'servicenow'
-  | 'ticket_create';
+  | 'ticket_create'
+  | 'rules_edit';
 
 export interface SparkTool {
   name: string;

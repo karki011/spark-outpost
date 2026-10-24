@@ -12,11 +12,14 @@ import {
 import { listQueue } from '../src/persistence/chat-queue.ts';
 import {
   useRecommendedRules,
+  answerOutsideChange,
   setGhAllowed,
   setSparkRule,
   sparkRules,
   sparkRulesForRun,
 } from '../src/persistence/spark-rules.ts';
+import { rulesTextHash } from '../src/spark-rules/accepted.ts';
+import { acceptRulesBaseline } from '../src/spark-rules/rules-store.ts';
 import { createApprovalGate } from '../src/workflow/approval-gate.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import { publishGrant } from '../src/workflow/publish-context.ts';
@@ -263,10 +266,11 @@ describe("Spark's rules file", () => {
   });
 
   it('takes an allowed command out of ask too, so it really follows the mode', async () => {
-    await writeFile(
-      userFile(),
-      JSON.stringify({ permissions: { ask: ['Gh(release create)', 'Gh(workflow run)'] } }),
-    );
+    const text = JSON.stringify({
+      permissions: { ask: ['Gh(release create)', 'Gh(workflow run)'] },
+    });
+    await writeFile(userFile(), text);
+    await answerOutsideChange({ keep: 'file', fileHash: rulesTextHash({ kind: 'text', text }) });
     await setGhAllowed('gh release create', true);
     await setSparkRule('workflows', 'allow');
     const { permissions } = await fileRules();
@@ -309,9 +313,42 @@ describe("Spark's rules file", () => {
     expect(view.malformed).toBe(false);
     await writeFile(userFile(), '{ nope');
     expect(await sparkRules()).toMatchObject({ malformed: true });
-    await expect(setSparkRule('Push', 'ask')).rejects.toThrow("can't be read");
+    await expect(setSparkRule('Push', 'ask')).rejects.toThrow('changed outside Spark');
     const run = await doRun(t, root);
     const { answer } = await refusedCard(run, RELEASE);
     expect(answer).toMatchObject({ allowed: false });
+  });
+
+  it('keeps the accepted rules in the gate until the user reviews a change made outside Spark', async () => {
+    await acceptRulesBaseline();
+    const text = await readFile(userFile(), 'utf8');
+    await writeFile(userFile(), text.replace('"Gh(*)"', '"Gh(issue create)"'));
+    const view = await sparkRules();
+    expect(view.outsideChange).toMatchObject({
+      added: [{ effect: 'deny', rule: 'Gh(issue create)' }],
+      removed: [{ effect: 'deny', rule: 'Gh(*)' }],
+    });
+    const run = await doRun(t, root);
+    const { answer } = await refusedCard(run, RELEASE);
+    expect(answer).toMatchObject({ allowed: false });
+    const kept = await answerOutsideChange({
+      keep: 'spark',
+      fileHash: view.outsideChange!.fileHash,
+    });
+    expect(kept.outsideChange).toBeUndefined();
+    expect(await readFile(userFile(), 'utf8')).toBe(text);
+  });
+
+  it('sees a rules file created outside Spark when there was none', async () => {
+    await rm(userFile());
+    await acceptRulesBaseline();
+    await writeFile(userFile(), JSON.stringify({ permissions: { allow: ['Gh(*)'] } }));
+    const view = await sparkRules();
+    expect(view.outsideChange?.added).toEqual([{ effect: 'allow', rule: 'Gh(*)' }]);
+    const kept = await answerOutsideChange({
+      keep: 'file',
+      fileHash: view.outsideChange!.fileHash,
+    });
+    expect(kept.outsideChange).toBeUndefined();
   });
 });

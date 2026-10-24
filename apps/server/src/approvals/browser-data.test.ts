@@ -172,6 +172,7 @@ describe("Spark's own rules file is refused to chats in every mode", () => {
     `echo '{}' > "${DATA}/spark/settings.json"`,
     'cat ../../../settings.json',
     `cat "${COMPANY}"`,
+    `echo x > "${DATA}/spark/.settings-accepted.json"`,
   ])('%s', async (command) => {
     expect(await verdicts(request({ command }))).toEqual(refused);
   });
@@ -249,10 +250,12 @@ describe("Spark's own rules file is refused to chats in every mode", () => {
     expect(await verdicts(request({ command: 'ls ~/*' }))).not.toEqual(refused);
   });
 
-  it('gives Claude read and edit deny rules for both files', () => {
+  it('gives Claude read and edit deny rules for both files and the accepted copy', () => {
     expect(sparkRulesFlagRules()).toEqual([
       `Read(/${DATA}/spark/settings.json)`,
       `Edit(/${DATA}/spark/settings.json)`,
+      `Read(/${DATA}/spark/.settings-accepted.json)`,
+      `Edit(/${DATA}/spark/.settings-accepted.json)`,
       `Read(/${COMPANY})`,
       `Edit(/${COMPANY})`,
     ]);

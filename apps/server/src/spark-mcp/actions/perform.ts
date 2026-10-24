@@ -26,6 +26,7 @@ import { performServiceNowEdit } from './servicenow-perform.ts';
 import { performAskSpark } from './ask-spark-perform.ts';
 import { performPublishArtifact } from './artifact-actions.ts';
 import { performStartOutpost } from './outpost-actions.ts';
+import { performRulesEdit } from './rules-edit-perform.ts';
 import type { StartedBy } from '../../outposts/start-outpost.ts';
 
 export const OPEN_PR_RETIRED =
@@ -125,5 +126,7 @@ export function performSparkAction(
       return performAskSpark(context, action);
     case 'publish_artifact':
       return performPublishArtifact(context, action);
+    case 'rules_edit':
+      return performRulesEdit(action);
   }
 }

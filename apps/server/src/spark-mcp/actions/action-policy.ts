@@ -104,6 +104,7 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     'start|split|spin up|kick off|launch|create',
     'sub-?chats?|outposts?|sub-?tasks?|parallel chats?|separate chats?',
   ),
+  rules_edit: null,
   confluence_edit: asked(
     'create|write|add|draft|publish|change|update|edit|rename|rewrite|delete|remove|trash|comment|post',
     'confluence|wiki|pages?|docs?|comments?',

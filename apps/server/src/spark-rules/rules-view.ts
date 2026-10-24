@@ -6,6 +6,7 @@ import {
   type SparkRuleRowState,
   type SparkRules,
 } from '@spark-outpost/contracts';
+import { outsideView } from './outside-view.ts';
 import { RECOMMENDED_RULES, WORKFLOW_RULES } from './recommended.ts';
 import { ghCommandRuling, NO_SPARK_RULES, type SparkRuleSet } from './resolve.ts';
 import { ghPrefixOfRule, ghRuleId, isFloorRuleId } from './rule-ids.ts';
@@ -70,6 +71,7 @@ function allowedEntries(rules: SparkRuleSet): GhAllowedEntry[] {
 
 export function sparkRulesView(loaded: LoadedRules): SparkRules {
   const { rules, userFile } = loaded;
+  const outside = outsideView(loaded);
   return {
     rows: sparkRuleRowSchema.options.map((row) => rowState(rules, row)),
     ghAllowed: allowedEntries(rules),
@@ -79,6 +81,7 @@ export function sparkRulesView(loaded: LoadedRules): SparkRules {
         problem.file === 'managed' || loaded.userFailedSafe || !namesOneEntry(problem.message),
     ),
     malformed: loaded.userFailedSafe,
+    ...(outside ? { outsideChange: outside } : {}),
   };
 }
 

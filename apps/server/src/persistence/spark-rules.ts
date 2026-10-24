@@ -1,5 +1,6 @@
 import {
   GH_ALLOWED_MAX,
+  type OutsideChangeAnswer,
   type SparkRuleChoice,
   type SparkRuleRow,
   type SparkRules,
@@ -7,8 +8,10 @@ import {
 import { normalizeCommand } from '../approvals/commands.ts';
 import type { SparkRuleContext } from '../approvals/gh-rules.ts';
 import {
+  acceptOutsideChange,
   changeSparkRules,
   loadSparkRules,
+  restoreAcceptedRules,
   sparkRulesFiles,
   type SparkRulesFiles,
 } from '../spark-rules/rules-store.ts';
@@ -62,6 +65,17 @@ export async function useRecommendedRules(
   files: SparkRulesFiles = sparkRulesFiles(),
 ): Promise<SparkRules> {
   return sparkRulesView(await changeSparkRules(files, () => recommendedChange()));
+}
+
+export async function answerOutsideChange(
+  answer: OutsideChangeAnswer,
+  files: SparkRulesFiles = sparkRulesFiles(),
+): Promise<SparkRules> {
+  const loaded =
+    answer.keep === 'file'
+      ? await acceptOutsideChange(files, answer.fileHash)
+      : await restoreAcceptedRules(files, answer.fileHash);
+  return sparkRulesView(loaded);
 }
 
 interface RunRulesRow {

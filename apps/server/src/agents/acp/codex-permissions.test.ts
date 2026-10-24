@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SECRET_FILE_PATTERNS } from '../../projects/secret-files.ts';
+import { acceptedRecordPath } from '../../spark-rules/accepted.ts';
 import { codexPermissionProfiles } from './codex-permissions.ts';
 
 type Profile = {
@@ -41,6 +42,9 @@ describe('codexPermissionProfiles', () => {
         '/nowhere/Spark Outpost/browser-origins.json': 'deny',
       });
       expect(profile.filesystem).not.toHaveProperty('/nowhere/Spark Outpost');
+      expect(profile.filesystem).toMatchObject({
+        [acceptedRecordPath(process.env.SPARK_RULES_FILE!)]: 'deny',
+      });
     }
     const plain = codexPermissionProfiles(null) as Record<string, Profile>;
     expect(Object.keys(plain.agent!.filesystem)).toEqual([':project_roots']);
