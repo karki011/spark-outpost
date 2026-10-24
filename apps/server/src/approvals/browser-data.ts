@@ -1,6 +1,7 @@
 import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import { sparkDataDir } from '../config.ts';
+import { globToRegExp } from '../projects/path-policy.ts';
 import { sparkRulesFiles, type SparkRulesFiles } from '../spark-rules/rules-store.ts';
 import { commandTree, treeWords } from './command-tree.ts';
 import { resolveCommandPath } from './commands.ts';
@@ -119,6 +120,23 @@ export function globReachesBrowserData(
   });
 }
 
+function widenedGlob(word: string): string {
+  return word.replace(/\[[^\]/]*\]/g, '?').replace(/\{[^}/]*\}/g, '*');
+}
+
+function globNamesEntry(
+  word: string,
+  cwd: string,
+  home: string,
+  dataDir: string,
+  entries: Entries,
+): boolean {
+  const expanded = word === '~' || word.startsWith('~/') ? path.join(home, word.slice(1)) : word;
+  if (expanded.search(GLOB) < 0) return false;
+  const pattern = globToRegExp(comparable(path.resolve(cwd, widenedGlob(expanded))));
+  return protectedEntries(dataDir, entries).some((entry) => pattern.test(entry));
+}
+
 export function sparkRulesFlagRules(files: SparkRulesFiles = sparkRulesFiles()): string[] {
   const patterns = sparkRulesEntries(files).map((file) => `/${file}`);
   return patterns.flatMap((pattern) => [`Read(${pattern})`, `Edit(${pattern})`]);
@@ -160,7 +178,8 @@ function touchesEntries(
   return words.some(
     (word) =>
       isEntry(resolveCommandPath(word, cwd, request.home), dataDir, entries, whole) ||
-      globReachesBrowserData(word, cwd, request.home, dataDir, entries),
+      globReachesBrowserData(word, cwd, request.home, dataDir, entries) ||
+      globNamesEntry(word, cwd, request.home, dataDir, entries),
   );
 }
 

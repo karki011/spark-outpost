@@ -77,8 +77,14 @@ function WorkflowRow({ rules, locked }: { rules: SparkRules; locked: boolean }) 
   const save = useRulesSave();
   const value =
     save.isPending && save.variables?.workflows ? save.variables.workflows : rules.workflows;
+  const shown: RuleStanding = rules.workflows === 'refused' ? 'refused' : 'mode';
+  const mixed = rules.workflowCommands.some((command) => command.standing !== shown);
+  const perCommand = rules.workflowCommands
+    .map((command) => `${command.prefix}: ${STANDING_LABEL[command.standing]}`)
+    .join(' · ');
   const hint =
     save.error?.message ??
+    (mixed && !save.isPending ? `${perCommand}. Choosing a setting sets all three.` : null) ??
     (value === 'mode'
       ? `${WORKFLOW_COMMANDS} run at once in Auto, Bypass permissions, Approve for me and Full access, and with a card otherwise. It counts as a send.`
       : `${WORKFLOW_COMMANDS} are refused in every mode, with a card to allow them.`);

@@ -22,12 +22,12 @@ The first case covers every request [an agent sends](outpost-asks.md), a [story]
 
 ## What never changes
 
-| Rule                                              | Means                                                         |
-| ------------------------------------------------- | ------------------------------------------------------------- |
-| Nothing merges.                                   | You merge pull requests yourself.                             |
-| No force pushes.                                  | With the recommended [rules](protected-paths.md#spark-rules). |
-| A chat pushes only its own branch.                | With the recommended rules.                                   |
-| A request can't raise a chat's mode.              | You set mode and autonomy in each chat.                       |
-| A proposed chat's mode is capped.                 | At the proposing chat's; only you raise it.                   |
-| A [stacked](stacked-pull-requests.md) push waits. | Until the branch under it is pushed.                          |
-| [Protected paths](protected-paths.md) still ask.  | Whoever wrote the request.                                    |
+| Rule                                              | Means                                                                     |
+| ------------------------------------------------- | ------------------------------------------------------------------------- |
+| Nothing merges.                                   | You merge pull requests yourself.                                         |
+| Force pushes hold to confirm.                     | Lease only, with the recommended [rules](protected-paths.md#spark-rules). |
+| A chat pushes only its own branch.                | With the recommended rules.                                               |
+| A request can't raise a chat's mode.              | You set mode and autonomy in each chat.                                   |
+| A proposed chat's mode is capped.                 | At the proposing chat's; only you raise it.                               |
+| A [stacked](stacked-pull-requests.md) push waits. | Until the branch under it is pushed.                                      |
+| [Protected paths](protected-paths.md) still ask.  | Whoever wrote the request.                                                |
