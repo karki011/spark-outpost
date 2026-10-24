@@ -15,8 +15,9 @@ function steer(id: string, runId: string, body: string, extra: object) {
 async function withSteers(page: Page, status: 'succeeded' | 'cancelled') {
   await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
-    const response = await route.fetch();
-    const detail = (await response.json()) as ConversationDetail;
+    const response = await route.fetch().catch(() => null);
+    const detail = (await response?.json().catch(() => null)) as ConversationDetail | null;
+    if (!response || !detail) return route.abort().catch(() => undefined);
     const run = detail.runs.find((candidate) => !candidate.parentRunId)!;
     const at = run.createdAt;
     const anchor = {
