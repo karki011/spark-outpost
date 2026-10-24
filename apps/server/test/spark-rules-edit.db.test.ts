@@ -33,20 +33,29 @@ async function setRun(provider: string, mode: string, origin = 'ui'): Promise<vo
   );
 }
 
-async function openSession(provider = 'claude', sessionId = randomUUID()): Promise<string> {
-  await t.db.query(
-    `UPDATE provider_sessions SET closed_at = now(), close_reason = 'replaced'
-     WHERE conversation_id = $1 AND closed_at IS NULL`,
-    [chat.conversationId],
-  );
-  const id = randomUUID();
+async function insertSession(provider: string, agentKey: string): Promise<void> {
   await t.db.query(
     `INSERT INTO provider_sessions
-       (id, conversation_id, provider, agent_key, session_id, cwd, settings_hash)
-     VALUES ($1, $2, $3, 'chat:do', $4, '/tmp', 'h')`,
-    [id, chat.conversationId, provider, sessionId],
+       (id, conversation_id, provider, agent_key, session_id, cwd, settings_hash, last_used_at)
+     VALUES ($1, $2, $3, $4, $5, '/tmp', 'h', now() + ($6 || ' minutes')::interval)`,
+    [
+      randomUUID(),
+      chat.conversationId,
+      provider,
+      agentKey,
+      randomUUID(),
+      agentKey === 'chat:do' ? 0 : 60,
+    ],
   );
-  return id;
+}
+
+async function openSession(provider = 'claude'): Promise<void> {
+  await t.db.query(
+    `UPDATE provider_sessions SET closed_at = now(), close_reason = 'replaced'
+     WHERE conversation_id = $1 AND closed_at IS NULL AND starts_with(agent_key, 'chat:')`,
+    [chat.conversationId],
+  );
+  await insertSession(provider, 'chat:do');
 }
 
 async function nextTurn(provider: string, mode: string): Promise<void> {
@@ -235,6 +244,13 @@ describe('Allow for this session', () => {
   });
 
   it('asks again in a new agent session', async () => {
+    await grantSession();
+    await openSession();
+    await asksAgain();
+  });
+
+  it("asks again in a new chat session while a child's session stays open", async () => {
+    await insertSession('claude', `key:${randomUUID()}`);
     await grantSession();
     await openSession();
     await asksAgain();

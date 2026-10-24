@@ -79,8 +79,11 @@ export async function rulesSession(db: Queryable, runId: string): Promise<RulesS
              WHERE post.id = r.user_message_id) AS from_user,
             (SELECT s.id FROM provider_sessions s
              WHERE s.conversation_id = r.conversation_id AND s.provider = r.provider
-               AND s.closed_at IS NULL
-             ORDER BY s.last_used_at DESC, s.created_at DESC LIMIT 1) AS session_row
+               AND s.closed_at IS NULL AND starts_with(s.agent_key, 'chat:')
+             ORDER BY EXISTS (SELECT 1 FROM provider_session_events e
+                              WHERE e.session_row_id = s.id AND e.run_id = r.id) DESC,
+                      s.last_used_at DESC, s.created_at DESC
+             LIMIT 1) AS session_row
      FROM runs r JOIN conversations c ON c.id = r.conversation_id
        LEFT JOIN provider_capabilities cap
          ON cap.workspace_id = c.workspace_id AND cap.provider = r.provider
