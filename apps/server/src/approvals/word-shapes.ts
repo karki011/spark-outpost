@@ -68,7 +68,7 @@ export function braceExpansions(word: string): string[] | null {
   return shapes;
 }
 
-function homeExpanded(word: string, home: string): string {
+export function homeExpanded(word: string, home: string): string {
   const withHome = word.replace(HOME_VARIABLE, home);
   if (withHome === '~' || withHome.startsWith('~/')) return path.join(home, withHome.slice(1));
   const user = USER_HOME.exec(withHome);

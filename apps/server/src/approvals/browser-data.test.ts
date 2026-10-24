@@ -218,6 +218,13 @@ describe("Spark's own rules file is refused to chats in every mode", () => {
     'cd /Users/me/rules && cat spark-settings.json',
     'cd /Users/me/work && cd ../rules; cat spark-settings.json',
     'cd "$SOMEWHERE" && cat spark-settings.json',
+    'cd ~me/rules && cat spark-settings.json',
+    'cd ~me && cd rules && cat spark-settings.json',
+    'pushd ~me/rules && cat spark-settings.json',
+    'cd $HOME/rules && cat spark-settings.json',
+    'cd ${HOME}/rules; cat spark-settings.json',
+    'cd - && cat spark-settings.json',
+    'cd $VAR/rules && cat spark-settings.json',
   ])('refuses a shell expansion that can reach the configured file: %s', async (command) => {
     vi.stubEnv('SPARK_RULES_FILE', MOVED);
     expect(await verdicts(request({ command }))).toEqual(refused);
@@ -229,6 +236,8 @@ describe("Spark's own rules file is refused to chats in every mode", () => {
     'cat $(cat list.txt)',
     'cd /Users/me/rules && cat other.json',
     'cat ~other/rules/spark-settings.json',
+    'cd ~other/rules && cat spark-settings.json',
+    'cd ~me/notes && cat spark-settings.json',
   ])('leaves an expansion that cannot reach it alone: %s', async (command) => {
     vi.stubEnv('SPARK_RULES_FILE', MOVED);
     expect(await verdicts(request({ command }))).not.toEqual(refused);
