@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import pg from 'pg';
@@ -13,6 +13,7 @@ import {
 import { createDb, POOL_MAX, type Db } from '../src/persistence/db.ts';
 import { ensureLocalWorkspace, sendUserMessage } from '../src/persistence/conversations.ts';
 import { runMigrations } from '../src/persistence/migrate.ts';
+import { recommendedRulesText } from '../src/spark-rules/recommended.ts';
 import { saveConnection } from '../src/persistence/setup.ts';
 import type { RunInput } from '../src/workflow/run-input.ts';
 import { truncateTables } from '../src/persistence/truncate.ts';
@@ -109,6 +110,7 @@ async function useFreshRulesFiles(): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), 'spark-rules-db-'));
   process.env.SPARK_RULES_FILE = join(dir, 'settings.json');
   process.env.SPARK_MANAGED_RULES_FILE = join(dir, 'managed-settings.json');
+  await writeFile(process.env.SPARK_RULES_FILE, recommendedRulesText());
   return dir;
 }
 

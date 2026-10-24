@@ -1,10 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join } from 'node:path';
-import { DEFAULT_SPARK_RULES } from '@spark-outpost/contracts';
 import { sparkDataDir } from '../config.ts';
 import { DEFAULT_BRANCH_PREFIX } from '../projects/worktrees.ts';
-import { recommendedRulesText, type GhSeed } from './recommended.ts';
+import { RECOMMENDED_RULES } from './recommended.ts';
 import {
   acceptedOf,
   acceptedRead,
@@ -39,13 +38,11 @@ export interface LoadedRules {
   rules: SparkRuleSet;
   problems: RuleProblem[];
   userFile: RulesFileRead;
-  managedFile: RulesFileRead;
   outside: OutsideChange | null;
 }
 
 export const MANAGED_RULES_FILE = '/Library/Application Support/SparkOutpost/managed-settings.json';
 export const USER_RULES_NAME = 'settings.json';
-export const SEEDED_MARKER = '.settings-seeded';
 const MAX_FILE_BYTES = 256 * 1024;
 
 function absolute(value: string | undefined): string | null {
@@ -65,19 +62,21 @@ export function sparkRulesFiles(env: NodeJS.ProcessEnv = process.env): SparkRule
   };
 }
 
-export function seededMarker(files: SparkRulesFiles): string {
-  return join(dirname(files.user), SEEDED_MARKER);
-}
-
-async function exists(file: string): Promise<boolean> {
-  return (await stat(file).catch(() => null)) !== null;
-}
-
 export type RulesFileRead = FileText;
 
+const ABSENT_CODES: ReadonlySet<string> = new Set(['ENOENT', 'ENOTDIR']);
+
+function absentError(error: unknown): boolean {
+  return ABSENT_CODES.has((error as NodeJS.ErrnoException | null)?.code ?? '');
+}
+
 export async function readRulesFile(file: string): Promise<RulesFileRead> {
-  const found = await stat(file).catch(() => null);
-  if (!found) return { kind: 'missing' };
+  let found;
+  try {
+    found = await stat(file);
+  } catch (error) {
+    return absentError(error) ? { kind: 'missing' } : { kind: 'unreadable' };
+  }
   if (!found.isFile() || found.size > MAX_FILE_BYTES) return { kind: 'unreadable' };
   const text = await readFile(file, 'utf8').catch(() => null);
   return text === null ? { kind: 'unreadable' } : { kind: 'text', text };
@@ -88,22 +87,17 @@ interface Tier {
   problems: string[];
 }
 
-function failSafe(gh: GhSeed, problem: string): Tier {
-  const lists = parseRulesFile(recommendedRulesText(gh)).lists;
+function failSafe(problem: string): Tier {
+  const lists = RECOMMENDED_RULES.user;
   return { lists, problems: [`${problem}, so Spark uses its recommended rules`] };
 }
 
-function tierFrom(read: RulesFileRead, gh: GhSeed): Tier {
-  if (read.kind === 'unreadable') return failSafe(gh, "The file can't be read");
+function tierFrom(read: RulesFileRead): Tier {
+  if (read.kind === 'unreadable') return failSafe("The file can't be read");
   if (read.kind === 'missing') return { lists: NO_RULE_LISTS, problems: [] };
   const parsed = parseRulesFile(read.text);
-  if (parsed.malformed) return failSafe(gh, parsed.problems[0] ?? 'The file is malformed');
+  if (parsed.malformed) return failSafe(parsed.problems[0] ?? 'The file is malformed');
   return { lists: parsed.lists, problems: parsed.problems };
-}
-
-async function userTier(files: SparkRulesFiles, gh: GhSeed, read: RulesFileRead): Promise<Tier> {
-  if (read.kind !== 'missing' || (await exists(seededMarker(files)))) return tierFrom(read, gh);
-  return { lists: parseRulesFile(recommendedRulesText(gh)).lists, problems: [] };
 }
 
 export const OUTSIDE_CHANGE_PROBLEM =
@@ -120,15 +114,17 @@ function outsideChangeOf(read: RulesFileRead, accepted: AcceptedRules | null) {
   return { fileHash: rulesTextHash(read), acceptedHash: accepted.hash, accepted: accepted.text };
 }
 
-export async function loadSparkRules(files: SparkRulesFiles, gh: GhSeed): Promise<LoadedRules> {
+export async function loadSparkRules(
+  files: SparkRulesFiles = sparkRulesFiles(),
+): Promise<LoadedRules> {
   const [managedRead, userRead, accepted] = await Promise.all([
     readRulesFile(files.managed),
     readRulesFile(files.user),
     readAccepted(files.user),
   ]);
   const outside = outsideChangeOf(userRead, accepted);
-  const managed = tierFrom(managedRead, gh);
-  const user = await userTier(files, gh, outside && accepted ? acceptedRead(accepted) : userRead);
+  const managed = tierFrom(managedRead);
+  const user = tierFrom(outside && accepted ? acceptedRead(accepted) : userRead);
   const userProblems = outside ? [OUTSIDE_CHANGE_PROBLEM, ...user.problems] : user.problems;
   return {
     rules: { managed: managed.lists, user: user.lists },
@@ -137,7 +133,6 @@ export async function loadSparkRules(files: SparkRulesFiles, gh: GhSeed): Promis
       ...userProblems.map((message) => ({ file: 'user' as const, message })),
     ],
     userFile: userRead,
-    managedFile: managedRead,
     outside,
   };
 }
@@ -145,7 +140,7 @@ export async function loadSparkRules(files: SparkRulesFiles, gh: GhSeed): Promis
 export async function floorRulesNow(
   files: SparkRulesFiles = sparkRulesFiles(),
 ): Promise<SparkRuleSet> {
-  return (await loadSparkRules(files, DEFAULT_SPARK_RULES)).rules;
+  return (await loadSparkRules(files)).rules;
 }
 
 async function writeAtomically(file: string, text: string): Promise<void> {
@@ -164,22 +159,12 @@ async function recordAccepted(files: SparkRulesFiles, accepted: AcceptedRules): 
   await writeAtomically(acceptedRecordPath(files.user), acceptedRecordText(accepted));
 }
 
-export async function acceptRulesBaseline(files: SparkRulesFiles): Promise<void> {
+export async function acceptRulesBaseline(
+  files: SparkRulesFiles = sparkRulesFiles(),
+): Promise<void> {
   if (await readAccepted(files.user)) return;
   const read = await readRulesFile(files.user);
   if (read.kind !== 'unreadable') await recordAccepted(files, acceptedOf(read));
-}
-
-export async function seedSparkRules(files: SparkRulesFiles, gh: GhSeed): Promise<boolean> {
-  if ((await exists(files.user)) || (await exists(seededMarker(files)))) {
-    await acceptRulesBaseline(files);
-    return false;
-  }
-  const text = recommendedRulesText(gh);
-  await writeAtomically(files.user, text);
-  await writeFile(seededMarker(files), `${new Date().toISOString()}\n`, { mode: 0o600 });
-  await recordAccepted(files, acceptedOf({ kind: 'text', text }));
-  return true;
 }
 
 export class StaleRulesError extends RulesFileError {}
@@ -212,20 +197,18 @@ function currentText(read: RulesFileRead, name: string): string | null {
 
 export function changeSparkRules(
   files: SparkRulesFiles,
-  gh: GhSeed,
   change: (loaded: LoadedRules) => RuleChange,
   expectedHash?: string,
 ): Promise<LoadedRules> {
   return serialized(async () => {
-    await seedSparkRules(files, gh);
     await acceptRulesBaseline(files);
-    const loaded = await loadSparkRules(files, gh);
+    const loaded = await loadSparkRules(files);
     if (loaded.outside) throw new RulesFileError(OUTSIDE_CHANGE_REFUSAL);
     checkedHash(loaded.userFile, expectedHash, USER_RULES_NAME);
     const text = changedRulesText(currentText(loaded.userFile, USER_RULES_NAME), change(loaded));
     await writeAtomically(files.user, text);
     await recordAccepted(files, acceptedOf({ kind: 'text', text }));
-    return loadSparkRules(files, gh);
+    return loadSparkRules(files);
   });
 }
 
@@ -233,7 +216,6 @@ export type ManagedWrite = (file: string, text: string) => Promise<void>;
 
 export function changeManagedRules(
   files: SparkRulesFiles,
-  gh: GhSeed,
   change: RuleChange,
   expectedHash: string,
   write: ManagedWrite,
@@ -245,13 +227,12 @@ export function changeManagedRules(
       files.managed,
       changedRulesText(currentText(read, basename(files.managed)), change),
     );
-    return loadSparkRules(files, gh);
+    return loadSparkRules(files);
   });
 }
 
 export function acceptOutsideChange(
   files: SparkRulesFiles,
-  gh: GhSeed,
   fileHash: string,
 ): Promise<LoadedRules> {
   return serialized(async () => {
@@ -259,15 +240,15 @@ export function acceptOutsideChange(
     checkedHash(read, fileHash, USER_RULES_NAME);
     currentText(read, USER_RULES_NAME);
     await recordAccepted(files, acceptedOf(read));
-    return loadSparkRules(files, gh);
+    return loadSparkRules(files);
   });
 }
 
-export function restoreAcceptedRules(files: SparkRulesFiles, gh: GhSeed): Promise<LoadedRules> {
+export function restoreAcceptedRules(files: SparkRulesFiles): Promise<LoadedRules> {
   return serialized(async () => {
     const accepted = await readAccepted(files.user);
     if (accepted?.text != null) await writeAtomically(files.user, accepted.text);
     else if (accepted) await rm(files.user, { force: true });
-    return loadSparkRules(files, gh);
+    return loadSparkRules(files);
   });
 }

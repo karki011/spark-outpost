@@ -14,11 +14,11 @@ import {
   type RulesEditAction,
   type RulesTarget,
 } from '@spark-outpost/contracts';
-import { ghSeed, seedWorkspaceRules } from '../../persistence/spark-rules.ts';
 import { rulesTextHash } from '../../spark-rules/accepted.ts';
 import { effectiveDiff, unrecognisedRules } from '../../spark-rules/rule-diff.ts';
 import { NO_RULE_LISTS, parseRulesFile, type RuleLists } from '../../spark-rules/rules-file.ts';
 import {
+  acceptRulesBaseline,
   loadSparkRules,
   OUTSIDE_CHANGE_REFUSAL,
   readRulesFile,
@@ -47,14 +47,12 @@ interface Current {
   fileHash: string;
 }
 
-async function currentRules(context: SparkToolContext, target: RulesTarget): Promise<Current> {
-  const { db } = context.deps;
-  const { workspaceId } = context.scope;
+async function currentRules(target: RulesTarget): Promise<Current> {
   const files = sparkRulesFiles();
   const name = RULES_FILE_NAMES[target];
   if (target === 'user') {
-    await seedWorkspaceRules(db, workspaceId, files);
-    const loaded = await loadSparkRules(files, await ghSeed(db, workspaceId));
+    await acceptRulesBaseline(files);
+    const loaded = await loadSparkRules(files);
     if (loaded.outside) throw new SparkToolError(OUTSIDE_CHANGE_REFUSAL);
   }
   const read = await readRulesFile(target === 'user' ? files.user : files.managed);
@@ -88,7 +86,7 @@ async function edit(args: EditArgs, context: SparkToolContext) {
   checkedRules(args.add, args.remove);
   const session = await rulesSession(db, run.runId);
   if (!session) throw new SparkToolError(RULES_RUN_REFUSALS.no_chat);
-  const current = await currentRules(context, args.target);
+  const current = await currentRules(args.target);
   const diff = effectiveDiff(current.lists, args.add, args.remove);
   if (diff.add.length === 0 && diff.remove.length === 0) {
     return { outcome: 'unchanged', message: `${RULES_FILE_NAMES[args.target]} already says that.` };

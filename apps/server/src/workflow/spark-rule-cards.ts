@@ -47,14 +47,14 @@ async function lockedCard(client: Queryable, workspaceId: string, id: string) {
   return rows[0] ?? null;
 }
 
-async function allowGroup(client: Queryable, workspaceId: string, rule: SparkRuleRefusal) {
+async function allowGroup(rule: SparkRuleRefusal) {
   if (rule.group === 'workflows') {
-    await saveSparkRules(client, workspaceId, { workflows: 'mode' });
+    await saveSparkRules({ workflows: 'mode' });
     return;
   }
   const problem = ghPrefixProblem(rule.prefix);
   if (problem) throw new ApprovalInputError(`${rule.prefix} can't be added: ${problem}`);
-  if (!(await allowGhPrefix(client, workspaceId, rule.prefix))) {
+  if (!(await allowGhPrefix(rule.prefix))) {
     throw new ApprovalInputError('Spark rules hold 20 allowed commands. Remove one first.');
   }
 }
@@ -72,7 +72,7 @@ export async function answerRuleCard(
     const command = row?.payload.command;
     if (!row || !rule || !command) throw new ApprovalNotFoundError();
     if (row.rule_answer) throw new ApprovalConflictError('This card was already answered.');
-    if (answer === 'allow_group') await allowGroup(client, workspaceId, rule);
+    if (answer === 'allow_group') await allowGroup(rule);
     await client.query('UPDATE approvals SET rule_answer = $2 WHERE id = $1', [id, answer]);
     const retries = answer !== 'keep';
     if (retries) {

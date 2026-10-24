@@ -127,6 +127,6 @@ export function performSparkAction(
     case 'publish_artifact':
       return performPublishArtifact(context, action);
     case 'rules_edit':
-      return performRulesEdit(context, action);
+      return performRulesEdit(action);
   }
 }

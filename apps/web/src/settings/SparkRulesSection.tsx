@@ -7,6 +7,7 @@ import {
   ghPrefixProblem,
   tidyGhPrefix,
   type GhRuleChoice,
+  type RuleStanding,
   type SparkRules,
   type UpdateSparkRulesRequest,
 } from '@spark-outpost/contracts';
@@ -42,17 +43,27 @@ const WORKFLOW_CHOICES: { id: GhRuleChoice; label: string }[] = [
   { id: 'mode', label: "Follows the agent's mode" },
 ];
 
-const FLOOR = [
-  {
-    label: "Push only the chat's own branch, never force",
-    hint: 'Its spark/* branch, or the pull request branch you adopted for it.',
-  },
-  {
-    label: 'Secret files, git hooks and config, agent instruction files',
-    hint: 'Ask or refuse, by mode.',
-  },
-  { label: 'Never merge, approve or dismiss reviews', hint: 'Spark never merges.' },
-];
+const STANDING_LABEL: Record<RuleStanding, string> = {
+  refused: 'Refused',
+  asks: 'Asks',
+  mode: "Follows the agent's mode",
+};
+
+const FLOOR_LABEL: Record<string, string> = {
+  Push: 'Push when nothing allows publishing',
+  PullRequest: 'Open a pull request when nothing allows it',
+  'Push(other)': "Push a branch that isn't the chat's own",
+  'Push(force)': 'Force push',
+  GitRemote: 'Change remotes or use other hosting tools',
+  'SecretFile(edit)': 'Change or use secret files',
+  'SecretFile(read)': 'Read files listed in .sparkignore',
+  'InstructionFile(edit)': 'Change agent instruction files',
+  GitConfig: 'Change git hooks or config',
+  WriteOutside: 'Write or delete outside the project',
+  SecretSend: 'Send a value from a secret file',
+};
+
+const FLOOR_HINT = "Set in settings.json. A rule that isn't set follows the agent's mode.";
 
 function useRulesSave() {
   const queryClient = useQueryClient();
@@ -207,16 +218,25 @@ function RulesRows({ rules }: { rules: SparkRules }) {
         <WorkflowRow rules={rules} locked={remote} />
         <FixedRow
           label={OTHER_LABEL}
-          hint="Merge, review, close, other pull requests, releases, repo settings."
-          status="Refused"
+          hint="Close, other pull requests, releases, repo settings."
+          status={STANDING_LABEL[rules.otherCommands]}
         />
         <AllowedRow rules={rules} locked={remote} />
       </section>
       <section className="spark-group" aria-labelledby="rules-floor">
-        <h4 id="rules-floor">Always on (safety floor)</h4>
-        {FLOOR.map((row) => (
-          <LockedRow key={row.label} label={row.label} hint={row.hint} />
+        <h4 id="rules-floor">Safety rules</h4>
+        {rules.floor.map((row) => (
+          <FixedRow
+            key={row.rule}
+            label={FLOOR_LABEL[row.rule] ?? row.rule}
+            hint={FLOOR_HINT}
+            status={STANDING_LABEL[row.standing]}
+          />
         ))}
+        <LockedRow
+          label="Never merge, approve or dismiss reviews"
+          hint="Spark never merges, whatever the rules say."
+        />
       </section>
     </>
   );

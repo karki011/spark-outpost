@@ -1,13 +1,8 @@
 import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import { sparkDataDir } from '../config.ts';
-import { ACCEPTED_RECORD } from '../spark-rules/accepted.ts';
-import {
-  SEEDED_MARKER,
-  sparkChannel,
-  sparkRulesFiles,
-  USER_RULES_NAME,
-} from '../spark-rules/rules-store.ts';
+import { acceptedRecordPath } from '../spark-rules/accepted.ts';
+import { sparkRulesFiles, type SparkRulesFiles } from '../spark-rules/rules-store.ts';
 import { commandTree, treeWords } from './command-tree.ts';
 import { resolveCommandPath } from './commands.ts';
 import type { ApprovalRequest } from './decide.ts';
@@ -44,15 +39,16 @@ export const BROWSER_DATA_ENTRIES = [
 ] as const;
 
 export const SPARK_RULES_REASON =
-  "Spark's own rules (settings.json in Spark's data folder and the company's managed-settings.json) can't be read or changed by an agent directly; ask with spark_rules_edit and the user decides on a card";
+  "Spark's own rules (settings.json in Spark's data folder, or the company's managed-settings.json) can't be read or changed by an agent directly; ask with spark_rules_edit and the user decides on a card";
 
-export function sparkRulesEntries(env: NodeJS.ProcessEnv = process.env): string[] {
-  const channel = sparkChannel(env);
-  return [USER_RULES_NAME, SEEDED_MARKER, ACCEPTED_RECORD].map((name) => path.join(channel, name));
+export function sparkRulesEntries(files: SparkRulesFiles = sparkRulesFiles()): string[] {
+  return [files.user, acceptedRecordPath(files.user), files.managed].map((file) =>
+    path.resolve(file),
+  );
 }
 
-export function managedRulesFile(env: NodeJS.ProcessEnv = process.env): string {
-  return sparkRulesFiles(env).managed;
+export function entryPath(dataDir: string, entry: string): string {
+  return path.isAbsolute(entry) ? entry : path.join(dataDir, entry);
 }
 
 export function guardedDataEntries(): string[] {
@@ -89,7 +85,7 @@ function within(root: string, target: string): boolean {
 type Entries = readonly string[];
 
 function protectedEntries(dataDir: string, entries: Entries): string[] {
-  return entries.map((entry) => comparable(path.join(dataDir, entry)));
+  return entries.map((entry) => comparable(entryPath(dataDir, entry)));
 }
 
 function isEntry(target: string, dataDir: string, entries: Entries, whole: boolean): boolean {
@@ -126,9 +122,8 @@ export function globReachesBrowserData(
   });
 }
 
-export function sparkRulesFlagRules(dataDir: string | null): string[] {
-  const entries = dataDir ? sparkRulesEntries().map((entry) => `/${dataDir}/${entry}`) : [];
-  const patterns = [...entries, `/${managedRulesFile()}`];
+export function sparkRulesFlagRules(files: SparkRulesFiles = sparkRulesFiles()): string[] {
+  const patterns = sparkRulesEntries(files).map((file) => `/${file}`);
   return patterns.flatMap((pattern) => [`Read(${pattern})`, `Edit(${pattern})`]);
 }
 
@@ -145,7 +140,7 @@ export function browserDataRules(dataDir: string | null): string[] {
 
 function namesAnEntry(command: string, dataDir: string, entries: Entries): boolean {
   const text = caseFolded(command);
-  return entries.some((entry) => text.includes(caseFolded(path.join(dataDir, entry))));
+  return entries.some((entry) => text.includes(caseFolded(entryPath(dataDir, entry))));
 }
 
 function wordPaths(word: string): string[] {
@@ -176,12 +171,9 @@ export function touchesBrowserData(request: ApprovalRequest, dataDir: string | n
   return dataDir !== null && touchesEntries(request, dataDir, BROWSER_DATA_ENTRIES, true);
 }
 
-function touchesManagedRules(request: ApprovalRequest): boolean {
-  const managed = managedRulesFile();
-  return touchesEntries(request, path.dirname(managed), [path.basename(managed)], false);
-}
-
-export function touchesSparkRules(request: ApprovalRequest, dataDir: string | null): boolean {
-  if (touchesManagedRules(request)) return true;
-  return dataDir !== null && touchesEntries(request, dataDir, sparkRulesEntries(), false);
+export function touchesSparkRules(
+  request: ApprovalRequest,
+  files: SparkRulesFiles = sparkRulesFiles(),
+): boolean {
+  return touchesEntries(request, '/', sparkRulesEntries(files), false);
 }

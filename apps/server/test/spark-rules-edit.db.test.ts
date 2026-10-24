@@ -162,7 +162,7 @@ describe('spark_rules_edit always asks first', () => {
 
   it('refuses a stale card: the file changed after it was shown', async () => {
     await edit(RELEASE);
-    await saveSparkRules(t.db, t.workspaceId, { workflows: 'refused' });
+    await saveSparkRules({ workflows: 'refused' });
     const done = await answer(SPARK_ACTION_OPTION.confirm);
     expect(done.payload.sparkResult).toMatchObject({
       state: 'failed',

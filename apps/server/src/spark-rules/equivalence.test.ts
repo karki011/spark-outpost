@@ -1,15 +1,14 @@
 import { readFileSync } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_SPARK_RULES } from '@spark-outpost/contracts';
 import { decide, NO_RUN_RULES, type Decision } from '../approvals/decide.ts';
 import { CORPUS_POSTURES, corpusCases } from '../approvals/spark-rules-corpus.ts';
 import { RECOMMENDED_RULES, recommendedRulesText, userRules } from './recommended.ts';
 import type { SparkRuleSet } from './resolve.ts';
 import { changedRulesText } from './rules-file.ts';
-import { loadSparkRules, seedSparkRules, type SparkRulesFiles } from './rules-store.ts';
+import { loadSparkRules, type SparkRulesFiles } from './rules-store.ts';
 
 interface Fixture {
   reasons: string[];
@@ -57,8 +56,8 @@ describe('the recommended rules', () => {
   });
 
   it('give exactly the verdicts Spark gave before the rules file, case by case', async () => {
-    await seedSparkRules(files, DEFAULT_SPARK_RULES);
-    const { rules, problems } = await loadSparkRules(files, DEFAULT_SPARK_RULES);
+    await writeFile(files.user, recommendedRulesText());
+    const { rules, problems } = await loadSparkRules(files);
     expect(problems).toEqual([]);
     const found = verdicts(rules);
     expect(Object.keys(found)).toHaveLength(Object.keys(FIXTURE.verdicts).length);

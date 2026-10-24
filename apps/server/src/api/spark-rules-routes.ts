@@ -23,17 +23,17 @@ export function sparkRulesRoutes({ db, workspaceId, fixedRunProvider }: SparkRul
     resolveRunTarget({ db, workspaceId, fixedRunProvider }, conversationId);
 
   router.get('/spark-rules', async (_req, res) => {
-    res.json(await sparkRules(db, workspaceId));
+    res.json(await sparkRules());
   });
 
   router.put('/spark-rules', async (req, res) => {
     const update = parseBody(updateSparkRulesRequestSchema, req);
-    res.json(await saveSparkRules(db, workspaceId, update));
+    res.json(await saveSparkRules(update));
   });
 
   router.post('/spark-rules/outside-change', async (req, res) => {
     const answer = parseBody(outsideChangeAnswerSchema, req);
-    res.json(await answerOutsideChange(db, workspaceId, answer));
+    res.json(await answerOutsideChange(answer));
   });
 
   router.post('/approvals/:id/spark-rule', async (req, res) => {
