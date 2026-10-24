@@ -1,10 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join } from 'node:path';
-import { DEFAULT_SPARK_RULES } from '@spark-outpost/contracts';
 import { sparkDataDir } from '../config.ts';
 import { DEFAULT_BRANCH_PREFIX } from '../projects/worktrees.ts';
-import { recommendedRulesText, type GhSeed } from './recommended.ts';
+import { RECOMMENDED_RULES } from './recommended.ts';
 import type { SparkRuleSet } from './resolve.ts';
 import {
   changedRulesText,
@@ -33,7 +32,6 @@ export interface LoadedRules {
 
 export const MANAGED_RULES_FILE = '/Library/Application Support/SparkOutpost/managed-settings.json';
 export const USER_RULES_NAME = 'settings.json';
-export const SEEDED_MARKER = '.settings-seeded';
 const MAX_FILE_BYTES = 256 * 1024;
 
 function absolute(value: string | undefined): string | null {
@@ -53,20 +51,22 @@ export function sparkRulesFiles(env: NodeJS.ProcessEnv = process.env): SparkRule
   };
 }
 
-export function seededMarker(files: SparkRulesFiles): string {
-  return join(dirname(files.user), SEEDED_MARKER);
-}
-
-async function exists(file: string): Promise<boolean> {
-  return (await stat(file).catch(() => null)) !== null;
-}
-
 export type RulesFileRead =
   { kind: 'missing' } | { kind: 'text'; text: string } | { kind: 'unreadable' };
 
+const ABSENT_CODES: ReadonlySet<string> = new Set(['ENOENT', 'ENOTDIR']);
+
+function absentError(error: unknown): boolean {
+  return ABSENT_CODES.has((error as NodeJS.ErrnoException | null)?.code ?? '');
+}
+
 async function readRulesFile(file: string): Promise<RulesFileRead> {
-  const found = await stat(file).catch(() => null);
-  if (!found) return { kind: 'missing' };
+  let found;
+  try {
+    found = await stat(file);
+  } catch (error) {
+    return absentError(error) ? { kind: 'missing' } : { kind: 'unreadable' };
+  }
   if (!found.isFile() || found.size > MAX_FILE_BYTES) return { kind: 'unreadable' };
   const text = await readFile(file, 'utf8').catch(() => null);
   return text === null ? { kind: 'unreadable' } : { kind: 'text', text };
@@ -77,31 +77,28 @@ interface Tier {
   problems: string[];
 }
 
-function failSafe(gh: GhSeed, problem: string): Tier {
-  const lists = parseRulesFile(recommendedRulesText(gh)).lists;
+function failSafe(problem: string): Tier {
+  const lists = RECOMMENDED_RULES.user;
   return { lists, problems: [`${problem}, so Spark uses its recommended rules`] };
 }
 
-function tierFrom(read: RulesFileRead, gh: GhSeed): Tier {
-  if (read.kind === 'unreadable') return failSafe(gh, "The file can't be read");
+function tierFrom(read: RulesFileRead): Tier {
+  if (read.kind === 'unreadable') return failSafe("The file can't be read");
   if (read.kind === 'missing') return { lists: NO_RULE_LISTS, problems: [] };
   const parsed = parseRulesFile(read.text);
-  if (parsed.malformed) return failSafe(gh, parsed.problems[0] ?? 'The file is malformed');
+  if (parsed.malformed) return failSafe(parsed.problems[0] ?? 'The file is malformed');
   return { lists: parsed.lists, problems: parsed.problems };
 }
 
-async function userTier(files: SparkRulesFiles, gh: GhSeed, read: RulesFileRead): Promise<Tier> {
-  if (read.kind !== 'missing' || (await exists(seededMarker(files)))) return tierFrom(read, gh);
-  return { lists: parseRulesFile(recommendedRulesText(gh)).lists, problems: [] };
-}
-
-export async function loadSparkRules(files: SparkRulesFiles, gh: GhSeed): Promise<LoadedRules> {
+export async function loadSparkRules(
+  files: SparkRulesFiles = sparkRulesFiles(),
+): Promise<LoadedRules> {
   const [managedRead, userRead] = await Promise.all([
     readRulesFile(files.managed),
     readRulesFile(files.user),
   ]);
-  const managed = tierFrom(managedRead, gh);
-  const user = await userTier(files, gh, userRead);
+  const managed = tierFrom(managedRead);
+  const user = tierFrom(userRead);
   return {
     rules: { managed: managed.lists, user: user.lists },
     problems: [
@@ -115,7 +112,7 @@ export async function loadSparkRules(files: SparkRulesFiles, gh: GhSeed): Promis
 export async function floorRulesNow(
   files: SparkRulesFiles = sparkRulesFiles(),
 ): Promise<SparkRuleSet> {
-  return (await loadSparkRules(files, DEFAULT_SPARK_RULES)).rules;
+  return (await loadSparkRules(files)).rules;
 }
 
 async function writeAtomically(file: string, text: string): Promise<void> {
@@ -130,23 +127,14 @@ async function writeAtomically(file: string, text: string): Promise<void> {
   }
 }
 
-export async function seedSparkRules(files: SparkRulesFiles, gh: GhSeed): Promise<boolean> {
-  if ((await exists(files.user)) || (await exists(seededMarker(files)))) return false;
-  await writeAtomically(files.user, recommendedRulesText(gh));
-  await writeFile(seededMarker(files), `${new Date().toISOString()}\n`, { mode: 0o600 });
-  return true;
-}
-
 let writing: Promise<unknown> = Promise.resolve();
 
 export function changeSparkRules(
   files: SparkRulesFiles,
-  gh: GhSeed,
   change: (loaded: LoadedRules) => RuleChange,
 ): Promise<LoadedRules> {
   const next = writing.then(async () => {
-    await seedSparkRules(files, gh);
-    const loaded = await loadSparkRules(files, gh);
+    const loaded = await loadSparkRules(files);
     const { userFile } = loaded;
     if (userFile.kind === 'unreadable') {
       throw new RulesFileError("Spark's settings.json can't be read. Fix the file first.");
@@ -154,7 +142,7 @@ export function changeSparkRules(
     const current = userFile.kind === 'text' ? userFile.text : null;
     const text = changedRulesText(current, change(loaded));
     await writeAtomically(files.user, text);
-    return loadSparkRules(files, gh);
+    return loadSparkRules(files);
   });
   writing = next.catch(() => undefined);
   return next;

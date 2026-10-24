@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MODE_POSTURES } from '@spark-outpost/contracts';
 import {
   BROWSER_DATA_REASON,
@@ -155,12 +155,23 @@ describe('browser data paths', () => {
 
 describe("Spark's own rules file is refused to chats in every mode", () => {
   const refused = MODE_POSTURES.map(() => SPARK_RULES_REASON);
+  const COMPANY = '/Library/Application Support/SparkOutpost/managed-settings.json';
+  const MOVED = '/Users/me/rules/spark-settings.json';
+
+  beforeEach(() => {
+    vi.stubEnv('SPARK_RULES_FILE', `${DATA}/spark/settings.json`);
+    vi.stubEnv('SPARK_MANAGED_RULES_FILE', COMPANY);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
 
   it.each([
     `cat "${DATA}/spark/settings.json"`,
     `echo '{}' > "${DATA}/spark/settings.json"`,
-    `rm "${DATA}/spark/.settings-seeded"`,
     'cat ../../../settings.json',
+    `cat "${COMPANY}"`,
   ])('%s', async (command) => {
     expect(await verdicts(request({ command }))).toEqual(refused);
   });
@@ -174,12 +185,20 @@ describe("Spark's own rules file is refused to chats in every mode", () => {
     expect(await verdicts(edit)).toEqual(refused);
   });
 
-  it('gives Claude read and edit deny rules for the file and its marker', () => {
-    expect(sparkRulesFlagRules(DATA)).toEqual([
+  it('guards the file wherever it is configured, and the company file', async () => {
+    vi.stubEnv('SPARK_RULES_FILE', MOVED);
+    expect(await verdicts(request({ command: `cat ${MOVED}` }))).toEqual(refused);
+    expect(await verdicts(request({ command: `cat "${DATA}/spark/settings.json"` }))).not.toEqual(
+      refused,
+    );
+  });
+
+  it('gives Claude read and edit deny rules for both files', () => {
+    expect(sparkRulesFlagRules()).toEqual([
       `Read(/${DATA}/spark/settings.json)`,
       `Edit(/${DATA}/spark/settings.json)`,
-      `Read(/${DATA}/spark/.settings-seeded)`,
-      `Edit(/${DATA}/spark/.settings-seeded)`,
+      `Read(/${COMPANY})`,
+      `Edit(/${COMPANY})`,
     ]);
   });
 

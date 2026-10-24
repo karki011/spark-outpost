@@ -1,5 +1,5 @@
 import {
-  DEFAULT_SPARK_RULES,
+  DEFAULT_WORKFLOW_RULE,
   WORKFLOW_PREFIXES,
   type GhRuleChoice,
 } from '@spark-outpost/contracts';
@@ -31,7 +31,9 @@ export const RECOMMENDED_DENY: readonly FloorRuleId[] = [
 
 export const WORKFLOW_RULES: readonly string[] = WORKFLOW_PREFIXES.map(ghRuleId);
 
-export function recommendedRulesText(gh: GhSeed = DEFAULT_SPARK_RULES): string {
+const RECOMMENDED_GH: GhSeed = { workflows: DEFAULT_WORKFLOW_RULE, ghAllowed: [] };
+
+export function recommendedRulesText(gh: GhSeed = RECOMMENDED_GH): string {
   const follows = gh.workflows === 'mode';
   const allowed = gh.ghAllowed.map(ghRuleId).filter(recognisedRule);
   const permissions = {

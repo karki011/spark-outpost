@@ -1,43 +1,24 @@
 import {
-  DEFAULT_SPARK_RULES,
   GH_ALLOWED_MAX,
   WORKFLOW_PREFIXES,
   type GhRuleChoice,
+  type RuleStanding,
   type SparkRules,
 } from '@spark-outpost/contracts';
 import { normalizeCommand } from '../approvals/commands.ts';
 import type { SparkRuleContext } from '../approvals/gh-rules.ts';
-import { WORKFLOW_RULES, type GhSeed } from '../spark-rules/recommended.ts';
-import { ghCommandRuling } from '../spark-rules/resolve.ts';
-import { ghPrefixOfRule, ghRuleId } from '../spark-rules/rule-ids.ts';
-import type { RuleChange, RuleEffect } from '../spark-rules/rules-file.ts';
+import { WORKFLOW_RULES } from '../spark-rules/recommended.ts';
+import { floorEffect, ghCommandRuling } from '../spark-rules/resolve.ts';
+import { FLOOR_RULE_IDS, ghPrefixOfRule, ghRuleId } from '../spark-rules/rule-ids.ts';
+import { RULE_EFFECTS, type RuleChange, type RuleEffect } from '../spark-rules/rules-file.ts';
 import {
   changeSparkRules,
   loadSparkRules,
-  seedSparkRules,
   sparkRulesFiles,
   type LoadedRules,
   type SparkRulesFiles,
 } from '../spark-rules/rules-store.ts';
 import type { Queryable } from './db.ts';
-
-interface SeedRow {
-  gh_workflows: GhRuleChoice;
-  gh_allowed: string[];
-}
-
-function seedOf(row: SeedRow | undefined): GhSeed {
-  if (!row) return DEFAULT_SPARK_RULES;
-  return { workflows: row.gh_workflows, ghAllowed: row.gh_allowed };
-}
-
-async function ghSeed(db: Queryable, workspaceId: string): Promise<GhSeed> {
-  const { rows } = await db.query<SeedRow>(
-    'SELECT gh_workflows, gh_allowed FROM profiles WHERE workspace_id = $1',
-    [workspaceId],
-  );
-  return seedOf(rows[0]);
-}
 
 function allowedPrefixes(loaded: LoadedRules): string[] {
   return loaded.rules.user.allow.flatMap((rule) => {
@@ -46,8 +27,16 @@ function allowedPrefixes(loaded: LoadedRules): string[] {
   });
 }
 
+function standing(effect: RuleEffect | null | undefined): RuleStanding {
+  if (effect === 'deny') return 'refused';
+  return effect === 'ask' ? 'asks' : 'mode';
+}
+
+const UNNAMED_GH_COMMAND = 'gh unnamed command';
+
 function settingsView(loaded: LoadedRules): SparkRules {
   const workflow = ghCommandRuling(loaded.rules, WORKFLOW_PREFIXES[0]);
+  const other = ghCommandRuling(loaded.rules, UNNAMED_GH_COMMAND);
   const problems = loaded.problems.map(
     (problem) =>
       `${problem.file === 'managed' ? 'managed-settings.json' : 'settings.json'}: ${problem.message}`,
@@ -55,35 +44,31 @@ function settingsView(loaded: LoadedRules): SparkRules {
   return {
     workflows: workflow?.effect === 'deny' ? 'refused' : 'mode',
     ghAllowed: allowedPrefixes(loaded),
+    otherCommands: standing(other?.effect),
+    floor: FLOOR_RULE_IDS.map((rule) => ({
+      rule,
+      standing: standing(floorEffect(loaded.rules, rule)),
+    })),
     ...(problems.length > 0 ? { problems } : {}),
   };
 }
 
-export async function seedWorkspaceRules(
-  db: Queryable,
-  workspaceId: string,
-  files: SparkRulesFiles = sparkRulesFiles(),
-): Promise<boolean> {
-  return seedSparkRules(files, await ghSeed(db, workspaceId));
-}
-
-export async function sparkRules(
-  db: Queryable,
-  workspaceId: string,
-  files: SparkRulesFiles = sparkRulesFiles(),
-): Promise<SparkRules> {
-  return settingsView(await loadSparkRules(files, await ghSeed(db, workspaceId)));
+export async function sparkRules(files: SparkRulesFiles = sparkRulesFiles()): Promise<SparkRules> {
+  return settingsView(await loadSparkRules(files));
 }
 
 type Pairs = (readonly [RuleEffect, string])[];
 
-function workflowChange(choice: GhRuleChoice): RuleChange {
-  const [to, from]: [RuleEffect, RuleEffect] =
-    choice === 'refused' ? ['deny', 'allow'] : ['allow', 'deny'];
+function settled(to: RuleEffect, rules: readonly string[]): Required<RuleChange> {
+  const others = RULE_EFFECTS.filter((effect) => effect !== to);
   return {
-    add: WORKFLOW_RULES.map((rule) => [to, rule] as const),
-    remove: WORKFLOW_RULES.map((rule) => [from, rule] as const),
+    add: rules.map((rule) => [to, rule] as const),
+    remove: others.flatMap((effect) => rules.map((rule) => [effect, rule] as const)),
   };
+}
+
+function workflowChange(choice: GhRuleChoice): RuleChange {
+  return settled(choice === 'refused' ? 'deny' : 'allow', WORKFLOW_RULES);
 }
 
 function allowedChange(loaded: LoadedRules, wanted: readonly string[]): RuleChange {
@@ -91,11 +76,8 @@ function allowedChange(loaded: LoadedRules, wanted: readonly string[]): RuleChan
   const dropped: Pairs = current
     .filter((prefix) => !wanted.includes(prefix))
     .map((prefix) => ['allow', ghRuleId(prefix)]);
-  const added = wanted.map(ghRuleId);
-  return {
-    add: added.map((rule) => ['allow', rule] as const),
-    remove: [...dropped, ...added.map((rule) => ['deny', rule] as const)],
-  };
+  const allowed = settled('allow', wanted.map(ghRuleId));
+  return { add: allowed.add, remove: [...dropped, ...allowed.remove] };
 }
 
 function merged(...changes: RuleChange[]): RuleChange {
@@ -106,12 +88,10 @@ function merged(...changes: RuleChange[]): RuleChange {
 }
 
 export async function saveSparkRules(
-  db: Queryable,
-  workspaceId: string,
   update: { workflows?: GhRuleChoice | undefined; ghAllowed?: readonly string[] | undefined },
   files: SparkRulesFiles = sparkRulesFiles(),
 ): Promise<SparkRules> {
-  const saved = await changeSparkRules(files, await ghSeed(db, workspaceId), (loaded) =>
+  const saved = await changeSparkRules(files, (loaded) =>
     merged(
       update.workflows ? workflowChange(update.workflows) : {},
       update.ghAllowed ? allowedChange(loaded, update.ghAllowed) : {},
@@ -121,13 +101,11 @@ export async function saveSparkRules(
 }
 
 export async function allowGhPrefix(
-  db: Queryable,
-  workspaceId: string,
   prefix: string,
   files: SparkRulesFiles = sparkRulesFiles(),
 ): Promise<boolean> {
   let fits = true;
-  const saved = await changeSparkRules(files, await ghSeed(db, workspaceId), (loaded) => {
+  const saved = await changeSparkRules(files, (loaded) => {
     const current = allowedPrefixes(loaded);
     fits = current.includes(prefix) || current.length < GH_ALLOWED_MAX;
     return fits ? allowedChange(loaded, [...new Set([...current, prefix])]) : {};
@@ -135,7 +113,7 @@ export async function allowGhPrefix(
   return fits && allowedPrefixes(saved).includes(prefix);
 }
 
-interface RunRulesRow extends SeedRow {
+interface RunRulesRow {
   once: (string | null)[];
 }
 
@@ -145,9 +123,7 @@ export async function sparkRulesForRun(
   files: SparkRulesFiles = sparkRulesFiles(),
 ): Promise<SparkRuleContext> {
   const { rows } = await db.query<RunRulesRow>(
-    `SELECT COALESCE(p.gh_workflows, $2) AS gh_workflows,
-       COALESCE(p.gh_allowed, '{}') AS gh_allowed,
-       ARRAY(
+    `SELECT ARRAY(
          SELECT a.payload->>'command' FROM approvals a
          JOIN runs card_run ON card_run.id = a.run_id
          WHERE a.rule_answer = 'allow_once' AND card_run.conversation_id = r.conversation_id
@@ -155,13 +131,11 @@ export async function sparkRulesForRun(
              OR a.run_id IN (r.id, r.parent_run_id))
        ) AS once
      FROM runs r
-     JOIN conversations c ON c.id = r.conversation_id
-     LEFT JOIN profiles p ON p.workspace_id = c.workspace_id
      WHERE r.id = $1`,
-    [runId, DEFAULT_SPARK_RULES.workflows],
+    [runId],
   );
   const row = rows[0];
-  const loaded = await loadSparkRules(files, seedOf(row));
+  const loaded = await loadSparkRules(files);
   return {
     rules: loaded.rules,
     once: (row?.once ?? []).flatMap((command) => (command ? [normalizeCommand(command)] : [])),

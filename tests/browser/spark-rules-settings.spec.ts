@@ -16,7 +16,7 @@ test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
 });
 
-test('Spark rules lists the gh rules, lets workflows be refused and keeps the floor fixed', async ({
+test('Spark rules lists the gh rules, lets workflows be refused and shows the safety rules', async ({
   page,
 }) => {
   await page.goto('/');
@@ -27,8 +27,10 @@ test('Spark rules lists the gh rules, lets workflows be refused and keeps the fl
   await expect(settings.getByRole('heading', { name: 'GitHub commands' })).toBeVisible();
   await expect(settings.getByText('Always allowed')).toBeVisible();
   await expect(settings.getByText('Publish rules')).toBeVisible();
-  await expect(settings.getByRole('heading', { name: 'Always on (safety floor)' })).toBeVisible();
-  await expect(settings.getByText('Fixed')).toHaveCount(3);
+  await expect(settings.getByRole('heading', { name: 'Safety rules' })).toBeVisible();
+  await expect(settings.getByText('Fixed')).toHaveCount(1);
+  await expect(settings.getByText('Force push', { exact: true })).toBeVisible();
+  expect(await rules(page)).toMatchObject({ otherCommands: 'refused' });
 
   const workflow = settings.getByRole('button', { name: 'Run a workflow' });
   await expect(workflow).toContainText("Follows the agent's mode");
@@ -80,4 +82,15 @@ test('allowed commands take gh prefixes, refuse the never-allowed ones and can b
   await settings.getByRole('button', { name: 'Remove gh release create' }).click();
   await expect(list).toHaveCount(0);
   await expect.poll(async () => (await rules(page)).ghAllowed).toEqual([]);
+});
+
+test("with no rules file every rule follows the agent's mode", async ({ page }) => {
+  await resetTestDatabase({ onboarded: true, sparkRules: 'none' });
+  await page.goto('/');
+  const settings = await openSparkRules(page);
+  await expect(settings.getByRole('heading', { name: 'Safety rules' })).toBeVisible();
+  const followed = settings.getByText("Follows the agent's mode", { exact: true });
+  await expect(followed).toHaveCount(13);
+  await expect(settings.getByText('Refused', { exact: true })).toHaveCount(0);
+  expect(await rules(page)).toMatchObject({ workflows: 'mode', otherCommands: 'mode' });
 });

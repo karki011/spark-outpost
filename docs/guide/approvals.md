@@ -21,7 +21,7 @@ Spark, not the model, runs the checks, so no agent can approve its own request.
 
 ## What never goes on without you
 
-- Approval cards, and protected paths in every mode and level.
+- Approval cards, and the protected paths your [rules](protected-paths.md#spark-rules) set.
 - **Address PR feedback?** at **Automatic**.
 - Merging. Nothing ever merges.
 

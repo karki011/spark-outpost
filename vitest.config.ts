@@ -18,6 +18,7 @@ export default defineConfig({
         test: {
           name: 'unit',
           env,
+          setupFiles: ['apps/server/test/recommended-rules-setup.ts'],
           include: ['{apps,packages,scripts,infra}/**/*.test.{ts,tsx}'],
           exclude: [
             '**/*.db.test.ts',
