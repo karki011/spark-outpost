@@ -17,6 +17,12 @@ const WRITE_MODE_OPEN = new RegExp(
   `\\b(?:f?open(?:Sync)?|os\\.open)\\s*\\([^)]*?,\\s*(?:mode\\s*=\\s*)?${WRITE_MODE}`,
 );
 const WRITE_MODE_METHOD = new RegExp(`\\.open\\s*\\(\\s*(?:mode\\s*=\\s*)?${WRITE_MODE}`);
+const NUMERIC_FLAG_OPEN =
+  /\b(?:f?open(?:Sync)?|os\.open|Deno\.open(?:Sync)?)\s*\(\s*[^,()]*,\s*(?:flags\s*=\s*)?(?!(?:0[xXoObB])?0+\b)\d/;
+const OS_OPEN = /\bos\.open\s*\(/g;
+const READ_ONLY_OS_OPEN =
+  /\bos\.open\s*\(\s*[^,()]*,\s*(?:flags\s*=\s*)?(?:0+|os\.O_RDONLY)\s*[,)]/g;
+const DESCRIPTOR_WRITE = /\b(?:os|fs)\.(?:write|pwrite|writev|pwritev|ftruncate)\s*\(/;
 const REDIRECT_WRITE = /(?:^|[\s)]|\bprintf?)(?:>>?|\|)\s*['"]/;
 const OPEN_FLAGS = /\bO_(?:WRONLY|RDWR|CREAT|TRUNC|APPEND)\b/;
 const FILE_CHANGE_FUNCTIONS =
@@ -45,10 +51,17 @@ export function readsUnknownFiles(code: string): boolean {
   return count(code, PATH_READ) > count(code, LITERAL_PATH_READ);
 }
 
+function opensForWriting(code: string): boolean {
+  return count(code, OS_OPEN) > count(code, READ_ONLY_OS_OPEN);
+}
+
 export function changesFiles(code: string): boolean {
+  if (opensForWriting(code)) return true;
   return [
     WRITE_MODE_OPEN,
     WRITE_MODE_METHOD,
+    NUMERIC_FLAG_OPEN,
+    DESCRIPTOR_WRITE,
     REDIRECT_WRITE,
     OPEN_FLAGS,
     CHANGE_CALL,

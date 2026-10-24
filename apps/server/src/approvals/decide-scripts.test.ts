@@ -284,6 +284,14 @@ describe('decide() sees code that changes a secret file however it is written', 
     ['ruby pathname-delete.rb', '.env'],
     ["ruby -e \"File.write('credentials', 'x')\"", 'credentials'],
     ["node -e \"require('fs').openSync('.env', 'w')\"", '.env'],
+    ["python3 -c \"import os; fd = os.open('.env', 1); os.write(fd, b'X=1')\"", '.env'],
+    ['python3 -c "import os; os.close(os.open(\'.env\', 0o101))"', '.env'],
+    ['python3 -c "import os; f = 1; os.close(os.open(\'.env\', f))"', '.env'],
+    ["node -e \"require('fs').open('.env', 0x41, () => {})\"", '.env'],
+    [
+      "node -e \"const fs = require('fs'); const f = 'a'; fs.open('.env', f, (e, fd) => fs.write(fd, 'x', () => {}))\"",
+      '.env',
+    ],
   ])('asks in every mode: %s', (command, file) => {
     for (const posture of ['auto', 'full_access', 'asks', 'edits'] as ModePosture[]) {
       expect(decideAt(posture, command), posture).toMatchObject({
@@ -293,14 +301,17 @@ describe('decide() sees code that changes a secret file however it is written', 
     }
   });
 
-  it.each(['ruby read.rb', 'node reply.js', 'node reply-write.js'])(
-    'lets the mode decide when the code only reads a secret: %s',
-    (command) => {
-      for (const posture of ['auto', 'full_access'] as ModePosture[]) {
-        expect(decideAt(posture, command), posture).toEqual({ verdict: 'allow', by: 'level' });
-      }
-    },
-  );
+  it.each([
+    'ruby read.rb',
+    'node reply.js',
+    'node reply-write.js',
+    'python3 -c "import os; print(os.read(os.open(\'.env\', os.O_RDONLY), 100))"',
+    'python3 -c "import os; print(os.read(os.open(\'.env\', 0), 100))"',
+  ])('lets the mode decide when the code only reads a secret: %s', (command) => {
+    for (const posture of ['auto', 'full_access'] as ModePosture[]) {
+      expect(decideAt(posture, command), posture).toEqual({ verdict: 'allow', by: 'level' });
+    }
+  });
 });
 
 describe('a secret a script reads counts for the send flag', () => {
