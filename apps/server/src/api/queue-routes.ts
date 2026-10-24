@@ -9,7 +9,8 @@ import {
   type QueueResponse,
   type SendNowOutcome,
 } from '@spark-outpost/contracts';
-import type { Db } from '../persistence/db.ts';
+import { withTransaction, type Db } from '../persistence/db.ts';
+import { missedMessage, removeMemberMessages } from '../persistence/member-messages.ts';
 import {
   addToQueue,
   editQueued,
@@ -140,6 +141,28 @@ export function queueRoutes({ db, workspaceId, fixedRunProvider }: QueueRouteDep
     const outcome = await sendNow(db, conversationId, { id: itemId(req) }, resolveTarget);
     if (!outcome) throw new QueueError(404, 'That message has already been sent.');
     res.status(202).json(await reply(conversationId, outcome));
+  });
+
+  const takeMissed = async (conversationId: string, id: string, requeue: boolean) => {
+    await withTransaction(db, async (client) => {
+      const missed = await missedMessage(client, conversationId, id);
+      if (!missed) throw new QueueError(404, 'That message is no longer waiting.');
+      if (requeue) await addToQueue(client, conversationId, { id, content: missed.body });
+      await removeMemberMessages(client, [id]);
+    });
+  };
+
+  router.post('/conversations/:id/steers/:itemId/resend', async (req, res) => {
+    const conversationId = paramId(req);
+    await takeMissed(conversationId, itemId(req), true);
+    await drainQueue(db, conversationId, resolveTarget);
+    res.status(202).json(await reply(conversationId));
+  });
+
+  router.delete('/conversations/:id/steers/:itemId', async (req, res) => {
+    const conversationId = paramId(req);
+    await takeMissed(conversationId, itemId(req), false);
+    res.json(await reply(conversationId));
   });
 
   router.post('/runs/:id/messages', async (req, res) => {

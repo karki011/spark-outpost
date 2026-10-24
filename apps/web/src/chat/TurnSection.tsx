@@ -147,7 +147,7 @@ export const TurnSection = memo(function TurnSection({
           repo={repo}
         />
       )}
-      {!crew && <TurnSteers detail={detail} run={run} />}
+      {sparkLed && !mainAgentRan(sparkLed) && <TurnSteers detail={detail} run={run} />}
       <TurnOutpostLines conversation={detail.conversation} run={run} />
       <OpenedPullRequests
         conversationId={detail.conversation.id}

@@ -55,6 +55,8 @@ import { useTurnChanges } from './rows/use-turn-changes.ts';
 import { AgentMark, TurnMeta, WorkingLine, agentChanged } from './turn/TurnParts.tsx';
 import { TurnChangesLine } from './turn/TurnChangesLine.tsx';
 import { turnMood } from './turn/turn-mood.ts';
+import { SteerGroup } from './steer/SteeredMessage.tsx';
+import { seenAfter, steerMarks, turnSteers } from './steer/steer-model.ts';
 
 interface SoloTurnProps {
   run: Run;
@@ -199,14 +201,25 @@ export function SoloTurn({
     : null;
   const changes = useTurnChanges(changeTask?.id ?? null, changeRunIds);
   const todoEntries = turnTodo(detail.runs, run.id, todo);
+  const steers = turnSteers(detail, run.id);
   const parts = turnRowParts({
     text,
     steps: viewSteps(steps),
     commands: commands.reply,
     shots: turnShots(detail, run.id),
     terminals: terminalParts.reply,
+    steers: steerMarks(steers),
     todo: todoEntries.length > 0,
   });
+  const steersAt = (ids: readonly string[], index: number) => (
+    <SteerGroup
+      messages={steers.filter((message) => ids.includes(message.id))}
+      detail={detail}
+      run={run}
+      crew={false}
+      seen={seenAfter(parts, index)}
+    />
+  );
   const mood = turnMood({
     run,
     live: stream.status,
@@ -234,6 +247,7 @@ export function SoloTurn({
           changes,
           todo: <TurnTodo entries={todoEntries} live={working} />,
         }}
+        steers={steersAt}
       >
         {(part, last) => (
           <Markdown text={part} streaming={last && leads && active && !publishing} />

@@ -5,11 +5,13 @@ import { newId } from '../persistence/ids.ts';
 import {
   claimMemberMessages,
   markMissedMessages,
+  markUnreadOnStop,
   removeMemberMessages,
   setMemberMessageStatus,
 } from '../persistence/member-messages.ts';
 import { runWaitingOn } from '../persistence/subagents.ts';
 import { requestCancel } from '../persistence/runs.ts';
+import { shotAnchor } from '../persistence/browser-screenshots.ts';
 import type { SteerRequests, TurnInbox } from '../providers/provider.ts';
 import type { Append } from './agent-turn.ts';
 import { runEvents } from './run-events.ts';
@@ -17,7 +19,7 @@ import { runEvents } from './run-events.ts';
 export const MESSAGE_HEADING = '## Message from the user';
 
 export interface MemberInbox extends SteerRequests, TurnInbox {
-  dispose(): Promise<void>;
+  dispose(stopped?: boolean): Promise<void>;
 }
 
 interface InboxOptions {
@@ -26,6 +28,7 @@ interface InboxOptions {
   topRunId: string;
   pollMs: number;
   append: Append;
+  replySoFar?: () => { shown: string; held: number };
 }
 
 export function messagePrompt(messages: readonly Pick<MemberMessage, 'body'>[]): string {
@@ -36,6 +39,10 @@ export function messagePrompt(messages: readonly Pick<MemberMessage, 'body'>[]):
 
 export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
   const { conversationId, runId, topRunId, append } = options;
+  const anchor = () => {
+    const reply = options.replySoFar?.();
+    return reply ? shotAnchor(reply.shown, reply.held) : null;
+  };
   let send: ((text: string) => Promise<boolean>) | null = null;
   let busy = false;
   let done = false;
@@ -75,7 +82,7 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     if (busy || done) return;
     busy = true;
     try {
-      const claimed = await claimMemberMessages(db, runId, topRunId, send === null);
+      const claimed = await claimMemberMessages(db, runId, topRunId, send === null, anchor());
       if (claimed.length === 0) return;
       if (send && (await send(messagePrompt(claimed)))) {
         await announce(claimed, 'delivered');
@@ -103,14 +110,15 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     },
     async take() {
       if (done) return null;
-      const claimed = await claimMemberMessages(db, runId, topRunId, false);
+      const claimed = await claimMemberMessages(db, runId, topRunId, false, anchor());
       if (claimed.length === 0) return null;
       await announce(claimed, 'delivered').catch(() => undefined);
       return messagePrompt(claimed);
     },
-    async dispose() {
+    async dispose(stopped = false) {
       done = true;
       clearInterval(timer);
+      if (stopped) await markUnreadOnStop(db, runId);
       await markMissedMessages(db, runId);
     },
   };

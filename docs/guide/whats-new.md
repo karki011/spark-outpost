@@ -10,7 +10,8 @@ Changes since the last release, newest first. For earlier ones, open **Release n
 
 ## October 2026
 
-| What changed                                                                       | What to do                                                  |
-| ---------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Mac app: the Settings window opens larger.                                         | Nothing; it still fits smaller screens.                     |
-| The prompt cache moved from the message box's chip to a badge on the context ring. | Hover or select the ring to read **Prompt cache** in words. |
+| What changed                                                                                                                                          | What to do                                                   |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| A message you send while a turn runs now shows in the turn where the agent took it in: **Sent**, then **Claude took this in**, with the answer below. | If you stop first, use **Send as next message** or **Edit**. |
+| Mac app: the Settings window opens larger.                                                                                                            | Nothing; it still fits smaller screens.                      |
+| The prompt cache moved from the message box's chip to a badge on the context ring.                                                                    | Hover or select the ring to read **Prompt cache** in words.  |
