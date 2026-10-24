@@ -56,7 +56,6 @@ test('arrows walk the areas, Enter opens one as a network and Escape goes back @
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const projectId = await addProject(page, REPO_ROOT);
-  await openMap(page, monoFixture(projectId));
   const loadedAreaSizes = new Set<number>();
   page.on('response', (response) => {
     if (!/\/map\/areas\//.test(response.url())) return;
@@ -69,6 +68,7 @@ test('arrows walk the areas, Enter opens one as a network and Escape goes back @
       })
       .catch(() => undefined);
   });
+  await openMap(page, monoFixture(projectId));
   await expect(sky(page)).toHaveAccessibleName(/21 areas/);
   await sky(page).focus();
   await page.keyboard.press('ArrowRight');
