@@ -81,7 +81,7 @@ export function ghStanding(program: Program, rules: SparkRuleContext, once = fal
 export function ruleSettingReason(rule: SparkRuleRefusal): string {
   const setting =
     rule.group === 'workflows'
-      ? '"Run a workflow" is Refused'
+      ? '"Run a workflow" is set to Refuse'
       : `${rule.prefix} is not an allowed command`;
   return `${rule.prefix} is refused by Spark rules: ${setting} in Settings → Spark rules`;
 }

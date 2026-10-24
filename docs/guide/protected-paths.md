@@ -52,7 +52,7 @@ Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then a
 
 Fixed: agents can't touch these files or Spark's ports; Mac control, Browser pane, Calendar, web address and always-refused rules stay.
 
-**Settings → Spark rules** edits the `Gh` rules. Following the mode: at once in **Auto**, **Bypass permissions**, **Approve for me** and **Full access**; a card otherwise. A refusal shows a [card](cards.md#around-the-result).
+**Settings → Spark rules** (Mac) sets each rule to **Agent's mode** (none), **Allow**, **Ask** or **Refuse** in your file; company rules are locked. A refusal shows a [card](cards.md#around-the-result).
 
 ## Secret files
 

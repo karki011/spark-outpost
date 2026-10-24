@@ -1,0 +1,282 @@
+.rules-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rules-actions .btn {
+  min-height: 28px;
+  gap: 6px;
+}
+
+.rules-action-note:empty {
+  display: none;
+}
+
+.rules-group {
+  margin-top: 18px;
+}
+
+.rules-group h4 {
+  margin: 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rules-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.rules-what {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rules-label {
+  font-size: 13.5px;
+}
+
+.rules-ids {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+
+.rules-what code,
+.rules-ids code,
+.rules-panel code {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.rules-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.rules-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.rules-choice {
+  width: 196px;
+}
+
+.rules-choice .field-button {
+  min-height: 28px;
+}
+
+.rules-choice .field-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rules-choice.is-mode .field-value {
+  color: var(--muted);
+}
+
+.rules-fixed-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 196px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.rule-mark {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+}
+
+.rule-mark.allow {
+  color: var(--success);
+}
+
+.rule-mark.deny {
+  color: var(--danger);
+}
+
+.rule-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+
+.rules-allowed {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.rules-allowed-body {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rules-allowed ul,
+.rules-panel ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rules-allowed li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rules-note {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.rules-add {
+  display: flex;
+  gap: 8px;
+}
+
+.rules-add .inp {
+  flex: 1;
+  min-width: 0;
+}
+
+.rules-panel {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+}
+
+.rules-panel h4 {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.rules-panel li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.rules-panel li span {
+  color: var(--muted);
+  text-align: right;
+}
+
+.rules-panel li code {
+  color: var(--text);
+}
+
+.rules-alert {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger);
+  border-radius: var(--r-sm);
+  background: var(--danger-soft);
+  font-size: 13px;
+}
+
+.rules-alert svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--danger);
+}
+
+.rules-alert p {
+  margin: 0;
+}
+
+.rules-alert p + p {
+  margin-top: 4px;
+}
+
+.rules-error {
+  color: var(--danger);
+}
+
+.rules-kept {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 18px 0 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.rules-kept svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .rules-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rules-right {
+    justify-content: space-between;
+  }
+
+  .rules-choice,
+  .rules-fixed-choice {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  .rules-choice .field-button {
+    min-height: 44px;
+  }
+
+  .rules-panel li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rules-panel li span {
+    text-align: left;
+  }
+}

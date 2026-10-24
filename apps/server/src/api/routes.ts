@@ -56,6 +56,7 @@ import { queueErrorStatus } from './queue-routes.ts';
 import { adoptErrorStatus } from './adopt-pull-routes.ts';
 import { outpostErrorStatus } from './outpost-routes.ts';
 import { interruptionErrorStatus } from './interruption-routes.ts';
+import { sparkRulesErrorStatus } from './spark-rules-routes.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { PlanDocumentError } from '../persistence/plan-documents.ts';
 import { AgentConfigConflictError } from './agent-config-routes.ts';
@@ -221,7 +222,8 @@ export function statusForError(error: unknown): { status: number; message: strin
     adoptErrorStatus(error) ??
     outpostErrorStatus(error) ??
     cloneErrorStatus(error) ??
-    interruptionErrorStatus(error);
+    interruptionErrorStatus(error) ??
+    sparkRulesErrorStatus(error);
   if (known) return known;
   if (
     error instanceof BadRequestError ||

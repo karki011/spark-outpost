@@ -11,8 +11,9 @@ import {
 } from '../src/persistence/approvals.ts';
 import { listQueue } from '../src/persistence/chat-queue.ts';
 import {
-  saveSparkRules,
   seedWorkspaceRules,
+  setGhAllowed,
+  setSparkRule,
   sparkRules,
   sparkRulesForRun,
 } from '../src/persistence/spark-rules.ts';
@@ -65,6 +66,10 @@ function gateFor(runId: string, mode: string) {
 }
 
 const signal = () => new AbortController().signal;
+const allowed = async () =>
+  (await sparkRules(t.db, t.workspaceId)).ghAllowed.map((entry) => entry.prefix);
+const workflows = async () =>
+  (await sparkRules(t.db, t.workspaceId)).rows.find((row) => row.row === 'workflows');
 const target = (conversationId: string) =>
   resolveRunTarget(
     { db: t.db, workspaceId: t.workspaceId, fixedRunProvider: 'fake' },
@@ -122,7 +127,7 @@ describe('Run a workflow', () => {
   });
 
   it('is refused with a card naming the rule when set to Refused', async () => {
-    await saveSparkRules(t.db, t.workspaceId, { workflows: 'refused' });
+    await setSparkRule(t.db, t.workspaceId, 'workflows', 'deny');
     const run = await doRun(t, root);
     const { answer, card } = await refusedCard(run, WORKFLOW);
     expect(answer.outcome === 'selected' && answer.denial).toContain('Spark rules');
@@ -137,14 +142,14 @@ describe('Run a workflow', () => {
 
 describe('the refused card', () => {
   it('Allow workflows and retry changes the setting and sends the agent a retry', async () => {
-    await saveSparkRules(t.db, t.workspaceId, { workflows: 'refused' });
+    await setSparkRule(t.db, t.workspaceId, 'workflows', 'deny');
     const run = await doRun(t, root);
     const { card } = await refusedCard(run, WORKFLOW);
     await finish(run.runId);
 
     const answered = await answerRuleCard(t.db, t.workspaceId, card.id, 'allow_group', target);
     expect(answered.ruleAnswer).toBe('allow_group');
-    expect((await sparkRules(t.db, t.workspaceId)).workflows).toBe('mode');
+    expect(await workflows()).toMatchObject({ choice: 'allow', source: 'user' });
 
     const retry = await retryRunOf(card.id);
     const input = await loadRunInput(t.db, retry);
@@ -164,7 +169,7 @@ describe('the refused card', () => {
     await finish(run.runId);
 
     await answerRuleCard(t.db, t.workspaceId, card.id, 'allow_once', target);
-    expect((await sparkRules(t.db, t.workspaceId)).ghAllowed).toEqual([]);
+    expect(await allowed()).toEqual([]);
     const retry = await retryRunOf(card.id);
     expect((await sparkRulesForRun(t.db, retry)).once).toEqual([RELEASE]);
 
@@ -182,7 +187,7 @@ describe('the refused card', () => {
     const run = await doRun(t, root);
     const { card } = await refusedCard(run, RELEASE);
     await answerRuleCard(t.db, t.workspaceId, card.id, 'allow_group', target);
-    expect((await sparkRules(t.db, t.workspaceId)).ghAllowed).toEqual(['gh release create']);
+    expect(await allowed()).toEqual(['gh release create']);
     const queue = await listQueue(t.db, run.conversationId);
     expect(queue).toHaveLength(1);
     expect(queue[0]).toMatchObject({ sparkRuleCardId: card.id });
@@ -193,7 +198,7 @@ describe('the refused card', () => {
     const { card } = await refusedCard(run, RELEASE);
     await finish(run.runId);
     await answerRuleCard(t.db, t.workspaceId, card.id, 'keep', target);
-    expect(await sparkRules(t.db, t.workspaceId)).toMatchObject({ ghAllowed: [] });
+    expect(await allowed()).toEqual([]);
     expect(await listQueue(t.db, run.conversationId)).toEqual([]);
     const { rows } = await t.db.query('SELECT 1 FROM runs WHERE conversation_id = $1', [
       run.conversationId,
@@ -208,7 +213,7 @@ describe('the refused card', () => {
     await expect(
       answerRuleCard(t.db, t.workspaceId, card.id, 'allow_group', target),
     ).rejects.toBeInstanceOf(ApprovalInputError);
-    expect((await sparkRules(t.db, t.workspaceId)).ghAllowed).toEqual([]);
+    expect(await allowed()).toEqual([]);
     const again = await answerRuleCard(t.db, t.workspaceId, card.id, 'allow_once', target);
     expect(again.ruleAnswer).toBe('allow_once');
   });
@@ -239,14 +244,13 @@ describe("Spark's rules file", () => {
     const { permissions } = await fileRules();
     expect(permissions.deny).toEqual(expect.arrayContaining(['Gh(workflow run)', 'Gh(*)']));
     expect(permissions.allow).toEqual(['Gh(release create)']);
-    expect(await sparkRules(t.db, t.workspaceId)).toEqual({
-      workflows: 'refused',
-      ghAllowed: ['gh release create'],
-    });
+    expect(await workflows()).toMatchObject({ choice: 'deny', source: 'user' });
+    expect(await allowed()).toEqual(['gh release create']);
   });
 
   it('saves Settings changes in the file, not the database', async () => {
-    await saveSparkRules(t.db, t.workspaceId, { workflows: 'refused', ghAllowed: ['gh pr ready'] });
+    await setSparkRule(t.db, t.workspaceId, 'workflows', 'deny');
+    await setGhAllowed(t.db, t.workspaceId, 'gh pr ready', true);
     const { permissions } = await fileRules();
     expect(permissions.deny).toContain('Gh(run cancel)');
     expect(permissions.allow).toEqual(['Gh(pr ready)']);
@@ -270,11 +274,19 @@ describe("Spark's rules file", () => {
   it('reports what it could not use and keeps the recommended rules for a broken file', async () => {
     await seedWorkspaceRules(t.db, t.workspaceId);
     await writeFile(userFile(), '{ "permissions": { "deny": ["Push", "Nope"] }, "theme": 1 }');
-    expect((await sparkRules(t.db, t.workspaceId)).problems).toEqual([
-      `settings.json: "theme" is kept but Spark doesn't use it`,
-      `settings.json: "Nope" in deny isn't a Spark rule, so it is not applied`,
+    const view = await sparkRules(t.db, t.workspaceId);
+    expect(view.problems).toEqual([
+      { file: 'user', message: `"theme" is kept but Spark doesn't use it` },
+      { file: 'user', message: `"Nope" in deny isn't a Spark rule, so it is not applied` },
     ]);
+    expect(view.unused).toEqual([
+      { entry: '"theme": 1', kind: 'key' },
+      { entry: '"Nope"', kind: 'rule' },
+    ]);
+    expect(view.malformed).toBe(false);
     await writeFile(userFile(), '{ nope');
+    expect(await sparkRules(t.db, t.workspaceId)).toMatchObject({ malformed: true });
+    await expect(setSparkRule(t.db, t.workspaceId, 'Push', 'ask')).rejects.toThrow("can't be read");
     const run = await doRun(t, root);
     const { answer } = await refusedCard(run, RELEASE);
     expect(answer).toMatchObject({ allowed: false });

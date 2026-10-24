@@ -44,33 +44,99 @@ export function ghPrefixProblem(text: string): string | null {
   return null;
 }
 
-export const ghAllowedSchema = z
-  .array(z.string().max(80))
-  .max(GH_ALLOWED_MAX)
-  .transform((entries) => [...new Set(entries.map(tidyGhPrefix))])
-  .refine((entries) => entries.every((entry) => ghPrefixProblem(entry) === null), {
-    message: 'Each allowed command is gh and two words, such as gh release create.',
-  });
+export const SPARK_FLOOR_RULE_IDS = [
+  'Push',
+  'Push(other)',
+  'Push(force)',
+  'PullRequest',
+  'SecretFile(edit)',
+  'SecretFile(read)',
+  'InstructionFile(edit)',
+  'GitConfig',
+  'WriteOutside',
+  'SecretSend',
+  'GitRemote',
+] as const;
+export type SparkFloorRuleId = (typeof SPARK_FLOOR_RULE_IDS)[number];
+
+export const HELD_ASK_RULES: readonly SparkFloorRuleId[] = [
+  'Push(force)',
+  'GitConfig',
+  'SecretSend',
+];
+
+export const sparkRuleRowSchema = z.enum([...SPARK_FLOOR_RULE_IDS, 'workflows', 'Gh(*)']);
+export type SparkRuleRow = z.infer<typeof sparkRuleRowSchema>;
+
+export const sparkRuleChoiceSchema = z.enum(['mode', 'allow', 'ask', 'deny']);
+export type SparkRuleChoice = z.infer<typeof sparkRuleChoiceSchema>;
+
+export const sparkRuleSourceSchema = z.enum(['user', 'managed']);
+export type SparkRuleSource = z.infer<typeof sparkRuleSourceSchema>;
+
+export const sparkRuleRowStateSchema = z.object({
+  row: sparkRuleRowSchema,
+  ids: z.array(z.string()),
+  choice: sparkRuleChoiceSchema.nullable(),
+  source: sparkRuleSourceSchema.nullable(),
+});
+export type SparkRuleRowState = z.infer<typeof sparkRuleRowStateSchema>;
+
+export const ghAllowedEntrySchema = z.object({
+  prefix: z.string(),
+  overridden: z.boolean(),
+});
+export type GhAllowedEntry = z.infer<typeof ghAllowedEntrySchema>;
+
+export const unusedRuleEntrySchema = z.object({
+  entry: z.string(),
+  kind: z.enum(['key', 'rule', 'agent-tool']),
+});
+export type UnusedRuleEntry = z.infer<typeof unusedRuleEntrySchema>;
+
+export const sparkRulesProblemSchema = z.object({
+  file: sparkRuleSourceSchema,
+  message: z.string(),
+});
+export type SparkRulesProblem = z.infer<typeof sparkRulesProblemSchema>;
 
 export const sparkRulesSchema = z.object({
-  workflows: ghRuleChoiceSchema,
-  ghAllowed: z.array(z.string()),
-  problems: z.array(z.string()).optional(),
+  rows: z.array(sparkRuleRowStateSchema),
+  ghAllowed: z.array(ghAllowedEntrySchema),
+  unused: z.array(unusedRuleEntrySchema),
+  problems: z.array(sparkRulesProblemSchema),
+  malformed: z.boolean(),
 });
 export type SparkRules = z.infer<typeof sparkRulesSchema>;
 
-export const DEFAULT_SPARK_RULES: SparkRules = {
+export const DEFAULT_SPARK_RULES = {
   workflows: DEFAULT_WORKFLOW_RULE,
-  ghAllowed: [],
+  ghAllowed: [] as string[],
 };
 
-export const updateSparkRulesRequestSchema = z
-  .object({
-    workflows: ghRuleChoiceSchema.optional(),
-    ghAllowed: ghAllowedSchema.optional(),
-  })
-  .refine((body) => body.workflows !== undefined || body.ghAllowed !== undefined);
-export type UpdateSparkRulesRequest = z.input<typeof updateSparkRulesRequestSchema>;
+export const setSparkRuleRequestSchema = z.object({
+  row: sparkRuleRowSchema,
+  choice: sparkRuleChoiceSchema,
+});
+export type SetSparkRuleRequest = z.infer<typeof setSparkRuleRequestSchema>;
+
+export const ghAllowedRequestSchema = z.object({
+  prefix: z
+    .string()
+    .max(80)
+    .transform(tidyGhPrefix)
+    .refine((prefix) => ghPrefixProblem(prefix) === null, {
+      message: 'Use gh and two words, such as gh release create.',
+    }),
+  allowed: z.boolean(),
+});
+export type GhAllowedRequest = z.input<typeof ghAllowedRequestSchema>;
+
+export const sparkRulesOpenResultSchema = z.object({
+  opened: z.boolean(),
+  error: z.string().optional(),
+});
+export type SparkRulesOpenResult = z.infer<typeof sparkRulesOpenResultSchema>;
 
 export const sparkRuleRefusalSchema = z.object({
   group: sparkRuleGroupSchema,

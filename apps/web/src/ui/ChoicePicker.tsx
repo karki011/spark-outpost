@@ -1,4 +1,4 @@
-import { useEffect, useId } from 'react';
+import { useEffect, useId, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronIcon, PlusIcon } from './icons.tsx';
 import { useMenuPosition } from './use-menu-position.ts';
@@ -7,6 +7,7 @@ import { usePopover } from './use-popover.ts';
 export interface PickerChoice {
   id: string;
   label: string;
+  icon?: ReactNode;
   description?: string;
   risky?: boolean;
   unavailableReason?: string | null;
@@ -85,7 +86,10 @@ export function ChoicePicker({
         aria-controls={listId}
         onClick={toggle}
       >
-        <span className="field-value">{current?.label ?? placeholder}</span>
+        <span className="field-value">
+          {current?.icon}
+          {current?.label ?? placeholder}
+        </span>
         <ChevronIcon />
       </button>
       {current?.description && (
@@ -120,6 +124,7 @@ export function ChoicePicker({
                 anchorRef.current?.focus();
               }}
             >
+              {choice.icon}
               <span>
                 <b>{choice.label}</b>
                 {(choice.unavailableReason ?? choice.description) && (

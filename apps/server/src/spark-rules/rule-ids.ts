@@ -1,23 +1,11 @@
-export const FLOOR_RULE_IDS = [
-  'Push',
-  'Push(other)',
-  'Push(force)',
-  'PullRequest',
-  'SecretFile(edit)',
-  'SecretFile(read)',
-  'InstructionFile(edit)',
-  'GitConfig',
-  'WriteOutside',
-  'SecretSend',
-  'GitRemote',
-] as const;
+import { SPARK_FLOOR_RULE_IDS, type SparkFloorRuleId } from '@spark-outpost/contracts';
 
-export type FloorRuleId = (typeof FLOOR_RULE_IDS)[number];
+export type FloorRuleId = SparkFloorRuleId;
 
 export const GH_ANY = 'Gh(*)';
 
 const GH_RULE = /^Gh\(([a-z][a-z0-9-]*) ([a-z][a-z0-9-]*)\)$/;
-const FLOOR_IDS: ReadonlySet<string> = new Set(FLOOR_RULE_IDS);
+const FLOOR_IDS: ReadonlySet<string> = new Set(SPARK_FLOOR_RULE_IDS);
 
 export function isFloorRuleId(text: string): text is FloorRuleId {
   return FLOOR_IDS.has(text);

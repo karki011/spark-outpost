@@ -29,6 +29,7 @@ export interface LoadedRules {
   rules: SparkRuleSet;
   problems: RuleProblem[];
   userFile: RulesFileRead;
+  userFailedSafe: boolean;
 }
 
 export const MANAGED_RULES_FILE = '/Library/Application Support/SparkOutpost/managed-settings.json';
@@ -75,24 +76,26 @@ async function readRulesFile(file: string): Promise<RulesFileRead> {
 interface Tier {
   lists: RuleLists;
   problems: string[];
+  failedSafe: boolean;
 }
 
 function failSafe(gh: GhSeed, problem: string): Tier {
   const lists = parseRulesFile(recommendedRulesText(gh)).lists;
-  return { lists, problems: [`${problem}, so Spark uses its recommended rules`] };
+  return { lists, problems: [`${problem}, so Spark uses its recommended rules`], failedSafe: true };
 }
 
 function tierFrom(read: RulesFileRead, gh: GhSeed): Tier {
   if (read.kind === 'unreadable') return failSafe(gh, "The file can't be read");
-  if (read.kind === 'missing') return { lists: NO_RULE_LISTS, problems: [] };
+  if (read.kind === 'missing') return { lists: NO_RULE_LISTS, problems: [], failedSafe: false };
   const parsed = parseRulesFile(read.text);
   if (parsed.malformed) return failSafe(gh, parsed.problems[0] ?? 'The file is malformed');
-  return { lists: parsed.lists, problems: parsed.problems };
+  return { lists: parsed.lists, problems: parsed.problems, failedSafe: false };
 }
 
 async function userTier(files: SparkRulesFiles, gh: GhSeed, read: RulesFileRead): Promise<Tier> {
   if (read.kind !== 'missing' || (await exists(seededMarker(files)))) return tierFrom(read, gh);
-  return { lists: parseRulesFile(recommendedRulesText(gh)).lists, problems: [] };
+  const lists = parseRulesFile(recommendedRulesText(gh)).lists;
+  return { lists, problems: [], failedSafe: false };
 }
 
 export async function loadSparkRules(files: SparkRulesFiles, gh: GhSeed): Promise<LoadedRules> {
@@ -109,6 +112,7 @@ export async function loadSparkRules(files: SparkRulesFiles, gh: GhSeed): Promis
       ...user.problems.map((message) => ({ file: 'user' as const, message })),
     ],
     userFile: userRead,
+    userFailedSafe: user.failedSafe,
   };
 }
 
