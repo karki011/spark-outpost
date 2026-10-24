@@ -4,7 +4,12 @@ import type { NewFeedback } from '../persistence/pr-watches.ts';
 import { repoPath, type GitHubConnection, type RepoRef } from '../ship/github/connection.ts';
 import { checkRunsState, failedCheckRuns } from '../ship/github/check-runs.ts';
 import { GITHUB_PAGE_SIZE } from '../ship/github/pull-reads.ts';
-import { checkRunsView, SPARK_REPLY_MARKER, type Discussion } from '../pr-tracking/details.ts';
+import {
+  checkRunsView,
+  latestCheckRuns,
+  SPARK_REPLY_MARKER,
+  type Discussion,
+} from '../pr-tracking/details.ts';
 import { reviewVerdict } from '../tickets/pull-status.ts';
 
 export { SPARK_REPLY_MARKER };
@@ -192,7 +197,7 @@ async function failedRuns(
   connection: GitHubConnection,
   repo: RepoRef,
   headSha: string,
-): Promise<CheckSummary & { failed: CheckRun[] }> {
+): Promise<CheckSummary & { failed: CheckRun[]; latest: PrCheckRun[] }> {
   const { check_runs: runs } = await connection.get(
     `${repoPath(repo)}/commits/${encodeURIComponent(headSha)}/check-runs?per_page=${GITHUB_PAGE_SIZE}`,
     checkRunsSchema,
@@ -200,7 +205,13 @@ async function failedRuns(
   );
   const state = checkRunsState(runs);
   const failed = state === 'failing' ? failedCheckRuns(runs) : [];
-  return { state, failingChecks: failingNames(failed), checkRuns: checkRunsView(runs), failed };
+  return {
+    state,
+    failingChecks: failingNames(failed),
+    checkRuns: checkRunsView(runs),
+    failed,
+    latest: latestCheckRuns(runs),
+  };
 }
 
 export async function readCheckSummary(
@@ -216,8 +227,9 @@ export async function readChecks(
   connection: GitHubConnection,
   repo: RepoRef,
   headSha: string,
-): Promise<CheckSummary & { failing: Gathered[] }> {
-  const { state, failingChecks, checkRuns, failed } = await failedRuns(connection, repo, headSha);
+): Promise<CheckSummary & { failing: Gathered[]; latest: PrCheckRun[] }> {
+  const summary = await failedRuns(connection, repo, headSha);
+  const { state, failingChecks, checkRuns, failed, latest } = summary;
   const failing: Gathered[] = [];
   for (const run of failed.slice(0, MAX_FAILING_CHECKS)) {
     failing.push({
@@ -231,7 +243,7 @@ export async function readChecks(
       url: run.html_url ?? null,
     });
   }
-  return { state, failingChecks, checkRuns, failing };
+  return { state, failingChecks, checkRuns, failing, latest };
 }
 
 const fromSpark = (body: string) => body.includes(SPARK_REPLY_MARKER);

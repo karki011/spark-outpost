@@ -83,7 +83,7 @@ async function ingest(
     resolved,
     inline: comments.inline,
     reviews: comments.reviews,
-    checkRuns: checks.checkRuns,
+    checkRuns: checks.latest,
   };
   const known = await feedbackFor(deps.db, watch.id);
   await updateFeedback(deps.db, settledOnGitHub(known, onGitHub), { state: 'done' });
