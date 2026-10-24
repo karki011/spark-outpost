@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join } from 'node:path';
+import { DEFAULT_SPARK_RULES } from '@spark-outpost/contracts';
 import { sparkDataDir } from '../config.ts';
 import { DEFAULT_BRANCH_PREFIX } from '../projects/worktrees.ts';
 import { recommendedRulesText, type GhSeed } from './recommended.ts';
@@ -109,6 +110,12 @@ export async function loadSparkRules(files: SparkRulesFiles, gh: GhSeed): Promis
     ],
     userFile: userRead,
   };
+}
+
+export async function floorRulesNow(
+  files: SparkRulesFiles = sparkRulesFiles(),
+): Promise<SparkRuleSet> {
+  return (await loadSparkRules(files, DEFAULT_SPARK_RULES)).rules;
 }
 
 async function writeAtomically(file: string, text: string): Promise<void> {

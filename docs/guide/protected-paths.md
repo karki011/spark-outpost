@@ -37,9 +37,9 @@ A blocked step reads "Refused gh pr create — …", unlike your own **Deny**. A
 
 ## Spark rules
 
-Spark keeps its rules in `settings.json` in its data folder, written once with the recommended rules. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.
+Spark keeps its rules in `settings.json` in its data folder, written once with recommended rules. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.
 
-Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then ask. A rule in no list, or in allow, is left to the agent's mode. A broken file means recommended rules.
+Each file lists rules in `permissions.allow`, `ask` or `deny`; deny wins, then ask. A rule in no list, or in allow, is left to the agent's mode, unflagged. A broken file means recommended rules.
 
 | Rule                                                                              | Covers                                                                         | Recommended  |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------ |

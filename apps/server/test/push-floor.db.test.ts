@@ -4,6 +4,7 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { DEFAULT_SPARK_RULES } from '@spark-outpost/contracts';
 import { CHAT_PUBLISH_REASON } from '../src/approvals/decide.ts';
 import { PLAIN_FORCE_REASON } from '../src/approvals/git-commands.ts';
 import {
@@ -22,6 +23,8 @@ import type { ProtocolObserver } from '../src/providers/provider.ts';
 import { createApprovalGate } from '../src/workflow/approval-gate.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import { startRailFlags } from '../src/workflow/rail-flags.ts';
+import type { FloorRuleId } from '../src/spark-rules/rule-ids.ts';
+import { changeSparkRules, sparkRulesFiles } from '../src/spark-rules/rules-store.ts';
 import { commandRequest, doRun, recordingAppend, type LinkedRun } from './approval-support.ts';
 import { repoWithRemote } from './ship-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
@@ -230,6 +233,15 @@ function watchFor(chat: LinkedRun) {
   return { command, asked, flags, methods };
 }
 
+async function removeRule(rule: FloorRuleId) {
+  await changeSparkRules(sparkRulesFiles(), DEFAULT_SPARK_RULES, () => ({
+    remove: [
+      ['ask', rule],
+      ['deny', rule],
+    ],
+  }));
+}
+
 describe('a push the approval gate never saw', () => {
   it('is flagged when it names a branch that is not the chat’s own, without stopping anything', async () => {
     const chat = await chatOnOwnBranch();
@@ -262,6 +274,14 @@ describe('a push the approval gate never saw', () => {
     watch.command('view', 'gh pr view 12');
     watch.asked('gated');
     watch.command('gated', 'git push origin main');
+    expect(await watch.flags()).toEqual([]);
+  });
+
+  it('is not flagged once the user removed Push(other) from Spark rules', async () => {
+    await removeRule('Push(other)');
+    const chat = await chatOnOwnBranch();
+    const watch = watchFor(chat);
+    watch.command('c1', 'git push origin main');
     expect(await watch.flags()).toEqual([]);
   });
 
@@ -298,5 +318,20 @@ describe('a remote change the approval gate never saw', () => {
     ]);
     expect(flags[0]!.originals[0]!.text).not.toContain('example.net');
     expect(methods).toEqual(['spark/rail_crossed']);
+  });
+
+  it('is not flagged once the user removed GitConfig from Spark rules', async () => {
+    await removeRule('GitConfig');
+    const chat = await chatOnOwnBranch();
+    const { audit } = auditLog();
+    const rails = await startRailFlags({
+      db: t.db,
+      runId: chat.runId,
+      projectRoots: [root],
+      audit,
+    });
+    execFileSync('git', ['-C', root, 'remote', 'add', 'fork', 'https://example.net/fork.git']);
+    await rails.finish();
+    expect(await listRailFlags(t.db, chat.conversationId)).toEqual([]);
   });
 });

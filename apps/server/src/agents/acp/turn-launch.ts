@@ -7,10 +7,9 @@ import {
   NO_PERMISSION_RULES,
   type PermissionRules,
 } from '../../agent-config/permission-rules.ts';
-import { DEFAULT_SPARK_RULES } from '@spark-outpost/contracts';
 import { ProviderError, type ProviderTurn } from '../../providers/provider.ts';
 import { sparkFloor, type SparkFloor } from '../../spark-rules/floor-flags.ts';
-import { loadSparkRules, sparkRulesFiles } from '../../spark-rules/rules-store.ts';
+import { floorRulesNow } from '../../spark-rules/rules-store.ts';
 import { resolveUserMcp } from '../../mcp/launch.ts';
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
 import { childEnvironment } from '../../setup/environment.ts';
@@ -87,8 +86,7 @@ function assertCanChange(definition: AgentDefinition, turn: ProviderTurn): void 
 }
 
 async function turnFloor(): Promise<SparkFloor> {
-  const loaded = await loadSparkRules(sparkRulesFiles(), DEFAULT_SPARK_RULES);
-  return sparkFloor(loaded.rules);
+  return sparkFloor(await floorRulesNow());
 }
 
 export async function planLaunch(
