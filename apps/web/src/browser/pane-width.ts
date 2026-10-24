@@ -54,9 +54,10 @@ export function presetPaneWidth(
   zoom = 1,
 ): PresetFit {
   if (page === 'fit') return { ok: true, width: range.max };
+  const widest = pageWidth(range.max, inset, zoom);
+  if (page > widest) return { ok: false, widest };
   const width = paneWidthFor(page, inset, zoom);
-  if (width > range.max) return { ok: false, widest: pageWidth(range.max, inset, zoom) };
-  return { ok: true, width: Math.max(range.min, width) };
+  return { ok: true, width: Math.min(range.max, Math.max(range.min, width)) };
 }
 
 export function presetNotice(page: number, widest: number): string {

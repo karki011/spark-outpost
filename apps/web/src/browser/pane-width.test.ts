@@ -102,4 +102,11 @@ describe('page widths under app zoom', () => {
       widest: 1228,
     });
   });
+
+  it('takes a preset the widest pane shows once the page width is rounded', () => {
+    const narrow = { min: 418, max: 505 };
+    expect(pageWidth(narrow.max, INSET, 0.8)).toBe(390);
+    expect(presetPaneWidth(390, INSET, narrow, 0.8)).toEqual({ ok: true, width: 505 });
+    expect(presetPaneWidth(768, INSET, narrow, 0.8)).toEqual({ ok: false, widest: 390 });
+  });
 });
