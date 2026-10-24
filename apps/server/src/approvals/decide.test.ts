@@ -178,7 +178,7 @@ describe('decide() refuses publishing from a Builder in every mode', () => {
     'git -C sub push origin feature',
     'gh pr create --draft --title x',
     'gh api -X POST repos/acme/widgets/pulls',
-    '/usr/local/bin/gh auth token',
+    '/usr/local/bin/gh auth logout',
     'git remote add fork git@github.com:me/widgets.git',
     'git remote set-url origin https://example.com/x.git',
     'hub pull-request',

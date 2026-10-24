@@ -11,7 +11,12 @@ import {
 } from './git-commands.ts';
 import { floorEffect, type SparkRuleSet } from '../spark-rules/resolve.ts';
 import type { FloorRuleId } from '../spark-rules/rule-ids.ts';
-import { followsRule, DEFAULT_RULE_CONTEXT, type SparkRuleContext } from './gh-rules.ts';
+import {
+  followsRule,
+  ownGhRules,
+  DEFAULT_RULE_CONTEXT,
+  type SparkRuleContext,
+} from './gh-rules.ts';
 import { namesAnotherRepo, ownPullReply, type OwnRepo } from './own-repo.ts';
 
 export interface FollowUpRound {
@@ -226,7 +231,10 @@ function* hostingStops(
     }
     const args = program.slice(1);
     const refused = ghRefusal(args, task, followed);
-    if (refused) yield [refused, opensPull(args) ? 'PullRequest' : null];
+    if (!refused) continue;
+    const owned = ownGhRules(args);
+    if (owned.length === 0) yield [refused, opensPull(args) ? 'PullRequest' : null];
+    for (const rule of owned) yield [refused, rule];
   }
 }
 

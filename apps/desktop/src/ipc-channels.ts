@@ -76,6 +76,7 @@ export const IPC = {
   settingsWindowTakeDoc: 'settings-window:take-doc',
   menuSidebarShown: 'menu:sidebar-shown',
   privacyOpenFullDiskAccess: 'privacy:open-full-disk-access',
+  sparkRulesOpenFile: 'spark-rules:open-file',
   browserState: 'browser:state',
   browserPlace: 'browser:place',
   browserCommand: 'browser:command',

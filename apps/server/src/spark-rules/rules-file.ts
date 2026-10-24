@@ -32,10 +32,17 @@ function parsedJson(text: string): unknown {
   }
 }
 
+const UNUSED_KEY = "is kept but Spark doesn't use it";
+const UNUSED_ENTRY = "isn't a Spark rule, so it is not applied";
+
+export function namesOneEntry(problem: string): boolean {
+  return problem.endsWith(UNUSED_KEY) || problem.endsWith(UNUSED_ENTRY);
+}
+
 function unknownKeys(record: Record<string, unknown>, known: ReadonlySet<string>, at: string) {
   return Object.keys(record)
     .filter((key) => !known.has(key))
-    .map((key) => `${at}"${key}" is kept but Spark doesn't use it`);
+    .map((key) => `${at}"${key}" ${UNUSED_KEY}`);
 }
 
 function describe(entry: unknown): string {
@@ -48,7 +55,7 @@ function readList(entries: readonly unknown[], effect: RuleEffect, problems: str
     if (typeof entry === 'string' && entry.length <= MAX_RULE_LENGTH && recognisedRule(entry)) {
       if (!applied.includes(entry)) applied.push(entry);
     } else {
-      problems.push(`${describe(entry)} in ${effect} isn't a Spark rule, so it is not applied`);
+      problems.push(`${describe(entry)} in ${effect} ${UNUSED_ENTRY}`);
     }
   }
   if (entries.length > MAX_RULES) {

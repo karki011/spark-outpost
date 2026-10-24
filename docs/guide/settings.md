@@ -63,10 +63,10 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 
 **Spark rules**:
 
-| Row                  | Default                      | More                                    |
-| -------------------- | ---------------------------- | --------------------------------------- |
-| **Run a workflow**   | **Follows the agent's mode** | [Rules](protected-paths.md#spark-rules) |
-| **Allowed commands** | None                         | [Rules](protected-paths.md#spark-rules) |
+| Row                                         | Default           | More                                    |
+| ------------------------------------------- | ----------------- | --------------------------------------- |
+| Publishing, GitHub commands, Files, Sending | Recommended rules | [Rules](protected-paths.md#spark-rules) |
+| **Allowed gh commands**                     | None              | [Rules](protected-paths.md#spark-rules) |
 
 ## Connections
 

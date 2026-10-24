@@ -27,6 +27,11 @@ export const RECOMMENDED_DENY: readonly FloorRuleId[] = [
   'Push(other)',
   'PullRequest',
   'GitRemote',
+  'Gh(pr merge)',
+  'Gh(pr review)',
+  'GhAdmin',
+  'Gh(auth)',
+  'Gh(api write)',
 ];
 
 export const WORKFLOW_RULES: readonly string[] = WORKFLOW_PREFIXES.map(ghRuleId);
@@ -39,7 +44,11 @@ export function recommendedRulesText(gh: GhSeed = RECOMMENDED_GH): string {
   const permissions = {
     allow: [...(follows ? WORKFLOW_RULES : []), ...allowed],
     ask: [...RECOMMENDED_ASK],
-    deny: [...RECOMMENDED_DENY, ...(follows ? [] : WORKFLOW_RULES), GH_ANY],
+    deny: [
+      ...RECOMMENDED_DENY.filter((rule) => !allowed.includes(rule)),
+      ...(follows ? [] : WORKFLOW_RULES),
+      GH_ANY,
+    ],
   };
   return `${JSON.stringify({ permissions }, null, 2)}\n`;
 }

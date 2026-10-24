@@ -28,6 +28,7 @@ export interface LoadedRules {
   rules: SparkRuleSet;
   problems: RuleProblem[];
   userFile: RulesFileRead;
+  userFailedSafe: boolean;
 }
 
 export const MANAGED_RULES_FILE = '/Library/Application Support/SparkOutpost/managed-settings.json';
@@ -75,19 +76,20 @@ async function readRulesFile(file: string): Promise<RulesFileRead> {
 interface Tier {
   lists: RuleLists;
   problems: string[];
+  failedSafe: boolean;
 }
 
 function failSafe(problem: string): Tier {
   const lists = RECOMMENDED_RULES.user;
-  return { lists, problems: [`${problem}, so Spark uses its recommended rules`] };
+  return { lists, problems: [`${problem}, so Spark uses its recommended rules`], failedSafe: true };
 }
 
 function tierFrom(read: RulesFileRead): Tier {
   if (read.kind === 'unreadable') return failSafe("The file can't be read");
-  if (read.kind === 'missing') return { lists: NO_RULE_LISTS, problems: [] };
+  if (read.kind === 'missing') return { lists: NO_RULE_LISTS, problems: [], failedSafe: false };
   const parsed = parseRulesFile(read.text);
   if (parsed.malformed) return failSafe(parsed.problems[0] ?? 'The file is malformed');
-  return { lists: parsed.lists, problems: parsed.problems };
+  return { lists: parsed.lists, problems: parsed.problems, failedSafe: false };
 }
 
 export async function loadSparkRules(
@@ -106,6 +108,7 @@ export async function loadSparkRules(
       ...user.problems.map((message) => ({ file: 'user' as const, message })),
     ],
     userFile: userRead,
+    userFailedSafe: user.failedSafe,
   };
 }
 

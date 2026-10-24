@@ -112,3 +112,16 @@ export function ghOnlyReads(given: readonly string[]): boolean {
 export function ghSendsQuery(args: readonly string[]): boolean {
   return ghArgs(args)[0] === 'search';
 }
+
+const TOKEN_CONFIG_KEY = /^oauth_token$/i;
+
+export function ghRevealsToken(given: readonly string[]): boolean {
+  const [group, verb, ...rest] = ghArgs(given);
+  if (group === 'auth') {
+    if (verb === 'token') return true;
+    if (verb === 'git-credential') return rest.includes('get');
+    return verb === 'status' && rest.some((token) => SHOWS_TOKEN.test(token));
+  }
+  if (group !== 'config' || verb !== 'get') return false;
+  return rest.some((token) => TOKEN_CONFIG_KEY.test(token));
+}

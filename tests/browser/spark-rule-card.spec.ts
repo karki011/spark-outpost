@@ -56,7 +56,18 @@ async function refusedChat(refused: readonly Refused[]): Promise<void> {
   }
 }
 
-const rules = async (page: Page) => (await page.request.get('/api/spark-rules')).json();
+interface RulesView {
+  rows: { row: string; choice: string | null }[];
+  ghAllowed: { prefix: string }[];
+}
+
+async function rules(page: Page) {
+  const view = (await (await page.request.get('/api/spark-rules')).json()) as RulesView;
+  return {
+    workflows: view.rows.find((row) => row.row === 'workflows')?.choice,
+    ghAllowed: view.ghAllowed.map((entry) => entry.prefix),
+  };
+}
 const card = (page: Page, command: string) =>
   page.getByRole('group').filter({ has: page.locator('code', { hasText: command }) });
 
@@ -78,7 +89,7 @@ test('a refused workflow card allows workflows and retries', async ({ page }) =>
   await expect(refused.getByRole('status')).toHaveText(
     'Workflows now follow the agent’s mode. The agent runs it again.',
   );
-  expect(await rules(page)).toMatchObject({ workflows: 'mode' });
+  expect(await rules(page)).toMatchObject({ workflows: 'allow' });
   await expect(page.getByText(/Spark rules now allow the command Spark refused/)).toBeVisible();
 });
 
@@ -104,7 +115,7 @@ test('Allow once and Keep refused answer each card once and leave the settings a
   await close.getByRole('button', { name: 'Keep refused' }).click();
   await expect(close.getByRole('status')).toHaveText('Kept refused.');
 
-  expect(await rules(page)).toMatchObject({ workflows: 'refused', ghAllowed: [] });
+  expect(await rules(page)).toMatchObject({ workflows: 'deny', ghAllowed: [] });
   await page.reload();
   await expect(card(page, RELEASE).getByRole('status')).toHaveText(
     'Allowed once. The agent runs it again.',

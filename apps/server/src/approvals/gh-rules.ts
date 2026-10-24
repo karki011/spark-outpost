@@ -1,5 +1,6 @@
 import { WORKFLOW_PREFIXES, type SparkRuleRefusal } from '@spark-outpost/contracts';
 import { WORKFLOWS_REFUSED_RULES } from '../spark-rules/recommended.ts';
+import type { FloorRuleId } from '../spark-rules/rule-ids.ts';
 import {
   ghCommandRuling,
   ghExactRuling,
@@ -7,7 +8,7 @@ import {
   type SparkRuleSet,
 } from '../spark-rules/resolve.ts';
 import { normalizeCommand, programName } from './commands.ts';
-import { ghArgs } from './gh-reads.ts';
+import { ghArgs, ghRevealsToken } from './gh-reads.ts';
 import { hostingCommands, hostingRead, publishesThroughGit } from './git-commands.ts';
 
 export interface SparkRuleContext {
@@ -26,7 +27,6 @@ export type GhRuling =
   | { kind: 'refused'; rule: SparkRuleRefusal | null; reason: string; ruleId: string };
 
 const NONE: GhRuling = { kind: 'none' };
-const FIXED_GROUPS = new Set(['api', 'auth']);
 const PUBLISH_RULED: Readonly<Record<string, ReadonlySet<string>>> = {
   pr: new Set(['create', 'edit', 'comment']),
 };
@@ -41,12 +41,17 @@ function prefixOf(given: readonly string[]): string | null {
   return `gh ${group} ${verb}`.toLowerCase();
 }
 
-function neverAllowed(args: readonly string[]): boolean {
-  const [group = '', verb = '', ...rest] = args;
-  if (FIXED_GROUPS.has(group)) return true;
-  if (args.some((token) => ADMIN.test(token))) return true;
-  if (group === 'pr' && verb === 'merge') return true;
-  return group === 'pr' && verb === 'review' && rest.some((token) => APPROVES.test(token));
+export function ownGhRules(args: readonly string[]): FloorRuleId[] {
+  const [group = '', verb = '', ...rest] = ghArgs(args);
+  const found: FloorRuleId[] = [];
+  if (group === 'api') found.push('Gh(api write)');
+  if (group === 'auth' && !ghRevealsToken(args)) found.push('Gh(auth)');
+  if (group === 'pr' && verb === 'merge') found.push('Gh(pr merge)');
+  if (group === 'pr' && verb === 'review' && rest.some((token) => APPROVES.test(token))) {
+    found.push('Gh(pr review)');
+  }
+  if (args.some((token) => ADMIN.test(token))) found.push('GhAdmin');
+  return found;
 }
 
 function workflowPrefix(prefix: string): boolean {
@@ -70,7 +75,7 @@ export function ghStanding(program: Program, rules: SparkRuleContext, once = fal
   if (hostingRead(program)) return 'read';
   const args = ghArgs(program.slice(1));
   const prefix = prefixOf(args);
-  if (!prefix || neverAllowed(args)) return 'policy';
+  if (!prefix || ownGhRules(args).length > 0) return 'policy';
   if (once) return 'follows';
   const ruling = rulingFor(prefix, rules);
   const [group = '', verb = ''] = args;
@@ -81,7 +86,7 @@ export function ghStanding(program: Program, rules: SparkRuleContext, once = fal
 export function ruleSettingReason(rule: SparkRuleRefusal): string {
   const setting =
     rule.group === 'workflows'
-      ? '"Run a workflow" is Refused'
+      ? '"Run a workflow" is set to Refuse'
       : `${rule.prefix} is not an allowed command`;
   return `${rule.prefix} is refused by Spark rules: ${setting} in Settings → Spark rules`;
 }

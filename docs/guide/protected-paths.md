@@ -6,7 +6,7 @@ order: 616
 summary: The hard rails - what Spark's rules make ask or refuse in a chat, and what is refused even with no rules.
 ---
 
-By default there are no [rules](#spark-rules): **Auto** or **Bypass permissions** can force push, push any branch, edit secret files, hooks and instruction files, and publish unasked. The recommended rules give the table below, outside [Terminal sessions](terminals.md).
+With no [rules](#spark-rules), the default, the mode decides all of this. Recommended rules give the table below, outside [Terminal sessions](terminals.md).
 
 ## What always asks
 
@@ -22,7 +22,7 @@ By default there are no [rules](#spark-rules): **Auto** or **Bypass permissions*
 
 ![The Change agent instructions card with Allow once, Allow for this chat and Deny](images/approvals-instructions-light.png)
 
-The recommended rules also refuse pushing any branch but the chat's `spark/` or [adopted pull request branch](where-spark-works.md#work-on-a-pull-request), plain `--force`, mirror and default-branch force pushes, and changing remotes. Unasked changes are [flagged](approvals.md#actions-that-ran-without-review).
+The recommended rules also refuse other branches than the chat's or its [adopted one](where-spark-works.md#work-on-a-pull-request), other force pushes and remote changes. Unasked changes are [flagged](approvals.md#actions-that-ran-without-review).
 
 ## What is always refused
 
@@ -30,14 +30,14 @@ Even with no rules:
 
 - Reading, copying or changing Spark's browser data: Browser profiles, **Personal** included, sign-in storage and the history database.
 - Your ChatGPT or Claude account's own apps and connectors; add MCP servers in Spark.
-- Merging a pull request, approving or dismissing reviews, `--admin`, `gh api` writes, `gh auth` and `--no-verify`.
-- Reading or changing Spark's rules files.
+- `--no-verify`, and reading or changing Spark's rules files.
+- Printing the GitHub token (`gh auth token`).
 
-A blocked step reads "Refused gh pr create — …".
+A blocked step reads "Refused …".
 
 ## Spark rules
 
-Spark reads rules from `settings.json` in its data folder and writes none; copy in the recommended rules below. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.
+Rules live in Spark's data folder, in `settings.json`. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.
 
 Rules go in `permissions.allow`, `ask` or `deny`; deny wins, then ask. Unlisted or allowed rules follow the mode, unflagged. A broken or unreadable file means recommended rules.
 
@@ -47,12 +47,13 @@ Rules go in `permissions.allow`, `ask` or `deny`; deny wins, then ask. Unlisted 
 | `Push(other)`, `GitRemote`                                                        | Other branches; remotes, other hosting CLIs                                    | deny         |
 | `Gh(workflow run)`, `Gh(run rerun)`, `Gh(run cancel)`                             | **Run a workflow**                                                             | allow        |
 | `Gh(<group> <verb>)`, `Gh(*)`                                                     | Other `gh` commands; a named one escapes `Gh(*)`                               | deny `Gh(*)` |
+| `Gh(pr merge)`, `Gh(pr review)`, `GhAdmin`, `Gh(auth)`, `Gh(api write)`           | Merging, reviews, `--admin`, other `gh auth`, `gh api` writes                  | deny         |
 | `SecretFile(edit)`, `SecretFile(read)`                                            | Secret files; `.sparkignore` reads                                             | ask          |
 | `Push(force)`, `InstructionFile(edit)`, `GitConfig`, `WriteOutside`, `SecretSend` | Their rows above                                                               | ask          |
 
 Fixed: Spark's ports, the [always refused](#what-is-always-refused) list and the Mac control, Browser pane, Calendar and web address rules.
 
-**Settings → Spark rules** shows each rule and edits the `Gh` rules. A refusal shows a [card](cards.md#around-the-result).
+**Settings → Spark rules** (Mac) sets each rule in your file; **Use recommended rules** adds the table's choices. Company rules are locked. A refusal shows a [card](cards.md#around-the-result).
 
 ## Secret files
 

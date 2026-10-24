@@ -365,6 +365,7 @@ async function launch(): Promise<void> {
   help = startHelp({
     version: app.getVersion(),
     logsFolder: paths.logs,
+    rulesFile: path.join(paths.userData, config.branchPrefix, 'settings.json'),
     apiUrl,
     token,
     trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
