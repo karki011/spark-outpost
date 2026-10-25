@@ -10,7 +10,7 @@ Follow a turn. About 2 minutes.
 
 ## See what's happening
 
-1. Summaries distinguish **Ran 2 commands** from **Used 2 tools**.
+1. Summaries separate commands **passed** from tools **done**.
 2. Code Mode labels discovery and combined reads; command failures expand.
 3. The to-do ticks off, then folds.
 4. Open **Agent TV** under **…**.

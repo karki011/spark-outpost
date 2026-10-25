@@ -137,8 +137,12 @@ export function humanizeToolName(name: string): string {
     .toLowerCase();
 }
 
+function isSparkServer(server: string): boolean {
+  return server === 'spark' || server === 'spark_outpost';
+}
+
 function mcpStep({ server, tool }: McpTool): string {
-  const spark = SPARK_TOOL_STEPS[tool];
+  const spark = isSparkServer(server) ? SPARK_TOOL_STEPS[tool] : undefined;
   if (spark) return spark;
   return `Using ${humanizeToolName(tool)} (${humanizeToolName(server)})`;
 }
@@ -182,7 +186,13 @@ export function isMcpToolName(name: string): boolean {
 export function friendlyStep(title: string, input?: unknown): string {
   const trimmed = title.trim();
   const mcp = parseMcpTool(trimmed);
-  if ((mcp?.tool ?? trimmed) === 'spark_execute' && input && typeof input === 'object') {
+  if (
+    (mcp
+      ? isSparkServer(mcp.server) && mcp.tool === 'spark_execute'
+      : trimmed === 'spark_execute') &&
+    input &&
+    typeof input === 'object'
+  ) {
     const args =
       'arguments' in input && input.arguments && typeof input.arguments === 'object'
         ? input.arguments

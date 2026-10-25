@@ -13,6 +13,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 | What changed                      | What to do                                                               |
 | --------------------------------- | ------------------------------------------------------------------------ |
 | Code Mode on by default           | Combine reads; [turn off in Settings](settings.md#code-mode).            |
+| Accurate activity status          | Commands pass; tools finish.                                             |
 | Agent-led delegation              | Leads [choose workers and slices](how-spark-works.md#how-work-is-split). |
 | Agent TV messaging                | Message a member or draft a worker redirect.                             |
 | Calmer text and composer          | Tools have readable labels; details stay folded.                         |

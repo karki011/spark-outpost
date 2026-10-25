@@ -134,6 +134,24 @@ describe('command rows', () => {
     expect(toggle(/^Running pnpm build/).closest('.trow-card')).toBeTruthy();
   });
 
+  it.each(['failed', 'completed'] as const)(
+    'counts completed MCP tools separately beside a %s shell command',
+    (status) => {
+      render(
+        <Turn
+          commands={[
+            command('test', status, 0),
+            { ...command('guide', 'completed', 10), command: 'mcp.spark.spark_guide' },
+          ]}
+        />,
+      );
+      const group = toggle(/Ran 1 command, used 1 tool/);
+      expect(group.querySelector('.trow-end')?.textContent).toMatch(
+        status === 'failed' ? /^1 failed·1 done/ : /^1 passed·1 done/,
+      );
+    },
+  );
+
   it('keeps an opened thought open when it finishes and joins the group', () => {
     const reads: StepView[] = [
       { name: 'Read `a.ts`', status: 'done' },

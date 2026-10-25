@@ -201,6 +201,8 @@ function statusWords(group: RowGroup, answers: CommandAnswers) {
     answers.get(item.command.toolCallId ?? '')?.denied === true;
   const all = groupCommands(group);
   const commands = all.filter((item) => !isDenied(item));
+  const tools = commands.filter((item) => isMcpToolName(item.command.command));
+  const shell = commands.filter((item) => !isMcpToolName(item.command.command));
   const deniedFailed = all.filter(
     (item) => isDenied(item) && item.command.status === 'failed',
   ).length;
@@ -209,8 +211,14 @@ function statusWords(group: RowGroup, answers: CommandAnswers) {
     { count: all.length - commands.length, word: 'denied', tone: 'bad', icon: <XIcon /> },
     { count: countOf(commands, 'interrupted'), word: 'interrupted', tone: '', icon: <PauseIcon /> },
     {
-      count: countOf(commands, 'completed'),
-      word: commands.every((item) => isMcpToolName(item.command.command)) ? 'done' : 'passed',
+      count: countOf(shell, 'completed'),
+      word: 'passed',
+      tone: 'ok',
+      icon: <CheckIcon className="ok" />,
+    },
+    {
+      count: countOf(tools, 'completed'),
+      word: 'done',
       tone: 'ok',
       icon: <CheckIcon className="ok" />,
     },
