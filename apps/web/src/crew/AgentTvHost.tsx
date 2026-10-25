@@ -78,7 +78,7 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
       branch={source?.conversation.branch ?? null}
       subagents={cast.subagents}
       messageChats={[
-        { conversationId: sourceId, name: 'lead' },
+        { conversationId: sourceId, name: source?.conversation.outpost?.handle ?? 'lead' },
         ...(outpost.data?.outpost.members ?? [])
           .filter((member) => member.conversationId !== sourceId)
           .map((member) => ({ conversationId: member.conversationId, name: member.handle })),

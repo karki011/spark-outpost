@@ -15,8 +15,8 @@ Follow a turn. About 2 minutes.
 3. The to-do ticks off, then folds.
 4. Open **Agent TV** under **…**.
 5. Worker blobs show roles and status; **View agents** opens cards in **Work**. Ended turns never show active workers.
-6. **Message lead** or a member opens its composer; you send.
-7. **Ask lead to redirect** drafts a short task summary for the lead.
+6. **Message** opens that chat’s composer; Outposts show handles.
+7. **Ask lead to redirect** drafts a summary in the worker’s owning chat.
 
 **⌘⇧Y** jumps to the waiting card.
 
