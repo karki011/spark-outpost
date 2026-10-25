@@ -144,7 +144,7 @@ The Mac app sends one anonymous heartbeat a day (a random install ID, the app ve
 
 ## Develop
 
-Current source adds [Code Mode](docs/architecture/CODE_MODE.md), enabled by default with a saved off switch, and clearer tool activity. [Claude Terminal recording](docs/architecture/NATIVE_TERMINALS.md#recording-a-claude-session-like-a-chat) defaults on for new profiles only. These changes are unreleased; the downloads above remain beta.30.
+Current source adds [Code Mode](docs/architecture/CODE_MODE.md), enabled by default with a saved off switch, and clearer tool activity. [Claude Terminal recording](docs/architecture/NATIVE_TERMINALS.md#recording-a-claude-session-like-a-chat) defaults on for new profiles only. These changes are included in beta.31.
 
 ### Run from source
 
