@@ -179,6 +179,7 @@ export const SPEC_GROUPS = {
     'provider-effort',
     'reset',
     'settings',
+    'codemode-setting',
     'settings-groups',
     'settings-sheet',
     'settings-lists',

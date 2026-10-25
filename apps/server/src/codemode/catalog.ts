@@ -17,7 +17,7 @@ const RESULT_HINTS: Readonly<Record<string, string>> = {
 
 export function codeModeOffered(scope: Partial<SparkScope>): boolean {
   return (
-    process.env.SPARK_CODE_MODE === '1' &&
+    process.env.SPARK_CODE_MODE !== '0' &&
     scope.codeMode === true &&
     Boolean(scope.runId && scope.conversationId && scope.actions) &&
     scope.rebinds !== true
@@ -40,7 +40,7 @@ export function describeCodeModeTools(tools: readonly SparkTool[], query?: strin
     .map((tool) => ({
       name: tool.name,
       description: tool.description,
-      inputSchema: z.toJSONSchema(z.object(tool.input)),
+      inputSchema: z.toJSONSchema(z.object(tool.input), { io: 'input' }),
       resultHint: RESULT_HINTS[tool.name],
     }));
 }

@@ -69,7 +69,7 @@ export function createToolCallOutputs(): ToolCallOutputs {
         outputs.push({
           kind: 'tool_started',
           id: update.toolCallId,
-          name: describeTool(update.title, update.kind),
+          name: describeTool(update.title, update.kind, update.rawInput),
         });
         outputs.push(...input(update.toolCallId, call, false));
         if (ended(update)) outputs.push(...close(update.toolCallId));

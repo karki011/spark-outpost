@@ -2,6 +2,9 @@ import { expect, it } from 'vitest';
 import { z } from 'zod';
 import type { SparkToolDeps } from '../spark-mcp/deps.ts';
 import { callSparkTool } from '../spark-mcp/server.ts';
+import { workTools } from '../spark-mcp/tools/work-tools.ts';
+import { githubTools } from '../spark-mcp/tools/github-tools.ts';
+import { docsTool } from '../spark-mcp/tools/docs-tool.ts';
 import { guideTool } from '../spark-mcp/tools/guide-tool.ts';
 import type { SparkToolContext } from '../spark-mcp/tool.ts';
 import { describeCodeModeTools } from './catalog.ts';
@@ -42,4 +45,24 @@ it('keeps listing and empty-search guide shapes distinct from successful matches
   expect(empty).toMatchObject({
     data: { matches: [], sections: expect.any(Array), note: expect.any(String) },
   });
+});
+
+it('advertises real input schemas for all five tools with defaulted fields omittable', () => {
+  const descriptions = describeCodeModeTools([...workTools, ...githubTools, docsTool, guideTool]);
+  expect(descriptions.map((tool) => tool.name).sort()).toEqual([
+    'spark_docs',
+    'spark_guide',
+    'spark_pr',
+    'spark_pull_requests',
+    'spark_tickets',
+  ]);
+  for (const tool of descriptions) {
+    expect(tool.inputSchema.type).toBe('object');
+    expect(tool.resultHint).toBeTruthy();
+    const required = tool.inputSchema.required ?? [];
+    for (const field of ['limit', 'offset', 'action', 'state'])
+      expect(required).not.toContain(field);
+    if (tool.name === 'spark_pr') expect(required).toContain('number');
+    else expect(required).toEqual([]);
+  }
 });

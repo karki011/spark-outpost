@@ -10,6 +10,31 @@ import {
 } from './tool-steps.ts';
 
 describe('friendlyStep', () => {
+  it('distinguishes Code Mode discovery from composed reads for both providers', () => {
+    for (const name of ['spark_execute', 'mcp.spark.spark_execute', 'mcp__spark__spark_execute']) {
+      expect(friendlyStep(name)).toBe('Using Code Mode');
+      expect(friendlyStep(name, {})).toBe('Finding Code Mode tools');
+      expect(friendlyStep(name, { query: 'guide' })).toBe('Finding Code Mode tools');
+      expect(friendlyStep(name, { code: 'return await tools.call("spark_guide", {});' })).toBe(
+        'Combining reads with Code Mode',
+      );
+    }
+  });
+
+  it('reads Codex MCP argument envelopes without mistaking execution for discovery', () => {
+    const name = 'mcp.spark.spark_execute';
+    const envelope = (args: unknown) => ({
+      tool: 'spark_execute',
+      server: 'spark',
+      arguments: args,
+    });
+    expect(friendlyStep(name, envelope({ query: 'spark_guide' }))).toBe('Finding Code Mode tools');
+    expect(
+      friendlyStep(name, envelope({ code: 'return await tools.call("spark_guide", {});' })),
+    ).toBe('Combining reads with Code Mode');
+    expect(friendlyStep(name, envelope(null))).toBe('Finding Code Mode tools');
+  });
+
   it('names Spark tools in plain words, from Claude and Codex', () => {
     expect(friendlyStep('mcp__spark__spark_projects')).toBe('Looking at projects');
     expect(friendlyStep('mcp__spark__spark_map')).toBe('Reading the project map');

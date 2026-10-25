@@ -14,6 +14,28 @@ const delta = (id: string, data: string): SessionUpdate => ({
 });
 
 describe('command tracker', () => {
+  it('keeps MCP execute calls out of terminal output for every provider', () => {
+    for (const title of [
+      'mcp.spark.spark_execute',
+      'mcp__spark__spark_guide',
+      'spark_docs',
+      'mcp.github.get_issue',
+    ]) {
+      expect(
+        see(false, [
+          {
+            sessionUpdate: 'tool_call',
+            toolCallId: 'mcp',
+            title,
+            kind: 'execute',
+            status: 'in_progress',
+          },
+          { sessionUpdate: 'tool_call_update', toolCallId: 'mcp', status: 'completed' },
+        ]),
+      ).toEqual([]);
+    }
+  });
+
   it('reports a command an agent streams, with its folder, output and exit code', () => {
     const outputs = see(true, [
       {

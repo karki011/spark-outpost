@@ -162,6 +162,8 @@ export const profileSchema = z.object({
   archiveInactiveDays: archiveInactiveDaysSchema.default(DEFAULT_ARCHIVE_INACTIVE_DAYS),
   terminalRecordLikeChat: z.boolean().default(false),
   macControl: z.boolean().default(false),
+  codeMode: z.boolean().default(true),
+  codeModeUnavailable: z.boolean().optional(),
 });
 export type Profile = z.infer<typeof profileSchema>;
 export type SparkSessionPrefs = Pick<
@@ -207,6 +209,7 @@ export const updateProfileRequestSchema = z
     archiveInactiveDays: archiveInactiveDaysSchema,
     terminalRecordLikeChat: z.boolean(),
     macControl: z.boolean(),
+    codeMode: z.boolean(),
   })
   .partial();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

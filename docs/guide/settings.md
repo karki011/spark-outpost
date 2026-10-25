@@ -44,9 +44,14 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | **While the agent is working, Enter**        | **Queues the message** | [Queue](follow-a-turn.md#queue-messages)               |
 | **On wide windows**                          | **Context rail**       | Rail, panel or nothing                                 |
 | **Archive inactive chats**                   | **After 2 days**       | [Chat list](statuses-and-limits.md#chat-list)          |
+| **Code Mode**                                | On                     | [Below](#code-mode)                                    |
 | **Record Terminal sessions like chats**      | Off                    | [Below](#record-terminal-sessions)                     |
 
 **Custom instructions**: text or a UTF-8 file from your Mac, up to 16 KB; then **Save instructions**.
+
+### Code Mode
+
+Agents can combine supported reads locally; direct tools stay available. Turn off for direct tools only on the next turn; pending combined reads stop. Terminal sessions are unchanged. An installation override may disable the switch.
 
 ### Record Terminal sessions
 

@@ -1,3 +1,4 @@
+import { isMcpToolName } from '@spark-outpost/contracts';
 import { useEffect, useState } from 'react';
 import { CheckIcon, PauseIcon, XIcon } from '../../ui/icons.tsx';
 import { commandSeconds, shownDuration, type CommandView } from './command-model.ts';
@@ -57,7 +58,7 @@ export function CommandWord({ command, waiting, denied = false }: CommandWordPro
   return (
     <span className="trow-word ok">
       <CheckIcon className="ok" />
-      passed · {took}
+      {isMcpToolName(command.command) ? 'done' : 'passed'} · {took}
     </span>
   );
 }

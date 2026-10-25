@@ -1,12 +1,13 @@
 import type * as acp from '@agentclientprotocol/sdk';
-import { friendlyStep } from '@spark-outpost/contracts';
+import { friendlyStep, isMcpToolName } from '@spark-outpost/contracts';
 import { objectFields } from './object-fields.ts';
 
-export function toolNameOf(toolCall: Pick<acp.ToolCallUpdate, '_meta'>): string | null {
+export function toolNameOf(toolCall: Pick<acp.ToolCallUpdate, '_meta' | 'title'>): string | null {
   const named = objectFields(toolCall).name;
   if (typeof named === 'string' && named.trim()) return named.trim();
   const meta = objectFields(objectFields(toolCall._meta).claudeCode).toolName;
-  return typeof meta === 'string' && meta.trim() ? meta.trim() : null;
+  if (typeof meta === 'string' && meta.trim()) return meta.trim();
+  return toolCall.title && isMcpToolName(toolCall.title) ? toolCall.title.trim() : null;
 }
 
 const ABSOLUTE_PATH = /(^|[\s(])(\/[^\s`'")]+)/g;
@@ -16,10 +17,10 @@ function asCommand(title: string, kind: string | null | undefined): string {
   return runs ? `\`${title}\`` : title;
 }
 
-export function describeTool(title: string, kind?: string | null): string {
+export function describeTool(title: string, kind?: string | null, input?: unknown): string {
   const trimmed = title.trim();
   if (!trimmed) return 'Using a tool';
-  const friendly = friendlyStep(trimmed);
+  const friendly = friendlyStep(trimmed, input);
   if (friendly !== trimmed) return friendly;
   return asCommand(trimmed, kind)
     .split('`')

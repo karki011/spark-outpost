@@ -325,7 +325,7 @@ describe('turn rows named by the ACP tool name', () => {
   it('names MCP and Spark tools, and keeps a title that adds to the name', () => {
     const mcp = { toolKind: 'other', toolName: 'mcp__github__create_issue' };
     expect(onlyRow(done('Using create issue (github)', mcp))).toMatchObject({
-      verb: 'github · create_issue',
+      verb: 'Using create issue (github)',
       target: null,
       label: 'Using create issue (github)',
     });

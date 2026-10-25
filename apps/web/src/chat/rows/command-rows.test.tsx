@@ -177,3 +177,20 @@ describe('command rows', () => {
     expect(screen.getByText('You denied it · 16:59')).toBeTruthy();
   });
 });
+
+it('renders persisted MCP commands as tool results without shell labels', () => {
+  render(
+    <Turn
+      commands={[
+        { ...command('guide', 'completed', 0), command: 'mcp.spark.spark_guide' },
+        { ...command('mode', 'completed', 10), command: 'mcp.spark.spark_execute' },
+      ]}
+    />,
+  );
+  fireEvent.click(toggle(/Used 2 tools/));
+  fireEvent.click(toggle(/Reading the Spark guide/));
+  expect(screen.getByText('Tool result')).toBeTruthy();
+  expect(screen.queryByText('Terminal')).toBeNull();
+  expect(screen.queryByText('No output.')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Open in terminal' })).toBeNull();
+});

@@ -6,6 +6,10 @@ import { callSparkTool, sparkToolsFor } from '../server.ts';
 import { sparkTool, type SparkToolContext } from '../tool.ts';
 import { executeTool } from './execute.ts';
 
+vi.mock('../../persistence/code-mode-settings.ts', () => ({
+  codeModeEnabled: vi.fn(async () => true),
+}));
+
 beforeEach(() => vi.stubEnv('SPARK_CODE_MODE', '1'));
 afterEach(() => vi.unstubAllEnvs());
 
@@ -19,9 +23,10 @@ function scope(): SparkScope {
   };
 }
 
-it('offers Code Mode only when explicitly enabled for a live chat run', () => {
+it('offers Code Mode by default for eligible live chat runs and respects opt-out', () => {
   const offered = (context: Partial<SparkScope>) =>
     sparkToolsFor(context, EVERYTHING_AVAILABLE).some((tool) => tool.name === 'spark_execute');
+  vi.stubEnv('SPARK_CODE_MODE', undefined);
   expect(offered(scope())).toBe(true);
   expect(offered({ ...scope(), readOnly: true })).toBe(true);
   expect(offered({ ...scope(), codeMode: false })).toBe(false);

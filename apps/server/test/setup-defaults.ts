@@ -27,4 +27,5 @@ export const NEW_PROFILE = {
   archiveInactiveDays: 2,
   terminalRecordLikeChat: false,
   macControl: false,
+  codeMode: true,
 };

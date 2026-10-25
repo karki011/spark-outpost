@@ -23,7 +23,7 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_sparks: 'Looking at Sparks',
   spark_guide: 'Reading the Spark guide',
   spark_docs: 'Reading the user guide',
-  spark_execute: 'Combining tool results',
+  spark_execute: 'Using Code Mode',
   spark_pull_requests: 'Checking pull requests',
   spark_pr: 'Reading a pull request',
   spark_pr_follow_up: 'Checking PR follow-up',
@@ -175,9 +175,22 @@ export function isWebToolTitle(title: string): boolean {
   return webStep(title.trim()) !== null;
 }
 
-export function friendlyStep(title: string): string {
+export function isMcpToolName(name: string): boolean {
+  return parseMcpTool(name) !== null || Object.hasOwn(SPARK_TOOL_STEPS, name.trim());
+}
+
+export function friendlyStep(title: string, input?: unknown): string {
   const trimmed = title.trim();
   const mcp = parseMcpTool(trimmed);
+  if ((mcp?.tool ?? trimmed) === 'spark_execute' && input && typeof input === 'object') {
+    const args =
+      'arguments' in input && input.arguments && typeof input.arguments === 'object'
+        ? input.arguments
+        : input;
+    return 'code' in args && typeof args.code === 'string' && args.code.trim()
+      ? 'Combining reads with Code Mode'
+      : 'Finding Code Mode tools';
+  }
   if (mcp) return mcpStep(mcp);
   const named = SPARK_TOOL_STEPS[trimmed] ?? AGENT_TOOL_STEPS[trimmed];
   if (named) return named;

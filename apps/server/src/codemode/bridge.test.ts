@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import type { Db } from '../persistence/db.ts';
+import { codeModeEnabled } from '../persistence/code-mode-settings.ts';
 import { memorySecretStore } from '../setup/secrets.ts';
 import { EVERYTHING_AVAILABLE } from '../spark-mcp/availability.ts';
 import type { SparkToolDeps } from '../spark-mcp/deps.ts';
@@ -9,7 +10,13 @@ import { sparkTool, type SparkTool, type SparkToolContext } from '../spark-mcp/t
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import { createCodeModeBridge } from './bridge.ts';
 
-beforeEach(() => vi.stubEnv('SPARK_CODE_MODE', '1'));
+vi.mock('../persistence/code-mode-settings.ts', () => ({
+  codeModeEnabled: vi.fn(async () => true),
+}));
+beforeEach(() => {
+  vi.stubEnv('SPARK_CODE_MODE', '1');
+  vi.mocked(codeModeEnabled).mockResolvedValue(true);
+});
 afterEach(() => vi.unstubAllEnvs());
 
 function fixture(tools: SparkTool[]) {
@@ -244,5 +251,107 @@ it('bounds receipt memory without limiting completed calls or dropping audit ent
   expect(bridge.receipts().at(-1)?.callId).toBe('execute:120');
   expect(bridge.receiptCounts()).toEqual({ totalCalls: 120, omittedCalls: 70 });
   expect(audit).toHaveBeenCalledTimes(240);
+  bridge.close();
+});
+
+it('records refused names and session failures in receipts and audit without arguments', async () => {
+  const { bridge, before, audit } = fixture([]);
+  await expect(
+    bridge.invoke('spark_execute', { secret: 'never log this' }, bridge.signal),
+  ).rejects.toThrow('not available');
+  before.mockRejectedValueOnce(new Error('session ended'));
+  await expect(bridge.invoke('spark_tickets', {}, bridge.signal)).rejects.toThrow('session ended');
+  expect(bridge.receiptCounts()).toEqual({ totalCalls: 2, omittedCalls: 0 });
+  expect(bridge.receipts().map(({ name, outcome }) => ({ name, outcome }))).toEqual([
+    { name: 'spark_execute', outcome: 'failed' },
+    { name: 'spark_tickets', outcome: 'failed' },
+  ]);
+  expect(audit.mock.calls.map((call) => call[1].params.outcome)).toEqual([
+    'started',
+    'failed',
+    'started',
+    'failed',
+  ]);
+  expect(JSON.stringify(audit.mock.calls)).not.toContain('never log this');
+  bridge.close();
+});
+
+it('bounds availability and reads together and refreshes each queued call', async () => {
+  const entered = deferred();
+  const finish = deferred();
+  const run = vi.fn(async () => ({}));
+  const { bridge, available, toolsFor } = fixture([readTool(run)]);
+  let active = 0;
+  let maximum = 0;
+  available.mockImplementation(async () => {
+    maximum = Math.max(maximum, ++active);
+    if (active === 4) entered.resolve();
+    await finish.promise;
+    active -= 1;
+    return EVERYTHING_AVAILABLE;
+  });
+  const calls = Promise.allSettled(
+    Array.from({ length: 12 }, () => bridge.invoke('spark_tickets', { query: '' }, bridge.signal)),
+  );
+  await entered.promise;
+  expect(available).toHaveBeenCalledTimes(4);
+  toolsFor.mockReturnValue([]);
+  finish.resolve();
+  expect((await calls).every((call) => call.status === 'rejected')).toBe(true);
+  expect(maximum).toBe(4);
+  expect(available).toHaveBeenCalledTimes(12);
+  expect(run).not.toHaveBeenCalled();
+  bridge.close();
+});
+
+it('aborts queued calls before they touch connectors', async () => {
+  const entered = deferred();
+  const finish = deferred();
+  const run = vi.fn(async () => {
+    if (run.mock.calls.length === 4) entered.resolve();
+    await finish.promise;
+    return {};
+  });
+  const { bridge, available, stop } = fixture([readTool(run)]);
+  const calls = Promise.allSettled(
+    Array.from({ length: 12 }, () => bridge.invoke('spark_tickets', { query: '' }, bridge.signal)),
+  );
+  await entered.promise;
+  stop.abort();
+  finish.resolve();
+  expect((await calls).every((call) => call.status === 'rejected')).toBe(true);
+  expect(available).toHaveBeenCalledTimes(4);
+  expect(run).toHaveBeenCalledTimes(4);
+  expect(bridge.receiptCounts().totalCalls).toBe(12);
+  expect(bridge.receipts().every((receipt) => receipt.outcome === 'cancelled')).toBe(true);
+});
+
+it('rechecks the saved off switch before each queued read', async () => {
+  const entered = deferred();
+  const finish = deferred();
+  const run = vi.fn(async () => {
+    if (run.mock.calls.length === 4) entered.resolve();
+    await finish.promise;
+    return {};
+  });
+  const { bridge, available } = fixture([readTool(run)]);
+  const calls = Promise.allSettled(
+    Array.from({ length: 8 }, () => bridge.invoke('spark_tickets', { query: '' }, bridge.signal)),
+  );
+  await entered.promise;
+  vi.mocked(codeModeEnabled).mockResolvedValue(false);
+  finish.resolve();
+  expect((await calls).map((call) => call.status)).toEqual([
+    'fulfilled',
+    'fulfilled',
+    'fulfilled',
+    'fulfilled',
+    'rejected',
+    'rejected',
+    'rejected',
+    'rejected',
+  ]);
+  expect(available).toHaveBeenCalledTimes(4);
+  expect(run).toHaveBeenCalledTimes(4);
   bridge.close();
 });

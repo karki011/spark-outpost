@@ -12,7 +12,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed                      | What to do                                                                                                 |
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Experimental read composition     | When enabled, agents combine reads through `spark_execute`; **Stop** cancels execution.                    |
+| Code Mode on by default           | Agents combine supported reads. Turn off in **Settings → Chats & autonomy → Code Mode**.                   |
 | Agent-led delegation              | Leads choose workers and slices; [Outposts remain optional](how-spark-works.md#how-work-is-split).         |
 | Agent TV messaging                | Open a member’s composer or draft a worker redirect. Drafts survive switches; nothing sends automatically. |
 | Calmer text and composer          | Use **View agents**, **Chat details** and **+ → Formatting** for details.                                  |
