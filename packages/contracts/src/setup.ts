@@ -160,7 +160,7 @@ export const profileSchema = z.object({
   wideWindow: wideWindowSchema.default(DEFAULT_WIDE_WINDOW),
   busyEnter: busyEnterSchema.default(DEFAULT_BUSY_ENTER),
   archiveInactiveDays: archiveInactiveDaysSchema.default(DEFAULT_ARCHIVE_INACTIVE_DAYS),
-  terminalRecordLikeChat: z.boolean().default(false),
+  terminalRecordLikeChat: z.boolean().default(true),
   macControl: z.boolean().default(false),
   codeMode: z.boolean().default(true),
   codeModeUnavailable: z.boolean().optional(),

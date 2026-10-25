@@ -25,7 +25,7 @@ export const NEW_PROFILE = {
   wideWindow: 'rail',
   busyEnter: 'queue',
   archiveInactiveDays: 2,
-  terminalRecordLikeChat: false,
+  terminalRecordLikeChat: true,
   macControl: false,
   codeMode: true,
 };
