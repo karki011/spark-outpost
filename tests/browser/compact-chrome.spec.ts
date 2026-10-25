@@ -116,6 +116,8 @@ test('the context bar chips never overlap at narrow, typical and wide windows', 
     await chatOnItsBranch(page, repo);
     const bar = page.locator('.ctxbar');
     const branch = bar.locator('.chat-branch');
+    await expect(branch).toBeHidden();
+    await bar.getByRole('button', { name: /^Chat details/ }).click();
     await expect(branch).toHaveAccessibleName(/, worktree$/);
     await expect(bar.getByRole('button', { name: /^Spark autonomy/ })).toHaveCount(0);
 
