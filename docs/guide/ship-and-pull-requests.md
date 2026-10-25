@@ -19,18 +19,18 @@ Ship commits only the task's own files, without secret files. Once a PR exists, 
 
 ## When the agent publishes
 
-Ask for a PR, or set **Full auto → PR**. After changes, the agent handles publishing, including local commits without a remote. Your explicit “do not commit/push/open a PR” instructions take precedence over that default.
+Ask for a PR, or set **Full auto → PR**. After changes, the agent handles publishing, including dirty local work without a remote. Your explicit “do not commit/push/open a PR” instructions take precedence over that default.
 
 In an outpost: [requests](outpost-permissions.md), [stacks](stacked-pull-requests.md).
 
-| First under the reply                                       | Meaning                                  |
-| ----------------------------------------------------------- | ---------------------------------------- |
-| **Opened pull request #12**                                 | Spark tracks it.                         |
-| "The branch was pushed, but no pull request was opened."    | Create it from the link.                 |
-| "Pushed …"                                                  | You asked only to push.                  |
-| **Push stopped by the pre-push check**, with its last lines | Nothing was pushed.                      |
-| "Not published: …"                                          | Kept, not pushed. Ask again, or ship it. |
-| "Committed … not pushed."                                   | No remote.                               |
+| First under the reply                                       | Meaning                                    |
+| ----------------------------------------------------------- | ------------------------------------------ |
+| **Opened pull request #12**                                 | Spark tracks it.                           |
+| "The branch was pushed, but no pull request was opened."    | Create it from the link.                   |
+| "Pushed …"                                                  | You asked only to push.                    |
+| **Push stopped by the pre-push check**, with its last lines | Nothing was pushed.                        |
+| "Not published: …"                                          | Kept, not pushed. Ask again, or ship it.   |
+| "HEAD changed …"                                            | Local HEAD changed; authorship unverified. |
 
 The push uses your shell's logins; tokens never reach the agent. Without `gh`, the PR opens through your GitHub sign-in.
 

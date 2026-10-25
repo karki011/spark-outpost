@@ -18,10 +18,12 @@ export async function commitWithoutRemote(
   branch: string,
   reason: PublishReason,
 ): Promise<TurnResult> {
+  if (turn.control.signal.aborted) return turn.reply;
+  const status = await runGit(root, ['status', '--porcelain']);
   const prompt = publishPrompt({
     branch,
     reason,
-    unpublishedWork: true,
+    unpublishedWork: status.code === 0 && status.stdout.trim().length > 0,
     draftAsked: false,
     localOnly: true,
   });
@@ -45,7 +47,7 @@ export async function commitWithoutRemote(
       ? 'The local commit state could not be verified. This project has no remote.'
       : after !== before
         ? onChatBranch
-          ? `Committed ${after.slice(0, 7)} on ${branch}, not pushed. This project has no remote.`
+          ? `HEAD changed to ${after.slice(0, 7)} on ${branch}. This project has no remote.`
           : `HEAD changed to ${after.slice(0, 7)}, but the chat branch could not be confirmed. This project has no remote.`
         : 'No additional commit was made. This project has no remote.';
   await notePublish(turn.append, line);

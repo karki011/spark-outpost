@@ -67,12 +67,46 @@ describe('where a change stays when there is no pull request to open', { timeout
     expect(prompts).toBe(2);
     expect(replies).toHaveLength(2);
     expect(replies[1]).toMatch(
-      new RegExp(`Committed [0-9a-f]{7} on ${CHAT_BRANCH}, not pushed\\. .*no remote`),
+      new RegExp(`HEAD changed to [0-9a-f]{7} on ${CHAT_BRANCH}\\. .*no remote`),
     );
     expect(git(chat.repo.root, 'status', '--porcelain', 'notes.txt')).toBe('');
     expect(git(chat.repo.root, 'log', '-1', '--format=%s', CHAT_BRANCH)).toMatch(
       /^Publish the change/,
     );
+  });
+
+  it.each([
+    { request: 'Open a PR for this work.', ahead: false },
+    { request: 'Push this branch.', ahead: false },
+    { request: 'Open a PR for this work.', ahead: true },
+    { request: 'Push this branch.', ahead: true },
+  ])(
+    'does not repeat a local publish turn on a clean checkout: $request (ahead=$ahead)',
+    async ({ request, ahead }) => {
+      const chat = await chatOnItsBranch(t, base, `clean-${chats}`, 'full-auto', 'none');
+      const baseHead = git(chat.repo.root, 'rev-parse', 'HEAD');
+      if (ahead) {
+        await writeFile(path.join(chat.repo.root, 'notes.txt'), 'already committed work\n');
+        git(chat.repo.root, 'add', 'notes.txt');
+        git(chat.repo.root, 'commit', '-qm', 'Existing local work');
+        expect(git(chat.repo.root, 'rev-list', '--count', `${baseHead}..HEAD`)).toBe('1');
+      }
+      expect(git(chat.repo.root, 'status', '--porcelain')).toBe('');
+      const before = git(chat.repo.root, 'rev-parse', 'HEAD');
+      const { prompts } = await turn(chat.conversationId, request);
+      expect(prompts).toBe(1);
+      expect(git(chat.repo.root, 'rev-parse', 'HEAD')).toBe(before);
+    },
+  );
+
+  it('includes pre-existing uncommitted work in an explicitly requested local publish', async () => {
+    const chat = await chatOnItsBranch(t, base, `existing-${chats}`, 'full-auto', 'none');
+    await writeFile(path.join(chat.repo.root, 'notes.txt'), 'pre-existing work\n');
+    const before = git(chat.repo.root, 'rev-parse', 'HEAD');
+    const { prompts } = await turn(chat.conversationId, 'Open a PR for this work.');
+    expect(prompts).toBe(2);
+    expect(git(chat.repo.root, 'rev-parse', 'HEAD')).not.toBe(before);
+    expect(git(chat.repo.root, 'status', '--porcelain')).toBe('');
   });
 
   it.each(['none', 'github'] as const)(

@@ -20,7 +20,11 @@ function turn(signal = new AbortController().signal) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  git.mockResolvedValue({ code: 0, stdout: 'abc1234', stderr: '' });
+  git.mockImplementation(async (_root, args) => ({
+    code: 0,
+    stdout: args[0] === 'status' ? ' M notes.txt' : 'abc1234',
+    stderr: '',
+  }));
   again.mockResolvedValue({ ...reply, text: '', messageId: 'second' });
 });
 
@@ -52,7 +56,10 @@ describe('agent-owned local publishing', () => {
         'topic',
         'full-auto',
       );
-      expect(git.mock.calls).toEqual([['/repo', ['rev-parse', '--verify', 'HEAD']]]);
+      expect(git.mock.calls).toEqual([
+        ['/repo', ['status', '--porcelain']],
+        ['/repo', ['rev-parse', '--verify', 'HEAD']],
+      ]);
       if (outcome === 'lease_lost') expect(result).toBe(stopped);
       else {
         expect(result.text).toContain(outcome === 'cancelled' ? 'was stopped' : 'failed');
@@ -61,7 +68,29 @@ describe('agent-owned local publishing', () => {
     },
   );
 
+  it.each(['asked', 'asked-push'] as const)(
+    'skips a clean local checkout for %s',
+    async (reason) => {
+      git.mockResolvedValue({ code: 0, stdout: '' });
+      expect(await commitWithoutRemote({} as TurnDeps, turn(), '/repo', 'topic', reason)).toBe(
+        reply,
+      );
+      expect(again).not.toHaveBeenCalled();
+    },
+  );
+
+  it('reports a changed HEAD neutrally even on the expected branch', async () => {
+    git.mockResolvedValueOnce({ code: 0, stdout: ' M notes.txt' });
+    git.mockResolvedValueOnce({ code: 0, stdout: 'abc1234' });
+    git.mockResolvedValueOnce({ code: 0, stdout: 'def5678' });
+    git.mockResolvedValueOnce({ code: 0, stdout: 'topic' });
+    const result = await commitWithoutRemote({} as TurnDeps, turn(), '/repo', 'topic', 'full-auto');
+    expect(result.text).toContain('HEAD changed to def5678 on topic.');
+    expect(result.text).not.toContain('Committed');
+  });
+
   it('does not attribute a changed HEAD to the expected branch after a checkout switch', async () => {
+    git.mockResolvedValueOnce({ code: 0, stdout: ' M notes.txt' });
     git.mockResolvedValueOnce({ code: 0, stdout: 'abc1234' });
     git.mockResolvedValueOnce({ code: 0, stdout: 'def5678' });
     git.mockResolvedValueOnce({ code: 0, stdout: 'other' });
