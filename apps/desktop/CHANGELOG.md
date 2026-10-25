@@ -4,6 +4,15 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.31
+
+- Calmer chat: easier-to-read Inter text, a narrower reading column, quieter composer controls, and formatting tucked into the add menu. Drafts survive chat switches and queued-message editing preserves what you are typing.
+- Agent TV shows delegated workers with role-specific blobs and clear working/done states. Message an Outpost member or ask the lead to redirect a worker without leaving the work behind. Controls fit short windows and wrapped touch targets, and dragged positions stay within the chat area.
+- Code Mode is on by default. Agents can combine supported ticket, pull request, docs and guide reads locally; turn it off in Settings → Chats & autonomy. Existing permissions, cancellation and audit apply to every inner read.
+- Tool activity distinguishes discovering Code Mode tools from combining reads, keeps details folded, and counts commands passed separately from tools completed. MCP tools no longer look like terminal commands.
+- New profiles record Claude Code Terminal sessions like chats when Spark’s mod is loaded. Existing recording preferences are preserved; Codex recording is unchanged.
+- Saved sign-ins show approved sites clearly and tell you when to retry. Read-only and unchanged turns avoid unnecessary publishing, while local changes and publishing restrictions are reported accurately.
+
 ## 0.1.0-beta.30
 
 - Spark rules live in a settings.json file, like Claude's settings: allow, ask or deny each rule (pushes, force pushes, pull requests, each gh command, secret files, instruction files, git hooks and config, writes outside the project, secret sends, remotes). Empty by default, so your agent's mode decides everything; Use recommended rules in Settings → Spark rules restores the old protections. A company can lock rules in /Library/Application Support/SparkOutpost/managed-settings.json.

@@ -10,14 +10,14 @@ Run Claude Code and Codex side by side on your Mac. Follow every step, answer th
 
 <!-- release-downloads:start -->
 
-<a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.30-arm64.dmg"><img alt="Download for Mac, Apple silicon" src="https://img.shields.io/badge/Download_for_Mac-Apple_silicon-2bb39a?style=for-the-badge&logo=apple&logoColor=white"></a> <a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.30-x64.dmg"><img alt="Download for Mac, Intel" src="https://img.shields.io/badge/Download_for_Mac-Intel-555555?style=for-the-badge&logo=apple&logoColor=white"></a>
+<a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.31-arm64.dmg"><img alt="Download for Mac, Apple silicon" src="https://img.shields.io/badge/Download_for_Mac-Apple_silicon-2bb39a?style=for-the-badge&logo=apple&logoColor=white"></a> <a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.31-x64.dmg"><img alt="Download for Mac, Intel" src="https://img.shields.io/badge/Download_for_Mac-Intel-555555?style=for-the-badge&logo=apple&logoColor=white"></a>
 
-Free beta · [0.1.0-beta.30](releases/0.1.0-beta.30.md) · macOS 12+ (Mac control needs 14) · [All versions](releases/README.md)
+Free beta · [0.1.0-beta.31](releases/0.1.0-beta.31.md) · macOS 12+ (Mac control needs 14) · [All versions](releases/README.md)
 
 <!-- release-downloads:end -->
 
 <p>
-<a href="apps/desktop/CHANGELOG.md"><img alt="Version 0.1.0-beta.30" src="https://img.shields.io/badge/version-0.1.0--beta.30-2bb39a"></a>
+<a href="apps/desktop/CHANGELOG.md"><img alt="Version 0.1.0-beta.31" src="https://img.shields.io/badge/version-0.1.0--beta.31-2bb39a"></a>
 <img alt="macOS 12 or later" src="https://img.shields.io/badge/macOS-12%2B-111111?logo=apple&logoColor=white">
 <img alt="Apple silicon and Intel" src="https://img.shields.io/badge/arch-arm64%20%7C%20x64-555555">
 <img alt="Agent Client Protocol" src="https://img.shields.io/badge/protocol-ACP-6e56cf">
@@ -144,7 +144,7 @@ The Mac app sends one anonymous heartbeat a day (a random install ID, the app ve
 
 ## Develop
 
-Current source adds [Code Mode](docs/architecture/CODE_MODE.md), enabled by default with a saved off switch, and clearer tool activity. [Claude Terminal recording](docs/architecture/NATIVE_TERMINALS.md#recording-a-claude-session-like-a-chat) defaults on for new profiles only. These changes are unreleased; the downloads above remain beta.30.
+Current source adds [Code Mode](docs/architecture/CODE_MODE.md), enabled by default with a saved off switch, and clearer tool activity. [Claude Terminal recording](docs/architecture/NATIVE_TERMINALS.md#recording-a-claude-session-like-a-chat) defaults on for new profiles only. These changes are included in beta.31.
 
 ### Run from source
 
