@@ -34,6 +34,18 @@ const agentsLine = (turn: ReturnType<Page['locator']>) => turn.locator('.sl-text
 test('Agent TV redirects through the lead composer without replacing a draft or sending it', async ({
   page,
 }) => {
+  const purpose = `Inspect ${'the routes and their existing boundaries '.repeat(8)}`;
+  await page.route(/\/api\/conversations\/[^/]+$/, async (route) => {
+    const response = await route.fetch();
+    const detail = (await response.json()) as ConversationDetail;
+    const subagents = Object.fromEntries(
+      Object.entries(detail.subagents ?? {}).map(([id, rows]) => [
+        id,
+        rows.map((row) => ({ ...row, task: `${purpose}\nDo not copy this task body.` })),
+      ]),
+    );
+    await route.fulfill({ response, json: { ...detail, subagents } });
+  });
   const input = await ask(page, 'Split the work #build #subagentshold');
   await expect(page.locator('.msg.ai').last().locator('.turn-working')).toContainText(
     'Running 2 agents',
@@ -70,6 +82,8 @@ test('Agent TV redirects through the lead composer without replacing a draft or 
   await expect(input).toHaveValue(/Keep my draft[\s\S]*Please redirect the sub-agent Explore/);
   await expect(page.locator('.msg.user')).toHaveCount(before);
   const draft = await input.inputValue();
+  expect(draft).toContain(`working on ${purpose.slice(0, 117)}…: `);
+  expect(draft).not.toContain('Do not copy this task body.');
   await toggleHeaderPane(page, 'Agent TV');
   await tv.getByRole('button', { name: 'Message lead', exact: true }).click();
   await expect(input).toBeFocused();

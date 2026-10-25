@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
 import { turnAnchor } from '../chat/outline/outline-model.ts';
+import { agentPurpose } from '../chat/subagents/agent-cards.ts';
 import { closeAgentTv, useAgentTv } from './agent-tv-store.ts';
 import { AgentTv } from './AgentTv.tsx';
 import { agentAnchor, approvalAnchor, castAgents, tvCast } from './conversation-crew.ts';
@@ -83,12 +84,14 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
           .map((member) => ({ conversationId: member.conversationId, name: member.handle })),
       ]}
       onMessage={(conversationId) => message(conversationId)}
-      onRedirect={(row) =>
+      onRedirect={(row) => {
+        const purpose = agentPurpose(row.task, row.name) ?? row.name;
+        const topic = purpose.length > 120 ? `${purpose.slice(0, 117)}…` : purpose;
         message(
           sourceId,
-          `Please redirect the sub-agent ${row.name} (${row.id}) working on ${row.task || row.name}: `,
-        )
-      }
+          `Please redirect the sub-agent ${row.name} (${row.id}) working on ${topic}: `,
+        );
+      }}
       onPick={(agentId) => jump(anchorOf(agentId))}
       onAsk={(approvalId) => jump(approvalAnchor(approvalId))}
     />

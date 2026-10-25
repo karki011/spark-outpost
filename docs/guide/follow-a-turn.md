@@ -16,7 +16,7 @@ Follow a turn. About 2 minutes.
 4. Open **Agent TV** under **…**.
 5. Worker blobs show roles and status; **View agents** opens cards in **Work**. Ended turns never show active workers.
 6. **Message lead** or a member opens its composer; you send.
-7. **Ask lead to redirect** drafts a lead request, not a sub-agent message.
+7. **Ask lead to redirect** drafts a short task summary for the lead.
 
 **⌘⇧Y** jumps to the waiting card.
 

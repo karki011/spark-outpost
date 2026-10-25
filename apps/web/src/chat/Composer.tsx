@@ -228,7 +228,7 @@ export function Composer({
       ),
     [attachments.items],
   );
-  useDraftRequests(conversationId, draft, setDraft, textareaRef, quotes?.focusRequest ?? 0);
+  useDraftRequests(conversationId, setDraft, textareaRef, quotes?.focusRequest ?? 0);
 
   const queueing = busy && onQueue !== undefined;
   const hasText = draft.trim().length > 0;
