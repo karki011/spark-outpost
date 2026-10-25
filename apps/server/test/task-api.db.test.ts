@@ -1,12 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { taskDetailSchema, taskOverviewSchema } from '@spark-outpost/contracts';
 import { getRun } from '../src/persistence/runs.ts';
 import { FAKE_PR_URL, createFakeProvider } from '../src/providers/fake.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
-import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
+import { createTestApp, localClient } from './app-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -32,9 +31,8 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-const post = (path: string, body: object) =>
-  request(app).post(path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
-const get = (path: string) => request(app).get(path).set(LOCAL_HEADERS);
+const post = (path: string, body: object) => localClient(app).send('post', path, body);
+const get = (path: string) => localClient(app).get(path);
 
 async function plannedTask(): Promise<{ conversationId: string; taskId: string }> {
   const conversationId = randomUUID();
