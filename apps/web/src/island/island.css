@@ -4,7 +4,7 @@
   pointer-events: none;
   color: var(--text);
   font:
-    13px/1.4 Geist,
+    13px/1.4 Inter,
     ui-sans-serif,
     system-ui,
     -apple-system,
@@ -215,7 +215,7 @@
   display: inline-grid;
   place-items: center;
   font:
-    600 12px Geist,
+    600 12px Inter,
     sans-serif;
   background: var(--warn);
   color: var(--warn-ink);
@@ -353,7 +353,7 @@
   background: var(--warn);
   color: var(--warn-ink);
   font:
-    700 9px/14px Geist,
+    700 9px/14px Inter,
     sans-serif;
   text-align: center;
   box-shadow: 0 0 0 2px var(--island);

@@ -7,7 +7,7 @@ import { resetWithAgents } from './project-chat-kit.ts';
 const SHOTS = process.env.SPARK_REVIEW_SHOTS ?? '';
 
 async function shot(page: Page, name: string) {
-  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, name) });
+  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, name), animations: 'disabled' });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -30,15 +30,64 @@ const cardsIn = (scope: ReturnType<Page['locator']>) =>
   scope.getByRole('list', { name: 'Sub-agents' }).getByRole('listitem');
 const agentsLine = (turn: ReturnType<Page['locator']>) => turn.locator('.sl-text');
 
+test('Agent TV redirects through the lead composer without replacing a draft or sending it', async ({
+  page,
+}) => {
+  const input = await ask(page, 'Split the work #build #subagentshold');
+  await expect(page.locator('.msg.ai').last().locator('.turn-working')).toContainText(
+    'Running 2 agents',
+    {
+      timeout: 30_000,
+    },
+  );
+  await input.fill('Keep my draft');
+  const before = await page.locator('.msg.user').count();
+  await toggleHeaderPane(page, 'Agent TV');
+  const tv = page.getByRole('dialog', { name: 'Agent TV' });
+  await expect(cardsIn(tv)).toHaveCount(2);
+  await expect(tv.locator('.tv-stage .tv-n')).toHaveCount(3);
+  await expect(tv.locator('.tv-stage .tv-n:not(.lead)')).toContainText(['Explore', 'Tests']);
+  await expect(cardsIn(tv).first().locator('.chat-face')).toBeVisible();
+  await expect(cardsIn(tv).first().locator('.ac-role')).toHaveText('Explorer');
+  await expect(cardsIn(tv).nth(1).locator('.ac-role')).toHaveCount(0);
+  await shot(page, 'agent-tv-message-desktop.png');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(tv.getByRole('button', { name: 'Message lead', exact: true })).toBeVisible();
+  for (const button of [
+    tv.getByRole('button', { name: 'Message lead', exact: true }),
+    tv.getByRole('button', { name: 'Ask lead to redirect' }).first(),
+  ]) {
+    await expect
+      .poll(async () => (await button.boundingBox())?.height ?? 0)
+      .toBeGreaterThanOrEqual(44);
+  }
+  await shot(page, 'agent-tv-message-phone.png');
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await cardsIn(tv).first().getByRole('button', { name: 'Ask lead to redirect' }).click();
+  await expect(tv).toHaveCount(0);
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue(/Keep my draft[\s\S]*Please redirect the sub-agent Explore/);
+  await expect(page.locator('.msg.user')).toHaveCount(before);
+  const draft = await input.inputValue();
+  await toggleHeaderPane(page, 'Agent TV');
+  await tv.getByRole('button', { name: 'Message lead', exact: true }).click();
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue(draft);
+});
+
 test('a turn shows its sub-agents as one line and as cards in the work panel, and stops them with the turn', async ({
   page,
 }) => {
   const input = await ask(page, 'Split the work #build #subagentshold');
   const turn = page.locator('.msg.ai').last();
-  await expect(agentsLine(turn)).toHaveText('Waiting on 2 agents · writing up when all finish', {
+  await expect(turn.locator('.turn-working')).toContainText('Running 2 agents', {
     timeout: 30_000,
   });
-  await expect(turn.locator('.sl-scout[data-working]')).toHaveCount(2);
+  await expect(turn.getByRole('list', { name: 'Agent progress' })).toBeVisible();
+  await expect(turn.locator('.sl-worker .sl-name')).toHaveText(['Explorer', 'Tests']);
+  await expect(turn.locator('.sl-worker .sl-state')).toHaveText(['Working', 'Working']);
+  await expect(turn.locator('.sl-worker .chat-face')).toHaveCount(2);
+  await expect(turn.locator('.sl-scout[data-working]')).toHaveCount(0);
   await expect(mood(page)).toHaveText('waiting on 2 sub-agents');
   await expect(turn.locator('.turn-working')).toBeVisible();
   await expect(turn.locator('.trow', { hasText: 'Starting a subagent' })).toHaveCount(0);
@@ -92,6 +141,7 @@ test('a turn shows its sub-agents as one line and as cards in the work panel, an
 
   await page.getByRole('button', { name: 'Stop', exact: true }).click();
   await expect(agentsLine(turn)).toHaveText('2 agents · 2 stopped', { timeout: 30_000 });
+  await expect(turn.locator('.sl-worker .sl-state')).toHaveText(['Stopped', 'Stopped']);
   await expect(turn.locator('.sl-scout[data-working]')).toHaveCount(0);
 });
 
@@ -136,6 +186,10 @@ test('a finished turn keeps its sub-agents, nested ones under their parent, afte
   await page.getByRole('tab', { name: 'Cost' }).click();
   await expect(page.locator('.cost-split')).toContainText('Sub-agents 3.4K');
   await expect(page.getByRole('list', { name: 'Usage by sub-agent' })).toContainText('Explore');
+  await toggleHeaderPane(page, 'Agent TV');
+  const tv = page.getByRole('dialog', { name: 'Agent TV' });
+  await expect(cardsIn(tv)).toHaveCount(3);
+  await expect(tv.getByRole('button', { name: 'Ask lead to redirect' })).toHaveCount(0);
 });
 
 test('a Claude turn that ends with background work running waits on it instead of saying done', async ({
@@ -144,6 +198,7 @@ test('a Claude turn that ends with background work running waits on it instead o
   const input = await ask(page, 'Check the schema #build #backgroundforever');
   const turn = page.locator('.msg.ai').last();
   await expect(mood(page)).toHaveText('waiting on 1 background agent', { timeout: 30_000 });
+  await expect(turn.locator('.turn-working')).toHaveCount(0);
   await expect(turn.locator('.background-work')).toContainText(
     'Still running in the background: Schema.',
   );

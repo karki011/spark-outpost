@@ -52,7 +52,7 @@
   top: calc(var(--top) - 6px);
   border-radius: 8px;
   font:
-    600 12px Geist,
+    600 12px Inter,
     sans-serif;
   background: var(--raise);
   color: var(--muted);

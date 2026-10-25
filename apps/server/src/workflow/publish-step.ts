@@ -85,16 +85,6 @@ async function keptWithout(turn: Publishing, line: string): Promise<TurnResult> 
   return withLine(turn.append, turn.reply, says ? line : null);
 }
 
-async function committedLocally(turn: Publishing): Promise<TurnResult> {
-  if (turn.reason === 'follow-up') return turn.reply;
-  const line = await commitWithoutRemote(turn.ship, {
-    runId: turn.lease.runId,
-    request: turn.input.userRequest,
-    reply: turn.reply.text,
-  });
-  return withLine(turn.append, turn.reply, line);
-}
-
 async function hasOpenPull(turn: Publishing, plan: PublishPlan): Promise<boolean> {
   const { db, workspaceId } = turn.ship;
   const watches = await watchesForConversation(db, workspaceId, turn.input.identity.threadId);
@@ -191,7 +181,10 @@ export async function publishStep(
   if (!(await isGitWorkTree(root))) return keptWithout(turn, NO_PULL_REQUEST.notGit);
   const worktree = await chatWorktreeAt(deps.db, root);
   if (!worktree?.ownsBranch) return keptWithout(turn, NO_OWN_BRANCH_LINE);
-  if (!(await pickRemote(root, worktree.branch))) return committedLocally(turn);
+  if (!(await pickRemote(root, worktree.branch))) {
+    if (reason === 'follow-up') return reply;
+    return commitWithoutRemote(deps, turn, root, worktree.branch, reason);
+  }
   const plan = await agentPublishPlan({ db: deps.db, input });
   if (!plan || !(await unpublishedWork(turn, plan, worktree.baseCommit))) return reply;
   if (plan.stackBase && !plan.stackBase.onRemote) {

@@ -9,6 +9,8 @@ import { busyCount } from './crew-model.ts';
 import { scrollToAnchor } from './scroll-to-anchor.ts';
 import { tvListRows } from './tv-list.ts';
 import { pendingAsks } from './tv-scene.ts';
+import { outpostKeys, outpostsApi } from '../outposts/outposts-api.ts';
+import { queueDraftAfterTyped, requestComposerFocus } from '../chat/composer/pending-draft.ts';
 
 interface AgentTvHostProps {
   activeId: string | null;
@@ -24,6 +26,12 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
     enabled: sourceId !== null,
   });
   const source = sourceId ? detail.data : undefined;
+  const outpostId = source?.conversation.outpost?.id;
+  const outpost = useQuery({
+    queryKey: outpostKeys.detail(outpostId ?? ''),
+    queryFn: () => outpostsApi.get(outpostId!),
+    enabled: outpostId !== undefined,
+  });
   const cast = tvCast(source);
   const members = castAgents(cast);
   const elsewhere = sourceId !== null && sourceId !== activeId;
@@ -50,6 +58,12 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
   };
 
   const asks = pendingAsks(source, members);
+  const message = (conversationId: string, draft?: string) => {
+    if (draft) queueDraftAfterTyped(conversationId, draft);
+    requestComposerFocus(conversationId);
+    closeAgentTv();
+    onGoTo(conversationId);
+  };
   const anchorOf = (agentId: string) =>
     agentId === cast.run.id ? turnAnchor(cast.run.id) : agentAnchor(cast.run.id, agentId);
 
@@ -62,6 +76,19 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
       onStop={(runId) => stop.mutate(runId)}
       branch={source?.conversation.branch ?? null}
       subagents={cast.subagents}
+      messageChats={[
+        { conversationId: sourceId, name: 'lead' },
+        ...(outpost.data?.outpost.members ?? [])
+          .filter((member) => member.conversationId !== sourceId)
+          .map((member) => ({ conversationId: member.conversationId, name: member.handle })),
+      ]}
+      onMessage={(conversationId) => message(conversationId)}
+      onRedirect={(row) =>
+        message(
+          sourceId,
+          `Please redirect the sub-agent ${row.name} (${row.id}) working on ${row.task || row.name}: `,
+        )
+      }
       onPick={(agentId) => jump(anchorOf(agentId))}
       onAsk={(approvalId) => jump(approvalAnchor(approvalId))}
     />

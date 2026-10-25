@@ -1,4 +1,4 @@
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, type RefObject } from 'react';
 import { focusAtEnd } from './composer-hint.ts';
 import {
   consumeComposerFocus,
@@ -22,20 +22,15 @@ export function useDraftRequests(
 ): void {
   const pendingDraft = usePendingDraft(conversationId);
   const storeFocusRequest = useComposerFocusRequest(conversationId);
-  const [appliedDraft, setAppliedDraft] = useState<PendingDraft | null>(null);
-  if (pendingDraft !== appliedDraft) {
-    setAppliedDraft(pendingDraft);
-    if (pendingDraft !== null) setDraft(withTyped(draft, pendingDraft));
-  }
-
   useEffect(() => {
     if (pendingDraft === null) return;
+    setDraft(withTyped(draft, pendingDraft));
     takeDraft(conversationId);
     requestAnimationFrame(() => {
       const input = textareaRef.current;
       if (input) focusAtEnd(input);
     });
-  }, [pendingDraft, conversationId, textareaRef]);
+  }, [pendingDraft, conversationId, textareaRef, draft, setDraft]);
 
   useEffect(() => {
     if (focusRequest === 0 && storeFocusRequest === 0) return;

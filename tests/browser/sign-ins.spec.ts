@@ -199,6 +199,46 @@ async function saveFixtureSignIn(project: string): Promise<void> {
   }
 }
 
+test('a refused origin can be explicitly added without re-entering credentials @packaged', async ({
+  page,
+}) => {
+  test.skip(!FAKE_HOST, 'The fixture sign-in requires the fake Browser host.');
+  await withDesktopBrowser(page);
+  const project = await link(page);
+  await saveFixtureSignIn(project);
+  const site = 'https://auth-dev.example.com';
+  const db = openTestDb();
+  try {
+    await db.query('UPDATE browser_sign_ins SET refused_site = $1 WHERE id = $2', [
+      site,
+      SIGN_IN_FIXTURE.id,
+    ]);
+  } finally {
+    await db.end();
+  }
+  const block = await openSignIns(page);
+  await expect(block).toContainText(site);
+  await expect(block).toContainText('without entering the password again');
+  const changed = page.waitForRequest(
+    (request) =>
+      request.method() === 'PUT' && request.url().endsWith(`/sign-ins/${SIGN_IN_FIXTURE.id}`),
+  );
+  await block.getByRole('button', { name: `Add this site, ${site}, to Staging admin` }).click();
+  const body = (await changed).postDataJSON();
+  expect(body.sites).toEqual([site]);
+  expect(body).not.toHaveProperty('username');
+  expect(body).not.toHaveProperty('password');
+  await expect(block).toContainText('Return to your chat and ask the agent to retry');
+  await expect(block.getByRole('button', { name: /^Add this site/ })).toHaveCount(0);
+  const response = await page.request.get(`/api/projects/${project}/sign-ins`);
+  const {
+    signIns: [saved],
+  } = await response.json();
+  expect(saved.sites).toEqual([site]);
+  expect(saved.refusedSite).toBeNull();
+  expectNoSecret(await page.content());
+});
+
 async function projectId(page: Page): Promise<string> {
   const listed = await page.request.get('/api/projects');
   const project = ((await listed.json()) as { id: string; rootPath: string }[]).find(

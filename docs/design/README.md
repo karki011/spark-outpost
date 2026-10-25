@@ -36,7 +36,7 @@ For every surface:
 Decided where Apple and the kit differ (the owner's Apple review, October 2026):
 
 - The app themes become tints over light and dark, and **Automatic** (follow the system) is the default.
-- Geist stays for content.
+- Inter is the shared content and interface font; Geist Mono stays for code. Both ship locally with the app. Use regular weight for reading, medium for labels and semibold for headings.
 - The 12px floor stays, above Apple's own 10pt minimum.
 - Sentence case in the web UI; title case in native menus.
 

@@ -142,6 +142,23 @@ describe('OutpostComposer', () => {
     expect(box().value).toBe('a note');
   });
 
+  it('keeps newer typing when an earlier send fails', async () => {
+    let reject!: (error: Error) => void;
+    render(
+      composer({
+        onSend: () =>
+          new Promise((_, fail) => {
+            reject = fail;
+          }),
+      }),
+    );
+    type('first note');
+    fireEvent.click(sendButton());
+    type('next note');
+    await act(async () => reject(new Error('Offline')));
+    expect(box().value).toBe('next note\n\nfirst note');
+  });
+
   it('offers member handles while one is typed at the start and fills in the pick', () => {
     render(composer());
     type('@');

@@ -82,7 +82,7 @@ export function drawAreaLabels(frame: Frame): void {
   const { ctx, palette, view } = frame;
   const size = fontSize(frame);
   const lineHeight = size + 2;
-  ctx.font = `600 ${size}px Geist, sans-serif`;
+  ctx.font = `600 ${size}px Inter, sans-serif`;
   ctx.letterSpacing = '1.6px';
   ctx.textAlign = 'center';
   const shown = view.scene.areas.filter(
@@ -159,11 +159,11 @@ function drawChangedCount(frame: Frame, area: SceneArea, x: number, y: number, a
   const count = area.files.filter((file) => view.changed.has(file)).length;
   if (count === 0) return;
   ctx.letterSpacing = '0px';
-  ctx.font = '600 11px Geist, sans-serif';
+  ctx.font = '600 11px Inter, sans-serif';
   ctx.fillStyle = palette.warm;
   ctx.globalAlpha = Math.max(alpha, 0.9);
   ctx.fillText(`${count} changed`, x, y);
-  ctx.font = `600 ${fontSize(frame)}px Geist, sans-serif`;
+  ctx.font = `600 ${fontSize(frame)}px Inter, sans-serif`;
   ctx.letterSpacing = '1.6px';
 }
 

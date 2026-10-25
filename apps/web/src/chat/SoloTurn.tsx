@@ -43,8 +43,7 @@ import { shownSteps, streamLeads, viewSteps, type RunProjection } from './run-pr
 import { ErrorLine, ModelSwitchNote } from './ModelSwitchNote.tsx';
 import { providerName } from './provider-name.ts';
 import { useLiveReport } from './status/status-context.ts';
-import { BackgroundWork } from './BackgroundWork.tsx';
-import { SubagentsLine } from './subagents/SubagentsLine.tsx';
+import { TurnActivity } from './turn/TurnActivity.tsx';
 import { useShowAgents } from './subagents/agent-board.ts';
 import { shownSubagents } from './subagents/subagent-view.ts';
 import { runSeconds } from './turns.ts';
@@ -56,10 +55,9 @@ import { TurnTodo } from '../todo/TurnTodo.tsx';
 import { TurnRows } from './rows/TurnRows.tsx';
 import { turnRowParts } from './rows/turn-rows.ts';
 import { useTurnChanges } from './rows/use-turn-changes.ts';
-import { AgentMark, TurnMeta, WorkingLine, agentChanged } from './turn/TurnParts.tsx';
+import { AgentMark, TurnMeta, agentChanged } from './turn/TurnParts.tsx';
 import { TurnChangesLine } from './turn/TurnChangesLine.tsx';
 import { turnMood } from './turn/turn-mood.ts';
-import { liveLabel } from './turn/live-label.ts';
 import { SteerGroup } from './steer/SteeredMessage.tsx';
 import { seenAfter, steerMarks, turnSteers } from './steer/steer-model.ts';
 
@@ -248,7 +246,6 @@ export function SoloTurn({
         {providerName(provider)} <span className="mood">{mood}</span>
       </p>
       {agentChanged(run, previous) && <AgentMark provider={provider} model={modelOf(run)} />}
-      <SubagentsLine runId={run.id} rows={subagents} live={working} />
       <PlanSavedLine detail={detail} runId={run.id} />
       <TurnRows
         parts={parts}
@@ -266,10 +263,6 @@ export function SoloTurn({
           <Markdown text={part} streaming={last && leads && active && !publishing} />
         )}
       </TurnRows>
-      <BackgroundWork
-        runId={run.id}
-        background={working && !waiting ? stream.subagents.background : null}
-      />
       {cardsLeft(cards.decided, answers, commandCalls).map(approvalCard)}
       <ChatFiles files={(detail.chatFiles ?? []).filter((file) => file.runId === run.id)} />
       <ArtifactCards chatId={detail.conversation.id} runId={run.id} pages={detail.artifactPages} />
@@ -318,12 +311,14 @@ export function SoloTurn({
           retryIn: isLatestTurn(detail, run.id) ? detail.conversation.id : null,
         }}
       />
-      {working && !waiting && (
-        <WorkingLine
-          run={run}
-          doing={liveLabel(subagents, [...commands.reply, ...commands.publish])}
-        />
-      )}
+      <TurnActivity
+        run={run}
+        subagents={subagents}
+        working={working}
+        waiting={waiting}
+        background={stream.subagents.background}
+        commands={[...commands.reply, ...commands.publish]}
+      />
       {finished && (
         <TurnMeta>
           {text && (

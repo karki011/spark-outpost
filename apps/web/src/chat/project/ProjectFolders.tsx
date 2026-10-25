@@ -15,6 +15,7 @@ type RepoPopover = ReturnType<typeof usePopover<HTMLButtonElement, HTMLDivElemen
 interface ContextDetails {
   id: string;
   open: boolean;
+  showProject?: boolean;
   items: ReactNode;
   onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
 }
@@ -100,7 +101,7 @@ export function ProjectFolders({
       aria-label="Project and branch"
       onKeyDown={details?.onKeyDown}
     >
-      {!details && folderChip}
+      {(!details || details.showProject) && folderChip}
       {children}
       {details && (
         <div
@@ -110,7 +111,7 @@ export function ProjectFolders({
           aria-label="Chat details"
           hidden={!details.open}
         >
-          {folderChip}
+          {!details.showProject && folderChip}
           {details.items}
         </div>
       )}

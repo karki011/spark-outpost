@@ -30,7 +30,7 @@
   --r-sm: 8px;
   --out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --spring: cubic-bezier(0.3, 1.4, 0.5, 1);
-  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, Menlo, monospace;
   --font-terminal: 'SF Mono', Menlo, monospace;
   --c-claude: oklch(0.605 0.15 40);

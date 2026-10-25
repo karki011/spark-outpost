@@ -10,6 +10,8 @@ import { Blobatar } from 'blobatar/react';
 import * as poses from 'blobatar/expression';
 import { crewExpression, crewHue, type CrewAgent } from './crew-model.ts';
 import { crewSeed } from './CrewBlob.tsx';
+import { chatBlob } from '../brand/ChatFace.tsx';
+import { workerIdentity } from './worker-identity.ts';
 import { roleSubtitle } from './tv-scene.ts';
 import type { CrewSeat, Seat } from './tv-layout.ts';
 
@@ -73,7 +75,7 @@ export function TvNode(props: TvNodeProps) {
   const [mood, setMood] = useState<TvMood | null>(null);
   const [hovered, setHovered] = useState(false);
   const squash = useRef<HTMLSpanElement>(null);
-  const subtitle = roleSubtitle(agent);
+  const subtitle = lead ? 'Lead' : roleSubtitle(agent);
 
   const face = mood ?? (hovered ? hoverMood(agent) : null) ?? crewExpression(agent.state);
   const blobRef = useCallback(
@@ -142,10 +144,11 @@ export function TvNode(props: TvNodeProps) {
         <span className="tv-sq" ref={squash}>
           <Blobatar
             ref={blobRef}
-            name={crewSeed(agent.name)}
-            hue={crewHue(agent.provider)}
+            {...(lead
+              ? { name: crewSeed(agent.name), hue: crewHue(agent.provider) }
+              : chatBlob(workerIdentity(agent.id)))}
             size={size}
-            animate="always"
+            animate={reduced ? 'hover' : 'always'}
             expression={MOODS[face]}
             className="crew-blob"
             aria-hidden="true"

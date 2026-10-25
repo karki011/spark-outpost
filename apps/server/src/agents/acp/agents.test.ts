@@ -185,6 +185,7 @@ describe('Codex launch', () => {
     expect(JSON.parse(chat.CODEX_CONFIG ?? '{}')).toEqual({
       features: {
         shell_tool: false,
+        multi_agent: true,
         unified_exec: false,
         skill_mcp_dependency_install: false,
         apps: false,
@@ -195,7 +196,12 @@ describe('Codex launch', () => {
     const project = agentDefinitions.codex.conversationEnv?.('/tmp/run', true) ?? {};
     expect(project).toMatchObject({ INITIAL_AGENT_MODE: 'read-only' });
     expect(JSON.parse(project.CODEX_CONFIG ?? '{}')).toMatchObject({
-      features: { shell_tool: true, unified_exec: false, skill_mcp_dependency_install: false },
+      features: {
+        shell_tool: true,
+        multi_agent: true,
+        unified_exec: false,
+        skill_mcp_dependency_install: false,
+      },
       default_permissions: 'read-only',
     });
     expect(JSON.parse(project.CODEX_CONFIG ?? '{}')).not.toHaveProperty('web_search');

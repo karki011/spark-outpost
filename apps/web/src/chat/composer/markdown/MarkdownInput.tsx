@@ -27,6 +27,7 @@ import {
 import { toggleInline, type Edit } from './md-format.ts';
 import { formatShortcut } from './md-keys.ts';
 import { marksAt } from './md-lines.ts';
+import type { Mark } from './md-inline.ts';
 import { pasteMarkdown } from './md-paste.ts';
 import { anchorPoint, copyTextareaStyles } from './mirror-geometry.ts';
 import { useFormatMenu } from './use-format-menu.ts';
@@ -52,6 +53,7 @@ interface OpenLink {
 
 const FLOAT_GAP = 6;
 const LINK_WIDTH = 300;
+const NO_MARKS: ReadonlySet<Mark> = new Set();
 
 function editFor(
   action: Exclude<ToolAction, 'link'>,
@@ -92,8 +94,12 @@ export function MarkdownInput({
   const floatRef = useRef<HTMLDivElement>(null);
   const [link, setLink] = useState<OpenLink | null>(null);
   const caret = selection.end > selection.start ? selection.start + 1 : selection.start;
-  const active = useMemo(() => marksAt(value, caret), [value, caret]);
   const showFloat = focused && !formatting && link === null && selection.end > selection.start;
+  const showMarks = formatting || showFloat;
+  const active = useMemo(
+    () => (showMarks ? marksAt(value, caret) : NO_MARKS),
+    [value, caret, showMarks],
+  );
 
   useLayoutEffect(() => {
     const textarea = ref.current;

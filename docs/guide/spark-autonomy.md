@@ -21,7 +21,7 @@ You'll choose what Spark does with finished work. About 1 minute.
 | **Automatic**                | Keeps changes. You ship.                               |
 | **Full auto → PR** (default) | Keeps changes, then has the agent open a pull request. |
 
-Neither level waits on a plan. The agent's [Plan mode](plan-card.md) does.
+Explicit publishing restrictions take precedence. For a plan approval, use [Plan mode](plan-card.md).
 
 ## For every new chat
 

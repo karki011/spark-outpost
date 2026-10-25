@@ -16,6 +16,8 @@ interface PlusMenuProps {
   onAddRepo: () => void;
   chatId: string;
   onAddChat: (chatId: string) => void;
+  formatting: boolean;
+  onFormatting: () => void;
 }
 
 type MenuAction = 'upload' | 'screenshot' | 'repo' | 'add-repo' | 'chat';
@@ -53,6 +55,8 @@ export function PlusMenu({
   onAddRepo,
   chatId,
   onAddChat,
+  formatting,
+  onFormatting,
 }: PlusMenuProps) {
   const { open, toggle, setOpen, anchorRef, panelRef } = usePopover<
     HTMLButtonElement,
@@ -162,6 +166,24 @@ export function PlusMenu({
             </button>
           );
         })}
+        <button
+          type="button"
+          className="mopt"
+          role="menuitemcheckbox"
+          aria-checked={formatting}
+          onClick={() => {
+            setOpen(false);
+            onFormatting();
+          }}
+        >
+          <span className="mi" aria-hidden="true">
+            Aa
+          </span>
+          <span>
+            <b>Formatting</b>
+            <small>Show the formatting toolbar</small>
+          </span>
+        </button>
       </div>
     </div>
   );

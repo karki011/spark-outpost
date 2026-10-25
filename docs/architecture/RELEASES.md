@@ -178,7 +178,7 @@ Also checked by hand: a 0.0.2 install pointed at a feed with 0.0.3 downloads it 
 
 ## Bundled fonts
 
-The web build ships Geist and Geist Mono (SIL Open Font License 1.1) from `@fontsource-variable/geist` and `@fontsource-variable/geist-mono`, pinned at 5.3.0. `apps/web/bundled-fonts.ts` copies the variable `woff2` files (weights 100 to 900, all upright subsets), a generated `fonts.css` and each family's licence notice (`geist-OFL.txt`, `geist-mono-OFL.txt`) to `dist/fonts/`, and serves the same files in development. The app, Spark Island and the boot screen load `fonts/fonts.css`; no font is fetched from the network, and `pnpm check:source` fails on a reference to the Google Fonts hosts.
+The web build ships Inter and Geist Mono (SIL Open Font License 1.1) from `@fontsource-variable/inter` and `@fontsource-variable/geist-mono`, pinned at 5.3.0. `apps/web/bundled-fonts.ts` copies the variable `woff2` files (weights 100 to 900, all upright subsets), a generated `fonts.css` and each family's licence notice (`inter-OFL.txt`, `geist-mono-OFL.txt`) to `dist/fonts/`, and serves the same files in development. The app, Spark Island and the boot screen load `fonts/fonts.css`; no font is fetched from the network, and `pnpm check:source` fails on a reference to the Google Fonts hosts.
 
 ## Bundled tmux
 

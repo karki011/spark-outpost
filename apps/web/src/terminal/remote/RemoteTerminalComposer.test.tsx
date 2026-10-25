@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BusyEnterAction } from '@spark-outpost/contracts';
 import { RemoteTerminalComposer } from './RemoteTerminalComposer.tsx';
@@ -7,6 +7,30 @@ import { RemoteTerminalComposer } from './RemoteTerminalComposer.tsx';
 const SECRET = 'use ghp_abcdefghijklmnopqrstuvwxyz0123 for the push';
 
 afterEach(cleanup);
+
+it.each([true, false])('keeps new typing after remote delivery settles (sent=%s)', async (sent) => {
+  let finish!: (value: boolean) => void;
+  render(
+    <RemoteTerminalComposer
+      blocked={null}
+      working={false}
+      preferred="now"
+      error={null}
+      onSend={() =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+      }
+      onStop={async () => undefined}
+    />,
+  );
+  const box = screen.getByRole('textbox', { name: 'Message the agent' }) as HTMLTextAreaElement;
+  fireEvent.change(box, { target: { value: 'First message' } });
+  fireEvent.keyDown(box, { key: 'Enter' });
+  fireEvent.change(box, { target: { value: 'Next message' } });
+  await act(async () => finish(sent));
+  expect(box.value).toBe(sent ? 'Next message' : 'Next message\n\nFirst message');
+});
 
 function show(preferred: BusyEnterAction) {
   const onSend = vi.fn(async () => true);

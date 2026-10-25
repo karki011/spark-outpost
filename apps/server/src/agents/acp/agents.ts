@@ -259,6 +259,7 @@ export function codexConfig(
   return {
     features: {
       shell_tool: browsing,
+      multi_agent: true,
       unified_exec: false,
       skill_mcp_dependency_install: false,
       apps: false,

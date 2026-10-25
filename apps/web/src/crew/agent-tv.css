@@ -159,6 +159,15 @@
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
+.tv-messages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  max-height: 100px;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+}
 .tv-cap {
   flex: none;
   contain: inline-size;
@@ -187,6 +196,10 @@
   animation-play-state: paused !important;
 }
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .tv-messages button,
+  .tv-subagents .btn {
+    min-height: 44px;
+  }
   .tv:not(.watch) {
     left: 8px;
     right: 8px;
@@ -199,6 +212,12 @@
   }
   .tv-h .tv-size {
     display: none;
+  }
+}
+@media (pointer: coarse) {
+  .tv-messages button,
+  .tv-subagents .btn {
+    min-height: 44px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

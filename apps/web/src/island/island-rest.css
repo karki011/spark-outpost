@@ -90,7 +90,7 @@
   background: var(--island);
   color: var(--text);
   font:
-    700 9px/13px Geist,
+    700 9px/13px Inter,
     sans-serif;
   text-align: center;
   z-index: 2;

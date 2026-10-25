@@ -43,7 +43,7 @@ To unlink, select **No project folder** in the menu.
 
 Or paste or drag files into the box.
 
-Markdown is styled as you type. Select text for a toolbar, or **Aa** for lists, quotes and code blocks; **⌘B**, **⌘I**, **⌘⇧X** work too. In a code block, **Enter** adds a line and **⌘Enter** sends.
+Markdown styles as you type. Select text or open **+ → Formatting**; **⌘B**, **⌘I**, **⌘⇧X** work too. In code blocks, **Enter** adds a line; **⌘Enter** sends. Branch and agent setup live in **Chat details** (**…**).
 
 ## Share a chat with another chat
 

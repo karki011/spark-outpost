@@ -3,10 +3,12 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import * as acp from '@agentclientprotocol/sdk';
 import type { FakeTurn } from './fake-acp-build.ts';
+import { readFakeSession } from './fake-acp-sessions.ts';
 
 const run = promisify(execFile);
 
 const PUBLISH_HEADING = '## Publish this change';
+const LOCAL_BRANCH = /Local branch: `([^`\s]+)`/;
 const BRANCH = /`git push origin ([^`\s]+)`/;
 const PULL_BASE = /`gh pr create --base ([^`\s]+)`/;
 const PULL_STEP = '`gh pr create`';
@@ -72,11 +74,25 @@ export async function publishTurn(turn: FakeTurn): Promise<acp.StopReason | null
   const at = turn.text.lastIndexOf(PUBLISH_HEADING);
   if (at < 0) return null;
   const asked = turn.text.slice(at);
-  const branch = BRANCH.exec(asked)?.[1];
+  const localBranch = LOCAL_BRANCH.exec(asked)?.[1];
+  const branch = localBranch ?? BRANCH.exec(asked)?.[1];
   if (!branch) return null;
+  if (process.env.FAKE_ACP_PUBLISH_CANCELS) return 'cancelled';
   if (process.env.FAKE_ACP_PUBLISH_FAILS) throw new Error('The publish prompt failed.');
+  if (
+    process.env.FAKE_ACP_SESSION_STORE &&
+    readFakeSession(turn.sessionId).prompts.some((prompt) => prompt.includes('#nocommit')) &&
+    asked.includes('Explicit restrictions')
+  ) {
+    await turn.say('Left the changes uncommitted as requested.');
+    return 'end_turn';
+  }
   await shell('git', ['add', '-A'], turn.cwd);
   await shell('git', [...AUTHOR, 'commit', '-qm', 'Publish the change'], turn.cwd);
+  if (localBranch) {
+    await turn.say('Committed locally; no remote.');
+    return 'end_turn';
+  }
   if (turn.text.includes('#nopush')) {
     await turn.say('published=no reason=asked not to push');
     return 'end_turn';

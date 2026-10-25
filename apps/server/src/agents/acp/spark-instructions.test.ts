@@ -32,11 +32,11 @@ describe('sparkInstructions', () => {
     expect(text).not.toMatch(/\bcrew\b|Jev picks/i);
   });
 
-  it('asks for coordinator work, the first name and the friendly tone by default', () => {
+  it('asks for delegated implementation, the first name and the friendly tone by default', () => {
     const text = sparkInstructions(PREFS, true);
-    expect(text).toContain('act as a coordinator');
-    expect(text).toContain('with the Agent tool');
-    expect(text).toContain('Answer simple questions directly without delegating.');
+    expect(text).toContain('Delegate implementation slices');
+    expect(text).toContain('available native sub-agent tools');
+    expect(text).toContain('Answer simple questions directly');
     expect(text).toContain(
       "The user's name is Sam; use it sparingly, not to open or close every reply.",
     );
@@ -45,9 +45,11 @@ describe('sparkInstructions', () => {
     expect(text).not.toContain('Rivera');
   });
 
-  it('words team mode as a checklist when the agent has no subagents', () => {
+  it('discloses missing delegation without silently switching to solo implementation', () => {
     const text = sparkInstructions(PREFS, false);
-    expect(text).toContain('keep a short checklist');
+    expect(text).toContain('no native sub-agent tools');
+    expect(text).toContain('disclose that limitation');
+    expect(text).not.toContain('keep a short checklist');
     expect(text).not.toContain('Agent tool');
   });
 
@@ -55,7 +57,7 @@ describe('sparkInstructions', () => {
     const text = sparkInstructions({ ...PREFS, displayName: '   ' }, true);
     expect(text).not.toContain('name is');
     expect(text.split('\n')).toHaveLength(3);
-    expect(text).toContain('act as a coordinator');
+    expect(text).toContain('Delegate implementation slices');
   });
 
   it('keeps humour out of failures for every personality', () => {
@@ -130,7 +132,7 @@ describe('withClaudeSpark', () => {
   it('never gives a chat session without tools the Agent tool', () => {
     const merged = withClaudeSpark(null, PREFS, false)!;
     expect(merged.agentTool).toBe(false);
-    expect(merged.appendPrompt).toContain('keep a short checklist');
+    expect(merged.appendPrompt).toContain('no native sub-agent tools');
   });
 
   it('changes nothing without preferences', () => {
@@ -139,9 +141,11 @@ describe('withClaudeSpark', () => {
 });
 
 describe('withCodexSpark', () => {
-  it('puts the instructions in developer instructions without subagent wording', () => {
+  it('uses Codex native subagents without prescribing the Claude Agent tool', () => {
     const merged = withCodexSpark(null, PREFS)!;
-    expect(merged.developerInstructions).toContain('keep a short checklist');
+    expect(merged.developerInstructions).toContain('available native sub-agent tools');
+    expect(merged.developerInstructions).not.toContain('Agent tool');
+    expect(merged.developerInstructions).not.toContain('keep a short checklist');
     expect(merged).toMatchObject({ agentsMd: true, skills: true });
   });
 
@@ -164,7 +168,7 @@ describe('auditCodexInstructions', () => {
     const [direction, message] = messages[0]!;
     expect(direction).toBe('harness');
     expect(message).toMatchObject({ method: CODEX_INSTRUCTIONS_METHOD });
-    expect(JSON.stringify(message)).toContain('keep a short checklist');
+    expect(JSON.stringify(message)).toContain('available native sub-agent tools');
   });
 
   it('records nothing when no instructions are sent', () => {

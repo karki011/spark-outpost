@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import type { Plugin } from 'vite';
 
 const FONT_PACKAGES = [
-  { name: '@fontsource-variable/geist', published: 'Geist Variable', family: 'Geist' },
+  { name: '@fontsource-variable/inter', published: 'Inter Variable', family: 'Inter' },
   {
     name: '@fontsource-variable/geist-mono',
     published: 'Geist Mono Variable',

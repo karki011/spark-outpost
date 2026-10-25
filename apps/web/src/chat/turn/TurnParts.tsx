@@ -29,23 +29,32 @@ export function AgentMark({ provider, model }: { provider: string; model: string
   );
 }
 
-export function WorkingLine({ run, doing = 'Working' }: { run: Run; doing?: string }) {
+export function WorkingLine({
+  run,
+  doing = 'Working',
+  children,
+}: {
+  run: Run;
+  doing?: string;
+  children?: ReactNode;
+}) {
   const headRef = useLiveHead(run.id);
   const now = useNow(true);
   const since = Date.parse(run.startedAt ?? run.createdAt);
   const tokens = run.usage?.tokens?.total ?? null;
   return (
-    <p className="turn-working" ref={headRef}>
+    <div className="turn-working" ref={headRef}>
       <Spinner />
       <b>{doing}</b>
       <span className="turn-working-meta">
         {Number.isFinite(since) && <> · {clockText(Math.max(0, now - since))}</>}
         {tokens !== null && tokens > 0 && <> · {formatTokens(tokens)} tokens</>}
       </span>
+      {children}
       <span className="turn-working-stop">
         <kbd>Esc</kbd> to stop
       </span>
-    </p>
+    </div>
   );
 }
 

@@ -2,6 +2,7 @@ import { basename } from 'node:path';
 import { outpostNeeds } from '../outposts/outpost-availability.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
+import { storyTaskOf } from '../persistence/outpost-stories.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { currentBranch } from '../projects/chat-worktrees.ts';
 import { isGitWorkTree } from '../projects/snapshot.ts';
@@ -32,10 +33,11 @@ async function projectFacts(db: Queryable, input: RunInput): Promise<ChatPromptP
 
 export async function chatPromptFacts(db: Queryable, input: RunInput): Promise<ChatPromptFacts> {
   const { threadId: conversationId, runId } = input.identity;
-  const [project, needs, prefs] = await Promise.all([
+  const [project, needs, prefs, storyTask] = await Promise.all([
     projectFacts(db, input),
     outpostNeeds(db, { conversationId, runId }),
     sparkPreferences(db, input.workspaceId),
+    storyTaskOf(db, conversationId),
   ]);
   return {
     project,
@@ -44,6 +46,11 @@ export async function chatPromptFacts(db: Queryable, input: RunInput): Promise<C
     level: input.level,
     followUpRound: input.followUpRound === true,
     asksWithTool: input.mode === 'do' && input.plansFirst !== true,
+    assignedWork:
+      storyTask !== null ||
+      (input.outpostRequest != null &&
+        !input.outpostRequest.fromUser &&
+        !input.outpostRequest.wrapUp),
     customInstructions: prefs.agentInstructions ?? null,
   };
 }

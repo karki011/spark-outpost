@@ -1,7 +1,9 @@
+import type { ReactNode } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import type { BackgroundWait } from '@spark-outpost/contracts';
 import { api } from '../api/client.ts';
 import { sleepingLine } from './wait-label.ts';
+import { useLiveHead } from './status/status-context.ts';
 
 function runningLine(background: BackgroundWait): string {
   const names = background.names.join(', ');
@@ -22,15 +24,19 @@ function stopLabel(background: BackgroundWait): string {
 export function BackgroundWork({
   runId,
   background,
+  children,
 }: {
   runId: string;
   background: BackgroundWait | null;
+  children?: ReactNode;
 }) {
+  const headRef = useLiveHead(runId);
   const stop = useMutation({ mutationFn: () => api.cancelRun(runId) });
   if (!background) return null;
   return (
-    <div className="ai-note background-work">
+    <div className="ai-note background-work" ref={headRef}>
       <span role="status">{backgroundLine(background)}.</span>
+      {children}
       <button
         type="button"
         className="btn sm"

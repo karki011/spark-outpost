@@ -12,10 +12,10 @@ export const SPARK_INSTRUCTIONS_MAX_LENGTH = 1024;
 const HEADER = '# Working with the user (set in Spark Outpost)';
 
 const TEAM_WITH_SUBAGENTS =
-  'For multi-step work, act as a coordinator: split the work into small, scoped pieces, hand each piece to a subagent with the Agent tool, then check and combine what they return. Answer simple questions directly without delegating.';
+  'Delegate implementation slices with available native sub-agent tools. Assigned workers execute without recursive delegation. Choose roles as needed. Answer simple questions directly; respect the current mode and user constraints.';
 
 const TEAM_WITHOUT_SUBAGENTS =
-  'For multi-step work, act as a coordinator: split the work into small, scoped pieces, keep a short checklist, and finish and check one piece before starting the next. Answer simple questions directly.';
+  'Answer questions directly within the current mode. This session has no native sub-agent tools: if implementation needs delegation, disclose that limitation and use an available authorized delegation path or ask how to proceed. Do not claim workers ran.';
 
 const TONE: Record<Personality, string> = {
   playful:
@@ -124,7 +124,7 @@ export function withCodexSpark(
     ...base,
     developerInstructions: joined(
       base.developerInstructions,
-      sparkInstructions(prefs, false, spark !== null, spark?.browser),
+      sparkInstructions(prefs, true, spark !== null, spark?.browser),
     ),
   };
 }

@@ -6,14 +6,14 @@ order: 227
 summary: Open a page in the chat's Browser pane, let the agent look, browse and click, and point at what you mean.
 ---
 
-Pages for you and agents. About 2 minutes. Mac app only.
+Browse with agents. About 2 minutes. Mac only.
 
 ## Open a page
 
-1. In a chat's **…** menu, select **Browser**, or press **⌘⇧B**.
+1. Select **… → Browser**, or press **⌘⇧B**.
 2. Type an address, like `localhost:5173`; press **Enter**.
 
-Chat links open here; **⌘**-click opens yours. [Keys](keyboard-shortcuts.md#browser-pane-mac-app).
+Chat links open here. [Keys](keyboard-shortcuts.md#browser-pane-mac-app).
 
 ## Test a page width
 
@@ -51,6 +51,6 @@ Right-click highlighted text: **Add to chat** or **Ask about this** (**⌘⇧A**
 1. In **Settings** → **Projects**, select **Add** beside **Saved sign-ins**: label, site, **Other sign-in sites**, test account.
 2. Ask the agent to sign in; allow the card once per chat.
 
-Spark types only there, unseen by the agent. Refused? **Add this site**. For SSO, sign in in the agent's tab, then **Done**.
+Spark fills only approved sites. For another domain, open **Settings → Projects → Saved sign-ins**, choose **Add this site**, then ask the agent to retry without re-entering credentials. SSO or MFA still needs you.
 
 **Next:** [Make a Spark](sparks.md)
