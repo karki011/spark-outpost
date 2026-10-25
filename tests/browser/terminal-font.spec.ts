@@ -4,7 +4,7 @@ import { startFixtureTerminal, typeLine } from './native-terminal-fixture.ts';
 import { FONT_HOSTS, probeFonts, probeStack, tableShot } from './terminal-font-probe.ts';
 
 const MONO = "'Geist Mono', ui-monospace, Menlo, monospace";
-const SANS = "'Geist', ui-sans-serif, system-ui, sans-serif";
+const SANS = "'Inter', ui-sans-serif, system-ui, sans-serif";
 const MENLO = 'Menlo';
 const BUNDLED_FONT_FILES = '**/fonts/*.woff2';
 

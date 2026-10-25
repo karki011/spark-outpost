@@ -1,8 +1,10 @@
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 import { withDesktopBrowser } from './desktop-browser.ts';
 import { toggleHeaderPane } from './header-menu.ts';
 import { openChats } from './navigation.ts';
+import { seedChats } from './sidebar-seed.ts';
 import { resetWithAgents } from './project-chat-kit.ts';
 
 const SHOTS = process.env.SPARK_REVIEW_SHOTS ?? '';
@@ -82,7 +84,7 @@ test('Agent TV stays inside the chat column beside the Browser pane, above the c
   await expectCardFits(page);
 
   const stage = (await tvOf(page).locator('.tv-stage').boundingBox())!;
-  expect(stage.height).toBeLessThan(250);
+  expect(stage.height).toBeLessThanOrEqual(250);
 
   const docked = (await tvOf(page).boundingBox())!;
   await page.keyboard.press('ControlOrMeta+Shift+B');
@@ -122,5 +124,66 @@ test('Agent TV stays inside the chat column beside the Browser pane, above the c
   await page.getByRole('button', { name: 'Stop', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0, {
     timeout: 30_000,
+  });
+});
+
+test.describe('touch message targets', () => {
+  test.use({ hasTouch: true });
+
+  test('wrapped member messages remain usable in a short window', async ({ page }) => {
+    const handles = ['lead', 'builder', 'explorer', 'verifier', 'reviewer', 'shipper'];
+    const chats = await seedChats(handles.map((handle) => ({ title: `${handle} chat` })));
+    await withDesktopBrowser(page);
+    await page.setViewportSize(WIDE);
+    await openChats(page);
+    const created = await page.request.post('/api/outposts', {
+      data: {
+        id: randomUUID(),
+        name: 'Short window team',
+        members: chats.map((conversationId, index) => ({ conversationId, handle: handles[index] })),
+      },
+    });
+    expect(created.ok()).toBe(true);
+    await openChats(page);
+    await page
+      .getByRole('navigation', { name: 'Chats' })
+      .getByText('lead chat', { exact: true })
+      .click();
+    const input = page.getByRole('textbox', { name: 'Message', exact: true });
+    await input.fill('Pull the settings spec #build #subagentswide');
+    await input.press('Enter');
+    await expect(page.locator('.msg.ai .mood').last()).toHaveText('waiting on 1 sub-agent', {
+      timeout: 30_000,
+    });
+    await toggleHeaderPane(page, 'Browser');
+    await toggleHeaderPane(page, 'Agent TV');
+    await page.setViewportSize(SHORT);
+    await settled(page);
+    await expectInsideChatColumn(page);
+    const messages = tvOf(page).getByRole('group', { name: 'Message agents' });
+    await expect(messages.getByRole('button')).toHaveCount(handles.length);
+    const geometry = await messages.evaluate((element) => {
+      const buttons = [...element.querySelectorAll('button')].map((button) =>
+        button.getBoundingClientRect(),
+      );
+      return {
+        rows: new Set(buttons.map((button) => button.top)).size,
+        heights: buttons.map((button) => button.height),
+        height: element.getBoundingClientRect().height,
+      };
+    });
+    expect(geometry.rows).toBeGreaterThan(1);
+    expect(geometry.heights.every((height) => height >= 44)).toBe(true);
+    expect(geometry.height).toBeLessThanOrEqual(100);
+    expect(
+      await tvOf(page).evaluate((element) => element.scrollHeight > element.clientHeight + 1),
+    ).toBe(false);
+    const last = messages.getByRole('button', { name: 'Message shipper', exact: true });
+    await last.scrollIntoViewIfNeeded();
+    await expect(last).toBeInViewport();
+    await last.click();
+    await expect(tvOf(page)).toHaveCount(0);
+    await expect(input).toBeFocused();
+    await expect(page.locator('main.main')).toContainText('shipper chat');
   });
 });

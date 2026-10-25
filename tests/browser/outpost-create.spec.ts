@@ -208,6 +208,7 @@ test('a new chat with a first message and a file starts working when the outpost
 
   await expect(chip(page, 'storefront2')).toBeVisible();
   await chip(page, 'storefront2').click();
+  await page.getByRole('button', { name: /^Chat details/ }).click();
   await expect(
     page.getByRole('button', {
       name: new RegExp(`^Open outpost ${NAME}\\. This chat is @storefront2`),

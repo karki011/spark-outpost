@@ -37,6 +37,7 @@ async function chatWithRepo(page: Page) {
   await repos.getByRole('button', { name: /^app/ }).click();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Project folders: app' })).toBeVisible();
+  await page.getByRole('button', { name: /^Chat details/ }).click();
   return input;
 }
 
@@ -46,6 +47,9 @@ const card = (page: Page, title: string) =>
   setup(page).getByRole('region', { name: new RegExp(`^${title}`) });
 
 async function openSetup(page: Page) {
+  if (!(await setupButton(page).isVisible())) {
+    await page.getByRole('button', { name: /^Chat details/ }).click();
+  }
   await setupButton(page).click();
   await expect(setup(page)).toBeVisible();
   await expect(card(page, 'Instructions')).toBeVisible();

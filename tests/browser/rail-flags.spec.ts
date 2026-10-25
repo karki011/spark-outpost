@@ -73,6 +73,7 @@ test('the branch chip names how pull requests open', async ({ page }) => {
   const repo = await repoWithRemote(base, 'route');
   await changeInChat(page, repo.root, 'Add a line to the notes #edit #plan');
   const chip = page.locator('.ctxbar .chat-branch');
+  await page.getByRole('button', { name: /^Chat details/ }).click();
   await chip.hover();
   await expect(page.getByRole('tooltip')).toContainText('Push only · PR link');
 });

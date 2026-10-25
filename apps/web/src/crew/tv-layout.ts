@@ -181,10 +181,10 @@ export function dockInto(area: Rect, viewport: Box, gap = DOCK_GAP): TvDock {
 const TV_CHROME = 76;
 const SUBAGENTS_MIN = 90;
 
-export function stageRoom(dock: TvDock, subagents: boolean): Box {
+export function stageRoom(dock: TvDock, subagents: boolean, messages = false): Box {
   return {
     width: dock.maxWidth - 2,
-    height: dock.maxHeight - TV_CHROME - (subagents ? SUBAGENTS_MIN : 0),
+    height: dock.maxHeight - TV_CHROME - (subagents ? SUBAGENTS_MIN : 0) - (messages ? 100 : 0),
   };
 }
 
@@ -204,7 +204,8 @@ export function tvStage(size: TvSize, room: Box | null, crew: number): StageMetr
     .find((stage) => fits(stage, room));
   if (fit || !room) return fit ?? forCrew(STAGES.s, crew);
   const aspect = DOCK.width / forCrew(DOCK, crew).height;
-  return forCrew(dockStage(Math.min(room.width, room.height * aspect)), crew);
+  const stage = forCrew(dockStage(Math.min(room.width, room.height * aspect)), crew);
+  return { ...stage, height: Math.max(0, Math.min(stage.height, room.height)) };
 }
 
 export function clampInto(position: Seat, size: Box, area: Rect, margin = 8): Seat {

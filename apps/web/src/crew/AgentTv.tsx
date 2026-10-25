@@ -140,7 +140,9 @@ export function AgentTv({
     ? watchStage(viewport)
     : tvStage(
         narrow ? 's' : size,
-        dock ? stageRoom(dock, subagents.length > 0) : null,
+        dock
+          ? stageRoom(dock, subagents.length > 0, Boolean(onMessage && messageChats.length > 0))
+          : null,
         stageMembers.length - 1,
       );
   const viewTip = useTooltip(view === 'list' ? 'List view' : 'Stage view');
@@ -211,7 +213,13 @@ export function AgentTv({
     const handle = event.currentTarget;
     handle.setPointerCapture(event.pointerId);
     const move = (moveEvent: globalThis.PointerEvent) =>
-      moveAgentTv({ x: moveEvent.clientX - offset.x, y: moveEvent.clientY - offset.y });
+      moveAgentTv(
+        clampInto(
+          { x: moveEvent.clientX - offset.x, y: moveEvent.clientY - offset.y },
+          { width: element.offsetWidth, height: element.offsetHeight },
+          area ?? { left: 0, top: 0, right: innerWidth, bottom: innerHeight },
+        ),
+      );
     const stop = () => {
       handle.removeEventListener('pointermove', move);
       handle.removeEventListener('pointerup', stop);

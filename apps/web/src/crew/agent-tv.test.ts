@@ -116,6 +116,9 @@ describe('Agent TV stage layout', () => {
     );
     const room = stageRoom(dock, true);
     expect(room.height).toBe(388 - 76 - 90);
+    const messagingRoom = stageRoom(dock, true, true);
+    expect(messagingRoom.height).toBeLessThanOrEqual(room.height - 100);
+    expect(tvStage('l', messagingRoom, 3).height).toBeLessThanOrEqual(messagingRoom.height);
     const short = tvStage('l', room, 3);
     expect(short.height).toBeLessThanOrEqual(room.height);
     expect(short.width).toBeLessThanOrEqual(room.width);
