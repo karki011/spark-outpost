@@ -205,7 +205,11 @@ export function tvStage(size: TvSize, room: Box | null, crew: number): StageMetr
   if (fit || !room) return fit ?? forCrew(STAGES.s, crew);
   const aspect = DOCK.width / forCrew(DOCK, crew).height;
   const stage = forCrew(dockStage(Math.min(room.width, room.height * aspect)), crew);
-  return { ...stage, height: Math.max(0, Math.min(stage.height, room.height)) };
+  return {
+    ...stage,
+    width: Math.max(0, Math.min(stage.width, room.width)),
+    height: Math.max(0, Math.min(stage.height, room.height)),
+  };
 }
 
 export function clampInto(position: Seat, size: Box, area: Rect, margin = 8): Seat {
