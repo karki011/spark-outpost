@@ -26,7 +26,7 @@ The guest receives only a JSON tool-call boundary. It gets no host filesystem, s
 
 Stop aborts execution and prevents new inner calls or late results from reaching the script. Host network calls receive its cancellation signal. Existing database reads and repository discovery may finish internally; they must not resume a cancelled script. Cancellation records terminal audit outcomes immediately, even for receipts no longer retained in the response; a late host completion cannot duplicate the outcome. GitHub CLI fallback is excluded from Code Mode.
 
-Results preserve tool errors and evidence blocks. The execution returns its latest 50 inner-call receipts with total and omitted counts; the audit records every inner-call lifecycle without arguments or results. A parsed `data` field is only available for successful JSON text. Scripts must check `isError`, respect paging, and treat retrieved text as untrusted data. A transformed result gains no authority over the user's instructions.
+Results preserve tool errors and evidence blocks. An execution failure sets the outer MCP error flag while retaining its inner-call receipts. The execution returns its latest 50 inner-call receipts with total and omitted counts; the audit records every inner-call lifecycle without arguments or results. A parsed `data` field is only available for successful JSON text. Scripts must check `isError`, respect paging, and treat retrieved text as untrusted data. A transformed result gains no authority over the user's instructions.
 
 ## UX and acceptance
 

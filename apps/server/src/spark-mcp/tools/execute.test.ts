@@ -92,3 +92,59 @@ it('refuses stale scopes even if a caller holds a prior execute tool reference',
     ),
   ).rejects.toThrow('unavailable');
 });
+
+it('reports execution failures to MCP while retaining successful read receipts', async () => {
+  const inner = sparkTool({
+    name: 'spark_pr',
+    title: 'Pull request',
+    description: 'Read a PR',
+    input: {},
+    run: async () => ({ checks: 'passing' }),
+  });
+  const tool = executeTool({
+    toolsFor: () => [inner],
+    callTool: callSparkTool,
+    availabilityOf: async () => EVERYTHING_AVAILABLE,
+  });
+  const context: SparkToolContext = { scope: scope(), deps: {} as SparkToolDeps };
+  const failed = await callSparkTool(
+    tool,
+    {
+      code: 'await tools.call("spark_pr", {}); throw new Error("execution failed");',
+    },
+    context,
+  );
+  expect(failed.isError).toBe(true);
+  expect(failed.content[0]?.type).toBe('text');
+  const text = failed.content[0];
+  expect(text?.type === 'text' && JSON.parse(text.text)).toMatchObject({
+    error: expect.stringContaining('execution failed'),
+    toolCalls: [{ name: 'spark_pr', outcome: 'completed' }],
+    totalCalls: 1,
+  });
+  const succeeded = await callSparkTool(
+    tool,
+    { code: 'return {error: "application data"};' },
+    context,
+  );
+  expect(succeeded.isError).not.toBe(true);
+  expect(succeeded.content).toEqual([
+    { type: 'text', text: expect.stringContaining('application data') },
+  ]);
+  const discovered = await callSparkTool(tool, {}, context);
+  expect(discovered.isError).not.toBe(true);
+  expect(discovered.content).toEqual([{ type: 'text', text: expect.stringContaining('spark_pr') }]);
+});
+
+it('does not reinterpret error fields returned by other Spark tools', async () => {
+  const tool = sparkTool({
+    name: 'spark_pr',
+    title: 'Pull request',
+    description: 'Read a PR',
+    input: {},
+    run: async () => ({ error: 'A check failed' }),
+  });
+  const result = await callSparkTool(tool, {}, { scope: scope(), deps: {} as SparkToolDeps });
+  expect(result.isError).not.toBe(true);
+  expect(result.content).toEqual([{ type: 'text', text: '{"error":"A check failed"}' }]);
+});

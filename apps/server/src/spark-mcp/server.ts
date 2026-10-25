@@ -170,7 +170,16 @@ export async function callSparkTool(
       });
     }
     if (result instanceof SparkBlocks) return { content: [...result.blocks] };
-    return { content: [{ type: 'text', text: renderResult(result) }] };
+    const executionFailed =
+      tool.name === 'spark_execute' &&
+      result !== null &&
+      typeof result === 'object' &&
+      'error' in result &&
+      typeof result.error === 'string';
+    return {
+      ...(executionFailed ? { isError: true } : {}),
+      content: [{ type: 'text', text: renderResult(result) }],
+    };
   } catch (error) {
     return failure(error);
   }
