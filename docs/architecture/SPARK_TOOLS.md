@@ -10,9 +10,11 @@ Every agent session (Ask, Do, chats without a project) gets the `spark` MCP serv
 - Tools never return file contents, terminal output, secrets or API keys. Two exceptions: `spark_browser_preview` returns the recent output of the preview server Spark runs, and `spark_terminal_run` returns the recent output of a command Spark runs for the agent; both are redacted, clipped and marked untrusted.
 - Read tools change nothing. Actions follow the agent's mode (`actionPath`): at once in Auto, Bypass permissions, Approve for me and Full access, and in Accept edits when the user's message asked; otherwise a `spark_action` confirm card, and Spark does it after the user confirms.
 
-## Experimental composition
+## Code Mode read composition
 
-`spark_execute` is an opt-in read-composition tool for chat runs. It uses the same scoped dispatcher for each eligible inner call; actions remain direct. See [Code Mode](CODE_MODE.md) for the local execution boundary, reference decisions and acceptance scope.
+`spark_execute` is available by default in eligible chat runs, including Ask Spark, and excluded from Terminal sessions. **Settings → Chats & autonomy → Code Mode** saves a workspace-wide off choice; `SPARK_CODE_MODE=0` disables it for the installation. Direct tools remain available, and actions remain direct.
+
+Discovery is labelled **Finding Code Mode tools**; execution is **Combining reads with Code Mode**. Each inner call rechecks the saved setting, session and tool availability, then uses the existing scoped dispatcher. At most four host reads run concurrently per execution; queued reads are cancellable. See [Code Mode](CODE_MODE.md) for the guest request limits, local execution boundary and acceptance scope.
 
 ## Coverage
 

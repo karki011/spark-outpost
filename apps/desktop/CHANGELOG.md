@@ -2,6 +2,8 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
+
 ## 0.1.0-beta.30
 
 - Spark rules live in a settings.json file, like Claude's settings: allow, ask or deny each rule (pushes, force pushes, pull requests, each gh command, secret files, instruction files, git hooks and config, writes outside the project, secret sends, remotes). Empty by default, so your agent's mode decides everything; Use recommended rules in Settings → Spark rules restores the old protections. A company can lock rules in /Library/Application Support/SparkOutpost/managed-settings.json.

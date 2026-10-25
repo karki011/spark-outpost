@@ -16,13 +16,13 @@ Cloudflare recommends direct tools for simple tasks and Code Mode for compositio
 
 The attached analysis is a design reference. Its OpenCode version, benchmark results and development estimates were not independently reproduced. Spark already uses Zod. QuickJS has standard JavaScript globals, including `globalThis`; isolation comes from withholding host capabilities, not removing JavaScript syntax.
 
-## First slice
+## Current scope
 
 Chat runs offer `spark_execute` by default. The workspace profile persists the Code Mode switch, including an explicit off choice across restarts. The next turn reads that preference and the existing tool-signature check reopens a live provider session when its tool list changes. Each inner call also rechecks the saved choice before dispatch, so disabling it refuses subsequent reads in an active execution. `SPARK_CODE_MODE=0` is an installation override: Settings shows the switch off and disabled while preserving the saved preference. Terminal sessions remain excluded. A call without code discovers eligible tools, input schemas and result descriptions; a call with code executes an async function body with an explicit `return`. There is no new composer control.
 
-Each inner call must pass the current session check and current tool availability. Eligibility is a positive list, not a name-based guess or all tools marked read-only. Existing validation, result redaction and private-data observations remain in the path. Credentials and service clients stay in the host.
+Each inner call must pass the current session check and current tool availability. The supported reads are `spark_tickets`, `spark_pull_requests`, `spark_pr`, `spark_docs` and `spark_guide`. Eligibility is a positive list, not a name-based guess or all tools marked read-only. Existing validation, result redaction and private-data observations remain in the path. Credentials and service clients stay in the host.
 
-The guest receives only a JSON tool-call boundary. It gets no host filesystem, shell, process, unrestricted network or module loader. QuickJS runs in a separate worker, with memory, stack, script and output protections and an interrupt for runaway computation. The current bounds are 64 MiB guest memory, 512 KiB stack, 256 KiB scripts/JSON, 64 levels of JSON nesting, one second of continuous computation, and 128 simultaneous guest requests, with at most four host reads dispatched concurrently. Additional host reads wait in a cancellable queue. Waiting for host tools does not consume the computation allowance. These protect one execution; they do not cap a chat's duration, tokens or total number of tools.
+The guest receives only a JSON tool-call boundary. It gets no host filesystem, shell, process, unrestricted network or module loader. QuickJS runs in a separate worker, with memory, stack, script and output protections and an interrupt for runaway computation. The current bounds are 64 MiB guest memory, 512 KiB stack, 256 KiB scripts/JSON, 64 levels of JSON nesting, one second of continuous computation, and 128 simultaneous pending guest requests, with at most four host reads dispatched concurrently per execution. Additional host reads wait in a cancellable queue. Waiting for host tools does not consume the computation allowance. These protect one execution; they do not cap a chat's duration, tokens or total number of tools.
 
 Stop aborts execution and prevents new inner calls or late results from reaching the script. Host network calls receive its cancellation signal. Existing database reads and repository discovery may finish internally; they must not resume a cancelled script. GitHub CLI fallback is excluded from Code Mode.
 
@@ -30,8 +30,17 @@ Results preserve tool errors and evidence blocks. The execution returns its late
 
 ## UX and acceptance
 
-One normal tool activity, **Combining tool results**, uses the existing collapsed activity presentation. Agent TV keeps the worker's identity. No extra agent card or persistent composer controls are needed.
+Discovery appears as **Finding Code Mode tools**, execution as **Combining reads with Code Mode**, and an activity without input details as **Using Code Mode**. These use the existing collapsed tool activity presentation and result view, rather than labelling reads as terminal commands. Agent TV keeps the worker's identity. No extra agent card or persistent composer control is added.
 
-The first useful scenario is: find tickets linked to open pull requests and summarize which need attention. Verify the result against direct calls; exercise absent connectors, invalid inputs, partial failures, cancellation, runaway code and blocked host access. Then run real Claude and Codex sessions before claiming provider acceptance. Fixture tests are not evidence of a real Jira or GitHub login.
+Automated coverage checks input validation, partial failures, cancellation, queued reads, runaway code, blocked host access, output bounds and redaction. Settings database tests cover the default, saved off choice, installation override and the tool signature changing on an existing grant. These tests do not establish connector login acceptance or a performance advantage.
+
+A recorded October 25, 2026 comparison used two fresh real Codex 6 Sol chats at medium effort with the same three-guide-read prompt. Both completed three reads successfully:
+
+| Mode | Duration | Model tool calls | Estimated cost |
+| ---- | -------- | ---------------- | -------------- |
+| On   | 17.965 s | 2                | $0.070602      |
+| Off  | 17.429 s | 3                | $0.083028      |
+
+This sequential pair preceded the label polish and settings default change. It verifies the guide-read path, not a general speed or cost improvement; cache usage and model variation differ between runs. It is not evidence of a real Jira or GitHub workflow. Connector acceptance should still compare ticket/PR summaries against direct reads and exercise missing connections and paged results.
 
 Durable replay, approved writes, external MCP catalogs, generated TypeScript declarations and reusable scripts remain later slices. Enabling any of them requires evidence that it improves a real task and preserves Spark's existing permission behavior.

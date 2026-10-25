@@ -42,7 +42,7 @@ Free beta · [0.1.0-beta.30](releases/0.1.0-beta.30.md) · macOS 12+ (Mac contro
 
 ### Your agents, your modes
 
-Claude Code and Codex with their own permission modes, shown with their own names. Spark keeps a safety floor in every mode: secret files, git hooks and config, and pushes are guarded. Each chat keeps its agent running between messages; its sub-agents appear as cards in the Work panel, and the agent can start sub-chats in an outpost when the work spans repos.
+Claude Code and Codex with their own permission modes, shown with their own names. Spark’s recommended rules guard secret files, git hooks and config, and publishing; with no rules, the agent’s mode decides. Each chat keeps its agent running between messages; its sub-agents appear as cards in the Work panel, and the agent can start sub-chats in an outpost when the work spans repos.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/guide/images/chats-and-modes-permissions-dark.png">
@@ -143,6 +143,8 @@ Found something? Open **Settings → Help → Send feedback** (or **Help → Sen
 The Mac app sends one anonymous heartbeat a day (a random install ID, the app version and OS; Cloudflare adds the country) so we know how many people use it. Turn it off in **Settings → Help → Send anonymous heartbeat**. See [Mac privacy](docs/guide/mac-privacy.md#anonymous-heartbeat).
 
 ## Develop
+
+Current source adds [Code Mode](docs/architecture/CODE_MODE.md), enabled by default with a saved off switch, and clearer tool activity. [Claude Terminal recording](docs/architecture/NATIVE_TERMINALS.md#recording-a-claude-session-like-a-chat) defaults on for new profiles only. These changes are unreleased; the downloads above remain beta.30.
 
 ### Run from source
 

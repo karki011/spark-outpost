@@ -41,6 +41,14 @@ Open http://127.0.0.1:5173. The first run shows onboarding: Meet Spark, Theme, A
 | `pnpm bench:loop`                                                                                | Event-loop bench for the code index and `spark_find`, in a scratch schema of the test database: indexes a repo (`--repo`, default this one), runs finds before, during and after the build, eight at once, and a full rebuild and warm refresh, printing loop lag (p50, p99, max), find latency and peak memory. Exits non-zero when lag p99 passes `--max-lag-p99` (50 ms) or find p95 passes `--max-find-p95` (2500 ms). Run it alone; other load on the machine shows up as lag. |
 | `node --import tsx scripts/turn-tasks/runner/cli.ts --provider claude --task 1,2 --label <name>` | Runs scratch tasks through the single-session turn with the fake agent; `--live` uses the real provider (paid turns). `scripts/turn-tasks/report/cli.ts --label <name>` writes the report to `.local/turn-tasks/results/`. Needs `TEST_DATABASE_URL`                                                                                                                                                                                                                                |
 
+## Code Mode and Terminal recording
+
+[Code Mode](architecture/CODE_MODE.md) is on by default for chat runs. Settings → Chats & autonomy persists the user’s choice; `SPARK_CODE_MODE=0` disables it for the installation without replacing that choice. Set the override consistently for API and workflow processes. Terminal sessions do not receive Code Mode.
+
+Migration 0217 adds the default-on Code Mode preference. Migration 0218 changes only the Terminal-recording default for newly created profiles; existing on/off values remain. Full Terminal recording applies to Claude Code with Spark’s mod, not Codex.
+
+Focused checks: `pnpm test:db apps/server/test/code-mode-settings.db.test.ts apps/server/test/terminal-record-settings.db.test.ts` and `pnpm test:browser tests/browser/codemode-setting.spec.ts tests/browser/terminal-record-setting.spec.ts`. Real provider composition uses `pnpm test:live apps/server/test/codemode.live.test.ts`; it needs connected Claude/Codex CLIs and uses real model calls.
+
 ## Layout
 
 ```text

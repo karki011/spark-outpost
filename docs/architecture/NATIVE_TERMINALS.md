@@ -122,7 +122,9 @@ Spark counts the mod as active while it checked in within the last 5 s (`remote/
 
 ### Recording a Claude session like a chat
 
-**Record Terminal sessions like chats** (Settings → Chats & autonomy, `profiles.terminal_record_like_chat`, migration 0178; migration 0218 defaults new profiles on and preserves existing choices) lets the owner keep what a chat keeps for Claude Terminal sessions. It changes nothing for Codex, for a session whose mod is not loaded, or while it is off.
+**Record Terminal sessions like chats** (Settings → Chats & autonomy, `profiles.terminal_record_like_chat`, migration 0178; migration 0218 defaults new profiles on and preserves every existing on/off value) lets the owner keep what a chat keeps for Claude Terminal sessions. It changes nothing for Codex, for a session whose mod is not loaded, or while it is off.
+
+Migration 0218 changes only the column default; it does not infer whether an existing off value was a deliberate choice. `terminal-record-settings.db.test.ts` verifies new-profile defaults, saved off choices and an upgrade with both existing values. This default change does not extend recording to Codex or prove live mod delivery.
 
 **How the mod learns the setting.** It reads it from `observer.json`, which is written at launch and again at re-adoption. After that, the inbox reply's `record` field updates it.
 

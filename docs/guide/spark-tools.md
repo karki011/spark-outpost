@@ -30,9 +30,9 @@ summary: What agents can look up about Spark, the confirm card they show before 
 | [Calendar](calendar.md#let-agents-use-it)                | `spark_calendar`                                                                                                      |
 | Jira, Confluence or ServiceNow                           | `spark_jira`, `spark_confluence`, `spark_servicenow`                                                                  |
 
-## Experimental composition
+## Combined reads
 
-| When enabled                                                               | Tool            |
+| Read operation                                                             | Tool            |
 | -------------------------------------------------------------------------- | --------------- |
 | Combine supported reads (on by default; [turn off](settings.md#code-mode)) | `spark_execute` |
 
