@@ -1,6 +1,16 @@
 import '../chat/composer.css';
 import './outpost-composer.css';
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react';
+import { restoreFailedDraft } from '../chat/composer/use-chat-draft.ts';
+import { composerRows } from '../chat/composer/ComposerShell.tsx';
 import { FormatToggle } from '../chat/composer/markdown/FormatToggle.tsx';
 import { MarkdownInput } from '../chat/composer/markdown/MarkdownInput.tsx';
 import { codeBlockEnter } from '../chat/composer/markdown/md-keys.ts';
@@ -45,8 +55,8 @@ export function OutpostComposer({
   const [problem, setProblem] = useState<string | null>(null);
   const [filled, setFilled] = useState(fill?.id ?? null);
   const [formatting, setFormatting] = useState(false);
-  const handles = members.map((member) => member.handle);
-  const mentionable = [...handles, 'all'];
+  const handles = useMemo(() => members.map((member) => member.handle), [members]);
+  const mentionable = useMemo(() => [...handles, 'all'], [handles]);
   const picker = useHandlePicker(typed, members, answering === null);
   const fillId = fill?.id ?? null;
   if (fill && fill.id !== filled) {
@@ -99,7 +109,10 @@ export function OutpostComposer({
       await onSend(target, sent);
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'That could not be sent.');
-      setTyped((now) => (now.text === '' ? { text: sent, caret: sent.length } : now));
+      setTyped((now) => ({
+        text: restoreFailedDraft(now.text, sent),
+        caret: now.text ? now.caret : sent.length,
+      }));
     }
   };
 
@@ -160,7 +173,7 @@ export function OutpostComposer({
           formatting={formatting}
           mentionable={mentionable}
           value={text}
-          rows={Math.min(MAX_ROWS, Math.max(1, text.split('\n').length))}
+          rows={composerRows(text, MAX_ROWS)}
           placeholder={
             answering ? `Answer @${answering.handle}` : 'Ask a chat with @, or post a note'
           }

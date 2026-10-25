@@ -88,7 +88,7 @@ export function ContextBar({
   const phone = usePhone();
   const { allows } = useRemoteClient();
   const setup = primary !== null && allows('settings');
-  const attention = useSetupAttention(phone && setup ? primary.id : null);
+  const attention = useSetupAttention(setup ? primary.id : null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const detailsId = useId();
   const detailsChipRef = useRef<HTMLButtonElement>(null);
@@ -98,7 +98,7 @@ export function ContextBar({
   const placeMenu = primary && showsPlaceMenu(workspace, branch) && (
     <WorkPlaceMenu conversationId={conversationId} projectId={primary.id} checkoutBranch={branch} />
   );
-  const setupChip = setup && <AgentSetup key={primary.id} repos={repos} labelled={phone} />;
+  const setupChip = setup && <AgentSetup key={primary.id} repos={repos} labelled />;
   const hasDetails = Boolean(branchChip) || Boolean(placeMenu) || setup;
   const people = (
     <>
@@ -113,7 +113,7 @@ export function ContextBar({
     detailsChipRef.current?.focus();
   };
 
-  if (phone && hasDetails) {
+  if (hasDetails) {
     return (
       <ProjectFolders
         conversationId={conversationId}
@@ -122,6 +122,7 @@ export function ContextBar({
         details={{
           id: detailsId,
           open: detailsOpen,
+          showProject: !phone,
           onKeyDown: closeDetails,
           items: (
             <>

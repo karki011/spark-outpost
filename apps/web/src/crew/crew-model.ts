@@ -10,7 +10,7 @@ import { formatTokens, shortLabel } from '../chat/composer/model-options.ts';
 import { formatCost } from '../usage/format.ts';
 
 export type CrewState =
-  'thinking' | 'working' | 'waiting' | 'done' | 'failed' | 'stopped' | 'queued';
+  'thinking' | 'working' | 'waiting' | 'done' | 'failed' | 'stopped' | 'queued' | 'inactive';
 
 export interface CrewAgent {
   id: string;
@@ -45,6 +45,7 @@ const EXPRESSIONS: Record<CrewState, BlobExpression> = {
   failed: 'sad',
   stopped: 'sleepy',
   queued: 'sleepy',
+  inactive: 'idle',
 };
 
 const STATE_WORDS: Record<CrewState, string> = {
@@ -55,6 +56,7 @@ const STATE_WORDS: Record<CrewState, string> = {
   failed: 'Failed',
   stopped: 'Stopped',
   queued: 'Queued',
+  inactive: 'Inactive',
 };
 
 export function crewHue(provider: string): number {

@@ -90,7 +90,7 @@ function drawPath(frame: Frame) {
     ctx.arc(x, y, 9, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = palette.sky1;
-    ctx.font = '700 10.5px Geist, sans-serif';
+    ctx.font = '700 10.5px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(String(index + 1), x, y + 3.8);
     const crowded = points.some(

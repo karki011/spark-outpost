@@ -1,16 +1,9 @@
-import type { SubagentRow, SubagentState } from '@spark-outpost/contracts';
+import type { SubagentRow } from '@spark-outpost/contracts';
 
 export interface SubagentLine {
   row: SubagentRow;
   depth: number;
 }
-
-export const SUBAGENT_STATE_WORDS: Record<SubagentState, string> = {
-  working: 'Working',
-  done: 'Done',
-  failed: 'Failed',
-  cancelled: 'Cancelled',
-};
 
 export function subagentLines(rows: readonly SubagentRow[]): SubagentLine[] {
   const known = new Set(rows.map((row) => row.id));

@@ -1,13 +1,10 @@
 export const INTRO = 'You are working for the user in Spark Outpost.';
 
 export const SPLIT_HEADING = 'How to split work';
-export const SPLIT_ALONE = '- Small or single-area change: do it yourself.';
-export const SPLIT_SUB_AGENTS =
-  '- Independent parts inside this repo and branch (searching, reviewing, edits to separate files): use your own sub-agents.';
 export const SPLIT_SUB_CHATS =
-  "- Work that spans repos, needs separate branches or pull requests, or is big enough that the user should steer each part: propose sub-chats with spark_outpost_draft and say why. The user starts them; you don't.";
+  "- If separate Spark chats are needed, propose them with spark_outpost_draft and say why. The user starts them; you don't.";
 export const SPLIT_SUB_CHATS_START =
-  '- Work that spans repos, needs separate branches or pull requests, or has parts that can run in parallel chats: split it into sub-chats and say why. Start them with spark_outpost_start when the user asked for it or the work needs it; propose them with spark_outpost_draft when the user should review the split first.';
+  '- If separate Spark chats are needed, start them with spark_outpost_start when the user asked for it or the work needs it; propose them with spark_outpost_draft when the user should review the split first. Do not create an Outpost just to delegate an ordinary in-session slice.';
 export const SPLIT_UNCLEAR = '- If the request is unclear, ask one question and stop.';
 export const SPLIT_ASK_WITH_TOOL =
   '- When the user should choose, or a detail you need is missing, call AskUserQuestion (Codex: request_user_input) with the options instead of writing them in your reply, and use the answer it returns.';
@@ -32,14 +29,15 @@ export const REPORTING = [
 
 export const PUBLISHING_HEADING = 'Publishing';
 export const PUBLISH_FULL_AUTO =
-  'Spark will ask you to publish when the work is done; you may also push this branch and open a pull request yourself.';
-export const PUBLISH_NO_REMOTE = "There is no remote: commit on this branch; don't try to push.";
+  'Full auto is the publishing default, not an override of the user’s instructions. Spark may ask you to publish when done; honor any current restriction on committing, pushing or pull requests.';
+export const PUBLISH_NO_REMOTE =
+  "There is no remote: commit on this branch only when the user’s current instructions permit it; don't try to push.";
 export const PUBLISH_CHECKOUT =
   "This chat works in your checkout and has no branch of its own to push. Keep the change; don't push.";
 export const PUBLISH_NOT_GIT =
   "This folder isn't a git repository. Keep the change; there is no pull request.";
 export const PUBLISH_FOLLOW_UP =
-  "This is a follow-up on this chat's open pull request: push fixes to the same branch.";
+  "This is a follow-up on this chat's open pull request: push fixes to the same branch unless the user’s current instructions restrict publishing.";
 export const PUBLISH_NOT_ASKED = "Don't push or open a pull request unless the user asks.";
 
 export const SETTINGS_HEADING = "From the user's settings:";

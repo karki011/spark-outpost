@@ -6,18 +6,18 @@ order: 515
 summary: What an outpost is for, how it differs from one chat, an example, and what it can't do yet.
 ---
 
-An outpost is one thread where you direct several chats, each doing its own work. Use it when a job spans repos or roles and you want every answer together.
+An outpost groups independently messaged chats across repositories or branches. Ordinary sub-agent work does not require one.
 
 ## Outpost or one chat
 
-| Use        | When                                                                 | You get                                                                            |
-| ---------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| One chat   | The work lives in one project. The agent may use its own sub-agents. | One branch and one pull request.                                                   |
-| An outpost | The work spans repos or roles, such as frontend, API and docs.       | Each chat keeps its own project, agent, mode, branch and pull request. You direct. |
+| Use        | When                                                                                | You get                                                                            |
+| ---------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| One chat   | The work lives in one project. The lead delegates implementation to its sub-agents. | One branch and one pull request.                                                   |
+| An outpost | The work spans repos or roles, such as frontend, API and docs.                      | Each chat keeps its own project, agent, mode, branch and pull request. You direct. |
 
 ## An example
 
-You add a usage page with frontend, API and docs chats in the outpost **Usage by user**.
+Example: **Usage by user**, with frontend, API and docs chats.
 
 | You post                                      | What happens                                                |
 | --------------------------------------------- | ----------------------------------------------------------- |

@@ -71,7 +71,7 @@
   background: var(--warn);
   color: var(--warn-ink);
   font:
-    700 8px/11px Geist,
+    700 8px/11px Inter,
     sans-serif;
   text-align: center;
   box-shadow: 0 0 0 2px var(--island);

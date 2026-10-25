@@ -202,3 +202,105 @@ test('the Tickets strip says when the brief is off and turns it on', async ({ pa
     timeout: 15_000,
   });
 });
+
+for (const failure of [false, true]) {
+  test(`refresh ${failure ? 'failure and retry' : 'success'} keeps Tickets interactive`, async ({
+    page,
+  }) => {
+    await connectTickets(page);
+    await openTickets(page);
+    await expect(row(page, 'API-81')).toBeVisible();
+    await row(page, 'API-81').getByRole('button').first().click();
+    const refresh = page.getByRole('button', { name: 'Refresh tickets' });
+    await expect(refresh).toBeEnabled();
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let requests = 0;
+    await page.route('**/api/tickets/inbox', async (route) => {
+      requests += 1;
+      await pending;
+      if (failure)
+        await route.fulfill({ status: 503, json: { error: 'Sync temporarily unavailable' } });
+      else await route.continue();
+    });
+    try {
+      await refresh.click();
+      await expect(main(page).getByRole('status').filter({ hasText: 'Syncing…' })).toBeVisible();
+      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      await page.getByRole('tab', { name: 'Connectors', exact: true }).click();
+      await page.getByRole('button', { name: 'Close settings', exact: true }).click();
+      await expect(page.locator('.set')).toHaveCount(0);
+      await main(page).getByRole('radio', { name: 'Compact', exact: true }).click();
+      await expect(main(page)).toHaveClass(/compact/);
+      await page.getByRole('searchbox').fill('API-77');
+      await expect(page.getByRole('searchbox')).toHaveValue('API-77');
+    } finally {
+      release();
+    }
+    await expect(refresh).toBeEnabled();
+    if (failure) {
+      expect(requests).toBe(2);
+      await page.unroute('**/api/tickets/inbox');
+      const synced = page.waitForResponse(
+        (response) => response.url().endsWith('/api/tickets/inbox') && response.ok(),
+      );
+      await refresh.click();
+      await synced;
+      await expect(refresh).toBeEnabled();
+    }
+    await page
+      .getByRole('navigation', { name: 'Main' })
+      .getByRole('button', { name: 'Home', exact: true })
+      .click();
+    await expect(main(page)).toHaveCount(0);
+  });
+}
+
+test('sync completion leaves ticket menus and Start work dismissible', async ({ page }) => {
+  await connectTickets(page);
+  await openTickets(page);
+  await expect(row(page, 'API-81')).toBeVisible();
+  const refresh = page.getByRole('button', { name: 'Refresh tickets' });
+  for (const surface of ['source', 'start'] as const) {
+    await expect(refresh).toBeEnabled();
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route('**/api/tickets/inbox', async (route) => {
+      await pending;
+      await route.continue();
+    });
+    try {
+      await refresh.click();
+      await expect(refresh).toBeDisabled();
+      if (surface === 'source') {
+        await main(page).getByRole('button', { name: 'Source', exact: true }).click();
+        await expect(page.getByRole('menu', { name: 'Source', exact: true })).toBeVisible();
+      } else {
+        await row(page, 'API-81').hover();
+        await page.getByRole('button', { name: 'Start API-81', exact: true }).click();
+        await expect(page.getByRole('dialog', { name: 'Start work on API-81' })).toBeVisible();
+      }
+    } finally {
+      release();
+    }
+    await expect(refresh).toBeEnabled();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.tk .dlg')).toHaveCount(0);
+    await expect(page.getByRole('menu', { name: 'Source', exact: true })).toBeHidden();
+    await page.unroute('**/api/tickets/inbox');
+    await main(page).getByRole('button', { name: 'Team or project', exact: true }).click();
+    await page.getByRole('menuitemradio', { name: 'All teams and projects', exact: true }).click();
+    await expect(page.getByRole('menu', { name: 'Team or project', exact: true })).toBeHidden();
+    await row(page, 'API-81').getByRole('button').first().click();
+    await expect(main(page).getByRole('complementary', { name: 'API-81 details' })).toBeVisible();
+  }
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: 'Home', exact: true })
+    .click();
+  await expect(main(page)).toHaveCount(0);
+});

@@ -27,8 +27,10 @@ export function queueDraftAfterTyped(conversationId: string, text: string): void
   setPendingDraft(conversationId, { text, afterTyped: true });
 }
 
-export function takeDraft(conversationId: string): void {
+export function takeDraft(conversationId: string): PendingDraft | null {
+  const pending = drafts.get(conversationId) ?? null;
   if (drafts.delete(conversationId)) listeners.forEach((listener) => listener());
+  return pending;
 }
 
 export function usePendingDraft(conversationId: string): PendingDraft | null {

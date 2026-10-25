@@ -1,4 +1,5 @@
 import './agent-tv.css';
+import { stageWorker } from './worker-identity.ts';
 import './agent-tv-stage.css';
 import 'blobatar/gaze.css';
 import {
@@ -97,6 +98,9 @@ interface AgentTvProps {
   onStop(runId: string): void;
   branch?: string | null;
   subagents?: readonly SubagentRow[];
+  messageChats?: readonly { conversationId: string; name: string }[];
+  onMessage?: (conversationId: string) => void;
+  onRedirect?: (row: SubagentRow) => void;
 }
 
 export function AgentTv({
@@ -109,8 +113,16 @@ export function AgentTv({
   onStop,
   branch = null,
   subagents = [],
+  messageChats = [],
+  onMessage,
+  onRedirect,
 }: AgentTvProps) {
   const { position, size, watch, muted, view, cleared } = useAgentTv();
+  const stageMembers = useMemo(
+    () =>
+      members[0] ? [...members, ...subagents.map((row) => stageWorker(row, members[0]!))] : members,
+    [members, subagents],
+  );
   const panel = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const reduced = useReducedMotion();
@@ -129,7 +141,7 @@ export function AgentTv({
     : tvStage(
         narrow ? 's' : size,
         dock ? stageRoom(dock, subagents.length > 0) : null,
-        members.length - 1,
+        stageMembers.length - 1,
       );
   const viewTip = useTooltip(view === 'list' ? 'List view' : 'Stage view');
   const sizeTip = useTooltip('Small / Medium / Large TV');
@@ -316,7 +328,7 @@ export function AgentTv({
           />
         ) : (
           <AgentTvStage
-            members={members}
+            members={stageMembers}
             metrics={metrics}
             asks={asks}
             chatter={chatter}
@@ -324,13 +336,40 @@ export function AgentTv({
             reduced={reduced}
             selected={selected}
             onSelect={setSelected}
-            onPick={onPick}
+            onPick={(id) => {
+              if (!subagents.some((row) => row.id === id)) return onPick(id);
+              const card = [
+                ...(panel.current?.querySelectorAll<HTMLElement>('[data-worker-id]') ?? []),
+              ].find((element) => element.dataset.workerId === id);
+              card?.scrollIntoView({ block: 'nearest' });
+              card?.querySelector<HTMLButtonElement>('button')?.focus();
+            }}
             onAsk={onAsk}
           />
         )}
         {subagents.length > 0 && (
           <div className="tv-subagents" role="group" aria-label="Sub-agents" tabIndex={0}>
-            <AgentCards rows={subagents} live={members.some((member) => isBusy(member.state))} />
+            <AgentCards
+              rows={subagents}
+              live={Boolean(
+                members[0] && (isBusy(members[0].state) || members[0].state === 'waiting'),
+              )}
+              onRedirect={onRedirect}
+            />
+          </div>
+        )}
+        {onMessage && messageChats.length > 0 && (
+          <div className="tv-messages" role="group" aria-label="Message agents">
+            {messageChats.map((chat) => (
+              <button
+                key={chat.conversationId}
+                type="button"
+                className="btn sm line"
+                onClick={() => onMessage(chat.conversationId)}
+              >
+                Message {chat.name}
+              </button>
+            ))}
           </div>
         )}
         {view === 'stage' && (

@@ -5,6 +5,7 @@ import { TeammateFace } from './TeammateFace.tsx';
 import { useTeammates } from './use-teammates.ts';
 
 const FACE_STATES: Record<CrewState, TeammateState> = {
+  inactive: 'idle',
   thinking: 'working',
   working: 'working',
   waiting: 'needs_you',

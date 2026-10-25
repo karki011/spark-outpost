@@ -130,7 +130,7 @@ The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every en
 
 | Rule                                                                                                                                  | Source             |
 | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| Body text is 15px with line-height 1.6. UCLA and IW recommend 16px; 15px Geist is kept for density and is paired with the higher line-height. | UCLA, IW           |
+| Use Inter: interface text is 15px/1.6, conversation text 16px/1.7 and composer text 16px/1.6. | UCLA, IW           |
 | No UI text below 12px: metadata, chips, keyboard hints and badges are all 12px or larger.                                             | IW (11px is "too small") |
 | Line-height is at least 1.5 for body and chat text, and paragraph spacing (0.8em) is larger than the gap between lines.               | IW, WCAG 1.4.12    |
 | Chat paragraphs and lists are capped at 75ch. Code blocks and tables keep the full width.                                             | IW (45–75 characters) |

@@ -112,6 +112,11 @@ test('the add-a-chat picker fits a 390px phone with touch-sized rows', async ({ 
 const ROWS = '.fopt, .mopt';
 
 async function openChip(page: Page, selector: string): Promise<void> {
+  const direct = page.locator(`.ctxbar > ${selector}`).first();
+  if (await direct.isVisible()) {
+    await direct.click();
+    return;
+  }
   const details = page.locator('.ctxbar').getByRole('button', { name: 'Chat details' });
   if (await details.isVisible()) {
     if ((await details.getAttribute('aria-expanded')) !== 'true') await details.click();

@@ -56,6 +56,14 @@ describe('AgentCards', () => {
     expect(cards[1]!.textContent).toContain('2 steps');
   });
 
+  it('marks stale working workers inactive and offers no redirect after the turn ends', () => {
+    render(<AgentCards rows={rows.slice(1)} live={false} onRedirect={() => {}} />);
+    expect(screen.getByText('Inactive')).toBeTruthy();
+    expect(screen.queryByText('Working')).toBeNull();
+    expect(screen.queryByText(/Now:/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Ask lead to redirect' })).toBeNull();
+  });
+
   it('opens a card to all its steps and its report', () => {
     render(<AgentCards rows={rows} live />);
     const name = screen.getByRole('button', { name: 'Server architecture' });

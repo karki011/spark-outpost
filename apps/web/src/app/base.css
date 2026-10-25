@@ -92,7 +92,7 @@ svg {
 }
 
 .main {
-  --chat-col: 880px;
+  --chat-col: 760px;
   --chat-gutter: clamp(16px, (100cqi - 480px) / 2, 56px);
   position: relative;
   flex: 1;
@@ -185,7 +185,7 @@ svg {
   .main {
     --chat-scroll: 10px;
     --chat-col: min(
-      880px,
+      760px,
       100cqi - 2 * var(--chat-gutter) - var(--crail-strip, 0px) - 2 * var(--chat-scroll)
     );
   }

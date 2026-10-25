@@ -144,7 +144,7 @@ function drawProjectName(
   const { ctx } = frame;
   ctx.globalAlpha = alpha;
   ctx.fillStyle = color;
-  ctx.font = '600 14px Geist, sans-serif';
+  ctx.font = '600 14px Inter, sans-serif';
   ctx.textAlign = 'center';
   ctx.letterSpacing = '3px';
   const text = name.toUpperCase();

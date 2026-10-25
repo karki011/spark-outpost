@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { CLICK_LIMIT_MS, keyFeedbackMs } from './perf-probe.ts';
 
 const SEND_URL = /\/api\/conversations\/[^/]+\/messages$/;
 const MESSAGE = [
@@ -43,6 +44,37 @@ function sentBodies(page: Page): string[] {
 }
 
 const mirror = (page: Page) => page.locator('.composer .mdf-mirror');
+
+test('a long draft stays responsive and formatting remains available from the quiet footer', async ({
+  page,
+}, info) => {
+  const input = await newChat(page);
+  const draft = Array.from(
+    { length: 800 },
+    (_, index) =>
+      `Line ${index}: inspect **the existing code** and preserve the current selection.`,
+  ).join('\n');
+  await input.fill(draft);
+  await input.press('ControlOrMeta+End');
+  const feedback = [];
+  for (let index = 0; index < 12; index += 1) feedback.push(await keyFeedbackMs(page, 'x'));
+  await expect(input).toHaveValue(`${draft}${'x'.repeat(12)}`);
+  await expect(input).toBeFocused();
+  expect(Math.max(...feedback)).toBeLessThan(CLICK_LIMIT_MS);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'Add files and context' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Formatting' }).click();
+  await expect(input).toBeFocused();
+  await expect(page.getByRole('toolbar', { name: 'Formatting' })).toBeVisible();
+  await input.press('Shift+ArrowLeft');
+  await input.press('ControlOrMeta+b');
+  await expect(input).toHaveValue(`${draft}${'x'.repeat(11)}**x**`);
+  expect(await page.locator('body').evaluate((body) => body.scrollWidth <= innerWidth)).toBe(true);
+  await info.attach('long-draft-key-feedback', {
+    body: JSON.stringify({ characters: draft.length, keyFeedbackMs: feedback }),
+    contentType: 'application/json',
+  });
+});
 
 async function selectBack(input: Locator, count: number): Promise<void> {
   for (let index = 0; index < count; index += 1) await input.press('Shift+ArrowLeft');
@@ -134,10 +166,10 @@ test('the selection toolbar and the Aa bar format without taking the focus', asy
   await expect(input).toBeFocused();
   await expect(input).toHaveValue('see `[the ticket](https://x.example/1)`');
 
-  const toggle = page.getByRole('button', { name: 'Formatting' });
+  await page.getByRole('button', { name: 'Add files and context' }).click();
+  const toggle = page.getByRole('menuitemcheckbox', { name: 'Formatting' });
   await toggle.click();
   await expect(input).toBeFocused();
-  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   const bar = page.getByRole('toolbar', { name: 'Formatting' });
   await input.press('ControlOrMeta+a');
   await expect(floating).toBeHidden();

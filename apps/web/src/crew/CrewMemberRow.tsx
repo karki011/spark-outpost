@@ -7,6 +7,7 @@ import { CrewBlob } from './CrewBlob.tsx';
 import { crewStateWord, type CrewAgent, type CrewState } from './crew-model.ts';
 
 const TONES: Record<CrewState, string> = {
+  inactive: 'pending',
   thinking: 'active',
   working: 'active',
   waiting: 'waiting',

@@ -89,7 +89,7 @@ function drawNetworkLabels(frame: Frame, hovered: number, near: Set<number> | nu
     near?.forEach((file) => network.slot.has(file) && show.add(file));
   }
   if (frame.focusFile >= 0) show.add(frame.focusFile);
-  ctx.font = '500 11.5px Geist, sans-serif';
+  ctx.font = '500 11.5px Inter, sans-serif';
   ctx.textAlign = 'center';
   const names = new Map<number, string>();
   const requests: LabelRequest[] = [];

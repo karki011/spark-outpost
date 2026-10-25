@@ -1,6 +1,7 @@
 import './composer.css';
 import './composer/composer-popovers.css';
 import './project/project.css';
+import { restoreFailedDraft, useChatDraft } from './composer/use-chat-draft.ts';
 import {
   useCallback,
   useId,
@@ -69,7 +70,6 @@ import { useAgentConfig } from './project/use-agent-config.ts';
 import { repoFileKey, type RepoFile } from './project/use-file-search.ts';
 import { useMention } from './project/use-mention.ts';
 import { enterAction } from './queue/send-choice.ts';
-import { FormatToggle } from './composer/markdown/FormatToggle.tsx';
 import { MarkdownInput } from './composer/markdown/MarkdownInput.tsx';
 import { codeBlockEnter } from './composer/markdown/md-keys.ts';
 import { QuoteChips } from './quotes/QuoteChips.tsx';
@@ -142,7 +142,7 @@ export function Composer({
   contextLead = null,
   quotes,
 }: ComposerProps) {
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useChatDraft(conversationId);
   const [repoOpen, setRepoOpen] = useState(false);
   const [formatting, setFormatting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -228,7 +228,7 @@ export function Composer({
       ),
     [attachments.items],
   );
-  useDraftRequests(conversationId, draft, setDraft, textareaRef, quotes?.focusRequest ?? 0);
+  useDraftRequests(conversationId, setDraft, textareaRef, quotes?.focusRequest ?? 0);
 
   const queueing = busy && onQueue !== undefined;
   const hasText = draft.trim().length > 0;
@@ -272,7 +272,7 @@ export function Composer({
       const deliver = choice === 'now' && onSendNow ? onSendNow : onQueue;
       await deliver(content).then(
         () => quotes?.clear(),
-        () => setDraft(draftText),
+        () => setDraft((current) => restoreFailedDraft(current, draftText)),
       );
       return;
     }
@@ -281,7 +281,7 @@ export function Composer({
       attachments.clear();
       quotes?.clear();
     } catch {
-      setDraft(draftText);
+      setDraft((current) => restoreFailedDraft(current, draftText));
     }
   };
 
@@ -327,6 +327,11 @@ export function Composer({
             onAddRepo={openRepoMenu}
             chatId={conversationId}
             onAddChat={attachments.addChat}
+            formatting={formatting}
+            onFormatting={() => {
+              setFormatting((open) => !open);
+              textareaRef.current?.focus();
+            }}
           />
           <ContextBar
             conversationId={conversationId}
@@ -344,7 +349,6 @@ export function Composer({
               />
             }
           />
-          <FormatToggle open={formatting} onToggle={setFormatting} />
           <span className={attachments.items.length > 0 ? 'hint shown' : 'hint'} title={hint}>
             {hint}
           </span>

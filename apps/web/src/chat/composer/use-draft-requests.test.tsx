@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { createRef, useState } from 'react';
+import { createRef, StrictMode, useLayoutEffect, useState } from 'react';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
@@ -23,7 +23,7 @@ function composer(input: HTMLTextAreaElement | null) {
   const ref = createRef<HTMLTextAreaElement>();
   (ref as { current: HTMLTextAreaElement | null }).current = input;
   return renderHook(() => {
-    useDraftRequests(CHAT, '', () => undefined, ref, 0);
+    useDraftRequests(CHAT, () => undefined, ref, 0);
     return useComposerFocusRequest(CHAT);
   });
 }
@@ -58,7 +58,7 @@ function typedComposer(typed: string) {
   const ref = createRef<HTMLTextAreaElement>();
   return renderHook(() => {
     const [draft, setDraft] = useState(typed);
-    useDraftRequests(CHAT, draft, setDraft, ref, 0);
+    useDraftRequests(CHAT, setDraft, ref, 0);
     return draft;
   });
 }
@@ -68,6 +68,32 @@ describe('text put back in the composer', () => {
     const { result } = typedComposer('Also check the docs.');
     act(() => queueDraftAfterTyped(CHAT, 'First\n\nSecond'));
     expect(result.current).toBe('Also check the docs.\n\nFirst\n\nSecond');
+  });
+
+  it('preserves text entered after render before the restored draft is applied', () => {
+    queueDraftAfterTyped(CHAT, 'Restored message');
+    const ref = createRef<HTMLTextAreaElement>();
+    const { result } = renderHook(() => {
+      const [draft, setDraft] = useState('Original text');
+      useDraftRequests(CHAT, setDraft, ref, 0);
+      useLayoutEffect(() => setDraft('Original text plus new typing'), []);
+      return draft;
+    });
+    expect(result.current).toBe('Original text plus new typing\n\nRestored message');
+  });
+
+  it('restores a pending message once when Strict Mode replays effects', () => {
+    queueDraftAfterTyped(CHAT, 'Restored message');
+    const ref = createRef<HTMLTextAreaElement>();
+    const { result } = renderHook(
+      () => {
+        const [draft, setDraft] = useState('Typed message');
+        useDraftRequests(CHAT, setDraft, ref, 0);
+        return draft;
+      },
+      { wrapper: StrictMode },
+    );
+    expect(result.current).toBe('Typed message\n\nRestored message');
   });
 
   it('fills an empty composer with the restored messages alone', () => {

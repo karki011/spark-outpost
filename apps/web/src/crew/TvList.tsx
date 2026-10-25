@@ -2,6 +2,8 @@ import './tv-list.css';
 import { useId, useRef, useState } from 'react';
 import { connectableIdSchema } from '@spark-outpost/contracts';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
+import { ChatFace } from '../brand/ChatFace.tsx';
+import { workerIdentity } from './worker-identity.ts';
 import { formatDuration } from '../audit/audit-model.ts';
 import { ChevronIcon, TrashIcon } from '../ui/icons.tsx';
 import { LiveElapsed } from '../ui/LiveElapsed.tsx';
@@ -32,6 +34,19 @@ interface TvListProps {
 }
 
 function RowBlob({ item }: { item: TvRow }) {
+  if (!item.lead) {
+    const state =
+      item.state === 'inactive'
+        ? 'idle'
+        : item.state === 'waiting'
+          ? 'needs_you'
+          : item.state === 'thinking'
+            ? 'working'
+            : item.state === 'queued' || item.state === 'stopped'
+              ? 'archived'
+              : item.state;
+    return <ChatFace chatId={workerIdentity(item.runId)} size="strip" state={state} />;
+  }
   const known = connectableIdSchema.safeParse(item.provider);
   if (known.success) {
     return (

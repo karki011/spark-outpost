@@ -28,7 +28,7 @@
     "apps/web": {
       "entry": ["src/chat/approvals/diff-worker.ts"],
       "project": ["src/**/*.{ts,tsx}"],
-      "ignoreDependencies": ["@fontsource-variable/geist", "@fontsource-variable/geist-mono"]
+      "ignoreDependencies": ["@fontsource-variable/inter", "@fontsource-variable/geist-mono"]
     },
     "apps/site": {
       "entry": ["src/changelog/page.ts"],

@@ -7,6 +7,7 @@ import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parse as parseToml } from 'smol-toml';
 import { nativeModeArgs, prepareNativeLaunch } from './native-launch.ts';
+import { delegationPolicy } from '../agents/delegation-policy.ts';
 
 const exec = promisify(execFile);
 const sessionId = '067f7c50-6ed9-48db-b1ea-683e216e3d35';
@@ -144,7 +145,7 @@ describe('native terminal launch', () => {
     'applies %s custom instructions to new and resumed sessions without replaying a user prompt',
     async (provider) => {
       const request = await input(provider);
-      const instructions = 'Use the project conventions. Literal $(do-not-execute).';
+      const instructions = `Use the project conventions. Literal $(do-not-execute).\n\n${delegationPolicy()}`;
       for (const resumeSessionId of [undefined, 'native-existing-session']) {
         const launch = await prepareNativeLaunch({
           ...request,

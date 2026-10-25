@@ -239,6 +239,13 @@ describe('spark_browser_sign_in', () => {
     const refused = await chat.call('spark_browser_sign_in', { signIn: saved.id });
     expect(refused.outcome).toBe('not_signed_in');
     expect(refused.reason).toContain('Nothing was filled');
+    expect(refused.requiresUserSiteApproval).toBe(!url.startsWith('http:'));
+    if (!url.startsWith('http:')) {
+      expect(refused.nextStep).toContain('Add this site');
+      expect(refused.nextStep).toContain('retry spark_browser_sign_in');
+    } else {
+      expect(refused.nextStep).toContain('cannot be added');
+    }
     expect(await cardCount()).toBe(0);
     expect(reads).not.toHaveBeenCalled();
     expect(fake.ops('sign_in')).toEqual([]);

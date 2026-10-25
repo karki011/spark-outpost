@@ -6,17 +6,19 @@ order: 216
 summary: See what the agent is doing, stop it, queue more messages while it works, and delete a running chat.
 ---
 
-Follow, stop and queue a turn. About 2 minutes.
+Follow a turn. About 2 minutes.
 
 ## See what's happening
 
-1. Steps fold into one line, like **Ran 4 commands, thought 2 times**.
-2. A command shows what it does; open it for the command. Failures open themselves.
+1. Steps fold into summaries.
+2. Open commands for details; failures expand.
 3. The to-do ticks off, then folds.
-4. Hover a reply for **Copy** and cost; **Agent TV** is under **…**.
-5. Sub-agents share one line; **View** shows their cards.
+4. Open **Agent TV** under **…**.
+5. Worker blobs show roles and status; **View agents** opens cards in **Work**. Ended turns never show active workers.
+6. **Message** opens that chat’s composer; Outposts show handles.
+7. **Ask lead to redirect** drafts a summary in the worker’s owning chat.
 
-A waiting card sits at the turn's end; **⌘⇧Y** jumps there.
+**⌘⇧Y** jumps to the waiting card.
 
 **Open in terminal** shows failed output in a [dock tab](terminals.md#watch-an-agents-command).
 
@@ -26,13 +28,13 @@ A waiting card sits at the turn's end; **⌘⇧Y** jumps there.
 
 ## Background work
 
-The chat shows **Waiting on 1 background agent**, or **Sleeping until 10:48** for Claude; **Stop background tasks** or **Stop waiting** ends it.
+During **Waiting on 1 background agent** or Claude’s **Sleeping until 10:48**, **Stop background tasks** or **Stop waiting** ends it.
 
 It stays up to 30 idle minutes; a turn it starts shows **Continued on its own**, and after Quit **Stopped by Quit**.
 
 ## Queue messages
 
-Other chats never wait.
+Draft text survives chat switches, not app reloads. Other chats never wait.
 
 1. While a turn runs, **Enter** queues a message.
 2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.
@@ -48,7 +50,7 @@ Other chats never wait.
 
 ## Delete a running chat
 
-1. In the chat's **…** menu, select **Delete**, then **Confirm delete**.
+1. Select **… → Delete → Confirm delete**.
 2. **Undo** restores it.
 
 ## After a turn

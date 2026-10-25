@@ -28,6 +28,8 @@
 }
 
 .composer textarea {
+  font-size: 16px;
+  line-height: 1.6;
   display: block;
   width: 100%;
   resize: none;
@@ -41,9 +43,16 @@
 
 .comp-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 2px;
   padding: 6px 8px 8px;
+}
+
+.comp-bar > .plus-wrap,
+.comp-bar > .ctxwrap,
+.comp-bar > .mic-btn {
+  flex-shrink: 0;
 }
 
 .hint {

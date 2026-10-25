@@ -1,0 +1,150 @@
+@media (min-width: 1600px) {
+  .preview-inspector {
+    width: 390px;
+  }
+  .with-inspector .preview-thread {
+    padding-left: max(48px, calc((100% - 800px) / 2));
+    padding-right: max(48px, calc((100% - 800px) / 2));
+  }
+}
+@media (max-width: 1150px) {
+  .preview-inspector {
+    width: 310px;
+  }
+  .with-inspector .preview-thread {
+    padding: 24px;
+  }
+  .preview-composer-area {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .preview-sidebar {
+    display: none;
+  }
+  .preview-ticket-list > button {
+    grid-template-columns: 78px 1fr;
+  }
+  .preview-ticket-detail {
+    width: 280px;
+  }
+  .preview-ticket-views {
+    width: 165px;
+  }
+}
+@media (max-width: 850px) {
+  .preview-project,
+  .preview-toolbar-note {
+    display: none;
+  }
+  .preview-inspector {
+    width: 290px;
+  }
+  .preview-agent-row {
+    flex-wrap: wrap;
+  }
+  .preview-ticket-views {
+    width: 140px;
+  }
+  .preview-ticket-detail {
+    width: 250px;
+    padding: 16px;
+  }
+  .preview-attention {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .preview-toolbar {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 5px 8px;
+  }
+  .preview-toolbar > div {
+    flex-wrap: wrap;
+  }
+  .preview-toolbar button,
+  .preview-toolbar select {
+    min-height: 32px;
+  }
+  .preview-app > .rail {
+    display: none;
+  }
+  .preview-body.with-inspector > .preview-conversation {
+    display: none;
+  }
+  .preview-inspector {
+    width: 100%;
+    border: 0;
+  }
+  .preview-thread {
+    padding: 16px;
+  }
+  .preview-composer-area {
+    padding: 8px 12px;
+  }
+  .preview-composer-footer {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .preview-run {
+    flex-wrap: wrap;
+  }
+  .preview-attach-label {
+    display: none;
+  }
+  .preview-ticket-layout {
+    flex-wrap: wrap;
+    overflow: auto;
+  }
+  .preview-ticket-views {
+    width: 100%;
+    display: flex;
+    padding: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .preview-ticket-views > small {
+    display: none;
+  }
+  .preview-ticket-views button {
+    font-size: 12px;
+    padding: 6px;
+  }
+  .preview-ticket-list {
+    flex: 1 0 100%;
+    overflow: visible;
+  }
+  .preview-ticket-detail {
+    width: 100%;
+    border-top: 1px solid var(--line);
+  }
+  .preview-tickets .tk-head {
+    flex-wrap: wrap;
+  }
+  .preview-tickets .tk-find {
+    min-width: 120px;
+  }
+}
+@media (pointer: coarse) {
+  .preview-root button,
+  .preview-root select,
+  .preview-root summary {
+    min-height: 44px;
+  }
+  .preview-root .preview-inspector > header button {
+    min-height: 44px;
+  }
+  .preview-root .preview-inspector > header button,
+  .preview-root .preview-composer button,
+  .preview-root .preview-notice button,
+  .preview-root .preview-icon {
+    min-width: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .preview-root *,
+  .preview-root *::before,
+  .preview-root *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

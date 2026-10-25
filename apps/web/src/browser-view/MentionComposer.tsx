@@ -2,6 +2,7 @@ import { useId, useRef, useState, type KeyboardEvent, type RefObject } from 'rea
 import type { BrowserPaneTab, BrowserProfile } from '@spark-outpost/contracts';
 import { ArrowUpIcon } from '../ui/icons.tsx';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
+import { restoreFailedDraft } from '../chat/composer/use-chat-draft.ts';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import {
   MENTIONS_MAX,
@@ -78,9 +79,10 @@ export function MentionComposer(props: MentionComposerProps) {
     const question = text.trim();
     if (!question || busy || secrets.blocks(text)) return;
     setToken(null);
+    setText('');
     onSend(question).then(
-      () => setText(''),
       () => undefined,
+      () => setText((current) => restoreFailedDraft(current, question)),
     );
   };
 

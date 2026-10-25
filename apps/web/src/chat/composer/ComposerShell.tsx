@@ -2,8 +2,14 @@ import type { ReactNode } from 'react';
 
 export const COMPOSER_MAX_ROWS = 5;
 
-export function composerRows(draft: string): number {
-  return Math.min(COMPOSER_MAX_ROWS, Math.max(1, draft.split('\n').length));
+export function composerRows(draft: string, maxRows = COMPOSER_MAX_ROWS): number {
+  let rows = 1;
+  let position = draft.indexOf('\n');
+  while (position !== -1 && rows < maxRows) {
+    rows += 1;
+    position = draft.indexOf('\n', position + 1);
+  }
+  return rows;
 }
 
 interface ComposerShellProps {

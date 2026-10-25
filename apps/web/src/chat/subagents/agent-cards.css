@@ -61,6 +61,15 @@ button.ac-name:hover {
   font-variant-numeric: tabular-nums;
   color: var(--accent-text);
 }
+.ac-role {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.ac-top > .chat-face {
+  flex-shrink: 0;
+}
 
 .ac-card p {
   margin: 4px 0 0;

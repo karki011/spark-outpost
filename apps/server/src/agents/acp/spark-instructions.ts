@@ -12,10 +12,13 @@ export const SPARK_INSTRUCTIONS_MAX_LENGTH = 1024;
 const HEADER = '# Working with the user (set in Spark Outpost)';
 
 const TEAM_WITH_SUBAGENTS =
-  'For multi-step work, act as a coordinator: split the work into small, scoped pieces, hand each piece to a subagent with the Agent tool, then check and combine what they return. Answer simple questions directly without delegating.';
+  'Delegate implementation slices with available native sub-agent tools. Assigned workers execute without recursive delegation. Choose roles as needed. Answer simple questions directly; respect the current mode and user constraints.';
 
 const TEAM_WITHOUT_SUBAGENTS =
-  'For multi-step work, act as a coordinator: split the work into small, scoped pieces, keep a short checklist, and finish and check one piece before starting the next. Answer simple questions directly.';
+  'Answer questions directly within the current mode. This session has no native sub-agent tools: if implementation needs delegation, disclose that limitation and use an available authorized delegation path or ask how to proceed. Do not claim workers ran.';
+
+const TEAM_WITH_UNKNOWN_SUBAGENTS =
+  'Delegate implementation with available native sub-agent tools. Workers do not redelegate. If delegation is unavailable, disclose that and ask how to proceed. Answer questions directly; respect user constraints.';
 
 const TONE: Record<Personality, string> = {
   playful:
@@ -44,7 +47,7 @@ export function teammateBriefText(teammate: TeammateBrief): string {
 
 export function sparkInstructions(
   prefs: SparkSessionPrefs,
-  subagents: boolean,
+  subagents: boolean | null,
   sparkTools = false,
   browser = false,
 ): string {
@@ -60,7 +63,11 @@ export function sparkInstructions(
   const name = firstName(prefs.displayName);
   const lines = [
     HEADER,
-    subagents ? TEAM_WITH_SUBAGENTS : TEAM_WITHOUT_SUBAGENTS,
+    subagents === null
+      ? TEAM_WITH_UNKNOWN_SUBAGENTS
+      : subagents
+        ? TEAM_WITH_SUBAGENTS
+        : TEAM_WITHOUT_SUBAGENTS,
     ...(name
       ? [`The user's name is ${name}; use it sparingly, not to open or close every reply.`]
       : []),
@@ -124,7 +131,7 @@ export function withCodexSpark(
     ...base,
     developerInstructions: joined(
       base.developerInstructions,
-      sparkInstructions(prefs, false, spark !== null, spark?.browser),
+      sparkInstructions(prefs, null, spark !== null, spark?.browser),
     ),
   };
 }

@@ -215,10 +215,15 @@ interface SignInArgs {
 const NO_LABEL =
   'Pass signIn with a label from spark_browser_signins, or handOver true to let the user sign in themselves.';
 
-async function noteRefused(context: SparkToolContext, row: SignInRow, url: string): Promise<void> {
+async function noteRefused(
+  context: SparkToolContext,
+  row: SignInRow,
+  url: string,
+): Promise<string | null> {
   const origin = browserOrigin(url);
   const site = origin === null ? null : signInOriginOf(origin);
   if (site !== null) await noteRefusedSite(context.deps.db, row.id, site);
+  return site;
 }
 
 async function signIn(args: SignInArgs, context: SparkToolContext) {
@@ -239,11 +244,21 @@ async function signIn(args: SignInArgs, context: SparkToolContext) {
   const problem = signInOriginProblem(signInSites(row), page.url);
   if (problem) {
     record(context, attempt, 'refused_origin');
-    await noteRefused(context, row, page.url);
+    const site = await noteRefused(context, row, page.url);
     await keepTab(context, page.tabId);
-    return notSignedIn(
-      `${problem} Spark checked after the page finished loading and redirecting. Nothing was filled.`,
-    );
+    return {
+      ...notSignedIn(
+        `${problem} Spark checked after the page finished loading and redirecting. Nothing was filled.`,
+      ),
+      signIn: row.label,
+      tab: page.tabId,
+      site: browserOrigin(page.url),
+      requiresUserSiteApproval: site !== null,
+      nextStep:
+        site !== null
+          ? `Ask the user to open Settings → Projects → Saved sign-ins for this chat's project, find "${row.label}", and choose Add this site for ${site} only if they trust that sign-in destination. Then retry spark_browser_sign_in with this label and tab. Do not ask them to enter credentials manually just because this site is not listed; manual handoff is for SSO, MFA, passkeys, unsupported forms, or their preference.`
+          : 'This destination cannot be added as a saved sign-in site. Return to the intended HTTPS sign-in page; do not broaden the saved sites or fill this page.',
+    };
   }
   const clearance = await clearSignIn(context, row, browserOrigin(page.url) ?? row.origin);
   if (clearance.decision === 'waiting_for_user' || clearance.decision === 'user_declined') {
@@ -276,7 +291,7 @@ async function signIns(context: SparkToolContext) {
     note:
       rows.length === 0
         ? 'No sign-ins are saved for this chat’s project. The user adds them in Settings, Projects, Saved sign-ins.'
-        : 'Pass a label to spark_browser_sign_in while a tab is on one of its sites. Spark types the values; you never see them. For SSO, MFA or a passkey, pass handOver true so the user signs in.',
+        : 'First check whether the shared Work browser is already signed in. Otherwise pass the intended label to spark_browser_sign_in; Spark checks the exact site before typing and returns Add this site instructions if the user must approve another origin. A different subdomain is not automatically approved and does not by itself require manual login. Spark types the values; you never see them. Use handOver true for SSO, MFA, passkeys, unsupported forms, or when the user prefers to sign in themselves.',
   };
 }
 

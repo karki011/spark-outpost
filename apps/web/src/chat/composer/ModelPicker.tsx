@@ -201,7 +201,6 @@ export function ModelPicker({
         >
           <ProviderBlob providerId={provider} size={18} animate="hover" />
           <span className="mname">{modelName}</span>
-          <EffortMeter efforts={efforts} effort={settings.effort} />
           <ChevronIcon />
         </button>
         {setup && (
