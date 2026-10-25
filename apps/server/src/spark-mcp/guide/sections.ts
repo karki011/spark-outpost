@@ -188,9 +188,9 @@ Action tools: ticket create, comment, move, assign; spark_pr_follow_up_round, sp
     id: 'spark-tools',
     title: 'Which Spark tool answers which question',
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
-    text: `Needs me? spark_attention. Run: spark_run. Plan, files: spark_task. Chats: spark_chats, spark_chat. Old turns: spark_chat_history. Steps: spark_audit. Recent: spark_activity, spark_brief.
-Spend, trends: spark_spend, spark_analytics. Models: spark_models.
-Agents: spark_providers. Connectors: spark_connectors. Slack: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, code: spark_map, spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr, spark_pr_follow_up. Sparks, @Spark jobs: spark_sparks. Guide, how-tos: spark_guide, spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview, spark_browser_signins. Mac: spark_mac_apps, spark_mac_read. Calendar: spark_calendar. Atlassian: spark_jira, spark_confluence. ServiceNow: spark_servicenow. Outposts: spark_outpost, spark_outpost_note, spark_outpost_draft.`,
+    text: `Attention: spark_attention. Run: spark_run. Task: spark_task. Chats: spark_chats, spark_chat. Old turns: spark_chat_history. Steps: spark_audit. Recent: spark_activity, spark_brief.
+Spend: spark_spend, spark_analytics. Models: spark_models. Combine reads: spark_execute.
+Agents: spark_providers. Connectors: spark_connectors. Slack: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, code: spark_map, spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr, spark_pr_follow_up. Sparks: spark_sparks. Guide: spark_guide, spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview, spark_browser_signins. Mac: spark_mac_apps, spark_mac_read. Calendar: spark_calendar. Atlassian: spark_jira, spark_confluence. ServiceNow: spark_servicenow. Outposts: spark_outpost, spark_outpost_note, spark_outpost_draft.`,
   },
   {
     id: 'compaction',

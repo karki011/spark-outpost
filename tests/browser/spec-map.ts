@@ -382,6 +382,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/server/src/chat-share/', groups: ['chat'] },
   { prefix: 'apps/server/src/checks/', groups: ['ship-pr'] },
   { prefix: 'apps/server/src/codescan/', groups: ['map'] },
+  { prefix: 'apps/server/src/codemode/', groups: ['chat', 'docs-help', 'tickets', 'ship-pr'] },
   { prefix: 'apps/server/src/compaction/', groups: ['chat'] },
   { prefix: 'apps/server/src/companion/', groups: ['home', 'island-desktop'] },
   { prefix: 'apps/server/src/digest/', groups: ['home'] },

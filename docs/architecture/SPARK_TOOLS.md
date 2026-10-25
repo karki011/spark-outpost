@@ -10,6 +10,10 @@ Every agent session (Ask, Do, chats without a project) gets the `spark` MCP serv
 - Tools never return file contents, terminal output, secrets or API keys. Two exceptions: `spark_browser_preview` returns the recent output of the preview server Spark runs, and `spark_terminal_run` returns the recent output of a command Spark runs for the agent; both are redacted, clipped and marked untrusted.
 - Read tools change nothing. Actions follow the agent's mode (`actionPath`): at once in Auto, Bypass permissions, Approve for me and Full access, and in Accept edits when the user's message asked; otherwise a `spark_action` confirm card, and Spark does it after the user confirms.
 
+## Experimental composition
+
+`spark_execute` is an opt-in read-composition tool for chat runs. It uses the same scoped dispatcher for each eligible inner call; actions remain direct. See [Code Mode](CODE_MODE.md) for the local execution boundary, reference decisions and acceptance scope.
+
 ## Coverage
 
 | Area (web / API)                                                                                 | Tool                                                                                                                                        | Private | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |

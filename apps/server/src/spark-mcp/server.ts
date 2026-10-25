@@ -58,10 +58,13 @@ import { rulesEditTool } from './tools/rules-edit-tool.ts';
 import { terminalTool } from './tools/terminal-tool.ts';
 import { usageTools } from './tools/usage-tools.ts';
 import { workTools } from './tools/work-tools.ts';
+import { codeModeOffered } from '../codemode/catalog.ts';
+import { executeTool } from './tools/execute.ts';
 
 export const SPARK_MCP_NAME = 'spark';
 
 export const SPARK_TOOLS: readonly SparkTool[] = [
+  executeTool({ toolsFor: sparkToolsFor, callTool: callSparkTool }),
   ...setupTools,
   mcpServersTool,
   ...projectTools,
@@ -186,7 +189,8 @@ export const CHAT_TURN_ONLY: ReadonlySet<string> = new Set([
   'spark_rules_edit',
 ]);
 
-function offeredTo(tool: SparkTool, scope: Pick<SparkScope, 'readOnly' | 'assistant'>): boolean {
+function offeredTo(tool: SparkTool, scope: Partial<SparkScope>): boolean {
+  if (tool.name === 'spark_execute') return codeModeOffered(scope);
   if (tool.assistantOnly) return scope.assistant === true;
   if (scope.assistant) return !CHAT_TURN_ONLY.has(tool.name);
   if (!tool.acts) return true;
@@ -194,7 +198,7 @@ function offeredTo(tool: SparkTool, scope: Pick<SparkScope, 'readOnly' | 'assist
 }
 
 export function sparkToolsFor(
-  scope: Pick<SparkScope, 'readOnly' | 'assistant'>,
+  scope: Partial<SparkScope>,
   available: SparkAvailability,
 ): readonly SparkTool[] {
   return SPARK_TOOLS.filter(

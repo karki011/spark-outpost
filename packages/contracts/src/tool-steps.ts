@@ -23,6 +23,7 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_sparks: 'Looking at Sparks',
   spark_guide: 'Reading the Spark guide',
   spark_docs: 'Reading the user guide',
+  spark_execute: 'Combining tool results',
   spark_pull_requests: 'Checking pull requests',
   spark_pr: 'Reading a pull request',
   spark_pr_follow_up: 'Checking PR follow-up',
