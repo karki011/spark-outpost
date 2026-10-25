@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { StrictMode } from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BusyEnterAction } from '@spark-outpost/contracts';
@@ -31,6 +32,40 @@ it.each([true, false])('keeps new typing after remote delivery settles (sent=%s)
   await act(async () => finish(sent));
   expect(box.value).toBe(sent ? 'Next message' : 'Next message\n\nFirst message');
 });
+
+it.each([
+  ['First message', false],
+  ['Next message\n\nFirst message', false],
+  ['First message', true],
+  ['Next message\n\nFirst message', true],
+] as const)(
+  'restores a failed send once beside matching new text %j (reject=%s)',
+  async (typed, reject) => {
+    let finish!: () => void;
+    render(
+      <StrictMode>
+        <RemoteTerminalComposer
+          blocked={null}
+          working={false}
+          preferred="now"
+          error={null}
+          onSend={() =>
+            new Promise((resolve, fail) => {
+              finish = () => (reject ? fail(new Error('Send failed')) : resolve(false));
+            })
+          }
+          onStop={async () => undefined}
+        />
+      </StrictMode>,
+    );
+    const box = screen.getByRole('textbox', { name: 'Message the agent' }) as HTMLTextAreaElement;
+    fireEvent.change(box, { target: { value: 'First message' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+    fireEvent.change(box, { target: { value: typed } });
+    await act(async () => finish());
+    expect(box.value).toBe(`${typed}\n\nFirst message`);
+  },
+);
 
 function show(preferred: BusyEnterAction) {
   const onSend = vi.fn(async () => true);

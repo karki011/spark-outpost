@@ -130,6 +130,15 @@
   .preview-root summary {
     min-height: 44px;
   }
+  .preview-root .preview-inspector > header button {
+    min-height: 44px;
+  }
+  .preview-root .preview-inspector > header button,
+  .preview-root .preview-composer button,
+  .preview-root .preview-notice button,
+  .preview-root .preview-icon {
+    min-width: 44px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .preview-root *,

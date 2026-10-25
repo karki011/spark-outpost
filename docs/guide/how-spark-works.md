@@ -34,4 +34,4 @@ Assignments carry scope, interfaces, dependencies and done criteria. Workers ret
 
 Questions, planning and assigned slices need no recursive delegation. For separate repositories, branches or independently messaged chats, use an [outpost](when-to-use-an-outpost.md).
 
-Delegation instructions do not guarantee workers ran. Without delegation, the agent explains and asks. Verification names the changes checked, test results and remaining limits.
+Codex keeps your delegation settings. Without available workers, the agent explains and asks. Reports identify workers, checks and remaining limits.

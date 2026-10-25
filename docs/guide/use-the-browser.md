@@ -51,6 +51,6 @@ Right-click highlighted text: **Add to chat** or **Ask about this** (**⌘⇧A**
 1. In **Settings** → **Projects**, select **Add** beside **Saved sign-ins**: label, site, **Other sign-in sites**, test account.
 2. Ask the agent to sign in; allow the card once per chat.
 
-Spark fills only approved sites. For another domain, open **Settings → Projects → Saved sign-ins**, choose **Add this site**, then ask the agent to retry without re-entering credentials. SSO or MFA still needs you.
+Spark fills only approved sites. For eligible HTTPS sites, open **Settings → Projects → Saved sign-ins**, choose **Add this site**, then retry. External HTTP sites cannot be approved. SSO or MFA needs you.
 
 **Next:** [Make a Spark](sparks.md)

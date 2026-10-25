@@ -4,7 +4,7 @@ const drafts = new Map<string, string>();
 const listeners = new Map<string, Set<() => void>>();
 
 export function restoreFailedDraft(current: string, failed: string): string {
-  if (!failed || current === failed || current.endsWith(`\n\n${failed}`)) return current;
+  if (!failed) return current;
   return current ? `${current}\n\n${failed}` : failed;
 }
 

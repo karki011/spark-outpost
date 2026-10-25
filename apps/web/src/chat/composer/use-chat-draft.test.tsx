@@ -5,13 +5,19 @@ import { restoreFailedDraft, useChatDraft } from './use-chat-draft.ts';
 
 afterEach(cleanup);
 
-it('restores a failed send after newer typing without replacing or duplicating either message', () => {
-  const hook = renderHook(() => useChatDraft('failed-send'));
-  act(() => hook.result.current[1]('New typing'));
-  act(() => hook.result.current[1]((current) => restoreFailedDraft(current, 'Failed message')));
-  expect(hook.result.current[0]).toBe('New typing\n\nFailed message');
-  act(() => hook.result.current[1]((current) => restoreFailedDraft(current, 'Failed message')));
-  expect(hook.result.current[0]).toBe('New typing\n\nFailed message');
+it.each(['New typing', 'Failed message', 'New typing\n\nFailed message'])(
+  'preserves newer typing %j even when it matches the failed message',
+  (newTyping) => {
+    const hook = renderHook(() => useChatDraft(`failed-send:${newTyping}`));
+    act(() => hook.result.current[1](newTyping));
+    act(() => hook.result.current[1]((current) => restoreFailedDraft(current, 'Failed message')));
+    expect(hook.result.current[0]).toBe(`${newTyping}\n\nFailed message`);
+  },
+);
+
+it('restores into an empty draft and leaves typing alone for an attachment-only failure', () => {
+  expect(restoreFailedDraft('', 'Failed message')).toBe('Failed message');
+  expect(restoreFailedDraft('New typing', '')).toBe('New typing');
 });
 
 it('preserves per-chat drafts through navigation and unmount and clears sent text', () => {

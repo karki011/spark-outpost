@@ -185,7 +185,6 @@ describe('Codex launch', () => {
     expect(JSON.parse(chat.CODEX_CONFIG ?? '{}')).toEqual({
       features: {
         shell_tool: false,
-        multi_agent: true,
         unified_exec: false,
         skill_mcp_dependency_install: false,
         apps: false,
@@ -198,13 +197,21 @@ describe('Codex launch', () => {
     expect(JSON.parse(project.CODEX_CONFIG ?? '{}')).toMatchObject({
       features: {
         shell_tool: true,
-        multi_agent: true,
         unified_exec: false,
         skill_mcp_dependency_install: false,
       },
       default_permissions: 'read-only',
     });
     expect(JSON.parse(project.CODEX_CONFIG ?? '{}')).not.toHaveProperty('web_search');
+  });
+
+  it('leaves native delegation to the effective Codex configuration in every launch mode', () => {
+    for (const browsing of [false, true]) {
+      for (const profiles of [false, true]) {
+        const env = agentDefinitions.codex.conversationEnv?.('/tmp/run', browsing, null, profiles);
+        expect(JSON.parse(env?.CODEX_CONFIG ?? '{}').features).not.toHaveProperty('multi_agent');
+      }
+    }
   });
 
   it('does Do in the patched ask-every-action mode, opening only the primary repo', () => {
