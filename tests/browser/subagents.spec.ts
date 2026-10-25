@@ -1,4 +1,5 @@
 import path from 'node:path';
+import type { ConversationDetail } from '../../packages/contracts/src/conversations.ts';
 import { expect, test, type Page } from '@playwright/test';
 import { toggleHeaderPane } from './header-menu.ts';
 import { openChats } from './navigation.ts';
@@ -229,4 +230,35 @@ test('a Claude turn picks up again on its own when its background work reports',
   await expect(turn).toContainText('Schema finished: turns live in events.', { timeout: 30_000 });
   await expect(mood(page)).toHaveText('done');
   await expect(agentsLine(turn)).toHaveText('1 agent · 1 done');
+});
+
+test('a finished lead shows stale working workers as inactive after reload', async ({ page }) => {
+  await ask(page, 'Split the work #build #subagents');
+  await expect(mood(page)).toHaveText('done', { timeout: 30_000 });
+  await page.route(/\/api\/conversations\/[^/]+$/, async (route) => {
+    const response = await route.fetch();
+    const detail = (await response.json()) as ConversationDetail;
+    const subagents = Object.fromEntries(
+      Object.entries(detail.subagents ?? {}).map(([id, rows]) => [
+        id,
+        rows.map((row) => ({ ...row, state: 'working', endedAt: null })),
+      ]),
+    );
+    await route.fulfill({ response, json: { ...detail, subagents } });
+  });
+  await page.reload();
+  const turn = page.locator('.msg.ai').last();
+  await expect(turn.locator('.sl-state')).toHaveText(['Inactive', 'Inactive', 'Inactive']);
+  await turn.getByRole('button', { name: 'View agents' }).click();
+  const panel = page.locator('#work-panel');
+  await expect(cardsIn(panel)).toHaveCount(3);
+  await expect(panel.locator('.ac-now')).toHaveCount(0);
+  await expect(panel.getByRole('button', { name: 'Ask lead to redirect' })).toHaveCount(0);
+  await toggleHeaderPane(page, 'Agent TV');
+  const tv = page.getByRole('dialog', { name: 'Agent TV' });
+  await tv.getByRole('radio', { name: 'Stage', exact: true }).click();
+  await expect(tv.locator('.tv-stage .tv-n.inactive')).toHaveCount(3);
+  await expect(tv.locator('.tv-stage .tv-n.working')).toHaveCount(0);
+  await expect(tv.getByRole('button', { name: 'Ask lead to redirect' })).toHaveCount(0);
+  await expect(cardsIn(tv).first()).toContainText('Inactive');
 });

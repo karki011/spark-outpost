@@ -2,7 +2,7 @@ import './subagents-line.css';
 import { createContext, use, useId, useState } from 'react';
 import type { SubagentRow } from '@spark-outpost/contracts';
 import { ChatFace } from '../../brand/ChatFace.tsx';
-import { workerIdentity, workerRole } from '../../crew/worker-identity.ts';
+import { workerIdentity, workerPresentation, workerRole } from '../../crew/worker-identity.ts';
 import { AgentCards } from './AgentCards.tsx';
 import { agentCounts, agentsLine } from './agent-cards.ts';
 
@@ -12,18 +12,8 @@ function Workers({ rows, live }: { rows: readonly SubagentRow[]; live: boolean }
   return (
     <ul className="sl-workers" aria-label="Agent progress">
       {rows.map((row) => {
-        const working = live && row.state === 'working';
         const role = workerRole(row.name);
-        const status =
-          row.state === 'cancelled'
-            ? 'Stopped'
-            : row.state === 'working'
-              ? live
-                ? 'Working'
-                : 'Inactive'
-              : row.state === 'done'
-                ? 'Done'
-                : 'Failed';
+        const presentation = workerPresentation(row.state, live);
         return (
           <li
             key={row.id}
@@ -32,19 +22,9 @@ function Workers({ rows, live }: { rows: readonly SubagentRow[]; live: boolean }
             data-state={row.state}
             title={[row.name, row.task].filter(Boolean).join(' · ')}
           >
-            <ChatFace
-              chatId={workerIdentity(row.id)}
-              size="row"
-              state={
-                row.state === 'cancelled'
-                  ? 'archived'
-                  : row.state === 'working' && !working
-                    ? 'idle'
-                    : row.state
-              }
-            />
+            <ChatFace chatId={workerIdentity(row.id)} size="row" state={presentation.face} />
             <span className="sl-name">{role ?? row.name}</span>
-            <span className="sl-state">{status}</span>
+            <span className="sl-state">{presentation.label}</span>
           </li>
         );
       })}

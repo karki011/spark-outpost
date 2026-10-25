@@ -58,6 +58,7 @@ function HeadMeta({ agent }: { agent: CrewAgent }) {
 }
 
 const TURN_STATES: Record<CrewAgent['state'], TurnState> = {
+  inactive: 'stopped',
   thinking: 'working',
   working: 'working',
   waiting: 'waiting',

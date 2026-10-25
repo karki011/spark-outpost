@@ -351,7 +351,9 @@ export function AgentTv({
           <div className="tv-subagents" role="group" aria-label="Sub-agents" tabIndex={0}>
             <AgentCards
               rows={subagents}
-              live={members.some((member) => isBusy(member.state))}
+              live={Boolean(
+                members[0] && (isBusy(members[0].state) || members[0].state === 'waiting'),
+              )}
               onRedirect={onRedirect}
             />
           </div>

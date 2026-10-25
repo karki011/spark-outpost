@@ -36,13 +36,15 @@ interface TvListProps {
 function RowBlob({ item }: { item: TvRow }) {
   if (!item.lead) {
     const state =
-      item.state === 'waiting'
-        ? 'needs_you'
-        : item.state === 'thinking'
-          ? 'working'
-          : item.state === 'queued' || item.state === 'stopped'
-            ? 'archived'
-            : item.state;
+      item.state === 'inactive'
+        ? 'idle'
+        : item.state === 'waiting'
+          ? 'needs_you'
+          : item.state === 'thinking'
+            ? 'working'
+            : item.state === 'queued' || item.state === 'stopped'
+              ? 'archived'
+              : item.state;
     return <ChatFace chatId={workerIdentity(item.runId)} size="strip" state={state} />;
   }
   const known = connectableIdSchema.safeParse(item.provider);

@@ -14,7 +14,7 @@ Follow a turn. About 2 minutes.
 2. Open commands for details; failures expand.
 3. The to-do ticks off, then folds.
 4. Open **Agent TV** under **…**.
-5. Worker blobs show roles and status; **View agents** opens cards in **Work**.
+5. Worker blobs show roles and status; **View agents** opens cards in **Work**. Ended turns never show active workers.
 6. **Message lead** or a member opens its composer; you send.
 7. **Ask lead to redirect** drafts a lead request, not a sub-agent message.
 

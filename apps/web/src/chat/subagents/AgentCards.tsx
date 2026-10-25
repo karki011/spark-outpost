@@ -4,10 +4,10 @@ import { useId, useState } from 'react';
 import type { SubagentRow } from '@spark-outpost/contracts';
 import { StepName } from '../WorkLog.tsx';
 import { ChatFace } from '../../brand/ChatFace.tsx';
-import { workerIdentity, workerRole } from '../../crew/worker-identity.ts';
+import { workerIdentity, workerPresentation, workerRole } from '../../crew/worker-identity.ts';
 import { SubagentDetail } from './SubagentDetail.tsx';
 import { agentActivity, agentMeta, agentPurpose } from './agent-cards.ts';
-import { SUBAGENT_STATE_WORDS, hasDetail, subagentLines } from './subagent-view.ts';
+import { hasDetail, subagentLines } from './subagent-view.ts';
 
 function AgentCard({
   row,
@@ -24,10 +24,11 @@ function AgentCard({
   const detailId = useId();
   const purpose = agentPurpose(row.task, row.name);
   const working = row.state === 'working';
-  const activity = agentActivity(row);
+  const activity = live ? agentActivity(row) : null;
   const meta = agentMeta(row);
   const task = row.task && row.task !== row.name ? row.task : null;
   const role = workerRole(row.name);
+  const presentation = workerPresentation(row.state, live);
   return (
     <li
       className="ac-card"
@@ -36,11 +37,7 @@ function AgentCard({
       data-nested={nested || undefined}
     >
       <div className="ac-top">
-        <ChatFace
-          chatId={workerIdentity(row.id)}
-          size="strip"
-          state={row.state === 'cancelled' ? 'archived' : working && !live ? 'idle' : row.state}
-        />
+        <ChatFace chatId={workerIdentity(row.id)} size="strip" state={presentation.face} />
         {hasDetail(row) ? (
           <button
             type="button"
@@ -54,7 +51,7 @@ function AgentCard({
         ) : (
           <b className="ac-name">{row.name}</b>
         )}
-        <span className="sr-only">{SUBAGENT_STATE_WORDS[row.state]}</span>
+        <span className="sr-only">{presentation.label}</span>
         {meta && <span className="ac-meta">{meta}</span>}
       </div>
       {role && <span className="ac-role">{role}</span>}
