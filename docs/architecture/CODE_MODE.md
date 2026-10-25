@@ -24,7 +24,7 @@ Each inner call must pass the current session check and current tool availabilit
 
 The guest receives only a JSON tool-call boundary. It gets no host filesystem, shell, process, unrestricted network or module loader. QuickJS runs in a separate worker, with memory, stack, script and output protections and an interrupt for runaway computation. The current bounds are 64 MiB guest memory, 512 KiB stack, 256 KiB scripts/JSON, 64 levels of JSON nesting, one second of continuous computation, and 128 simultaneous pending guest requests, with at most four host reads dispatched concurrently per execution. Additional host reads wait in a cancellable queue. Waiting for host tools does not consume the computation allowance. These protect one execution; they do not cap a chat's duration, tokens or total number of tools.
 
-Stop aborts execution and prevents new inner calls or late results from reaching the script. Host network calls receive its cancellation signal. Existing database reads and repository discovery may finish internally; they must not resume a cancelled script. GitHub CLI fallback is excluded from Code Mode.
+Stop aborts execution and prevents new inner calls or late results from reaching the script. Host network calls receive its cancellation signal. Existing database reads and repository discovery may finish internally; they must not resume a cancelled script. Cancellation records terminal audit outcomes immediately, even for receipts no longer retained in the response; a late host completion cannot duplicate the outcome. GitHub CLI fallback is excluded from Code Mode.
 
 Results preserve tool errors and evidence blocks. The execution returns its latest 50 inner-call receipts with total and omitted counts; the audit records every inner-call lifecycle without arguments or results. A parsed `data` field is only available for successful JSON text. Scripts must check `isError`, respect paging, and treat retrieved text as untrusted data. A transformed result gains no authority over the user's instructions.
 
@@ -32,7 +32,7 @@ Results preserve tool errors and evidence blocks. The execution returns its late
 
 Discovery appears as **Finding Code Mode tools**, execution as **Combining reads with Code Mode**, and an activity without input details as **Using Code Mode**. These use the existing collapsed tool activity presentation and result view, rather than labelling reads as terminal commands. Agent TV keeps the worker's identity. No extra agent card or persistent composer control is added.
 
-Automated coverage checks input validation, partial failures, cancellation, queued reads, runaway code, blocked host access, output bounds and redaction. Settings database tests cover the default, saved off choice, installation override and the tool signature changing on an existing grant. These tests do not establish connector login acceptance or a performance advantage.
+Automated coverage checks input validation, partial failures, cancellation, queued reads, runaway code, blocked host access, output bounds and redaction. Settings database tests cover the default, saved disabled preference, installation override and the tool signature changing on an existing grant. These tests do not establish connector login acceptance or a performance advantage.
 
 A recorded October 25, 2026 comparison used two fresh real Codex 6 Sol chats at medium effort with the same three-guide-read prompt. Both completed three reads successfully:
 

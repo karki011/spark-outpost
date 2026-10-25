@@ -101,12 +101,7 @@ export function createCodeModeBridge(context: SparkToolContext, access: CodeMode
 
   return {
     signal,
-    close: () => {
-      controller.abort();
-      for (const receipt of receipts) {
-        if (receipt.outcome === 'started') receipt.outcome = 'cancelled';
-      }
-    },
+    close: () => controller.abort(),
     receipts: () => receipts.map((receipt) => ({ ...receipt })),
     receiptCounts: () => ({ totalCalls: sequence, omittedCalls: sequence - receipts.length }),
     async discover(query?: string) {
@@ -119,13 +114,18 @@ export function createCodeModeBridge(context: SparkToolContext, access: CodeMode
       receipts.push(receipt);
       if (receipts.length > RETAINED_RECEIPTS) receipts.shift();
       const audit = (outcome: CallReceipt['outcome']) => {
+        if (receipt.outcome !== 'started') return;
         receipt.outcome = outcome;
+        if (outcome !== 'started') callSignal.removeEventListener('abort', cancelled);
         context.scope.actions?.audit?.message('harness', {
           method: 'spark/code_mode_call',
           params: { name: receipt.name, callId: id, outcome },
         });
       };
+      const cancelled = () => audit('cancelled');
       audit('started');
+      callSignal.addEventListener('abort', cancelled, { once: true });
+      if (callSignal.aborted) cancelled();
       let release: (() => void) | undefined;
       try {
         release = await acquire(callSignal);

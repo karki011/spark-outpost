@@ -355,3 +355,40 @@ it('rechecks the saved off switch before each queued read', async () => {
   expect(run).toHaveBeenCalledTimes(4);
   bridge.close();
 });
+
+it.each(['close', 'stop'] as const)(
+  'audits every pending cancellation immediately on %s, including evicted receipts',
+  async (cancel) => {
+    const entered = deferred();
+    const finish = deferred();
+    const run = vi.fn(async () => {
+      if (run.mock.calls.length === 4) entered.resolve();
+      await finish.promise;
+      return {};
+    });
+    const { bridge, audit, stop } = fixture([readTool(run)]);
+    const calls = Promise.allSettled(
+      Array.from({ length: 60 }, () =>
+        bridge.invoke('spark_tickets', { query: '' }, bridge.signal),
+      ),
+    );
+    await entered.promise;
+    expect(bridge.receipts()).toHaveLength(50);
+    if (cancel === 'close') bridge.close();
+    else stop.abort();
+
+    const outcomes = () => audit.mock.calls.map((call) => call[1].params);
+    expect(outcomes().filter((entry) => entry.outcome === 'cancelled')).toHaveLength(60);
+    expect(outcomes()).toContainEqual({
+      name: 'spark_tickets',
+      callId: 'execute:1',
+      outcome: 'cancelled',
+    });
+    expect(bridge.receipts().every((receipt) => receipt.outcome === 'cancelled')).toBe(true);
+    bridge.close();
+    finish.resolve();
+    expect((await calls).every((call) => call.status === 'rejected')).toBe(true);
+    expect(outcomes()).toHaveLength(120);
+    expect(outcomes().filter((entry) => entry.outcome === 'cancelled')).toHaveLength(60);
+  },
+);
