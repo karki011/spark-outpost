@@ -1,6 +1,6 @@
 import { memo, use, useEffect, useId, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { plainOutput } from '@spark-outpost/contracts';
+import { isMcpToolName, plainOutput } from '@spark-outpost/contracts';
 import { openCommandTab } from '../../terminal/dock/shell-store.ts';
 import { CheckIcon, ChevronIcon, CopyIcon, TerminalIcon } from '../../ui/icons.tsx';
 import { QueryWait } from '../../ui/loading/QueryWait.tsx';
@@ -49,7 +49,11 @@ function useTerminalUi(command: CommandView) {
 function CommandTitle({ command }: { command: CommandView }) {
   return (
     <span className="trow-text">
-      <span className="trow-verb">{command.status === 'running' ? 'Running' : 'Ran'}</span>{' '}
+      {!isMcpToolName(command.command) && (
+        <>
+          <span className="trow-verb">{command.status === 'running' ? 'Running' : 'Ran'}</span>{' '}
+        </>
+      )}
       <span className="trow-name">{commandTitle(command)}</span>
     </span>
   );
@@ -85,6 +89,7 @@ export const CommandTerminal = memo(function CommandTerminal({
   answer = null,
 }: CommandTerminalProps) {
   const bodyId = useId();
+  const tool = isMcpToolName(command.command);
   const dockChatId = use(CommandDockContext);
   const { open, tall, toggleRef, touch, toggle, setTall, focus } = useTerminalUi(command);
   const { state: copyState, copy } = useCopyFeedback();
@@ -109,7 +114,7 @@ export const CommandTerminal = memo(function CommandTerminal({
   return (
     <section
       className={`run-cmd ${command.status}${open ? ' open' : ''}`}
-      aria-label={`Command: ${command.command}`}
+      aria-label={tool ? `Tool: ${commandTitle(command)}` : `Command: ${command.command}`}
       data-command={command.id}
     >
       <div className="run-cmd-head">
@@ -126,7 +131,7 @@ export const CommandTerminal = memo(function CommandTerminal({
             if (event.relatedTarget) focus(false);
           }}
         >
-          <RowIcon name="run" />
+          <RowIcon name={tool ? 'other' : 'run'} />
           <CommandTitle command={command} />
           <span className="trow-end run-cmd-state">
             <CommandWord command={command} waiting={waiting} denied={answer?.denied ?? false} />
@@ -135,12 +140,14 @@ export const CommandTerminal = memo(function CommandTerminal({
         </button>
       </div>
       <span className="sr-only" role="status">
-        {running ? `Running ${command.command.slice(0, 120)}` : commandOutcome(command)}
+        {running
+          ? `${tool ? '' : 'Running '}${commandTitle(command).slice(0, 120)}`
+          : commandOutcome(command)}
       </span>
       <div className="run-cmd-body" id={bodyId} hidden={!open}>
         {open && (
           <div className="run-cmd-tools">
-            <span className="run-cmd-label">Terminal</span>
+            <span className="run-cmd-label">{tool ? 'Tool result' : 'Terminal'}</span>
             {!awaitsEnd && (
               <button
                 type="button"
@@ -164,7 +171,7 @@ export const CommandTerminal = memo(function CommandTerminal({
                 </svg>
               </button>
             )}
-            {dockChatId && (
+            {dockChatId && !tool && (
               <button
                 type="button"
                 className="icon-btn run-cmd-dock"
@@ -190,13 +197,19 @@ export const CommandTerminal = memo(function CommandTerminal({
             </button>
           </div>
         )}
-        {open && (
+        {open && !tool && (
           <pre className="run-cmd-cmd">
             <span aria-hidden="true">$ </span>
             {command.command}
           </pre>
         )}
-        {open && awaitsEnd && <p className="run-cmd-note">Output shows when the command ends.</p>}
+        {open && awaitsEnd && (
+          <p className="run-cmd-note">
+            {tool
+              ? 'Results appear when the tool finishes.'
+              : 'Output shows when the command ends.'}
+          </p>
+        )}
         {open && !awaitsEnd && text === null && (
           <div className="run-cmd-wait-load">
             <QueryWait query={loaded} what="the command output">
@@ -205,7 +218,9 @@ export const CommandTerminal = memo(function CommandTerminal({
           </div>
         )}
         {open && !awaitsEnd && text === '' && command.status !== 'interrupted' && !running && (
-          <p className="run-cmd-note">No output.</p>
+          <p className="run-cmd-note">
+            {tool ? 'No result was captured for this tool call.' : 'No output.'}
+          </p>
         )}
         {open && !awaitsEnd && text !== null && (text !== '' || running) && (
           <CommandScreen

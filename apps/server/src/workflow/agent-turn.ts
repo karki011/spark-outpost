@@ -376,6 +376,7 @@ export async function runAgentTurn(
       ...(userMcp.length > 0 ? { userMcp } : {}),
       spark,
       sparkScope: {
+        codeMode: spark.codeMode,
         workspaceId: input.workspaceId,
         conversationId: input.identity.threadId,
         runId: lease.runId,

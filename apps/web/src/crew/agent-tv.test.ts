@@ -109,6 +109,17 @@ describe('Agent TV stage layout', () => {
     expect(tvStage('s', { width: 240, height: 800 }, 1).width).toBe(240);
   });
 
+  it('keeps the fallback stage within a room smaller than its preferred minimum', () => {
+    const room = { width: 160, height: 100 };
+    for (const crew of [0, 3]) {
+      const stage = tvStage('l', room, crew);
+      expect(stage.width).toBeLessThanOrEqual(room.width);
+      expect(stage.height).toBeLessThanOrEqual(room.height);
+      expect(stage.width).toBeGreaterThan(0);
+      expect(stage.height).toBeGreaterThan(0);
+    }
+  });
+
   it('picks a stage that fits a short window under the header, caption and sub-agents', () => {
     const dock = dockInto(
       { left: 300, top: 60, right: 1300, bottom: 480 },
@@ -116,6 +127,9 @@ describe('Agent TV stage layout', () => {
     );
     const room = stageRoom(dock, true);
     expect(room.height).toBe(388 - 76 - 90);
+    const messagingRoom = stageRoom(dock, true, true);
+    expect(messagingRoom.height).toBeLessThanOrEqual(room.height - 100);
+    expect(tvStage('l', messagingRoom, 3).height).toBeLessThanOrEqual(messagingRoom.height);
     const short = tvStage('l', room, 3);
     expect(short.height).toBeLessThanOrEqual(room.height);
     expect(short.width).toBeLessThanOrEqual(room.width);

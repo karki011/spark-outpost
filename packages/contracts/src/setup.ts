@@ -160,8 +160,10 @@ export const profileSchema = z.object({
   wideWindow: wideWindowSchema.default(DEFAULT_WIDE_WINDOW),
   busyEnter: busyEnterSchema.default(DEFAULT_BUSY_ENTER),
   archiveInactiveDays: archiveInactiveDaysSchema.default(DEFAULT_ARCHIVE_INACTIVE_DAYS),
-  terminalRecordLikeChat: z.boolean().default(false),
+  terminalRecordLikeChat: z.boolean().default(true),
   macControl: z.boolean().default(false),
+  codeMode: z.boolean().default(true),
+  codeModeUnavailable: z.boolean().optional(),
 });
 export type Profile = z.infer<typeof profileSchema>;
 export type SparkSessionPrefs = Pick<
@@ -207,6 +209,7 @@ export const updateProfileRequestSchema = z
     archiveInactiveDays: archiveInactiveDaysSchema,
     terminalRecordLikeChat: z.boolean(),
     macControl: z.boolean(),
+    codeMode: z.boolean(),
   })
   .partial();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

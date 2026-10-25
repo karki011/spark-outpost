@@ -4,6 +4,7 @@ import type {
   SessionUpdate,
   ToolCallContent,
 } from '@agentclientprotocol/sdk';
+import { isMcpToolName } from '@spark-outpost/contracts';
 import type { ConfigValues, PlanEntry } from '@spark-outpost/contracts';
 import type { ProviderOutput } from '../../providers/provider.ts';
 import { currentValue } from './session-config.ts';
@@ -227,7 +228,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
     const open = openTools.get(update.toolCallId);
     if (!open || open.shown || !update.title) return [];
     if (awaitsAddress(update.title, update.kind ?? open.kind)) return [];
-    open.name = describeTool(update.title, update.kind ?? open.kind);
+    open.name = describeTool(update.title, update.kind ?? open.kind, update.rawInput);
     open.shown = true;
     return [stepOf('step_started', open)];
   };
@@ -237,7 +238,9 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
     if (!open) return;
     open.opensPr ||= opensPullRequest(update.title, update.rawInput);
     open.toolName = toolNameOf(update) ?? open.toolName;
-    const title = update.title ? describeTool(update.title, update.kind ?? open.kind) : null;
+    const title = update.title
+      ? describeTool(update.title, update.kind ?? open.kind, update.rawInput)
+      : null;
     open.path = toolPath(update.locations, update.rawInput) ?? open.path;
     open.target =
       toolTarget(update.locations, update.rawInput) ??
@@ -335,11 +338,13 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
         case 'tool_call': {
           rememberPlan(update.kind, update.rawInput, update.content);
           const outputs = [...stopThinking(), ...finishTool(update.toolCallId)];
-          const name = describeTool(update.title, update.kind);
+          const name = describeTool(update.title, update.kind, update.rawInput);
           worked = true;
           const opened: OpenTool = {
             name,
-            kind: update.kind ?? null,
+            kind: isMcpToolName(toolNameOf(update) ?? update.title)
+              ? 'other'
+              : (update.kind ?? null),
             toolName: toolNameOf(update),
             target: toolTarget(update.locations, update.rawInput),
             path: toolPath(update.locations, update.rawInput),

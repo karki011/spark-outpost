@@ -211,17 +211,25 @@ test('a paired phone without the settings switch gets no agent setup in Details'
   await page.close();
 });
 
-test('the desktop composer bar keeps its chips, with no autonomy or Details chip', async ({
+test('the desktop composer keeps the project visible and folds branch and setup into details', async ({
   page,
 }) => {
   await page.goto('/');
   await expect(bar(page).locator('.ctx-outpost')).toContainText(`@${HANDLE}`, {
     timeout: 20_000,
   });
-  for (const chip of ['.ctx-repo', '.ctx-place', '.ctx-setup']) {
+  await expect(bar(page).locator('.ctx-repo')).toBeVisible();
+  for (const chip of ['.ctx-place', '.ctx-setup']) {
+    await expect(bar(page).locator(chip)).toBeHidden();
+  }
+  await expect(detailsChip(page)).toHaveAttribute('aria-expanded', 'false');
+  await detailsChip(page).click();
+  for (const chip of ['.ctx-place', '.ctx-setup']) {
     await expect(bar(page).locator(chip)).toBeVisible();
   }
-  await expect(detailsChip(page)).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(detailsChip(page)).toHaveAttribute('aria-expanded', 'false');
+  await expect(detailsChip(page)).toBeFocused();
   await expect(bar(page).getByRole('button', { name: /^Spark autonomy/ })).toHaveCount(0);
   expect(await crowdedChips(page, '.ctxbar')).toEqual([]);
 });

@@ -1,4 +1,10 @@
-import { friendlyStep, isSparkNote, toolLabel, type BrowserShot } from '@spark-outpost/contracts';
+import {
+  friendlyStep,
+  isMcpToolName,
+  isSparkNote,
+  toolLabel,
+  type BrowserShot,
+} from '@spark-outpost/contracts';
 import { anchorIndex, outsideFence, type TextAnchor } from '../../browser/shot-order.ts';
 import type { AgentTerminalView } from '../commands/agent-terminal-model.ts';
 import type { CommandView } from '../commands/command-model.ts';
@@ -9,7 +15,7 @@ const THINKING = 'Thinking';
 const WEB_STEP = /^(?:Fetched |Searched the web$)/;
 const WEB_SEARCHED = 'Searched the web';
 
-export type ToolTone = 'read' | 'search' | 'edit' | 'run' | 'web' | 'other';
+export type ToolTone = 'read' | 'search' | 'edit' | 'run' | 'web' | 'tool' | 'other';
 
 export interface ToolItem {
   kind: 'tool';
@@ -194,6 +200,9 @@ function toolItem(step: StepView, key: string, ranCommands: boolean): ToolItem |
     startedAt: step.startedAt,
     finishedAt: step.finishedAt,
   };
+  if (step.toolName && isMcpToolName(step.toolName) && step.toolKind !== 'execute') {
+    return { ...base, tone: 'tool', verb: base.label, target: null, path: null };
+  }
   const item = fromToolKind(step, base, open) ?? fromName(step, base, open, ranCommands);
   return item && named(item, step.toolName);
 }
@@ -279,7 +288,7 @@ function placedItems(input: TurnRowInput): Placed[] {
   );
 }
 
-const GROUPED_TONES = new Set<ToolTone>(['read', 'search', 'edit', 'run']);
+const GROUPED_TONES = new Set<ToolTone>(['read', 'search', 'edit', 'run', 'tool']);
 
 function groupable(item: RowItem): item is GroupedItem {
   if (item.kind === 'command') return item.command.status !== 'running';

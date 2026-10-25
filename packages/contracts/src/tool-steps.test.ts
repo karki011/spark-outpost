@@ -10,12 +10,45 @@ import {
 } from './tool-steps.ts';
 
 describe('friendlyStep', () => {
+  it('distinguishes Code Mode discovery from composed reads for both providers', () => {
+    for (const name of [
+      'spark_execute',
+      'mcp.spark.spark_execute',
+      'mcp__spark__spark_execute',
+      'mcp.spark_outpost.spark_execute',
+      'mcp__spark_outpost__spark_execute',
+    ]) {
+      expect(friendlyStep(name)).toBe('Using Code Mode');
+      expect(friendlyStep(name, {})).toBe('Finding Code Mode tools');
+      expect(friendlyStep(name, { query: 'guide' })).toBe('Finding Code Mode tools');
+      expect(friendlyStep(name, { code: 'return await tools.call("spark_guide", {});' })).toBe(
+        'Combining reads with Code Mode',
+      );
+    }
+  });
+
+  it('reads Codex MCP argument envelopes without mistaking execution for discovery', () => {
+    const name = 'mcp.spark.spark_execute';
+    const envelope = (args: unknown) => ({
+      tool: 'spark_execute',
+      server: 'spark',
+      arguments: args,
+    });
+    expect(friendlyStep(name, envelope({ query: 'spark_guide' }))).toBe('Finding Code Mode tools');
+    expect(
+      friendlyStep(name, envelope({ code: 'return await tools.call("spark_guide", {});' })),
+    ).toBe('Combining reads with Code Mode');
+    expect(friendlyStep(name, envelope(null))).toBe('Finding Code Mode tools');
+  });
+
   it('names Spark tools in plain words, from Claude and Codex', () => {
     expect(friendlyStep('mcp__spark__spark_projects')).toBe('Looking at projects');
     expect(friendlyStep('mcp__spark__spark_map')).toBe('Reading the project map');
     expect(friendlyStep('mcp__spark__spark_pull_requests')).toBe('Checking pull requests');
     expect(friendlyStep('mcp.spark.spark_open_pr')).toBe('Opening a PR');
     expect(friendlyStep('spark_tickets')).toBe('Looking at tickets');
+    expect(friendlyStep('mcp__spark_outpost__spark_guide')).toBe('Reading the Spark guide');
+    expect(friendlyStep('mcp.spark_outpost.spark_guide')).toBe('Reading the Spark guide');
   });
 
   it('names other MCP tools by tool and server', () => {
@@ -26,6 +59,15 @@ describe('friendlyStep', () => {
     expect(friendlyStep('mcp__spark__spark_something_new')).toBe(
       'Using spark something new (spark)',
     );
+  });
+
+  it('keeps external tools with Spark names identified by their own server', () => {
+    for (const name of ['mcp__github__spark_execute', 'mcp.github.spark_execute']) {
+      for (const input of [undefined, {}, { query: 'guide' }, { code: 'return 1;' }]) {
+        expect(friendlyStep(name, input)).toBe('Using spark execute (github)');
+      }
+    }
+    expect(friendlyStep('mcp__github__spark_guide')).toBe('Using spark guide (github)');
   });
 
   it('turns bare agent tool names and snake names into words', () => {

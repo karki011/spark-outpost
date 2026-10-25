@@ -34,6 +34,11 @@ async function chatOn(page: Page, root: string) {
   await page.keyboard.press('Escape');
 }
 
+async function showChatDetails(page: Page) {
+  const details = page.getByRole('button', { name: /^Chat details/ });
+  if ((await details.getAttribute('aria-expanded')) !== 'true') await details.click();
+}
+
 async function sendAndKeep(page: Page) {
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Add a line to the notes #edit #plan');
@@ -52,6 +57,7 @@ test('a Do chat works on its own branch in a worktree and brings the change in o
   await page.setViewportSize({ width: 1400, height: 900 });
   const repo = await repoWithRemote(base, 'widgets');
   await chatOn(page, repo.root);
+  await showChatDetails(page);
   const place = page.getByRole('button', { name: /^Where this chat works/ });
   await expect(place).toHaveText(/New branch/);
   await place.click();
@@ -66,6 +72,7 @@ test('a Do chat works on its own branch in a worktree and brings the change in o
   await expect(place).toBeFocused();
 
   await sendAndKeep(page);
+  await showChatDetails(page);
   const chip = page.getByRole('button', { name: /^This chat’s branch/ });
   await expect(chip).toContainText(/spark\/add-a-line-to-the-notes[a-z-]*-[0-9a-f]{8}/);
   await expect(chip).toHaveAccessibleName(/, worktree$/);
@@ -107,6 +114,7 @@ test('Edit my files changes the checked-out branch and is remembered for the pro
   await page.setViewportSize({ width: 1400, height: 900 });
   const repo = await repoWithRemote(base, 'inplace');
   await chatOn(page, repo.root);
+  await showChatDetails(page);
   const place = page.getByRole('button', { name: /^Where this chat works/ });
   await place.click();
   await page
@@ -134,6 +142,7 @@ test('Edit my files changes the checked-out branch and is remembered for the pro
     .getByRole('button', { name: /^inplace/ })
     .click();
   await page.keyboard.press('Escape');
+  await showChatDetails(page);
   await expect(page.getByRole('button', { name: /^Where this chat works/ })).toHaveText(
     /main · my files/,
   );

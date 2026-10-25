@@ -44,13 +44,18 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | **While the agent is working, Enter**        | **Queues the message** | [Queue](follow-a-turn.md#queue-messages)               |
 | **On wide windows**                          | **Context rail**       | Rail, panel or nothing                                 |
 | **Archive inactive chats**                   | **After 2 days**       | [Chat list](statuses-and-limits.md#chat-list)          |
-| **Record Terminal sessions like chats**      | Off                    | [Below](#record-terminal-sessions)                     |
+| **Code Mode**                                | On                     | [Below](#code-mode)                                    |
+| **Record Terminal sessions like chats**      | On                     | [Below](#record-terminal-sessions)                     |
 
 **Custom instructions**: text or a UTF-8 file from your Mac, up to 16 KB; then **Save instructions**.
 
+### Code Mode
+
+Agents can combine supported reads locally; direct tools stay available. Turn off for direct tools only on the next turn; pending combined reads stop. Terminal sessions are unchanged. An installation override can disable it.
+
 ### Record Terminal sessions
 
-When on, new Claude [Terminal](terminals.md) turns keep tool calls (input and output), replies, changed files and an audit, like a chat. Secret-file values are hidden.
+On for new profiles; existing choices stay. With Spark’s mod, Claude [Terminal](terminals.md) turns keep tool inputs/outputs, replies, changed files and an audit. Secret-file values are hidden.
 
 Pushes to other branches, force pushes, protected files and writes outside the project are flagged, not stopped. Not for Codex.
 

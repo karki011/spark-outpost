@@ -138,7 +138,7 @@ test('a finished answer keeps one quiet meta row and no plan or Jev lines', asyn
 
   const column = (await page.locator('.col').boundingBox())!;
   const composer = (await page.locator('.composer').boundingBox())!;
-  expect(column.width).toBeGreaterThan(860);
+  expect(column.width).toBe(760);
   expect(Math.abs(column.width - composer.width)).toBeLessThan(2);
   await shots(page, 'finished-wide');
 

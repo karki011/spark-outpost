@@ -1,3 +1,4 @@
+import { isMcpToolName } from '@spark-outpost/contracts';
 import type { StepTimes } from '../run-projection.ts';
 import {
   spanSeconds,
@@ -7,7 +8,7 @@ import {
   type ToolItem,
 } from './turn-rows.ts';
 
-export type GroupKind = 'run' | 'edit' | 'read' | 'search';
+export type GroupKind = 'run' | 'edit' | 'read' | 'search' | 'tool';
 
 interface Counted {
   kind: GroupKind | 'thought';
@@ -15,6 +16,8 @@ interface Counted {
 }
 
 function stepKind(item: GroupedItem): GroupKind | 'thought' {
+  if (item.kind === 'command' && isMcpToolName(item.command.command)) return 'tool';
+  if (item.kind === 'tool' && item.tone === 'tool') return 'tool';
   if (item.kind === 'command' || item.kind === 'thought') {
     return item.kind === 'command' ? 'run' : 'thought';
   }
@@ -33,7 +36,7 @@ function plural(count: number, one: string, many = `${one}s`): string {
   return `${count} ${count === 1 ? one : many}`;
 }
 
-const ORDER: readonly Counted['kind'][] = ['run', 'edit', 'read', 'search', 'thought'];
+const ORDER: readonly Counted['kind'][] = ['run', 'edit', 'read', 'search', 'tool', 'thought'];
 
 function counts(group: RowGroup): Counted[] {
   const byKind = (kind: Counted['kind']) => group.items.filter((item) => stepKind(item) === kind);
@@ -46,6 +49,7 @@ function counts(group: RowGroup): Counted[] {
 }
 
 function phrase({ kind, count }: Counted): string {
+  if (kind === 'tool') return `used ${plural(count, 'tool')}`;
   if (kind === 'run') return `ran ${plural(count, 'command')}`;
   if (kind === 'edit') return `edited ${plural(count, 'file')}`;
   if (kind === 'read') return `read ${plural(count, 'file')}`;

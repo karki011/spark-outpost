@@ -1,4 +1,6 @@
 import type { SessionUpdate, ToolCallContent } from '@agentclientprotocol/sdk';
+import { isMcpToolName } from '@spark-outpost/contracts';
+import { toolNameOf } from './tool-titles.ts';
 import type { ProviderOutput } from '../../providers/provider.ts';
 import { objectFields } from './object-fields.ts';
 
@@ -134,6 +136,7 @@ export function createCommandTracker(live: boolean): CommandTracker {
       if (update.sessionUpdate !== 'tool_call' && update.sessionUpdate !== 'tool_call_update') {
         return [];
       }
+      if (isMcpToolName(toolNameOf(update) ?? update.title ?? '')) return [];
       const known = open.get(update.toolCallId);
       if (known) return seen(update, known);
       if (update.sessionUpdate !== 'tool_call' || update.kind !== 'execute') return [];

@@ -59,6 +59,7 @@ interface ProfileRow {
   archive_inactive_days: ArchiveInactiveDays;
   terminal_record_like_chat: boolean;
   mac_control: boolean;
+  code_mode: boolean;
 }
 
 export interface ConnectionRow {
@@ -104,7 +105,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
        default_level_notice,
        morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
        heartbeat, wide_window, busy_enter, archive_inactive_days, terminal_record_like_chat,
-       mac_control,
+       mac_control, code_mode,
        to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
@@ -203,6 +204,8 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     archiveInactiveDays: profile.archive_inactive_days,
     terminalRecordLikeChat: profile.terminal_record_like_chat,
     macControl: profile.mac_control,
+    codeMode: profile.code_mode && process.env.SPARK_CODE_MODE !== '0',
+    ...(process.env.SPARK_CODE_MODE === '0' ? { codeModeUnavailable: true } : {}),
   };
   return { profile: result, providers, advisors };
 }
@@ -262,6 +265,7 @@ export async function updateProfile(
        terminal_record_like_chat = COALESCE($26, terminal_record_like_chat),
        mac_control = COALESCE($27, mac_control),
        archive_inactive_days = CASE WHEN $28 THEN $29::integer ELSE archive_inactive_days END,
+       code_mode = COALESCE($30, code_mode),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -294,11 +298,13 @@ export async function updateProfile(
       update.macControl ?? null,
       update.archiveInactiveDays !== undefined,
       update.archiveInactiveDays ?? null,
+      update.codeMode ?? null,
     ],
   );
 }
 
 export interface SparkPreferences extends SparkSessionPrefs {
+  codeMode: boolean;
   instructionsNote: string | null;
 }
 
@@ -316,6 +322,7 @@ export async function sparkPreferences(
     personality: profile.personality,
     agentInstructions: instructions.text,
     instructionsNote: instructions.fileError && instructionsFileNote(instructions.fileError),
+    codeMode: profile.code_mode && process.env.SPARK_CODE_MODE !== '0',
   };
 }
 

@@ -10,13 +10,13 @@ Follow a turn. About 2 minutes.
 
 ## See what's happening
 
-1. Steps fold into summaries.
-2. Open commands for details; failures expand.
+1. Summaries separate commands **passed** from tools **done**.
+2. Code Mode labels discovery and combined reads; command failures expand.
 3. The to-do ticks off, then folds.
 4. Open **Agent TV** under **…**.
-5. Worker blobs show roles and status; **View agents** opens cards in **Work**. Ended turns never show active workers.
+5. Worker blobs show roles/status. **View agents** opens **Work**; ended workers stay inactive.
 6. **Message** opens that chat’s composer; Outposts show handles.
-7. **Ask lead to redirect** drafts a summary in the worker’s owning chat.
+7. **Ask lead to redirect** drafts in the worker’s owning chat.
 
 **⌘⇧Y** jumps to the waiting card.
 

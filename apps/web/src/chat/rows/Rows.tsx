@@ -1,3 +1,4 @@
+import { isMcpToolName } from '@spark-outpost/contracts';
 import './rows.css';
 import { Fragment, use, useId, useState, type ReactNode } from 'react';
 import { CheckIcon, ChevronIcon, PauseIcon, XIcon } from '../../ui/icons.tsx';
@@ -47,9 +48,11 @@ const TONE_ICONS: Record<ToolItem['tone'], RowIconName> = {
   run: 'run',
   web: 'web',
   other: 'other',
+  tool: 'other',
 };
 
 const KIND_ICONS: Record<GroupKind, RowIconName> = {
+  tool: 'other',
   run: 'run',
   edit: 'edit',
   read: 'read',
@@ -198,6 +201,8 @@ function statusWords(group: RowGroup, answers: CommandAnswers) {
     answers.get(item.command.toolCallId ?? '')?.denied === true;
   const all = groupCommands(group);
   const commands = all.filter((item) => !isDenied(item));
+  const tools = commands.filter((item) => isMcpToolName(item.command.command));
+  const shell = commands.filter((item) => !isMcpToolName(item.command.command));
   const deniedFailed = all.filter(
     (item) => isDenied(item) && item.command.status === 'failed',
   ).length;
@@ -206,8 +211,14 @@ function statusWords(group: RowGroup, answers: CommandAnswers) {
     { count: all.length - commands.length, word: 'denied', tone: 'bad', icon: <XIcon /> },
     { count: countOf(commands, 'interrupted'), word: 'interrupted', tone: '', icon: <PauseIcon /> },
     {
-      count: countOf(commands, 'completed'),
+      count: countOf(shell, 'completed'),
       word: 'passed',
+      tone: 'ok',
+      icon: <CheckIcon className="ok" />,
+    },
+    {
+      count: countOf(tools, 'completed'),
+      word: 'done',
       tone: 'ok',
       icon: <CheckIcon className="ok" />,
     },
@@ -261,7 +272,10 @@ function GroupEnd({ group, context }: { group: RowGroup; context: RowContext }) 
 }
 
 function liveTitle(item: LiveItem): [verb: string, name: string] {
-  if (item.kind === 'command') return ['Running', commandTitle(item.command)];
+  if (item.kind === 'command')
+    return isMcpToolName(item.command.command)
+      ? [commandTitle(item.command), '']
+      : ['Running', commandTitle(item.command)];
   if (item.kind === 'thought') return ['Thinking', ''];
   return [item.verb, item.target ?? ''];
 }

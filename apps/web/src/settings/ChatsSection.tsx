@@ -5,6 +5,7 @@ import { CompactionSettings } from '../spark/CompactionSettings.tsx';
 import { LevelSetting } from '../spark/LevelSetting.tsx';
 import { ArchiveInactiveSetting } from './ArchiveInactiveSetting.tsx';
 import { AutoContinueSetting } from './AutoContinueSetting.tsx';
+import { CodeModeSetting } from './CodeModeSetting.tsx';
 import { BusyEnterSetting } from './BusyEnterSetting.tsx';
 import { TerminalRecordSetting } from './TerminalRecordSetting.tsx';
 import { WideWindowSetting } from './WideWindowSetting.tsx';
@@ -29,6 +30,7 @@ export function ChatsSection({ profile }: { profile: Profile }) {
       </section>
       <section className="spark-group" aria-labelledby="chats-sessions">
         <h4 id="chats-sessions">Agent sessions</h4>
+        <CodeModeSetting enabled={profile.codeMode} unavailable={profile.codeModeUnavailable} />
         <AgentInstructionsSetting profile={profile} />
         <TerminalRecordSetting enabled={profile.terminalRecordLikeChat} />
       </section>
