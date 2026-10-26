@@ -25,6 +25,7 @@ async function chatWithHistory(page: Page) {
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Hello there');
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 20_000 });
   return input;

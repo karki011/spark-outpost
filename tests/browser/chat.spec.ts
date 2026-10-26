@@ -301,13 +301,17 @@ test('a failed chat load offers retry without discarding the typed draft', async
   const id = await savedChat(page, 'Recover loading fixture');
   await savedChat(page, 'Other conversation');
   await openChats(page);
-  await page.route(`**/api/conversations/${id}`, (route) =>
-    route.fulfill({
+  await page.route(`**/api/conversations/${id}`, async (route) => {
+    const retryRequested = await page.evaluate(
+      () => document.documentElement.dataset.retryRequested === 'true',
+    );
+    if (retryRequested) return route.continue();
+    return route.fulfill({
       status: 500,
       contentType: 'application/json',
       body: JSON.stringify({ error: 'Temporarily unavailable' }),
-    }),
-  );
+    });
+  });
   await page.locator(`[data-chat="${id}"] .row-open`).click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Keep the recovery draft');
@@ -317,8 +321,13 @@ test('a failed chat load offers retry without discarding the typed draft', async
     path: testInfo.outputPath('loading-recovery.png'),
     animations: 'disabled',
   });
-  await page.unroute(`**/api/conversations/${id}`);
-  await page.getByRole('button', { name: 'Try again', exact: true }).click();
+  const retry = page.getByRole('button', { name: 'Try again', exact: true });
+  await retry.evaluate((button) => {
+    button.addEventListener('click', () => {
+      document.documentElement.dataset.retryRequested = 'true';
+    });
+  });
+  await retry.click();
   await expect(page.locator('.bubble', { hasText: 'Recover loading fixture' })).toBeVisible();
   await expect(input).toHaveValue('Keep the recovery draft');
 });

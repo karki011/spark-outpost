@@ -13,6 +13,7 @@ async function chatWithReply(page: Page): Promise<Locator> {
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill(PLAN);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
   const reply = page.locator('.md', { hasText: 'You wrote:' }).first();
   await expect(reply).toBeVisible({ timeout: 15_000 });

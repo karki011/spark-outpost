@@ -24,6 +24,7 @@ async function replyWithLinks(page: Page) {
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByLabel('Message');
   await input.fill(`See [the site](${SITE}), [the docs](${DOCS}) and [mail](mailto:a@example.com)`);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
   const reply = page.locator('.msg.ai .md').last();
   await expect(reply.getByRole('link', { name: 'the site' })).toBeVisible({ timeout: 15_000 });
