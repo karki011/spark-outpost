@@ -9,7 +9,6 @@ import {
   useState,
   type KeyboardEvent,
 } from 'react';
-import { restoreFailedDraft } from '../chat/composer/use-chat-draft.ts';
 import { composerRows } from '../chat/composer/ComposerShell.tsx';
 import { FormatToggle } from '../chat/composer/markdown/FormatToggle.tsx';
 import { MarkdownInput } from '../chat/composer/markdown/MarkdownInput.tsx';
@@ -35,7 +34,7 @@ interface OutpostComposerProps {
   paused: boolean;
   fill?: ComposerFill | null;
   onCancelAnswer: () => void;
-  onSend: (target: ComposerTarget, text: string) => Promise<unknown>;
+  onSend: (target: ComposerTarget, text: string, id: string) => Promise<unknown>;
 }
 
 export interface ComposerFill {
@@ -72,6 +71,12 @@ export function OutpostComposer({
   const note = destinationId === 'note';
   const [skipped, setSkipped] = useState<string[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [failedSend, setFailedSend] = useState<{
+    text: string;
+    target: ComposerTarget;
+    deliver: () => Promise<unknown>;
+  } | null>(null);
   const [filled, setFilled] = useState(fill?.id ?? null);
   const [formatting, setFormatting] = useState(false);
   const [noteReceipt, setNoteReceipt] = useState<{ text: string; pending: boolean } | null>(null);
@@ -134,25 +139,31 @@ export function OutpostComposer({
     textareaRef.current?.focus();
   };
 
-  const send = async () => {
-    if (!target.ready) return;
-    const sent = text;
-    const receipt = target.action === 'note' ? { text: sent, pending: true } : null;
+  const deliver = async (request: NonNullable<typeof failedSend>) => {
+    const receipt = request.target.action === 'note' ? { text: request.text, pending: true } : null;
+    setSending(true);
     setNoteReceipt(receipt);
-    setTyped(NOTHING_TYPED);
-    setSkipped([]);
     setProblem(null);
     try {
-      await onSend(target, sent);
+      await request.deliver();
+      setFailedSend(null);
       setNoteReceipt((now) => (now && now === receipt ? { ...now, pending: false } : now));
     } catch (error) {
       setNoteReceipt((now) => (now === receipt ? null : now));
       setProblem(error instanceof Error ? error.message : 'That could not be sent.');
-      setTyped((now) => ({
-        text: restoreFailedDraft(now.text, sent),
-        caret: now.text ? now.caret : sent.length,
-      }));
+      setFailedSend(request);
+    } finally {
+      setSending(false);
     }
+  };
+
+  const send = async () => {
+    if (!target.ready || sending || failedSend) return;
+    const sent = text;
+    const id = crypto.randomUUID();
+    setTyped(NOTHING_TYPED);
+    setSkipped([]);
+    await deliver({ text: sent, target, deliver: () => onSend(target, sent, id) });
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -193,6 +204,36 @@ export function OutpostComposer({
         <p className="composer-error" role="alert">
           {problem}
         </p>
+      )}
+      {failedSend && (
+        <div className="op-note-receipt">
+          <span>
+            Unsent{' '}
+            {failedSend.target.action === 'note'
+              ? 'note'
+              : `to @${failedSend.target.to.join(', @')}`}
+            : {failedSend.text.slice(0, 120)}
+          </span>
+          <button
+            type="button"
+            className="btn ghost sm"
+            disabled={sending}
+            onClick={() => void deliver(failedSend)}
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            className="btn ghost sm"
+            disabled={sending}
+            onClick={() => {
+              setFailedSend(null);
+              setProblem(null);
+            }}
+          >
+            Discard unsent message
+          </button>
+        </div>
       )}
       <div className="composer op-composer">
         {picking && (
@@ -298,7 +339,7 @@ export function OutpostComposer({
           <button
             type="button"
             className="btn primary sm op-send"
-            disabled={!target.ready}
+            disabled={!target.ready || sending || failedSend !== null}
             onClick={() => void send()}
           >
             {target.label}

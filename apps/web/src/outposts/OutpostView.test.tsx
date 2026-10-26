@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { api, queryKeys } from '../api/client.ts';
 import { phoneKeys } from '../phone/phone-api.ts';
@@ -92,6 +92,52 @@ describe('OutpostView', () => {
     expect(calls).toEqual([]);
     await waitFor(() => expect(screen.queryByText('Answering')).toBeNull());
   });
+
+  it.each([false, true])(
+    'keeps a newer answer target when an earlier answer finishes, retry=%s',
+    async (retry) => {
+      let finish!: () => void;
+      const sendMessage = vi.spyOn(api, 'sendMessage');
+      if (retry) sendMessage.mockRejectedValueOnce(new Error('Offline'));
+      sendMessage.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = () => resolve(SENT);
+          }),
+      );
+      show(
+        detail([
+          post(1, { state: 'needs_you', reason: 'Theme?' }),
+          post(2, {
+            state: 'needs_you',
+            reason: 'Layout?',
+            toConversationId: FE_CHAT,
+            toHandle: 'fe',
+          }),
+        ]),
+      );
+      view();
+      fireEvent.click(screen.getByRole('button', { name: 'Answer @api' }));
+      fireEvent.change(screen.getByRole('combobox', { name: 'Answer @api' }), {
+        target: { value: 'Light.' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Send answer' }));
+      if (retry) await screen.findByRole('button', { name: 'Retry' });
+      fireEvent.click(screen.getByRole('button', { name: 'Answer @fe' }));
+      fireEvent.change(screen.getByRole('combobox', { name: 'Answer @fe' }), {
+        target: { value: 'Keep the newer draft' },
+      });
+      if (retry) fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      await waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(retry ? 2 : 1));
+      await act(async () => finish());
+      expect(screen.getByText('Answering').textContent).toBe('Answering @fe');
+      expect(screen.getByRole<HTMLTextAreaElement>('combobox', { name: 'Answer @fe' }).value).toBe(
+        'Keep the newer draft',
+      );
+      expect(sendMessage.mock.calls.every(([id]) => id === API_CHAT)).toBe(true);
+      if (retry) expect(sendMessage.mock.calls[1]?.[1]).toBe(sendMessage.mock.calls[0]?.[1]);
+    },
+  );
 
   it('offers only Open in chat while the chat waits on an approval card', () => {
     client.setQueryData(queryKeys.conversations, [

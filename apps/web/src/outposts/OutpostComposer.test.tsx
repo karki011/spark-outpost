@@ -11,7 +11,7 @@ const MEMBERS = [
 ];
 const ANSWERING: Answering = { postId: postId(1), conversationId: FE_CHAT, handle: 'fe' };
 
-type Send = (target: ComposerTarget, text: string) => Promise<unknown>;
+type Send = (target: ComposerTarget, text: string, id: string) => Promise<unknown>;
 
 class QuietResizeObserver {
   observe(): void {}
@@ -97,6 +97,7 @@ describe('OutpostComposer', () => {
       toConversationId: API_CHAT,
       body: 'where are we',
     });
+    await act(async () => {});
     choose('@fe');
     type('next step');
     fireEvent.click(sendButton());
@@ -276,30 +277,69 @@ describe('OutpostComposer', () => {
     expect(box().value).toBe('');
   });
 
-  it('puts the text back and says why when sending fails', async () => {
-    const onSend = vi.fn<Send>(() => Promise.reject(new Error('The outpost was deleted.')));
-    render(composer({ onSend }));
-    type('a note');
-    fireEvent.click(sendButton());
-    expect((await screen.findByRole('alert')).textContent).toBe('The outpost was deleted.');
-    expect(box().value).toBe('a note');
-  });
+  it.each([false, true])(
+    'retries the original agent after routing changes, newer draft=%s',
+    async (newer) => {
+      let reject!: (error: Error) => void;
+      const onSend = vi
+        .fn<Send>()
+        .mockImplementationOnce(
+          () =>
+            new Promise((_, fail) => {
+              reject = fail;
+            }),
+        )
+        .mockResolvedValue(undefined);
+      const props = { answering: null, paused: false, onCancelAnswer: () => undefined, onSend };
+      const { rerender } = render(
+        <OutpostComposer {...props} members={MEMBERS} leadConversationId={FE_CHAT} />,
+      );
+      type('original request');
+      fireEvent.click(sendButton());
+      choose('Post note');
+      if (newer) type('new note draft');
+      fireEvent.keyDown(box(), { key: 'Enter' });
+      expect(onSend).toHaveBeenCalledTimes(1);
+      rerender(<OutpostComposer {...props} members={MEMBERS} leadConversationId={API_CHAT} />);
+      await act(async () => reject(new Error('Offline')));
+      expect(box().value).toBe(newer ? 'new note draft' : '');
+      expect(screen.getByText('Unsent to @fe: original request')).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull());
+      expect(onSend.mock.calls[1]).toEqual(onSend.mock.calls[0]);
+      expect(onSend.mock.calls[1]?.[2]).toEqual(expect.any(String));
+      expect(onSend.mock.calls[1]?.[0]).toMatchObject({ toConversationId: FE_CHAT });
+      expect(box().value).toBe(newer ? 'new note draft' : '');
+      expect(screen.getByRole('button', { name: 'Message destination' }).textContent).toContain(
+        'Post note',
+      );
+    },
+  );
 
-  it('keeps newer typing when an earlier send fails', async () => {
-    let reject!: (error: Error) => void;
-    render(
-      composer({
-        onSend: () =>
-          new Promise((_, fail) => {
-            reject = fail;
-          }),
-      }),
-    );
-    type('first note');
+  it('keeps a failed note separate from an agent draft and allows explicit discard', async () => {
+    const onSend = vi.fn<Send>().mockRejectedValue(new Error('Offline'));
+    render(composer({ onSend }));
+    choose('Post note');
+    type('@all reference only');
     fireEvent.click(sendButton());
-    type('next note');
-    await act(async () => reject(new Error('Offline')));
-    expect(box().value).toBe('next note\n\nfirst note');
+    choose('@api');
+    type('new request');
+    await screen.findByRole('alert');
+    expect(box().value).toBe('new request');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(onSend).toHaveBeenCalledTimes(2));
+    expect(onSend.mock.calls[1]).toEqual(onSend.mock.calls[0]);
+    expect(onSend.mock.calls[1]?.[2]).toEqual(expect.any(String));
+    expect(onSend.mock.calls[1]?.[0]).toMatchObject({ action: 'note', to: [] });
+    await waitFor(() =>
+      expect(
+        screen.getByRole<HTMLButtonElement>('button', { name: 'Discard unsent message' }).disabled,
+      ).toBe(false),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Discard unsent message' }));
+    expect(box().value).toBe('new request');
+    expect(sendButton().disabled).toBe(false);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('offers member handles while one is typed at the start and fills in the pick', () => {

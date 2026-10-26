@@ -158,14 +158,18 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
     layout.showConversation();
   };
 
-  const send = async (target: ComposerTarget, text: string) => {
+  const send = async (target: ComposerTarget, text: string, messageId: string) => {
     if (target.action === 'answer' && answering) {
-      await answer.mutateAsync({ conversationId: answering.conversationId, text: target.body });
-      setAnsweringId(null);
+      await answer.mutateAsync({
+        id: messageId,
+        conversationId: answering.conversationId,
+        text: target.body,
+      });
+      setAnsweringId((current) => (current === answering.postId ? null : current));
       return;
     }
     await post.mutateAsync({
-      id: crypto.randomUUID(),
+      id: messageId,
       text,
       ...(target.toConversationId
         ? { toConversationId: target.toConversationId }

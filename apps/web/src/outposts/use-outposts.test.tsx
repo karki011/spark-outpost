@@ -210,12 +210,14 @@ describe('the other actions', () => {
 
   it('answers a Needs you as an ordinary message to that chat', async () => {
     const { result } = renderHook(() => useAnswer(OUTPOST_ID), { wrapper });
-    act(() => result.current.mutate({ conversationId: FE_CHAT, text: 'Light theme.' }));
+    act(() =>
+      result.current.mutate({ id: postId(7), conversationId: FE_CHAT, text: 'Light theme.' }),
+    );
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]).toMatchObject({
       method: 'POST',
       path: `/api/conversations/${FE_CHAT}/messages`,
-      body: { content: 'Light theme.', source: 'ui' },
+      body: { id: postId(7), content: 'Light theme.', source: 'ui' },
     });
   });
 

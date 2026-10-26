@@ -278,3 +278,54 @@ test('ordinary messages reach the displayed agent without adding a mention', asy
     sent[0]!.postDataJSON().toConversationId,
   );
 });
+
+test('retry keeps the original recipient and preserves a newer draft and destination', async ({
+  page,
+}) => {
+  await seeded(page);
+  await openOutpost(page);
+  let release: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let attempts = 0;
+  const sent = requestsTo(page, POSTS_URL, 'POST');
+  await page.route(POSTS_URL, async (route) => {
+    if (route.request().method() !== 'POST' || ++attempts > 1) return route.continue();
+    await held;
+    return route.fulfill({ status: 400, json: { error: 'Could not send. Try again.' } });
+  });
+  await box(page).fill('Summarize the frontend changes');
+  await sendButton(page).click();
+  await expect.poll(() => sent.length).toBe(1);
+  await box(page).fill('New API draft');
+  await page.getByRole('button', { name: 'Message destination' }).click();
+  await page.getByRole('menuitemradio', { name: '@api', exact: true }).click();
+  release();
+  const retry = page.getByRole('button', { name: 'Retry', exact: true });
+  await expect(retry).toBeVisible();
+  await expect(page.locator('.op-note-receipt')).toContainText(
+    'Unsent to @fe: Summarize the frontend changes',
+  );
+  await expect(sendButton(page)).toBeDisabled();
+  await inBothThemes(page, 'retry-original-message', async () => {
+    await expect(retry).toBeVisible();
+    expect(await page.locator('body').evaluate((body) => body.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  });
+  await retry.click();
+  await expect(retry).toBeHidden();
+  expect(sent[1]!.postDataJSON()).toMatchObject({
+    text: 'Summarize the frontend changes',
+    toConversationId: sent[0]!.postDataJSON().toConversationId,
+  });
+  await expect(box(page)).toHaveValue('New API draft');
+  await expect(page.locator('.op-hint')).toContainText('To @api');
+  await sendButton(page).click();
+  await expect.poll(() => sent.length).toBe(3);
+  expect(sent[2]!.postDataJSON()).toMatchObject({ text: 'New API draft' });
+  expect(sent[2]!.postDataJSON().toConversationId).not.toBe(
+    sent[0]!.postDataJSON().toConversationId,
+  );
+});

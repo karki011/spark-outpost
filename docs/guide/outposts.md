@@ -20,10 +20,10 @@ Or use **Add to outpost** in a chat's row menu. A chat joins one outpost; Termin
 ## Send a request
 
 1. Type and **Send message** to the displayed lead. Choose another agent, or use `@api`, several handles or `@all`. **Asks:** lists recipients.
-2. Each chat gets a card with its [state](statuses-and-limits.md#outpost-requests), branch and pull request, plus **Answer**, **Review PR**, **Open** or **Stop…** as fits. Agent requests say **not from you**.
+2. Each chat shows its [state](statuses-and-limits.md#outpost-requests), branch and pull request, plus **Answer**, **Review PR**, **Open** or **Stop…** as fits. Agent requests say **not from you**.
 3. **Open** shows that chat's thread; typing there **Sends to @api as you**.
 
-Choose **Post note** explicitly to save without a reply. Unknown handles or removing all recipients block sending.
+**Post note** saves without a reply. Unknown or missing recipients block sending. Failed messages **Retry** their original destination.
 
 | Select                    | To                                                        |
 | ------------------------- | --------------------------------------------------------- |

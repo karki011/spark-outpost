@@ -14,6 +14,7 @@ import { outpostKeys, outpostsApi } from './outposts-api.ts';
 import type { SheetChanges } from './sheet-draft.ts';
 
 interface NewAnswer {
+  id: string;
   conversationId: string;
   text: string;
 }
@@ -106,8 +107,7 @@ export function usePost(id: string) {
 export function useAnswer(id: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (input: NewAnswer) =>
-      api.sendMessage(input.conversationId, crypto.randomUUID(), input.text),
+    mutationFn: (input: NewAnswer) => api.sendMessage(input.conversationId, input.id, input.text),
     onSettled: (_result, _error, input) =>
       Promise.all([
         client.invalidateQueries({ queryKey: outpostKeys.detail(id) }),
