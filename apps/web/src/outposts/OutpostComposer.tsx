@@ -18,7 +18,13 @@ import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { XIcon } from '../ui/icons.tsx';
 import { AsksLine } from './AsksLine.tsx';
 import { HandlePicker, handleOptionId } from './HandlePicker.tsx';
-import { asked, composerTarget, type Answering, type ComposerTarget } from './composer-target.ts';
+import {
+  NOBODY_HINT,
+  asked,
+  composerTarget,
+  type Answering,
+  type ComposerTarget,
+} from './composer-target.ts';
 import type { MemberView } from './member-view.ts';
 import { useHandlePicker } from './use-handle-picker.ts';
 
@@ -284,12 +290,11 @@ export function OutpostComposer({
                 : target.hint}
             </span>
           )}
-          {target.hint === 'No recipients selected. Restore a recipient or choose Post note.' &&
-            activeMembers.length > 0 && (
-              <button type="button" className="btn ghost sm" onClick={() => askAll(text)}>
-                Ask all
-              </button>
-            )}
+          {target.hint === NOBODY_HINT && activeMembers.length > 0 && (
+            <button type="button" className="btn ghost sm" onClick={() => askAll(text)}>
+              Ask all
+            </button>
+          )}
           <button
             type="button"
             className="btn primary sm op-send"
