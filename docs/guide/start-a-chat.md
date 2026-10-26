@@ -19,6 +19,8 @@ Or type in **Start a new chat** on **Home**.
 
 Choose **Terminal** for native Claude Code or Codex: [Open a terminal](terminals.md).
 
+While loading, drafts stay editable; sending waits. **Try again** recovers failed loads.
+
 ## Link a project
 
 Without one, the agent works in a private folder; files show under its reply.
@@ -41,23 +43,21 @@ To unlink, select **No project folder** in the menu.
 | **/**                             | Run a command: `/plan`, `/review`, `/model`, `/effort`, `/mcp`, `/fresh` |
 | **+** (**Add files and context**) | **Upload a file**, **Add a screenshot**, **Add from repo**, another chat |
 
-Or paste or drag files into the box.
-
 Markdown styles as you type. Select text or open **+ → Formatting**; **⌘B**, **⌘I**, **⌘⇧X** work too. In code blocks, **Enter** adds a line; **⌘Enter** sends. Branch and agent setup live in **Chat details** (**…**).
 
 ## Share a chat with another chat
 
 Paste a link from **Chat actions → Copy chat link** into another chat; the agent can [read it](spark-tools.md), never change it.
 
-For several chats in one thread, use an [outpost](outposts.md).
+Group chats in an [outpost](outposts.md).
 
 > **Tip:** Select **Talk to…** or type `@` to work with a [Spark](sparks.md).
 
 ## Jump between sessions
 
 1. Press **⌘⇧K**, or select **Sessions** above the chat list.
-2. Those that need you come first, then working ones; Terminal sessions show steps and cost.
-3. Type to filter by title, project, agent, state or message text.
-4. Press **↑** or **↓**, then **Enter**. A message-text match opens at that message. **Esc** closes.
+2. Needs-you chats come first; Terminal sessions show steps and cost.
+3. Filter by title, project, agent, state or message.
+4. Press **↑** or **↓**, then **Enter**. Message matches open there. **Esc** closes.
 
 **Next:** [Pick the model, effort and mode](agent-mode.md)

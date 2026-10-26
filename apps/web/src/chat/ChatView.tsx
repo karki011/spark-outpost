@@ -5,6 +5,7 @@ import {
   DEFAULT_WIDE_WINDOW,
   EMPTY_CONVERSATION_USAGE,
   type AgentCommand,
+  type ConversationSummary,
   type ChangeEntry,
   type Run,
   type TaskOverview,
@@ -13,7 +14,6 @@ import { useMemo, useRef, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
-import { isConnectionLoss } from '../app/connection/connection-failure.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { DiffChip } from '../diff/DiffChip.tsx';
 import { DiffDrawerHost, useDiffDrawer } from '../diff/DiffDrawerHost.tsx';
@@ -70,7 +70,7 @@ import { activeRun, latestReplyId } from './turns.ts';
 import { useStop } from './use-stop.ts';
 import { useEscapeStop } from './use-escape-stop.ts';
 import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
-import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
+import { ChatLoading, ChatRefreshError } from './ChatLoading.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { sessionView } from './session-view.ts';
 import { NativeTerminalWorkspace } from '../terminal/NativeTerminalWorkspace.tsx';
@@ -140,7 +140,10 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const waitingOn = running ? (detail.data?.conversation.latestRun?.waitingOn ?? 0) : 0;
   usePreviewDockTab(conversationId);
   const queue = useChatQueue(conversationId, detail.data?.queue);
-  const title = detail.data?.conversation.title ?? '';
+  const summary = queryClient
+    .getQueryData<ConversationSummary[]>(queryKeys.conversations)
+    ?.find((chat) => chat.id === conversationId);
+  const title = detail.data?.conversation.title ?? summary?.title ?? '';
   const repos = useLinkedProjects(detail.data?.conversation.projectIds ?? NO_REPOS);
   const settings = detail.data?.settings ?? null;
   const autonomyLevel =
@@ -305,11 +308,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             </div>
           </header>
           <ChatTicketBar chat={tickets} />
-          {detail.isError && !isConnectionLoss(detail.error) && (
-            <p className="error-line" role="alert">
-              {detail.error.message}
-            </p>
-          )}
+          <ChatRefreshError error={detail.data && detail.isError ? detail.error : null} />
           {terminalSession && detail.data ? (
             <NativeTerminalWorkspace
               chat={detail.data.conversation}
@@ -369,11 +368,11 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               </RailContext>
             </PanelOpenContext>
           ) : (
-            <div className="thread-wrap" aria-busy={detail.isPending}>
-              {detail.isPending && (
-                <LoadingBlob size="lg" className="thread-loading" line="Opening this chat…" />
-              )}
-            </div>
+            <ChatLoading
+              fetching={detail.isFetching}
+              failed={detail.isError}
+              onRetry={() => void detail.refetch()}
+            />
           )}
           {assistantChat && <AssistantReadOnly />}
           {!terminalSession && !terminalDraft && !assistantChat && (
@@ -398,6 +397,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
                 busy={running !== null}
                 sending={sends.sending}
+                ready={Boolean(detail.data)}
                 error={stop.error ?? (queue.items.length === 0 ? queue.error : null)}
                 notice={sendNowStatus({
                   memberMessages: detail.data?.memberMessages,

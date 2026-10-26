@@ -12,6 +12,7 @@ import { castAgents, isSparkLed, tvCast } from '../../crew/conversation-crew.ts'
 import { isBusy, modelLabel, roleLabel, type CrewAgent } from '../../crew/crew-model.ts';
 import { crewAgents } from '../../crew/crew-projection.ts';
 import { turnState } from '../../crew/tv-list.ts';
+import { teamAgents } from '../../crew/worker-identity.ts';
 import { countLabel } from '../../ui/count-label.ts';
 import { formatTokens } from '../composer/model-options.ts';
 import { filesLabel, formatTotal } from '../changes/change-rules.ts';
@@ -210,7 +211,7 @@ export function railCrew(detail: ConversationDetail, running: boolean): RailCrew
   if (stored && !isSparkLed(stored)) {
     return { stage: [], list: finishedCrew(stored, crewAgents(stored, detail.activity)) };
   }
-  const members = castAgents(cast);
+  const members = teamAgents(castAgents(cast), cast.subagents);
   if (running && !isTerminalRunStatus(cast.run.status)) return { stage: members, list: [] };
   return { stage: [], list: members };
 }

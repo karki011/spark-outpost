@@ -39,7 +39,7 @@ function setup() {
 }
 
 function box(): HTMLTextAreaElement {
-  return screen.getByRole<HTMLTextAreaElement>('combobox');
+  return screen.getByRole<HTMLTextAreaElement>('combobox', { name: 'Message the outpost' });
 }
 
 function type(text: string, start = text.length, end = start): void {

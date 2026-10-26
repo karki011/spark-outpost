@@ -368,6 +368,28 @@ describe('a post written by a member chat', () => {
     expect(post?.requestHash).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  it('keeps direct-target agent requests agent-authored and applies the same sending restrictions', async () => {
+    const [stored] = await ask('where are we', { toConversationId: api });
+    expect(stored).toMatchObject({
+      kind: 'request',
+      body: 'where are we',
+      fromUser: false,
+      fromConversationId: asker.conversationId,
+      toConversationId: api,
+    });
+    author = { ...author, startedByRequest: true } as RequestAuthor;
+    expect(await refusal(ask('follow up', { toConversationId: api }))).toEqual({
+      status: 400,
+      message: REQUEST_STARTED_TURN,
+    });
+    author = { ...author, startedByRequest: false } as RequestAuthor;
+    await setPaused(t.db, t.workspaceId, outpostId, true);
+    expect(await refusal(ask('follow up', { toConversationId: api }))).toEqual({
+      status: 400,
+      message: OUTPOST_PAUSED,
+    });
+  });
+
   it('stores the same request from the same turn once, and a different one again', async () => {
     const [first] = await ask();
     const [again] = await ask();

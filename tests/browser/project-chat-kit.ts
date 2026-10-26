@@ -92,6 +92,7 @@ export async function projectChat(page: Page, repo: ChatRepo, level: Level): Pro
 export async function send(page: Page, text: string): Promise<void> {
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill(text);
+  await expect(page.getByRole('button', { name: /^(Send|Send now|Queue message)$/ })).toBeEnabled();
   await input.press('Enter');
 }
 

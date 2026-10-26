@@ -1,5 +1,5 @@
 import type { AppEvent } from '@spark-outpost/contracts';
-import type { PeerAgent } from '../outposts/ports.ts';
+import type { OutboundRequest, PeerAgent } from '../outposts/ports.ts';
 import type { ParentWorkReady } from '../outposts/stacked-parent-work.ts';
 import { queueWrapUps } from '../outposts/story-wrap-ups.ts';
 import type { Db } from '../persistence/db.ts';
@@ -30,22 +30,33 @@ async function attempt(failure: string, step: () => Promise<unknown>): Promise<v
 }
 
 export async function dispatchUnsent(db: Db, peer: PeerAgent): Promise<number> {
-  let sent = 0;
+  const destinations = new Map<string, OutboundRequest[]>();
   for (const post of await unsentRequests(db)) {
     if (post.toConversationId === null) continue;
-    try {
-      await peer.send({
-        postId: post.id,
-        outpostId: post.outpostId,
-        toConversationId: post.toConversationId,
-        body: post.body,
-      });
-      sent += 1;
-    } catch (error) {
-      console.error(`Outpost request ${post.id} was not sent (${errorName(error)}).`);
-    }
+    const requests = destinations.get(post.toConversationId) ?? [];
+    requests.push({
+      postId: post.id,
+      outpostId: post.outpostId,
+      toConversationId: post.toConversationId,
+      body: post.body,
+    });
+    destinations.set(post.toConversationId, requests);
   }
-  return sent;
+  const counts = await Promise.all(
+    [...destinations.values()].map(async (requests) => {
+      let sent = 0;
+      for (const request of requests) {
+        try {
+          await peer.send(request);
+          sent += 1;
+        } catch (error) {
+          console.error(`Outpost request ${request.postId} was not sent (${errorName(error)}).`);
+        }
+      }
+      return sent;
+    }),
+  );
+  return counts.reduce((total, sent) => total + sent, 0);
 }
 
 export function startDispatcher(deps: DispatchDeps): Dispatcher {

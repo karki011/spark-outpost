@@ -20,7 +20,7 @@ import { OverviewToggle } from './OverviewToggle.tsx';
 import { PostList } from './PostList.tsx';
 import { SuggestedThreads } from './SuggestedThreads.tsx';
 import { ThreadPane } from './ThreadPane.tsx';
-import type { Answering, ComposerTarget } from './composer-target.ts';
+import { uniqueLead, type Answering, type ComposerTarget } from './composer-target.ts';
 import { chatActivity } from './chat-activity.ts';
 import { chatsOnApproval, chatsOnQuestion, memberViews } from './member-view.ts';
 import { outpostPulls } from './outpost-pulls.ts';
@@ -158,13 +158,23 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
     layout.showConversation();
   };
 
-  const send = async (target: ComposerTarget, text: string) => {
+  const send = async (target: ComposerTarget, text: string, messageId: string) => {
     if (target.action === 'answer' && answering) {
-      await answer.mutateAsync({ conversationId: answering.conversationId, text: target.body });
-      setAnsweringId(null);
+      await answer.mutateAsync({
+        id: messageId,
+        conversationId: answering.conversationId,
+        text: target.body,
+      });
+      setAnsweringId((current) => (current === answering.postId ? null : current));
       return;
     }
-    await post.mutateAsync({ id: crypto.randomUUID(), text, to: target.to });
+    await post.mutateAsync({
+      id: messageId,
+      text,
+      ...(target.toConversationId
+        ? { toConversationId: target.toConversationId }
+        : { to: target.to }),
+    });
   };
 
   const saveEdit = async (form: SheetForm) => {
@@ -194,7 +204,7 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
     ) : (
       <div className="empty op-empty">
         <h2>Nothing here yet</h2>
-        <p>Use @ and a handle anywhere to ask a chat for work. Anything else is a note.</p>
+        <p>Message the lead to get started. Use @ to ask another agent, or choose Post note.</p>
       </div>
     );
 
@@ -218,6 +228,7 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
       />
       <OutpostComposer
         members={members}
+        leadConversationId={uniqueLead(members, stories)}
         answering={answering}
         paused={paused}
         fill={fill}

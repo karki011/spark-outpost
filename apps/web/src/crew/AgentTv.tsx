@@ -1,5 +1,5 @@
 import './agent-tv.css';
-import { stageWorker } from './worker-identity.ts';
+import { teamAgents } from './worker-identity.ts';
 import './agent-tv-stage.css';
 import 'blobatar/gaze.css';
 import {
@@ -118,11 +118,7 @@ export function AgentTv({
   onRedirect,
 }: AgentTvProps) {
   const { position, size, watch, muted, view, cleared } = useAgentTv();
-  const stageMembers = useMemo(
-    () =>
-      members[0] ? [...members, ...subagents.map((row) => stageWorker(row, members[0]!))] : members,
-    [members, subagents],
-  );
+  const stageMembers = useMemo(() => teamAgents(members, subagents), [members, subagents]);
   const panel = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const reduced = useReducedMotion();

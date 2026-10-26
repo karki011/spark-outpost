@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_CONVERSATION_USAGE, type ConversationDetail } from '@spark-outpost/contracts';
+import {
+  EMPTY_CONVERSATION_USAGE,
+  emptySubagentRecord,
+  type ConversationDetail,
+} from '@spark-outpost/contracts';
 import { crewAgents } from '../../crew/crew-projection.ts';
 import { member, orchestration } from '../../crew/test-orchestration.ts';
 import { tvCrew } from '../../crew/conversation-crew.ts';
@@ -221,6 +225,50 @@ describe('the crew the rail shows', () => {
     const view = railCrew(chat('running'), true);
     expect(names(view.stage)).toEqual(['Claude']);
     expect(view.list).toEqual([]);
+  });
+
+  it('shows native workers with the lead while running and retains their outcomes when finished', () => {
+    const detail = chat('running');
+    detail.subagents = {
+      [RUN_ID]: [
+        {
+          ...emptySubagentRecord,
+          id: 'builder',
+          name: 'Builder',
+          task: 'Build UI',
+          parentId: null,
+          state: 'working',
+          step: 'Editing',
+          startedAt: 1,
+          endedAt: null,
+        },
+        {
+          ...emptySubagentRecord,
+          id: 'reviewer',
+          name: 'Reviewer',
+          task: 'Review UI',
+          parentId: null,
+          state: 'done',
+          step: null,
+          startedAt: 1,
+          endedAt: 2,
+        },
+      ],
+    };
+    const live = railCrew(detail, true);
+    expect(live.stage.map((agent) => [agent.name, agent.state])).toEqual([
+      ['Claude', 'thinking'],
+      ['Builder', 'working'],
+      ['Reviewer', 'done'],
+    ]);
+    expect(live.list).toEqual([]);
+    const finished = railCrew({ ...detail, runs: [run({ status: 'succeeded' })] }, false);
+    expect(finished.stage).toEqual([]);
+    expect(finished.list.map((agent) => [agent.name, agent.state])).toEqual([
+      ['Claude', 'done'],
+      ['Builder', 'inactive'],
+      ['Reviewer', 'done'],
+    ]);
   });
 
   it('keeps the rows of a stored crew turn', () => {

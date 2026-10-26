@@ -1,4 +1,4 @@
-import { memo, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
+import { memo, useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
 import { motion } from 'motion/react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -34,6 +34,7 @@ interface ChatRowProps {
   faceless?: boolean;
   relation?: string | null;
   onOpen: (id: string) => void;
+  onPrepare?: (id: string) => void;
   onMenu: (id: string, element: HTMLElement, point: { x: number; y: number } | null) => void;
   onRename: (chat: ConversationSummary, title: string | null) => void;
   onRestore: (chat: ConversationSummary) => void;
@@ -163,6 +164,18 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
     chat.pinnedAt ? 'pinned' : '',
   ].filter(Boolean);
   const pointerListeners = pointerStart(listeners, draggable);
+  const prepareTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelPrepare = () => {
+    if (prepareTimer.current !== null) clearTimeout(prepareTimer.current);
+    prepareTimer.current = null;
+  };
+  const prepare = () => {
+    cancelPrepare();
+    if (!selected && !renaming && !isDragging && props.onPrepare) {
+      prepareTimer.current = setTimeout(() => props.onPrepare?.(chat.id), 150);
+    }
+  };
+  useEffect(() => cancelPrepare, []);
 
   const openMenuAt = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
@@ -177,9 +190,15 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
     'data-chat': chat.id,
     onContextMenu: renaming ? undefined : openMenuAt,
     onPointerEnter: (event: PointerEvent<HTMLElement>) => {
-      if (event.pointerType === 'mouse') marquee.start();
+      if (event.pointerType === 'mouse') {
+        marquee.start();
+        prepare();
+      }
     },
-    onPointerLeave: marquee.stop,
+    onPointerLeave: () => {
+      marquee.stop();
+      cancelPrepare();
+    },
   };
   const terminal = chat.sessionType === 'terminal';
   const autoArchived =
@@ -219,9 +238,15 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
           title={tooltip.join(' · ')}
           onClick={() => onOpen(chat.id)}
           onFocus={(event) => {
-            if (event.currentTarget.matches(':focus-visible')) marquee.start();
+            if (event.currentTarget.matches(':focus-visible')) {
+              marquee.start();
+              prepare();
+            }
           }}
-          onBlur={marquee.stop}
+          onBlur={() => {
+            marquee.stop();
+            cancelPrepare();
+          }}
           {...pointerListeners}
         >
           {!faceless && <span className="st">{face}</span>}

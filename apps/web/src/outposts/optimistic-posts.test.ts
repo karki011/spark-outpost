@@ -8,6 +8,28 @@ function ids(): () => string {
 }
 
 describe('optimisticPosts', () => {
+  it('draws a direct request without requiring or interpreting a handle', () => {
+    const [drawn] = optimisticPosts(
+      detail(),
+      { id: postId(7), text: 'where are we', toConversationId: FE_CHAT },
+      'now',
+    );
+    expect(drawn).toMatchObject({
+      kind: 'request',
+      body: 'where are we',
+      toHandle: 'fe',
+      toConversationId: FE_CHAT,
+      state: 'sent',
+    });
+    expect(
+      optimisticPosts(
+        detail(),
+        { id: postId(8), text: 'where are we', toConversationId: 'gone' },
+        'now',
+      ),
+    ).toEqual([]);
+  });
+
   it('draws a request to a member as Sent before the server has it', () => {
     const drawn = optimisticPosts(detail(), { id: postId(7), text: '@api add the filter' }, 'now');
     expect(drawn).toHaveLength(1);

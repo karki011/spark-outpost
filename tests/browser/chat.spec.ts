@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
@@ -236,4 +237,97 @@ test('the composer picks a model and effort per chat and shows context use', asy
   await expect(repo).toContainText('Add a repo first');
   await repo.click();
   await expect(page.getByRole('dialog', { name: 'Project folders' })).toBeVisible();
+});
+
+async function savedChat(page: Page, title: string) {
+  const id = randomUUID();
+  const created = await page.request.post('/api/conversations', { data: { id } });
+  expect(created.status()).toBe(201);
+  const sent = await page.request.post(`/api/conversations/${id}/messages`, {
+    data: { id: randomUUID(), content: title, attachmentIds: [], annotations: [], source: 'ui' },
+  });
+  expect(sent.ok()).toBe(true);
+  return id;
+}
+
+test('opening a chat reuses its hover request and keeps a draft while history loads', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  const id = await savedChat(page, 'History loading fixture');
+  await savedChat(page, 'Other conversation');
+  await openChats(page);
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let requests = 0;
+  await page.route(`**/api/conversations/${id}`, async (route) => {
+    requests += 1;
+    await held;
+    await route.continue();
+  });
+  const row = page.locator(`[data-chat="${id}"] .row-open`);
+  await row.hover();
+  await expect.poll(() => requests).toBe(1);
+  await expect(page.locator('.chat-title')).not.toHaveText('History loading fixture');
+  await row.click();
+  await expect(page.locator('.chat-title')).toHaveText('History loading fixture');
+  await expect(page.getByText('Opening this chat…')).toBeVisible();
+  await expect(page.getByText('You can type while this chat opens')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Choose project', exact: true })).toBeHidden();
+  await expect(page.locator('.bubble', { hasText: 'Other conversation' })).toBeHidden();
+  const input = page.getByRole('textbox', { name: 'Message' });
+  await input.fill('Keep this draft while loading');
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
+  await input.press('Enter');
+  expect(requests).toBe(1);
+  await expect(page.locator('.thread-loading')).toHaveCSS('opacity', '1');
+  await page.screenshot({
+    path: testInfo.outputPath('loading-context.png'),
+    animations: 'disabled',
+  });
+  release();
+  await expect(page.locator('.bubble', { hasText: 'History loading fixture' })).toBeVisible();
+  await expect(input).toHaveValue('Keep this draft while loading');
+  await expect(page.getByText('Opening this chat…')).toBeHidden();
+  expect(requests).toBe(1);
+});
+
+test('a failed chat load offers retry without discarding the typed draft', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  const id = await savedChat(page, 'Recover loading fixture');
+  await savedChat(page, 'Other conversation');
+  await openChats(page);
+  await page.route(`**/api/conversations/${id}`, async (route) => {
+    const retryRequested = await page.evaluate(
+      () => document.documentElement.dataset.retryRequested === 'true',
+    );
+    if (retryRequested) return route.continue();
+    return route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Temporarily unavailable' }),
+    });
+  });
+  await page.locator(`[data-chat="${id}"] .row-open`).click();
+  const input = page.getByRole('textbox', { name: 'Message' });
+  await input.fill('Keep the recovery draft');
+  await expect(page.getByText('Couldn’t open this chat. Your draft is kept.')).toBeVisible();
+  await expect(page.locator('.thread-loading')).toHaveCSS('opacity', '1');
+  await page.screenshot({
+    path: testInfo.outputPath('loading-recovery.png'),
+    animations: 'disabled',
+  });
+  const retry = page.getByRole('button', { name: 'Try again', exact: true });
+  await retry.evaluate((button) => {
+    button.addEventListener('click', () => {
+      document.documentElement.dataset.retryRequested = 'true';
+    });
+  });
+  await retry.click();
+  await expect(page.locator('.bubble', { hasText: 'Recover loading fixture' })).toBeVisible();
+  await expect(input).toHaveValue('Keep the recovery draft');
 });

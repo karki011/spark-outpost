@@ -79,6 +79,7 @@ test('ordinary code and prose send without a warning', async ({ page }) => {
   const input = await newChatInput(page);
   const code = 'const apiKey = process.env.OPENAI_API_KEY; // see the sk-learn-pipeline-for-images';
   await input.fill(code);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
   await expect(page.locator('.md', { hasText: 'You wrote:' })).toBeVisible({ timeout: 15_000 });
   await expect(warning(page)).toHaveCount(0);

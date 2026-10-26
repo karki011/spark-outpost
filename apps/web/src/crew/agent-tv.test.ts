@@ -186,7 +186,7 @@ describe('Agent TV caption', () => {
 describe('dockStage', () => {
   it('keeps the base size when the rail is narrow or not measured yet', () => {
     expect(dockStage(0)).toEqual(dockStage(200));
-    expect(dockStage(200)).toMatchObject({ width: 200, height: 128, leadSize: 34, fontSize: 11 });
+    expect(dockStage(200)).toMatchObject({ width: 200, height: 128, leadSize: 34, fontSize: 12 });
   });
 
   it('grows every part with the rail and stops at the cap', () => {
@@ -200,5 +200,32 @@ describe('dockStage', () => {
       fontSize: 13,
     });
     expect(dockStage(900)).toEqual(dockStage(320));
+  });
+
+  it('keeps a small team in the existing arc', () => {
+    expect(dockStage(300, 3)).toEqual(dockStage(300));
+  });
+
+  it('gives every worker a readable, non-overlapping row seat in a crowded rail', () => {
+    for (const width of [200, 260, 300, 320]) {
+      for (const count of [4, 5, 8, 12, 20]) {
+        const stage = dockStage(width, count);
+        const { lead, seats } = stageLayout(count, stage);
+        expect(seats).toHaveLength(count);
+        expect(stage.fontSize).toBeGreaterThanOrEqual(12);
+        for (const [index, seat] of seats.entries()) {
+          expect(seat.x - stage.labelWidth / 2).toBeGreaterThanOrEqual(0);
+          expect(seat.x + stage.labelWidth / 2).toBeLessThanOrEqual(stage.width);
+          expect(seat.y - stage.crewSize / 2).toBeGreaterThanOrEqual(0);
+          expect(seat.y + stage.crewSize / 2 + 20).toBeLessThan(lead.y - stage.leadSize / 2);
+          for (const other of seats.slice(index + 1)) {
+            const separateColumns = Math.abs(other.x - seat.x) >= stage.labelWidth;
+            const separateRows = Math.abs(other.y - seat.y) >= stage.crewSize + 20;
+            expect(separateColumns || separateRows).toBe(true);
+          }
+        }
+        expect(lead.y + stage.leadSize / 2 + 20).toBeLessThanOrEqual(stage.height);
+      }
+    }
   });
 });

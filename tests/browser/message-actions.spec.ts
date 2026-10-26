@@ -12,6 +12,7 @@ test('copies a reply and a message and shows when each was sent', async ({ page,
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Ship **it**\n> carefully');
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 15_000 });
 

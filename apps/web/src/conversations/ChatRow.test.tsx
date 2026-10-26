@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { ChatRow } from './ChatRow.tsx';
@@ -19,6 +19,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 const chat: ConversationSummary = {
@@ -44,6 +45,7 @@ function renderRow(
   selected = false,
   onScreenId: string | null = null,
   member: { faceless?: boolean; relation?: string | null } = {},
+  onPrepare?: (id: string) => void,
 ) {
   render(
     <OnScreenChat.Provider value={onScreenId}>
@@ -59,6 +61,7 @@ function renderRow(
           handle={handle}
           {...member}
           onOpen={vi.fn()}
+          {...(onPrepare ? { onPrepare } : {})}
           onMenu={vi.fn()}
           onRename={vi.fn()}
           onRestore={vi.fn()}
@@ -85,6 +88,38 @@ const finished: ConversationSummary = {
 };
 
 describe('ChatRow', () => {
+  it('warms only a deliberate focus and cancels preparation on blur or unmount', () => {
+    vi.useFakeTimers();
+    const prepare = vi.fn();
+    renderRow(undefined, chat, false, null, {}, prepare);
+    const open = screen.getByRole('button', { name: /^Orders API/ });
+    vi.spyOn(open, 'matches').mockReturnValue(true);
+    fireEvent.focus(open);
+    vi.advanceTimersByTime(149);
+    expect(prepare).not.toHaveBeenCalled();
+    fireEvent.blur(open);
+    vi.advanceTimersByTime(200);
+    expect(prepare).not.toHaveBeenCalled();
+    fireEvent.focus(open);
+    vi.advanceTimersByTime(150);
+    expect(prepare).toHaveBeenCalledExactlyOnceWith(chat.id);
+    fireEvent.focus(open);
+    cleanup();
+    vi.advanceTimersByTime(200);
+    expect(prepare).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not warm the already selected chat', () => {
+    vi.useFakeTimers();
+    const prepare = vi.fn();
+    renderRow(undefined, chat, true, null, {}, prepare);
+    const open = screen.getByRole('button', { name: /^Orders API/ });
+    vi.spyOn(open, 'matches').mockReturnValue(true);
+    fireEvent.focus(open);
+    vi.advanceTimersByTime(200);
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
   it('shows only the title, and keeps an outpost handle in the name and tooltip', () => {
     renderRow('feature-dashboar');
     const open = screen.getByRole('button', { name: /^Orders API, @feature-dashboar/ });

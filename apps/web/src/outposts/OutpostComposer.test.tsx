@@ -11,7 +11,7 @@ const MEMBERS = [
 ];
 const ANSWERING: Answering = { postId: postId(1), conversationId: FE_CHAT, handle: 'fe' };
 
-type Send = (target: ComposerTarget, text: string) => Promise<unknown>;
+type Send = (target: ComposerTarget, text: string, id: string) => Promise<unknown>;
 
 class QuietResizeObserver {
   observe(): void {}
@@ -49,11 +49,22 @@ function composer(
 }
 
 function box(): HTMLTextAreaElement {
-  return screen.getByRole<HTMLTextAreaElement>('combobox');
+  return screen.getByRole<HTMLTextAreaElement>('combobox', {
+    name: /Message the outpost|Answer @/,
+  });
 }
 
 function type(text: string, caret = text.length): void {
   fireEvent.change(box(), { target: { value: text, selectionStart: caret, selectionEnd: caret } });
+}
+
+function choose(label: string): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Message destination' }));
+  fireEvent.click(
+    screen.getByRole('menuitemradio', {
+      name: label === 'Post note' ? /^Post note/ : label,
+    }),
+  );
 }
 
 function asks(): string[] {
@@ -63,22 +74,152 @@ function asks(): string[] {
 
 function sendButton(): HTMLButtonElement {
   return screen.getByRole<HTMLButtonElement>('button', {
-    name: /^(Send request|Post note|Send answer)$/,
+    name: /^(Send message|Send request|Post note|Send answer)$/,
   });
 }
 
 describe('OutpostComposer', () => {
+  it('uses the story lead, allows another agent, and retains that choice after sending', async () => {
+    const onSend = vi.fn<Send>(() => Promise.resolve());
+    render(
+      <OutpostComposer
+        members={MEMBERS}
+        leadConversationId={API_CHAT}
+        answering={null}
+        paused={false}
+        onCancelAnswer={() => undefined}
+        onSend={onSend}
+      />,
+    );
+    type('where are we');
+    fireEvent.click(sendButton());
+    expect(onSend.mock.calls[0]?.[0]).toMatchObject({
+      toConversationId: API_CHAT,
+      body: 'where are we',
+    });
+    await act(async () => {});
+    choose('@fe');
+    type('next step');
+    fireEvent.click(sendButton());
+    await waitFor(() => expect(onSend).toHaveBeenCalledTimes(2));
+    expect(onSend.mock.calls[1]?.[0]).toMatchObject({ toConversationId: FE_CHAT });
+    expect(screen.getByRole('button', { name: 'Message destination' }).textContent).toContain(
+      '@fe',
+    );
+  });
+
+  it('keeps the draft and blocks when an explicitly selected member disappears', () => {
+    const onSend = vi.fn<Send>(() => Promise.resolve());
+    const props = { answering: null, paused: false, onCancelAnswer: () => undefined, onSend };
+    const { rerender } = render(<OutpostComposer {...props} members={MEMBERS} />);
+    choose('@api');
+    type('unfinished thought');
+    rerender(<OutpostComposer {...props} members={[MEMBERS[0]!]} />);
+    expect(box().value).toBe('unfinished thought');
+    expect(sendButton().disabled).toBe(true);
+    fireEvent.keyDown(box(), { key: 'Enter' });
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it('uses the first active member when the story lead is unavailable', () => {
+    render(
+      <OutpostComposer
+        members={[{ ...MEMBERS[0]!, archived: true }, MEMBERS[1]!]}
+        leadConversationId={FE_CHAT}
+        answering={null}
+        paused={false}
+        onCancelAnswer={() => undefined}
+        onSend={vi.fn<Send>()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Message destination' }).textContent).toContain(
+      'Lead · @api',
+    );
+    type('status');
+    expect(sendButton().disabled).toBe(false);
+  });
+
+  it('never routes explicit notes even when they mention all agents', () => {
+    const onSend = vi.fn<Send>(() => Promise.resolve());
+    render(composer({ onSend }));
+    choose('Post note');
+    type('@all remember this');
+    fireEvent.click(sendButton());
+    expect(onSend.mock.calls[0]?.[0]).toMatchObject({
+      action: 'note',
+      to: [],
+      body: '@all remember this',
+    });
+    expect(onSend.mock.calls[0]?.[0]).not.toHaveProperty('toConversationId');
+  });
+
   it('is one message box whose button says what the text will do', () => {
     render(composer());
-    expect(screen.getAllByRole('combobox')).toHaveLength(1);
-    expect(sendButton().textContent).toBe('Post note');
+    expect(box()).toBeTruthy();
+    expect(sendButton().textContent).toBe('Send message');
     expect(sendButton().disabled).toBe(true);
     type('The contract is settled');
-    expect(sendButton().textContent).toBe('Post note');
+    expect(sendButton().textContent).toBe('Send message');
     expect(sendButton().disabled).toBe(false);
     type('@api add the filter');
     expect(sendButton().textContent).toBe('Send request');
     expect(asks()).toEqual(['@api']);
+  });
+
+  it('acknowledges a saved note and prepares an explicit request without sending it', async () => {
+    let finish!: () => void;
+    const onSend = vi.fn<Send>(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    render(composer({ onSend }));
+    choose('Post note');
+    type('where are we');
+    expect(screen.getByText('Note only · No agent will reply.')).toBeTruthy();
+    fireEvent.click(sendButton());
+    expect(screen.getByRole('status').textContent).toBe('Saving note…');
+    expect(onSend.mock.calls[0]?.[0]).toMatchObject({ action: 'note', to: [] });
+    await act(async () => finish());
+    expect(screen.getByRole('status').textContent).toBe('Note saved · No agent was asked.');
+    fireEvent.click(screen.getByRole('button', { name: 'Ask all' }));
+    expect(box().value).toBe('@all where are we');
+    expect(asks()).toEqual(['@fe', '@api']);
+    expect(document.activeElement).toBe(box());
+    expect(onSend).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('offers explicit targeting before a note is posted and restores skipped recipients', () => {
+    const onSend = vi.fn<Send>(() => Promise.resolve());
+    render(composer({ onSend }));
+    type('@all status');
+    fireEvent.click(screen.getByRole('button', { name: 'Do not ask @fe' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Do not ask @api' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ask all' }));
+    expect(asks()).toEqual(['@fe', '@api']);
+    expect(box().value).toBe('@all status');
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it('does not replace newer typing with a late note receipt', async () => {
+    let finish!: () => void;
+    render(
+      composer({
+        onSend: () =>
+          new Promise<void>((resolve) => {
+            finish = resolve;
+          }),
+      }),
+    );
+    choose('Post note');
+    type('first note');
+    fireEvent.click(sendButton());
+    type('next message');
+    await act(async () => finish());
+    expect(box().value).toBe('next message');
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('lists every chat a message will ask, wherever its handle is typed', () => {
@@ -90,7 +231,7 @@ describe('OutpostComposer', () => {
     expect(asks()).toEqual(['@fe', '@api']);
     type('mail someone@api.dev about it');
     expect(asks()).toEqual([]);
-    expect(sendButton().textContent).toBe('Post note');
+    expect(sendButton().textContent).toBe('Send message');
   });
 
   it('leaves a chat out when its name is removed, and sends who is left', async () => {
@@ -108,13 +249,16 @@ describe('OutpostComposer', () => {
     expect(onSend.mock.calls[0]?.[1]).toBe(text);
   });
 
-  it('posts a note once every chat is left out, and asks a chat again when it is typed again', () => {
+  it('blocks when every chat is left out, and asks a chat again when it is typed again', () => {
     render(composer());
     type('thanks @api');
     fireEvent.click(screen.getByRole('button', { name: 'Do not ask @api' }));
     expect(asks()).toEqual([]);
-    expect(sendButton().textContent).toBe('Post note');
-    expect(screen.getByText('Asks nobody. This posts as a note.')).toBeTruthy();
+    expect(sendButton().textContent).toBe('Send message');
+    expect(
+      screen.getByText('No recipients selected. Restore a recipient or choose Post note.'),
+    ).toBeTruthy();
+    expect(sendButton().disabled).toBe(true);
     type('thanks');
     type('thanks @api');
     expect(asks()).toEqual(['@api']);
@@ -133,36 +277,77 @@ describe('OutpostComposer', () => {
     expect(box().value).toBe('');
   });
 
-  it('puts the text back and says why when sending fails', async () => {
-    const onSend = vi.fn<Send>(() => Promise.reject(new Error('The outpost was deleted.')));
-    render(composer({ onSend }));
-    type('a note');
-    fireEvent.click(sendButton());
-    expect((await screen.findByRole('alert')).textContent).toBe('The outpost was deleted.');
-    expect(box().value).toBe('a note');
-  });
+  it.each([false, true])(
+    'retries the original agent after routing changes, newer draft=%s',
+    async (newer) => {
+      let reject!: (error: Error) => void;
+      const onSend = vi
+        .fn<Send>()
+        .mockImplementationOnce(
+          () =>
+            new Promise((_, fail) => {
+              reject = fail;
+            }),
+        )
+        .mockResolvedValue(undefined);
+      const props = { answering: null, paused: false, onCancelAnswer: () => undefined, onSend };
+      const { rerender } = render(
+        <OutpostComposer {...props} members={MEMBERS} leadConversationId={FE_CHAT} />,
+      );
+      type('original request');
+      fireEvent.click(sendButton());
+      choose('Post note');
+      if (newer) type('new note draft');
+      fireEvent.keyDown(box(), { key: 'Enter' });
+      expect(onSend).toHaveBeenCalledTimes(1);
+      rerender(<OutpostComposer {...props} members={MEMBERS} leadConversationId={API_CHAT} />);
+      await act(async () => reject(new Error('Offline')));
+      expect(box().value).toBe(newer ? 'new note draft' : '');
+      expect(screen.getByText('Unsent to @fe: original request')).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull());
+      expect(onSend.mock.calls[1]).toEqual(onSend.mock.calls[0]);
+      expect(onSend.mock.calls[1]?.[2]).toEqual(expect.any(String));
+      expect(onSend.mock.calls[1]?.[0]).toMatchObject({ toConversationId: FE_CHAT });
+      expect(box().value).toBe(newer ? 'new note draft' : '');
+      expect(screen.getByRole('button', { name: 'Message destination' }).textContent).toContain(
+        'Post note',
+      );
+    },
+  );
 
-  it('keeps newer typing when an earlier send fails', async () => {
-    let reject!: (error: Error) => void;
-    render(
-      composer({
-        onSend: () =>
-          new Promise((_, fail) => {
-            reject = fail;
-          }),
-      }),
-    );
-    type('first note');
+  it('keeps a failed note separate from an agent draft and allows explicit discard', async () => {
+    const onSend = vi.fn<Send>().mockRejectedValue(new Error('Offline'));
+    render(composer({ onSend }));
+    choose('Post note');
+    type('@all reference only');
     fireEvent.click(sendButton());
-    type('next note');
-    await act(async () => reject(new Error('Offline')));
-    expect(box().value).toBe('next note\n\nfirst note');
+    choose('@api');
+    type('new request');
+    await screen.findByRole('alert');
+    expect(box().value).toBe('new request');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(onSend).toHaveBeenCalledTimes(2));
+    expect(onSend.mock.calls[1]).toEqual(onSend.mock.calls[0]);
+    expect(onSend.mock.calls[1]?.[2]).toEqual(expect.any(String));
+    expect(onSend.mock.calls[1]?.[0]).toMatchObject({ action: 'note', to: [] });
+    await waitFor(() =>
+      expect(
+        screen.getByRole<HTMLButtonElement>('button', { name: 'Discard unsent message' }).disabled,
+      ).toBe(false),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Discard unsent message' }));
+    expect(box().value).toBe('new request');
+    expect(sendButton().disabled).toBe(false);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('offers member handles while one is typed at the start and fills in the pick', () => {
     render(composer());
     type('@');
-    const options = screen.getAllByRole('option');
+    const options = screen
+      .getAllByRole('option')
+      .filter((option) => option.closest('[role=listbox]'));
     expect(options.map((option) => option.textContent)).toEqual([
       '@feUsage page',
       '@apiUsage endpoint',
@@ -179,9 +364,12 @@ describe('OutpostComposer', () => {
   it('narrows the handles as they are typed and closes the list on Escape', () => {
     render(composer());
     type('@a');
-    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
-      '@apiUsage endpoint',
-    ]);
+    expect(
+      screen
+        .getAllByRole('option')
+        .filter((option) => option.closest('[role=listbox]'))
+        .map((option) => option.textContent),
+    ).toEqual(['@apiUsage endpoint']);
     fireEvent.keyDown(box(), { key: 'Escape' });
     expect(screen.queryByRole('listbox')).toBeNull();
     expect(box().value).toBe('@a');
@@ -190,7 +378,9 @@ describe('OutpostComposer', () => {
   it('offers handles wherever an @ is typed and completes the one at the caret', () => {
     render(composer());
     type('tell @ about the shape', 6);
-    expect(screen.getAllByRole('option')).toHaveLength(2);
+    expect(
+      screen.getAllByRole('option').filter((option) => option.closest('[role=listbox]')),
+    ).toHaveLength(2);
     fireEvent.keyDown(box(), { key: 'ArrowUp' });
     fireEvent.keyDown(box(), { key: 'Enter' });
     expect(box().value).toBe('tell @api about the shape');

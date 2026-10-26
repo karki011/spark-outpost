@@ -53,6 +53,7 @@ export async function ask(page: Page, prompts: readonly string[]) {
   const input = page.getByRole('textbox', { name: 'Message' });
   for (const [index, text] of prompts.entries()) {
     await input.fill(text);
+    await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
     await input.press('Enter');
     await expect(turns(page)).toHaveCount(index + 1);
     await expect(page.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0, {

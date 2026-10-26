@@ -14,6 +14,7 @@ export interface ComposerTarget {
   hint: string;
   to: string[];
   body: string;
+  toConversationId?: string;
   ready: boolean;
 }
 
@@ -27,24 +28,38 @@ export interface Filled {
   caret: number;
 }
 
-export const EMPTY_HINT = '@ a chat anywhere to ask it for work. Without a handle, it is a note.';
-export const NOBODY_HINT = 'Asks nobody. This posts as a note.';
+export const EMPTY_HINT = 'Choose an agent or add a chat to send a message.';
+export const NOBODY_HINT = 'No recipients selected. Restore a recipient or choose Post note.';
 
-const LEADING_WORD = /^@([a-z0-9-]+)/i;
 const HANDLE_IN_PROGRESS = /(?:^|[\s([{"'])@([a-z0-9-]*)$/i;
+const MENTION = /(^|[\s([{"'])@([a-z0-9-]+)(?=[.,:;!?)\]}"']*(?:\s|$))/gi;
 
-function unknownHandle(text: string, handles: readonly string[]): string | null {
-  const word = LEADING_WORD.exec(text.trim())?.[1]?.toLowerCase();
-  if (!word || word === 'all' || handles.includes(word)) return null;
-  return word;
+interface Destination {
+  conversationId: string;
+  handle: string;
 }
 
-function noteHint(text: string, handles: readonly string[], skipped: readonly string[]): string {
-  if (text.trim() === '') return EMPTY_HINT;
-  if (asked(text, handles, []).length > 0 && skipped.length > 0) return NOBODY_HINT;
-  const unknown = unknownHandle(text, handles);
-  if (unknown) return `No chat here is called @${unknown}. This posts as a note.`;
-  return 'A note starts no work.';
+export function uniqueLead(
+  members: readonly { conversationId: string; archived: boolean }[],
+  stories: readonly { leadConversationId: string | null }[],
+): string | null {
+  const leads = new Set(
+    stories
+      .map((story) => story.leadConversationId)
+      .filter(
+        (id): id is string =>
+          id !== null && members.some((member) => !member.archived && member.conversationId === id),
+      ),
+  );
+  return leads.size === 1 ? [...leads][0]! : null;
+}
+
+function unknownHandle(text: string, handles: readonly string[]): string | null {
+  return (
+    [...text.matchAll(MENTION)]
+      .map((match) => (match[2] ?? '').toLowerCase())
+      .find((handle) => handle !== 'all' && !handles.includes(handle)) ?? null
+  );
 }
 
 export function asked(
@@ -60,6 +75,8 @@ export function composerTarget(
   handles: readonly string[],
   answering: Answering | null,
   skipped: readonly string[] = [],
+  destination: Destination | null = null,
+  note = false,
 ): ComposerTarget {
   const trimmed = text.trim();
   if (answering) {
@@ -72,6 +89,28 @@ export function composerTarget(
       ready: trimmed !== '',
     };
   }
+  if (note) {
+    return {
+      action: 'note',
+      label: 'Post note',
+      hint: 'Note only · No agent will reply.',
+      to: [],
+      body: trimmed,
+      ready: trimmed !== '',
+    };
+  }
+  const unknown = unknownHandle(text, handles);
+  const blocked = (hint: string): ComposerTarget => ({
+    action: 'request',
+    label: 'Send message',
+    hint,
+    to: [],
+    body: trimmed,
+    ready: false,
+  });
+  if (unknown)
+    return blocked(`No chat here is called @${unknown}. Choose a member or correct the handle.`);
+  const explicit = asked(text, handles, []);
   const address = userAddress(text, handles, asked(text, handles, skipped));
   if (address.kind === 'request') {
     return {
@@ -83,13 +122,18 @@ export function composerTarget(
       ready: true,
     };
   }
+  if (explicit.length > 0)
+    return blocked(skipped.length ? NOBODY_HINT : 'Add a message for the selected agents.');
+  if (text.trim().match(/^@all(?:\s|$)/i)) return blocked(EMPTY_HINT);
+  if (!destination) return blocked(EMPTY_HINT);
   return {
-    action: 'note',
-    label: 'Post note',
-    hint: noteHint(text, handles, skipped),
-    to: [],
-    body: address.body,
-    ready: address.body !== '',
+    action: 'request',
+    label: 'Send message',
+    hint: '',
+    to: [destination.handle],
+    toConversationId: destination.conversationId,
+    body: trimmed,
+    ready: trimmed !== '',
   };
 }
 
