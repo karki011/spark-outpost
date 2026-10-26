@@ -4,6 +4,14 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.32
+
+- The chat sidebar shows the same worker blobs as Agent TV, with consistent identities and room for larger teams. Finished workers keep their outcomes visible.
+- Ordinary Outpost messages go to the displayed lead. Choose another agent, use `@agent` or `@all`, or explicitly select **Post note** to save without asking for a reply.
+- Chats start loading when you hover or focus their sidebar row. You can keep typing while history opens, and **Try again** recovers a failed load without losing your draft.
+- Outpost requests to different chats are delivered in parallel, while requests within each chat keep their order.
+- Failed Outpost messages keep their original recipient and text for **Retry**, separate from your next draft. Retries reuse the original message ID to avoid duplicate work, and finishing an older answer preserves your newer answer target.
+
 ## 0.1.0-beta.31
 
 - Calmer chat: easier-to-read Inter text, a narrower reading column, quieter composer controls, and formatting tucked into the add menu. Drafts survive chat switches and queued-message editing preserves what you are typing.
