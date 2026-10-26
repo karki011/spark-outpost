@@ -3,7 +3,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { AgentTvStage } from '../../crew/AgentTvStage.tsx';
 import { openAgentTv } from '../../crew/agent-tv-store.ts';
-import { busyCount, type CrewAgent } from '../../crew/crew-model.ts';
+import { crewStateWord, type CrewAgent } from '../../crew/crew-model.ts';
 import { tvCaption } from '../../crew/tv-caption.ts';
 import { dockStage } from '../../crew/tv-layout.ts';
 import { useReducedMotion } from '../../ui/motion.ts';
@@ -19,12 +19,11 @@ interface RailTvProps {
 }
 
 function openLabel(agents: readonly CrewAgent[]): string {
-  const busy = busyCount(agents);
-  if (busy === 0) return 'Open Agent TV';
-  return `Open Agent TV. ${busy} ${busy === 1 ? 'agent' : 'agents'} working`;
+  if (agents.length === 0) return 'Open Agent TV';
+  return `Open Agent TV. ${agents.map((agent) => `${agent.name}: ${crewStateWord(agent.state)}`).join('. ')}`;
 }
 
-function useDockStage() {
+function useDockStage(workerCount: number) {
   const dock = useRef<HTMLDivElement>(null);
   const [room, setRoom] = useState(0);
   useLayoutEffect(() => {
@@ -36,15 +35,15 @@ function useDockStage() {
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  const metrics = useMemo(() => dockStage(room), [room]);
+  const metrics = useMemo(() => dockStage(room, workerCount), [room, workerCount]);
   return { dock, metrics };
 }
 
 export function RailTv({ conversationId, agents }: RailTvProps) {
   const reduced = useReducedMotion();
   const hidden = usePageHidden();
-  const caption = tvCaption(agents);
-  const { dock, metrics } = useDockStage();
+  const caption = tvCaption(agents.slice(0, 1));
+  const { dock, metrics } = useDockStage(Math.max(0, agents.length - 1));
   const classes = ['crail-tv', hidden && 'paused', reduced && 'still'].filter(Boolean).join(' ');
   return (
     <motion.div

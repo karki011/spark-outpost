@@ -13,8 +13,8 @@ Follow a turn. About 2 minutes.
 1. Summaries separate commands **passed** from tools **done**.
 2. Code Mode labels discovery and combined reads; command failures expand.
 3. The to-do ticks off, then folds.
-4. Open **Agent TV** under **…**.
-5. Worker blobs show roles/status. **View agents** opens **Work**; ended workers stay inactive.
+4. Sidebar blobs show the **Agent TV** team. Select to open.
+5. **View agents** opens **Work**.
 6. **Message** opens that chat’s composer; Outposts show handles.
 7. **Ask lead to redirect** drafts in the worker’s owning chat.
 
@@ -30,11 +30,11 @@ Follow a turn. About 2 minutes.
 
 During **Waiting on 1 background agent** or Claude’s **Sleeping until 10:48**, **Stop background tasks** or **Stop waiting** ends it.
 
-It stays up to 30 idle minutes; a turn it starts shows **Continued on its own**, and after Quit **Stopped by Quit**.
+It stays up to 30 idle minutes; turns show **Continued on its own**, and after Quit **Stopped by Quit**.
 
 ## Queue messages
 
-Draft text survives chat switches, not app reloads. Other chats never wait.
+Drafts survive chat switches, not reloads.
 
 1. While a turn runs, **Enter** queues a message.
 2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.

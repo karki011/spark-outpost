@@ -1,7 +1,13 @@
 import { expect, it } from 'vitest';
 import { emptySubagentRecord, type SubagentRow } from '@spark-outpost/contracts';
 import { chatBlob } from '../brand/ChatFace.tsx';
-import { stageWorker, workerIdentity, workerPresentation, workerRole } from './worker-identity.ts';
+import {
+  teamAgents,
+  stageWorker,
+  workerIdentity,
+  workerPresentation,
+  workerRole,
+} from './worker-identity.ts';
 import { chatAgent } from './chat-agent.ts';
 import { run } from './test-run.ts';
 
@@ -77,4 +83,24 @@ it.each([
   ['cancelled', false, 'Stopped', 'archived'],
 ] as const)('shows %s workers truthfully when live=%s', (state, live, label, face) => {
   expect(workerPresentation(state, live)).toMatchObject({ label, face });
+});
+
+it('shows each worker once alongside the lead, preserving its identity', () => {
+  const lead = chatAgent(run({ status: 'running' }));
+  const worker: SubagentRow = {
+    ...emptySubagentRecord,
+    id: 'worker-a',
+    name: 'Builder',
+    task: 'Build UI',
+    parentId: null,
+    state: 'working',
+    step: null,
+    startedAt: 1,
+    endedAt: null,
+  };
+  const team = teamAgents([lead], [worker, worker]);
+  expect(team.map((agent) => agent.id)).toEqual([lead.id, worker.id]);
+  expect(team[1]?.blobId).toBe(workerIdentity(worker.id));
+  expect(teamAgents(team, [worker])).toEqual(team);
+  expect(teamAgents([], [worker])).toEqual([]);
 });

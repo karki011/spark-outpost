@@ -55,6 +55,8 @@ test('a note is sent as typed and shows as Markdown in the outpost thread', asyn
   await seeded(page);
   await openOutpost(page);
   const texts = postedTexts(page);
+  await page.getByRole('button', { name: 'Message destination' }).click();
+  await page.getByRole('menuitemradio', { name: /^Post note/ }).click();
   await box(page).fill(NOTE);
   await expect(page.locator('.op-composer .mdl-code')).toHaveText(
     'expect(canExportAll(member)).toBe(false);',

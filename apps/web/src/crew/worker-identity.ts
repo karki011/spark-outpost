@@ -49,6 +49,7 @@ export function stageWorker(row: SubagentRow, lead: CrewAgent): CrewAgent {
       : presentation.label;
   return {
     id: row.id,
+    blobId: workerIdentity(row.id),
     name: row.name,
     role: workerRole(row.name) ?? 'Sub-agent',
     provider: lead.provider,
@@ -61,4 +62,23 @@ export function stageWorker(row: SubagentRow, lead: CrewAgent): CrewAgent {
     costSource: null,
     durationMs: row.usage?.durationMs ?? null,
   };
+}
+
+export function teamAgents(
+  members: readonly CrewAgent[],
+  subagents: readonly SubagentRow[],
+): CrewAgent[] {
+  const lead = members[0];
+  if (!lead) return [];
+  const ids = new Set(members.map((member) => member.id));
+  return [
+    ...members,
+    ...subagents
+      .filter((row) => {
+        if (ids.has(row.id)) return false;
+        ids.add(row.id);
+        return true;
+      })
+      .map((row) => stageWorker(row, lead)),
+  ];
 }

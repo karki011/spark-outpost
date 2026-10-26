@@ -139,8 +139,14 @@ test('a chat taken off the Asks line is only mentioned', async ({ page }) => {
   await box(page).fill('thanks @api');
   await asksLine(page).getByRole('button', { name: 'Do not ask @api' }).click();
   await expect(asksLine(page)).toHaveCount(0);
-  await expect(sendButton(page)).toHaveText('Post note');
-  await expect(page.locator('.op-hint')).toHaveText('Asks nobody. This posts as a note.');
+  await expect(sendButton(page)).toBeDisabled();
+  await expect(page.locator('.op-hint')).toHaveText(
+    'No recipients selected. Restore a recipient or choose Post note.',
+  );
+  await box(page).press('Enter');
+  expect(sentTo(posted)).toEqual([['fe']]);
+  await page.getByRole('button', { name: 'Message destination' }).click();
+  await page.getByRole('menuitemradio', { name: /^Post note/ }).click();
   await box(page).press('Enter');
   await expect(post(page, 'thanks @api').locator('.op-kind')).toHaveText('note');
   expect(sentTo(posted)).toEqual([['fe'], []]);
@@ -202,4 +208,73 @@ test('a long message with no line breaks grows the box instead of scrolling insi
   }));
   expect(fit.hidden).toBeLessThanOrEqual(1);
   expect(fit.scrolled).toBe(0);
+});
+
+test('explicit notes acknowledge saving and Ask all prepares a request without sending it', async ({
+  page,
+}) => {
+  await seeded(page);
+  await openOutpost(page);
+  let release: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const sent = requestsTo(page, POSTS_URL, 'POST');
+  await page.route(POSTS_URL, async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.getByRole('button', { name: 'Message destination' }).click();
+  await page.getByRole('menuitemradio', { name: /^Post note/ }).click();
+  await box(page).fill('Where are we?');
+  await expect(page.locator('.op-hint')).toHaveText('Note only · No agent will reply.');
+  await sendButton(page).click();
+  await expect(page.locator('.op-note-receipt').getByRole('status')).toContainText('Saving note…');
+  release();
+  await expect(page.locator('.op-note-receipt').getByRole('status')).toContainText(
+    'Note saved · No agent was asked.',
+  );
+  await expect(chip(page, 'api')).toContainText('Idle');
+  await expect(chip(page, 'fe')).toContainText('Idle');
+  expect(sent).toHaveLength(1);
+  await inBothThemes(page, 'note-receipt', async () => {
+    await expect(page.getByRole('button', { name: 'Ask all', exact: true })).toBeVisible();
+  });
+  await page.getByRole('button', { name: 'Ask all', exact: true }).click();
+  await expect(box(page)).toBeFocused();
+  await expect(box(page)).toHaveValue('@all Where are we?');
+  await expect(asksLine(page)).toContainText('@fe');
+  await expect(asksLine(page)).toContainText('@api');
+  expect(sent).toHaveLength(1);
+  await sendButton(page).click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1]!.postDataJSON().to).toEqual(['fe', 'api']);
+});
+
+test('ordinary messages reach the displayed agent without adding a mention', async ({ page }) => {
+  await seeded(page);
+  await openOutpost(page);
+  const sent = requestsTo(page, POSTS_URL, 'POST');
+  await box(page).fill('Where are we?');
+  await expect(page.locator('.op-hint')).toContainText('To @fe');
+  await inBothThemes(page, 'lead-message', async () => {
+    await expect(sendButton(page)).toHaveText('Send message');
+  });
+  await sendButton(page).click();
+  const request = post(page, 'Where are we?');
+  await expect(stateOf(request)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
+  expect(sent[0]!.postDataJSON()).toMatchObject({
+    text: 'Where are we?',
+    toConversationId: expect.any(String),
+  });
+  expect(sent[0]!.postDataJSON().to).toBeUndefined();
+  await expect(request).toContainText('@fe');
+  await expect(chip(page, 'api')).toContainText('Idle');
+  await page.getByRole('button', { name: 'Message destination' }).click();
+  await page.getByRole('menuitemradio', { name: '@api', exact: true }).click();
+  await say(page, 'What is next?');
+  await expect(stateOf(post(page, 'What is next?'))).toHaveText('Idle', { timeout: TURN_TIMEOUT });
+  expect(sent[1]!.postDataJSON().toConversationId).not.toBe(
+    sent[0]!.postDataJSON().toConversationId,
+  );
 });

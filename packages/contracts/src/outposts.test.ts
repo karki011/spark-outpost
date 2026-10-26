@@ -192,6 +192,17 @@ describe('outpost schemas', () => {
     ).toBe(false);
   });
 
+  it('accepts one direct member target without changing text and refuses mixed addressing', () => {
+    const request = { id: POST, text: 'where are we', toConversationId: BACKEND };
+    expect(createPostRequestSchema.parse(request)).toEqual(request);
+    for (const extra of [{ to: [] }, { to: ['api'] }, { guestConversationId: BACKEND }]) {
+      expect(createPostRequestSchema.safeParse({ ...request, ...extra }).success).toBe(false);
+    }
+    expect(
+      createPostRequestSchema.safeParse({ ...request, toConversationId: 'missing' }).success,
+    ).toBe(false);
+  });
+
   it('reads the facts a request state is derived from', () => {
     const facts = {
       toHandle: 'api',

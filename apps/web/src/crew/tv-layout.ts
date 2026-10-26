@@ -15,6 +15,7 @@ export interface StageMetrics extends Box {
   crewSize: number;
   labelWidth: number;
   fontSize: number;
+  columns?: number;
 }
 
 export interface CrewSeat extends Seat {
@@ -40,21 +41,30 @@ const DOCK: StageMetrics = {
   leadSize: 34,
   crewSize: 26,
   labelWidth: 62,
-  fontSize: 11,
+  fontSize: 12,
 };
 const DOCK_MAX_WIDTH = 320;
 const DOCK_MAX_FONT = 13;
 
-export function dockStage(room: number): StageMetrics {
+export function dockStage(room: number, workerCount = 0): StageMetrics {
   const width = Math.round(Math.min(Math.max(room, DOCK.width), DOCK_MAX_WIDTH));
   const scale = width / DOCK.width;
-  return {
+  const stage: StageMetrics = {
     width,
     height: Math.round(DOCK.height * scale),
     leadSize: Math.round(DOCK.leadSize * scale),
     crewSize: Math.round(DOCK.crewSize * scale),
     labelWidth: Math.round(DOCK.labelWidth * scale),
     fontSize: Math.min(DOCK_MAX_FONT, Math.round(DOCK.fontSize * scale * 2) / 2),
+  };
+  if (workerCount <= 3) return stage;
+  const columns = width >= 280 ? 3 : 2;
+  const rows = Math.ceil(workerCount / columns);
+  return {
+    ...stage,
+    columns,
+    labelWidth: Math.floor(width / columns) - 8,
+    height: rows * (stage.crewSize + 36) + stage.leadSize + 42,
   };
 }
 
@@ -86,7 +96,27 @@ function arcAngles(count: number, radius: number, gap: number): number[] {
   return Array.from({ length: count }, (_, index) => start + spacing * index);
 }
 
+function rowLayout(count: number, stage: StageMetrics, columns: number): StageLayout {
+  const rows = Math.ceil(count / columns);
+  const rowHeight = stage.crewSize + 36;
+  const lead = { x: Math.round(stage.width / 2), y: rows * rowHeight + stage.leadSize / 2 + 12 };
+  const seats = Array.from({ length: count }, (_, index) => {
+    const row = Math.floor(index / columns);
+    const rowCount = Math.min(columns, count - row * columns);
+    return {
+      x: Math.round(
+        stage.width / 2 + ((index % columns) - (rowCount - 1) / 2) * (stage.width / columns),
+      ),
+      y: 12 + stage.crewSize / 2 + row * rowHeight,
+      outX: 0,
+      outY: -1,
+    };
+  });
+  return { lead, seats, radius: 0 };
+}
+
 export function stageLayout(count: number, stage: StageMetrics): StageLayout {
+  if (stage.columns) return rowLayout(count, stage, stage.columns);
   const lead = { x: Math.round(stage.width / 2), y: Math.round(stage.height * LEAD_FLOOR) };
   const top = stage.crewSize * 0.6 + 6;
   const radius = Math.round(Math.min(stage.width / 2 - stage.labelWidth / 2, lead.y - top));

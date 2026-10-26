@@ -27,6 +27,7 @@ export interface CrewAgent {
   durationMs: number | null;
   turns?: number;
   sameProvider?: boolean;
+  blobId?: string;
   routeNote?: string;
   spark?: { id: string; role: string };
 }

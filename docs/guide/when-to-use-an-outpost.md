@@ -24,7 +24,7 @@ Example: **Usage by user**, with frontend, API and docs chats.
 | `@api add GET /usage and open a PR`           | The API chat builds on its branch and opens a pull request. |
 | `@fe build the page against the new endpoint` | The frontend chat builds in its repo, under its own mode.   |
 | `@docs describe the page`                     | The docs chat writes the page in the docs repo.             |
-| `The response is paged.`                      | A note: it starts no work and stays in the thread.          |
+| **Post note**: `The response is paged.`       | A note: it starts no work and stays in the thread.          |
 
 Each answer lands under its request with its branch and PR.
 

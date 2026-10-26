@@ -27,7 +27,13 @@ interface CrewMemberRowProps {
 export function CrewMemberRow({ agent, job, blobSize = 30, children }: CrewMemberRowProps) {
   return (
     <li className="crow" data-state={agent.state}>
-      <CrewBlob name={agent.name} provider={agent.provider} state={agent.state} size={blobSize} />
+      <CrewBlob
+        name={agent.name}
+        provider={agent.provider}
+        state={agent.state}
+        size={blobSize}
+        blobId={agent.blobId}
+      />
       <span className="nm">
         <b>
           {agent.name}

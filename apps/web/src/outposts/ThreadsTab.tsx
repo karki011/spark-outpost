@@ -108,7 +108,7 @@ function Group({
 export function ThreadsTab({ cards, selectedId, onOpenThread }: ThreadsTabProps) {
   const groups = groupCards(cards);
   if (groups.length === 0) {
-    return <p className="op-pane-empty">No threads yet. Ask a chat with @ to start one.</p>;
+    return <p className="op-pane-empty">No threads yet. Send a message to start one.</p>;
   }
   return (
     <div className="op-groups">

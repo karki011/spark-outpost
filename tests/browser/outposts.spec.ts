@@ -53,7 +53,7 @@ test.beforeEach(async ({ page }) => {
 test('typing @ offers the handles and the send button says what will happen', async ({ page }) => {
   await seeded(page);
   await openOutpost(page);
-  await expect(sendButton(page)).toHaveText('Post note');
+  await expect(sendButton(page)).toHaveText('Send message');
   await expect(sendButton(page)).toBeDisabled();
 
   await box(page).pressSequentially('@');
@@ -74,11 +74,11 @@ test('typing @ offers the handles and the send button says what will happen', as
   await expect(asksLine(page)).toHaveText('Asks:@api');
 
   await box(page).fill('The orders response is now paged.');
-  await expect(sendButton(page)).toHaveText('Post note');
-  await expect(page.locator('.op-hint')).toHaveText('A note starts no work.');
+  await expect(sendButton(page)).toHaveText('Send message');
+  await expect(page.locator('.op-hint')).toContainText('To @fe');
   await box(page).fill('@nobody hello');
   await expect(page.locator('.op-hint')).toHaveText(
-    'No chat here is called @nobody. This posts as a note.',
+    'No chat here is called @nobody. Choose a member or correct the handle.',
   );
 });
 
@@ -118,6 +118,8 @@ test('a request is Sent, then Working, then Answered with the answer under it @p
 test('a note is posted with no state and starts no work', async ({ page }) => {
   await seeded(page);
   await openOutpost(page);
+  await page.getByRole('button', { name: 'Message destination' }).click();
+  await page.getByRole('menuitemradio', { name: /^Post note/ }).click();
   await say(page, 'The orders response is now paged.');
   const note = post(page, 'The orders response is now paged.');
   await expect(note).toBeVisible();
@@ -181,7 +183,7 @@ test('pause holds a new request and resume sends it', async ({ page }) => {
   await expect(resume).toHaveAttribute('aria-pressed', 'true');
   await expect(resume.locator('svg')).toBeVisible();
   await expect(main.getByRole('status').filter({ hasText: 'Paused.' })).toBeVisible();
-  await expect(page.locator('.op-hint')).not.toContainText('Paused');
+  await expect(page.locator('.op-hint')).toHaveText('Paused. @fe gets this when you resume.');
 
   await box(page).fill('@api ping');
   await expect(asksLine(page)).toContainText('Paused. @api gets this when you resume.');

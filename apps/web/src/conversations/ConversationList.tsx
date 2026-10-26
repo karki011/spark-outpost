@@ -242,6 +242,13 @@ export const ConversationList = memo(function ConversationList({
     setRenamingId(null);
     if (title) actions.rename(chat, title);
   });
+  const prepareChat = useStableCallback((id: string) => {
+    void client.prefetchQuery({
+      queryKey: queryKeys.conversation(id),
+      queryFn: () => api.getConversation(id),
+      staleTime: 5_000,
+    });
+  });
   const handleRestore = useStableCallback((chat: ConversationSummary) =>
     actions.archive(chat, false),
   );
@@ -266,6 +273,7 @@ export const ConversationList = memo(function ConversationList({
       faceless={member ? !member.face : false}
       relation={member ? roleLine(member.role) : null}
       onOpen={handleOpen}
+      onPrepare={prepareChat}
       onMenu={handleMenu}
       onRename={handleRename}
       onRestore={handleRestore}

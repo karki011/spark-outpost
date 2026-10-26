@@ -31,6 +31,95 @@ const cardsIn = (scope: ReturnType<Page['locator']>) =>
   scope.getByRole('list', { name: 'Sub-agents' }).getByRole('listitem');
 const agentsLine = (turn: ReturnType<Page['locator']>) => turn.locator('.sl-text');
 
+test('the context rail shows the same worker blobs as Agent TV and preserves their outcomes', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.setViewportSize({ width: 2000, height: 1100 });
+  const input = await ask(page, 'Split the work #build #subagentshold');
+  const rail = page.getByRole('region', { name: 'Chat context' });
+  const dock = rail.locator('.crail-tv');
+  await expect(dock.locator('.tv-n')).toHaveCount(3, { timeout: 30_000 });
+  await expect(dock.locator('.tv-n:not(.lead) > b')).toHaveText(['Explore', 'Tests']);
+  await input.fill('Keep this draft');
+  const ids = await dock
+    .locator('.tv-n')
+    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-agent')));
+  await dock.getByRole('button', { name: /^Open Agent TV/ }).focus();
+  await page.keyboard.press('Enter');
+  const tv = page.getByRole('dialog', { name: 'Agent TV' });
+  await expect(tv).toBeVisible();
+  expect(
+    await tv
+      .locator('.tv-stage .tv-n')
+      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-agent'))),
+  ).toEqual(ids);
+  await shot(page, 'agent-team-sidebar.png');
+  await tv.getByRole('button', { name: 'Close Agent TV' }).click();
+  await expect(input).toHaveValue('Keep this draft');
+  await page.getByRole('button', { name: 'Stop', exact: true }).click();
+  await expect(dock).toHaveCount(0, { timeout: 30_000 });
+  await expect(rail).toContainText('Explore');
+  await expect(rail).toContainText('Tests');
+  await expect(rail).toContainText('Stopped');
+  await page.reload();
+  await expect(rail).toContainText('Explore');
+  await expect(rail).toContainText('Tests');
+});
+
+test('a larger sidebar team keeps every worker label separate', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.setViewportSize({ width: 2000, height: 1100 });
+  await page.route(/\/api\/conversations\/[^/]+$/, async (route) => {
+    const response = await route.fetch();
+    const detail = (await response.json()) as ConversationDetail;
+    const subagents = Object.fromEntries(
+      Object.entries(detail.subagents ?? {}).map(([id, rows]) => [
+        id,
+        rows.length
+          ? Array.from({ length: 6 }, (_, index) => ({
+              ...rows[0]!,
+              id: `worker-${index}`,
+              name: `Builder ${index + 1}`,
+            }))
+          : rows,
+      ]),
+    );
+    await route.fulfill({ response, json: { ...detail, subagents } });
+  });
+  await ask(page, 'Split the work #build #subagentshold');
+  const dock = page.getByRole('region', { name: 'Chat context' }).locator('.crail-tv');
+  await expect(dock.locator('.tv-n')).toHaveCount(7, { timeout: 30_000 });
+  const boxes = await dock.locator('.tv-n > b').evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const { x, y, right, bottom } = node.getBoundingClientRect();
+      return { x, y, right, bottom };
+    }),
+  );
+  for (let i = 0; i < boxes.length; i++)
+    for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i]!;
+      const b = boxes[j]!;
+      expect(a.right <= b.x || b.right <= a.x || a.bottom <= b.y || b.bottom <= a.y).toBe(true);
+    }
+  await shot(page, 'agent-team-sidebar-large.png');
+  await page.setViewportSize({ width: 1600, height: 600 });
+  const rail = page.getByRole('region', { name: 'Chat context' });
+  await expect
+    .poll(() => rail.evaluate((element) => element.scrollHeight > element.clientHeight))
+    .toBe(true);
+  expect(await rail.evaluate((element) => getComputedStyle(element).overflowY)).toBe('auto');
+  await dock.getByRole('button', { name: /^Open Agent TV/ }).focus();
+  await page.keyboard.press('End');
+  await expect
+    .poll(() =>
+      rail.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop),
+    )
+    .toBeLessThan(2);
+  await shot(page, 'agent-team-sidebar-short.png');
+  await page.getByRole('button', { name: 'Stop', exact: true }).click();
+});
+
 test('Agent TV redirects through the lead composer without replacing a draft or sending it', async ({
   page,
 }) => {

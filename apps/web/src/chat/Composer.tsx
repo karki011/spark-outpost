@@ -2,35 +2,18 @@ import './composer.css';
 import './composer/composer-popovers.css';
 import './project/project.css';
 import { restoreFailedDraft, useChatDraft } from './composer/use-chat-draft.ts';
-import {
-  useCallback,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from 'react';
+import { useCallback, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   DEFAULT_BUSY_ENTER,
   type AgentCommand,
-  type AnnotationInput,
-  type Attachment,
-  type BackgroundWait,
   type BusyEnterAction,
-  type ChatSettings,
-  type ConversationUsage,
-  type Project,
-  type ProviderSetup,
   type RepoDefinition,
-  type Run,
 } from '@spark-outpost/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../api/client.ts';
 import { usePopover } from '../ui/use-popover.ts';
 import { AttachmentChips } from './attachments/AttachmentChips.tsx';
 import { pasteContext } from './attachments/paste-context.ts';
-import type { AttachmentsState } from './attachments/use-attachments.ts';
 import { ContextRing } from './composer/ContextRing.tsx';
 import { ModelPicker } from './composer/ModelPicker.tsx';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
@@ -74,41 +57,7 @@ import { MarkdownInput } from './composer/markdown/MarkdownInput.tsx';
 import { codeBlockEnter } from './composer/markdown/md-keys.ts';
 import { QuoteChips } from './quotes/QuoteChips.tsx';
 import { sendLabel } from './quotes/quote-text.ts';
-import type { QuotesState } from './quotes/use-quotes.ts';
-
-interface ComposerProps {
-  conversationId: string;
-  repos: Project[];
-  settings: ChatSettings | null;
-  providers: ProviderSetup[];
-  runs: Run[];
-  usageTotals: ConversationUsage;
-  busy: boolean;
-  stopping?: boolean;
-  sending: boolean;
-  error: string | null;
-  attachments: AttachmentsState;
-  onSend: (
-    content: string,
-    attachments: Attachment[],
-    annotations: AnnotationInput[],
-  ) => Promise<void>;
-  quotes?: QuotesState;
-  onStop: () => void;
-  onQueue?: (content: string) => Promise<void>;
-  onSendNow?: (content: string) => Promise<void>;
-  busyEnter?: BusyEnterAction;
-  waitingOn?: number;
-  waitingBackground?: BackgroundWait | null;
-  notice?: string | null;
-  above?: ReactNode;
-  onAudit?: () => void;
-  onStartFresh?: () => void;
-  agentCommands?: readonly AgentCommand[];
-  agentName?: string;
-  autoFocus?: boolean;
-  contextLead?: ReactNode;
-}
+import type { ComposerProps } from './composer/composer-props.ts';
 
 const NO_COMMANDS: readonly AgentCommand[] = [];
 const NO_SKILLS: readonly RepoDefinition[] = [];
@@ -123,6 +72,7 @@ export function Composer({
   busy,
   stopping = false,
   sending,
+  ready = true,
   error,
   attachments,
   onSend,
@@ -237,6 +187,7 @@ export function Composer({
   const sendName = hasText ? 'Send' : sendLabel(quoteItems.map((quote) => quote.kind));
   const canQueue = queueing && hasText && attachments.items.length === 0;
   const canSend =
+    ready &&
     (hasText || attachments.items.length > 0 || quoteItems.length > 0) &&
     !sending &&
     (!busy || canQueue) &&
@@ -290,7 +241,9 @@ export function Composer({
     textareaRef.current?.focus();
   };
 
-  const hint = composerHint(attachments, queueing, busyEnter, waitingOn, waitingBackground);
+  const hint = ready
+    ? composerHint(attachments, queueing, busyEnter, waitingOn, waitingBackground)
+    : 'You can type while this chat opens';
   const typedNote = typedCommandNote(parseSlash(draft), slash.all, agentName);
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -333,23 +286,28 @@ export function Composer({
               textareaRef.current?.focus();
             }}
           />
-          <ContextBar
-            conversationId={conversationId}
-            repos={repos}
-            popover={repoPopover}
-            suggestion={
-              <SparkSuggestion
-                conversationId={conversationId}
-                sparks={sparks}
-                draft={draft}
-                onApply={(text) => {
-                  setDraft(text);
-                  textareaRef.current?.focus();
-                }}
-              />
-            }
-          />
-          <span className={attachments.items.length > 0 ? 'hint shown' : 'hint'} title={hint}>
+          {ready && (
+            <ContextBar
+              conversationId={conversationId}
+              repos={repos}
+              popover={repoPopover}
+              suggestion={
+                <SparkSuggestion
+                  conversationId={conversationId}
+                  sparks={sparks}
+                  draft={draft}
+                  onApply={(text) => {
+                    setDraft(text);
+                    textareaRef.current?.focus();
+                  }}
+                />
+              }
+            />
+          )}
+          <span
+            className={!ready || attachments.items.length > 0 ? 'hint shown' : 'hint'}
+            title={hint}
+          >
             {hint}
           </span>
           {settings && (

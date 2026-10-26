@@ -14,6 +14,7 @@ import { composerRows } from '../chat/composer/ComposerShell.tsx';
 import { FormatToggle } from '../chat/composer/markdown/FormatToggle.tsx';
 import { MarkdownInput } from '../chat/composer/markdown/MarkdownInput.tsx';
 import { codeBlockEnter } from '../chat/composer/markdown/md-keys.ts';
+import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { XIcon } from '../ui/icons.tsx';
 import { AsksLine } from './AsksLine.tsx';
 import { HandlePicker, handleOptionId } from './HandlePicker.tsx';
@@ -23,6 +24,7 @@ import { useHandlePicker } from './use-handle-picker.ts';
 
 interface OutpostComposerProps {
   members: readonly MemberView[];
+  leadConversationId?: string | null;
   answering: Answering | null;
   paused: boolean;
   fill?: ComposerFill | null;
@@ -40,6 +42,7 @@ const NOTHING_TYPED = { text: '', caret: 0 };
 
 export function OutpostComposer({
   members,
+  leadConversationId = null,
   answering,
   paused,
   fill = null,
@@ -51,22 +54,38 @@ export function OutpostComposer({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const caretToPlace = useRef<number | null>(null);
   const [typed, setTyped] = useState(NOTHING_TYPED);
+  const [destinationId, setDestinationId] = useState('lead');
+  const activeMembers = members.filter((member) => !member.archived);
+  const lead =
+    activeMembers.find((member) => member.conversationId === leadConversationId) ??
+    activeMembers[0];
+  const destination =
+    destinationId === 'lead'
+      ? lead
+      : activeMembers.find((member) => member.conversationId === destinationId);
+  const note = destinationId === 'note';
   const [skipped, setSkipped] = useState<string[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
   const [filled, setFilled] = useState(fill?.id ?? null);
   const [formatting, setFormatting] = useState(false);
-  const handles = useMemo(() => members.map((member) => member.handle), [members]);
+  const [noteReceipt, setNoteReceipt] = useState<{ text: string; pending: boolean } | null>(null);
+  const handles = useMemo(
+    () => members.filter((member) => !member.archived).map((member) => member.handle),
+    [members],
+  );
   const mentionable = useMemo(() => [...handles, 'all'], [handles]);
-  const picker = useHandlePicker(typed, members, answering === null);
+  const picker = useHandlePicker(typed, activeMembers, answering === null && !note);
   const fillId = fill?.id ?? null;
   if (fill && fill.id !== filled) {
     setFilled(fill.id);
+    setDestinationId('lead');
+    setNoteReceipt(null);
     setTyped({ text: fill.text, caret: fill.text.length });
     setSkipped([]);
     picker.close();
   }
   const { text } = typed;
-  const target = composerTarget(text, handles, answering, skipped);
+  const target = composerTarget(text, handles, answering, skipped, destination ?? null, note);
   const picking = picker.options.length > 0;
   const answeringId = answering?.postId ?? null;
 
@@ -86,6 +105,7 @@ export function OutpostComposer({
   }, [typed]);
 
   const change = (next: string, caret: number) => {
+    setNoteReceipt(null);
     setTyped({ text: next, caret });
     setSkipped((left) => left.filter((handle) => asked(next, handles, []).includes(handle)));
     picker.reset();
@@ -99,15 +119,28 @@ export function OutpostComposer({
     textareaRef.current?.focus();
   };
 
+  const askAll = (body: string) => {
+    setDestinationId('lead');
+    const next = /^@all(?:\s|$)/i.test(body.trim()) ? body : `@all ${body}`;
+    setSkipped([]);
+    caretToPlace.current = next.length;
+    change(next, next.length);
+    textareaRef.current?.focus();
+  };
+
   const send = async () => {
     if (!target.ready) return;
     const sent = text;
+    const receipt = target.action === 'note' ? { text: sent, pending: true } : null;
+    setNoteReceipt(receipt);
     setTyped(NOTHING_TYPED);
     setSkipped([]);
     setProblem(null);
     try {
       await onSend(target, sent);
+      setNoteReceipt((now) => (now && now === receipt ? { ...now, pending: false } : now));
     } catch (error) {
+      setNoteReceipt((now) => (now === receipt ? null : now));
       setProblem(error instanceof Error ? error.message : 'That could not be sent.');
       setTyped((now) => ({
         text: restoreFailedDraft(now.text, sent),
@@ -138,6 +171,18 @@ export function OutpostComposer({
 
   return (
     <div className="composer-wrap">
+      {noteReceipt && !answering && text === '' && (
+        <div className="op-note-receipt">
+          <span role="status">
+            {noteReceipt.pending ? 'Saving note…' : 'Note saved · No agent was asked.'}
+          </span>
+          {!noteReceipt.pending && activeMembers.length > 0 && (
+            <button type="button" className="btn ghost sm" onClick={() => askAll(noteReceipt.text)}>
+              Ask all
+            </button>
+          )}
+        </div>
+      )}
       {problem && (
         <p className="composer-error" role="alert">
           {problem}
@@ -175,7 +220,11 @@ export function OutpostComposer({
           value={text}
           rows={composerRows(text, MAX_ROWS)}
           placeholder={
-            answering ? `Answer @${answering.handle}` : 'Ask a chat with @, or post a note'
+            answering
+              ? `Answer @${answering.handle}`
+              : note
+                ? 'Write a note'
+                : 'Message your agent, @ to ask another'
           }
           aria-label={answering ? `Answer @${answering.handle}` : 'Message the outpost'}
           aria-describedby={hintId}
@@ -193,7 +242,30 @@ export function OutpostComposer({
         />
         <div className="comp-bar">
           <FormatToggle open={formatting} onToggle={setFormatting} />
-          {target.action === 'request' ? (
+          {!answering && (
+            <div className="op-destination">
+              <ChoicePicker
+                label="Message destination"
+                value={destinationId}
+                showNote={false}
+                placeholder="Agent unavailable"
+                choices={[
+                  { id: 'lead', label: lead ? `Lead · @${lead.handle}` : 'No agent available' },
+                  ...activeMembers.map((member) => ({
+                    id: member.conversationId,
+                    label: `@${member.handle}`,
+                  })),
+                  { id: 'note', label: 'Post note', description: 'Save without asking an agent' },
+                ]}
+                onChange={(id) => {
+                  setDestinationId(id);
+                  setNoteReceipt(null);
+                  picker.close();
+                }}
+              />
+            </div>
+          )}
+          {target.action === 'request' && !target.hint && !target.toConversationId ? (
             <AsksLine
               id={hintId}
               handles={target.to}
@@ -205,9 +277,19 @@ export function OutpostComposer({
             />
           ) : (
             <span id={hintId} className="hint shown op-hint">
-              {target.hint}
+              {target.toConversationId
+                ? paused
+                  ? `Paused. @${target.to[0]} gets this when you resume.`
+                  : `To @${target.to[0]}`
+                : target.hint}
             </span>
           )}
+          {target.hint === 'No recipients selected. Restore a recipient or choose Post note.' &&
+            activeMembers.length > 0 && (
+              <button type="button" className="btn ghost sm" onClick={() => askAll(text)}>
+                Ask all
+              </button>
+            )}
           <button
             type="button"
             className="btn primary sm op-send"

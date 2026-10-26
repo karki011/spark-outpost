@@ -34,7 +34,7 @@ describe('OutpostView', () => {
     expect(
       within(screen.getByRole('list', { name: 'Outpost thread' })).getAllByRole('listitem'),
     ).toHaveLength(3);
-    expect(screen.getAllByRole('combobox')).toHaveLength(1);
+    expect(screen.getByRole('combobox', { name: 'Message the outpost' })).toBeTruthy();
   });
 
   it('opens a chat from the strip and from a request’s thread', () => {
@@ -51,7 +51,7 @@ describe('OutpostView', () => {
     show(detail());
     view();
     expect(screen.getByText('Nothing here yet')).toBeTruthy();
-    const box = screen.getByRole('combobox');
+    const box = screen.getByRole('combobox', { name: /Message the outpost|Answer @/ });
     fireEvent.change(box, { target: { value: '@api add the filter' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send request' }));
     const thread = screen.getByRole('list', { name: 'Outpost thread' });
@@ -64,13 +64,25 @@ describe('OutpostView', () => {
     });
   });
 
+  it('posts ordinary text directly to the lead without a handle', async () => {
+    show(detail());
+    view();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Message the outpost' }), {
+      target: { value: 'where are we' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toMatchObject({ body: { text: 'where are we', toConversationId: FE_CHAT } });
+    expect(calls[0]?.body).not.toHaveProperty('to');
+  });
+
   it('answers a Needs you in the main box, as a message to that chat', async () => {
     const sendMessage = vi.spyOn(api, 'sendMessage').mockResolvedValue(SENT);
     show(detail([post(1, { state: 'needs_you', reason: 'Light or dark theme?' })]));
     view();
     fireEvent.click(screen.getByRole('button', { name: 'Answer @api' }));
     expect(screen.getByText('Answering').textContent).toBe('Answering @api');
-    const box = screen.getByRole('combobox');
+    const box = screen.getByRole('combobox', { name: /Message the outpost|Answer @/ });
     expect(document.activeElement).toBe(box);
     fireEvent.change(box, { target: { value: 'Light.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send answer' }));
@@ -122,7 +134,7 @@ describe('OutpostView', () => {
     expect(screen.getByText('Answering')).toBeTruthy();
     show(detail([post(1, { state: 'working' })]));
     await waitFor(() => expect(screen.queryByText('Answering')).toBeNull());
-    expect(screen.getByRole('button', { name: 'Post note' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeTruthy();
   });
 
   it('cancels a request and pauses the outpost', async () => {
@@ -165,7 +177,9 @@ describe('OutpostView', () => {
     expect(onOpenChat).toHaveBeenCalledWith(FE_CHAT);
 
     fireEvent.click(within(stories).getByRole('button', { name: 'Update from @api' }));
-    const box = screen.getByRole<HTMLTextAreaElement>('combobox');
+    const box = screen.getByRole<HTMLTextAreaElement>('combobox', {
+      name: /Message the outpost|Answer @/,
+    });
     expect(box.value).toBe(
       '@fe merge spark/api-1 into your branch, fix any conflicts and run the checks.',
     );
