@@ -22,6 +22,7 @@ test.beforeEach(async ({ page }) => {
 async function send(page: Page, text: string) {
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill(text);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
 }
 
