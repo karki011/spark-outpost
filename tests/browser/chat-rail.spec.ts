@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import type { ConversationDetail } from '../../packages/contracts/src/conversations.ts';
@@ -9,6 +9,7 @@ import {
   projectChat,
   resetWithAgents,
   send,
+  turnDone,
 } from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { useSystemTheme } from './docs-seed.ts';
@@ -241,31 +242,43 @@ test.describe('working chats', () => {
     await page.setViewportSize(WIDE);
     await projectChat(page, repo, 'Full auto');
     await send(page, `${BUILD_REQUEST} #build`);
+    await turnDone(page);
+    const gate = `${repo.root}/.git/agent-tv-release`;
+    const script = JSON.stringify([
+      { say: 'Working on the notes.' },
+      { waitFor: gate },
+      { say: 'All done.' },
+    ]);
+    await send(page, `${BUILD_REQUEST} #build #sparkscript ${script}`);
 
     const dock = rail(page).locator('.crail-tv');
-    await expect(dock).toBeVisible({ timeout: 30_000 });
-    await expect(dock.locator('.tv-n').first()).toBeVisible();
-    const stage = (await dock.locator('.crail-tv-stage').boundingBox())!;
-    const dockRail = (await rail(page).boundingBox())!;
-    expect(stage.width).toBeGreaterThanOrEqual(280);
-    expect(stage.width).toBeLessThanOrEqual(dockRail.width);
-    expect(stage.height).toBeGreaterThanOrEqual(175);
-    await expect(rail(page).getByRole('list', { name: 'This chat' })).toContainText(
-      'Full auto → PR',
-    );
-    await expect(rail(page).getByRole('list', { name: 'This chat' })).toContainText('worktree');
-    await shoot(page, 'agent-run-2000');
-
-    const before = (await page.locator('.col').boundingBox())!;
-    await dock.getByRole('button', { name: /^Open Agent TV/ }).click();
     const tv = page.getByRole('dialog', { name: 'Agent TV' });
-    await expect(tv).toBeVisible();
-    await tv.getByRole('button', { name: 'Close Agent TV' }).click();
-    await expect(tv).toBeHidden();
+    let before!: { x: number; width: number };
+    try {
+      await expect(dock).toBeVisible({ timeout: 30_000 });
+      await expect(dock.locator('.tv-n').first()).toBeVisible();
+      const stage = (await dock.locator('.crail-tv-stage').boundingBox())!;
+      const dockRail = (await rail(page).boundingBox())!;
+      expect(stage.width).toBeGreaterThanOrEqual(280);
+      expect(stage.width).toBeLessThanOrEqual(dockRail.width);
+      expect(stage.height).toBeGreaterThanOrEqual(175);
+      await expect(rail(page).getByRole('list', { name: 'This chat' })).toContainText(
+        'Full auto → PR',
+      );
+      await expect(rail(page).getByRole('list', { name: 'This chat' })).toContainText('worktree');
+      await shoot(page, 'agent-run-2000');
 
-    await expect(page.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0, {
-      timeout: 120_000,
-    });
+      before = (await page.locator('.col').boundingBox())!;
+      await dock.getByRole('button', { name: /^Open Agent TV/ }).click();
+      await expect(tv).toBeVisible();
+      await tv.getByRole('button', { name: 'Close Agent TV' }).click();
+      await expect(tv).toBeHidden();
+    } finally {
+      writeFileSync(gate, '');
+      await expect(page.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0, {
+        timeout: 120_000,
+      });
+    }
     await expect(dock).toHaveCount(0);
     const after = (await page.locator('.col').boundingBox())!;
     expect(after.x).toBe(before.x);
