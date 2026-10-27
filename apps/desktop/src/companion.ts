@@ -36,7 +36,7 @@ export interface CompanionEffects {
   openIsland: (onGone: () => void) => IslandHandle;
   register: (accelerator: string, run: () => void) => boolean;
   unregister: (accelerator: string) => void;
-  save: (settings: CompanionSettings) => void;
+  save: (settings: CompanionSettings) => void | Promise<void>;
   changed: (status: CompanionStatus) => void;
   preview: (status: CompanionStatus) => void;
 }
@@ -50,7 +50,7 @@ export interface Companion {
   setShortcut(action: ShortcutAction, accelerator: string | null): ShortcutResult;
   setSound(on: boolean): CompanionStatus;
   setIslandSize(size: IslandSize): CompanionStatus;
-  setIslandHeight(height: number): CompanionStatus;
+  setIslandHeight(height: number): Promise<CompanionStatus>;
   previewIslandHeight(height: number): CompanionStatus;
   setAutoExpand(on: boolean): CompanionStatus;
   setHideInShare(on: boolean): CompanionStatus;
@@ -76,6 +76,8 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
   const failed = new Set<ShortcutAction>();
   let notifyBlocked = false;
   let previewHeight: number | null = null;
+  let previewRevision = 0;
+  let saving: Promise<void> | null = null;
 
   const status = (): CompanionStatus => ({
     supported: effects.supported,
@@ -94,9 +96,25 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
 
   const publish = () => effects.changed(status());
 
+  const persist = (write: () => void | Promise<void>): Promise<void> => {
+    let result: void | Promise<void>;
+    try {
+      result = saving ? saving.then(write) : write();
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    if (!result) return Promise.resolve();
+    const tail = Promise.resolve(result).catch(() => {});
+    saving = tail;
+    void tail.then(() => {
+      if (saving === tail) saving = null;
+    });
+    return Promise.resolve(result);
+  };
+
   const commit = (next: CompanionSettings) => {
     settings = next;
-    effects.save(settings);
+    void persist(() => effects.save(settings)).catch(() => {});
   };
 
   const tryRegister = (action: ShortcutAction, accelerator: string): boolean => {
@@ -142,7 +160,10 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
     position: () => settings.position,
     setEnabled(on) {
       if (!effects.supported) return status();
-      if (!on) previewHeight = null;
+      if (!on) {
+        previewRevision += 1;
+        previewHeight = null;
+      }
       commit({ ...settings, enabled: on });
       if (on) start();
       else stop();
@@ -179,18 +200,26 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
       publish();
       return status();
     },
-    setIslandHeight(height) {
+    async setIslandHeight(height) {
       if (!isIslandHeight(height)) return status();
-      const previewed = previewHeight !== null;
-      previewHeight = null;
-      if (height === settings.islandHeight && !previewed) return status();
-      if (height !== settings.islandHeight) commit({ ...settings, islandHeight: height });
-      publish();
+      if (!saving && height === settings.islandHeight && previewHeight === null) return status();
+      const revision = previewRevision;
+      try {
+        await persist(async () => {
+          if (height === settings.islandHeight) return;
+          await effects.save({ ...settings, islandHeight: height });
+          settings = { ...settings, islandHeight: height };
+        });
+      } finally {
+        if (revision === previewRevision) previewHeight = null;
+        publish();
+      }
       return status();
     },
     previewIslandHeight(height) {
       if (!isIslandHeight(height) || height === (previewHeight ?? settings.islandHeight))
         return status();
+      previewRevision += 1;
       previewHeight = height;
       effects.preview(status());
       return status();

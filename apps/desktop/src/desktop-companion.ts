@@ -97,7 +97,6 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   let island: IslandWindow | null = null;
   let pendingChat: { id: string; runId: string | null } | null = null;
   let pendingSettings: string | null = null;
-  let saving = Promise.resolve();
   let attention: AttentionHost | null = null;
   const menuBar = menuBarItem(() => openTray(options.trayIcon, options.appName));
 
@@ -120,10 +119,15 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     app.dock?.setMenu(Menu.buildFromTemplate(islandToggle(state, toggleCompanion)));
   };
 
-  const save = (settings: CompanionSettings) => {
-    saving = saving
-      .then(() => saveSettings(options.settingsPath, settings))
-      .catch((error: Error) => console.error(`[companion] Could not save: ${error.message}`));
+  const save = async (settings: CompanionSettings) => {
+    try {
+      await saveSettings(options.settingsPath, settings);
+    } catch (error) {
+      console.error(
+        `[companion] Could not save: ${error instanceof Error ? error.message : error}`,
+      );
+      throw error;
+    }
   };
 
   const layout = appLayout({
