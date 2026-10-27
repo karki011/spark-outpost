@@ -10,6 +10,7 @@ import { acceleratorFromKey, shortcutKeys } from '../desktop/shortcut-keys.ts';
 import { useCompanionStatus } from '../desktop/use-companion-status.ts';
 import type { DocTarget } from '../ui/DocLink.tsx';
 import { Keys } from '../ui/Keys.tsx';
+import { ISLAND_HEIGHT_LABEL, IslandHeightSetting } from './IslandHeightSetting.tsx';
 import { ISLAND_SIZE_LABEL, IslandSizeSetting } from './IslandSizeSetting.tsx';
 import { SettingRow } from './SettingRow.tsx';
 
@@ -36,6 +37,7 @@ const DEFAULTS: Record<IslandAction, string> = { quick: 'Alt+Space', sessions: '
 
 const SHOWN_WITH_ISLAND = [
   ISLAND_SIZE_LABEL,
+  ISLAND_HEIGHT_LABEL,
   AUTO_EXPAND,
   HIDE_IN_SHARE,
   ...SHORTCUTS.map((shortcut) => shortcut.label),
@@ -49,6 +51,7 @@ export function islandRows(): string[] {
     NOTIFY,
     MENU_BAR,
     ISLAND_SIZE_LABEL,
+    ISLAND_HEIGHT_LABEL,
     AUTO_EXPAND,
     HIDE_IN_SHARE,
     ...SHORTCUTS.map((shortcut) => shortcut.label),
@@ -229,6 +232,11 @@ export function DesktopCompanionSetting() {
               onChange={(size) => void desktop.companion.setIslandSize?.(size)}
             />
           )}
+          <IslandHeightSetting
+            status={status}
+            onChange={desktop.companion.setIslandHeight}
+            onPreview={desktop.companion.previewIslandHeight}
+          />
           {desktop.companion.setAutoExpand && (
             <SwitchRow
               id={expandId}

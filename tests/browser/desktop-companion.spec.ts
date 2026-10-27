@@ -12,6 +12,7 @@ async function fakeDesktop(page: Page) {
       failed: [] as string[],
       sound: false,
       islandSize: localStorage.getItem('fake-desktop.island-size') ?? 'medium',
+      islandHeight: Number(localStorage.getItem('fake-desktop.island-height') ?? 0),
       autoExpand: true,
       hideInShare: true,
       notify: true,
@@ -25,7 +26,11 @@ async function fakeDesktop(page: Page) {
     };
     const noop = () => () => undefined;
     const reports: unknown[] = [];
+    let heightSaveDelay = 0;
     Object.assign(window, {
+      setHeightSaveDelay: (delay: number) => {
+        heightSaveDelay = delay;
+      },
       desktopCalls: calls,
       attentionReports: reports,
       blockNotifications: () => {
@@ -62,6 +67,18 @@ async function fakeDesktop(page: Page) {
             calls.push(['size', size]);
             status.islandSize = size;
             localStorage.setItem('fake-desktop.island-size', size);
+            return publish();
+          },
+          previewIslandHeight: async (height: number) => {
+            calls.push(['previewHeight', height]);
+            status.islandHeight = height;
+            return publish();
+          },
+          setIslandHeight: async (height: number) => {
+            calls.push(['height', height]);
+            await new Promise((resolve) => setTimeout(resolve, heightSaveDelay));
+            status.islandHeight = height;
+            localStorage.setItem('fake-desktop.island-height', String(height));
             return publish();
           },
           setAutoExpand: async (on: boolean) => {
@@ -111,6 +128,71 @@ async function openNotifications(page: Page) {
 
 const desktopCalls = (page: Page) =>
   page.evaluate(() => (window as unknown as { desktopCalls: unknown[] }).desktopCalls);
+
+test('Island height previews a drag, saves once on release, and resets after reload', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await fakeDesktop(page);
+  await page.goto('/');
+  await openNotifications(page);
+  await page.getByRole('switch', { name: 'Show Spark Island' }).click();
+  const slider = page.getByRole('slider', { name: 'Spark Island height' });
+  await expect(slider).toHaveValue('0');
+  const bounds = (await slider.boundingBox())!;
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + bounds.width * 0.2, bounds.y + bounds.height / 2, { steps: 8 });
+  await expect
+    .poll(async () =>
+      (await desktopCalls(page)).some((call) => Array.isArray(call) && call[0] === 'previewHeight'),
+    )
+    .toBe(true);
+  expect(
+    (await desktopCalls(page)).filter((call) => Array.isArray(call) && call[0] === 'height'),
+  ).toEqual([]);
+  const chosen = await slider.inputValue();
+  expect(Number(chosen)).toBeLessThan(0);
+  await expect(slider).toHaveAttribute('aria-valuetext', /px higher$/);
+  await page.mouse.up();
+  await expect
+    .poll(async () =>
+      (await desktopCalls(page)).filter((call) => Array.isArray(call) && call[0] === 'height'),
+    )
+    .toEqual([['height', Number(chosen)]]);
+  await slider.blur();
+  expect(
+    (await desktopCalls(page)).filter((call) => Array.isArray(call) && call[0] === 'height'),
+  ).toHaveLength(1);
+  await page.reload();
+  await openNotifications(page);
+  await page.getByRole('switch', { name: 'Show Spark Island' }).click();
+  await expect(slider).toHaveValue(chosen);
+  await page.getByRole('button', { name: 'Reset Spark Island height' }).click();
+  await expect(slider).toHaveValue('0');
+  await expect(slider).toHaveAttribute('aria-valuetext', 'Default');
+  expect(
+    (await desktopCalls(page)).filter((call) => Array.isArray(call) && call[0] === 'height'),
+  ).toEqual([['height', 0]]);
+  await page.reload();
+  await openNotifications(page);
+  await page.getByRole('switch', { name: 'Show Spark Island' }).click();
+  await expect(slider).toHaveValue('0');
+  await page.evaluate(() =>
+    (window as unknown as { setHeightSaveDelay(delay: number): void }).setHeightSaveDelay(100),
+  );
+  await slider.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('fake-desktop.island-height')))
+    .toBe('1');
+  await expect(slider).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('fake-desktop.island-height')))
+    .toBe('2');
+  await expect(slider).toBeFocused();
+});
 
 test('the desktop companion shows its shortcuts only while it is on', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });

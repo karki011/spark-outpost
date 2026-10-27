@@ -1,3 +1,4 @@
+import { isIslandHeight } from '@spark-outpost/contracts';
 import {
   DEFAULT_SHORTCUTS,
   isAccelerator,
@@ -20,6 +21,7 @@ export interface CompanionStatus {
   failed: ShortcutAction[];
   sound: boolean;
   islandSize: IslandSize;
+  islandHeight: number;
   autoExpand: boolean;
   hideInShare: boolean;
   notify: boolean;
@@ -36,6 +38,7 @@ export interface CompanionEffects {
   unregister: (accelerator: string) => void;
   save: (settings: CompanionSettings) => void;
   changed: (status: CompanionStatus) => void;
+  preview: (status: CompanionStatus) => void;
 }
 
 export interface Companion {
@@ -47,6 +50,8 @@ export interface Companion {
   setShortcut(action: ShortcutAction, accelerator: string | null): ShortcutResult;
   setSound(on: boolean): CompanionStatus;
   setIslandSize(size: IslandSize): CompanionStatus;
+  setIslandHeight(height: number): CompanionStatus;
+  previewIslandHeight(height: number): CompanionStatus;
   setAutoExpand(on: boolean): CompanionStatus;
   setHideInShare(on: boolean): CompanionStatus;
   setNotify(on: boolean): CompanionStatus;
@@ -70,6 +75,7 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
   const active = new Map<ShortcutAction, string>();
   const failed = new Set<ShortcutAction>();
   let notifyBlocked = false;
+  let previewHeight: number | null = null;
 
   const status = (): CompanionStatus => ({
     supported: effects.supported,
@@ -78,6 +84,7 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
     failed: SHORTCUT_ACTIONS.filter((action) => failed.has(action)),
     sound: settings.sound,
     islandSize: settings.islandSize,
+    islandHeight: previewHeight ?? settings.islandHeight,
     autoExpand: settings.autoExpand,
     hideInShare: settings.hideInShare,
     notify: settings.notify,
@@ -135,6 +142,7 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
     position: () => settings.position,
     setEnabled(on) {
       if (!effects.supported) return status();
+      if (!on) previewHeight = null;
       commit({ ...settings, enabled: on });
       if (on) start();
       else stop();
@@ -169,6 +177,22 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
     setIslandSize(size) {
       commit({ ...settings, islandSize: size, islandSizePicked: true });
       publish();
+      return status();
+    },
+    setIslandHeight(height) {
+      if (!isIslandHeight(height)) return status();
+      const previewed = previewHeight !== null;
+      previewHeight = null;
+      if (height === settings.islandHeight && !previewed) return status();
+      if (height !== settings.islandHeight) commit({ ...settings, islandHeight: height });
+      publish();
+      return status();
+    },
+    previewIslandHeight(height) {
+      if (!isIslandHeight(height) || height === (previewHeight ?? settings.islandHeight))
+        return status();
+      previewHeight = height;
+      effects.preview(status());
       return status();
     },
     setAutoExpand(on) {

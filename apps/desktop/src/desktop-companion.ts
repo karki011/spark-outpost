@@ -10,7 +10,7 @@ import {
   type IpcMainEvent,
   type IpcMainInvokeEvent,
 } from 'electron';
-import { parseIslandRegions } from '@spark-outpost/contracts';
+import { isIslandHeight, parseIslandRegions } from '@spark-outpost/contracts';
 import { createCompanion, type Companion, type CompanionStatus } from './companion.ts';
 import {
   isIslandSize,
@@ -165,6 +165,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     register: registerShortcut,
     unregister: (accelerator) => globalShortcut.unregister(accelerator),
     save,
+    preview: (status) => broadcast(IPC.companionChanged, status),
     changed: (status) => {
       refreshMenus(status);
       attention?.refresh();
@@ -212,6 +213,15 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     island?.sizeChanged();
     return status;
   });
+  ipcMain.handle(IPC.companionSetIslandHeight, (event, height: unknown) => {
+    if (!fromSpark(event) || !isIslandHeight(height)) return companion.status();
+    return companion.setIslandHeight(height);
+  });
+  ipcMain.handle(IPC.companionPreviewIslandHeight, (event, height: unknown) =>
+    fromSpark(event) && isIslandHeight(height)
+      ? companion.previewIslandHeight(height)
+      : companion.status(),
+  );
   ipcMain.handle(IPC.companionSetAutoExpand, (event, on: unknown) =>
     fromSpark(event) && typeof on === 'boolean' ? companion.setAutoExpand(on) : companion.status(),
   );

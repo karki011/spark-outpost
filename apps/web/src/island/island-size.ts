@@ -37,3 +37,7 @@ export function useAutoExpandSetting(): boolean {
 export function useIslandSize(): IslandSize {
   return useCompanionStatus()?.islandSize ?? UNSET_ISLAND_SIZE;
 }
+
+export function useIslandHeight(): number {
+  return useCompanionStatus()?.islandHeight ?? 0;
+}

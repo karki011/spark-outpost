@@ -41,6 +41,7 @@ export interface CompanionStatus {
   failed: IslandAction[];
   sound?: boolean;
   islandSize?: IslandSize;
+  islandHeight?: number;
   autoExpand?: boolean;
   hideInShare?: boolean;
   notify?: boolean;
@@ -140,6 +141,8 @@ export interface SparkDesktop {
     setShortcut(action: IslandAction, accelerator: string | null): Promise<ShortcutResult>;
     setSound?(on: boolean): Promise<CompanionStatus>;
     setIslandSize?(size: IslandSize): Promise<CompanionStatus>;
+    setIslandHeight?(height: number): Promise<CompanionStatus>;
+    previewIslandHeight?(height: number): Promise<CompanionStatus>;
     setAutoExpand?(on: boolean): Promise<CompanionStatus>;
     setHideInShare?(on: boolean): Promise<CompanionStatus>;
     setNotify?(on: boolean): Promise<CompanionStatus>;

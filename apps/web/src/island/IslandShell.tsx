@@ -20,7 +20,7 @@ import { scoutLabel, ScoutMarks } from './RestLine.tsx';
 import { DropScene } from './DropScene.tsx';
 import { ViewBody, type IslandShellProps } from './ShellBody.tsx';
 import { notchFit, restLineTop, restPose, restsQuietly, stripHeight } from './island-fit.ts';
-import { restMetrics, type RestMetrics } from './island-size.ts';
+import { restMetrics, useIslandHeight, type RestMetrics } from './island-size.ts';
 import { useIslandShape, type ScoutSpot } from './use-island-shape.ts';
 
 interface ShellRefs {
@@ -47,9 +47,10 @@ function scoutSpot(
   rest: RestMetrics,
   docked: boolean,
   out: boolean,
+  height: number,
 ): ScoutSpot {
   if (view.kind === 'peek') {
-    const pose = restPose({ docked, edge: top, tuck: rest.tuck, out });
+    const pose = restPose({ docked, edge: top, tuck: rest.tuck, out, height, blob: rest.blob });
     const x = width / 2 - rest.blob / 2 - ISLAND_BORDER;
     return { x, y: pose.y, size: rest.blob, edge: pose.edge };
   }
@@ -71,6 +72,7 @@ function viewKey(view: IslandView): string {
 
 export function IslandShell({ islandRef, ...props }: IslandShellProps & ShellRefs) {
   const { view, geometry, size } = props;
+  const height = useIslandHeight();
   const scoutRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
   const fit = notchFit(geometry);
@@ -84,7 +86,9 @@ export function IslandShell({ islandRef, ...props }: IslandShellProps & ShellRef
   const top = bare || loose ? 0 : stripHeight(fit, quiet);
   const out = props.hover || !restsQuietly(props.mood);
   const { docked } = geometry;
-  const pose = peeking ? restPose({ docked, edge: top, tuck: rest.tuck, out }) : null;
+  const pose = peeking
+    ? restPose({ docked, edge: top, tuck: rest.tuck, out, height, blob: rest.blob })
+    : null;
   const gap = hugsNotch ? geometry.notchWidth + 2 * NOTCH_MARGIN : 0;
   const notchSpan = loose ? 0 : view.kind === 'peek' ? geometry.notchWidth : gap;
   const viewport = useViewportWidth();
@@ -92,7 +96,7 @@ export function IslandShell({ islandRef, ...props }: IslandShellProps & ShellRef
   const room = Math.max(PANEL_MIN_WIDTH, viewport - PANEL_SIDE_GAP);
   const width = bare ? rest.blob : Math.min(viewWidth(view, notchSpan, screenWidth), room);
   const hint = keyHint(view);
-  const scout = scoutSpot(view, width, top, rest, docked, out);
+  const scout = scoutSpot(view, width, top, rest, docked, out, height);
   const setTarget = useIslandShape(
     islandRef,
     scoutRef,
@@ -122,13 +126,13 @@ export function IslandShell({ islandRef, ...props }: IslandShellProps & ShellRef
   useLayoutEffect(() => {
     const measure = () => {
       const body = quiet ? 0 : (viewRef.current?.scrollHeight ?? 0);
-      const height = top + body + (hint && !quiet ? KHINT_HEIGHT : 0);
+      const panelHeight = top + body + (hint && !quiet ? KHINT_HEIGHT : 0);
       setTarget(
         {
           width,
-          height,
+          height: panelHeight,
           radius: quiet ? 14 : 22,
-          scout: scoutSpot(view, width, top, rest, docked, out),
+          scout: scoutSpot(view, width, top, rest, docked, out, height),
         },
         view.kind === 'peek' ? 0.62 : 0.5,
       );
@@ -139,7 +143,7 @@ export function IslandShell({ islandRef, ...props }: IslandShellProps & ShellRef
     const observer = new ResizeObserver(measure);
     observer.observe(watched);
     return () => observer.disconnect();
-  }, [view, width, top, quiet, hint, setTarget, rest, docked, out]);
+  }, [view, width, top, quiet, hint, setTarget, rest, docked, out, height]);
 
   const classes = [
     'isl',

@@ -61,6 +61,7 @@ describe('companion settings file', () => {
       position: { docked: true },
       sound: false,
       islandSize: 'full',
+      islandHeight: 0,
       islandSizePicked: false,
       autoExpand: true,
       hideInShare: true,
@@ -92,6 +93,17 @@ describe('companion settings file', () => {
     expect(saved).toMatchObject({ islandSize: 'xlarge', islandSizePicked: true });
     expect(parseSettings(JSON.stringify(saved)).islandSize).toBe('xlarge');
     expect(parseSettings(JSON.stringify({ islandSize: 'xlarge' })).islandSize).toBe('full');
+  });
+
+  it('keeps valid island heights and restores the default for malformed stored values', () => {
+    for (const value of [-32, -1, 0, 14, 32]) {
+      expect(parseSettings(JSON.stringify({ islandHeight: value })).islandHeight).toBe(value);
+    }
+    for (const value of [-33, 33, 2.5, '12', null, {}, []]) {
+      expect(parseSettings(JSON.stringify({ islandHeight: value })).islandHeight).toBe(0);
+    }
+    expect(parseSettings('{"islandHeight":1e400}').islandHeight).toBe(0);
+    expect(parseSettings('{}').islandHeight).toBe(0);
   });
 
   it('opens requests by itself unless that was turned off', () => {
@@ -142,6 +154,7 @@ describe('companion settings file', () => {
       position: { docked: false as const, x: 40, y: 200 },
       sound: true,
       islandSize: 'small' as const,
+      islandHeight: -12,
       islandSizePicked: true,
       autoExpand: false,
       hideInShare: false,

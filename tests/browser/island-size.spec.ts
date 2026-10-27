@@ -3,6 +3,7 @@ import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { pointAtScout } from './island-pointer.ts';
 import { ISLAND_BLOB } from '../../packages/contracts/src/island-size.ts';
+import { NOTCH, openNotchIsland, type NotchWindow } from './island-notch-desktop.ts';
 
 const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
 
@@ -171,4 +172,66 @@ test('a pending request rests as Scout with a count at every size, including sav
   await expect(card).toContainText('npm test');
   await page.keyboard.press('Escape');
   await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
+});
+
+test('height moves the working blob under a notch without moving its open panel', async ({
+  page,
+}, info) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedChats([{ title: 'Build the dashboard', run: { status: 'running' } }]);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openNotchIsland(page, { size: 'medium', autoExpand: false });
+  const scout = island(page).locator('.isl-scout-wrap');
+  const height = (value: number) =>
+    page.evaluate((next) => (window as unknown as NotchWindow).setIslandHeight(next), value);
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect.poll(async () => (await scout.boundingBox())!.y).toBeGreaterThan(NOTCH.height);
+  const baseline = (await scout.boundingBox())!;
+  await page.screenshot({
+    path: info.outputPath('island-height-default.png'),
+    clip: { x: 400, y: 0, width: 480, height: 200 },
+  });
+  await height(-32);
+  await expect.poll(async () => (await scout.boundingBox())!.y).toBeLessThan(baseline.y);
+  await settledBoxes(page);
+  const raised = (await scout.boundingBox())!;
+  expect(raised.y + raised.height - NOTCH.height).toBeGreaterThanOrEqual(16);
+  await page.screenshot({
+    path: info.outputPath('island-height-raised.png'),
+    clip: { x: 400, y: 0, width: 480, height: 200 },
+  });
+  await height(32);
+  await expect.poll(async () => (await scout.boundingBox())!.y).toBeGreaterThan(baseline.y);
+  await settledBoxes(page);
+  await page.screenshot({
+    path: info.outputPath('island-height-lowered.png'),
+    clip: { x: 400, y: 0, width: 480, height: 200 },
+  });
+  const button = island(page).locator('.isl-scout-btn');
+  const hit = (await button.boundingBox())!;
+  await button.click({ position: { x: hit.width / 2, y: hit.height - 4 } });
+  await expect(island(page)).toHaveAttribute('data-view', 'panel');
+  await settledBoxes(page);
+  const panel = (await island(page).boundingBox())!;
+  expect((await island(page).locator('.isl-view').boundingBox())!.y).toBeGreaterThanOrEqual(
+    NOTCH.height,
+  );
+  expect(panel.y + panel.height).toBeLessThanOrEqual(720);
+  await height(-32);
+  await settledBoxes(page);
+  expect(await island(page).boundingBox()).toEqual(panel);
+  await page.screenshot({ path: info.outputPath('island-height-panel.png') });
+});
+
+test('height leaves a floating working island in its current position', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedChats([{ title: 'Explore the reports', run: { status: 'running' } }]);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openNotchIsland(page, { size: 'medium', autoExpand: false, docked: false, notch: false });
+  await settledBoxes(page);
+  const scout = island(page).locator('.isl-scout-wrap');
+  const before = await scout.boundingBox();
+  await page.evaluate(() => (window as unknown as NotchWindow).setIslandHeight(32));
+  await settledBoxes(page);
+  expect(await scout.boundingBox()).toEqual(before);
 });
