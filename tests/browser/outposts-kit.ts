@@ -97,6 +97,7 @@ export async function openOutpost(page: Page, name = NAME): Promise<Locator> {
 
 export async function say(page: Page, text: string): Promise<void> {
   await box(page).fill(text);
+  await expect(page.locator('.op-send')).toBeEnabled();
   await box(page).press('Enter');
 }
 
