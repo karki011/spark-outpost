@@ -6,24 +6,24 @@ order: 410
 summary: Turn on Spark Island in the Mac app, size and move it, and allow or deny an agent's request from the top of your screen.
 ---
 
-You'll answer agents from Spark Island. About 2 minutes.
+Adjust Spark Island and answer agents. About 2 minutes.
 
 ## Turn it on and size it
 
 1. Open **Settings → Notifications**, **Spark Island**.
 2. Switch **Show Spark Island** on or off.
-3. Pick a **Spark Island size**.
+3. Pick a **Spark Island size**. Slide **Spark Island height** higher or lower; **Reset** restores it.
 4. **Island chimes** sound for new requests.
 5. **Hide in screen sharing** keeps it out of shares; some apps may still show it.
-6. **Show in menu bar** adds Spark's icon there; it's off at first. Without it, right-click the Dock icon to show or hide Spark Island.
+6. **Show in menu bar** adds Spark's icon. Otherwise, right-click the Dock icon to toggle Island.
 
 ![The Spark Island settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 
-Drag Scout anywhere; at top centre it docks, half hidden when quiet.
+Drag Scout anywhere; top centre docks it. Height adjusts the docked blob; panels stay below the notch.
 
 ## Open it
 
-Scout rests at the notch, with an amber count when something needs you. Rest on it to answer the top request or join a meeting within 10 minutes; click for Home. Passing over opens nothing.
+Scout’s amber count shows requests. Hover to answer or join a meeting within 10 minutes; click for Home. Passing over opens nothing.
 
 ![Spark Island Home: one big request card with Allow, Deny and Later, and working chats below](images/companion-island-home-light.png)
 

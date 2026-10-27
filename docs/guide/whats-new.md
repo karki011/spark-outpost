@@ -12,6 +12,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed                      | What to do                                                               |
 | --------------------------------- | ------------------------------------------------------------------------ |
+| Adjustable Island height          | Slide higher or lower in **Settings → Notifications**.                   |
 | Code Mode on by default           | Combine reads; [turn off in Settings](settings.md#code-mode).            |
 | Accurate activity status          | Commands pass; tools finish.                                             |
 | Agent-led delegation              | Leads [choose workers and slices](how-spark-works.md#how-work-is-split). |

@@ -4,6 +4,8 @@ export const IPC = {
   companionSetShortcut: 'companion:set-shortcut',
   companionSetSound: 'companion:set-sound',
   companionSetIslandSize: 'companion:set-island-size',
+  companionSetIslandHeight: 'companion:set-island-height',
+  companionPreviewIslandHeight: 'companion:preview-island-height',
   companionSetAutoExpand: 'companion:set-auto-expand',
   companionSetHideInShare: 'companion:set-hide-in-share',
   companionSetNotify: 'companion:set-notify',

@@ -82,6 +82,7 @@ async function realChat(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Audit the date helpers #plan');
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 30_000 });
 }

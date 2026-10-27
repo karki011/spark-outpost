@@ -16,3 +16,14 @@ const SMALL_TUCK = 20;
 export function islandTuck(blob: number): number {
   return Math.round((SMALL_TUCK * blob) / SMALL_BLOB);
 }
+
+export const ISLAND_HEIGHT_RANGE = { min: -32, max: 32, default: 0 } as const;
+
+export function isIslandHeight(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= ISLAND_HEIGHT_RANGE.min &&
+    value <= ISLAND_HEIGHT_RANGE.max
+  );
+}

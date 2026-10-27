@@ -9,7 +9,7 @@ import {
   send,
 } from './project-chat-kit.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
-import { fakeHomeDesktop, openIsland } from './island-home-desktop.ts';
+import { fakeHomeDesktop, openHome, openIsland } from './island-home-desktop.ts';
 import { openChats } from './navigation.ts';
 import { BUSY_MACHINE, frameWork, PRODUCTION, writeReport, type FrameWork } from './perf-probe.ts';
 import { openPhone, resetPhone, setFakeTailscale, startPairing, turnOn } from './phone-support.ts';
@@ -162,6 +162,7 @@ test('Spark Island blobs for working and waiting chats do no work on each frame'
   ]);
   await fakeHomeDesktop(page);
   await openIsland(page);
+  await openHome(page);
   await expect(page.locator('.isl-sblob')).toHaveCount(2);
   await page.mouse.move(640, 600);
   await measure(page, 'island');

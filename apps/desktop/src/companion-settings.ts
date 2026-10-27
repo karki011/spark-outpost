@@ -1,6 +1,11 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { ISLAND_SIZES, type IslandSize } from '@spark-outpost/contracts';
+import {
+  ISLAND_HEIGHT_RANGE,
+  ISLAND_SIZES,
+  isIslandHeight,
+  type IslandSize,
+} from '@spark-outpost/contracts';
 
 export type { IslandSize };
 
@@ -16,6 +21,7 @@ export interface CompanionSettings {
   position: IslandPosition;
   sound: boolean;
   islandSize: IslandSize;
+  islandHeight: number;
   islandSizePicked: boolean;
   autoExpand: boolean;
   hideInShare: boolean;
@@ -34,6 +40,7 @@ export const DEFAULT_SETTINGS: CompanionSettings = {
   position: { docked: true },
   sound: false,
   islandSize: 'full',
+  islandHeight: ISLAND_HEIGHT_RANGE.default,
   islandSizePicked: false,
   autoExpand: true,
   hideInShare: true,
@@ -146,6 +153,9 @@ export function parseSettings(raw: string | null): CompanionSettings {
     position: parsePosition(record.position),
     sound: savedFlag(record.sound, DEFAULT_SETTINGS.sound),
     islandSize: size ?? DEFAULT_SETTINGS.islandSize,
+    islandHeight: isIslandHeight(record.islandHeight)
+      ? record.islandHeight
+      : DEFAULT_SETTINGS.islandHeight,
     islandSizePicked: size !== null,
     autoExpand: savedFlag(record.autoExpand, DEFAULT_SETTINGS.autoExpand),
     hideInShare: savedFlag(record.hideInShare, DEFAULT_SETTINGS.hideInShare),

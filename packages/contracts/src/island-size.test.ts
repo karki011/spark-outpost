@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { ISLAND_BLOB, ISLAND_SIZES, islandTuck } from './island-size.ts';
+import {
+  ISLAND_BLOB,
+  ISLAND_SIZES,
+  islandTuck,
+  isIslandHeight,
+  ISLAND_HEIGHT_RANGE,
+} from './island-size.ts';
 
 describe('island sizes', () => {
   it('ends with a size exactly twice the previous largest', () => {
@@ -17,4 +23,12 @@ describe('island sizes', () => {
       expect(shown).toBeLessThan(0.49);
     }
   });
+});
+
+it('accepts only whole island height offsets in the supported range', () => {
+  expect(ISLAND_HEIGHT_RANGE).toEqual({ min: -32, max: 32, default: 0 });
+  for (const value of [-32, -1, 0, 1, 32]) expect(isIslandHeight(value)).toBe(true);
+  for (const value of [-33, 33, 1.5, NaN, Infinity, -Infinity, '0', null, undefined, {}, []]) {
+    expect(isIslandHeight(value)).toBe(false);
+  }
 });

@@ -38,6 +38,9 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
       ipcRenderer.invoke(IPC.companionSetShortcut, action, accelerator),
     setSound: (on: boolean) => ipcRenderer.invoke(IPC.companionSetSound, on),
     setIslandSize: (size: string) => ipcRenderer.invoke(IPC.companionSetIslandSize, size),
+    setIslandHeight: (height: number) => ipcRenderer.invoke(IPC.companionSetIslandHeight, height),
+    previewIslandHeight: (height: number) =>
+      ipcRenderer.invoke(IPC.companionPreviewIslandHeight, height),
     setAutoExpand: (on: boolean) => ipcRenderer.invoke(IPC.companionSetAutoExpand, on),
     setHideInShare: (on: boolean) => ipcRenderer.invoke(IPC.companionSetHideInShare, on),
     setNotify: (on: boolean) => ipcRenderer.invoke(IPC.companionSetNotify, on),

@@ -44,13 +44,16 @@ interface RestInput {
   edge: number;
   tuck: number;
   out: boolean;
+  height?: number;
+  blob?: number;
 }
 
-export function restPose({ docked, edge, tuck, out }: RestInput): RestPose {
+export function restPose({ docked, edge, tuck, out, height = 0, blob = 58 }: RestInput): RestPose {
   if (!docked) return { y: 0, tucked: false, edge: null };
   const clip = edge > 0 ? edge : null;
-  if (out) return { y: edge + OUT_GAP, tucked: false, edge: clip };
-  return { y: edge - tuck, tucked: true, edge: clip };
+  const base = out ? edge + OUT_GAP : edge - tuck;
+  const y = height === 0 ? base : Math.max(edge - blob + 16, base + height);
+  return { y, tucked: y < edge, edge: clip };
 }
 
 interface Box {

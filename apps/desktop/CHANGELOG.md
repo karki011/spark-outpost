@@ -4,6 +4,10 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.33
+
+- Adjust **Spark Island height** in Settings → Notifications to raise or lower the docked blob, including while agents work. The slider previews changes live, saves when you finish adjusting, and offers **Reset** to restore the default. Expanded panels keep their clearance below the notch.
+
 ## 0.1.0-beta.32
 
 - The chat sidebar shows the same worker blobs as Agent TV, with consistent identities and room for larger teams. Finished workers keep their outcomes visible.

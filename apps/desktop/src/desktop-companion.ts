@@ -10,7 +10,7 @@ import {
   type IpcMainEvent,
   type IpcMainInvokeEvent,
 } from 'electron';
-import { parseIslandRegions } from '@spark-outpost/contracts';
+import { isIslandHeight, parseIslandRegions } from '@spark-outpost/contracts';
 import { createCompanion, type Companion, type CompanionStatus } from './companion.ts';
 import {
   isIslandSize,
@@ -97,7 +97,6 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   let island: IslandWindow | null = null;
   let pendingChat: { id: string; runId: string | null } | null = null;
   let pendingSettings: string | null = null;
-  let saving = Promise.resolve();
   let attention: AttentionHost | null = null;
   const menuBar = menuBarItem(() => openTray(options.trayIcon, options.appName));
 
@@ -120,10 +119,15 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     app.dock?.setMenu(Menu.buildFromTemplate(islandToggle(state, toggleCompanion)));
   };
 
-  const save = (settings: CompanionSettings) => {
-    saving = saving
-      .then(() => saveSettings(options.settingsPath, settings))
-      .catch((error: Error) => console.error(`[companion] Could not save: ${error.message}`));
+  const save = async (settings: CompanionSettings) => {
+    try {
+      await saveSettings(options.settingsPath, settings);
+    } catch (error) {
+      console.error(
+        `[companion] Could not save: ${error instanceof Error ? error.message : error}`,
+      );
+      throw error;
+    }
   };
 
   const layout = appLayout({
@@ -165,6 +169,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     register: registerShortcut,
     unregister: (accelerator) => globalShortcut.unregister(accelerator),
     save,
+    preview: (status) => broadcast(IPC.companionChanged, status),
     changed: (status) => {
       refreshMenus(status);
       attention?.refresh();
@@ -212,6 +217,15 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     island?.sizeChanged();
     return status;
   });
+  ipcMain.handle(IPC.companionSetIslandHeight, (event, height: unknown) => {
+    if (!fromSpark(event) || !isIslandHeight(height)) return companion.status();
+    return companion.setIslandHeight(height);
+  });
+  ipcMain.handle(IPC.companionPreviewIslandHeight, (event, height: unknown) =>
+    fromSpark(event) && isIslandHeight(height)
+      ? companion.previewIslandHeight(height)
+      : companion.status(),
+  );
   ipcMain.handle(IPC.companionSetAutoExpand, (event, on: unknown) =>
     fromSpark(event) && typeof on === 'boolean' ? companion.setAutoExpand(on) : companion.status(),
   );
@@ -358,6 +372,8 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.companionSetShortcut,
         IPC.companionSetSound,
         IPC.companionSetIslandSize,
+        IPC.companionSetIslandHeight,
+        IPC.companionPreviewIslandHeight,
         IPC.companionSetAutoExpand,
         IPC.companionSetHideInShare,
         IPC.companionSetNotify,

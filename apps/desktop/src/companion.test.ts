@@ -20,8 +20,9 @@ function effectsFor(taken: string[] = []) {
       return true;
     }),
     unregister: vi.fn((accelerator: string) => registered.delete(accelerator)),
-    save: vi.fn(),
+    save: vi.fn<CompanionEffects['save']>(),
     changed: vi.fn(),
+    preview: vi.fn(),
   } satisfies CompanionEffects;
   return { effects, registered, islands, gone };
 }
@@ -189,6 +190,131 @@ describe('desktop companion lifecycle', () => {
     expect(effects.changed).toHaveBeenLastCalledWith(
       expect.objectContaining({ islandSize: 'medium' }),
     );
+  });
+
+  it('persists and broadcasts an island height once, retaining it across restart', async () => {
+    const { companion, effects } = setup();
+    expect(companion.status().islandHeight).toBe(0);
+    const saves = effects.save.mock.calls.length;
+    const changes = effects.changed.mock.calls.length;
+    expect(await companion.setIslandHeight(-12)).toMatchObject({ islandHeight: -12 });
+    await companion.setIslandHeight(-12);
+    expect(effects.save).toHaveBeenCalledTimes(saves + 1);
+    expect(effects.changed).toHaveBeenCalledTimes(changes + 1);
+    const saved = effects.save.mock.calls.at(-1)![0];
+    const restarted = createCompanion(parseSettings(JSON.stringify(saved)), effectsFor().effects);
+    expect(restarted.status().islandHeight).toBe(-12);
+    expect(effects.changed).toHaveBeenLastCalledWith(
+      expect.objectContaining({ islandHeight: -12 }),
+    );
+  });
+
+  it('previews through only the renderer effect and commits the final choice normally', async () => {
+    const { companion, effects } = setup({ islandHeight: 4 });
+    effects.save.mockClear();
+    effects.changed.mockClear();
+    for (const height of [8, 12, 20]) companion.previewIslandHeight(height);
+    expect(companion.status().islandHeight).toBe(20);
+    expect(effects.save).not.toHaveBeenCalled();
+    expect(effects.changed).not.toHaveBeenCalled();
+    expect(effects.preview).toHaveBeenCalledTimes(3);
+    expect(effects.preview).toHaveBeenLastCalledWith(expect.objectContaining({ islandHeight: 20 }));
+    companion.previewIslandHeight(20);
+    expect(effects.preview).toHaveBeenCalledTimes(3);
+    companion.setSound(true);
+    expect(effects.save).toHaveBeenLastCalledWith(expect.objectContaining({ islandHeight: 4 }));
+    effects.save.mockClear();
+    effects.changed.mockClear();
+    await companion.setIslandHeight(20);
+    expect(effects.changed).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ islandHeight: 20 }),
+    );
+    expect(effects.preview).toHaveBeenCalledTimes(3);
+    expect(effects.save).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ islandHeight: 20 }),
+    );
+    companion.previewIslandHeight(-8);
+    await companion.setIslandHeight(20);
+    expect(companion.status().islandHeight).toBe(20);
+    expect(effects.save).toHaveBeenCalledTimes(1);
+    companion.previewIslandHeight(32);
+    expect(companion.setEnabled(false).islandHeight).toBe(20);
+  });
+
+  it.each([0, 12])(
+    'rejects a failed height save to %i and retries without losing concurrent preferences',
+    async (height) => {
+      const { companion, effects } = setup({ islandHeight: 4 });
+      let rejectSave!: (error: Error) => void;
+      effects.save.mockImplementationOnce(
+        () =>
+          new Promise<void>((_, reject) => {
+            rejectSave = reject;
+          }),
+      );
+      companion.previewIslandHeight(height);
+      const failed = companion.setIslandHeight(height);
+      const rejection = expect(failed).rejects.toThrow('Disk full');
+      companion.setSound(true);
+      expect(effects.save).toHaveBeenCalledTimes(1);
+      rejectSave(new Error('Disk full'));
+      await rejection;
+      await vi.waitFor(() => expect(effects.save).toHaveBeenCalledTimes(2));
+      expect(companion.status()).toMatchObject({ islandHeight: 4, sound: true });
+      expect(effects.save).toHaveBeenLastCalledWith(
+        expect.objectContaining({ islandHeight: 4, sound: true }),
+      );
+      await companion.setIslandHeight(height);
+      expect(companion.status()).toMatchObject({ islandHeight: height, sound: true });
+      expect(effects.save).toHaveBeenLastCalledWith(
+        expect.objectContaining({ islandHeight: height, sound: true }),
+      );
+    },
+  );
+
+  it('waits for durable writes and serializes height changes without losing a newer preview', async () => {
+    const { companion, effects } = setup({ islandHeight: 4 });
+    let finishSave!: () => void;
+    effects.save.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishSave = resolve;
+        }),
+    );
+    let completed = false;
+    const first = companion.setIslandHeight(12).then(() => {
+      completed = true;
+    });
+    const second = companion.setIslandHeight(20);
+    companion.setSound(true);
+    companion.previewIslandHeight(28);
+    await Promise.resolve();
+    expect(completed).toBe(false);
+    expect(effects.save).toHaveBeenCalledTimes(1);
+    finishSave();
+    await first;
+    await second;
+    await vi.waitFor(() => expect(effects.save).toHaveBeenCalledTimes(3));
+    expect(companion.status()).toMatchObject({ islandHeight: 28, sound: true });
+    expect(effects.save).toHaveBeenLastCalledWith(
+      expect.objectContaining({ islandHeight: 20, sound: true }),
+    );
+    await companion.setIslandHeight(20);
+    expect(companion.status().islandHeight).toBe(20);
+    expect(effects.save).toHaveBeenCalledTimes(3);
+  });
+
+  it('never persists or broadcasts an invalid island height', async () => {
+    const { companion, effects } = setup({ islandHeight: 8 });
+    effects.save.mockClear();
+    effects.changed.mockClear();
+    for (const height of [-33, 33, 1.5, NaN, Infinity, -Infinity]) {
+      expect((await companion.setIslandHeight(height)).islandHeight).toBe(8);
+      expect(companion.previewIslandHeight(height).islandHeight).toBe(8);
+    }
+    expect(effects.save).not.toHaveBeenCalled();
+    expect(effects.changed).not.toHaveBeenCalled();
+    expect(effects.preview).not.toHaveBeenCalled();
   });
 
   it('shuts down cleanly and notices a window that went away on its own', () => {

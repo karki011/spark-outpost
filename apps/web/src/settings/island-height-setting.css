@@ -1,0 +1,42 @@
+.island-height {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 280px;
+  max-width: 100%;
+}
+.island-height-range {
+  flex: 1;
+  min-width: 0;
+}
+.island-height input {
+  display: block;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.island-height-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 899px), (max-height: 500px) and (pointer: coarse) {
+  .set-row:has(.island-height) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .set-row:has(.island-height) .set-row-control {
+    grid-row: auto;
+    grid-column: 1;
+    margin-top: 8px;
+  }
+}
+@media (pointer: coarse) {
+  .island-height input,
+  .island-height button {
+    min-height: 44px;
+  }
+}
