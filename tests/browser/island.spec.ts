@@ -368,7 +368,9 @@ test('without a notch Scout peeks on its own, hover opens the full panel and a c
   expect(Math.max(...eyes.map((eye) => eye.bottom))).toBeLessThanOrEqual(24);
   const lastRest = () =>
     page.evaluate(() => (window as unknown as { islandRest: unknown[] }).islandRest.at(-1));
-  await expect.poll(lastRest).not.toBeNull();
+  await expect
+    .poll(lastRest)
+    .toEqual(expect.objectContaining({ width: expect.any(Number), height: expect.any(Number) }));
   const rest = (await lastRest()) as { width: number; height: number };
   expect(rest.width).toBeLessThan(200);
   expect(rest.height).toBeLessThan(50);
