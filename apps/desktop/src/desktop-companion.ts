@@ -368,6 +368,8 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.companionSetShortcut,
         IPC.companionSetSound,
         IPC.companionSetIslandSize,
+        IPC.companionSetIslandHeight,
+        IPC.companionPreviewIslandHeight,
         IPC.companionSetAutoExpand,
         IPC.companionSetHideInShare,
         IPC.companionSetNotify,
