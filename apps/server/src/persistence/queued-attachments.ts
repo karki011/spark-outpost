@@ -25,13 +25,16 @@ export async function validateQueuedAttachments(
   }
   if (unique.length) {
     const reserved = await db.query(
-      `SELECT 1 FROM chat_queue WHERE attachment_ids && $1::uuid[] AND id <> $2
+      `SELECT 1 FROM chat_queue WHERE attachment_ids && $1::uuid[]
+         AND NOT (id = $2 AND conversation_id = $3)
        UNION ALL
-       SELECT 1 FROM member_messages WHERE attachment_ids && $1::uuid[] AND id <> $2
+       SELECT 1 FROM member_messages WHERE attachment_ids && $1::uuid[]
+         AND NOT (id = $2 AND conversation_id = $3)
        UNION ALL
-       SELECT 1 FROM outpost_posts WHERE attachment_ids && $1::uuid[] AND id <> $2
+       SELECT 1 FROM outpost_posts WHERE attachment_ids && $1::uuid[]
+         AND NOT (id = $2 AND to_conversation_id IS NOT DISTINCT FROM $3::uuid)
        LIMIT 1`,
-      [unique, messageId],
+      [unique, messageId, conversationId],
     );
     if (reserved.rowCount)
       throw new AttachmentError(

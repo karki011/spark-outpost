@@ -78,6 +78,22 @@ export async function listQueue(db: Queryable, conversationId: string): Promise<
   return rows.map(toQueued);
 }
 
+export async function assertMessageOwner(
+  db: Queryable,
+  conversationId: string,
+  messageId: string,
+): Promise<void> {
+  await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [messageId]);
+  const owners = await db.query<{ conversation_id: string }>(
+    `SELECT conversation_id FROM messages WHERE id = $1
+     UNION ALL SELECT conversation_id FROM member_messages WHERE id = $1
+     UNION ALL SELECT conversation_id FROM chat_queue WHERE id = $1`,
+    [messageId],
+  );
+  if (owners.rows.some((row) => row.conversation_id !== conversationId))
+    throw new QueueError(409, 'That message ID belongs to another chat.');
+}
+
 export async function alreadySent(db: Queryable, id: string): Promise<boolean> {
   const { rowCount } = await db.query('SELECT 1 FROM messages WHERE id = $1', [id]);
   return rowCount === 1;
@@ -103,6 +119,7 @@ async function addInTransaction(
   );
   if (session.rows[0]?.session_type === 'terminal')
     throw new QueueError(409, 'Send messages in this session’s terminal.');
+  await assertMessageOwner(db, conversationId, item.id);
   if (await alreadySent(db, item.id)) return;
   await validateQueuedAttachments(
     db,
@@ -135,6 +152,7 @@ async function addInTransaction(
       JSON.stringify(item.annotations ?? []),
     ],
   );
+  await assertMessageOwner(db, conversationId, item.id);
   await rememberRemoteMessage(db, item.id);
 }
 

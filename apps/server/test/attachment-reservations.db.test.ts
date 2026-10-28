@@ -209,3 +209,47 @@ it('delivers an outpost file independently to every fanout recipient', async () 
     true,
   );
 });
+
+it('does not let another chat consume a reservation by reusing its message ID', async () => {
+  const [first, second] = await Promise.all([chat(), chat()]);
+  const file = await attachment();
+  const request = { id: randomUUID(), content: 'Reserved', attachmentIds: [file.id] };
+  await addToQueue(t.db, first.id, request);
+  await expect(sendNow(t.db, second.id, request, target)).rejects.toThrow('another chat');
+  await expect(sendUserMessage(t.db, second.id, request, await target())).rejects.toThrow(
+    'pending message',
+  );
+  await expect(addToQueue(t.db, second.id, request)).rejects.toThrow('another chat');
+  expect(await listQueue(t.db, first.id)).toHaveLength(1);
+  await expect(sendNow(t.db, first.id, request, target)).resolves.toBe('steering');
+});
+
+it('rejects cross-chat retries of accepted steers and sent messages', async () => {
+  const [first, second] = await Promise.all([chat(), chat()]);
+  const request = { id: randomUUID(), content: 'Steer' };
+  await expect(sendNow(t.db, first.id, request, target)).resolves.toBe('steering');
+  await expect(sendNow(t.db, second.id, request, target)).rejects.toThrow('another chat');
+  await expect(sendNow(t.db, first.id, request, target)).resolves.toBe('steering');
+  const sent = { id: randomUUID(), content: 'Sent' };
+  await sendUserMessage(t.db, first.id, sent, await target());
+  await expect(sendNow(t.db, second.id, sent, target)).rejects.toThrow('another chat');
+  await expect(sendNow(t.db, first.id, sent, target)).resolves.toBe('sent');
+});
+
+it('rejects foreign text-only queue retries and concurrent cross-chat IDs', async () => {
+  const [first, second] = await Promise.all([chat(), chat()]);
+  const queued = { id: randomUUID(), content: 'Queued' };
+  await addToQueue(t.db, first.id, queued);
+  await expect(addToQueue(t.db, second.id, queued)).rejects.toThrow('another chat');
+  await expect(addToQueue(t.db, first.id, queued)).resolves.toBeUndefined();
+  const sent = { id: randomUUID(), content: 'Sent' };
+  await sendUserMessage(t.db, first.id, sent, await target());
+  await expect(addToQueue(t.db, second.id, sent)).rejects.toThrow('another chat');
+  const shared = { id: randomUUID(), content: 'Concurrent' };
+  const results = await Promise.allSettled([
+    addToQueue(t.db, first.id, shared),
+    sendNow(t.db, second.id, shared, target),
+  ]);
+  expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+  expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+});

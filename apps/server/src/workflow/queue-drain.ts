@@ -4,6 +4,7 @@ import { resolveRunTarget } from '../api/run-target.ts';
 import { BadRequestError } from '../api/validation.ts';
 import {
   addToQueue,
+  assertMessageOwner,
   alreadySent,
   PAUSED_OUTPOST_ITEM,
   QueueError,
@@ -196,6 +197,7 @@ export async function sendNow(
   const target = await resolveTarget(conversationId);
   return withTransaction(db, async (client) => {
     if (!(await lockConversation(client, conversationId))) return null;
+    await assertMessageOwner(client, conversationId, request.id);
     if (await getMemberMessage(client, request.id)) return 'steering';
     if (await alreadySent(client, request.id)) return 'sent';
     const queued = await takeQueued(client, conversationId, request.id);
@@ -240,6 +242,7 @@ export async function sendNow(
       attachmentIds,
       annotations,
     });
+    await assertMessageOwner(client, conversationId, request.id);
     return 'steering';
   });
 }
