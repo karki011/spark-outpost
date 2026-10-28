@@ -203,7 +203,7 @@ export async function sendNow(
     if (content === undefined) return null;
     const attachmentIds = queued?.attachmentIds ?? request.attachmentIds;
     const annotations = queued?.annotations ?? request.annotations;
-    await validateQueuedAttachments(client, conversationId, attachmentIds, annotations);
+    await validateQueuedAttachments(client, conversationId, request.id, attachmentIds, annotations);
     const running = await activeTurn(client, conversationId);
     if (queued?.outpostPostId)
       await refuseOutpostSendNow(client, queued.outpostPostId, running !== null);

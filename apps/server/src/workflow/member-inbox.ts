@@ -12,7 +12,7 @@ import {
 import { runWaitingOn } from '../persistence/subagents.ts';
 import { requestCancel } from '../persistence/runs.ts';
 import { shotAnchor } from '../persistence/browser-screenshots.ts';
-import { queuedAttachmentFiles } from '../persistence/queued-attachments.ts';
+import { queuedAttachmentFiles } from '../persistence/attachments.ts';
 import type { ProviderMessage, SteerRequests, TurnInbox } from '../providers/provider.ts';
 import type { Append } from './agent-turn.ts';
 import { runEvents } from './run-events.ts';

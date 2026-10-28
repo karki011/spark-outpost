@@ -2,6 +2,7 @@ import type { Attachment, AttachmentKind } from '@spark-outpost/contracts';
 import { AttachmentError, classifyAttachment } from './attachment-content.ts';
 import type { Queryable } from './db.ts';
 import { newId } from './ids.ts';
+import { validateQueuedAttachments } from './queued-attachments.ts';
 
 interface AttachmentRow {
   id: string;
@@ -112,6 +113,7 @@ export async function linkAttachments(
 ): Promise<Attachment[]> {
   const ids = [...new Set(attachmentIds)];
   if (ids.length === 0) return [];
+  await validateQueuedAttachments(db, conversationId, messageId, ids);
   const { rows } = await db.query<{ id: string }>(
     `UPDATE attachments SET message_id = $1
      WHERE id = ANY($2::uuid[]) AND message_id IS NULL
@@ -142,5 +144,25 @@ export async function pruneUnlinkedAttachments(db: Queryable, workspaceId: strin
          SELECT 1 FROM chat_queue q WHERE attachments.id = ANY(q.attachment_ids)
        )`,
     [workspaceId],
+  );
+}
+
+export async function queuedAttachmentFiles(
+  db: Queryable,
+  conversationId: string,
+  ids: readonly string[],
+) {
+  const { rows } = await db.query<{ workspace_id: string }>(
+    'SELECT workspace_id FROM conversations WHERE id = $1',
+    [conversationId],
+  );
+  const workspaceId = rows[0]?.workspace_id;
+  if (!workspaceId) throw new AttachmentError('The chat is no longer available.');
+  return Promise.all(
+    ids.map(async (id) => {
+      const file = await getAttachmentContent(db, workspaceId, id);
+      if (!file) throw new AttachmentError('An attached file is no longer available.');
+      return file;
+    }),
   );
 }

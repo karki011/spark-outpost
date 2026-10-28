@@ -274,7 +274,7 @@ describe('attachments during an active turn', () => {
       target,
     );
     const load = vi
-      .spyOn(attachmentStore, 'getAttachmentContent')
+      .spyOn(attachmentStore, 'queuedAttachmentFiles')
       .mockRejectedValueOnce(new Error('temporary storage read failure'));
     const inbox = openMemberInbox(t.db, {
       conversationId,

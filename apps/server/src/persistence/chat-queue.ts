@@ -1,7 +1,7 @@
 import { QUEUE_LIMIT, type QueuedMessage } from '@spark-outpost/contracts';
 import { validateQueuedAttachments } from './queued-attachments.ts';
 import { rememberRemoteMessage } from '../remote/run-mark.ts';
-import type { Queryable } from './db.ts';
+import { withTransaction, type Db, type DbClient, type Queryable } from './db.ts';
 
 export class QueueError extends Error {
   constructor(
@@ -84,18 +84,33 @@ export async function alreadySent(db: Queryable, id: string): Promise<boolean> {
 }
 
 export async function addToQueue(
+  db: Db | DbClient,
+  conversationId: string,
+  item: NewQueued,
+): Promise<void> {
+  if ('release' in db) return addInTransaction(db, conversationId, item);
+  return withTransaction(db, (client) => addInTransaction(client, conversationId, item));
+}
+
+async function addInTransaction(
   db: Queryable,
   conversationId: string,
   item: NewQueued,
 ): Promise<void> {
   const session = await db.query<{ session_type: string }>(
-    'SELECT session_type FROM conversations WHERE id = $1',
+    'SELECT session_type FROM conversations WHERE id = $1 FOR UPDATE',
     [conversationId],
   );
   if (session.rows[0]?.session_type === 'terminal')
     throw new QueueError(409, 'Send messages in this session’s terminal.');
   if (await alreadySent(db, item.id)) return;
-  await validateQueuedAttachments(db, conversationId, item.attachmentIds, item.annotations);
+  await validateQueuedAttachments(
+    db,
+    conversationId,
+    item.id,
+    item.attachmentIds,
+    item.annotations,
+  );
   const { rows } = await db.query<{ count: number }>(
     'SELECT count(*)::int AS count FROM chat_queue WHERE conversation_id = $1',
     [conversationId],

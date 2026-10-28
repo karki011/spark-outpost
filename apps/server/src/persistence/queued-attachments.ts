@@ -1,12 +1,12 @@
 import type { AnnotationRequest } from '@spark-outpost/contracts';
 import { AttachmentError } from './attachment-content.ts';
 import { AnnotationError } from './annotations.ts';
-import { getAttachmentContent } from './attachments.ts';
 import type { Queryable } from './db.ts';
 
 export async function validateQueuedAttachments(
   db: Queryable,
   conversationId: string,
+  messageId: string,
   ids: readonly string[] = [],
   annotations: readonly AnnotationRequest[] = [],
 ): Promise<void> {
@@ -14,12 +14,26 @@ export async function validateQueuedAttachments(
   if (unique.length) {
     const { rowCount } = await db.query(
       `SELECT 1 FROM attachments WHERE id = ANY($1::uuid[]) AND message_id IS NULL
-       AND workspace_id = (SELECT workspace_id FROM conversations WHERE id = $2)`,
+       AND workspace_id = (SELECT workspace_id FROM conversations WHERE id = $2)
+       ORDER BY id FOR UPDATE`,
       [unique, conversationId],
     );
     if (rowCount !== unique.length)
       throw new AttachmentError(
         'An attachment is missing or already sent. Remove it and attach the file again.',
+      );
+  }
+  if (unique.length) {
+    const reserved = await db.query(
+      `SELECT 1 FROM chat_queue WHERE attachment_ids && $1::uuid[] AND id <> $2
+       UNION ALL
+       SELECT 1 FROM member_messages WHERE attachment_ids && $1::uuid[] AND id <> $2
+       LIMIT 1`,
+      [unique, messageId],
+    );
+    if (reserved.rowCount)
+      throw new AttachmentError(
+        'An attachment is already in another pending message. Attach the file again.',
       );
   }
   if (annotations.length) {
@@ -33,24 +47,4 @@ export async function validateQueuedAttachments(
         'A quoted message is no longer in this chat. Remove it and resend.',
       );
   }
-}
-
-export async function queuedAttachmentFiles(
-  db: Queryable,
-  conversationId: string,
-  ids: readonly string[],
-) {
-  const { rows } = await db.query<{ workspace_id: string }>(
-    'SELECT workspace_id FROM conversations WHERE id = $1',
-    [conversationId],
-  );
-  const workspaceId = rows[0]?.workspace_id;
-  if (!workspaceId) throw new AttachmentError('The chat is no longer available.');
-  return Promise.all(
-    ids.map(async (id) => {
-      const file = await getAttachmentContent(db, workspaceId, id);
-      if (!file) throw new AttachmentError('An attached file is no longer available.');
-      return file;
-    }),
-  );
 }
