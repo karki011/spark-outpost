@@ -152,6 +152,7 @@ test('a message the server finds too large says so and Edit gives the text back'
   const input = await newChat(page);
 
   await input.fill(marker);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
 
   const failed = page.locator('.msg.me', { hasText: marker }).getByRole('alert');

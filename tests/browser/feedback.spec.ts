@@ -127,8 +127,7 @@ test('a chat with no pull request never asks how it went', async ({ page }) => {
   const repo = await repoWithRemote(base, 'nopull');
   await chatIn(page, repo, 'Auto-edit');
   await sendAndWait(page, 'What does the notes file hold?', 1);
-  await buildNotes(page);
-  await expect(page.locator('.turn-meta')).toHaveCount(2);
+  await sendAndWait(page, 'Add a line to the notes #edit #plan', 2);
   await expect(page.locator('.pr-opened')).toHaveCount(0);
   await expect(page.getByRole('group', { name: /How did it go\?|What went wrong\?/ })).toHaveCount(
     0,

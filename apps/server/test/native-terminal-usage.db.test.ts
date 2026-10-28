@@ -256,8 +256,8 @@ describe('native terminal usage that arrives late', () => {
     f.exits[0]!({ exitCode: 0 });
     await expect.poll(() => f.watchers.length).toBe(2);
     await expect
-      .poll(async () => (await nativeTerminalRow(f.t.db, f.conversationId))!.usage_offset)
-      .toBe('500');
+      .poll(async () => await nativeTerminalRow(f.t.db, f.conversationId))
+      .toMatchObject({ state: 'exited', usage_offset: '500' });
     await f.runtime.launch(f.conversationId, { resume: true });
     await prompt('second');
     const resumed = f.watchers.at(-1)!;
