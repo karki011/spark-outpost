@@ -111,6 +111,8 @@ async function sendQueued(
     urgency: 'next',
     status: 'continued',
     messageId: item.id,
+    attachmentIds,
+    annotations: item.annotations,
   });
 }
 

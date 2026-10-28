@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   saveAttachment,
   attachmentFilesForMessages,
@@ -8,7 +8,8 @@ import {
 import { addToQueue, editQueued, listQueue } from '../src/persistence/chat-queue.ts';
 import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
 import { getMemberMessage } from '../src/persistence/member-messages.ts';
-import { drainQueue, sendNow } from '../src/workflow/queue-drain.ts';
+import * as attachmentStore from '../src/persistence/attachments.ts';
+import { drainQueue, resendMissed, sendNow } from '../src/workflow/queue-drain.ts';
 import { openMemberInbox } from '../src/workflow/member-inbox.ts';
 import { listAnnotations } from '../src/persistence/annotations.ts';
 import { createTestApp, localClient } from './app-support.ts';
@@ -263,6 +264,57 @@ describe('attachments during an active turn', () => {
     },
   );
 
+  it('keeps a transient attachment-read failure recoverable without failing the lead turn', async () => {
+    const { conversationId, runId, file } = await setup();
+    const id = randomUUID();
+    await sendNow(
+      t.db,
+      conversationId,
+      { id, content: 'Read these notes', attachmentIds: [file.id] },
+      target,
+    );
+    const load = vi
+      .spyOn(attachmentStore, 'getAttachmentContent')
+      .mockRejectedValueOnce(new Error('temporary storage read failure'));
+    const inbox = openMemberInbox(t.db, {
+      conversationId,
+      runId,
+      topRunId: runId,
+      pollMs: 60_000,
+      append: async () => null,
+    });
+    try {
+      await expect(inbox.take()).resolves.toBeNull();
+      expect(await getMemberMessage(t.db, id)).toMatchObject({
+        status: 'missed',
+        body: 'Read these notes',
+        attachmentIds: [file.id],
+      });
+      await expect(inbox.take()).resolves.toBeNull();
+      expect(load).toHaveBeenCalledTimes(1);
+      load.mockRestore();
+      expect(await resendMissed(t.db, conversationId, id, target)).toBe('queued');
+      expect((await listQueue(t.db, conversationId))[0]).toMatchObject({
+        id,
+        content: 'Read these notes',
+        attachmentIds: [file.id],
+      });
+      expect(
+        (await t.db.query('SELECT cancel_requested_at FROM runs WHERE id = $1', [runId])).rows[0]
+          ?.cancel_requested_at,
+      ).toBeNull();
+      await t.db.query("UPDATE runs SET status = 'succeeded' WHERE id = $1", [runId]);
+      expect(await drainQueue(t.db, conversationId, target)).toBe('sent');
+      expect((await attachmentFilesForMessages(t.db, [id])).get(id)?.[0]?.data.toString()).toBe(
+        'attached context',
+      );
+      expect(await listQueue(t.db, conversationId)).toEqual([]);
+    } finally {
+      load.mockRestore();
+      await inbox.dispose();
+    }
+  });
+
   it('allows removing queued text only when an attachment remains', async () => {
     const { conversationId, file } = await setup();
     const id = randomUUID();
@@ -275,6 +327,40 @@ describe('attachments during an active turn', () => {
     const plain = randomUUID();
     await addToQueue(t.db, conversationId, { id: plain, content: 'Keep me' });
     await expect(editQueued(t.db, conversationId, plain, '')).rejects.toThrow('Keep a message');
+  });
+
+  it('keeps attachment metadata on continued queued message markers', async () => {
+    const { conversationId, runId, file } = await setup();
+    const id = randomUUID();
+    const source = (
+      await t.db.query<{ id: string }>('SELECT id FROM messages WHERE conversation_id = $1', [
+        conversationId,
+      ])
+    ).rows[0]!;
+    const annotation = {
+      id: randomUUID(),
+      sourceMessageId: source.id,
+      kind: 'quote' as const,
+      quote: 'Work',
+      note: '',
+      anchor: { exact: 'Work', prefix: '', suffix: '', start: 0, end: 4 },
+    };
+    await addToQueue(t.db, conversationId, {
+      id,
+      content: 'Continue with notes',
+      attachmentIds: [file.id],
+      annotations: [annotation],
+      continueRunId: runId,
+    });
+    await t.db.query("UPDATE runs SET status = 'succeeded' WHERE id = $1", [runId]);
+    expect(await drainQueue(t.db, conversationId, target)).toBe('sent');
+    expect(await getMemberMessage(t.db, id)).toMatchObject({
+      status: 'continued',
+      messageId: id,
+      attachmentIds: [file.id],
+      annotations: [annotation],
+    });
+    expect((await attachmentFilesForMessages(t.db, [id])).get(id)?.[0]?.id).toBe(file.id);
   });
 
   it('rejects missing and already-linked attachments before accepting a queued or immediate draft', async () => {

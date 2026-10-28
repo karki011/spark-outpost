@@ -3,7 +3,7 @@ title: Follow, stop and queue messages
 section: Chats
 type: how-to
 order: 216
-summary: Follow work, stop it, queue messages and files, or delete chats.
+summary: Follow work, stop it, queue files and messages, or delete a running chat.
 ---
 
 About 2 minutes.
