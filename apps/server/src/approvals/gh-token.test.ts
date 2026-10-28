@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
+import { splitSimpleCommands } from './commands.ts';
 import { NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { recommendedRulesText, userRules } from '../spark-rules/recommended.ts';
@@ -86,6 +87,34 @@ describe('a gh command that prints the token', () => {
         verdict: 'reject',
       });
     }
+  });
+
+  it.each([
+    ['gh ', 'auth token'],
+    ['gh au', 'th token'],
+    ['g', 'h auth token'],
+    ['gh "au', 'th" token'],
+    ["bash -lc 'gh ", "auth token'"],
+    ['export NODE_AUTH_TOKEN=$(gh ', 'auth token)'],
+  ])('keeps continued auth commands subject to explicit auth rules: %s', (before, after) => {
+    const command = `${before}${String.fromCharCode(92, 10)}${after}`;
+    expect(judged('full_access', command, DENYING_AUTH, [command, 'gh']).verdict).toBe('reject');
+    expect(judged('full_access', command, ASKING_AUTH).verdict).toBe('ask');
+    expect(judged('full_access', command, NO_RULES).verdict).toBe('allow');
+  });
+
+  it('preserves quoted literal newlines and escaped backslashes', () => {
+    const continuation = String.fromCharCode(92, 10);
+    expect(splitSimpleCommands(`gh '${continuation}auth' token`)).toEqual([
+      ['gh', `${continuation}auth`, 'token'],
+    ]);
+    expect(splitSimpleCommands(`gh ${String.fromCharCode(92)}${continuation}auth token`)).toEqual([
+      ['gh', String.fromCharCode(92)],
+      ['auth', 'token'],
+    ]);
+    expect(splitSimpleCommands(`gh ${continuation}  auth token`)).toEqual([
+      ['gh', 'auth', 'token'],
+    ]);
   });
 
   it('respects an exact rule for retrieving the config token', () => {

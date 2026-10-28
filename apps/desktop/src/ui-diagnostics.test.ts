@@ -120,4 +120,93 @@ describe('UI diagnostics', () => {
       vi.useRealTimers();
     }
   });
+  it.each([
+    ['unexpected content', () => ({ ...snapshot(), secret: 'private-content' })],
+    [
+      'arbitrary selector',
+      () => ({
+        ...snapshot(),
+        overlays: [{ ...snapshot().overlays[0], selectors: ['private-content'] }],
+      }),
+    ],
+    [
+      'arbitrary style',
+      () => ({
+        ...snapshot(),
+        overlays: [{ ...snapshot().overlays[0], display: 'private-content' }],
+      }),
+    ],
+    [
+      'non-finite rectangle',
+      () => ({
+        ...snapshot(),
+        overlays: [{ ...snapshot().overlays[0], rect: [0, 0, Infinity, 800] }],
+      }),
+    ],
+    [
+      'oversize overlays',
+      () => ({ ...snapshot(), overlays: Array.from({ length: 25 }, () => snapshot().overlays[0]) }),
+    ],
+    [
+      'oversize hit tests',
+      () => ({ ...snapshot(), hitTests: Array.from({ length: 10 }, () => snapshot().hitTests[0]) }),
+    ],
+    [
+      'oversize opacity',
+      () => ({
+        ...snapshot(),
+        overlays: [{ ...snapshot().overlays[0], opacity: '0.' + '1'.repeat(100000) }],
+      }),
+    ],
+    [
+      'nested content',
+      () => ({
+        ...snapshot(),
+        hitTests: [
+          {
+            ...snapshot().hitTests[0],
+            target: { ...snapshot().overlays[0], text: 'private-content' },
+          },
+        ],
+      }),
+    ],
+  ])('rejects %s from renderer before logging', async (_name, result) => {
+    const log = vi.fn();
+    await recordUiDiagnostics(
+      [{ kind: 'main', window: windowAt('http://localhost:1234/', result()) }],
+      'http://localhost:1234',
+      log,
+    );
+    expect(log).toHaveBeenCalledExactlyOnceWith('[ui-diagnostics] main unavailable');
+  });
+
+  it('bounds concurrent captures per window even after the export times out', async () => {
+    vi.useFakeTimers();
+    try {
+      let resolve!: (result: unknown) => void;
+      const main = windowAt('http://localhost:1234/');
+      vi.mocked(main.webContents.executeJavaScript).mockReturnValueOnce(
+        new Promise((done) => {
+          resolve = done;
+        }),
+      );
+      const log = vi.fn();
+      const windows = [{ kind: 'main' as const, window: main }];
+      const first = recordUiDiagnostics(windows, 'http://localhost:1234', log);
+      await recordUiDiagnostics(windows, 'http://localhost:1234', log);
+      expect(main.webContents.executeJavaScript).toHaveBeenCalledOnce();
+      await vi.advanceTimersByTimeAsync(1500);
+      await first;
+      await recordUiDiagnostics(windows, 'http://localhost:1234', log);
+      expect(main.webContents.executeJavaScript).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+      resolve(snapshot());
+      await vi.advanceTimersByTimeAsync(0);
+      await recordUiDiagnostics(windows, 'http://localhost:1234', log);
+      expect(main.webContents.executeJavaScript).toHaveBeenCalledTimes(2);
+      expect(log.mock.calls.at(-1)?.[0]).toContain('"viewport":[1000,800]');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

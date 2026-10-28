@@ -83,6 +83,10 @@ export function splitCommandLine(command: string): SimpleCommand[] {
   };
   for (let index = 0; index < command.length; index++) {
     const char = command[index]!;
+    if (quote !== "'" && char === '\\' && command[index + 1] === '\n') {
+      index++;
+      continue;
+    }
     if (quote) {
       if (char === quote) quote = null;
       else if (char === '\\' && quote === '"' && index + 1 < command.length) {
