@@ -181,34 +181,28 @@ function gitPublishes(command: string, publishing: readonly string[]): boolean {
   });
 }
 
+const GH_IN_TEXT = /(?:^|[^\w.-])gh((?:[ \t]+[^\s;|&()`$"'<>]+)+)/g;
+
+function opaqueTokenCommands(command: string): string[][] {
+  return [...command.matchAll(GH_IN_TEXT)]
+    .map((found) => ['gh', ...found[1]!.trim().split(/\s+/)])
+    .filter((program) => ghRevealsToken(program.slice(1)));
+}
+
 export function hostingCommands(command: string): string[][] {
   const tree = commandTree(withoutDataHeredocs(command));
-  return tree.commands
+  const commands = tree.opaque
+    ? [...tree.commands, ...opaqueTokenCommands(withoutDataHeredocs(command))]
+    : tree.commands;
+  const hosting = commands
     .filter((program) => HOSTING_CLIS.includes(programName(program)))
     .map((program) => argumentWords(tree, program))
     .map((words) => (programName(words) === 'gh' ? [words[0]!, ...ghArgs(words.slice(1))] : words));
+  return [...new Map(hosting.map((program) => [JSON.stringify(program), program])).values()];
 }
 
 export function hostingRead(program: readonly string[]): boolean {
   return programName(program) === 'gh' && ghOnlyReads(program.slice(1));
-}
-
-export const GH_TOKEN_REASON =
-  'Commands that print the GitHub token (gh auth token, gh auth status --show-token, gh auth git-credential get, gh config get oauth_token) are refused in every mode';
-
-const GH_IN_TEXT = /(?:^|[^\w.-])gh((?:[ \t]+[^\s;|&()`$"'<>]+)+)/g;
-
-function textRevealsGhToken(command: string): boolean {
-  return [...command.matchAll(GH_IN_TEXT)].some((found) =>
-    ghRevealsToken(found[1]!.trim().split(/\s+/)),
-  );
-}
-
-export function revealsGhToken(command: string): boolean {
-  const found = hostingCommands(command).some(
-    (program) => programName(program) === 'gh' && ghRevealsToken(program.slice(1)),
-  );
-  return found || (commandTree(command).opaque && textRevealsGhToken(command));
 }
 
 function publishes(command: string, publishing: readonly string[]): boolean {

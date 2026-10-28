@@ -31,7 +31,6 @@ Even with no rules:
 - Reading, copying or changing Spark's browser data: Browser profiles, **Personal** included, sign-in storage and the history database.
 - Your ChatGPT or Claude account's own apps and connectors; add MCP servers in Spark.
 - `--no-verify`, and reading or changing Spark's rules files directly.
-- Printing the GitHub token (`gh auth token`).
 
 A blocked step reads "Refused …".
 
@@ -47,7 +46,7 @@ Rules go in `permissions.allow`, `ask` or `deny`; deny wins, then ask. Unlisted 
 | `Push(other)`, `GitRemote`                                                        | Other branches; remotes, other hosting CLIs                                    | deny         |
 | `Gh(workflow run)`, `Gh(run rerun)`, `Gh(run cancel)`                             | **Run a workflow**                                                             | allow        |
 | `Gh(<group> <verb>)`, `Gh(*)`                                                     | Other `gh` commands; a named one escapes `Gh(*)`                               | deny `Gh(*)` |
-| `Gh(pr merge)`, `Gh(pr review)`, `GhAdmin`, `Gh(auth)`, `Gh(api write)`           | Merging, reviews, `--admin`, other `gh auth`, `gh api` writes                  | deny         |
+| `Gh(pr merge)`, `Gh(pr review)`, `GhAdmin`, `Gh(auth)`, `Gh(api write)`           | Merging, reviews, `--admin`, `gh auth`, `gh api` writes                        | deny         |
 | `SecretFile(edit)`, `SecretFile(read)`                                            | Secret files; `.sparkignore` reads                                             | ask          |
 | `Push(force)`, `InstructionFile(edit)`, `GitConfig`, `WriteOutside`, `SecretSend` | Their rows above                                                               | ask          |
 

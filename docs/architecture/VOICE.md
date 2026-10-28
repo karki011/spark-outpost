@@ -129,7 +129,7 @@ With a ticket, Send uses the existing ticket start route (`projectId`, `note` = 
 
 **Speak answers** (off by default) reads aloud Ask Spark's reply as plain text, what an `open` card found ("Found Fix login redirect. Open it?") and **Didn't catch that**, with an installed Apple system voice. Esc or a new press stops it before the mic opens, so Spark never records itself; the mic is not left open to hear the user talk over it.
 
-**Dictation:** a mic button in the chat composer (`Composer.tsx`) and the island's text boxes, with partial text dimmed at the caret; the draft is never sent. In a Terminal session the user sends through the existing `POST /conversations/:id/terminal/message` route, its refusals unchanged (an agent waiting for an answer, a CLI menu, a leading `/` or `!`); a spoken "slash" stays a word. Paired devices use their keyboard's dictation.
+**Dictation:** a mic button in the chat composer (`Composer.tsx`) and the island's text boxes, with a fixed-size animated listening indicator and screen-reader status; the draft is never sent. In a Terminal session the user sends through the existing `POST /conversations/:id/terminal/message` route, its refusals unchanged (an agent waiting for an answer, a CLI menu, a leading `/` or `!`); a spoken "slash" stays a word. Paired devices use their keyboard's dictation.
 
 **First run:** **Turn on Voice** (Settings, or the first mic press) asks for the mic, downloads the model, then offers **Use Fn twice** (asks for Input Monitoring, or names the Keyboard setting using 🌐 and opens it) or **Use ⌥⇧V**.
 
@@ -207,7 +207,7 @@ How Phase 1 settles what the design left open:
 - **Fn twice is offered** when `AppleFnUsageType` in `com.apple.HIToolbox` is 0 and `Dictation Enabled` in `com.apple.assistant.support` is off. An absent `AppleFnUsageType` counts as Emoji (the macOS default). Dictation's own shortcut key is not read, so Dictation on with another shortcut still blocks Fn twice. **Hold to talk** listens while the second Fn press is held.
 - **Ticket starts** from a voice chat use the ticket start route with **Move to In Progress** on by default; a spoken `open` of a ticket shows its status in Ask Spark (the island has no ticket page).
 - **A phrase that isn't yes, no or a pick** while a result is open is matched as a new command.
-- **Partial dictation** shows dimmed beside the mic button, not at the caret.
+- **Partial dictation** appears in the existing input as a local preview, replacing earlier provisional words without saving them. Final text commits once; cancelling restores the committed draft. Editing during speech cancels dictation and keeps the edited text. Sending waits until dictation finishes. A fixed-size waveform replaces the mic while active; reduced motion keeps it static. Errors remain visible.
 - **Terminal sessions:** **Dictate** fills a one-line box, sent with **Send to <agent>** through `POST /conversations/:id/terminal/message`, its refusals shown as returned.
 
 ### Verified, and not

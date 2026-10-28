@@ -38,7 +38,7 @@ import { PlusMenu } from './composer/PlusMenu.tsx';
 import { SendButton } from './composer/SendButton.tsx';
 import { ComposerShell, composerRows } from './composer/ComposerShell.tsx';
 import { MicButton } from '../voice/MicButton.tsx';
-import { joinDictation } from '../voice/use-dictation.ts';
+import { useDictationDraft } from '../voice/use-dictation-draft.ts';
 import {
   composerHint,
   composerPlaceholder,
@@ -93,6 +93,7 @@ export function Composer({
   quotes,
 }: ComposerProps) {
   const [draft, setDraft] = useChatDraft(conversationId);
+  const voice = useDictationDraft(draft, setDraft, conversationId);
   const [repoOpen, setRepoOpen] = useState(false);
   const [formatting, setFormatting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -187,6 +188,7 @@ export function Composer({
   const sendName = hasText ? 'Send' : sendLabel(quoteItems.map((quote) => quote.kind));
   const canQueue = queueing && hasText && attachments.items.length === 0;
   const canSend =
+    !voice.dictation.active &&
     ready &&
     (hasText || attachments.items.length > 0 || quoteItems.length > 0) &&
     !sending &&
@@ -327,12 +329,7 @@ export function Composer({
             usageTotals={usageTotals}
             {...(onAudit ? { onAudit } : {})}
           />
-          <MicButton
-            onText={(heard) => {
-              setDraft((now) => joinDictation(now, heard));
-              textareaRef.current?.focus();
-            }}
-          />
+          <MicButton dictation={voice.dictation} />
           <SendButton
             busy={busy}
             stopping={stopping}
@@ -423,8 +420,8 @@ export function Composer({
         formatting={formatting}
         id={inputId}
         autoFocus={autoFocus}
-        value={draft}
-        rows={composerRows(draft)}
+        value={voice.value}
+        rows={composerRows(voice.value)}
         placeholder={composerPlaceholder({
           queueing,
           preferred: busyEnter,
@@ -433,7 +430,7 @@ export function Composer({
         })}
         {...(slash.open ? slash.inputProps : mention.inputProps)}
         onChange={(event) => {
-          setDraft(event.target.value);
+          voice.change(event.target.value);
           slash.sync(event.target);
           mention.sync(event.target);
         }}

@@ -96,6 +96,7 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
   const people = peopleRow(detail?.attendees ?? []);
   const clash = clashText(calendar.clashes.get(event.key) ?? []);
   const agenda = detail ? agendaPreview(detail.snippet || detail.agenda) : null;
+  const beforeStart = calendar.at < spanOf(event).start;
   const dismiss = () => leave(() => calendar.onDismissNudge(event));
   const onKeyDown = (key: KeyboardEvent) => {
     if (key.key !== 'Escape') return;
@@ -147,9 +148,9 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
         <button
           type="button"
           className="isl-calline-act"
-          onClick={() => leave(() => calendar.onSnooze(event))}
+          onClick={() => leave(() => calendar.onSnooze(event, beforeStart))}
         >
-          Snooze 2 min
+          {beforeStart ? 'Snooze until start' : 'Snooze 2 min'}
         </button>
         <button type="button" className="isl-calline-act" onClick={dismiss}>
           Dismiss

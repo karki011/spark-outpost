@@ -15,7 +15,7 @@ import { plainLine } from './plain-line.ts';
 import type { AskSession } from './use-ask-session.ts';
 import { MicButton } from '../voice/MicButton.tsx';
 import { useSeed, useSpeechSeeds } from '../voice/speech-seed.tsx';
-import { joinDictation } from '../voice/use-dictation.ts';
+import { useDictationDraft } from '../voice/use-dictation-draft.ts';
 
 interface AskSparkProps {
   voice: Voice;
@@ -70,6 +70,9 @@ export function AskSpark({ voice, focusDelay, session, links }: AskSparkProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const secrets = useSecretGuard(text);
   const detail = assistant.detail;
+  const voiceDraft = useDictationDraft(text, setText, assistant.id ?? 'ask', () =>
+    setDictated(true),
+  );
   const run = detail?.conversation.latestRun;
   const thinking = run?.status === 'queued' || run?.status === 'running';
 
@@ -123,7 +126,7 @@ export function AskSpark({ voice, focusDelay, session, links }: AskSparkProps) {
 
   const submit = () => {
     const question = text.trim();
-    if (!question || secrets.blocks(text)) return;
+    if (voiceDraft.dictation.active || !question || secrets.blocks(text)) return;
     setText('');
     const spoken = heard.current === question || dictated;
     heard.current = null;
@@ -228,8 +231,8 @@ export function AskSpark({ voice, focusDelay, session, links }: AskSparkProps) {
           ref={inputRef}
           rows={1}
           placeholder="Ask about your chats, tickets, spend, calendar…"
-          value={text}
-          onChange={(event) => setText(event.target.value)}
+          value={voiceDraft.value}
+          onChange={(event) => voiceDraft.change(event.target.value)}
           onKeyDown={onKeyDown}
         />
         <div className="isl-qc-bar">
@@ -239,18 +242,12 @@ export function AskSpark({ voice, focusDelay, session, links }: AskSparkProps) {
               : 'Answers use the Spark assistant model'}
           </span>
           <span className="isl-sp" />
-          <MicButton
-            className="isl-chip"
-            onText={(spoken) => {
-              setDictated(true);
-              setText((now) => joinDictation(now, spoken));
-            }}
-          />
+          <MicButton className="isl-chip" dictation={voiceDraft.dictation} />
           <button
             type="button"
             className="isl-send"
             aria-label="Ask"
-            disabled={!text.trim()}
+            disabled={voiceDraft.dictation.active || !text.trim()}
             onClick={submit}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">

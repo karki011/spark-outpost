@@ -88,6 +88,22 @@ describe('nudgeText', () => {
 });
 
 describe('a wrap-up about a chat', () => {
+  it('expires a cached wrap-up once the associated meeting ends', () => {
+    const meeting = event('Review', at(10), at(10, 30));
+    const calendar = now({
+      upcoming: [meeting],
+      nudge: {
+        ...nudge('wrap_up', meeting.title, at(10)),
+        eventKey: meeting.key,
+        kind: 'wrap_up',
+        chats: [{ id: CHAT, title: 'dashboards', reason: 'running' }],
+      },
+    });
+    const chats = new Map([[CHAT, 'running' as const]]);
+    expect(calendarLine(input(calendar, { at: at(10, 29, 59), chats }))).not.toBeNull();
+    expect(calendarLine(input(calendar, { at: at(10, 30), chats }))).toBeNull();
+  });
+
   const wrapUp = (): CalendarNudge => ({
     ...(nudge('wrap_up', 'Design review', at(10, 5)) as Extract<
       CalendarNudge,

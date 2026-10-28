@@ -5,6 +5,7 @@ import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CalendarEvent, CalendarNow, MeetingAlertPayload } from '@spark-outpost/contracts';
 import { calendarApi } from './calendar-api.ts';
+import { useMeetingAlert } from './use-meeting-alert.ts';
 import { at, event, link, status } from './test-fixtures.ts';
 
 const calendarState = vi.hoisted(() => ({ now: null as CalendarNow | null, updatedAt: 0 }));
@@ -85,6 +86,29 @@ afterEach(() => {
 });
 
 describe('useIslandCalendar meeting alert', () => {
+  it('expires the native alert even when the caller clock stays fixed', async () => {
+    vi.setSystemTime(at(10, 44, 59));
+    const bridge = fakeBridge();
+    const options = {
+      live: nowWith(),
+      settings: status().settings,
+      at: Date.now(),
+      held: false,
+      marks: new Map(),
+      setMarks: () => undefined,
+      names: new Map(),
+      note: () => undefined,
+      onDismissed: vi.fn(),
+    };
+    renderHook(() => useMeetingAlert(options));
+    expect(bridge.shown.at(-1)?.key).toBe(standup.key);
+    await act(async () => vi.advanceTimersByTimeAsync(999));
+    expect(bridge.shown.at(-1)?.key).toBe(standup.key);
+    await act(async () => vi.advanceTimersByTimeAsync(51));
+    expect(bridge.shown.at(-1)).toBeNull();
+    expect(options.onDismissed).not.toHaveBeenCalled();
+  });
+
   it('hides the alert on Snooze and shows it once more after a minute', async () => {
     const bridge = fakeBridge();
     mount();
@@ -111,6 +135,31 @@ describe('useIslandCalendar meeting alert', () => {
     expect(hook.result.current.upcoming).toEqual([]);
     await act(async () => vi.advanceTimersByTimeAsync(121_000));
     expect(hook.result.current.line?.event?.key).toBe(standup.key);
+  });
+
+  it('keeps a snoozed meeting quiet across reload until its scheduled start', async () => {
+    vi.setSystemTime(at(10, 21));
+    const bridge = fakeBridge();
+    const hook = mount();
+    act(() => hook.result.current.onSnooze(standup, true));
+    expect(hook.result.current.line).toBeNull();
+    hook.unmount();
+    const restored = mount();
+    expect(restored.result.current.line).toBeNull();
+    await act(async () => vi.advanceTimersByTimeAsync(9 * 60_000 - 1));
+    expect(restored.result.current.line).toBeNull();
+    expect(restored.result.current.upcoming).toEqual([]);
+    expect(bridge.shown.at(-1)).toBeNull();
+    await act(async () => vi.advanceTimersByTimeAsync(51));
+    expect(restored.result.current.upcoming.map((meeting) => meeting.key)).toContain(standup.key);
+    expect(bridge.shown.at(-1)?.key).toBe(standup.key);
+  });
+
+  it('does not create a past snooze when the meeting starts before the click completes', () => {
+    const hook = mount();
+    act(() => hook.result.current.onSnooze(standup, true));
+    expect(hook.result.current.upcoming.map((meeting) => meeting.key)).toContain(standup.key);
+    expect(localStorage.getItem('spark-outpost.calendar-snoozes')).toBe('[]');
   });
 
   it('saves Dismiss from the centre card so the meeting stays quiet', async () => {
@@ -185,6 +234,38 @@ describe('useIslandCalendar meeting alert', () => {
 });
 
 describe('useIslandCalendar island line', () => {
+  it('expires the bubble and chooser at event end without a server refresh', async () => {
+    vi.setSystemTime(at(10, 44, 59));
+    const design = event('Design sync', at(10, 30), at(10, 45));
+    calendarState.now = {
+      ...nowWith(),
+      upcoming: [standup, design],
+      nudge: { ...nowWith().nudge!, group: [standup, design] } as CalendarNow['nudge'],
+    };
+    const hook = mount(at(10, 44), true);
+    act(() => hook.result.current.onChoose(hook.result.current.line!));
+    expect(hook.result.current.choosing).toHaveLength(2);
+    await act(async () => vi.advanceTimersByTimeAsync(999));
+    expect(hook.result.current.line).not.toBeNull();
+    await act(async () => vi.advanceTimersByTimeAsync(51));
+    expect(hook.result.current.line).toBeNull();
+    expect(hook.result.current.choosing).toBeNull();
+    expect(hook.result.current.upcoming).toEqual([]);
+    expect(marked).not.toHaveBeenCalled();
+  });
+
+  it('hides the native meeting alert at event end without dismissing it', async () => {
+    vi.setSystemTime(at(10, 44, 59));
+    const bridge = fakeBridge();
+    mount(at(10, 44));
+    expect(bridge.shown.at(-1)?.key).toBe(standup.key);
+    await act(async () => vi.advanceTimersByTimeAsync(999));
+    expect(bridge.shown.at(-1)?.key).toBe(standup.key);
+    await act(async () => vi.advanceTimersByTimeAsync(51));
+    expect(bridge.shown.at(-1)).toBeNull();
+    expect(marked).not.toHaveBeenCalled();
+  });
+
   it('counts down each minute even when the island clock lags a minute behind', async () => {
     vi.setSystemTime(at(10, 26, 30));
     fakeBridge();

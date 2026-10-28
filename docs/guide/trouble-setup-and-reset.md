@@ -3,10 +3,10 @@ title: Fix the app, setup or a reset
 section: Help
 type: troubleshooting
 order: 710
-summary: Fixes for an app that isn't answering or doesn't start, how to send diagnostics with a bug report, and how to start over.
+summary: Fix startup problems, export diagnostics and reset Spark.
 ---
 
-Provider errors: [Providers and keys](trouble-providers.md). Stuck runs and failed pushes: [Runs and pull requests](trouble-runs.md).
+Providers: [Providers and keys](trouble-providers.md). Runs: [Runs and pull requests](trouble-runs.md).
 
 ## The app
 
@@ -27,10 +27,10 @@ Setup reopens at **AI provider** only when you disconnect every provider or rese
 ## Send diagnostics with a bug report
 
 1. Select **Export diagnostics** in **Settings → Help**.
-2. Check the zip, then attach it.
+2. Check and attach zip.
 3. Or, in **Send feedback**, turn on **Include diagnostics**, then **Open email draft** or **Open GitHub issue draft**.
 
-Nothing is sent until you do.
+You choose what to send.
 
 | The zip holds                             | It never holds                           |
 | ----------------------------------------- | ---------------------------------------- |
@@ -39,11 +39,13 @@ Nothing is sent until you do.
 | Settings, without your name               | Keys or tokens                           |
 | Database updates run, and recent app logs | Key-like text: it becomes `[redacted:…]` |
 
-The draft lists Docs searches that found nothing.
+Mac exports include overlay geometry and click blockers, never screen text.
+
+Drafts list unsuccessful searches.
 
 ## Start over
 
-A reset deletes chats, projects and settings; repositories and pushed branches stay.
+Reset deletes chats, projects and settings; repositories stay.
 
 1. In **Settings → Reset**, read **What Spark removes** and **What stays**.
 2. Turn on **Keep my API keys** to keep provider and Jev keys; GitHub, ticket and MCP tokens always go.
