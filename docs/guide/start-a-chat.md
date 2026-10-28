@@ -3,10 +3,10 @@ title: Start a chat and link a project
 section: Chats
 type: how-to
 order: 210
-summary: Start a chat, link the folder the agent may work in, and add files or commands to your message.
+summary: Start chats, link projects and attach context.
 ---
 
-You'll start a chat linked to your code. About 1 minute.
+About 1 minute.
 
 ## Start a chat
 
@@ -42,6 +42,8 @@ To unlink, select **No project folder** in the menu.
 | **@**                             | Add a file from the project                                              |
 | **/**                             | Run a command: `/plan`, `/review`, `/model`, `/effort`, `/mcp`, `/fresh` |
 | **+** (**Add files and context**) | **Upload a file**, **Add a screenshot**, **Add from repo**, another chat |
+
+**Sent** confirms receipt while history refreshes. **Retry** reuses the message ID.
 
 Markdown styles as you type. Select text or open **+ → Formatting**; **⌘B**, **⌘I**, **⌘⇧X** work too. In code blocks, **Enter** adds a line; **⌘Enter** sends. Branch and agent setup live in **Chat details** (**…**).
 

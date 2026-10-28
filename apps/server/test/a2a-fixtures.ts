@@ -12,6 +12,15 @@ export async function setRunStatus(db: Db, runId: string, status: RunStatus): Pr
   await db.query('UPDATE runs SET status = $2 WHERE id = $1', [runId, status]);
 }
 
+export async function pendingApproval(db: Db, runId: string): Promise<void> {
+  await db.query(
+    `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash,
+       options, status)
+     VALUES ($1, $2, 'request', 'execute', 'Run command?', '{}', 'sha256:request', '[]', 'pending')`,
+    [randomUUID(), runId],
+  );
+}
+
 export async function replyRow(db: Db, runId: string, content: string): Promise<void> {
   await db.query(
     `INSERT INTO messages (id, conversation_id, role, content, run_id)

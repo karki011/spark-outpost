@@ -49,14 +49,19 @@ describe('pending sends', () => {
     expect(retried).toMatchObject([{ phase: 'starting', submittedAt: 3_000 }]);
   });
 
-  it('drops a message once any attempt succeeded or the chat already has it', () => {
+  it('keeps accepted messages until they appear in the chat', () => {
     const attempts = [
       attempt('a', 'pending', 1_000),
       attempt('a', 'success', 7_000),
       attempt('b', 'error', 2_000, 'Timed out.'),
     ];
-    expect(pendingSends(attempts, NONE, 9_000).map((send) => send.message.id)).toEqual(['b']);
-    expect(pendingSends(attempts, new Set(['b']), 9_000)).toEqual([]);
+    expect(
+      pendingSends(attempts, NONE, 9_000).map((send) => [send.message.id, send.phase]),
+    ).toEqual([
+      ['a', 'accepted'],
+      ['b', 'failed'],
+    ]);
+    expect(pendingSends(attempts, new Set(['a', 'b']), 9_000)).toEqual([]);
   });
 
   it('shows one entry per message even after several retries', () => {

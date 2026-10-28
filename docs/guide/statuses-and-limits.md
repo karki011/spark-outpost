@@ -48,7 +48,7 @@ A row reading **Flagged by Spark**: an unreviewed action crossed a protected pat
 | **Queued**              | The chat is busy, failed, stopped or paused.                            |
 | **Working**             | Its turn runs.                                                          |
 | **Held**                | Shows **Waiting for @api** until it's answered.                         |
-| **Waiting on you**      | An approval or question card waits, or the reply ends **Needs you: …**. |
+| **Waiting on you**      | An unanswered approval or question, or a reply ending **Needs you: …**. |
 | **Failed**              | Turn failed, or **Not delivered: …**; listed with **Waiting on you**.   |
 | **Ready for review**    | Answered, pull request open.                                            |
 | **Idle**                | Answered, no open pull request.                                         |

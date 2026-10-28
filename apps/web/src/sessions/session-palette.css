@@ -1,4 +1,4 @@
-.sp {
+.session-palette {
   position: fixed;
   inset: 0;
   z-index: 85;
@@ -199,7 +199,7 @@
 }
 
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
-  .sp {
+  .session-palette {
     padding: 0;
   }
 
@@ -247,7 +247,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sp,
+  .session-palette,
   .sp-panel {
     animation: none;
   }

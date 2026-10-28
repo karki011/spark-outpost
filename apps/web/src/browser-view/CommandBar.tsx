@@ -138,7 +138,7 @@ export function CommandBar(props: CommandBarProps) {
   const label = mode === 'new' ? 'Open a new tab' : 'Go to';
   return (
     <div
-      className="sp bv-bar-cmd"
+      className="session-palette bv-bar-cmd"
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

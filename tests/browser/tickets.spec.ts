@@ -8,6 +8,7 @@ import {
   seedAssignedSince,
 } from './ticket-seed.ts';
 import { LINEAR_KEY } from '../../apps/server/test/fake-linear.ts';
+import { withDesktopBrowser } from './desktop-browser.ts';
 
 const main = (page: Page) => page.getByRole('main', { name: 'Tickets' });
 const section = (page: Page, name: string) => main(page).getByRole('region', { name, exact: true });
@@ -307,6 +308,69 @@ test('sync completion leaves ticket menus and Start work dismissible', async ({ 
     await row(page, 'API-81').getByRole('button').first().click();
     await expect(main(page).getByRole('complementary', { name: 'API-81 details' })).toBeVisible();
   }
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: 'Home', exact: true })
+    .click();
+  await expect(main(page)).toHaveCount(0);
+});
+
+test('loading and closing Sessions leaves Tickets interactive', async ({ page }) => {
+  await connectTickets(page, ['jira']);
+  await openTickets(page);
+  await page.keyboard.press('ControlOrMeta+Shift+K');
+  const palette = page.getByRole('dialog', { name: 'Sessions', exact: true });
+  await expect(palette).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(palette).toHaveCount(0);
+  const home = page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: 'Home', exact: true });
+  await expect
+    .poll(() =>
+      home.evaluate((button) => {
+        const rect = button.getBoundingClientRect();
+        const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        return hit !== null && button.contains(hit);
+      }),
+    )
+    .toBe(true);
+  await page.getByRole('searchbox').fill('API-77');
+  await expect(page.getByRole('searchbox')).toHaveValue('API-77');
+  await home.click();
+  await expect(main(page)).toHaveCount(0);
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Tickets/ })
+    .click();
+  await main(page).getByRole('radio', { name: 'Compact', exact: true }).click();
+  await expect(main(page)).toHaveClass(/compact/);
+});
+
+test('preloading Browser from its rail button does not cover Tickets', async ({ page }) => {
+  await withDesktopBrowser(page);
+  await connectTickets(page, ['jira']);
+  await openTickets(page);
+  const loaded = page.waitForResponse((response) =>
+    /session-palette[^/]*\.css/.test(response.url()),
+  );
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: 'Browser', exact: true })
+    .hover();
+  await loaded;
+  await page.waitForFunction(() =>
+    Array.from(document.styleSheets).some((sheet) => {
+      const owner = sheet.ownerNode;
+      const href =
+        sheet.href ?? (owner instanceof Element ? owner.getAttribute('data-vite-dev-id') : null);
+      return href?.includes('session-palette') && sheet.cssRules.length > 0;
+    }),
+  );
+  await main(page).getByRole('radio', { name: 'Compact', exact: true }).click();
+  await expect(main(page)).toHaveClass(/compact/);
+  await page.getByRole('searchbox').fill('API-77');
+  await expect(page.getByRole('searchbox')).toHaveValue('API-77');
   await page
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button', { name: 'Home', exact: true })

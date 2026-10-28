@@ -101,7 +101,7 @@ export function SessionPalette({ onOpenChat, onClose }: SessionPaletteProps) {
 
   return (
     <div
-      className="sp"
+      className="session-palette"
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

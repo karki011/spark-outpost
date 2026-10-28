@@ -93,17 +93,15 @@ const FACTS_QUERY = `
       WHERE last.conversation_id = p.to_conversation_id AND last.parent_run_id IS NULL
       ORDER BY last.created_at DESC LIMIT 1
     ) AS held,
-    r.status AS run_status,
+    CASE WHEN r.status = 'awaiting_approval' AND pending.kind IS NULL
+      THEN 'running' ELSE r.status END AS run_status,
     r.error AS run_error,
     CASE WHEN r.status = 'succeeded' THEN (
       SELECT CASE WHEN strpos(work.text, '${NEEDS_YOU_PREFIX}') > 0 THEN work.text END
       FROM (${workReply('r.id')}) work
     ) END AS run_asking_reply,
-    CASE WHEN r.status = 'awaiting_approval' THEN (
-      SELECT a.kind = 'clarify' FROM approvals a JOIN runs ar ON ar.id = a.run_id
-      WHERE a.status = 'pending' AND (ar.id = r.id OR ar.parent_run_id = r.id)
-      ORDER BY a.created_at, a.id LIMIT 1
-    ) END AS run_asks_question,
+    CASE WHEN r.status = 'awaiting_approval' THEN pending.kind = 'clarify'
+      END AS run_asks_question,
     CASE WHEN w.to_conversation_id IS NOT NULL THEN w.to_handle END AS waiting_handle,
     (w.id IS NOT NULL AND w.to_conversation_id IS NULL) AS waiting_deleted,
     COALESCE(
@@ -115,6 +113,12 @@ const FACTS_QUERY = `
   FROM outpost_posts p
   JOIN outposts o ON o.id = p.outpost_id
   LEFT JOIN runs r ON r.id = p.run_id
+  LEFT JOIN LATERAL (
+    SELECT a.kind FROM approvals a JOIN runs ar ON ar.id = a.run_id
+    WHERE r.status = 'awaiting_approval' AND a.status = 'pending'
+      AND (ar.id = r.id OR ar.parent_run_id = r.id)
+    ORDER BY a.created_at, a.id LIMIT 1
+  ) pending ON true
   LEFT JOIN outpost_posts w ON w.id = p.after_post_id AND p.task_id IS NULL
   LEFT JOIN runs wr ON wr.id = w.run_id`;
 

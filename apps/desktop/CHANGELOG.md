@@ -4,6 +4,13 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.35
+
+- Chat messages show **Sent** after the server accepts them, even while history refreshes. Slow or failed refreshes no longer mislabel accepted messages or offer duplicate retries.
+
+- Fix Tickets dimming and blocking clicks after Browser preloads or Sessions opens. Ticket spacers no longer inherit the session palette backdrop.
+- Outpost requests clear “Waiting on you” once their last pending question or approval is answered. Answered cards remain in history, and other pending questions stay visible.
+
 ## 0.1.0-beta.34
 
 - Dictation shows live transcription in the existing message input with a compact listening animation. Partial words replace earlier previews; Escape restores the draft, and sending waits until dictation finishes.

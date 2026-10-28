@@ -50,6 +50,7 @@ export function useChatSend(
   const mutationKey = sendKey(conversationId);
   const mutation = useMutation({
     mutationKey,
+    gcTime: Infinity,
     mutationFn: (message: OutgoingMessage) =>
       api.sendMessage(
         conversationId,
@@ -58,12 +59,24 @@ export function useChatSend(
         message.attachments.map((attachment) => attachment.id),
         message.annotations,
       ),
-    onSuccess: onSent,
+    onSuccess: () => {
+      void Promise.resolve()
+        .then(onSent)
+        .catch(() => undefined);
+    },
   });
   const attempts = useMutationState({ filters: { mutationKey }, select: toAttempt });
   const [now, setNow] = useState(() => Date.now());
   const pending = useMemo(() => pendingSends(attempts, savedIds, now), [attempts, savedIds, now]);
   const slowAt = nextSlowAt(pending);
+
+  useEffect(() => {
+    const cache = queryClient.getMutationCache();
+    cache
+      .findAll({ mutationKey: sendKey(conversationId) })
+      .filter((entry) => savedIds.has(outgoing(entry).id))
+      .forEach((entry) => cache.remove(entry));
+  }, [queryClient, conversationId, savedIds, attempts]);
 
   useEffect(() => {
     if (slowAt === null) return;
@@ -72,16 +85,24 @@ export function useChatSend(
   }, [slowAt]);
 
   const inFlight = () =>
-    queryClient
-      .getMutationCache()
-      .findAll({ mutationKey, status: 'pending' })
-      .some((entry) => !savedIds.has(outgoing(entry).id));
+    pendingSends(
+      queryClient.getMutationCache().findAll({ mutationKey }).map(toAttempt),
+      savedIds,
+      Date.now(),
+    ).some((entry) => entry.phase === 'starting' || entry.phase === 'slow');
 
   const send = useStableCallback((message: Omit<OutgoingMessage, 'id'>) => {
     if (inFlight()) return;
     mutation.mutate({ ...message, id: crypto.randomUUID() });
   });
-  const retry = useStableCallback((message: OutgoingMessage) => mutation.mutate(message));
+  const retry = useStableCallback((message: OutgoingMessage) => {
+    const accepted = queryClient
+      .getMutationCache()
+      .findAll({ mutationKey, status: 'success' })
+      .some((entry) => outgoing(entry).id === message.id);
+    if (savedIds.has(message.id) || accepted) return;
+    mutation.mutate(message);
+  });
   const edit = useStableCallback((message: OutgoingMessage) => {
     const cache = queryClient.getMutationCache();
     cache
@@ -93,7 +114,7 @@ export function useChatSend(
   return useMemo(
     () => ({
       pending,
-      sending: pending.some((entry) => entry.phase !== 'failed'),
+      sending: pending.some((entry) => entry.phase === 'starting' || entry.phase === 'slow'),
       send,
       retry,
       edit,
