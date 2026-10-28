@@ -13,7 +13,7 @@ import {
 } from '../persistence/chat-queue.ts';
 import { chatSparkPaused, sparkPausedForChat } from '../persistence/spark-pause.ts';
 import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
-import { postAttachmentIds } from '../persistence/outpost-posts.ts';
+import { copyPostAttachments } from '../persistence/outpost-posts.ts';
 import { markRuleRetry } from '../persistence/spark-rules.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 import {
@@ -80,7 +80,7 @@ async function sendQueued(
 ): Promise<void> {
   const continuing = item.continueRunId !== null && target.permission === PERMISSION_DO;
   const attachmentIds = item.outpostPostId
-    ? await postAttachmentIds(db, item.outpostPostId)
+    ? await copyPostAttachments(db, item.outpostPostId)
     : (item.attachmentIds ?? []);
   const sent = await sendInTransaction(
     db,

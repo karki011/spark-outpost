@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { postToOutpost } from '../src/outposts/post-service.ts';
+import { createOutpost } from '../src/persistence/outposts.ts';
+import { acceptTask } from '../src/persistence/outpost-tasks.ts';
 import { saveAttachment } from '../src/persistence/attachments.ts';
 import { addToQueue, listQueue, takeQueued } from '../src/persistence/chat-queue.ts';
 import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
@@ -89,4 +92,120 @@ describe('queued attachment ownership', () => {
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
     expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
   });
+});
+
+async function outpost(conversationId: string) {
+  const id = randomUUID();
+  await createOutpost(t.db, {
+    id,
+    workspaceId: t.workspaceId,
+    name: 'Files',
+    members: [{ conversationId, handle: 'builder' }],
+  });
+  return (attachmentId: string, postId = randomUUID()) =>
+    postToOutpost(
+      { db: t.db, workspaceId: t.workspaceId },
+      {
+        id: postId,
+        outpostId: id,
+        author: { kind: 'user' },
+        text: 'See file',
+        toConversationId: conversationId,
+        attachmentIds: [attachmentId],
+      },
+    );
+}
+
+describe('outpost attachment ownership', () => {
+  it('keeps an outpost file reserved while allowing its own queued request to drain', async () => {
+    const conversation = await chat();
+    const post = await outpost(conversation.id);
+    const file = await attachment();
+    const id = randomUUID();
+    await post(file.id, id);
+    await expect(post(file.id, id)).resolves.toHaveLength(1);
+    const request = { id: randomUUID(), content: 'Reuse', attachmentIds: [file.id] };
+    await expect(addToQueue(t.db, conversation.id, request)).rejects.toThrow('pending message');
+    await expect(sendNow(t.db, conversation.id, request, target)).rejects.toThrow(
+      'pending message',
+    );
+    await expect(sendUserMessage(t.db, conversation.id, request, await target())).rejects.toThrow(
+      'pending message',
+    );
+    await acceptTask(t.db, conversation.id, { messageId: id, contextId: null, text: 'See file' });
+    await t.db.query("UPDATE runs SET status = 'succeeded' WHERE id = $1", [conversation.runId]);
+    expect(await drainQueue(t.db, conversation.id, target)).toBe('sent');
+    const linked = await t.db.query('SELECT message_id FROM attachments WHERE id = $1', [file.id]);
+    expect(linked.rows[0].message_id).toBeNull();
+    const delivered = await t.db.query('SELECT data FROM attachments WHERE message_id = $1', [id]);
+    expect(delivered.rows[0].data.toString()).toBe('notes');
+  });
+
+  it.each(['queued', 'steering'] as const)('rejects outpost reuse of a %s file', async (mode) => {
+    const conversation = await chat();
+    const post = await outpost(conversation.id);
+    const file = await attachment();
+    const request = { id: randomUUID(), content: 'File', attachmentIds: [file.id] };
+    if (mode === 'queued') await addToQueue(t.db, conversation.id, request);
+    else await sendNow(t.db, conversation.id, request, target);
+    await expect(post(file.id)).rejects.toThrow('missing or already sent');
+  });
+
+  it('serializes concurrent outpost and chat admission of one file', async () => {
+    const conversation = await chat();
+    const post = await outpost(conversation.id);
+    const file = await attachment();
+    const results = await Promise.allSettled([
+      post(file.id),
+      addToQueue(t.db, conversation.id, {
+        id: randomUUID(),
+        content: 'File',
+        attachmentIds: [file.id],
+      }),
+    ]);
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+  });
+});
+
+it('delivers an outpost file independently to every fanout recipient', async () => {
+  const [first, second] = await Promise.all([chat(), chat()]);
+  const outpostId = randomUUID();
+  await createOutpost(t.db, {
+    id: outpostId,
+    workspaceId: t.workspaceId,
+    name: 'Fanout',
+    members: [
+      { conversationId: first.id, handle: 'first' },
+      { conversationId: second.id, handle: 'second' },
+    ],
+  });
+  const file = await attachment();
+  const posts = await postToOutpost(
+    { db: t.db, workspaceId: t.workspaceId },
+    { outpostId, author: { kind: 'user' }, text: '@all See file', attachmentIds: [file.id] },
+  );
+  expect(posts).toHaveLength(2);
+  for (const post of posts) {
+    await acceptTask(t.db, post.toConversationId!, {
+      messageId: post.id,
+      contextId: outpostId,
+      text: post.body,
+    });
+  }
+  await t.db.query("UPDATE runs SET status = 'succeeded' WHERE id = ANY($1::uuid[])", [
+    [first.runId, second.runId],
+  ]);
+  expect(
+    await Promise.all([drainQueue(t.db, first.id, target), drainQueue(t.db, second.id, target)]),
+  ).toEqual(['sent', 'sent']);
+  const copies = await t.db.query(
+    'SELECT id, data FROM attachments WHERE message_id = ANY($1::uuid[])',
+    [posts.map((post) => post.id)],
+  );
+  expect(copies.rows).toHaveLength(2);
+  expect(new Set(copies.rows.map((row) => row.id)).size).toBe(2);
+  expect(copies.rows.every((row) => row.data.toString() === 'notes' && row.id !== file.id)).toBe(
+    true,
+  );
 });

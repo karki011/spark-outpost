@@ -28,6 +28,8 @@ export async function validateQueuedAttachments(
       `SELECT 1 FROM chat_queue WHERE attachment_ids && $1::uuid[] AND id <> $2
        UNION ALL
        SELECT 1 FROM member_messages WHERE attachment_ids && $1::uuid[] AND id <> $2
+       UNION ALL
+       SELECT 1 FROM outpost_posts WHERE attachment_ids && $1::uuid[] AND id <> $2
        LIMIT 1`,
       [unique, messageId],
     );
