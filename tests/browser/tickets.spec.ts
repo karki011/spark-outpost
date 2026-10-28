@@ -360,9 +360,12 @@ test('preloading Browser from its rail button does not cover Tickets', async ({ 
     .hover();
   await loaded;
   await page.waitForFunction(() =>
-    Array.from(document.styleSheets).some(
-      (sheet) => sheet.href?.includes('session-palette') && sheet.cssRules.length > 0,
-    ),
+    Array.from(document.styleSheets).some((sheet) => {
+      const owner = sheet.ownerNode;
+      const href =
+        sheet.href ?? (owner instanceof Element ? owner.getAttribute('data-vite-dev-id') : null);
+      return href?.includes('session-palette') && sheet.cssRules.length > 0;
+    }),
   );
   await main(page).getByRole('radio', { name: 'Compact', exact: true }).click();
   await expect(main(page)).toHaveClass(/compact/);
