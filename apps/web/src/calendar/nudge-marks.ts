@@ -23,6 +23,16 @@ export function snoozeNudge(
   return snoozeNudgeFor(marks, eventKey, end, at, SNOOZE_MS);
 }
 
+export function snoozeNudgeUntilStart(
+  marks: NudgeMarks,
+  eventKey: string,
+  span: { start: number; end: number },
+  at: number,
+): NudgeMarks {
+  if (span.start <= at || span.end <= at) return marks;
+  return snoozeNudgeFor(marks, eventKey, span.end, at, span.start - at);
+}
+
 export function snoozeNudgeFor(
   marks: NudgeMarks,
   eventKey: string,

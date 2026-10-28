@@ -3,10 +3,9 @@ import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
-import { PACKAGED, PACKAGED_DATA_DIR } from './stub-config.ts';
+import { TEST_DATA_DIR } from './stub-config.ts';
 
-const dataDir = PACKAGED ? PACKAGED_DATA_DIR : path.resolve('.local');
-const chatHome = (chatId: string) => path.join(dataDir, 'spark', 'chats', chatId);
+const chatHome = (chatId: string) => path.join(TEST_DATA_DIR, 'spark', 'chats', chatId);
 
 test.beforeEach(async () => {
   test.slow();

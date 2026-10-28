@@ -4,6 +4,13 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.34
+
+- Dictation shows live transcription in the existing message input with a compact listening animation. Partial words replace earlier previews; Escape restores the draft, and sending waits until dictation finishes.
+- Upcoming Scout meeting reminders offer **Snooze until start**. Snoozes survive refresh, and ended reminders disappear automatically without user action.
+- GitHub credential commands, including token substitution for private package installs, follow the agent permission mode and configured Spark rules instead of an unconditional refusal. Secret redaction remains enabled.
+- Mac diagnostic exports include content-free overlay geometry and click-target metadata to investigate blocked interfaces. This adds diagnostic evidence; the reported intermittent Jira overlay issue is not yet confirmed fixed.
+
 ## 0.1.0-beta.33
 
 - Adjust **Spark Island height** in Settings → Notifications to raise or lower the docked blob, including while agents work. The slider previews changes live, saves when you finish adjusting, and offers **Reset** to restore the default. Expanded panels keep their clearance below the notch.

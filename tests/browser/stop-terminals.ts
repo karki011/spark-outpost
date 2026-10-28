@@ -6,11 +6,11 @@ import {
   tmuxBaseEnv,
   tmuxBinary,
 } from '../../apps/server/src/terminal/tmux/tmux-host.ts';
-import { API_PORT } from './stub-config.ts';
+import { TEST_DATA_DIR } from './stub-config.ts';
 
 export default function stopTerminalSessions(): void {
   const localDir = path.resolve(import.meta.dirname, '../../.local');
-  const directory = path.join(localDir, DEFAULT_BRANCH_PREFIX, `tmux-${API_PORT}`);
+  const directory = path.join(TEST_DATA_DIR, DEFAULT_BRANCH_PREFIX, 'tmux');
   const socket = path.join(directory, 's');
   const bin = tmuxBinary(process.env, localDir);
   if (!bin || !existsSync(socket)) return;

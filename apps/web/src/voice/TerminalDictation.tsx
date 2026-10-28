@@ -1,9 +1,9 @@
 import './speech.css';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { terminalRemoteApi } from '../terminal/terminal-api.ts';
 import { MicButton } from './MicButton.tsx';
-import { joinDictation } from './use-dictation.ts';
+import { useDictationDraft } from './use-dictation-draft.ts';
 
 interface TerminalDictationProps {
   chatId: string;
@@ -12,42 +12,51 @@ interface TerminalDictationProps {
 
 export function TerminalDictation({ chatId, agentName }: TerminalDictationProps) {
   const [text, setText] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const voice = useDictationDraft(text ?? '', setText, chatId, () => {
+    inputRef.current?.focus({ preventScroll: true });
+  });
+  const discard = () => {
+    voice.dictation.cancel();
+    setText(null);
+  };
   const send = useMutation({
     mutationFn: (message: string) => terminalRemoteApi.message(chatId, message),
     onSuccess: () => setText(null),
   });
   return (
     <>
-      <MicButton onText={(heard) => setText((now) => joinDictation(now ?? '', heard))} />
-      {text !== null && (
+      <MicButton dictation={voice.dictation} />
+      {(text !== null || voice.dictation.active) && (
         <form
           className="tdict"
           aria-label="Dictated message"
           onSubmit={(event) => {
             event.preventDefault();
-            if (text.trim()) send.mutate(text.trim());
+            if (!voice.dictation.active && text?.trim()) send.mutate(text.trim());
           }}
         >
           <label className="sr-only" htmlFor={`tdict-${chatId}`}>
             Dictated message for {agentName}
           </label>
           <input
+            ref={inputRef}
             id={`tdict-${chatId}`}
-            value={text}
+            value={voice.value}
             autoFocus
-            onChange={(event) => setText(event.target.value)}
+            onChange={(event) => voice.change(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Escape') setText(null);
+              if (event.key === 'Escape') discard();
             }}
           />
           <button
             type="submit"
             className="btn primary sm"
-            disabled={!text.trim() || send.isPending}
+            disabled={voice.dictation.active || !text?.trim() || send.isPending}
           >
             Send to {agentName}
           </button>
-          <button type="button" className="btn ghost sm" onClick={() => setText(null)}>
+          <button type="button" className="btn ghost sm" onClick={discard}>
             Discard
           </button>
           {send.isError && (

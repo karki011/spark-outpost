@@ -12,6 +12,10 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed                      | What to do                                                               |
 | --------------------------------- | ------------------------------------------------------------------------ |
+| Mac diagnostics                   | Export while blocked to capture overlay metadata.                        |
+| GitHub authentication             | Credential commands follow mode and rules.                               |
+| Compact dictation                 | Live words appear in drafts; controls stay put.                          |
+| Meeting reminders                 | **Snooze until start**; ended reminders disappear.                       |
 | Adjustable Island height          | Slide higher or lower in **Settings → Notifications**.                   |
 | Code Mode on by default           | Combine reads; [turn off in Settings](settings.md#code-mode).            |
 | Accurate activity status          | Commands pass; tools finish.                                             |

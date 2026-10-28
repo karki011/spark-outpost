@@ -165,8 +165,6 @@ describe('with no Spark rules, what is fixed in v1 still holds', () => {
     `cat "${DATA}/spark/settings.json"`,
     `cat "${DATA}/postgres-password"`,
     `git push --no-verify origin ${BRANCH}`,
-    'gh auth token',
-    'gh auth status --show-token',
   ];
 
   it.each(REFUSED)('%s is refused in every mode', async (command) => {

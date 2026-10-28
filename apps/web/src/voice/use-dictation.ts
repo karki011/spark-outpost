@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { VoiceErrorCode } from '@spark-outpost/contracts';
 import { desktopSpeech, useSpeechEvents, useSpeechStatus } from './speech-bridge.ts';
 
@@ -25,17 +25,46 @@ export function joinDictation(current: string, heard: string): string {
   return /\s$/.test(current) ? `${current}${text}` : `${current} ${text}`;
 }
 
-export function useDictation(onText: (text: string) => void) {
+export function useDictation(onText: (text: string) => void, scope: string) {
   const speech = desktopSpeech();
   const status = useSpeechStatus();
   const [state, setState] = useState<DictationState>({ phase: 'idle' });
   const [problem, setProblem] = useState<string | null>(null);
-  const current = useRef<string | null>(null);
+  const current = useRef<{ id: string; scope: string } | null>(null);
+  const generation = useRef(0);
+  const [stateScope, setStateScope] = useState(scope);
+  if (stateScope !== scope) {
+    setStateScope(scope);
+    setState({ phase: 'idle' });
+    setProblem(null);
+  }
+
+  const cancel = () => {
+    generation.current += 1;
+    const id = current.current?.id;
+    current.current = null;
+    setState({ phase: 'idle' });
+    if (id && speech) void speech.cancel(id).catch(() => undefined);
+  };
+
+  useLayoutEffect(() => {
+    return () => {
+      generation.current += 1;
+      const id = current.current?.id;
+      current.current = null;
+      if (id && speech) void speech.cancel(id).catch(() => undefined);
+    };
+  }, [scope, speech]);
 
   useSpeechEvents((event) => {
-    if (!('id' in event) || event.id !== current.current) return;
+    if (!('id' in event) || event.id !== current.current?.id || current.current.scope !== scope)
+      return;
     if (event.kind === 'partial') {
-      setState({ phase: 'listening', id: event.id, partial: event.text });
+      setState((before) => ({
+        phase: before.phase === 'working' ? 'working' : 'listening',
+        id: event.id,
+        partial: event.text,
+      }));
     } else if (event.kind === 'final') {
       current.current = null;
       setState({ phase: 'idle' });
@@ -55,19 +84,38 @@ export function useDictation(onText: (text: string) => void) {
     if (!speech) return;
     setProblem(null);
     setState({ phase: 'starting' });
-    const answer = await speech.listen('dictation', '');
+    const pending = ++generation.current;
+    let answer;
+    try {
+      answer = await speech.listen('dictation', '');
+    } catch {
+      if (pending === generation.current) {
+        setState({ phase: 'idle' });
+        setProblem(DICTATION_PROBLEMS.failed!);
+      }
+      return;
+    }
+    if (pending !== generation.current) {
+      if (answer.ok) void speech.cancel(answer.id).catch(() => undefined);
+      return;
+    }
     if (!answer.ok) {
       setState({ phase: 'idle' });
       setProblem(DICTATION_PROBLEMS[answer.error] ?? DICTATION_PROBLEMS.failed!);
       return;
     }
-    current.current = answer.id;
+    current.current = { id: answer.id, scope };
     setState({ phase: 'listening', id: answer.id, partial: '' });
   };
 
   const stop = () => {
     if (state.phase !== 'listening' || !speech) return;
-    void speech.stop(state.id);
+    const id = state.id;
+    void speech.stop(id).catch(() => {
+      if (current.current?.id !== id || current.current.scope !== scope) return;
+      cancel();
+      setProblem(DICTATION_PROBLEMS.failed!);
+    });
     setState({ ...state, phase: 'working' });
   };
 
@@ -75,20 +123,22 @@ export function useDictation(onText: (text: string) => void) {
   useEffect(() => {
     if (!active || !speech) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || !current.current) return;
+      if (event.key !== 'Escape') return;
       event.preventDefault();
       event.stopPropagation();
-      void speech.cancel(current.current);
+      cancel();
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [active, speech]);
+  });
 
   return {
     available: speech !== null && status?.settings.enabled === true,
     state,
     problem,
     active,
-    toggle: () => (state.phase === 'idle' ? void start() : stop()),
+    cancel,
+    toggle: () =>
+      state.phase === 'idle' ? void start() : state.phase === 'starting' ? cancel() : stop(),
   };
 }

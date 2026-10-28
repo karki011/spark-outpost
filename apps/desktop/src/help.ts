@@ -23,6 +23,7 @@ import { appMenuTemplate, type HelpActions } from './help-menu.ts';
 import { IPC } from './ipc-channels.ts';
 import { startSettingsWindow } from './settings-window.ts';
 import { openRulesFile, userRulesFile } from './spark-rules-file.ts';
+import { recordUiDiagnostics } from './ui-diagnostics.ts';
 
 const EXPORT_TIMEOUT_MS = 60_000;
 const HELP_ROUTE = '#/settings/help';
@@ -61,7 +62,18 @@ function focusedWindow(): BrowserWindow | null {
   return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
 }
 
-async function saveDiagnostics(options: HelpOptions): Promise<DiagnosticsExport> {
+async function saveDiagnostics(
+  options: HelpOptions,
+  settings: () => BrowserWindow | null,
+): Promise<DiagnosticsExport> {
+  await recordUiDiagnostics(
+    [
+      { kind: 'main', window: options.mainWindow() },
+      { kind: 'settings', window: settings() },
+    ],
+    options.apiUrl,
+    options.log,
+  );
   const zip = await diagnosticsZip(options.apiUrl, options.token);
   const dialogOptions = {
     title: 'Export diagnostics',
@@ -84,9 +96,12 @@ async function showLogs(folder: string): Promise<void> {
   await shell.openPath(folder);
 }
 
-async function exportFromMenu(options: HelpOptions): Promise<void> {
+async function exportFromMenu(
+  options: HelpOptions,
+  settings: () => BrowserWindow | null,
+): Promise<void> {
   try {
-    const result = await saveDiagnostics(options);
+    const result = await saveDiagnostics(options, settings);
     if (result.saved) shell.showItemInFolder(result.path);
   } catch (error) {
     await dialog.showMessageBox({
@@ -118,7 +133,7 @@ export function startHelp(options: HelpOptions): Help {
     ipcMain.handle(channel, (event) => (options.trusted(event) ? handler() : null));
   };
   handle(IPC.helpInfo, () => info);
-  handle(IPC.helpExportDiagnostics, () => saveDiagnostics(options));
+  handle(IPC.helpExportDiagnostics, () => saveDiagnostics(options, settingsWindow.current));
   handle(IPC.helpShowLogs, () => showLogs(options.logsFolder));
   const rulesFile = userRulesFile(process.env, options.rulesFile);
   handle(IPC.sparkRulesOpenFile, () => openRulesFile(rulesFile, shell.openPath));
@@ -142,7 +157,7 @@ export function startHelp(options: HelpOptions): Help {
           toggleSidebar: () => toMainWindow(IPC.menuCommand, TOGGLE_SIDEBAR_COMMAND),
           sendFeedback: () =>
             settingsWindow.open({ route: HELP_ROUTE, focus: FEEDBACK_SETTINGS_FOCUS }),
-          exportDiagnostics: () => void exportFromMenu(options),
+          exportDiagnostics: () => void exportFromMenu(options, settingsWindow.current),
           showLogs: () => void showLogs(options.logsFolder),
           paneShortcut: options.paneShortcut,
         }),

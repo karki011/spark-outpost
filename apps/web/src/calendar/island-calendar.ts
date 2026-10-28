@@ -8,7 +8,7 @@ import type {
 import type { Chime } from '../island/island-sound.ts';
 import { countLabel } from '../ui/count-label.ts';
 import { clock, minutesUntil } from './calendar-format.ts';
-import { stillOn } from './event-clock.ts';
+import { hasEnded, stillOn } from './event-clock.ts';
 import { nudgeHidden, type NudgeMarks } from './nudge-marks.ts';
 import { meetingParts, type MeetingParts } from './meeting-line.ts';
 import { joinTarget } from './today-model.ts';
@@ -221,8 +221,8 @@ function liveNudge(
   nudge: CalendarNudge,
   input: CalendarLineInput,
 ): CalendarNudge | null {
-  if (nudge.kind === 'wrap_up') return nudge;
   const fallback = meetingOf(now, nudge.eventKey);
+  if (nudge.kind === 'wrap_up') return fallback && hasEnded(fallback, input.at) ? null : nudge;
   const members = nudge.group.length > 0 ? nudge.group : fallback ? [fallback] : [];
   if (members.length === 0) return nudge;
   const group = stillOn(members, input.at).filter(

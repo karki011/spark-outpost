@@ -291,6 +291,15 @@ test('sync completion leaves ticket menus and Start work dismissible', async ({ 
     await page.keyboard.press('Escape');
     await expect(page.locator('.tk .dlg')).toHaveCount(0);
     await expect(page.getByRole('menu', { name: 'Source', exact: true })).toBeHidden();
+    await expect
+      .poll(() =>
+        refresh.evaluate((button) => {
+          const rect = button.getBoundingClientRect();
+          const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+          return hit !== null && button.contains(hit);
+        }),
+      )
+      .toBe(true);
     await page.unroute('**/api/tickets/inbox');
     await main(page).getByRole('button', { name: 'Team or project', exact: true }).click();
     await page.getByRole('menuitemradio', { name: 'All teams and projects', exact: true }).click();

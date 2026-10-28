@@ -6,7 +6,7 @@ order: 421
 summary: Connect Mac Calendar or Google Calendar to see Today beside your chats, join meetings in one click and keep focus time quiet.
 ---
 
-Connect your calendars. About 2 minutes.
+Connect calendars. About 2 minutes.
 
 1. Open **Settings → Connectors → Calendar**.
 2. Select **Connect** for Mac Calendar, or **Sign in with Google**.
@@ -14,7 +14,7 @@ Connect your calendars. About 2 minutes.
 
 ## Google sign-in
 
-**Disconnect** revokes a sign-in. Until Spark's Google app is verified, sign-ins expire every 7 days: select **Sign in again**.
+**Disconnect** revokes access. Google sign-ins expire weekly until verification: select **Sign in again**.
 
 ## Use it
 
@@ -26,9 +26,9 @@ At a meeting's start, Scout lowers a card: **Join**, **Snooze 1 min** or **Dismi
 
 With VoiceOver or keyboard navigation, the card takes focus; **⌃⌥⌘M** focuses it. A silent notification mirrors it.
 
-**Meeting alerts**: **Bubble from Scout** adds **Open** and **Choose** for clashes. Focus blocks hold chimes.
+**Bubble from Scout**: **Snooze until start**, then **Snooze 2 min**; snoozes survive reloads. Ended reminders disappear. **Open** shows Today; **Choose** handles clashes. Focus blocks hold chimes.
 
-**Join meetings automatically** (off) joins at the start after a cancellable 10-second countdown; never in a clash, a hold or when away. Times follow your Mac's 24-hour setting.
+**Join meetings automatically** (off): cancellable 10-second countdown; never during clashes, holds or absence. Times follow your Mac.
 
 ## Let agents use it
 

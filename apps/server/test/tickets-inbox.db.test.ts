@@ -258,6 +258,8 @@ describe('tickets inbox', () => {
   });
 
   it('keeps a ticket with failing checks in review and notifies once per head commit', async () => {
+    stubs.linear.issues.find((issue) => issue.identifier === 'ENG-12')!.updatedAt =
+      new Date().toISOString();
     await connect();
     await connectGitHubToken();
     fakePull(1, {});

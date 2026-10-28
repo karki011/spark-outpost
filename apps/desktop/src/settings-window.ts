@@ -80,6 +80,7 @@ export interface SettingsWindowOptions {
 }
 
 export interface SettingsWindow {
+  current(): BrowserWindow | null;
   open(target: SettingsTarget): void;
   show(): void;
   dispose(): void;
@@ -192,6 +193,7 @@ export function startSettingsWindow(options: SettingsWindowOptions): SettingsWin
   });
 
   return {
+    current: () => window,
     open,
     show,
     dispose() {

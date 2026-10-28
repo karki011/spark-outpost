@@ -39,8 +39,8 @@ function alertTimes(live: CalendarNow | null, settings: CalendarSettings | null)
   if (!live || !settings) return [];
   const lead = settings.alertLead * 60_000;
   return live.upcoming.flatMap((event) => {
-    const { start } = spanOf(event);
-    return [start - lead, start];
+    const { start, end } = spanOf(event);
+    return [start - lead, start, end];
   });
 }
 

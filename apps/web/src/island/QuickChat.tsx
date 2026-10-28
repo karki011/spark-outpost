@@ -25,7 +25,7 @@ import { ticketsApi } from '../tickets/tickets-api.ts';
 import type { TicketRef } from '../voice/commands.ts';
 import { MicButton } from '../voice/MicButton.tsx';
 import { useSeed } from '../voice/speech-seed.tsx';
-import { joinDictation } from '../voice/use-dictation.ts';
+import { useDictationDraft } from '../voice/use-dictation-draft.ts';
 
 export type FollowUp = Pick<ConversationSummary, 'id' | 'title'>;
 
@@ -75,6 +75,12 @@ function useDefaults() {
 export function QuickChat(props: QuickChatProps) {
   const { draftId, draft, followUp, projects, onDraft, onSent } = props;
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const voice = useDictationDraft(
+    draft.text,
+    (text) => onDraft({ ...draft, text }),
+    followUp?.id ?? draftId,
+    () => textRef.current?.focus({ preventScroll: true }),
+  );
   const chipRef = useRef<HTMLButtonElement>(null);
   const { attachments, adder, added } = props.compose;
   const [menuAt, setMenuAt] = useState<number | null>(null);
@@ -138,7 +144,14 @@ export function QuickChat(props: QuickChatProps) {
 
   const submit = () => {
     const content = draft.text.trim();
-    if (!content || !ready || send.isPending || secrets.blocks(draft.text)) return;
+    if (
+      voice.dictation.active ||
+      !content ||
+      !ready ||
+      send.isPending ||
+      secrets.blocks(draft.text)
+    )
+      return;
     send.mutate(content);
   };
 
@@ -240,8 +253,8 @@ export function QuickChat(props: QuickChatProps) {
           ref={textRef}
           rows={2}
           placeholder={followUp ? 'Reply…' : 'Start a new chat…'}
-          value={draft.text}
-          onChange={(event) => onDraft({ ...draft, text: event.target.value })}
+          value={voice.value}
+          onChange={(event) => voice.change(event.target.value)}
           onKeyDown={onKeyDown}
         />
         <div className="isl-qc-bar">
@@ -295,15 +308,12 @@ export function QuickChat(props: QuickChatProps) {
           <span className="isl-qc-hint">
             {send.isPending ? 'Sending…' : attachments.uploading ? 'Uploading…' : ''}
           </span>
-          <MicButton
-            className="isl-chip"
-            onText={(heard) => onDraft({ ...draft, text: joinDictation(draft.text, heard) })}
-          />
+          <MicButton className="isl-chip" dictation={voice.dictation} />
           <button
             type="button"
             className="isl-send"
             aria-label="Send"
-            disabled={!draft.text.trim() || !ready || send.isPending}
+            disabled={voice.dictation.active || !draft.text.trim() || !ready || send.isPending}
             onClick={submit}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">

@@ -193,8 +193,12 @@ describe('spark_terminals', () => {
     const shell = { id: randomUUID(), conversationId: null, label: '~', cwd: '/tmp', pid: 1 };
     registry.opened(shell);
     registry.ended(shell.id);
-    registry.opened({ ...shell, id: randomUUID() });
-    await eventually(async () => ((await listShells(t.db, t.workspaceId)).length === 1 ? 1 : null));
+    const keptId = randomUUID();
+    registry.opened({ ...shell, id: keptId });
+    await eventually(async () => {
+      const shells = await listShells(t.db, t.workspaceId);
+      return shells.length === 1 && shells[0]?.id === keptId ? 1 : null;
+    });
     expect((await listShells(t.db, t.workspaceId)).map((row) => row.id)).not.toContain(shell.id);
 
     await forgetAllShells(t.db, t.workspaceId);

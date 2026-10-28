@@ -29,6 +29,7 @@ import {
   saveSnoozes,
   snoozeEnds,
   snoozeNudge,
+  snoozeNudgeUntilStart,
   snoozeNudgeFor,
   withJoined,
   withServerDismissed,
@@ -84,7 +85,7 @@ export interface IslandCalendar {
   onChoose: (line: CalendarLine) => void;
   onCapture: (line: CalendarLine) => void;
   onDismiss: (line: CalendarLine) => void;
-  onSnooze: (event: CalendarEvent) => void;
+  onSnooze: (event: CalendarEvent, untilStart?: boolean) => void;
   onSnoozeAlert: (event: CalendarEvent) => void;
   onDismissNudge: (event: CalendarEvent) => void;
   countdown: MeetingCountdown | null;
@@ -276,9 +277,11 @@ export function useIslandCalendar(
     onJoined: autoJoin.markJoined,
     onOpenEvent: (eventKey) => openToday(eventKey),
     onChoose: choose,
-    onSnooze: (event) =>
+    onSnooze: (event, untilStart = false) =>
       nudges.setMarks((current) =>
-        snoozeNudge(current, event.key, Date.parse(event.end), Date.now()),
+        untilStart
+          ? snoozeNudgeUntilStart(current, event.key, spanOf(event), Date.now())
+          : snoozeNudge(current, event.key, Date.parse(event.end), Date.now()),
       ),
     onSnoozeAlert: (event) =>
       nudges.setMarks((current) =>

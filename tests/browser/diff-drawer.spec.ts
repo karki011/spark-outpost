@@ -215,6 +215,7 @@ test('the changes chip opens the drawer by shortcut, resizes and hands focus bac
   await expect(drawer).toBeVisible();
   await expect(chip).toHaveAttribute('aria-expanded', 'true');
   const tree = drawer.getByRole('tree', { name: 'Changed files' });
+  await expect(tree.getByRole('treeitem', { name: /^notes\.txt,/ })).toBeVisible();
   await expect(tree).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');

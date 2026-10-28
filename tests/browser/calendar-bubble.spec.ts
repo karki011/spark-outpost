@@ -97,7 +97,18 @@ test('the meeting card hangs from Scout with its details, snoozes through a relo
   await expect(bubble(page)).toContainText('Daily sync: what changed since yesterday.');
   await expect(bubble(page).getByRole('button', { name: 'Join Zoom: Standup' })).toBeEnabled();
 
-  await bubble(page).getByRole('button', { name: 'Snooze 2 min' }).click();
+  const response = await page.request.get('/api/calendar/now');
+  const meeting = calendarNowSchema
+    .parse(await response.json())
+    .upcoming.find((event) => event.title === 'Standup')!;
+  await bubble(page).getByRole('button', { name: 'Snooze until start' }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        JSON.parse(localStorage.getItem('spark-outpost.calendar-snoozes') ?? '[]'),
+      ),
+    )
+    .toContainEqual([meeting.key, Date.parse(meeting.end), Date.parse(meeting.start)]);
   await expect(bubble(page)).toBeHidden();
   await page.reload();
   await expect(island(page)).toHaveAttribute('data-view', 'peek');

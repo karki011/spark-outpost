@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
+import { argumentWords, commandTree, treeWords } from './command-tree.ts';
+import { secretLabels } from './guarded-targets.ts';
+import { splitSimpleCommands } from './commands.ts';
 import { NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { recommendedRulesText, userRules } from '../spark-rules/recommended.ts';
 import type { SparkRuleContext } from './gh-rules.ts';
-import { GH_TOKEN_REASON } from './git-commands.ts';
 import type { PublishGrant } from './publish-policy.ts';
 
 const ROOT = '/work/app/.spark/worktrees/chat-1';
 const files: FileLister = { glob: () => [], walk: () => [], script: () => null };
-const EVERY_MODE: readonly ModePosture[] = ['asks', 'edits', 'unknown', 'auto', 'full_access'];
 const ASKED: PublishGrant = { level: 'full-auto', requested: true };
 
 function context(text: string): SparkRuleContext {
@@ -19,6 +20,7 @@ function context(text: string): SparkRuleContext {
 const NO_RULES = context('{}');
 const ALLOWING = context(JSON.stringify({ permissions: { allow: ['Gh(auth)', 'Gh(*)'] } }));
 const RECOMMENDED = context(recommendedRulesText());
+const ASKING_AUTH = context(JSON.stringify({ permissions: { ask: ['Gh(auth)'] } }));
 const DENYING_AUTH = context(JSON.stringify({ permissions: { deny: ['Gh(auth)'] } }));
 
 function run(command: string): ApprovalRequest {
@@ -65,14 +67,87 @@ describe('a gh command that prints the token', () => {
     'bash -lc "gh auth token"',
     'curl -H "Authorization: token $(/opt/homebrew/bin/gh auth token)" https://api.github.com',
     'git -c credential.helper="!gh auth git-credential" fetch && echo "$(gh auth git-credential get)"',
-  ])('%s is refused in every mode, whatever the rules say', (command) => {
-    for (const rules of [NO_RULES, ALLOWING, RECOMMENDED]) {
-      for (const posture of EVERY_MODE) {
-        expect(judged(posture, command, rules, [command, 'gh']), posture).toEqual({
-          verdict: 'reject',
-          reason: GH_TOKEN_REASON,
-        });
-      }
+    'export NODE_AUTH_TOKEN=$(gh auth token) && pnpm install --frozen-lockfile 2>&1 | tail -8',
+    'bash -lc "export NODE_AUTH_TOKEN=$(gh auth token) && pnpm install"',
+  ])('%s follows the mode without rules', (command) => {
+    for (const rules of [NO_RULES, ALLOWING]) {
+      expect(judged('full_access', command, rules).verdict).toBe('allow');
+      expect(judged('asks', command, rules).verdict).toBe('ask');
+    }
+  });
+
+  it.each([
+    'gh auth token',
+    '2>&1 gh auth token',
+    '</dev/null gh auth token',
+    '2>/tmp/gh-errors gh auth token',
+    'gh 2>&1 auth token',
+    'gh auth status --show-token',
+    'gh auth git-credential get',
+    'export NODE_AUTH_TOKEN=$(gh auth token) && pnpm install --frozen-lockfile 2>&1 | tail -8',
+    'bash -lc "export NODE_AUTH_TOKEN=$(gh auth token) && pnpm install"',
+  ])('%s respects explicit auth rules', (command) => {
+    expect(judged('full_access', command, ASKING_AUTH).verdict).toBe('ask');
+    for (const rules of [DENYING_AUTH, RECOMMENDED]) {
+      expect(judged('full_access', command, rules, [command, 'gh'])).toMatchObject({
+        verdict: 'reject',
+      });
+    }
+  });
+
+  it.each([
+    ['2>', '&1 gh auth token'],
+    ['2>&', '1 gh auth token'],
+    ['true |', '| gh auth token'],
+    ['echo $', '(gh auth token)'],
+    ['gh ', 'auth token'],
+    ['gh au', 'th token'],
+    ['g', 'h auth token'],
+    ['gh "au', 'th" token'],
+    ["bash -lc 'gh ", "auth token'"],
+    ['export NODE_AUTH_TOKEN=$(gh ', 'auth token)'],
+  ])('keeps continued auth commands subject to explicit auth rules: %s', (before, after) => {
+    const command = `${before}${String.fromCharCode(92, 10)}${after}`;
+    expect(judged('full_access', command, DENYING_AUTH, [command, 'gh']).verdict).toBe('reject');
+    expect(judged('full_access', command, ASKING_AUTH).verdict).toBe('ask');
+    expect(judged('full_access', command, NO_RULES).verdict).toBe('allow');
+  });
+
+  it.each(['<.env cat', '>.env echo value', '2>.env gh auth token'])(
+    'retains leading redirection targets for secret classification: %s',
+    (command) => {
+      const tree = commandTree(command);
+      expect(treeWords(tree)).toContain('.env');
+      expect(argumentWords(tree, tree.commands[0]!)).not.toContain('.env');
+      expect(secretLabels(run(command))).toContain('.env');
+      const rules = context(
+        JSON.stringify({ permissions: { deny: ['SecretFile(read)', 'SecretFile(edit)'] } }),
+      );
+      expect(judged('full_access', command, rules).verdict).toBe('reject');
+      expect(tree.commands[0]![0]).toBe(
+        command.includes('cat') ? 'cat' : command.includes('echo') ? 'echo' : 'gh',
+      );
+    },
+  );
+
+  it('preserves quoted literal newlines and escaped backslashes', () => {
+    const continuation = String.fromCharCode(92, 10);
+    expect(splitSimpleCommands(`gh '${continuation}auth' token`)).toEqual([
+      ['gh', `${continuation}auth`, 'token'],
+    ]);
+    expect(splitSimpleCommands(`gh ${String.fromCharCode(92)}${continuation}auth token`)).toEqual([
+      ['gh', String.fromCharCode(92)],
+      ['auth', 'token'],
+    ]);
+    expect(splitSimpleCommands(`gh ${continuation}  auth token`)).toEqual([
+      ['gh', 'auth', 'token'],
+    ]);
+  });
+
+  it('respects an exact rule for retrieving the config token', () => {
+    const rules = context(JSON.stringify({ permissions: { deny: ['Gh(config get)'] } }));
+    for (const command of ['gh config get oauth_token', 'echo "$(gh config get oauth_token)"']) {
+      expect(judged('full_access', command, rules).verdict).toBe('reject');
     }
   });
 });
@@ -89,7 +164,6 @@ describe('other gh auth commands', () => {
     expect(judged('asks', command, NO_RULES).verdict).toBe('ask');
     const denied = judged('full_access', command, DENYING_AUTH);
     expect(denied).toMatchObject({ verdict: 'reject' });
-    expect(denied).not.toMatchObject({ reason: GH_TOKEN_REASON });
     expect(judged('full_access', command, RECOMMENDED).verdict).toBe('reject');
   });
 
