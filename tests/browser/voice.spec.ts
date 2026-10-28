@@ -400,7 +400,7 @@ test('a denied microphone says so and opens Microphone settings', async ({ page 
   expect((await voiceCalls(page)).at(-1)).toEqual({ op: 'openSettings', args: ['microphone'] });
 });
 
-test('live dictation keeps the composer steady and never sends its draft', async ({
+test('live dictation keeps the composer steady and sends only after confirmation', async ({
   page,
 }, testInfo) => {
   await resetTestDatabase({ onboarded: true });
@@ -471,7 +471,7 @@ test('live dictation keeps the composer steady and never sends its draft', async
     'aria-pressed',
     'false',
   );
-  await page.waitForTimeout(400);
+  await expect(input).toBeFocused();
   expect(await userMessages()).toBe(before);
   await emitVoice(page, {
     kind: 'final',
@@ -494,4 +494,7 @@ test('live dictation keeps the composer steady and never sends its draft', async
   expect(await userMessages()).toBe(before);
   const ops = (await voiceCalls(page)).map((call) => call.op);
   expect(ops.filter((op) => op !== 'resolved')).toEqual(['listen', 'stop', 'listen', 'cancel']);
+  await input.focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(userMessages).toBe(before + 1);
 });

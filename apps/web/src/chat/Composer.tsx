@@ -93,10 +93,12 @@ export function Composer({
   quotes,
 }: ComposerProps) {
   const [draft, setDraft] = useChatDraft(conversationId);
-  const voice = useDictationDraft(draft, setDraft, conversationId);
   const [repoOpen, setRepoOpen] = useState(false);
   const [formatting, setFormatting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const voice = useDictationDraft(draft, setDraft, conversationId, () => {
+    textareaRef.current?.focus({ preventScroll: true });
+  });
   const lastChoice = useRef(busyEnter);
   const secrets = useSecretGuard(draft);
   const inputId = useId();
