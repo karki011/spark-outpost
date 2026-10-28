@@ -10,6 +10,8 @@ interface MemberMessageRow {
   id: string;
   run_id: string;
   body: string;
+  attachment_ids?: string[];
+  annotations?: MemberMessage['annotations'];
   urgency: MemberMessageUrgency;
   status: MemberMessageStatus;
   message_id: string | null;
@@ -27,6 +29,8 @@ export interface NewMemberMessage {
   runId: string;
   body: string;
   urgency: MemberMessageUrgency;
+  attachmentIds?: readonly string[] | undefined;
+  annotations?: MemberMessage['annotations'];
   status?: MemberMessageStatus;
   messageId?: string | null;
 }
@@ -36,6 +40,8 @@ function toMemberMessage(row: MemberMessageRow): MemberMessage {
     id: row.id,
     runId: row.run_id,
     body: row.body,
+    ...(row.attachment_ids?.length ? { attachmentIds: row.attachment_ids } : {}),
+    ...(row.annotations?.length ? { annotations: row.annotations } : {}),
     urgency: row.urgency,
     status: row.status,
     messageId: row.message_id,
@@ -59,8 +65,8 @@ export async function insertMemberMessage(
   message: NewMemberMessage,
 ): Promise<MemberMessage> {
   await db.query(
-    `INSERT INTO member_messages (id, conversation_id, run_id, body, urgency, status, message_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING`,
+    `INSERT INTO member_messages (id, conversation_id, run_id, body, urgency, status, message_id, attachment_ids, annotations)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (id) DO NOTHING`,
     [
       message.id,
       message.conversationId,
@@ -69,6 +75,8 @@ export async function insertMemberMessage(
       message.urgency,
       message.status ?? 'queued',
       message.messageId ?? null,
+      [...(message.attachmentIds ?? [])],
+      JSON.stringify(message.annotations ?? []),
     ],
   );
   const stored = await getMemberMessage(db, message.id);

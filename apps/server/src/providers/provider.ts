@@ -50,12 +50,14 @@ export interface ModeRequests {
   subscribe(listener: (mode: string) => void): () => void;
 }
 
+export type ProviderMessage = string | { text: string; attachments: readonly TurnAttachment[] };
+
 export interface SteerRequests {
-  attach(send: (text: string) => Promise<boolean>): () => void;
+  attach(send: (text: ProviderMessage) => Promise<boolean>): () => void;
 }
 
 export interface TurnInbox {
-  take(): Promise<string | null>;
+  take(): Promise<ProviderMessage | null>;
 }
 
 export interface StoredSession {

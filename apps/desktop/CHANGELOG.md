@@ -4,6 +4,10 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.36
+
+- Send or queue screenshots and files while an agent works, including attachment-only messages. Background work continues, queued files survive reloads, and failed sends keep the draft and attachments for retry.
+
 ## 0.1.0-beta.35
 
 - Chat messages show **Sent** after the server accepts them, even while history refreshes. Slow or failed refreshes no longer mislabel accepted messages or offer duplicate retries.

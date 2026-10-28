@@ -188,12 +188,14 @@ export function Composer({
   const quoteItems = quotes?.items ?? [];
   useUnsentWork(conversationId, hasText || attachments.items.length > 0 || quoteItems.length > 0);
   const sendName = hasText ? 'Send' : sendLabel(quoteItems.map((quote) => quote.kind));
-  const canQueue = queueing && hasText && attachments.items.length === 0;
+  const [delivering, setDelivering] = useState(false);
+  const canQueue = queueing;
   const canSend =
     !voice.dictation.active &&
     ready &&
     (hasText || attachments.items.length > 0 || quoteItems.length > 0) &&
     !sending &&
+    !delivering &&
     (!busy || canQueue) &&
     !attachments.uploading &&
     !attachments.failed;
@@ -222,13 +224,21 @@ export function Composer({
     const typed = outgoing();
     if (typed === null) return;
     const { content, annotations } = quotes?.compose(typed) ?? { content: typed, annotations: [] };
+    const sentItems = [...attachments.items];
+    const sentQuotes = [...quoteItems];
     setDraft('');
     if (queueing && onQueue) {
       const deliver = choice === 'now' && onSendNow ? onSendNow : onQueue;
-      await deliver(content).then(
-        () => quotes?.clear(),
-        () => setDraft((current) => restoreFailedDraft(current, draftText)),
-      );
+      setDelivering(true);
+      try {
+        await deliver(content, attachments.uploaded, annotations);
+        for (const item of sentItems) attachments.remove(item.key);
+        for (const quote of sentQuotes) quotes?.remove(quote.id);
+      } catch {
+        setDraft((current) => restoreFailedDraft(current, draftText));
+      } finally {
+        setDelivering(false);
+      }
       return;
     }
     try {

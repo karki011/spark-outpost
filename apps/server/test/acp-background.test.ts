@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
-import type { AgentSettings, ProviderOutput, SteerRequests } from '../src/providers/provider.ts';
+import type {
+  AgentSettings,
+  ProviderMessage,
+  ProviderOutput,
+  SteerRequests,
+} from '../src/providers/provider.ts';
+import { childEnvironment } from '../src/setup/environment.ts';
 import { WRITE_UP_STEP } from '@spark-outpost/contracts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
@@ -9,6 +15,10 @@ import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 const claude = createAcpProvider({
   definition: { ...agentDefinitions.claude, name: 'Fake', ...FAKE_AGENT_MODES },
   launch,
+  env: {
+    ...childEnvironment(process.env),
+    FAKE_ACP_PROMPT_CAPABILITIES: JSON.stringify({ image: true }),
+  },
   cancelGraceMs: 2_000,
 });
 const codexLike = createAcpProvider({
@@ -120,31 +130,50 @@ describe(
       );
     });
 
-    it('sends a message written during the wait to the same session as a new prompt', async () => {
-      let send: ((text: string) => Promise<boolean>) | null = null;
-      const delivered: boolean[] = [];
-      const steering: SteerRequests = {
-        attach(sender) {
-          send = sender;
-          return () => {
-            send = null;
-          };
-        },
-      };
-      let waits = 0;
-      const outputs = await collect('#backgroundforever', {
-        steering,
-        onOutput: (output, controller) => {
-          if (output.kind !== 'background_work' || output.agents === 0) return;
-          waits += 1;
-          if (waits === 1) void send?.('Any news?').then((ok) => delivered.push(ok));
-          else controller.abort();
-        },
-      });
+    it.each([false, true])(
+      'sends a message during background work with attachments=%s',
+      async (rich) => {
+        let send: ((text: ProviderMessage) => Promise<boolean>) | null = null;
+        const delivered: boolean[] = [];
+        const steering: SteerRequests = {
+          attach(sender) {
+            send = sender;
+            return () => {
+              send = null;
+            };
+          },
+        };
+        let waits = 0;
+        const outputs = await collect('#backgroundforever', {
+          steering,
+          onOutput: (output, controller) => {
+            if (output.kind !== 'background_work' || output.agents === 0) return;
+            waits += 1;
+            if (waits === 1)
+              void send?.(
+                rich
+                  ? {
+                      text: '#blocks',
+                      attachments: [
+                        {
+                          name: 'screen.png',
+                          mediaType: 'image/png',
+                          kind: 'image',
+                          data: Buffer.from('pixels'),
+                        },
+                      ],
+                    }
+                  : 'Any news?',
+              ).then((ok) => delivered.push(ok));
+            else controller.abort();
+          },
+        });
 
-      expect(delivered).toEqual([true]);
-      expect(replyText(outputs)).toContain('prompt=Any news?');
-      expect(backgroundReports(outputs).map((output) => output.agents)).toEqual([1, 0, 1]);
-    });
+        expect(delivered).toEqual([true]);
+        if (!rich) expect(replyText(outputs)).toContain('prompt=Any news?');
+        if (rich) expect(replyText(outputs)).toContain('image:image/png:8');
+        expect(backgroundReports(outputs).map((output) => output.agents)).toEqual([1, 0, 1]);
+      },
+    );
   },
 );

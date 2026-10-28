@@ -34,8 +34,8 @@ export interface ComposerProps {
   ) => Promise<void>;
   quotes?: QuotesState;
   onStop: () => void;
-  onQueue?: (content: string) => Promise<void>;
-  onSendNow?: (content: string) => Promise<void>;
+  onQueue?: ComposerProps['onSend'];
+  onSendNow?: ComposerProps['onSend'];
   busyEnter?: BusyEnterAction;
   waitingOn?: number;
   waitingBackground?: BackgroundWait | null;

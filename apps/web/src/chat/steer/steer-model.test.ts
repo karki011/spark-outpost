@@ -211,6 +211,13 @@ describe('withSteer', () => {
     expect(turnSteers(next, TOP)).toHaveLength(1);
   });
 
+  it('keeps image-only steers visible while their delivery is pending', () => {
+    const next = withSteer(detail(), 'image', '', now, ['file-a']);
+    expect(turnSteers(next, TOP)).toMatchObject([
+      { id: 'image', body: '', attachmentIds: ['file-a'] },
+    ]);
+  });
+
   it('adds nothing when no turn is running or the message is already there', () => {
     const idle = detail({ runs: [run(TOP, 'succeeded')] });
     expect(withSteer(idle, 'new', 'Use UTC', now)).toBe(idle);

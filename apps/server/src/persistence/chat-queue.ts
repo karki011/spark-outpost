@@ -1,4 +1,5 @@
 import { QUEUE_LIMIT, type QueuedMessage } from '@spark-outpost/contracts';
+import { validateQueuedAttachments } from './queued-attachments.ts';
 import { rememberRemoteMessage } from '../remote/run-mark.ts';
 import type { Queryable } from './db.ts';
 
@@ -21,6 +22,7 @@ interface QueueRow {
   spark_rule_card_id?: string | null;
   origin?: QueuedMessage['origin'] | null;
   attachment_ids?: string[];
+  annotations?: QueuedMessage['annotations'];
 }
 
 export const PAUSED_OUTPOST_ITEM = `EXISTS (
@@ -53,6 +55,7 @@ function toQueued(row: QueueRow): QueuedMessage {
     ...(row.outpost_post_id ? { outpostPostId: row.outpost_post_id } : {}),
     ...(row.spark_rule_card_id ? { sparkRuleCardId: row.spark_rule_card_id } : {}),
     ...(row.origin ? { origin: row.origin } : {}),
+    ...(row.annotations?.length ? { annotations: row.annotations } : {}),
     ...(row.attachment_ids?.length ? { attachmentIds: row.attachment_ids } : {}),
   };
 }
@@ -63,7 +66,8 @@ export interface NewQueued {
   continueRunId?: string | null;
   sparkRuleCardId?: string | null;
   origin?: QueuedMessage['origin'];
-  attachmentIds?: readonly string[];
+  attachmentIds?: readonly string[] | undefined;
+  annotations?: QueuedMessage['annotations'];
 }
 
 export async function listQueue(db: Queryable, conversationId: string): Promise<QueuedMessage[]> {
@@ -91,6 +95,7 @@ export async function addToQueue(
   if (session.rows[0]?.session_type === 'terminal')
     throw new QueueError(409, 'Send messages in this session’s terminal.');
   if (await alreadySent(db, item.id)) return;
+  await validateQueuedAttachments(db, conversationId, item.attachmentIds, item.annotations);
   const { rows } = await db.query<{ count: number }>(
     'SELECT count(*)::int AS count FROM chat_queue WHERE conversation_id = $1',
     [conversationId],
@@ -100,8 +105,8 @@ export async function addToQueue(
   }
   await db.query(
     `INSERT INTO chat_queue (id, conversation_id, position, content, continue_run_id,
-       spark_rule_card_id, origin, attachment_ids)
-     SELECT $1, $2, COALESCE(MAX(position), 0) + 1, $3, $4, $5, $6, $7
+       spark_rule_card_id, origin, attachment_ids, annotations)
+     SELECT $1, $2, COALESCE(MAX(position), 0) + 1, $3, $4, $5, $6, $7, $8
      FROM chat_queue WHERE conversation_id = $2
      ON CONFLICT (id) DO NOTHING`,
     [
@@ -112,6 +117,7 @@ export async function addToQueue(
       item.sparkRuleCardId ?? null,
       item.origin ?? null,
       [...(item.attachmentIds ?? [])],
+      JSON.stringify(item.annotations ?? []),
     ],
   );
   await rememberRemoteMessage(db, item.id);
@@ -125,16 +131,22 @@ export async function editQueued(
 ): Promise<void> {
   const { rowCount } = await db.query(
     `UPDATE chat_queue SET content = $3, updated_at = now()
-     WHERE conversation_id = $1 AND id = $2 AND outpost_post_id IS NULL`,
+     WHERE conversation_id = $1 AND id = $2 AND outpost_post_id IS NULL
+       AND (length($3) > 0 OR cardinality(attachment_ids) > 0)`,
     [conversationId, id, content],
   );
   if (rowCount === 1) return;
-  const outpostItem = await db.query(
-    'SELECT 1 FROM chat_queue WHERE conversation_id = $1 AND id = $2',
+  const outpostItem = await db.query<{ outpost_post_id: string | null }>(
+    'SELECT outpost_post_id FROM chat_queue WHERE conversation_id = $1 AND id = $2',
     [conversationId, id],
   );
   if (outpostItem.rowCount === 1) {
-    throw new QueueError(409, 'A request from an outpost can’t be edited. Remove it instead.');
+    throw new QueueError(
+      409,
+      outpostItem.rows[0]?.outpost_post_id
+        ? 'A request from an outpost can’t be edited. Remove it instead.'
+        : 'Keep a message or an attachment.',
+    );
   }
   throw new QueueError(404, 'That message has already been sent.');
 }

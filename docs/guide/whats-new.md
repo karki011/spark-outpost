@@ -12,6 +12,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
+| Busy attachments         | Send or queue files while agents work.                                   |
 | Tickets interaction      | Browser preloading no longer creates blocking backdrops.                 |
 | GitHub authentication    | Credential commands follow mode and rules.                               |
 | Compact dictation        | Live words appear in drafts; controls stay put.                          |
@@ -27,4 +28,4 @@ Earlier releases: **Settings → Updates → Release notes**.
 | Calmer text and composer | Tools have readable labels; details stay folded.                         |
 | Message delivery         | **Sent** confirms receipt; refresh failures cannot trigger retries.      |
 
-New profiles [record Claude Terminal sessions](settings.md#record-terminal-sessions) by default; existing choices stay. Codex is unchanged.
+New profiles [record Claude Terminal sessions](settings.md#record-terminal-sessions); existing choices stay.

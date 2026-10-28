@@ -218,3 +218,138 @@ test('a failed Send now keeps the draft and shows the error', async ({ page }) =
   await expect(queued(page)).toHaveCount(0);
   await expect(mine(page).filter({ hasText: 'Keep me' })).toHaveCount(0);
 });
+
+const PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGMwObwYiBggFAArKgZp8w3CnwAAAABJRU5ErkJggg==';
+
+async function attachBusyFiles(page: Page, withTextFile = false) {
+  await page.getByRole('button', { name: 'Add files and context' }).click();
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('menuitem', { name: 'Upload a file' }).click();
+  await (
+    await chooser
+  ).setFiles([
+    { name: 'busy.png', mimeType: 'image/png', buffer: Buffer.from(PNG_BASE64, 'base64') },
+    ...(withTextFile
+      ? [{ name: 'busy.txt', mimeType: 'text/plain', buffer: Buffer.from('Follow-up details\n') }]
+      : []),
+  ]);
+  await expect(page.getByRole('button', { name: 'Remove busy.png' })).toBeVisible();
+  await expect(page.getByRole('progressbar')).toHaveCount(0);
+}
+
+async function allowUntilAttachmentDelivered(page: Page, names: string, steered = false) {
+  const reply = page.locator('.md').filter({ hasText: `Attachments: ${names}.` });
+  const imageReceipt = page.locator('.md').filter({
+    hasText: `[Image not shown: ${names.split(', ')[0]}]`,
+  });
+  await expect(async () => {
+    const allow = card(page, /^Edit .+\?$/).getByRole('button', { name: 'Allow', exact: true });
+    if (await allow.first().isVisible()) await allow.first().click();
+    await expect(steered ? reply.or(imageReceipt).first() : reply).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 60_000 });
+}
+
+test('an image-only busy message queues, survives reload and reaches the agent @packaged', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await waitingCrew(page);
+  await attachBusyFiles(page);
+  await expect(composer(page)).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Queue message' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Queue message' }).click();
+  await expect(queued(page)).toHaveCount(1);
+  await expect(queued(page)).toContainText('1 attachment');
+  await expect(page.getByRole('button', { name: 'Remove busy.png' })).toHaveCount(0);
+  if (process.env.BUSY_ATTACHMENT_SHOT) {
+    await page.screenshot({ path: process.env.BUSY_ATTACHMENT_SHOT, animations: 'disabled' });
+  }
+  await page.reload();
+  await expect(queued(page)).toContainText('1 attachment');
+  await allowUntilAttachmentDelivered(page, 'busy.png');
+  await expect(queued(page)).toHaveCount(0);
+  await expect(mine(page).getByRole('button', { name: 'View busy.png' })).toBeVisible();
+});
+
+test('Send now delivers a screenshot and text file while a turn is waiting @packaged', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await waitingCrew(page);
+  await attachBusyFiles(page, true);
+  await composer(page).fill('Use these follow-up files');
+  await composer(page).press('ControlOrMeta+Enter');
+  await expect(composer(page)).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Remove busy.png' })).toHaveCount(0);
+  await allowUntilAttachmentDelivered(page, 'busy.png, busy.txt', true);
+  const acpReply = page
+    .locator('.msg.ai .md')
+    .filter({
+      hasText: 'Attached file busy.txt:',
+    })
+    .filter({ hasText: 'Follow-up details' });
+  const fakeReply = page.locator('.msg.ai .md').filter({
+    hasText: 'Attachments: busy.png, busy.txt.',
+  });
+  await expect(acpReply.or(fakeReply).first()).toBeVisible();
+  const bubble = mine(page).filter({ hasText: 'Use these follow-up files' });
+  await expect(bubble).toHaveCount(1);
+  await expect(
+    bubble
+      .getByRole('button', { name: 'View busy.png' })
+      .or(bubble.getByText('2 attachments', { exact: true })),
+  ).toBeVisible();
+  await expect(queued(page)).toHaveCount(0);
+});
+
+test('a failed busy attachment send keeps its image and text for retry', async ({ page }) => {
+  test.setTimeout(90_000);
+  await waitingCrew(page);
+  await attachBusyFiles(page);
+  await page.route('**/queue/send-now', (route) =>
+    route.fulfill({ status: 500, json: { error: 'Could not send those files.' } }),
+  );
+  await composer(page).fill('Keep this image');
+  await composer(page).press('ControlOrMeta+Enter');
+  await expect(page.locator('.composer-error[role="alert"]')).toHaveText(
+    'Could not send those files.',
+  );
+  await expect(composer(page)).toHaveValue('Keep this image');
+  await expect(page.getByRole('button', { name: 'Remove busy.png' })).toBeVisible();
+  await expect(queued(page)).toHaveCount(0);
+  await page.unroute('**/queue/send-now');
+  await composer(page).press('ControlOrMeta+Enter');
+  await allowUntilAttachmentDelivered(page, 'busy.png', true);
+  await expect(mine(page).filter({ hasText: 'Keep this image' })).toHaveCount(1);
+});
+
+test('a failed image-only queue keeps the image and can send it now instead @packaged', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await waitingCrew(page);
+  await attachBusyFiles(page);
+  await page.route('**/queue', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({ status: 500, json: { error: 'Could not queue that image.' } });
+    } else {
+      await route.continue();
+    }
+  });
+  await page.getByRole('button', { name: 'Queue message' }).click();
+  await expect(page.locator('.composer-error[role="alert"]')).toHaveText(
+    'Could not queue that image.',
+  );
+  await expect(composer(page)).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Remove busy.png' })).toBeVisible();
+  await expect(queued(page)).toHaveCount(0);
+  await page.unroute('**/queue');
+  await composer(page).press('ControlOrMeta+Enter');
+  await allowUntilAttachmentDelivered(page, 'busy.png', true);
+  await expect(
+    mine(page)
+      .getByRole('button', { name: 'View busy.png' })
+      .or(mine(page).getByText('1 attachment', { exact: true })),
+  ).toHaveCount(1);
+});

@@ -58,14 +58,16 @@ function MissedActions({
       >
         Send as next message
       </button>
-      <button
-        type="button"
-        className="btn ghost sm"
-        disabled={actions.pending}
-        onClick={() => actions.edit(messages)}
-      >
-        Edit
-      </button>
+      {!messages.some((message) => message.attachmentIds?.length) && (
+        <button
+          type="button"
+          className="btn ghost sm"
+          disabled={actions.pending}
+          onClick={() => actions.edit(messages)}
+        >
+          Edit
+        </button>
+      )}
       {actions.error && (
         <span className="steer-error" role="alert">
           {actions.error}
@@ -90,6 +92,12 @@ export function SteerGroup({ messages, detail, run, crew, seen }: SteerGroupProp
           data-message-id={message.id}
         >
           <QuotedText text={message.body} />
+          {!!message.attachmentIds?.length && (
+            <span className="steer-status">
+              {message.attachmentIds.length}{' '}
+              {message.attachmentIds.length === 1 ? 'attachment' : 'attachments'}
+            </span>
+          )}
         </div>
       ))}
       <SteerLine status={status} />

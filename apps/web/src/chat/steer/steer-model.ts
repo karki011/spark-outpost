@@ -1,6 +1,7 @@
 import {
   isTerminalRunStatus,
   type ConversationDetail,
+  type AnnotationInput,
   type MemberMessage,
   type Run,
 } from '@spark-outpost/contracts';
@@ -164,6 +165,8 @@ export function withSteer(
   id: string,
   body: string,
   createdAt: string,
+  attachmentIds: string[] = [],
+  annotations: AnnotationInput[] = [],
 ): ConversationDetail {
   const running = activeRun(detail);
   const known = detail.memberMessages ?? [];
@@ -177,6 +180,15 @@ export function withSteer(
     messageId: null,
     createdAt,
     deliveredAt: null,
+    ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
+    ...(annotations.length > 0
+      ? {
+          annotations: annotations.map((annotation) => ({
+            ...annotation,
+            note: annotation.note ?? '',
+          })),
+        }
+      : {}),
   };
   return { ...detail, memberMessages: [...known, steer] };
 }

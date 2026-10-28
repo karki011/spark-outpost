@@ -1,5 +1,6 @@
 import type * as acp from '@agentclientprotocol/sdk';
 import type {
+  ProviderMessage,
   ProviderOutput,
   ProviderTurn,
   RequestUsage,
@@ -112,8 +113,10 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
     sleeping = count.wakesAt !== undefined;
     push([{ kind: 'background_work', ...count }]);
   };
-  const sendPrompt = (text: string) => {
-    failure = untilFailure(session.prompt(followUpBlocks(text, loop.followUp)));
+  const sendPrompt = (message: ProviderMessage) => {
+    const text = typeof message === 'string' ? message : message.text;
+    const attachments = typeof message === 'string' ? [] : message.attachments;
+    failure = untilFailure(session.prompt(followUpBlocks(text, { ...loop.followUp, attachments })));
   };
   const startWaiting = () => {
     waiting = true;

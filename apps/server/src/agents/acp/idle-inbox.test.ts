@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { SteerRequests } from '../../providers/provider.ts';
+import type { ProviderMessage, SteerRequests } from '../../providers/provider.ts';
 import { createIdleInbox, deliveringWhenIdle } from './idle-inbox.ts';
 
 function listener() {
-  let send: ((text: string) => Promise<boolean>) | null = null;
+  let send: ((text: ProviderMessage) => Promise<boolean>) | null = null;
   const steering: SteerRequests = {
     attach(sender) {
       send = sender;
@@ -32,7 +32,7 @@ describe('the idle inbox', () => {
   it('takes a message for the session while waiting and steers it otherwise', async () => {
     const { steering, current } = listener();
     const inbox = createIdleInbox();
-    const steered: string[] = [];
+    const steered: ProviderMessage[] = [];
     deliveringWhenIdle(steering, inbox)?.attach(async (text) => {
       steered.push(text);
       return true;

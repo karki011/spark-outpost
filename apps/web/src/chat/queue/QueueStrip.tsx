@@ -30,7 +30,7 @@ function Editor({
   const [text, setText] = useState(item.content);
   const save = () => {
     const content = text.trim();
-    if (content) onSave(content);
+    if (content || item.attachmentIds?.length) onSave(content);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Escape') {
@@ -53,7 +53,12 @@ function Editor({
         onChange={(event) => setText(event.target.value)}
         onKeyDown={onKeyDown}
       />
-      <button type="button" className="qs-btn text" onClick={save} disabled={!text.trim()}>
+      <button
+        type="button"
+        className="qs-btn text"
+        onClick={save}
+        disabled={!text.trim() && !item.attachmentIds?.length}
+      >
         Save
       </button>
       <button type="button" className="qs-btn text" onClick={onCancel}>
@@ -95,6 +100,13 @@ function QueueItem({ item, index, count, queue, editing, onEdit }: ItemProps) {
             {item.continueRunId && <b className="qs-tag">Continue · </b>}
             {!editable && <b className="qs-tag">Outpost request · </b>}
             {item.content}
+            {!!item.attachmentIds?.length && (
+              <span className="qs-tag">
+                {item.content ? ' · ' : ''}
+                {item.attachmentIds.length}{' '}
+                {item.attachmentIds.length === 1 ? 'attachment' : 'attachments'}
+              </span>
+            )}
           </span>
           <span className="qs-acts">
             {editable && (

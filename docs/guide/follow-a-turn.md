@@ -3,10 +3,10 @@ title: Follow, stop and queue messages
 section: Chats
 type: how-to
 order: 216
-summary: See what the agent is doing, stop it, queue more messages while it works, and delete a running chat.
+summary: Follow work, stop it, queue messages and files, or delete chats.
 ---
 
-Follow a turn. About 2 minutes.
+About 2 minutes.
 
 ## See what's happening
 
@@ -30,11 +30,11 @@ Follow a turn. About 2 minutes.
 
 During **Waiting on 1 background agent** or Claude’s **Sleeping until 10:48**, **Stop background tasks** or **Stop waiting** ends it.
 
-It stays up to 30 idle minutes; turns show **Continued on its own**, and after Quit **Stopped by Quit**.
+Waits last 30 idle minutes. Resumed turns show **Continued on its own**.
 
 ## Queue messages
 
-Drafts survive chat switches, not reloads.
+Send files without text. Queues survive reloads; drafts do not.
 
 1. While a turn runs, **Enter** queues a message.
 2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.
