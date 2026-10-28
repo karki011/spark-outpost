@@ -253,3 +253,23 @@ it('rejects foreign text-only queue retries and concurrent cross-chat IDs', asyn
   expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
   expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
 });
+
+it('rejects queue retries of an accepted steer without blocking its later delivery', async () => {
+  const conversation = await chat();
+  const file = await attachment();
+  const request = { id: randomUUID(), content: 'Original', attachmentIds: [file.id] };
+  await expect(sendNow(t.db, conversation.id, request, target)).resolves.toBe('steering');
+  await expect(addToQueue(t.db, conversation.id, request)).rejects.toThrow('already accepted');
+  await expect(
+    addToQueue(t.db, conversation.id, { ...request, content: 'Changed' }),
+  ).rejects.toThrow('already accepted');
+  expect(await listQueue(t.db, conversation.id)).toEqual([]);
+  await t.db.query("UPDATE runs SET status = 'succeeded' WHERE id = $1", [conversation.runId]);
+  expect(await drainQueue(t.db, conversation.id, target)).toBe('sent');
+  await t.db.query("UPDATE runs SET status = 'succeeded' WHERE conversation_id = $1", [
+    conversation.id,
+  ]);
+  expect(await drainQueue(t.db, conversation.id, target)).toBe('empty');
+  const delivered = await t.db.query('SELECT content FROM messages WHERE id = $1', [request.id]);
+  expect(delivered.rows[0].content).toBe('Original');
+});

@@ -74,6 +74,13 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
   const queueForLater = async (messages: readonly MemberMessage[]) => {
     try {
       await withTransaction(db, async (client) => {
+        await client.query('SELECT id FROM conversations WHERE id = $1 FOR UPDATE', [
+          conversationId,
+        ]);
+        await removeMemberMessages(
+          client,
+          messages.map((message) => message.id),
+        );
         for (const { id, body, attachmentIds, annotations } of messages) {
           await addToQueue(client, conversationId, {
             id,
@@ -82,10 +89,6 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
             annotations,
           });
         }
-        await removeMemberMessages(
-          client,
-          messages.map((message) => message.id),
-        );
       });
     } catch {
       await missed(messages);

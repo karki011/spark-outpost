@@ -121,6 +121,9 @@ async function addInTransaction(
     throw new QueueError(409, 'Send messages in this session’s terminal.');
   await assertMessageOwner(db, conversationId, item.id);
   if (await alreadySent(db, item.id)) return;
+  const accepted = await db.query('SELECT 1 FROM member_messages WHERE id = $1', [item.id]);
+  if (accepted.rowCount)
+    throw new QueueError(409, 'This message was already accepted. Send a new message instead.');
   await validateQueuedAttachments(
     db,
     conversationId,
