@@ -240,21 +240,35 @@ export async function attachmentsFree(
   attachmentIds: readonly string[],
 ): Promise<boolean> {
   if (attachmentIds.length === 0) return true;
-  const { rows } = await db.query<{ free: number }>(
-    `SELECT count(*)::int AS free FROM attachments a
-     WHERE a.id = ANY($2::uuid[]) AND a.workspace_id = $1 AND a.message_id IS NULL
-       AND NOT EXISTS (SELECT 1 FROM outpost_posts p WHERE a.id = ANY(p.attachment_ids))`,
+  const { rowCount } = await db.query(
+    `SELECT 1 FROM attachments
+     WHERE id = ANY($2::uuid[]) AND workspace_id = $1 AND message_id IS NULL
+     ORDER BY id FOR UPDATE`,
     [workspaceId, attachmentIds],
   );
-  return rows[0]?.free === attachmentIds.length;
+  if (rowCount !== attachmentIds.length) return false;
+  const reserved = await db.query(
+    `SELECT 1 FROM outpost_posts WHERE attachment_ids && $1::uuid[]
+     UNION ALL
+     SELECT 1 FROM chat_queue WHERE attachment_ids && $1::uuid[]
+     UNION ALL
+     SELECT 1 FROM member_messages WHERE attachment_ids && $1::uuid[]
+     LIMIT 1`,
+    [attachmentIds],
+  );
+  return reserved.rowCount === 0;
 }
 
-export async function postAttachmentIds(db: Queryable, postId: string): Promise<string[]> {
-  const { rows } = await db.query<{ attachment_ids: string[] }>(
-    'SELECT attachment_ids FROM outpost_posts WHERE id = $1',
+export async function copyPostAttachments(db: Queryable, postId: string): Promise<string[]> {
+  const { rows } = await db.query<{ id: string }>(
+    `INSERT INTO attachments (id, workspace_id, name, media_type, kind, size, data, source_path)
+     SELECT gen_random_uuid(), a.workspace_id, a.name, a.media_type, a.kind, a.size, a.data, a.source_path
+     FROM outpost_posts p JOIN attachments a ON a.id = ANY(p.attachment_ids)
+     WHERE p.id = $1
+     RETURNING id`,
     [postId],
   );
-  return rows[0]?.attachment_ids ?? [];
+  return rows.map((row) => row.id);
 }
 
 export const insertPosts: PostStore['insertPosts'] = async (db, posts) => {

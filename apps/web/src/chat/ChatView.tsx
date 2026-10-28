@@ -410,13 +410,13 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   sends.send({ content, attachments: files, annotations });
                 }}
                 onStop={stop.stop}
-                onQueue={(content) => {
+                onQueue={(content, files, annotations) => {
                   followRequests.request();
-                  return queue.add(content);
+                  return queue.add(content, files, annotations);
                 }}
-                onSendNow={(content) => {
+                onSendNow={(content, files, annotations) => {
                   followRequests.request();
-                  return queue.sendFirst(content);
+                  return queue.sendFirst(content, files, annotations);
                 }}
                 busyEnter={enterWhileBusy(
                   setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER,

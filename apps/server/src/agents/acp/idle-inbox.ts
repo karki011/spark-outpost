@@ -1,19 +1,19 @@
-import type { SteerRequests } from '../../providers/provider.ts';
+import type { ProviderMessage, SteerRequests } from '../../providers/provider.ts';
 
 export interface IdleInbox {
   open(): void;
   close(): void;
-  offer(text: string): boolean;
+  offer(text: ProviderMessage): boolean;
   arrived(): Promise<void>;
-  take(): string | null;
+  take(): ProviderMessage | null;
 }
 
 export function createIdleInbox(listening?: SteerRequests): IdleInbox {
-  const waiting: string[] = [];
+  const waiting: ProviderMessage[] = [];
   let accepting = false;
   let wake: (() => void) | null = null;
   let stopListening: () => void = () => undefined;
-  const offer = (text: string) => {
+  const offer = (text: ProviderMessage) => {
     if (!accepting) return false;
     waiting.push(text);
     wake?.();

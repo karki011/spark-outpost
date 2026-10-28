@@ -61,17 +61,13 @@ export function queueRoutes({ db, workspaceId, fixedRunProvider }: QueueRouteDep
   };
 
   const queuedRequest = async (conversationId: string, request: QueueAddRequest) => {
-    const { attachmentIds, ...item } = request;
-    if (!attachmentIds?.length && request.origin !== 'pages') return item;
-    if (request.origin !== 'pages') {
-      throw new BadRequestError('Only a question about your tabs can carry files here.');
-    }
+    if (request.origin !== 'pages') return request;
     const { rowCount } = await db.query(
       'SELECT 1 FROM profiles WHERE workspace_id = $1 AND assistant_conversation_id = $2',
       [workspaceId, conversationId],
     );
     if (rowCount !== 1) throw new BadRequestError('Only Ask Spark takes questions about tabs.');
-    return { ...item, attachmentIds: attachmentIds ?? [] };
+    return request;
   };
 
   const reply = async (conversationId: string, outcome?: SendNowOutcome) => {
@@ -131,7 +127,12 @@ export function queueRoutes({ db, workspaceId, fixedRunProvider }: QueueRouteDep
     const conversationId = paramId(req);
     const request = parseBody(queueAddRequestSchema, req);
     await known(conversationId);
-    const outcome = await sendNow(db, conversationId, request, resolveTarget);
+    const outcome = await sendNow(
+      db,
+      conversationId,
+      await queuedRequest(conversationId, request),
+      resolveTarget,
+    );
     if (!outcome) throw new QueueError(404, 'Conversation not found.');
     res.status(202).json(await reply(conversationId, outcome));
   });

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { annotationInputSchema } from './annotations.ts';
 
 export const MEMBER_MESSAGE_ACTIVITY = 'member_message';
 export const memberMessageStatusSchema = z.enum([
@@ -18,6 +19,8 @@ export const memberMessageSchema = z.object({
   id: z.uuid(),
   runId: z.uuid(),
   body: z.string(),
+  attachmentIds: z.array(z.uuid()).optional(),
+  annotations: z.array(annotationInputSchema).optional(),
   urgency: memberMessageUrgencySchema,
   status: memberMessageStatusSchema,
   messageId: z.uuid().nullable(),
@@ -54,5 +57,6 @@ export const queuedMessageSchema = z.object({
   sparkRuleCardId: z.uuid().optional(),
   origin: z.enum(['voice', 'assistant', 'pages']).optional(),
   attachmentIds: z.array(z.uuid()).optional(),
+  annotations: z.array(annotationInputSchema).optional(),
 });
 export type QueuedMessage = z.infer<typeof queuedMessageSchema>;

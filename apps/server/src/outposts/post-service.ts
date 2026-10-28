@@ -155,6 +155,25 @@ async function freeAttachments(
   return attachmentIds;
 }
 
+async function lockAttachmentChats(
+  db: Queryable,
+  posts: readonly Pick<NewPost, 'fromConversationId' | 'toConversationId'>[],
+  attachmentIds: readonly string[],
+): Promise<void> {
+  if (!attachmentIds.length) return;
+  const ids = [
+    ...new Set(
+      posts
+        .flatMap((post) => [post.fromConversationId, post.toConversationId])
+        .filter((id) => id != null),
+    ),
+  ];
+  await db.query(
+    'SELECT id FROM conversations WHERE id = ANY($1::uuid[]) ORDER BY id FOR KEY SHARE',
+    [ids],
+  );
+}
+
 export async function postToOutpost(
   { db, workspaceId }: PostServiceDeps,
   input: PostInput,
@@ -164,7 +183,6 @@ export async function postToOutpost(
     const repeated = await repeatedPost(client, input);
     if (repeated) return [repeated];
     const address = addressOf(input, outpost.members);
-    const attachmentIds = await freeAttachments(client, workspaceId, input.attachmentIds ?? []);
     const plan = planPost(
       input.author,
       address,
@@ -173,6 +191,8 @@ export async function postToOutpost(
       input.guestConversationId ?? null,
     );
     if (plan.kind === 'refusal') throw new OutpostError(400, plan.message);
+    await lockAttachmentChats(client, plan.posts, input.attachmentIds ?? []);
+    const attachmentIds = await freeAttachments(client, workspaceId, input.attachmentIds ?? []);
     const planned: NewPost[] = [];
     const batchId = plan.posts.length > 1 ? newId() : null;
     for (const [index, plannedPost] of plan.posts.entries()) {
@@ -209,6 +229,7 @@ export async function postStoryRequest(
       (member) => member.conversationId === request.toConversationId,
     );
     if (!isMember) throw new OutpostError(400, CHAT_NOT_IN_OUTPOST);
+    await lockAttachmentChats(client, [request], request.attachmentIds);
     const attachmentIds = await freeAttachments(client, workspaceId, request.attachmentIds);
     const [post] = await insertPosts(client, [
       {

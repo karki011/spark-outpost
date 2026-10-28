@@ -129,7 +129,7 @@ describe('Ask Spark questions that @-mention browser tabs', () => {
     expect(rows[0]).toEqual({ source: 'pages', attachments: [page.id] });
   });
 
-  it('go only to Ask Spark, and only questions about tabs carry files in the queue', async () => {
+  it('go only to Ask Spark while ordinary queued questions may also carry files', async () => {
     const client = api();
     const page = await client.upload('page text');
     const { conversationId } = await startChat(t, 'Other');
@@ -145,7 +145,7 @@ describe('Ask Spark questions that @-mention browser tabs', () => {
       content: 'hi',
       attachmentIds: [page.id],
     });
-    expect(unmarked.status).toBe(400);
+    expect(unmarked.status).toBe(201);
   });
 
   it('never steer a running Ask Spark turn with Send now', async () => {

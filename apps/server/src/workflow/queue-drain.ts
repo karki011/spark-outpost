@@ -1,8 +1,10 @@
 import { PERMISSION_DO, type QueuedMessage, type SendNowOutcome } from '@spark-outpost/contracts';
+import { validateQueuedAttachments } from '../persistence/queued-attachments.ts';
 import { resolveRunTarget } from '../api/run-target.ts';
 import { BadRequestError } from '../api/validation.ts';
 import {
   addToQueue,
+  assertMessageOwner,
   alreadySent,
   PAUSED_OUTPOST_ITEM,
   QueueError,
@@ -12,7 +14,7 @@ import {
 } from '../persistence/chat-queue.ts';
 import { chatSparkPaused, sparkPausedForChat } from '../persistence/spark-pause.ts';
 import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
-import { postAttachmentIds } from '../persistence/outpost-posts.ts';
+import { copyPostAttachments } from '../persistence/outpost-posts.ts';
 import { markRuleRetry } from '../persistence/spark-rules.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 import {
@@ -73,12 +75,13 @@ async function sendQueued(
     | 'sparkRuleCardId'
     | 'origin'
     | 'attachmentIds'
+    | 'annotations'
   >,
   target: RunTarget,
 ): Promise<void> {
   const continuing = item.continueRunId !== null && target.permission === PERMISSION_DO;
   const attachmentIds = item.outpostPostId
-    ? await postAttachmentIds(db, item.outpostPostId)
+    ? await copyPostAttachments(db, item.outpostPostId)
     : (item.attachmentIds ?? []);
   const sent = await sendInTransaction(
     db,
@@ -87,6 +90,7 @@ async function sendQueued(
       id: item.id,
       content: item.content,
       attachmentIds,
+      annotations: item.annotations ?? [],
       source: queuedSource(item),
       ...(continuing ? { startAs: 'continue' as const } : {}),
     },
@@ -108,6 +112,8 @@ async function sendQueued(
     urgency: 'next',
     status: 'continued',
     messageId: item.id,
+    attachmentIds,
+    annotations: item.annotations,
   });
 }
 
@@ -143,7 +149,13 @@ export async function drainQueue(
       await sendInTransaction(
         client,
         conversationId,
-        { id: urgent.id, content: urgent.body, source: 'queue' },
+        {
+          id: urgent.id,
+          content: urgent.body,
+          source: 'queue',
+          attachmentIds: urgent.attachmentIds ?? [],
+          annotations: urgent.annotations ?? [],
+        },
         target,
       );
       await markMessageSent(client, urgent.id, 'sent', urgent.id);
@@ -172,6 +184,8 @@ async function refuseOutpostSendNow(db: Queryable, postId: string, busy: boolean
 export interface SendNowRequest {
   id: string;
   content?: string;
+  attachmentIds?: readonly string[] | undefined;
+  annotations?: QueuedMessage['annotations'];
 }
 
 export async function sendNow(
@@ -183,11 +197,15 @@ export async function sendNow(
   const target = await resolveTarget(conversationId);
   return withTransaction(db, async (client) => {
     if (!(await lockConversation(client, conversationId))) return null;
+    await assertMessageOwner(client, conversationId, request.id);
     if (await getMemberMessage(client, request.id)) return 'steering';
     if (await alreadySent(client, request.id)) return 'sent';
     const queued = await takeQueued(client, conversationId, request.id);
     const content = queued?.content ?? request.content;
     if (content === undefined) return null;
+    const attachmentIds = queued?.attachmentIds ?? request.attachmentIds;
+    const annotations = queued?.annotations ?? request.annotations;
+    await validateQueuedAttachments(client, conversationId, request.id, attachmentIds, annotations);
     const running = await activeTurn(client, conversationId);
     if (queued?.outpostPostId)
       await refuseOutpostSendNow(client, queued.outpostPostId, running !== null);
@@ -208,7 +226,8 @@ export async function sendNow(
           outpostPostId: queued?.outpostPostId ?? null,
           ...(queued?.sparkRuleCardId ? { sparkRuleCardId: queued.sparkRuleCardId } : {}),
           ...(queued?.origin ? { origin: queued.origin } : {}),
-          ...(queued?.attachmentIds ? { attachmentIds: queued.attachmentIds } : {}),
+          attachmentIds: attachmentIds ? [...attachmentIds] : undefined,
+          annotations,
         },
         target,
       );
@@ -220,7 +239,10 @@ export async function sendNow(
       runId: running,
       body: content,
       urgency: 'now',
+      attachmentIds,
+      annotations,
     });
+    await assertMessageOwner(client, conversationId, request.id);
     return 'steering';
   });
 }
@@ -298,10 +320,22 @@ export async function resendMissed(
     if (!missed) return null;
     await removeMemberMessages(client, [id]);
     if (await activeTurn(client, conversationId)) {
-      await addToQueue(client, conversationId, { id, content: missed.body });
+      await addToQueue(client, conversationId, {
+        id,
+        content: missed.body,
+        attachmentIds: missed.attachmentIds,
+        annotations: missed.annotations,
+      });
       return 'queued';
     }
-    const item = { id, content: missed.body, continueRunId: null, outpostPostId: null };
+    const item = {
+      id,
+      content: missed.body,
+      attachmentIds: missed.attachmentIds,
+      annotations: missed.annotations,
+      continueRunId: null,
+      outpostPostId: null,
+    };
     await sendQueued(client, conversationId, item, target);
     return 'sent';
   });
