@@ -208,12 +208,60 @@ describe('attachments during an active turn', () => {
       append: async () => null,
     });
     try {
-      await expect(inbox.take()).rejects.toThrow('no longer available');
-      expect((await getMemberMessage(t.db, id))?.status).toBe('queued');
+      await expect(inbox.take()).resolves.toBeNull();
+      expect((await getMemberMessage(t.db, id))?.status).toBe('missed');
+      await expect(inbox.take()).resolves.toBeNull();
+      expect((await getMemberMessage(t.db, id))?.status).toBe('missed');
     } finally {
       await inbox.dispose();
     }
   });
+
+  it.each([false, true])(
+    'shows a recoverable missed attachment without polling it again, steering=%s',
+    async (steering) => {
+      const { conversationId, runId, file } = await setup();
+      const id = randomUUID();
+      await sendNow(
+        t.db,
+        conversationId,
+        { id, content: 'Read this', attachmentIds: [file.id] },
+        target,
+      );
+      await t.db.query('DELETE FROM attachments WHERE id = $1', [file.id]);
+      const statuses: string[] = [];
+      let delivered = 0;
+      const inbox = openMemberInbox(t.db, {
+        conversationId,
+        runId,
+        topRunId: runId,
+        pollMs: 10,
+        append: async (event) => {
+          const content = (event as { content?: { status?: string } }).content;
+          if (content?.status) statuses.push(content.status);
+          return null;
+        },
+      });
+      if (steering)
+        inbox.attach(async () => {
+          delivered += 1;
+          return true;
+        });
+      try {
+        await expect.poll(async () => (await getMemberMessage(t.db, id))?.status).toBe('missed');
+        await expect(inbox.take()).resolves.toBeNull();
+        expect(delivered).toBe(0);
+        expect(
+          (await t.db.query('SELECT cancel_requested_at FROM runs WHERE id = $1', [runId])).rows[0]
+            ?.cancel_requested_at,
+        ).toBeNull();
+        expect(await listQueue(t.db, conversationId)).toEqual([]);
+        expect(statuses).toEqual(['missed']);
+      } finally {
+        await inbox.dispose();
+      }
+    },
+  );
 
   it('allows removing queued text only when an attachment remains', async () => {
     const { conversationId, file } = await setup();

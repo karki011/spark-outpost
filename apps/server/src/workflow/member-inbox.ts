@@ -63,6 +63,14 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     await announce(messages, 'interrupting');
     await requestCancel(db, topRunId);
   };
+  const missed = async (messages: readonly MemberMessage[]) => {
+    await setMemberMessageStatus(
+      db,
+      messages.map((message) => message.id),
+      'missed',
+    );
+    await announce(messages, 'missed').catch(() => undefined);
+  };
   const queueForLater = async (messages: readonly MemberMessage[]) => {
     try {
       await withTransaction(db, async (client) => {
@@ -79,13 +87,9 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
           messages.map((message) => message.id),
         );
       });
-    } catch (error) {
-      await setMemberMessageStatus(
-        db,
-        messages.map((message) => message.id),
-        'queued',
-      );
-      throw error;
+    } catch {
+      await missed(messages);
+      return;
     }
     await announce(messages, 'queued');
   };
@@ -95,20 +99,16 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
       (await runWaitingOn(db, topRunId)) > 0;
     await (onlyWaiting ? queueForLater(messages) : interrupt(messages));
   };
-  const prompt = async (messages: readonly MemberMessage[]): Promise<ProviderMessage> => {
+  const prompt = async (messages: readonly MemberMessage[]): Promise<ProviderMessage | null> => {
     const text = messagePrompt(messages);
     const ids = messages.flatMap((message) => message.attachmentIds ?? []);
     try {
       return ids.length
         ? { text, attachments: await queuedAttachmentFiles(db, conversationId, ids) }
         : text;
-    } catch (error) {
-      await setMemberMessageStatus(
-        db,
-        messages.map((message) => message.id),
-        'queued',
-      );
-      throw error;
+    } catch {
+      await missed(messages);
+      return null;
     }
   };
   const poll = async () => {
@@ -117,9 +117,13 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     try {
       const claimed = await claimMemberMessages(db, runId, topRunId, send === null, anchor());
       if (claimed.length === 0) return;
-      if (send && (await send(await prompt(claimed)))) {
-        await announce(claimed, 'delivered');
-        return;
+      if (send) {
+        const message = await prompt(claimed);
+        if (message === null) return;
+        if (await send(message)) {
+          await announce(claimed, 'delivered');
+          return;
+        }
       }
       const urgent = claimed.filter((message) => message.urgency === 'now');
       const later = claimed.filter((message) => message.urgency !== 'now');
@@ -146,6 +150,7 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
       const claimed = await claimMemberMessages(db, runId, topRunId, false, anchor());
       if (claimed.length === 0) return null;
       const message = await prompt(claimed);
+      if (message === null) return null;
       await announce(claimed, 'delivered').catch(() => undefined);
       return message;
     },

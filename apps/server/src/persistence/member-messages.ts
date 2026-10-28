@@ -131,15 +131,15 @@ export async function claimMemberMessages(
 export async function setMemberMessageStatus(
   db: Queryable,
   ids: readonly string[],
-  status: Extract<MemberMessageStatus, 'queued' | 'interrupting'>,
+  status: Extract<MemberMessageStatus, 'queued' | 'interrupting' | 'missed'>,
 ): Promise<void> {
   if (ids.length === 0) return;
   await db.query(
     `UPDATE member_messages SET status = $2,
-       delivered_at = CASE WHEN $2 = 'queued' THEN NULL ELSE delivered_at END,
-       delivered_text_offset = CASE WHEN $2 = 'queued' THEN NULL ELSE delivered_text_offset END,
-       delivered_text_before = CASE WHEN $2 = 'queued' THEN NULL ELSE delivered_text_before END,
-       delivered_text_held = CASE WHEN $2 = 'queued' THEN NULL ELSE delivered_text_held END
+       delivered_at = CASE WHEN $2 IN ('queued', 'missed') THEN NULL ELSE delivered_at END,
+       delivered_text_offset = CASE WHEN $2 IN ('queued', 'missed') THEN NULL ELSE delivered_text_offset END,
+       delivered_text_before = CASE WHEN $2 IN ('queued', 'missed') THEN NULL ELSE delivered_text_before END,
+       delivered_text_held = CASE WHEN $2 IN ('queued', 'missed') THEN NULL ELSE delivered_text_held END
      WHERE id = ANY($1::uuid[])`,
     [ids, status],
   );
