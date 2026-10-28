@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
+import { argumentWords, commandTree, treeWords } from './command-tree.ts';
+import { secretLabels } from './guarded-targets.ts';
 import { splitSimpleCommands } from './commands.ts';
 import { NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
@@ -76,6 +78,10 @@ describe('a gh command that prints the token', () => {
 
   it.each([
     'gh auth token',
+    '2>&1 gh auth token',
+    '</dev/null gh auth token',
+    '2>/tmp/gh-errors gh auth token',
+    'gh 2>&1 auth token',
     'gh auth status --show-token',
     'gh auth git-credential get',
     'export NODE_AUTH_TOKEN=$(gh auth token) && pnpm install --frozen-lockfile 2>&1 | tail -8',
@@ -90,6 +96,10 @@ describe('a gh command that prints the token', () => {
   });
 
   it.each([
+    ['2>', '&1 gh auth token'],
+    ['2>&', '1 gh auth token'],
+    ['true |', '| gh auth token'],
+    ['echo $', '(gh auth token)'],
     ['gh ', 'auth token'],
     ['gh au', 'th token'],
     ['g', 'h auth token'],
@@ -102,6 +112,23 @@ describe('a gh command that prints the token', () => {
     expect(judged('full_access', command, ASKING_AUTH).verdict).toBe('ask');
     expect(judged('full_access', command, NO_RULES).verdict).toBe('allow');
   });
+
+  it.each(['<.env cat', '>.env echo value', '2>.env gh auth token'])(
+    'retains leading redirection targets for secret classification: %s',
+    (command) => {
+      const tree = commandTree(command);
+      expect(treeWords(tree)).toContain('.env');
+      expect(argumentWords(tree, tree.commands[0]!)).not.toContain('.env');
+      expect(secretLabels(run(command))).toContain('.env');
+      const rules = context(
+        JSON.stringify({ permissions: { deny: ['SecretFile(read)', 'SecretFile(edit)'] } }),
+      );
+      expect(judged('full_access', command, rules).verdict).toBe('reject');
+      expect(tree.commands[0]![0]).toBe(
+        command.includes('cat') ? 'cat' : command.includes('echo') ? 'echo' : 'gh',
+      );
+    },
+  );
 
   it('preserves quoted literal newlines and escaped backslashes', () => {
     const continuation = String.fromCharCode(92, 10);

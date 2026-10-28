@@ -48,7 +48,25 @@ export interface SimpleCommand {
   redirected: number[];
 }
 
+function joinContinuedLines(command: string): string {
+  let joined = '';
+  let quote: '"' | "'" | null = null;
+  for (let index = 0; index < command.length; index++) {
+    const char = command[index]!;
+    if (quote !== "'" && char === '\\' && index + 1 < command.length) {
+      const next = command[++index]!;
+      if (next !== '\n') joined += char + next;
+      continue;
+    }
+    if (char === quote) quote = null;
+    else if (quote === null && (char === '"' || char === "'")) quote = char;
+    joined += char;
+  }
+  return joined;
+}
+
 export function splitCommandLine(command: string): SimpleCommand[] {
+  command = joinContinuedLines(command);
   const commands: SimpleCommand[] = [];
   let tokens: string[] = [];
   let current = '';
@@ -71,6 +89,15 @@ export function splitCommandLine(command: string): SimpleCommand[] {
   };
   const endCommand = () => {
     endToken();
+    let prefix = 0;
+    while (redirected.includes(prefix)) prefix++;
+    if (prefix > 0 && prefix < tokens.length) {
+      const count = tokens.length;
+      tokens = [...tokens.slice(prefix), ...tokens.slice(0, prefix)];
+      redirected = redirected.map((index) =>
+        index < prefix ? count - prefix + index : index - prefix,
+      );
+    }
     if (tokens.length > 0) {
       commands.push({ tokens, stdin: piped, fragment, redirected });
       piped = null;
@@ -83,10 +110,6 @@ export function splitCommandLine(command: string): SimpleCommand[] {
   };
   for (let index = 0; index < command.length; index++) {
     const char = command[index]!;
-    if (quote !== "'" && char === '\\' && command[index + 1] === '\n') {
-      index++;
-      continue;
-    }
     if (quote) {
       if (char === quote) quote = null;
       else if (char === '\\' && quote === '"' && index + 1 < command.length) {
