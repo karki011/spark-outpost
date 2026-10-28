@@ -161,7 +161,10 @@ describe('SubscribeToTask', () => {
     await pendingApproval(t.db, runId);
     await setRunStatus(t.db, runId, 'awaiting_approval');
     expect((await nextStatus(stream)).state).toBe(TaskState.TASK_STATE_INPUT_REQUIRED);
-    await t.db.query("UPDATE approvals SET status = 'allowed' WHERE run_id = $1", [runId]);
+    await t.db.query(
+      "UPDATE approvals SET status = 'allowed', decided_at = now() WHERE run_id = $1",
+      [runId],
+    );
     await setRunStatus(t.db, runId, 'running');
     expect((await nextStatus(stream)).state).toBe(TaskState.TASK_STATE_WORKING);
     await setRunStatus(t.db, runId, 'failed');

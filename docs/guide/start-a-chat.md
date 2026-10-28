@@ -34,8 +34,6 @@ Plain folders offer **Make it a git repository**.
 
 To unlink, select **No project folder** in the menu.
 
-**Sent** confirms receipt while history refreshes. **Retry** reuses the message ID.
-
 ## Write a message
 
 | Type or select                    | To                                                                       |
@@ -44,6 +42,8 @@ To unlink, select **No project folder** in the menu.
 | **@**                             | Add a file from the project                                              |
 | **/**                             | Run a command: `/plan`, `/review`, `/model`, `/effort`, `/mcp`, `/fresh` |
 | **+** (**Add files and context**) | **Upload a file**, **Add a screenshot**, **Add from repo**, another chat |
+
+**Sent** confirms receipt while history refreshes. **Retry** reuses the message ID.
 
 Markdown styles as you type. Select text or open **+ → Formatting**; **⌘B**, **⌘I**, **⌘⇧X** work too. In code blocks, **Enter** adds a line; **⌘Enter** sends. Branch and agent setup live in **Chat details** (**…**).
 

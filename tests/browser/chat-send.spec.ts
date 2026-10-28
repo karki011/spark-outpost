@@ -89,6 +89,7 @@ test('an accepted message stays sent while conversation history is delayed', asy
   });
   const marker = `Accepted with slow history ${Date.now()}`;
   const ids = sentIds(page);
+  await page.clock.install();
   await input.fill(marker);
   await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   const accepted = page.waitForResponse(
@@ -99,7 +100,7 @@ test('an accepted message stays sent while conversation history is delayed', asy
   const pending = page.locator('.msg.me', { hasText: marker });
   await expect(pending.getByRole('status')).toHaveText('Sent');
   await expect.poll(() => refreshes).toBeGreaterThan(0);
-  await page.waitForTimeout(5_500);
+  await page.clock.fastForward(6_000);
   await expect(pending.getByRole('status')).toHaveText('Sent');
   await expect(pending.getByRole('button', { name: 'Retry' })).toHaveCount(0);
   await input.fill('A separate draft');

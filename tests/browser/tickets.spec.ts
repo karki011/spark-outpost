@@ -359,6 +359,11 @@ test('preloading Browser from its rail button does not cover Tickets', async ({ 
     .getByRole('button', { name: 'Browser', exact: true })
     .hover();
   await loaded;
+  await page.waitForFunction(() =>
+    Array.from(document.styleSheets).some(
+      (sheet) => sheet.href?.includes('session-palette') && sheet.cssRules.length > 0,
+    ),
+  );
   await main(page).getByRole('radio', { name: 'Compact', exact: true }).click();
   await expect(main(page)).toHaveClass(/compact/);
   await page.getByRole('searchbox').fill('API-77');
