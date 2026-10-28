@@ -6,8 +6,10 @@ import { startFixtureTerminal } from './native-terminal-fixture.ts';
 async function sentMessages() {
   const db = openTestDb();
   try {
-    const result = await db.query(`SELECT count(*)::int AS n FROM messages WHERE role = 'user'`);
-    return result.rows[0].n as number;
+    const result = await db.query<{ content: string }>(
+      `SELECT content FROM messages WHERE role = 'user' ORDER BY created_at`,
+    );
+    return result.rows.map((row) => row.content);
   } finally {
     await db.end();
   }
@@ -41,9 +43,10 @@ for (const [tab, label] of [
       'aria-pressed',
       'false',
     );
-    expect(await sentMessages()).toBe(0);
+    expect(await sentMessages()).toHaveLength(0);
     await page.keyboard.press('Enter');
-    await expect.poll(sentMessages).toBe(1);
+    await expect.poll(async () => (await sentMessages()).length).toBe(1);
+    expect(await sentMessages()).toEqual(['Please inspect this change']);
     await expect(island.getByRole('button', { name: 'Stop dictating' })).toHaveCount(0);
   });
 }
