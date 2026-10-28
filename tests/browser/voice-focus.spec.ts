@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { emitVoice, installFakeVoice } from './fake-voice.ts';
+import { startFixtureTerminal } from './native-terminal-fixture.ts';
 
 async function sentMessages() {
   const db = openTestDb();
@@ -46,3 +47,31 @@ for (const [tab, label] of [
     await expect(island.getByRole('button', { name: 'Stop dictating' })).toHaveCount(0);
   });
 }
+
+test('Terminal dictation restores focus and Enter submits through the real form', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
+  await installFakeVoice(page);
+  const terminal = await startFixtureTerminal(page);
+  const messages: unknown[] = [];
+  await page.route('**/api/conversations/*/terminal/message', async (route) => {
+    messages.push(route.request().postDataJSON());
+    await route.fulfill({ json: null });
+  });
+  await terminal.getByRole('button', { name: 'Dictate', exact: true }).click();
+  await terminal.getByRole('button', { name: 'Stop dictating' }).click();
+  await emitVoice(page, {
+    kind: 'final',
+    id: 'listen-1',
+    text: 'Inspect this change',
+    reason: 'stopped',
+  });
+  const input = terminal.getByRole('textbox', { name: 'Dictated message for Codex' });
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue('Inspect this change');
+  expect(messages).toHaveLength(0);
+  await page.keyboard.press('Enter');
+  await expect.poll(() => messages).toEqual([{ text: 'Inspect this change' }]);
+  await expect(terminal.getByRole('form', { name: 'Dictated message' })).toHaveCount(0);
+});
