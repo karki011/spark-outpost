@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { VoiceEvent, VoiceListenResult } from '@spark-outpost/contracts';
@@ -151,4 +151,25 @@ it('recovers from a rejected stop without retaining provisional text', async () 
   expect(hook.result.current.value).toBe('Typed draft');
   emit(final('late'));
   expect(hook.result.current.value).toBe('Typed draft');
+});
+
+it('rejects a final delivered during the new scope commit before passive effects', async () => {
+  const committed = vi.fn();
+  const hook = renderHook(
+    ({ scope }) => {
+      const voice = useDictationDraft(scope, committed, scope);
+      useLayoutEffect(() => {
+        if (scope === 'second') speech.event?.(final('late first chat text'));
+      }, [scope]);
+      return voice;
+    },
+    { initialProps: { scope: 'first' } },
+  );
+  await act(async () => hook.result.current.dictation.toggle());
+  emit(partial('temporary'));
+  hook.rerender({ scope: 'second' });
+  expect(committed).not.toHaveBeenCalled();
+  expect(speech.cancel).toHaveBeenCalledWith('listen');
+  expect(hook.result.current.value).toBe('second');
+  expect(hook.result.current.dictation.active).toBe(false);
 });

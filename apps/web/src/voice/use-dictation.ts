@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { VoiceErrorCode } from '@spark-outpost/contracts';
 import { desktopSpeech, useSpeechEvents, useSpeechStatus } from './speech-bridge.ts';
 
@@ -30,7 +30,7 @@ export function useDictation(onText: (text: string) => void, scope: string) {
   const status = useSpeechStatus();
   const [state, setState] = useState<DictationState>({ phase: 'idle' });
   const [problem, setProblem] = useState<string | null>(null);
-  const current = useRef<string | null>(null);
+  const current = useRef<{ id: string; scope: string } | null>(null);
   const generation = useRef(0);
   const [stateScope, setStateScope] = useState(scope);
   if (stateScope !== scope) {
@@ -41,23 +41,24 @@ export function useDictation(onText: (text: string) => void, scope: string) {
 
   const cancel = () => {
     generation.current += 1;
-    const id = current.current;
+    const id = current.current?.id;
     current.current = null;
     setState({ phase: 'idle' });
     if (id && speech) void speech.cancel(id).catch(() => undefined);
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     return () => {
       generation.current += 1;
-      const id = current.current;
+      const id = current.current?.id;
       current.current = null;
       if (id && speech) void speech.cancel(id).catch(() => undefined);
     };
   }, [scope, speech]);
 
   useSpeechEvents((event) => {
-    if (!('id' in event) || event.id !== current.current) return;
+    if (!('id' in event) || event.id !== current.current?.id || current.current.scope !== scope)
+      return;
     if (event.kind === 'partial') {
       setState((before) => ({
         phase: before.phase === 'working' ? 'working' : 'listening',
@@ -103,7 +104,7 @@ export function useDictation(onText: (text: string) => void, scope: string) {
       setProblem(DICTATION_PROBLEMS[answer.error] ?? DICTATION_PROBLEMS.failed!);
       return;
     }
-    current.current = answer.id;
+    current.current = { id: answer.id, scope };
     setState({ phase: 'listening', id: answer.id, partial: '' });
   };
 
@@ -111,7 +112,7 @@ export function useDictation(onText: (text: string) => void, scope: string) {
     if (state.phase !== 'listening' || !speech) return;
     const id = state.id;
     void speech.stop(id).catch(() => {
-      if (current.current !== id) return;
+      if (current.current?.id !== id || current.current.scope !== scope) return;
       cancel();
       setProblem(DICTATION_PROBLEMS.failed!);
     });
