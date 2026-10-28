@@ -15,6 +15,7 @@ import {
   post,
   stateOf,
   seeded,
+  say,
   thread,
   threadPane,
 } from './outposts-kit.ts';
@@ -121,6 +122,55 @@ test('an agent leaves a note in the thread, and it starts no work', async ({ pag
   await expect(note.locator('.op-kind')).toHaveText('note');
   await expect(thread(page).locator('.op-pill')).toHaveCount(0);
   await expect(chip(page, 'api')).toContainText('Idle');
+});
+
+test('answering an agent question clears the Outpost request and header while retaining its answer', async ({
+  page,
+}) => {
+  const id = await seeded(page);
+  await openOutpost(page);
+  await say(page, '@api Choose the cache store #askclaude #build');
+  const requested = post(page, 'Choose the cache store');
+  await expect(stateOf(requested)).toHaveText('Waiting on you', { timeout: TURN_TIMEOUT });
+  await requested.getByRole('button', { name: 'Answer @api', exact: true }).click();
+  const pane = threadPane(page, 'api');
+  const questions = pane.getByRole('group', { name: /has questions/ });
+  await expect(questions).toBeVisible();
+  await animationsSettled(page);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}-question-pending.png` });
+  await questions.getByRole('radio', { name: /^Postgres/ }).check();
+  await questions.getByRole('radio', { name: /^Postgres/ }).press('Enter');
+  await questions.getByRole('checkbox', { name: /^Lint/ }).check();
+  await questions.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(questions.getByRole('status')).toContainText('Answered.');
+  await expect(pane.locator('.op-thread-head .op-pill')).toHaveText('Idle', {
+    timeout: TURN_TIMEOUT,
+  });
+  await expect(pane.getByRole('button', { name: 'Answer @api', exact: true })).toHaveCount(0);
+  await expect(questions).toContainText('Which store should the cache use? → Postgres');
+  await expect(pane).toContainText('asked=accept');
+  const response = await page.request.get(`/api/outposts/${id}`);
+  expect(response.ok()).toBe(true);
+  const detail = await response.json();
+  expect(
+    detail.posts.find((item: { body: string }) => item.body.includes('#askclaude')).state,
+  ).toBe('answered');
+  await pane.getByRole('button', { name: 'Back to Overview' }).click();
+  await expect(stateOf(requested)).toHaveText('Idle');
+  await expect(requested.getByRole('button', { name: 'Answer @api', exact: true })).toHaveCount(0);
+  await openThread(requested, 'api');
+  await expect(threadPane(page, 'api').getByRole('group', { name: /has questions/ })).toContainText(
+    'Answered.',
+  );
+  await animationsSettled(page);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}-question-answered.png` });
+  await page.reload();
+  await openOutpost(page);
+  await expect(stateOf(requested)).toHaveText('Idle');
+  await openThread(requested, 'api');
+  await expect(pane.locator('.op-thread-head .op-pill')).toHaveText('Idle');
+  await expect(pane.getByRole('button', { name: 'Answer @api', exact: true })).toHaveCount(0);
+  await expect(questions).toContainText('Answered.');
 });
 
 test("a chat's Browser pane stays with its chat and never sits beside the outpost", async ({

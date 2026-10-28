@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { requestState } from '@spark-outpost/contracts';
 import { TaskWakes } from '../src/a2a/task-wakes.ts';
@@ -61,6 +62,12 @@ describe('waiting for an outpost request', () => {
     await carry(t, postId, api.runId);
     const waiting = stateAfterWait(postId, new AbortController().signal);
     await eventually(async () => wakes.waiters === 1);
+    await t.db.query(
+      `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash,
+         options, status)
+       VALUES ($1, $2, 'question', 'clarify', 'Pick a shape', '{}', 'sha256:card', '[]', 'pending')`,
+      [randomUUID(), api.runId],
+    );
     await t.db.query(`UPDATE runs SET status = 'awaiting_approval' WHERE id = $1`, [api.runId]);
     outpostChanged(wakes, outpostId);
     expect(await waiting).toBe('needs_you');

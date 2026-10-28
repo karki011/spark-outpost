@@ -5,10 +5,10 @@ import type { PendingSend } from './send-state.ts';
 import type { ChatSends } from './use-chat-send.ts';
 
 function SendStatus({ send, sends }: { send: PendingSend; sends: ChatSends }) {
-  if (send.phase === 'starting') {
+  if (send.phase === 'starting' || send.phase === 'accepted') {
     return (
       <p className="send-status" role="status">
-        Starting…
+        {send.phase === 'accepted' ? 'Sent' : 'Starting…'}
       </p>
     );
   }
@@ -17,7 +17,7 @@ function SendStatus({ send, sends }: { send: PendingSend; sends: ChatSends }) {
     <p className="send-status send-problem" role="alert">
       <span>
         {send.phase === 'slow'
-          ? 'Spark hasn’t accepted this message yet.'
+          ? 'Still waiting for Spark to confirm receipt.'
           : `Not sent. ${send.error ?? 'The server could not be reached.'}`}
       </span>
       <button type="button" className="send-action" onClick={() => sends.retry(send.message)}>

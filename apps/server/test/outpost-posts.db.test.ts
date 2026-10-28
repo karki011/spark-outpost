@@ -66,6 +66,15 @@ async function receivingRun(postId: string, status: RunStatus): Promise<string> 
   return turn.runId;
 }
 
+const pending = (runId: string, kind: string, minutesAgo: number) =>
+  t.db.query(
+    `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash,
+           options, status, created_at)
+         VALUES ($1, $2, $3, $4, 'Card', '{}', 'sha256:card', '[]', 'pending',
+           now() - make_interval(mins => $5))`,
+    [randomUUID(), runId, `call-${randomUUID()}`, kind, minutesAgo],
+  );
+
 describe('the facts a request state is derived from', () => {
   it('reads Sent, not sent yet, for a request nothing has accepted', async () => {
     const found = await getPost(t.db, await request());
@@ -149,20 +158,13 @@ describe('the facts a request state is derived from', () => {
     ];
     for (const [status, state] of expected) {
       const postId = await request();
-      await receivingRun(postId, status);
+      const runId = await receivingRun(postId, status);
+      if (status === 'awaiting_approval') await pending(runId, 'execute', 0);
       expect((await stateOf(postId)).state, status).toBe(state);
     }
   });
 
   describe('a run waiting on a card', () => {
-    const pending = (runId: string, kind: string, minutesAgo: number) =>
-      t.db.query(
-        `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash,
-           options, status, created_at)
-         VALUES ($1, $2, $3, $4, 'Card', '{}', 'sha256:card', '[]', 'pending',
-           now() - make_interval(mins => $5))`,
-        [randomUUID(), runId, `call-${randomUUID()}`, kind, minutesAgo],
-      );
     const waitingOn = async (...cards: [string, number][]) => {
       const postId = await request();
       const runId = await receivingRun(postId, 'awaiting_approval');

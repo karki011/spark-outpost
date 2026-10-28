@@ -3,10 +3,10 @@ title: Start a chat and link a project
 section: Chats
 type: how-to
 order: 210
-summary: Start a chat, link the folder the agent may work in, and add files or commands to your message.
+summary: Start chats, link projects and attach context.
 ---
 
-You'll start a chat linked to your code. About 1 minute.
+About 1 minute.
 
 ## Start a chat
 
@@ -33,6 +33,8 @@ Plain folders offer **Make it a git repository**.
 ![The message box with a linked project, its branch and agent setup](images/chats-and-modes-project-light.png)
 
 To unlink, select **No project folder** in the menu.
+
+**Sent** confirms receipt while history refreshes. **Retry** reuses the message ID.
 
 ## Write a message
 
