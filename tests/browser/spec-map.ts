@@ -249,6 +249,7 @@ export const SPEC_GROUPS = {
     'island-states',
     'island-terminal',
     'voice',
+    'voice-focus',
   ],
   phone: ['phone', 'phone-motion', 'phone-notify', 'phone-pair-again', 'phone-passkey'],
   'docs-help': ['docs', 'help'],

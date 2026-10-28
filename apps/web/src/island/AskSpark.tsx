@@ -70,9 +70,10 @@ export function AskSpark({ voice, focusDelay, session, links }: AskSparkProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const secrets = useSecretGuard(text);
   const detail = assistant.detail;
-  const voiceDraft = useDictationDraft(text, setText, assistant.id ?? 'ask', () =>
-    setDictated(true),
-  );
+  const voiceDraft = useDictationDraft(text, setText, assistant.id ?? 'ask', () => {
+    setDictated(true);
+    inputRef.current?.focus({ preventScroll: true });
+  });
   const run = detail?.conversation.latestRun;
   const thinking = run?.status === 'queued' || run?.status === 'running';
 

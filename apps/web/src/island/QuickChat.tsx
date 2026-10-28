@@ -74,12 +74,13 @@ function useDefaults() {
 
 export function QuickChat(props: QuickChatProps) {
   const { draftId, draft, followUp, projects, onDraft, onSent } = props;
+  const textRef = useRef<HTMLTextAreaElement>(null);
   const voice = useDictationDraft(
     draft.text,
     (text) => onDraft({ ...draft, text }),
     followUp?.id ?? draftId,
+    () => textRef.current?.focus({ preventScroll: true }),
   );
-  const textRef = useRef<HTMLTextAreaElement>(null);
   const chipRef = useRef<HTMLButtonElement>(null);
   const { attachments, adder, added } = props.compose;
   const [menuAt, setMenuAt] = useState<number | null>(null);

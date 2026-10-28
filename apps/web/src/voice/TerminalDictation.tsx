@@ -1,5 +1,5 @@
 import './speech.css';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { terminalRemoteApi } from '../terminal/terminal-api.ts';
 import { MicButton } from './MicButton.tsx';
@@ -12,7 +12,10 @@ interface TerminalDictationProps {
 
 export function TerminalDictation({ chatId, agentName }: TerminalDictationProps) {
   const [text, setText] = useState<string | null>(null);
-  const voice = useDictationDraft(text ?? '', setText, chatId);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const voice = useDictationDraft(text ?? '', setText, chatId, () => {
+    inputRef.current?.focus({ preventScroll: true });
+  });
   const discard = () => {
     voice.dictation.cancel();
     setText(null);
@@ -37,6 +40,7 @@ export function TerminalDictation({ chatId, agentName }: TerminalDictationProps)
             Dictated message for {agentName}
           </label>
           <input
+            ref={inputRef}
             id={`tdict-${chatId}`}
             value={voice.value}
             autoFocus
