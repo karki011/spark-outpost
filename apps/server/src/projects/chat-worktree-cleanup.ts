@@ -1,14 +1,11 @@
 import { access } from 'node:fs/promises';
 import {
-  archivedOrDeleted,
   chatWorktreesOf,
   markChatWorktreeRemoved,
-  sweepableChatWorktrees,
   type ChatWorktree,
 } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
 import {
-  branchMerged,
   branchSafeToDelete,
   changedFiles,
   deleteBranch,
@@ -24,9 +21,6 @@ export interface Released {
   branchKept: boolean;
   saved: boolean;
 }
-
-const SWEEP_EVERY_MS = 60_000;
-let lastSweep = 0;
 
 async function present(target: string): Promise<boolean> {
   return access(target).then(
@@ -85,28 +79,4 @@ export async function releaseConversation(
     }
   }
   return released;
-}
-
-async function sweepOne(db: Queryable, record: ChatWorktree): Promise<void> {
-  if (!record.conversationId) {
-    await releaseChatWorktree(db, record, 'deleted');
-    return;
-  }
-  if (await archivedOrDeleted(db, record.conversationId)) {
-    await releaseChatWorktree(db, record, 'archived');
-    return;
-  }
-  if (await branchMerged(record.repoRoot, record.branch, record.baseCommit)) {
-    await releaseChatWorktree(db, record, 'merged');
-  }
-}
-
-export async function sweepChatWorktrees(db: Queryable, now = Date.now()): Promise<void> {
-  if (now - lastSweep < SWEEP_EVERY_MS) return;
-  lastSweep = now;
-  for (const record of await sweepableChatWorktrees(db)) {
-    await sweepOne(db, record).catch((error: unknown) =>
-      console.error(`Could not sweep the worktree on ${record.branch}`, error),
-    );
-  }
 }

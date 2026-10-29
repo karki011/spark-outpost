@@ -177,16 +177,26 @@ export async function chatWorktreesOf(
   return rows.map(toRecord);
 }
 
+const OPEN_RUN_STATUSES = `('queued', 'running', 'awaiting_approval')`;
+
 export async function sweepableChatWorktrees(db: Queryable): Promise<ChatWorktree[]> {
   const { rows } = await db.query<Row>(
     `SELECT cw.* FROM chat_worktrees cw
      WHERE cw.removed_at IS NULL AND NOT cw.in_place
        AND NOT EXISTS (
          SELECT 1 FROM runs r WHERE r.conversation_id = cw.conversation_id
-           AND r.status IN ('queued', 'running', 'awaiting_approval'))
+           AND r.status IN ${OPEN_RUN_STATUSES})
      ORDER BY cw.created_at`,
   );
   return rows.map(toRecord);
+}
+
+export async function chatHasOpenRun(db: Queryable, conversationId: string): Promise<boolean> {
+  const { rows } = await db.query(
+    `SELECT 1 FROM runs WHERE conversation_id = $1 AND status IN ${OPEN_RUN_STATUSES} LIMIT 1`,
+    [conversationId],
+  );
+  return rows.length > 0;
 }
 
 export async function archivedOrDeleted(db: Queryable, conversationId: string | null) {
