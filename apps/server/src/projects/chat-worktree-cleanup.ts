@@ -2,6 +2,7 @@ import { access } from 'node:fs/promises';
 import {
   archivedOrDeleted,
   chatWorktreesOf,
+  markChatWorktreeKeptDirty,
   markChatWorktreeRemoved,
   sweepableChatWorktrees,
   type ChatWorktree,
@@ -68,6 +69,7 @@ export async function releaseChatWorktree(
 ): Promise<Released> {
   const released = await releaseOnDisk(record, reason);
   if (released.removed) await markChatWorktreeRemoved(db, record.id);
+  else if (reason === 'archived') await markChatWorktreeKeptDirty(db, record.id);
   return released;
 }
 
