@@ -5,19 +5,29 @@ function isApiPath(req: Request): boolean {
   return req.path.startsWith('/api/');
 }
 
-export function webApp(root: string, policy: string) {
-  const router = express.Router();
-  router.use((req: Request, res: Response, next: NextFunction) => {
+function pagePolicy(policy: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
     if (!isApiPath(req)) res.setHeader(CONTENT_SECURITY_POLICY_HEADER, policy);
     next();
+  };
+}
+
+export function webApp(root: string, policy: string) {
+  const serveFile = express.static(root, { index: false });
+  const files = express.Router();
+  files.use(pagePolicy(policy));
+  files.use((req: Request, res: Response, next: NextFunction) => {
+    if (isApiPath(req)) next();
+    else serveFile(req, res, next);
   });
-  router.use(express.static(root, { index: false }));
-  router.get('/{*path}', (req: Request, res: Response, next: NextFunction) => {
+  const page = express.Router();
+  page.use(pagePolicy(policy));
+  page.get('/{*path}', (req: Request, res: Response, next: NextFunction) => {
     if (isApiPath(req)) {
       next();
       return;
     }
     res.sendFile('index.html', { root });
   });
-  return router;
+  return { files, page };
 }

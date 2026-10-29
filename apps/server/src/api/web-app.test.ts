@@ -12,8 +12,13 @@ const APP_CONTENT_SECURITY_POLICY = appContentSecurityPolicy(artifactOrigin(4318
 function appServing(root = mkdtempSync(path.join(tmpdir(), 'spark-web-'))) {
   writeFileSync(path.join(root, 'index.html'), '<title>Spark Outpost</title>');
   writeFileSync(path.join(root, 'theme.css'), 'body {}');
+  const web = webApp(root, APP_CONTENT_SECURITY_POLICY);
   const app = express();
-  app.use(webApp(root, APP_CONTENT_SECURITY_POLICY));
+  app.use(web.files);
+  app.get('/api/hello', (_req, res) => {
+    res.json({ from: 'api' });
+  });
+  app.use(web.page);
   app.use((_req, res) => {
     res.status(404).json({ error: 'Not found.' });
   });
@@ -56,5 +61,18 @@ describe('webApp', () => {
     const response = await request(appServing()).get('/api/missing');
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ error: 'Not found.' });
+  });
+
+  it('serves built files ahead of the API without letting a file shadow an API path', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'spark-web-'));
+    mkdirSync(path.join(root, 'api'));
+    writeFileSync(path.join(root, 'api', 'hello'), 'not the api');
+    writeFileSync(path.join(root, 'api', 'other'), 'not the api');
+    const app = appServing(root);
+    expect((await request(app).get('/api/hello').expect(200)).body).toEqual({ from: 'api' });
+    const other = await request(app).get('/api/other');
+    expect(other.status).toBe(404);
+    expect(other.body).toEqual({ error: 'Not found.' });
+    expect(other.headers['content-security-policy']).toBeUndefined();
   });
 });
