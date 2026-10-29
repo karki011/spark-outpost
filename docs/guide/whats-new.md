@@ -12,6 +12,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
+| Terminal                 | Opens faster.                                                            |
 | Busy attachments         | Send or queue files while agents work.                                   |
 | Tickets interaction      | Browser preloading no longer creates blocking backdrops.                 |
 | GitHub authentication    | Credential commands follow mode and rules.                               |

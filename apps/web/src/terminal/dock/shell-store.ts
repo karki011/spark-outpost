@@ -77,15 +77,13 @@ export function parkHost(host: HTMLDivElement): void {
   parking().append(host);
 }
 
-function started(chatId: string, tabId: string, created: CreateShellResponse) {
-  updateTab(chatId, tabId, {
-    sessionId: created.id,
-    label: created.label,
-    cwd: created.cwd,
-    folder: created.kind,
-    status: 'open',
-  });
-  if (created.note) connections.get(tabId)?.notice(created.note);
+function shellFields(shell: CreateShellResponse): Partial<ShellTab> {
+  return { sessionId: shell.id, label: shell.label, cwd: shell.cwd, folder: shell.kind };
+}
+
+function started(chatId: string, tabId: string, shell: CreateShellResponse) {
+  updateTab(chatId, tabId, { ...shellFields(shell), status: 'open' });
+  if (shell.note) connections.get(tabId)?.notice(shell.note);
 }
 
 function ended(chatId: string, tabId: string, notice: string, removeTab: boolean) {
@@ -135,7 +133,9 @@ function addTab(
   const preview = kind === 'preview';
   const create = preview ? () => previewApi.terminal(chatId) : () => createShell(chatId);
   const connection = openTerminal(create, host, {
-    onOpen: (created) => started(chatId, id, created),
+    startEarly: true,
+    onCreated: (shell) => updateTab(chatId, id, shellFields(shell)),
+    onOpen: (shell) => started(chatId, id, shell),
     onEnded: (reason) =>
       ended(chatId, id, preview ? PREVIEW_ENDED : endMessages[reason], reason === 'chat_removed'),
     onError: (message) => ended(chatId, id, message, false),
