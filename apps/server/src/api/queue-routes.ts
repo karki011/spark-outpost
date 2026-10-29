@@ -27,6 +27,15 @@ import { drainQueue, resendMissed, sendNow, type ResolveTarget } from '../workfl
 import { resolveRunTarget } from './run-target.ts';
 import { BadRequestError, paramId, parseBody } from './validation.ts';
 
+async function sentOrSending(db: Db, id: string): Promise<boolean> {
+  const { rows } = await db.query<{ taken: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM messages WHERE id = $1)
+       OR EXISTS (SELECT 1 FROM member_messages WHERE id = $1) AS taken`,
+    [id],
+  );
+  return rows[0]?.taken === true;
+}
+
 export interface QueueRouteDeps {
   db: Db;
   workspaceId: string;
@@ -81,7 +90,10 @@ export function queueRoutes({ db, workspaceId, fixedRunProvider }: QueueRouteDep
   const removeQueued = async (conversationId: string, id: string) => {
     const postId = await queuedOutpostPost(db, conversationId, id);
     if (postId === null) {
-      await takeQueued(db, conversationId, id);
+      if (await takeQueued(db, conversationId, id)) return;
+      if (await sentOrSending(db, id)) {
+        throw new QueueError(409, 'That message has already been sent.');
+      }
       return;
     }
     const outcome = await cancelPost(db, postId);

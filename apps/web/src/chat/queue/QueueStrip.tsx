@@ -1,6 +1,7 @@
 import './queue.css';
 import { useId, useState, type KeyboardEvent } from 'react';
 import type { QueuedMessage } from '@spark-outpost/contracts';
+import { ApiError } from '../../api/client.ts';
 import { ArrowDownIcon, ArrowUpIcon, PenIcon, XIcon } from '../../ui/icons.tsx';
 import { canEdit, queuedCount, queueNote, type QueueMode } from './queue-model.ts';
 import type { ChatQueue } from './use-chat-queue.ts';
@@ -68,6 +69,44 @@ function Editor({
   );
 }
 
+function StrandedEdit({
+  content,
+  queue,
+  onDone,
+}: {
+  content: string;
+  queue: ChatQueue;
+  onDone: () => void;
+}) {
+  const [text, setText] = useState(content);
+  const requeue = () => {
+    const kept = text.trim();
+    if (kept) void queue.add(kept).then(onDone, () => undefined);
+  };
+  return (
+    <div className="qs-stranded">
+      <p className="qs-error" role="alert">
+        That message was sent before your edit was saved. Queue the edit as a new message, or
+        discard it.
+      </p>
+      <span className="qs-edit">
+        <textarea
+          aria-label="Unsaved edit"
+          rows={Math.min(4, Math.max(1, text.split('\n').length))}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+        />
+        <button type="button" className="qs-btn text" onClick={requeue} disabled={!text.trim()}>
+          Queue
+        </button>
+        <button type="button" className="qs-btn text" onClick={onDone}>
+          Discard
+        </button>
+      </span>
+    </div>
+  );
+}
+
 interface ItemProps {
   item: QueuedMessage;
   index: number;
@@ -75,9 +114,10 @@ interface ItemProps {
   queue: ChatQueue;
   editing: boolean;
   onEdit: (id: string | null) => void;
+  onSave: (content: string) => void;
 }
 
-function QueueItem({ item, index, count, queue, editing, onEdit }: ItemProps) {
+function QueueItem({ item, index, count, queue, editing, onEdit, onSave }: ItemProps) {
   const label = `Queued message ${index + 1}`;
   const editable = canEdit(item);
   return (
@@ -86,14 +126,7 @@ function QueueItem({ item, index, count, queue, editing, onEdit }: ItemProps) {
         {index + 1}
       </span>
       {editing && editable ? (
-        <Editor
-          item={item}
-          onSave={(content) => {
-            queue.edit(item.id, content);
-            onEdit(null);
-          }}
-          onCancel={() => onEdit(null)}
-        />
+        <Editor item={item} onSave={onSave} onCancel={() => onEdit(null)} />
       ) : (
         <>
           <span className="qs-text" title={item.content}>
@@ -164,16 +197,26 @@ function QueueItem({ item, index, count, queue, editing, onEdit }: ItemProps) {
 
 export function QueueStrip({ queue, mode }: QueueStripProps) {
   const [editing, setEditing] = useState<string | null>(null);
+  const [stranded, setStranded] = useState<string | null>(null);
   const headId = useId();
   const { items } = queue;
-  if (items.length === 0) return null;
+  if (items.length === 0 && stranded === null) return null;
+  const save = (id: string, content: string) => {
+    setEditing(null);
+    queue.edit(id, content).catch((error: unknown) => {
+      if (error instanceof ApiError && error.status === 404) setStranded(content);
+    });
+  };
   return (
     <div className="qwrap">
       <section className={`qstrip ${mode}`} aria-labelledby={headId}>
         <div className="qs-h">
           <b id={headId}>{queuedCount(items.length)}</b>
-          <span className="qs-note">{queueNote(mode, items.length)}</span>
+          {items.length > 0 && <span className="qs-note">{queueNote(mode, items.length)}</span>}
         </div>
+        {stranded !== null && (
+          <StrandedEdit content={stranded} queue={queue} onDone={() => setStranded(null)} />
+        )}
         <ol className="qs-list" aria-label="Queued messages">
           {items.map((item, index) => (
             <QueueItem
@@ -184,10 +227,11 @@ export function QueueStrip({ queue, mode }: QueueStripProps) {
               queue={queue}
               editing={editing === item.id}
               onEdit={setEditing}
+              onSave={(content) => save(item.id, content)}
             />
           ))}
         </ol>
-        {queue.error && (
+        {queue.error && stranded === null && (
           <p className="qs-error" role="alert">
             {queue.error}
           </p>

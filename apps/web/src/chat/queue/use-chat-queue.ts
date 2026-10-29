@@ -21,7 +21,7 @@ export interface ChatQueue {
     attachments?: readonly Attachment[],
     annotations?: readonly AnnotationInput[],
   ) => Promise<void>;
-  edit: (id: string, content: string) => void;
+  edit: (id: string, content: string) => Promise<void>;
   remove: (id: string) => void;
   move: (id: string, delta: -1 | 1) => void;
   sendNow: (id: string) => void;
@@ -180,7 +180,9 @@ export function useChatQueue(
           annotations: [...annotations],
         });
       },
-      edit: (id, content) => mutate({ kind: 'edit', id, content }),
+      edit: async (id, content) => {
+        await mutateAsync({ kind: 'edit', id, content });
+      },
       remove: (id) => mutate({ kind: 'remove', id }),
       move: (id, delta) => {
         const ids = movedIds(items, id, delta);

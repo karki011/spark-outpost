@@ -12,6 +12,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
+| Queue edits              | An edit to a message already sent can be queued.                         |
 | Send now order           | A message the agent can't take queues first.                             |
 | Busy attachments         | Send or queue files while agents work.                                   |
 | Tickets interaction      | Browser preloading no longer creates blocking backdrops.                 |
@@ -24,7 +25,6 @@ Earlier releases: **Settings → Updates → Release notes**.
 | Agent-led delegation     | Leads [choose workers and slices](how-spark-works.md#how-work-is-split). |
 | Chat opening             | Drafts stay; failures offer **Try again**.                               |
 | Outpost messages         | Messages go to the displayed lead; **Post note** is explicit.            |
-| Team in the sidebar      | See worker blobs in the sidebar and Agent TV.                            |
 | Agent TV messaging       | Message members or redirect workers in short windows.                    |
 | Message delivery         | **Sent** confirms receipt; refresh failures cannot trigger retries.      |
 

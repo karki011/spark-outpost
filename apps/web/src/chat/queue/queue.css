@@ -161,6 +161,10 @@
   color: var(--danger);
 }
 
+.qs-stranded {
+  padding: 0 4px 4px;
+}
+
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .qs-now {
     display: none;
