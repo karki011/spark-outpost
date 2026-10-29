@@ -1,7 +1,10 @@
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import { basename, join } from 'node:path';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 export interface TmuxHost {
   bin: string;
@@ -121,6 +124,8 @@ export function tmuxArgs(host: TmuxHost, args: readonly string[]): string[] {
   return ['-u', '-S', host.socket, '-f', host.configPath, ...args];
 }
 
+const MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
+
 export function tmux(
   host: TmuxHost,
   args: readonly string[],
@@ -131,8 +136,25 @@ export function tmux(
     env,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
-    maxBuffer: 64 * 1024 * 1024,
+    maxBuffer: MAX_OUTPUT_BYTES,
   });
+}
+
+export async function tryTmuxAsync(
+  host: TmuxHost,
+  args: readonly string[],
+): Promise<string | null> {
+  const running = execFileAsync(host.bin, tmuxArgs(host, args), {
+    cwd: host.directory,
+    env: host.env,
+    encoding: 'utf8',
+    maxBuffer: MAX_OUTPUT_BYTES,
+  });
+  running.child.stdin?.end();
+  return running.then(
+    ({ stdout }) => stdout,
+    () => null,
+  );
 }
 
 export function tryTmux(host: TmuxHost, args: readonly string[]): string | null {

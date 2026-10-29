@@ -448,7 +448,7 @@ export class TerminalSessions {
     session.view = null;
     if (keepRunning) session.pty?.detach?.();
     else if (session.pty?.kill) session.pty.kill();
-    else if (session.pty) killProcessTree(session.pty.pid);
+    else if (session.pty) void killProcessTree(session.pty.pid);
     if (session.pty && session.kind.type === 'shell') this.watcher?.ended(session.id);
     if (!keepRunning) session.client?.send({ type: 'ended', reason, exitCode });
     session.client?.close();

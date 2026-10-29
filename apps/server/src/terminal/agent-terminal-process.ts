@@ -13,7 +13,7 @@ export interface AgentTerminalRuntime extends Pick<
 const KILL_AFTER_MS = 1_500;
 
 function stopWithTerm(pid: number): void {
-  killProcessTree(pid, KILL_AFTER_MS, 'SIGTERM');
+  void killProcessTree(pid, KILL_AFTER_MS, 'SIGTERM');
 }
 
 export function agentTerminalRuntime(

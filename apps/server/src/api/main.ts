@@ -16,6 +16,7 @@ import { migrateOrExit } from '../persistence/migrate-startup.ts';
 import { listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
 import { configuredSecretStore } from '../setup/secrets.ts';
+import { processKillsSent } from '../terminal/process-group.ts';
 import { loginShellSpawner } from '../terminal/pty.ts';
 import { savedPort, savePort } from '../terminal/tmux/stable-port.ts';
 import { chooseTmux, killTmuxServer, tmuxChoiceLine } from '../terminal/tmux/tmux-host.ts';
@@ -376,6 +377,7 @@ const shutdown = async (keepTerminals = false) => {
   if (keepTerminals) await nativeTerminals.detach();
   else await nativeTerminals.dispose();
   terminals.killAll();
+  await processKillsSent();
   if (terminalTmux.host && !keepTerminals) killTmuxServer(terminalTmux.host);
   await nativeMcp.close();
   await artifactPages?.close();
@@ -397,6 +399,7 @@ const shutdown = async (keepTerminals = false) => {
   server.closeAllConnections();
   await listener.close();
   await appEventListener.close();
+  await processKillsSent();
   await db.end();
   process.exit(0);
 };
