@@ -117,6 +117,7 @@ export const SPEC_GROUPS = {
     'terminal-remote',
     'terminal-font',
     'terminal-select',
+    'terminal-fast-open',
     'command-terminal',
     'command-tab',
     'agent-terminal',
