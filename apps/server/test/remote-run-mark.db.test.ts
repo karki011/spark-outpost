@@ -2,7 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { addToQueue } from '../src/persistence/chat-queue.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
+import { removeMemberMessages } from '../src/persistence/member-messages.ts';
 import { asDevice, rememberRemoteTyping, runFromDevice } from '../src/remote/run-mark.ts';
+import { drainQueue, sendNow } from '../src/workflow/queue-drain.ts';
 import { createTestDb, startChat, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -61,5 +63,47 @@ describe('marking runs a paired device started', () => {
     expect(await deviceOf(typed.run.id)).toBe(DEVICE);
     const next = await send(conversationId);
     expect(await deviceOf(next.run.id)).toBeNull();
+  });
+});
+
+describe('a message a paired device sent now into a running turn', () => {
+  const target = async () => ({ provider: 'fake' });
+
+  async function steerFromDevice() {
+    const { conversationId, runId } = await startChat(t, 'Busy turn');
+    const id = randomUUID();
+    const outcome = await asDevice(DEVICE, () =>
+      sendNow(t.db, conversationId, { id, content: 'Change course' }, target),
+    );
+    expect(outcome).toBe('steering');
+    return { conversationId, runId, id };
+  }
+
+  async function newestRun(conversationId: string): Promise<string> {
+    const { rows } = await t.db.query<{ id: string }>(
+      `SELECT id FROM runs WHERE conversation_id = $1 AND parent_run_id IS NULL
+       ORDER BY created_at DESC LIMIT 1`,
+      [conversationId],
+    );
+    return rows[0]!.id;
+  }
+
+  it('keeps the device when Spark stops the turn to send it', async () => {
+    const { conversationId, runId, id } = await steerFromDevice();
+    await t.db.query(`UPDATE member_messages SET status = 'interrupting' WHERE id = $1`, [id]);
+    await t.db.query(`UPDATE runs SET status = 'cancelled' WHERE id = $1`, [runId]);
+    expect(await drainQueue(t.db, conversationId, target)).toBe('sent');
+    const sent = await newestRun(conversationId);
+    expect(sent).not.toBe(runId);
+    expect(await deviceOf(sent)).toBe(DEVICE);
+  });
+
+  it('keeps the device when it waits in the queue for the turn to end', async () => {
+    const { conversationId, runId, id } = await steerFromDevice();
+    await removeMemberMessages(t.db, [id]);
+    await addToQueue(t.db, conversationId, { id, content: 'Change course' });
+    await t.db.query(`UPDATE runs SET status = 'succeeded' WHERE id = $1`, [runId]);
+    expect(await drainQueue(t.db, conversationId, target)).toBe('sent');
+    expect(await deviceOf(await newestRun(conversationId))).toBe(DEVICE);
   });
 });

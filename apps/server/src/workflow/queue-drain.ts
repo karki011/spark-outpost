@@ -16,6 +16,7 @@ import { chatSparkPaused, sparkPausedForChat } from '../persistence/spark-pause.
 import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
 import { copyPostAttachments } from '../persistence/outpost-posts.ts';
 import { markRuleRetry } from '../persistence/spark-rules.ts';
+import { rememberRemoteMessage } from '../remote/run-mark.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 import {
   getMemberMessage,
@@ -243,6 +244,7 @@ export async function sendNow(
       annotations,
     });
     await assertMessageOwner(client, conversationId, request.id);
+    await rememberRemoteMessage(client, request.id);
     return 'steering';
   });
 }
