@@ -187,7 +187,14 @@ export interface SendNowRequest {
   content?: string;
   attachmentIds?: readonly string[] | undefined;
   annotations?: QueuedMessage['annotations'];
+  origin?: QueuedMessage['origin'];
 }
+
+const STEER_REFUSALS: Record<NonNullable<QueuedMessage['origin']>, string> = {
+  assistant: 'A message from Ask Spark starts when this chat is free.',
+  pages: 'A question about your tabs starts when Ask Spark is free.',
+  voice: 'A spoken message starts when this chat is free.',
+};
 
 export async function sendNow(
   db: Db,
@@ -210,12 +217,8 @@ export async function sendNow(
     const running = await activeTurn(client, conversationId);
     if (queued?.outpostPostId)
       await refuseOutpostSendNow(client, queued.outpostPostId, running !== null);
-    if (queued?.origin === 'assistant' && running) {
-      throw new QueueError(409, 'A message from Ask Spark starts when this chat is free.');
-    }
-    if (queued?.origin === 'pages' && running) {
-      throw new QueueError(409, 'A question about your tabs starts when Ask Spark is free.');
-    }
+    const origin = queued?.origin ?? request.origin;
+    if (origin && running) throw new QueueError(409, STEER_REFUSALS[origin]);
     if (queued?.sparkRuleCardId && running) {
       throw new QueueError(409, 'A retry from a Spark rules card starts when this chat is free.');
     }
@@ -229,7 +232,7 @@ export async function sendNow(
           continueRunId: queued?.continueRunId ?? null,
           outpostPostId: queued?.outpostPostId ?? null,
           ...(queued?.sparkRuleCardId ? { sparkRuleCardId: queued.sparkRuleCardId } : {}),
-          ...(queued?.origin ? { origin: queued.origin } : {}),
+          ...(origin ? { origin } : {}),
           attachmentIds: attachmentIds ? [...attachmentIds] : undefined,
           annotations,
         },
