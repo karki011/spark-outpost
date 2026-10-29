@@ -1,5 +1,14 @@
+import { spawn } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
-import { commandLabel, descendantsOf, runningCommand, type ProcessRow } from './process-group.ts';
+import {
+  commandLabel,
+  descendantsOf,
+  isAlive,
+  killProcessTreeSoon,
+  processTable,
+  runningCommand,
+  type ProcessRow,
+} from './process-group.ts';
 
 function row(pid: number, ppid: number, args: string, foregroundGroup = 0): ProcessRow {
   return { pid, ppid, foregroundGroup, args };
@@ -57,5 +66,33 @@ describe('commandLabel', () => {
     const label = commandLabel(`tail -f ${'x'.repeat(200)}`);
     expect(label).toHaveLength(60);
     expect(label.endsWith('…')).toBe(true);
+  });
+});
+
+describe('killProcessTreeSoon', () => {
+  async function until(check: () => boolean | Promise<boolean>) {
+    const deadline = Date.now() + 5000;
+    while (!(await check())) {
+      if (Date.now() > deadline) throw new Error('timed out');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }
+
+  it('stops a shell and the commands it started without blocking on the process list', async () => {
+    const shell = spawn('/bin/sh', ['-c', 'sleep 60 & sleep 60; wait'], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    const root = shell.pid!;
+    let children: number[] = [];
+    await until(async () => {
+      children = descendantsOf(root, await processTable());
+      return children.length === 2;
+    });
+
+    const stopping = killProcessTreeSoon(root, 200);
+    expect(stopping).toBeInstanceOf(Promise);
+    await stopping;
+    await until(() => [root, ...children].every((pid) => !isAlive(pid)));
   });
 });

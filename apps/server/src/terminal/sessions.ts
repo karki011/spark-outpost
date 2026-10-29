@@ -3,7 +3,12 @@ import { existsSync } from 'node:fs';
 import type { ProviderId, TerminalEndReason, TerminalStep } from '@spark-outpost/contracts';
 import { catalogEntry, type CatalogEntry } from '../providers/catalog.ts';
 import { detectHint } from './hints.ts';
-import { killProcessTree, processTable, runningCommand } from './process-group.ts';
+import {
+  killProcessTree,
+  killProcessTreeSoon,
+  processTable,
+  runningCommand,
+} from './process-group.ts';
 import type { PtyProcess, SpawnPty } from './pty.ts';
 import type {
   AgentRequest,
@@ -448,7 +453,8 @@ export class TerminalSessions {
     session.view = null;
     if (keepRunning) session.pty?.detach?.();
     else if (session.pty?.kill) session.pty.kill();
-    else if (session.pty) killProcessTree(session.pty.pid);
+    else if (session.pty && reason === 'shutdown') killProcessTree(session.pty.pid);
+    else if (session.pty) void killProcessTreeSoon(session.pty.pid);
     if (session.pty && session.kind.type === 'shell') this.watcher?.ended(session.id);
     if (!keepRunning) session.client?.send({ type: 'ended', reason, exitCode });
     session.client?.close();
