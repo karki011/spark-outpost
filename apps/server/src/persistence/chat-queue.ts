@@ -35,7 +35,7 @@ export function postedAfterStop(post: string, lastRun: string): string {
     AND ${post}.created_at > ${lastRun}.cancel_requested_at)`;
 }
 
-const POSTED_AFTER_STOP_ITEM = `EXISTS (
+export const POSTED_AFTER_STOP_ITEM = `EXISTS (
   SELECT 1 FROM outpost_posts post
   JOIN LATERAL (
     SELECT r.status, r.cancel_requested_at FROM runs r

@@ -35,6 +35,42 @@ async function archivedAt(conversationId: string): Promise<Date | null> {
   return rows[0]?.archived_at ?? null;
 }
 
+describe('the sweep for queues waiting to send', () => {
+  it('skips chats whose last turn stopped, so they never crowd out one that can go on', async () => {
+    const stopped: string[] = [];
+    for (let index = 0; index < 21; index += 1) {
+      const { conversationId } = await finishedChat(`Stopped ${index}`, 'cancelled');
+      await queueOne(conversationId);
+      stopped.push(conversationId);
+    }
+    const { conversationId: flowing } = await finishedChat('Flowing');
+    await queueOne(flowing);
+
+    const waiting = await waitingQueues(t.db);
+    expect(waiting).toContain(flowing);
+    expect(waiting.some((id) => stopped.includes(id))).toBe(false);
+  });
+
+  it('still sends a message waiting to interrupt a turn that stopped for it', async () => {
+    const { conversationId, runId } = await finishedChat('Interrupted', 'cancelled');
+    await queueOne(conversationId);
+    await t.db.query(
+      `INSERT INTO member_messages (id, conversation_id, run_id, body, urgency, status)
+       VALUES ($1, $2, $3, 'Change course', 'now', 'interrupting')`,
+      [randomUUID(), conversationId, runId],
+    );
+    expect(await waitingQueues(t.db)).toEqual([conversationId]);
+  });
+
+  it('takes the oldest waiting queue first', async () => {
+    const { conversationId: older } = await finishedChat('Older');
+    await queueOne(older);
+    const { conversationId: newer } = await finishedChat('Newer');
+    await queueOne(newer);
+    expect(await waitingQueues(t.db, 1)).toEqual([older]);
+  });
+});
+
 describe('an archived chat with queued messages', () => {
   it('holds its queue instead of bringing the chat back', async () => {
     const { conversationId } = await finishedChat('Archived');

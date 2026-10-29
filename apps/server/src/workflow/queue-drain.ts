@@ -7,6 +7,7 @@ import {
   assertMessageOwner,
   alreadySent,
   PAUSED_OUTPOST_ITEM,
+  POSTED_AFTER_STOP_ITEM,
   QueueError,
   takePostedAfterStop,
   takeQueued,
@@ -266,12 +267,19 @@ export async function sendNow(
   });
 }
 
+const LAST_TURN_FLOWS = `COALESCE((
+  SELECT r.status FROM runs r WHERE r.conversation_id = q.conversation_id AND r.parent_run_id IS NULL
+  ORDER BY r.created_at DESC LIMIT 1
+), 'succeeded') = 'succeeded'`;
+
 export async function waitingQueues(db: Queryable, limit = 20): Promise<string[]> {
   const { rows } = await db.query<{ conversation_id: string }>(
-    `SELECT DISTINCT c.conversation_id FROM (
-       SELECT q.conversation_id FROM chat_queue q WHERE NOT ${PAUSED_OUTPOST_ITEM}
-       UNION
-       SELECT m.conversation_id FROM member_messages m JOIN runs target ON target.id = m.run_id
+    `SELECT c.conversation_id FROM (
+       SELECT q.conversation_id, q.created_at FROM chat_queue q
+       WHERE NOT ${PAUSED_OUTPOST_ITEM} AND (${LAST_TURN_FLOWS} OR ${POSTED_AFTER_STOP_ITEM})
+       UNION ALL
+       SELECT m.conversation_id, m.created_at FROM member_messages m
+       JOIN runs target ON target.id = m.run_id
        WHERE m.message_id IS NULL
          AND (m.status = 'interrupting'
            OR (m.status = 'queued' AND (m.urgency = 'now' OR target.parent_run_id IS NULL)))
@@ -282,6 +290,8 @@ export async function waitingQueues(db: Queryable, limit = 20): Promise<string[]
        SELECT 1 FROM runs r WHERE r.conversation_id = c.conversation_id
          AND r.parent_run_id IS NULL AND r.status IN ${ACTIVE}
      )
+     GROUP BY c.conversation_id
+     ORDER BY min(c.created_at)
      LIMIT $1`,
     [limit],
   );
