@@ -27,6 +27,7 @@ import { useIdleCache } from '../project/chat-cache.ts';
 import { formatTokens } from './model-options.ts';
 
 const RING = 50.27;
+const SHOWN_ABOVE_PERCENT = 50;
 
 function ringNote(level: ContextLevel, thresholds: CompactionThresholds): string {
   const at = thresholds.compactPercent;
@@ -112,6 +113,17 @@ export function ContextRing({
     : ringLabel(reading, percent);
   const chat = chatLine(usageTotals);
   const showProviders = usageTotals.byProvider.length > 1;
+  const filling = reading !== null && (percent > SHOWN_ABOVE_PERCENT || level !== 'ok');
+  const live = (
+    <>
+      <span className="sr-only" aria-live="polite">
+        {cache.announcement}
+      </span>
+      {cache.clock}
+    </>
+  );
+
+  if (!filling && !cache.badge) return <div className="ctxwrap">{live}</div>;
 
   return (
     <div className="ctxwrap">
@@ -140,7 +152,7 @@ export function ContextRing({
           </svg>
           {cache.badge && <CacheBadgeGlyph badge={cache.badge} />}
         </span>
-        {reading && <span className="ctxpct">{percent}%</span>}
+        {filling && <span className="ctxpct">{percent}% context</span>}
       </button>
       <div
         ref={panelRef}
@@ -214,10 +226,7 @@ export function ContextRing({
           </button>
         )}
       </div>
-      <span className="sr-only" aria-live="polite">
-        {cache.announcement}
-      </span>
-      {cache.clock}
+      {live}
     </div>
   );
 }

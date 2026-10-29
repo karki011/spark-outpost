@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import { openChats } from './navigation.ts';
+import { chooseSessionType, openChats } from './navigation.ts';
 
 export const FIXTURE_READY = 'Ready for terminal input. No provider request is made.';
 export const SESSION_START_MS = 20_000;
@@ -11,10 +11,7 @@ export async function startFixtureTerminal(
   await page.setViewportSize({ width: 1440, height: 900 });
   await open(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await page
-    .getByRole('radiogroup', { name: 'Session type' })
-    .getByRole('radio', { name: 'Terminal' })
-    .click();
+  await chooseSessionType(page, 'Terminal');
   await page.getByRole('button', { name: /^Terminal agent: / }).click();
   await page
     .getByRole('dialog', { name: 'Terminal agent and permissions' })

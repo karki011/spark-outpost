@@ -81,7 +81,7 @@ test('the ring warns at 60%, the card compacts at 80%, and the divider shows the
     'true',
   );
   await expect(divider).toContainText('Compacted the conversation');
-  await expect(page.getByRole('button', { name: /Context window: 6% used/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Context window/ })).toHaveCount(0);
 });
 
 test('without /compact Spark writes the summary itself', async ({ page }) => {

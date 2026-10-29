@@ -16,13 +16,6 @@
 .tk-start .session-choice {
   margin: 0 0 18px;
 }
-.composer-lead {
-  max-width: var(--chat-col, 700px);
-  margin: 0 auto 8px;
-}
-.composer-lead .session-choice > .seg {
-  width: 168px;
-}
 .native-intro {
   margin: auto;
 }

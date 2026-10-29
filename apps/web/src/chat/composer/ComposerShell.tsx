@@ -16,18 +16,18 @@ interface ComposerShellProps {
   error: string | null;
   warning: ReactNode;
   above?: ReactNode;
-  lead?: ReactNode;
   children: ReactNode;
   bar: ReactNode;
+  foot?: ReactNode;
 }
 
 export function ComposerShell({
   error,
   warning,
   above = null,
-  lead = null,
   children,
   bar,
+  foot = null,
 }: ComposerShellProps) {
   return (
     <div className="composer-wrap">
@@ -38,10 +38,16 @@ export function ComposerShell({
       )}
       {warning}
       {above}
-      {lead && <div className="composer-lead">{lead}</div>}
-      <div className="composer">
-        {children}
-        <div className="comp-bar">{bar}</div>
+      <div className="composer-frame">
+        <div className="composer">
+          {children}
+          <div className="comp-bar">{bar}</div>
+        </div>
+        {foot && (
+          <div className="comp-foot" role="group" aria-label="Chat settings">
+            {foot}
+          </div>
+        )}
       </div>
     </div>
   );

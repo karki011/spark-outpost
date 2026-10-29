@@ -125,23 +125,21 @@ test('the permission chip names the mode and opens the picker on Permissions', a
   await expect(pickerButton(page)).toBeFocused();
 });
 
-test('the permission chip keeps the composer bar on one line at phone width', async ({ page }) => {
+test('the permission chip keeps the footer under the box on one line at phone width', async ({
+  page,
+}) => {
   await linkedChat(page, repo);
   await page.setViewportSize({ width: 360, height: 780 });
   const chip = permissionChip(page);
   await expect(chip).toHaveAccessibleName('Permissions: Plan');
   await expect(chip.locator('.pchip-name')).toBeHidden();
   await expect(chip.locator('svg')).toBeVisible();
+  const foot = page.locator('.comp-foot');
+  await expect(foot.getByRole('button', { name: /^Permissions: / })).toBeVisible();
+  const [chipBox, footBox] = [await chip.boundingBox(), await foot.boundingBox()];
+  expect(footBox!.height).toBeLessThan(chipBox!.height * 2);
+  expect(await foot.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   const bar = page.locator('.comp-bar');
-  const send = bar.locator('.send');
-  const [chipBox, sendBox] = [await chip.boundingBox(), await send.boundingBox()];
-  expect(
-    Math.abs(
-      (chipBox?.y ?? 0) +
-        (chipBox?.height ?? 0) / 2 -
-        ((sendBox?.y ?? 0) + (sendBox?.height ?? 0) / 2),
-    ),
-  ).toBeLessThan(6);
   expect(await bar.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await chip.click();
   await expect(pickerPanel(page).getByRole('tab', { name: /Permissions/ })).toHaveAttribute(

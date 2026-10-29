@@ -99,7 +99,7 @@ export function ContextBar({
     <WorkPlaceMenu conversationId={conversationId} projectId={primary.id} checkoutBranch={branch} />
   );
   const setupChip = setup && <AgentSetup key={primary.id} repos={repos} labelled />;
-  const hasDetails = Boolean(branchChip) || Boolean(placeMenu) || setup;
+  const hasDetails = phone ? Boolean(branchChip) || Boolean(placeMenu) || setup : setup;
   const people = (
     <>
       <TalkToChip conversationId={conversationId} />
@@ -126,14 +126,16 @@ export function ContextBar({
           onKeyDown: closeDetails,
           items: (
             <>
-              {branchChip}
-              {placeMenu}
+              {phone && branchChip}
+              {phone && placeMenu}
               {people}
               {setupChip}
             </>
           ),
         }}
       >
+        {!phone && branchChip}
+        {!phone && placeMenu}
         <DetailsChip
           chipRef={detailsChipRef}
           open={detailsOpen}

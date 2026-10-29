@@ -11,6 +11,7 @@ interface SendButtonProps {
   busy: boolean;
   stopping?: boolean;
   label: string;
+  tip?: string;
   disabled: boolean;
   onSend: () => void;
   onStop: () => void;
@@ -21,6 +22,7 @@ export function SendButton({
   busy,
   stopping = false,
   label,
+  tip,
   disabled,
   onSend,
   onStop,
@@ -42,7 +44,7 @@ export function SendButton({
       type="button"
       className="send"
       aria-label={label}
-      title={label === 'Send' ? undefined : label}
+      title={tip ?? (label === 'Send' ? undefined : label)}
       disabled={disabled}
       onClick={onSend}
     >

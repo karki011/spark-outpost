@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import { useQueries } from '@tanstack/react-query';
 import {
@@ -51,6 +52,7 @@ interface ModelPickerProps {
   providers: ProviderSetup[];
   runs: readonly Run[];
   hasRepos: boolean;
+  chipSlot: HTMLElement | null;
 }
 
 export function ModelPicker({
@@ -60,13 +62,14 @@ export function ModelPicker({
   providers,
   runs,
   hasRepos,
+  chipSlot,
 }: ModelPickerProps) {
+  const chipRef = useRef<HTMLButtonElement>(null);
   const { open, setOpen, toggle, anchorRef, panelRef, returnFocusRef } = usePopover<
     HTMLDivElement,
     HTMLDivElement
-  >();
+  >(chipRef);
   const modelButtonRef = useRef<HTMLButtonElement>(null);
-  const chipRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
   const listId = useId();
   const [section, setSection] = useState<PickerSection>('model');
@@ -193,6 +196,7 @@ export function ModelPicker({
           aria-expanded={open}
           aria-controls={panelId}
           aria-label={`Model and effort: ${modelName}`}
+          aria-description={effort ? `${effort.label} effort` : undefined}
           onClick={() => {
             returnFocusRef.current = modelButtonRef.current;
             setSection('model');
@@ -201,9 +205,13 @@ export function ModelPicker({
         >
           <ProviderBlob providerId={provider} size={18} animate="hover" />
           <span className="mname">{modelName}</span>
+          {effort && <span className="meffort">· {effort.label}</span>}
           <ChevronIcon />
         </button>
-        {setup && (
+      </div>
+      {setup &&
+        chipSlot &&
+        createPortal(
           <PermissionChip
             ref={chipRef}
             state={permission}
@@ -211,9 +219,9 @@ export function ModelPicker({
             expanded={open}
             panelId={panelId}
             onClick={openPermissions}
-          />
+          />,
+          chipSlot,
         )}
-      </div>
       <div
         ref={panelRef}
         id={panelId}

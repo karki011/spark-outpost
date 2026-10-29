@@ -13,7 +13,7 @@ About 1 minute.
 1. Select **Chats** in the rail, then **New chat** (**⌘⇧O**).
 2. Leave **Chat** selected, type your message and press **Enter**.
 
-![A new chat with project and branch in the message box](images/chats-and-modes-new-chat-light.png)
+![A new chat with project and branch under the message box](images/chats-and-modes-new-chat-light.png)
 
 Or type in **Start a new chat** on **Home**.
 
@@ -25,7 +25,7 @@ While loading, drafts stay editable; sending waits. **Try again** recovers faile
 
 Without one, the agent works in a private folder; files show under its reply.
 
-1. In the message box, select **Choose project**.
+1. Under the box, select **Choose project**.
 2. Pick a folder under **Recent**, **Add folder…** to pick or make one, or **Clone a repository…**.
 
 Plain folders offer **Make it a git repository**.
@@ -38,14 +38,13 @@ To unlink, select **No project folder** in the menu.
 
 | Type or select                    | To                                                                       |
 | --------------------------------- | ------------------------------------------------------------------------ |
-| **Enter** / **Shift+Enter**       | Send / add a new line                                                    |
 | **@**                             | Add a file from the project                                              |
 | **/**                             | Run a command: `/plan`, `/review`, `/model`, `/effort`, `/mcp`, `/fresh` |
 | **+** (**Add files and context**) | **Upload a file**, **Add a screenshot**, **Add from repo**, another chat |
 
 **Sent** confirms receipt while history refreshes. **Retry** reuses the message ID.
 
-Markdown styles as you type. Select text or open **+ → Formatting**; **⌘B**, **⌘I**, **⌘⇧X** work too. In code blocks, **Enter** adds a line; **⌘Enter** sends. Branch and agent setup live in **Chat details** (**…**).
+Markdown styles as you type. Select text or open **+ → Formatting**; **⌘B**, **⌘I**, **⌘⇧X** work too. In code blocks, **Enter** adds a line; **⌘Enter** sends. Agent setup is in **…** under the box.
 
 ## Share a chat with another chat
 

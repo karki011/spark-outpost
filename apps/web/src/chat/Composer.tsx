@@ -60,6 +60,7 @@ import { sendLabel } from './quotes/quote-text.ts';
 import type { ComposerProps } from './composer/composer-props.ts';
 
 const NO_COMMANDS: readonly AgentCommand[] = [];
+const SEND_KEYS_TIP = 'Enter to send, Shift + Enter for a new line';
 const NO_SKILLS: readonly RepoDefinition[] = [];
 
 export function Composer({
@@ -89,12 +90,13 @@ export function Composer({
   agentCommands = NO_COMMANDS,
   agentName = 'Agent',
   autoFocus = true,
-  contextLead = null,
+  sessionChip = null,
   quotes,
 }: ComposerProps) {
   const [draft, setDraft] = useChatDraft(conversationId);
   const [repoOpen, setRepoOpen] = useState(false);
   const [formatting, setFormatting] = useState(false);
+  const [modeSlot, setModeSlot] = useState<HTMLSpanElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const voice = useDictationDraft(draft, setDraft, conversationId, () => {
     textareaRef.current?.focus({ preventScroll: true });
@@ -283,23 +285,8 @@ export function Composer({
         />
       }
       above={above}
-      lead={contextLead}
-      bar={
+      foot={
         <>
-          <PlusMenu
-            hasProject={hasRepos}
-            onAttach={attachments.add}
-            onNotice={attachments.notify}
-            onAddFromRepo={() => setRepoOpen(true)}
-            onAddRepo={openRepoMenu}
-            chatId={conversationId}
-            onAddChat={attachments.addChat}
-            formatting={formatting}
-            onFormatting={() => {
-              setFormatting((open) => !open);
-              textareaRef.current?.focus();
-            }}
-          />
           {ready && (
             <ContextBar
               conversationId={conversationId}
@@ -318,9 +305,38 @@ export function Composer({
               }
             />
           )}
+          {sessionChip}
+          <span className="comp-foot-end">
+            <ContextRing
+              conversationId={conversationId}
+              runs={runs}
+              provider={settings?.provider ?? null}
+              usageTotals={usageTotals}
+              {...(onAudit ? { onAudit } : {})}
+            />
+            <span ref={setModeSlot} className="comp-foot-mode" />
+          </span>
+        </>
+      }
+      bar={
+        <>
+          <PlusMenu
+            hasProject={hasRepos}
+            onAttach={attachments.add}
+            onNotice={attachments.notify}
+            onAddFromRepo={() => setRepoOpen(true)}
+            onAddRepo={openRepoMenu}
+            chatId={conversationId}
+            onAddChat={attachments.addChat}
+            formatting={formatting}
+            onFormatting={() => {
+              setFormatting((open) => !open);
+              textareaRef.current?.focus();
+            }}
+          />
           <span
             className={!ready || attachments.items.length > 0 ? 'hint shown' : 'hint'}
-            title={hint}
+            title={hint || undefined}
           >
             {hint}
           </span>
@@ -332,20 +348,15 @@ export function Composer({
               providers={providers}
               runs={runs}
               hasRepos={hasRepos}
+              chipSlot={modeSlot}
             />
           )}
-          <ContextRing
-            conversationId={conversationId}
-            runs={runs}
-            provider={settings?.provider ?? null}
-            usageTotals={usageTotals}
-            {...(onAudit ? { onAudit } : {})}
-          />
           <MicButton dictation={voice.dictation} />
           <SendButton
             busy={busy}
             stopping={stopping}
             label={sendName}
+            tip={SEND_KEYS_TIP}
             disabled={!canSend}
             onSend={() => void submit()}
             onStop={onStop}

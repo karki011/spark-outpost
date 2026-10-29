@@ -79,6 +79,7 @@ export function ProjectFolders({
         type="button"
         className={primary ? 'ctx-repo' : 'ctx-repo unset'}
         aria-label={primary ? `Project folders: ${names.join(', ')}` : 'Choose project'}
+        aria-description={primary ? undefined : PICK_PROJECT_HINT}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={menuId}
