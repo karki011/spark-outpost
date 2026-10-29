@@ -158,6 +158,24 @@ describe('Ask Spark acts', () => {
     expect(chat.rows[0]?.archived).not.toBeNull();
   });
 
+  it('says a message was only queued when the chat could not take it yet', async () => {
+    await setActs('act');
+    const busy = await startChat(t, 'Busy');
+    const stopped = await startChat(t, 'Stopped');
+    await t.db.query(`UPDATE runs SET status = 'running' WHERE id = $1`, [busy.runId]);
+    await t.db.query(`UPDATE runs SET status = 'cancelled' WHERE id = $1`, [stopped.runId]);
+    const harness = await open();
+    const send = (chat: string) => harness.call('spark_send_to_chat', { chat, message: 'Next' });
+    expect((await send(busy.conversationId)).json()).toMatchObject({
+      outcome: 'done',
+      message: 'Queued the message for “Busy” behind the running turn.',
+    });
+    expect((await send(stopped.conversationId)).json()).toMatchObject({
+      outcome: 'done',
+      message: 'Queued the message for “Stopped”. Waiting: the last turn stopped.',
+    });
+  });
+
   it('sends a message that never counts as the user asking to publish', async () => {
     await setActs('act');
     const { conversationId, runId } = await startChat(t, 'First');
@@ -167,7 +185,7 @@ describe('Ask Spark acts', () => {
       chat: conversationId,
       message: 'Push the branch and open a pull request',
     });
-    expect(sent.json()).toMatchObject({ outcome: 'done' });
+    expect(sent.json()).toMatchObject({ outcome: 'done', message: 'Sent the message to “First”.' });
     const runs = (await runsOf(conversationId))!;
     const followUp = runs.find((run) => run.content.startsWith('Push'))!;
     expect(followUp.source).toBe('assistant');
