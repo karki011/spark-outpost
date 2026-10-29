@@ -28,7 +28,7 @@ import {
 } from '../persistence/member-messages.ts';
 
 export type ResolveTarget = (conversationId: string) => Promise<RunTarget>;
-export type DrainOutcome = 'sent' | 'busy' | 'paused' | 'held' | 'empty';
+export type DrainOutcome = 'sent' | 'busy' | 'paused' | 'held' | 'archived' | 'empty';
 
 const ACTIVE = `('queued', 'running', 'awaiting_approval')`;
 
@@ -51,11 +51,20 @@ async function lastTurnSucceeded(db: Queryable, conversationId: string): Promise
   return !rows[0] || rows[0].status === 'succeeded';
 }
 
+interface LockedChat {
+  archived: boolean;
+}
+
+async function lockChat(db: Queryable, conversationId: string): Promise<LockedChat | null> {
+  const { rows } = await db.query<LockedChat>(
+    'SELECT archived_at IS NOT NULL AS archived FROM conversations WHERE id = $1 FOR UPDATE',
+    [conversationId],
+  );
+  return rows[0] ?? null;
+}
+
 async function lockConversation(db: Queryable, conversationId: string): Promise<boolean> {
-  const { rowCount } = await db.query('SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE', [
-    conversationId,
-  ]);
-  return rowCount === 1;
+  return (await lockChat(db, conversationId)) !== null;
 }
 
 function queuedSource(item: Pick<QueuedMessage, 'outpostPostId' | 'sparkRuleCardId' | 'origin'>) {
@@ -140,7 +149,9 @@ export async function drainQueue(
 ): Promise<DrainOutcome> {
   const target = await resolveTarget(conversationId);
   return withTransaction(db, async (client) => {
-    if (!(await lockConversation(client, conversationId))) return 'empty';
+    const chat = await lockChat(client, conversationId);
+    if (!chat) return 'empty';
+    if (chat.archived) return 'archived';
     if (await activeTurn(client, conversationId)) return 'busy';
     if (await chatSparkPaused(client, conversationId)) {
       return sendTypedWhilePaused(client, conversationId, typedPostId, target);
@@ -265,6 +276,7 @@ export async function waitingQueues(db: Queryable, limit = 20): Promise<string[]
          AND (m.status = 'interrupting'
            OR (m.status = 'queued' AND (m.urgency = 'now' OR target.parent_run_id IS NULL)))
      ) c
+     JOIN conversations chat ON chat.id = c.conversation_id AND chat.archived_at IS NULL
      WHERE NOT ${sparkPausedForChat('c.conversation_id')}
      AND NOT EXISTS (
        SELECT 1 FROM runs r WHERE r.conversation_id = c.conversation_id
