@@ -216,6 +216,9 @@ export async function sendNow(
     if (queued?.origin === 'pages' && running) {
       throw new QueueError(409, 'A question about your tabs starts when Ask Spark is free.');
     }
+    if (queued?.sparkRuleCardId && running) {
+      throw new QueueError(409, 'A retry from a Spark rules card starts when this chat is free.');
+    }
     if (!running) {
       await sendQueued(
         client,
