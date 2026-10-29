@@ -57,7 +57,7 @@ import { CALENDAR_WRITTEN_CHANNEL, agentCalendarHosts } from '../calendar/agent/
 import { generateVapidKeys, webPushSend } from '../remote/push-send.ts';
 import { slackSignInConfig } from '../slack/sign-in-config.ts';
 import { startSlackSocket } from '../slack/socket.ts';
-import { pruneOldRows } from './startup-prune.ts';
+import { schedulePrune, type PruneSchedule } from './startup-prune.ts';
 import { cloneJobsFor } from './project-clone-routes.ts';
 import { connectDesktopBrowser } from '../browser/host-client.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
@@ -348,9 +348,10 @@ const morningBrief = config.MORNING_BRIEF
     )
   : null;
 
+let pruneSchedule: PruneSchedule | null = null;
 const server = app.listen(config.API_PORT, config.API_HOST, () => {
   console.log(`API listening on http://${config.API_HOST}:${config.API_PORT}`);
-  void pruneOldRows({
+  pruneSchedule = schedulePrune({
     db,
     workspaceId,
     auditRetentionDays: config.AUDIT_RETENTION_DAYS,
@@ -386,6 +387,7 @@ const shutdown = async (keepTerminals = false) => {
   stopLagMonitor();
   outcomeSweep.stop();
   archiveSweep?.stop();
+  pruneSchedule?.stop();
   morningBrief?.stop();
   slackSocket.stop();
   await slackNotifier.stop();
