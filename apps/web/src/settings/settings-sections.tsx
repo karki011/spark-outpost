@@ -20,6 +20,7 @@ import { HelpSection, helpRows } from '../help/HelpSection.tsx';
 import { AUTO_CONTINUE_LABEL } from './AutoContinueSetting.tsx';
 import { ARCHIVE_INACTIVE_LABEL } from './ArchiveInactiveSetting.tsx';
 import { CODE_MODE_LABEL } from './CodeModeSetting.tsx';
+import { COLLAPSE_TURNS_LABEL } from './CollapseTurnsSetting.tsx';
 import { BUSY_ENTER_LABEL } from './BusyEnterSetting.tsx';
 import {
   BrowserSection,
@@ -194,6 +195,7 @@ export const SETTINGS_SECTIONS = [
       COMPACT_LABEL,
       BUSY_ENTER_LABEL,
       WIDE_WINDOW_LABEL,
+      COLLAPSE_TURNS_LABEL,
       ARCHIVE_INACTIVE_LABEL,
       CODE_MODE_LABEL,
       INSTRUCTIONS_LABEL,

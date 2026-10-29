@@ -70,6 +70,7 @@ export const SPEC_GROUPS = {
     'stream-scroll',
     'thinking-step',
     'titles',
+    'turn-fold',
     'work-panel',
   ],
   approvals: [

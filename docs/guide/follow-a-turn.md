@@ -55,6 +55,8 @@ Send files without text. Queues survive reloads; drafts do not.
 
 ## After a turn
 
+Finished steps fold under **Worked for …**; select to open.
+
 | Under a reply                                  | Use it to                                                   |
 | ---------------------------------------------- | ----------------------------------------------------------- |
 | **Good result** / **Bad result**               | Rate the PR turn.                                           |
