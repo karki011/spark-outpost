@@ -38,7 +38,7 @@ Send files without text. Queues survive restarts; drafts do not.
 
 1. While a turn runs, **Enter** queues a message.
 2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.
-3. While the agent waits, **Enter** sends now.
+3. While the agent only waits on background work, **Enter** sends now; queued messages follow.
 4. Queued messages have **Edit**, **Move up**, **Move down**, **Remove** and **Send now**; **Retry** messages are read-only.
 
 | When                      | Spark                                 |

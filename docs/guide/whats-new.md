@@ -12,9 +12,8 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
-| Queue tags               | See who wrote each queued message.                                       |
-| Queue edits              | An edit to a message already sent can be queued.                         |
-| Send now order           | A message the agent can't take queues first.                             |
+| Queue while waiting      | Queued messages reach an agent waiting on background work.               |
+| Queue strip              | Tags show authors; late edits and untaken messages stay queued.          |
 | Busy attachments         | Send or queue files while agents work.                                   |
 | Tickets interaction      | Browser preloading no longer creates blocking backdrops.                 |
 | GitHub authentication    | Credential commands follow mode and rules.                               |

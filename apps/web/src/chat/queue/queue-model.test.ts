@@ -8,6 +8,7 @@ import {
   queueMode,
   queueNote,
   queuedItem,
+  stripNote,
 } from './queue-model.ts';
 
 function item(id: string, position: number): QueuedMessage {
@@ -18,16 +19,16 @@ const items = [item('a', 1), item('b', 2), item('c', 3)];
 
 describe('queue model', () => {
   it('waits while a turn runs, sends next after a success, and pauses after a stop or failure', () => {
-    expect(queueMode(true, [{ status: 'cancelled' }], false)).toBe('waiting');
-    expect(queueMode(false, [], false)).toBe('next');
-    expect(queueMode(false, [{ status: 'failed' }, { status: 'succeeded' }], false)).toBe('next');
-    expect(queueMode(false, [{ status: 'cancelled' }], false)).toBe('paused');
-    expect(queueMode(false, [{ status: 'failed' }], false)).toBe('paused');
+    expect(queueMode(0, [{ status: 'cancelled' }], false)).toBe('waiting');
+    expect(queueMode(null, [], false)).toBe('next');
+    expect(queueMode(null, [{ status: 'failed' }, { status: 'succeeded' }], false)).toBe('next');
+    expect(queueMode(null, [{ status: 'cancelled' }], false)).toBe('paused');
+    expect(queueMode(null, [{ status: 'failed' }], false)).toBe('paused');
   });
 
   it('holds the queue while Spark is paused, once the running turn has ended', () => {
-    expect(queueMode(true, [{ status: 'running' }], true)).toBe('waiting');
-    expect(queueMode(false, [{ status: 'succeeded' }], true)).toBe('held');
+    expect(queueMode(0, [{ status: 'running' }], true)).toBe('waiting');
+    expect(queueMode(null, [{ status: 'succeeded' }], true)).toBe('held');
     expect(queueNote('held', 1)).toBe('Held while Spark is paused. Send one now to go on.');
   });
 
@@ -74,5 +75,16 @@ describe('queue model', () => {
     expect(authorTag(fromAsk)).toBe('Ask Spark');
     expect(authorTag(fromOutpost)).toBe('Outpost request');
     expect([own, retry, fromAsk, fromOutpost].map(canEdit)).toEqual([true, false, true, false]);
+  });
+
+  it('says queued messages go to the agent while it only waits, when the user wrote one', () => {
+    expect(queueMode(1, [{ status: 'running' }], false)).toBe('agent-waits');
+    expect(queueMode(1, [{ status: 'running' }], true)).toBe('waiting');
+    expect(queueMode(0, [{ status: 'running' }], false)).toBe('waiting');
+    const own = item('a', 1);
+    const fromAsk = { ...own, origin: 'assistant' as const };
+    expect(stripNote('agent-waits', [fromAsk, own])).toBe('Sends to the agent while it waits');
+    expect(stripNote('agent-waits', [fromAsk])).toBe('Sends when this turn ends');
+    expect(stripNote('waiting', [own])).toBe('Sends when this turn ends');
   });
 });

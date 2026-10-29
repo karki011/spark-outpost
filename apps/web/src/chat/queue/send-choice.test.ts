@@ -67,7 +67,10 @@ describe('what Enter does while a turn runs', () => {
   it('says what Send now does while the agent only waits', () => {
     expect(choiceNote('now', true)).toBe('Reaches the agent while it waits, or joins the queue');
     expect(choiceNote('now', false)).toBe('Steers or interrupts the turn');
-    expect(choiceNote('queue', true)).toBe('Sends when this turn ends');
+    expect(choiceNote('queue', true)).toBe(
+      'Reaches the agent in order while it waits, or when this turn ends',
+    );
+    expect(choiceNote('queue', false)).toBe('Sends when this turn ends');
     expect(choiceTitle('now', 'now', true, true)).toBe(
       'Send now: reaches the agent while it waits, or joins the queue (Enter)',
     );

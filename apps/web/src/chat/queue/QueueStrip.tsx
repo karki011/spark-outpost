@@ -3,7 +3,7 @@ import { useId, useState, type KeyboardEvent } from 'react';
 import type { QueuedMessage } from '@spark-outpost/contracts';
 import { ApiError } from '../../api/client.ts';
 import { ArrowDownIcon, ArrowUpIcon, PenIcon, XIcon } from '../../ui/icons.tsx';
-import { authorTag, canEdit, queuedCount, queueNote, type QueueMode } from './queue-model.ts';
+import { authorTag, canEdit, queuedCount, stripNote, type QueueMode } from './queue-model.ts';
 import type { ChatQueue } from './use-chat-queue.ts';
 
 interface QueueStripProps {
@@ -213,7 +213,7 @@ export function QueueStrip({ queue, mode }: QueueStripProps) {
       <section className={`qstrip ${mode}`} aria-labelledby={headId}>
         <div className="qs-h">
           <b id={headId}>{queuedCount(items.length)}</b>
-          {items.length > 0 && <span className="qs-note">{queueNote(mode, items.length)}</span>}
+          {items.length > 0 && <span className="qs-note">{stripNote(mode, items)}</span>}
         </div>
         {stranded !== null && (
           <StrandedEdit content={stranded} queue={queue} onDone={() => setStranded(null)} />

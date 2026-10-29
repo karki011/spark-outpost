@@ -386,7 +386,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               />
               <QueueStrip
                 queue={queue}
-                mode={queueMode(running !== null, detail.data?.runs ?? NO_RUNS, sparkPaused)}
+                mode={queueMode(running ? waitingOn : null, detail.data?.runs, sparkPaused)}
               />
               <Composer
                 conversationId={conversationId}
