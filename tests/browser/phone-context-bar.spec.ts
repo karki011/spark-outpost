@@ -138,7 +138,7 @@ for (const width of WIDTHS) {
   test(`the composer bar keeps its chips apart at ${width}px`, async ({ browser }) => {
     const page = await openTouch(browser, { width, height: 800 }, 'chats');
     await expect(detailsChip(page)).toBeVisible({ timeout: 20_000 });
-    expect(await crowdedChips(page, '.comp-bar')).toEqual([]);
+    expect(await crowdedChips(page, '.comp-bar, .comp-foot')).toEqual([]);
     await expect(bar(page).getByRole('button', { name: /^Spark autonomy/ })).toHaveCount(0);
     for (const hidden of ['.ctx-outpost', '.ctx-place', '.ctx-setup', '.ctx-repo']) {
       await expect(bar(page).locator(hidden)).toBeHidden();
@@ -211,7 +211,7 @@ test('a paired phone without the settings switch gets no agent setup in Details'
   await page.close();
 });
 
-test('the desktop composer keeps the project visible and folds branch and setup into details', async ({
+test('the desktop composer keeps the project and branch visible and folds setup into details', async ({
   page,
 }) => {
   await page.goto('/');
@@ -219,14 +219,11 @@ test('the desktop composer keeps the project visible and folds branch and setup 
     timeout: 20_000,
   });
   await expect(bar(page).locator('.ctx-repo')).toBeVisible();
-  for (const chip of ['.ctx-place', '.ctx-setup']) {
-    await expect(bar(page).locator(chip)).toBeHidden();
-  }
+  await expect(bar(page).locator('.ctx-place')).toBeVisible();
+  await expect(bar(page).locator('.ctx-setup')).toBeHidden();
   await expect(detailsChip(page)).toHaveAttribute('aria-expanded', 'false');
   await detailsChip(page).click();
-  for (const chip of ['.ctx-place', '.ctx-setup']) {
-    await expect(bar(page).locator(chip)).toBeVisible();
-  }
+  await expect(bar(page).locator('.ctx-setup')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(detailsChip(page)).toHaveAttribute('aria-expanded', 'false');
   await expect(detailsChip(page)).toBeFocused();
@@ -242,14 +239,14 @@ test('a chat with no project and a new chat fit at 320px with no Details chip', 
   await page.getByRole('button', { name: 'Plain question', exact: true }).dispatchEvent('click');
   await expect(bar(page).getByRole('button', { name: 'Choose project' })).toBeVisible();
   await expect(detailsChip(page)).toHaveCount(0);
-  expect(await crowdedChips(page, '.ctxbar, .comp-bar')).toEqual([]);
+  expect(await crowdedChips(page, '.ctxbar, .comp-bar, .comp-foot')).toEqual([]);
   await expectNoSidewaysScroll(page);
 
   await page.getByRole('button', { name: 'New chat', exact: true }).first().dispatchEvent('click');
   await expect(
-    page.locator('.composer-lead').getByRole('group', { name: 'New session' }),
+    page.locator('.comp-foot').getByRole('button', { name: 'Session type: Chat' }),
   ).toBeVisible();
-  expect(await crowdedChips(page, '.ctxbar, .comp-bar')).toEqual([]);
+  expect(await crowdedChips(page, '.ctxbar, .comp-bar, .comp-foot')).toEqual([]);
   await expectNoSidewaysScroll(page);
   await shot(page, 'context-bar-new-chat');
   await page.close();

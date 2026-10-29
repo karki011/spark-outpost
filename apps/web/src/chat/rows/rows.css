@@ -171,3 +171,33 @@ button.trow:hover {
     min-height: 44px;
   }
 }
+
+.turn-fold {
+  margin: 0 0 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.turn-fold > .steps-head {
+  min-height: 28px;
+  width: 100%;
+  text-align: left;
+}
+
+.turn-fold > .steps-head b {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.turn-fold-sum {
+  color: var(--muted);
+}
+
+.turn-fold-body {
+  padding: 4px 0 6px;
+}
+
+@media (pointer: coarse) {
+  .turn-fold > .steps-head {
+    min-height: 44px;
+  }
+}

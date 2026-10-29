@@ -58,6 +58,7 @@ export const SPEC_GROUPS = {
     'phone-context-bar',
     'prompt-cache',
     'queue-strip',
+    'quiet-composer',
     'quote-to-chat',
     'responsive-chat',
     'result-block',
@@ -69,6 +70,7 @@ export const SPEC_GROUPS = {
     'stream-scroll',
     'thinking-step',
     'titles',
+    'turn-fold',
     'work-panel',
   ],
   approvals: [

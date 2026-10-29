@@ -46,5 +46,5 @@ export interface ComposerProps {
   agentCommands?: readonly AgentCommand[];
   agentName?: string;
   autoFocus?: boolean;
-  contextLead?: ReactNode;
+  sessionChip?: ReactNode;
 }

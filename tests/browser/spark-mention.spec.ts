@@ -40,7 +40,7 @@ test('suggests the matching Spark, stays quiet once dismissed, and applies on cl
   page,
 }) => {
   const input = await newChat(page);
-  await expect(input).toHaveAttribute('placeholder', /@ to hand a job to a Spark/);
+  await expect(input).toHaveAttribute('placeholder', /@ for a Spark/);
 
   await input.fill('add a dark mode toggle');
   await expect(suggestion(page)).toHaveCount(0);

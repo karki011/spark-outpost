@@ -117,14 +117,18 @@ export function TerminalComposer({
             onSendAnyway={start}
           />
         }
-        lead={sessionPicker}
-        bar={
+        foot={
           <>
             <ProjectFolders conversationId={conversationId} repos={repos} popover={folders}>
               <span className="ctx-unlinked" title={WORKTREE_HINT}>
                 {WORKTREE_HINT}
               </span>
             </ProjectFolders>
+            {sessionPicker}
+          </>
+        }
+        bar={
+          <>
             <span className="hint shown" title={`${PULL_REQUEST_HINT}.`}>
               {PULL_REQUEST_HINT}
             </span>

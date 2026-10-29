@@ -17,6 +17,7 @@
     .ctx-repo,
     .ctx-branch,
     .ctx-details,
+    .session-chip,
     .theme-menu button,
     .mdf-tool,
     .mdf-toggle
@@ -42,6 +43,7 @@
     .ctx-repo,
     .ctx-branch,
     .ctx-details,
+    .session-chip,
     .mdf-tool,
     .mdf-toggle
   )::before {

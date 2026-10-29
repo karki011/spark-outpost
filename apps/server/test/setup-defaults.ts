@@ -28,4 +28,5 @@ export const NEW_PROFILE = {
   terminalRecordLikeChat: true,
   macControl: false,
   codeMode: true,
+  collapseFinishedTurns: true,
 };

@@ -12,7 +12,7 @@ By default a chat in a mode that can change files gets its own git worktree and 
 
 ## For one chat
 
-1. Open **Chat details** (**…**) in the message box, then the branch chip.
+1. Select the branch chip under the message box.
 2. Pick **New branch from** _branch_, a branch under **Or continue a branch**, **Work on a pull request…** or **Edit my files directly instead**.
 
 Hovering the chip shows where the branch started and how pull requests open.

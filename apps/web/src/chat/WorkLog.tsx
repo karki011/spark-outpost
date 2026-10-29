@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { friendlyStep, isSparkNote } from '@spark-outpost/contracts';
 export type TurnState = 'working' | 'waiting' | 'done' | 'failed' | 'stopped';
 import { viewSteps, type RunStep, type StepView } from './run-projection.ts';
@@ -70,7 +70,7 @@ export function StepToggle({
   label,
 }: {
   log: Pick<StepLog, 'open' | 'listId' | 'toggle'>;
-  label: string;
+  label: ReactNode;
 }) {
   return (
     <button

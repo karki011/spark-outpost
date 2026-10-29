@@ -106,7 +106,7 @@ test('a chat with no project shows the picked mode and points to projects', asyn
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await expect(
-    page.locator('.comp-bar').getByRole('button', { name: 'Choose project' }),
+    page.locator('.comp-foot').getByRole('button', { name: 'Choose project' }),
   ).toBeVisible();
   const chip = permissionChip(page);
   await expect(chip).not.toHaveText(/No file tools/);

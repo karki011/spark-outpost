@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   isTerminalRunStatus,
   STOPPED_BY_QUIT,
@@ -7,6 +9,7 @@ import {
   type Project,
   type Run,
 } from '@spark-outpost/contracts';
+import { setupApi, setupKey } from '../api/setup.ts';
 import { CacheRebuildNote } from '../usage/CacheRebuildNote.tsx';
 import { RunUsageMeta } from '../usage/RunUsageMeta.tsx';
 import { waitLabel } from './wait-label.ts';
@@ -54,6 +57,7 @@ import { currentTodo, shownTodo, turnTodo } from '../todo/todo-model.ts';
 import { TurnTodo } from '../todo/TurnTodo.tsx';
 import { TurnRows } from './rows/TurnRows.tsx';
 import { turnRowParts } from './rows/turn-rows.ts';
+import { canFold } from './rows/turn-fold.ts';
 import { useTurnChanges } from './rows/use-turn-changes.ts';
 import { AgentMark, TurnMeta, agentChanged } from './turn/TurnParts.tsx';
 import { TurnChangesLine } from './turn/TurnChangesLine.tsx';
@@ -92,6 +96,11 @@ function turnApprovals(
   if (isTerminalRunStatus(run.status)) return shownApprovals(stored);
   const pendingCheckpoint = detail.orchestrations?.[run.id]?.pendingCheckpoint;
   return shownApprovals(stored, pendingCheckpoint ? [pendingCheckpoint] : [], stream.approvals);
+}
+
+function useCollapseFinishedTurns(): boolean {
+  const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
+  return setup.data?.profile.collapseFinishedTurns ?? true;
 }
 
 function metaLine(run: Run, model: string | null): string | null {
@@ -237,6 +246,14 @@ export function SoloTurn({
     waitingText,
     started: steps.length > 0 || text !== '',
   });
+  const collapse = useCollapseFinishedTurns();
+  const [foldOpen, setFoldOpen] = useState(false);
+  const fold =
+    finished && collapse && canFold(parts)
+      ? { open: foldOpen, seconds: runSeconds(run), onToggle: () => setFoldOpen(!foldOpen) }
+      : null;
+  const decided =
+    fold && !fold.open ? cards.decided : cardsLeft(cards.decided, answers, commandCalls);
   const usageRun = child?.usage ? child : run;
   const meta = metaLine(run, modelOf(usageRun) ?? modelOf(run));
 
@@ -258,12 +275,13 @@ export function SoloTurn({
           answers,
         }}
         steers={steersAt}
+        fold={fold}
       >
         {(part, last) => (
           <Markdown text={part} streaming={last && leads && active && !publishing} />
         )}
       </TurnRows>
-      {cardsLeft(cards.decided, answers, commandCalls).map(approvalCard)}
+      {decided.map(approvalCard)}
       <ChatFiles files={(detail.chatFiles ?? []).filter((file) => file.runId === run.id)} />
       <ArtifactCards chatId={detail.conversation.id} runId={run.id} pages={detail.artifactPages} />
       <RailFlags detail={detail} runId={run.id} />

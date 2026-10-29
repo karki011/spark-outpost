@@ -3,7 +3,7 @@ import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { pickTerminalAgent } from './native-terminal-support.ts';
-import { openChats } from './navigation.ts';
+import { chooseSessionType, openChats } from './navigation.ts';
 import { FAKE_CLAUDE_BIN } from './stub-config.ts';
 
 const SEQUENTIAL_HOOKS_MS = 20_000;
@@ -34,10 +34,7 @@ test('a Codex Terminal session shows its steps and tokens by turn, with no repor
   await page.setViewportSize({ width: 1440, height: 1000 });
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await page
-    .getByRole('radiogroup', { name: 'Session type' })
-    .getByRole('radio', { name: 'Terminal' })
-    .click();
+  await chooseSessionType(page, 'Terminal');
   await pickTerminalAgent(page, 'Codex');
   await page
     .getByRole('textbox', { name: 'What would you like to work on?' })
@@ -77,10 +74,7 @@ test('a Terminal session shows its steps, tokens by turn and the total the CLI r
   await page.setViewportSize({ width: 1440, height: 1000 });
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await page
-    .getByRole('radiogroup', { name: 'Session type' })
-    .getByRole('radio', { name: 'Terminal' })
-    .click();
+  await chooseSessionType(page, 'Terminal');
   await pickTerminalAgent(page, 'Claude Code');
   await page
     .getByRole('textbox', { name: 'What would you like to work on?' })

@@ -1,32 +1,73 @@
-import { Fragment, useState, type ReactNode } from 'react';
+import { Fragment, useId, useState, type ReactNode } from 'react';
 import { BrowserShots } from '../../browser/BrowserShots.tsx';
 import { AgentTerminalRow } from '../commands/AgentTerminalRow.tsx';
 import { CommandUiContext, type CommandUiStore } from '../commands/command-ui.ts';
+import { StepToggle } from '../WorkLog.tsx';
 import { BackgroundTerminals } from './BackgroundTerminals.tsx';
 import { RowView, type RowContext } from './Rows.tsx';
+import { foldedPart, foldLead, foldSummary } from './turn-fold.ts';
 import type { TurnRowPart } from './turn-rows.ts';
+
+export interface TurnFoldState {
+  open: boolean;
+  seconds: number | null;
+  onToggle: () => void;
+}
 
 interface TurnRowsProps {
   parts: readonly TurnRowPart[];
   context: RowContext;
   children: (text: string, last: boolean) => ReactNode;
   steers?: (ids: readonly string[], index: number) => ReactNode;
+  fold?: TurnFoldState | null;
 }
 
-export function TurnRows({ parts, context, children, steers }: TurnRowsProps) {
+interface PartsProps extends Omit<TurnRowsProps, 'fold'> {
+  shown?: (index: number) => boolean;
+}
+
+export function TurnRows({ parts, context, children, steers, fold = null }: TurnRowsProps) {
   const [commands] = useState<CommandUiStore>(() => new Map());
+  const shared = { parts, context, children, ...(steers ? { steers } : {}) };
   return (
     <CommandUiContext value={commands}>
-      <Parts parts={parts} context={context} {...(steers ? { steers } : {})}>
-        {children}
-      </Parts>
+      {fold ? (
+        <>
+          <FoldedWork {...shared} fold={fold} />
+          <Parts {...shared} shown={(index) => !foldedPart(parts, index)} />
+        </>
+      ) : (
+        <Parts {...shared} />
+      )}
     </CommandUiContext>
   );
 }
 
-function Parts({ parts, context, children, steers }: TurnRowsProps) {
+function FoldedWork({ fold, ...shared }: PartsProps & { fold: TurnFoldState }) {
+  const bodyId = useId();
+  const summary = foldSummary(shared.parts);
+  return (
+    <div className={fold.open ? 'steps open turn-fold' : 'steps turn-fold'}>
+      <StepToggle
+        log={{ open: fold.open, listId: bodyId, toggle: fold.onToggle }}
+        label={
+          <>
+            <b>{foldLead(fold.seconds)}</b>
+            {summary && <span className="turn-fold-sum"> · {summary}</span>}
+          </>
+        }
+      />
+      <div id={bodyId} className="turn-fold-body" hidden={!fold.open}>
+        {fold.open && <Parts {...shared} shown={(index) => foldedPart(shared.parts, index)} />}
+      </div>
+    </div>
+  );
+}
+
+function Parts({ parts, context, children, steers, shown = () => true }: PartsProps) {
   const lastShown = parts.findLastIndex((part) => part.kind !== 'steers');
   return parts.map((part, index) => {
+    if (!shown(index)) return null;
     if (part.kind === 'steers') {
       return <Fragment key={part.key}>{steers?.(part.ids, index)}</Fragment>;
     }

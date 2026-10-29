@@ -97,10 +97,10 @@ test('a running turn shows no cache badge', async ({ page }) => {
   await open(page);
 
   await expect(
-    page.locator('.comp-bar').getByRole('button', { name: 'Choose project' }),
+    page.locator('.comp-foot').getByRole('button', { name: 'Choose project' }),
   ).toBeVisible();
   await expect(badge(page)).toHaveCount(0);
-  await expect(ring(page)).not.toHaveAccessibleName(/Prompt cache/);
+  await expect(ring(page)).toHaveCount(0);
 });
 
 test('no cache badge while the agent waits on a card', async ({ page }) => {
@@ -114,7 +114,7 @@ test('no cache badge while the agent waits on a card', async ({ page }) => {
 
   await expect(page.getByRole('group', { name: /^Run .+\?$/ })).toBeVisible();
   await expect(badge(page)).toHaveCount(0);
-  await expect(ring(page)).not.toHaveAccessibleName(/Prompt cache/);
+  await expect(ring(page)).toHaveCount(0);
 });
 
 test('a turn that re-wrote the cache carries a dim note', async ({ page }) => {

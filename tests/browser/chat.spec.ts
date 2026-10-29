@@ -201,12 +201,12 @@ test('the composer picks a model and effort per chat and shows context use', asy
   await expect(page.getByRole('tooltip')).toHaveText('Pick a project to work in your code.');
   await page.mouse.move(0, 0);
 
-  await input.fill('Hello');
+  await input.fill('Hello #ctx62');
   await input.press('Enter');
   await expect(page.locator('.turn-working')).toBeVisible();
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('.turn-working')).toHaveCount(0);
-  const ring = page.getByRole('button', { name: /Context window: 6% used/ });
+  const ring = page.getByRole('button', { name: /Context window: 62% used/ });
   await expect(ring).toBeVisible();
 
   const usage = page.locator('.run-usage');
