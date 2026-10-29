@@ -1,4 +1,4 @@
-import { PERMISSION_DO, type QueuedMessage, type SendNowOutcome } from '@spark-outpost/contracts';
+import type { QueuedMessage, SendNowOutcome } from '@spark-outpost/contracts';
 import { validateQueuedAttachments } from '../persistence/queued-attachments.ts';
 import { resolveRunTarget } from '../api/run-target.ts';
 import { BadRequestError } from '../api/validation.ts';
@@ -81,7 +81,6 @@ async function sendQueued(
     QueuedMessage,
     | 'id'
     | 'content'
-    | 'continueRunId'
     | 'outpostPostId'
     | 'sparkRuleCardId'
     | 'origin'
@@ -90,7 +89,6 @@ async function sendQueued(
   >,
   target: RunTarget,
 ): Promise<void> {
-  const continuing = item.continueRunId !== null && target.permission === PERMISSION_DO;
   const attachmentIds = item.outpostPostId
     ? await copyPostAttachments(db, item.outpostPostId)
     : (item.attachmentIds ?? []);
@@ -103,7 +101,6 @@ async function sendQueued(
       attachmentIds,
       annotations: item.annotations ?? [],
       source: queuedSource(item),
-      ...(continuing ? { startAs: 'continue' as const } : {}),
     },
     target,
   );
@@ -114,18 +111,6 @@ async function sendQueued(
     ]);
   }
   if (item.sparkRuleCardId) await markRuleRetry(db, item.sparkRuleCardId, sent.run.id);
-  if (!item.continueRunId) return;
-  await insertMemberMessage(db, {
-    id: item.id,
-    conversationId,
-    runId: item.continueRunId,
-    body: item.content,
-    urgency: 'next',
-    status: 'continued',
-    messageId: item.id,
-    attachmentIds,
-    annotations: item.annotations,
-  });
 }
 
 async function sendTypedWhilePaused(
@@ -241,7 +226,6 @@ export async function sendNow(
         {
           id: request.id,
           content,
-          continueRunId: queued?.continueRunId ?? null,
           outpostPostId: queued?.outpostPostId ?? null,
           ...(queued?.sparkRuleCardId ? { sparkRuleCardId: queued.sparkRuleCardId } : {}),
           ...(origin ? { origin } : {}),
@@ -363,7 +347,6 @@ export async function resendMissed(
       content: missed.body,
       attachmentIds: missed.attachmentIds,
       annotations: missed.annotations,
-      continueRunId: null,
       outpostPostId: null,
     };
     await sendQueued(client, conversationId, item, target);

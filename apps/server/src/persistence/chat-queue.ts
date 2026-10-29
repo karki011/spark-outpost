@@ -63,7 +63,6 @@ function toQueued(row: QueueRow): QueuedMessage {
 export interface NewQueued {
   id: string;
   content: string;
-  continueRunId?: string | null;
   sparkRuleCardId?: string | null;
   origin?: QueuedMessage['origin'];
   attachmentIds?: readonly string[] | undefined;
@@ -148,16 +147,15 @@ async function addInTransaction(
     throw new QueueError(409, `The queue holds ${QUEUE_LIMIT} messages. Send or remove one first.`);
   }
   await db.query(
-    `INSERT INTO chat_queue (id, conversation_id, position, content, continue_run_id,
+    `INSERT INTO chat_queue (id, conversation_id, position, content,
        spark_rule_card_id, origin, attachment_ids, annotations)
-     SELECT $1, $2, ${PLACED_POSITION[place]}, $3, $4, $5, $6, $7, $8
+     SELECT $1, $2, ${PLACED_POSITION[place]}, $3, $4, $5, $6, $7
      FROM chat_queue WHERE conversation_id = $2
      ON CONFLICT (id) DO NOTHING`,
     [
       item.id,
       conversationId,
       item.content,
-      item.continueRunId ?? null,
       item.sparkRuleCardId ?? null,
       item.origin ?? null,
       [...(item.attachmentIds ?? [])],
