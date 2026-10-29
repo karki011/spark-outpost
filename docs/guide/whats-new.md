@@ -13,6 +13,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
 | Quieter chats            | Controls sit [under the box](start-a-chat.md); finished turns fold.      |
+| Mac stays awake          | [Remote control](use-your-phone.md) keeps it awake.                      |
 | Busy attachments         | Send or queue files while agents work.                                   |
 | Tickets interaction      | Browser preloading no longer creates blocking backdrops.                 |
 | GitHub authentication    | Credential commands follow mode and rules.                               |

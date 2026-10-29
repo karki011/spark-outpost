@@ -6,6 +6,7 @@ import { defineConfig } from 'vitest/config';
 if (existsSync('.local/credentials.env')) process.loadEnvFile('.local/credentials.env');
 
 const TEST_RULES = path.join(tmpdir(), `spark-outpost-test-rules-${process.pid}`);
+const TMPDIR_SANDBOX = 'scripts/vitest-tmpdir.ts';
 const env = {
   SPARK_RULES_FILE: path.join(TEST_RULES, 'settings.json'),
   SPARK_MANAGED_RULES_FILE: path.join(TEST_RULES, 'managed-settings.json'),
@@ -18,6 +19,7 @@ export default defineConfig({
         test: {
           name: 'unit',
           env,
+          globalSetup: [TMPDIR_SANDBOX],
           setupFiles: ['apps/server/test/recommended-rules-setup.ts'],
           include: ['{apps,packages,scripts,infra}/**/*.test.{ts,tsx}'],
           exclude: [
@@ -35,6 +37,7 @@ export default defineConfig({
         test: {
           name: 'db',
           env,
+          globalSetup: [TMPDIR_SANDBOX],
           include: ['{apps/server,apps/desktop/src,scripts}/**/*.db.test.ts'],
           setupFiles: ['apps/server/test/worker-database.ts'],
           environment: 'node',
