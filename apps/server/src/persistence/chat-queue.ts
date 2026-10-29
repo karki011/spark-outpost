@@ -206,17 +206,37 @@ export async function editQueued(
   throw new QueueError(404, 'That message has already been sent.');
 }
 
+function sameIds(current: readonly string[], wanted: readonly string[]): boolean {
+  const unique = new Set(wanted);
+  return (
+    unique.size === wanted.length &&
+    current.length === wanted.length &&
+    current.every((id) => unique.has(id))
+  );
+}
+
 export async function reorderQueue(
-  db: Queryable,
+  db: Db,
   conversationId: string,
   ids: readonly string[],
 ): Promise<void> {
-  await db.query(
-    `UPDATE chat_queue q SET position = ordered.position, updated_at = now()
-     FROM unnest($2::uuid[]) WITH ORDINALITY AS ordered(id, position)
-     WHERE q.conversation_id = $1 AND q.id = ordered.id`,
-    [conversationId, ids],
-  );
+  await withTransaction(db, async (client) => {
+    await client.query('SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE', [conversationId]);
+    const { rows } = await client.query<{ id: string }>(
+      'SELECT id FROM chat_queue WHERE conversation_id = $1',
+      [conversationId],
+    );
+    const current = rows.map((row) => row.id);
+    if (!sameIds(current, ids)) {
+      throw new QueueError(409, 'The queue changed while you moved a message. Try again.');
+    }
+    await client.query(
+      `UPDATE chat_queue q SET position = ordered.position, updated_at = now()
+       FROM unnest($2::uuid[]) WITH ORDINALITY AS ordered(id, position)
+       WHERE q.conversation_id = $1 AND q.id = ordered.id`,
+      [conversationId, ids],
+    );
+  });
 }
 
 export async function takeQueued(

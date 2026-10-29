@@ -53,6 +53,31 @@ describe('Send now with an origin', () => {
   });
 });
 
+describe('reordering the queue', () => {
+  it('refuses an order that no longer matches the queue, so positions never tie', async () => {
+    const { conversationId } = await startChat(t, 'Busy');
+    const [a, b, c] = [randomUUID(), randomUUID(), randomUUID()];
+    for (const id of [a, b]) await addToQueue(t.db, conversationId, { id, content: id });
+    const api = localClient(createTestApp(t));
+    const order = `/api/conversations/${conversationId}/queue/order`;
+    await addToQueue(t.db, conversationId, { id: c, content: c });
+
+    for (const stale of [
+      [b, a],
+      [b, a, a],
+      [b, a, c, c],
+    ]) {
+      const moved = await api.send('put', order, { ids: stale });
+      expect(moved.status).toBe(409);
+    }
+    const ordered = await api.send('put', order, { ids: [c, b, a] });
+    expect(ordered.status).toBe(200);
+    const queue = await listQueue(t.db, conversationId);
+    expect(queue.map((item) => item.id)).toEqual([c, b, a]);
+    expect(new Set(queue.map((item) => item.position)).size).toBe(3);
+  });
+});
+
 describe('changing a queued message after it was sent', () => {
   it('says it was already sent instead of pretending to remove or edit it', async () => {
     const { conversationId, runId } = await startChat(t, 'Busy');
