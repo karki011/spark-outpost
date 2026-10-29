@@ -1,7 +1,6 @@
 import { Router, type Request } from 'express';
 import { z } from 'zod';
 import {
-  memberMessageRequestSchema,
   queueAddRequestSchema,
   queueEditRequestSchema,
   queueOrderRequestSchema,
@@ -22,7 +21,6 @@ import {
 } from '../persistence/chat-queue.ts';
 import { cancelPost } from '../persistence/outpost-tasks.ts';
 import { stopRun } from '../workflow/stop-run.ts';
-import { MemberMessageError, messageMember } from '../workflow/member-message.ts';
 import { drainQueue, resendMissed, sendNow, type ResolveTarget } from '../workflow/queue-drain.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { BadRequestError, paramId, parseBody } from './validation.ts';
@@ -51,7 +49,7 @@ function itemId(req: Request): string {
 }
 
 export function queueErrorStatus(error: unknown): { status: number; message: string } | null {
-  if (error instanceof QueueError || error instanceof MemberMessageError) {
+  if (error instanceof QueueError) {
     return { status: error.status, message: error.message };
   }
   return null;
@@ -174,11 +172,6 @@ export function queueRoutes({ db, workspaceId, fixedRunProvider }: QueueRouteDep
       await removeMemberMessages(client, [itemId(req)]);
     });
     res.json(await reply(conversationId));
-  });
-
-  router.post('/runs/:id/messages', async (req, res) => {
-    const request = parseBody(memberMessageRequestSchema, req);
-    res.status(202).json(await messageMember(db, paramId(req), request));
   });
 
   return router;

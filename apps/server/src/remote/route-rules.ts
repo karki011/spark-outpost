@@ -104,7 +104,6 @@ POST /api/conversations/:id/queue/send-now
 PUT /api/conversations/:id/queue/order
 POST /api/conversations/:id/steers/:itemId/resend
 DELETE /api/conversations/:id/steers/:itemId
-POST /api/runs/:id/messages
 GET /api/outposts
 GET /api/outposts/:id
 GET /api/conversations/:id/outpost-drafts
