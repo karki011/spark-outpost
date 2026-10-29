@@ -81,13 +81,13 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
           client,
           messages.map((message) => message.id),
         );
-        for (const { id, body, attachmentIds, annotations } of messages) {
-          await addToQueue(client, conversationId, {
-            id,
-            content: body,
-            attachmentIds,
-            annotations,
-          });
+        for (const { id, body, attachmentIds, annotations } of [...messages].reverse()) {
+          await addToQueue(
+            client,
+            conversationId,
+            { id, content: body, attachmentIds, annotations },
+            'front',
+          );
         }
       });
     } catch {

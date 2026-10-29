@@ -99,19 +99,28 @@ export async function alreadySent(db: Queryable, id: string): Promise<boolean> {
   return rowCount === 1;
 }
 
+export type QueuePlace = 'back' | 'front';
+
+const PLACED_POSITION: Record<QueuePlace, string> = {
+  back: 'COALESCE(MAX(position), 0) + 1',
+  front: 'COALESCE(MIN(position), 1) - 1',
+};
+
 export async function addToQueue(
   db: Db | DbClient,
   conversationId: string,
   item: NewQueued,
+  place: QueuePlace = 'back',
 ): Promise<void> {
-  if ('release' in db) return addInTransaction(db, conversationId, item);
-  return withTransaction(db, (client) => addInTransaction(client, conversationId, item));
+  if ('release' in db) return addInTransaction(db, conversationId, item, place);
+  return withTransaction(db, (client) => addInTransaction(client, conversationId, item, place));
 }
 
 async function addInTransaction(
   db: Queryable,
   conversationId: string,
   item: NewQueued,
+  place: QueuePlace,
 ): Promise<void> {
   const session = await db.query<{ session_type: string }>(
     'SELECT session_type FROM conversations WHERE id = $1 FOR UPDATE',
@@ -141,7 +150,7 @@ async function addInTransaction(
   await db.query(
     `INSERT INTO chat_queue (id, conversation_id, position, content, continue_run_id,
        spark_rule_card_id, origin, attachment_ids, annotations)
-     SELECT $1, $2, COALESCE(MAX(position), 0) + 1, $3, $4, $5, $6, $7, $8
+     SELECT $1, $2, ${PLACED_POSITION[place]}, $3, $4, $5, $6, $7, $8
      FROM chat_queue WHERE conversation_id = $2
      ON CONFLICT (id) DO NOTHING`,
     [

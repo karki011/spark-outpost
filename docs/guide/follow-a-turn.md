@@ -34,7 +34,7 @@ Waits last 30 idle minutes. Resumed turns show **Continued on its own**.
 
 ## Queue messages
 
-Send files without text. Queues survive reloads; drafts do not.
+Send files without text. Queues survive restarts; drafts do not.
 
 1. While a turn runs, **Enter** queues a message.
 2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.
@@ -45,8 +45,8 @@ Send files without text. Queues survive reloads; drafts do not.
 | ------------------------- | ------------------------------------- |
 | The turn finishes         | Sends queued messages in order.       |
 | You stop it, or it fails  | Pauses the queue until **Send now**.  |
-| You reload or restart     | Keeps the queue.                      |
 | You stop before it's read | **Send as next message** or **Edit**. |
+| The agent can't take it   | Queues a sent-now message first.      |
 
 ## Delete a running chat
 
