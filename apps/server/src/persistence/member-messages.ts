@@ -165,16 +165,26 @@ const TAKEN_IN_EVENTS = [
   'TOOL_CALL_START',
 ];
 
+const DELIVERED_UNREAD = `m.status = 'delivered' AND NOT EXISTS (
+  SELECT 1 FROM run_events e JOIN runs r ON r.id = e.run_id
+  WHERE e.run_id = m.delivered_run_id AND e.created_at > m.delivered_at
+    AND e.created_at < COALESCE(r.cancel_requested_at, 'infinity')
+    AND e.type = ANY($2::text[]))`;
+
+export async function markUnreadAfterCrash(db: Queryable, runId: string): Promise<void> {
+  await db.query(
+    `UPDATE member_messages m SET status = 'missed'
+     WHERE m.message_id IS NULL AND ${DELIVERED_UNREAD}
+       AND m.delivered_run_id IN (SELECT id FROM runs WHERE id = $1 OR parent_run_id = $1)`,
+    [runId, TAKEN_IN_EVENTS],
+  );
+}
+
 export async function markUnreadOnStop(db: Queryable, runId: string): Promise<void> {
   await db.query(
     `UPDATE member_messages m SET status = 'missed'
      WHERE m.message_id IS NULL AND (
-       (m.status = 'delivered' AND m.delivered_run_id = $1
-         AND NOT EXISTS (
-           SELECT 1 FROM run_events e JOIN runs r ON r.id = e.run_id
-           WHERE e.run_id = $1 AND e.created_at > m.delivered_at
-             AND e.created_at < COALESCE(r.cancel_requested_at, 'infinity')
-             AND e.type = ANY($2::text[])))
+       (m.delivered_run_id = $1 AND ${DELIVERED_UNREAD})
        OR (m.status = 'queued' AND m.urgency = 'now' AND m.run_id = $1
          AND NOT EXISTS (
            SELECT 1 FROM member_messages i WHERE i.run_id = $1 AND i.status = 'interrupting')))`,
