@@ -90,7 +90,7 @@ With **Reduce motion** on, only faces change.
 
 ## Prompt cache
 
-Idle Claude chats show a badge on the context ring, worded in its label and popover; Terminal sessions say **Cache warm · …** in their bar. Never during a turn, sub-agent or card.
+Idle Claude chats show a badge on the context ring; Terminal sessions say **Cache warm · …** in their bar. Never during a turn, sub-agent or card.
 
 | Shows                                                                                 | Means                                   |
 | ------------------------------------------------------------------------------------- | --------------------------------------- |

@@ -5,8 +5,8 @@ import {
   autoUpdater as nativeUpdater,
   BrowserWindow,
   dialog,
+  powerSaveBlocker,
   session,
-  shell,
   type IpcMainInvokeEvent,
 } from 'electron';
 import { BROWSER_HOST_ENV, isBetaVersion, parseSparkChatLink } from '@spark-outpost/contracts';
@@ -58,6 +58,8 @@ import { readFeedUrl, updateConfigFile } from './update-feed.ts';
 import { guardMigrations, readSkippedVersion, skippedVersionFile } from './update-migration.ts';
 import { startUpdater, type Updater } from './updater.ts';
 import { fetchActiveRuns } from './active-runs.ts';
+import { showFailureDialog } from './error-dialog.ts';
+import { readKeepAwake, startKeepAwake, type KeepAwake } from './keep-awake.ts';
 import { apiOrigin, targetsApi } from './api-token.ts';
 import { IPC } from './ipc-channels.ts';
 import { openSparkWindow, type SparkWindow } from './spark-window.ts';
@@ -102,6 +104,7 @@ let updater: Updater | null = null;
 let help: Help | null = null;
 let privacy: Privacy | null = null;
 let heartbeat: HeartbeatTimer | null = null;
+let keepAwake: KeepAwake | null = null;
 let storage: StorageSync | null = null;
 let browser: AgentHosts | null = null;
 const fileLog = new FileLog({ dir: paths.logs });
@@ -157,6 +160,8 @@ function closeWindows(): void {
   browser = null;
   heartbeat?.dispose();
   heartbeat = null;
+  keepAwake?.dispose();
+  keepAwake = null;
   updater?.dispose();
   updater = null;
   help?.dispose();
@@ -168,20 +173,8 @@ function closeWindows(): void {
   for (const open of BrowserWindow.getAllWindows()) open.destroy();
 }
 
-async function showError(message: string, detail: string): Promise<void> {
-  const help = failureHelp;
-  const buttons = help ? ['Open previous version instructions', 'Quit'] : ['OK'];
-  const { response } = await dialog.showMessageBox({
-    type: 'error',
-    title: `${config.appName} could not continue`,
-    message,
-    detail,
-    buttons,
-    defaultId: buttons.length - 1,
-    cancelId: buttons.length - 1,
-  });
-  if (help && response === 0) await shell.openPath(help);
-}
+const showError = (message: string, detail: string) =>
+  showFailureDialog(config.appName, failureHelp, message, detail);
 
 const quitPolicy = createQuitPolicy();
 const shutdown = createShutdown({
@@ -409,6 +402,11 @@ async function launch(): Promise<void> {
     userData: paths.userData,
     devChannel: config.channel === 'dev',
     env: process.env,
+  });
+  keepAwake = startKeepAwake({
+    read: () => readKeepAwake(apiUrl, token),
+    blocker: powerSaveBlocker,
+    log: log('keep-awake'),
   });
   bootTeasers.watch(apiUrl, token);
   companionHost = await startCompanionHost({
