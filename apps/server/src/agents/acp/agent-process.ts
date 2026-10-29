@@ -17,8 +17,8 @@ export class AgentExitedError extends Error {
   }
 }
 
-function killOrphans(pids: readonly number[]): void {
-  for (const pid of pids.filter((candidate) => isAlive(candidate))) killProcessTree(pid);
+async function killOrphans(pids: readonly number[]): Promise<void> {
+  for (const pid of pids.filter((candidate) => isAlive(candidate))) await killProcessTree(pid);
 }
 
 export interface AgentProcess {
@@ -26,7 +26,7 @@ export interface AgentProcess {
   exited: Promise<never>;
   stderrTail(): string;
   stopping(): void;
-  kill(): void;
+  kill(): Promise<void>;
 }
 
 export function startAgentProcess(
@@ -52,7 +52,7 @@ export function startAgentProcess(
     child.once('exit', (code, signal) => reject(new AgentExitedError(code, signal)));
   });
   exited.catch(() => undefined);
-  let killed = false;
+  let killing: Promise<void> | null = null;
   let startedBeforeStop: number[] = [];
   const stream = acp.ndJsonStream(
     Writable.toWeb(child.stdin),
@@ -63,14 +63,17 @@ export function startAgentProcess(
     exited,
     stderrTail: () => stderr,
     stopping() {
-      if (child.pid !== undefined && !killed) startedBeforeStop = processTreeNow(child.pid);
+      if (child.pid !== undefined && !killing) startedBeforeStop = processTreeNow(child.pid);
     },
     kill() {
-      if (killed || child.pid === undefined) return;
-      killed = true;
+      const pid = child.pid;
+      if (killing) return killing;
+      if (pid === undefined) return Promise.resolve();
       const running = child.exitCode === null && child.signalCode === null;
-      if (running) killProcessTree(child.pid, undefined, undefined, startedBeforeStop);
-      else killOrphans(startedBeforeStop);
+      killing = running
+        ? killProcessTree(pid, undefined, undefined, startedBeforeStop)
+        : killOrphans(startedBeforeStop);
+      return killing;
     },
   };
 }

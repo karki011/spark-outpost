@@ -1,132 +1,132 @@
-import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { insertChatWorktree, sweepableChatWorktrees } from '../src/persistence/chat-worktrees.ts';
-import { sweepChatWorktrees } from '../src/projects/chat-worktree-cleanup.ts';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { insertChatWorktree, type ChatWorktree } from '../src/persistence/chat-worktrees.ts';
+import { setConversationProjects } from '../src/persistence/conversation-projects.ts';
+import { createConversation } from '../src/persistence/conversations.ts';
+import { sweepChatWorktrees, type Exclusive } from '../src/projects/chat-worktree-sweep.ts';
 import { addChatWorktree } from '../src/projects/chat-worktrees.ts';
+import { createProject } from '../src/projects/projects.ts';
 import { worktreePath } from '../src/projects/worktrees.ts';
-import { linkedConversation } from './approval-support.ts';
+import { sendDo } from './approval-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
-import { gitRepo, removeRepo } from './turn-support.ts';
-
-const SWEEP_GAP_MS = 60_000;
 
 let t: TestDb;
+let base: string;
 let root: string;
-let clock = Date.now();
+let projectId: string;
 
 const git = (cwd: string, ...args: string[]) =>
-  execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' }).trim();
+  execFileSync('git', ['-C', cwd, '-c', 'user.email=t@t', '-c', 'user.name=t', ...args], {
+    encoding: 'utf8',
+  }).trim();
+
+const directly: Exclusive = (work) => work();
 
 beforeEach(async () => {
   t = await createTestDb();
-  root = await gitRepo();
+  base = await realpath(await mkdtemp(join(tmpdir(), 'spark-worktree-sweep-')));
+  root = join(base, 'repo');
+  execFileSync('git', ['init', '-q', '-b', 'main', root]);
+  await writeFile(join(root, 'notes.txt'), 'one\n');
+  git(root, 'add', '.');
+  git(root, 'commit', '-qm', 'start');
+  ({
+    project: { id: projectId },
+  } = await createProject(t.db, t.workspaceId, root));
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
+  await rm(base, { recursive: true, force: true });
   await t.cleanup();
-  await removeRepo(root);
 });
 
-async function sweep(): Promise<void> {
-  clock += SWEEP_GAP_MS;
-  await sweepChatWorktrees(t.db, clock);
-}
-
-async function archivedChatWithDirtyWorktree() {
-  const { conversationId, projectId } = await linkedConversation(t, root);
+async function chatWithWorktree(name: string, path?: string): Promise<ChatWorktree> {
+  const conversation = await createConversation(t.db, t.workspaceId, randomUUID());
+  await setConversationProjects(t.db, t.workspaceId, conversation.id, [projectId]);
   const id = randomUUID();
-  const path = worktreePath(root, id);
-  const branch = `spark/sweep-${id.slice(0, 8)}`;
-  const base = git(root, 'rev-parse', 'HEAD');
-  await addChatWorktree(root, path, { kind: 'new', branch, from: base });
-  await insertChatWorktree(t.db, {
+  const branch = `spark/${name}`;
+  const from = git(root, 'rev-parse', 'HEAD');
+  if (!path) await addChatWorktree(root, worktreePath(root, id), { kind: 'new', branch, from });
+  const record: ChatWorktree = {
     id,
-    conversationId,
+    conversationId: conversation.id,
     projectId,
     repoRoot: root,
-    path,
+    path: path ?? worktreePath(root, id),
     branch,
-    baseBranch: null,
-    baseCommit: base,
+    baseBranch: 'main',
+    baseCommit: from,
     landedCommit: null,
     inPlace: false,
     ownsBranch: true,
-  });
-  await writeFile(join(path, 'notes.txt'), 'unsaved work\n');
-  await setArchived(conversationId, true);
-  return { conversationId, id, path, branch };
+  };
+  await insertChatWorktree(t.db, record);
+  return record;
 }
 
-async function setArchived(conversationId: string, archived: boolean): Promise<void> {
-  await t.db.query(
-    `UPDATE conversations SET archived_at = CASE WHEN $2 THEN clock_timestamp() ELSE NULL END
-     WHERE id = $1`,
-    [conversationId, archived],
+async function archive(record: ChatWorktree): Promise<void> {
+  await t.db.query('UPDATE conversations SET archived_at = now() WHERE id = $1', [
+    record.conversationId,
+  ]);
+}
+
+async function removedAt(record: ChatWorktree): Promise<Date | null> {
+  const { rows } = await t.db.query<{ removed_at: Date | null }>(
+    'SELECT removed_at FROM chat_worktrees WHERE id = $1',
+    [record.id],
   );
+  return rows[0]!.removed_at;
 }
 
-async function sweepableIds(): Promise<string[]> {
-  return (await sweepableChatWorktrees(t.db)).map((record) => record.id);
-}
+const sweep = (exclusive: Exclusive = directly) =>
+  sweepChatWorktrees(t.db, exclusive, new AbortController().signal);
 
-describe('sweeping the worktree of an archived chat with uncommitted work', () => {
-  it('keeps the work and stops checking it on every sweep', async () => {
-    const chat = await archivedChatWithDirtyWorktree();
-    expect(await sweepableIds()).toEqual([chat.id]);
-
+describe('sweeping chat worktrees', () => {
+  it('removes an archived chat clean worktree and keeps one with changes', async () => {
+    const clean = await chatWithWorktree('clean');
+    const dirty = await chatWithWorktree('dirty');
+    await writeFile(join(dirty.path, 'notes.txt'), 'one\nunsaved\n');
+    await archive(clean);
+    await archive(dirty);
     await sweep();
-
-    expect(existsSync(chat.path)).toBe(true);
-    expect(git(chat.path, 'status', '--porcelain')).toContain('notes.txt');
-    expect(await sweepableIds()).toEqual([]);
+    expect(existsSync(clean.path)).toBe(false);
+    expect(await removedAt(clean)).not.toBeNull();
+    expect(await readFile(join(dirty.path, 'notes.txt'), 'utf8')).toBe('one\nunsaved\n');
+    expect(await removedAt(dirty)).toBeNull();
   });
 
-  it('checks it again once the chat is restored, or archived again', async () => {
-    const chat = await archivedChatWithDirtyWorktree();
-    await sweep();
-
-    await setArchived(chat.conversationId, false);
-    expect(await sweepableIds()).toEqual([chat.id]);
-
-    await setArchived(chat.conversationId, true);
-    expect(await sweepableIds()).toEqual([chat.id]);
-    await sweep();
-    expect(existsSync(chat.path)).toBe(true);
-    expect(await sweepableIds()).toEqual([]);
+  it('leaves a worktree alone when its chat starts a turn before the release', async () => {
+    const record = await chatWithWorktree('busy');
+    await archive(record);
+    const startsTurn: Exclusive = async (work) => {
+      await sendDo(t, record.conversationId!, 'keep going');
+      return work();
+    };
+    await sweep(startsTurn);
+    expect(existsSync(record.path)).toBe(true);
+    expect(await removedAt(record)).toBeNull();
   });
 
-  it('checks it again a day later and removes it once the work is gone', async () => {
-    const chat = await archivedChatWithDirtyWorktree();
+  it('keeps sweeping the other worktrees when one fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const notGit = await mkdtemp(join(base, 'not-git-'));
+    const broken = await chatWithWorktree('broken', notGit);
+    const clean = await chatWithWorktree('after-broken');
+    await archive(broken);
+    await archive(clean);
     await sweep();
-    git(chat.path, 'checkout', '--', 'notes.txt');
-    await sweep();
-    expect(existsSync(chat.path)).toBe(true);
-
-    await t.db.query(
-      `UPDATE chat_worktrees SET kept_dirty_at = kept_dirty_at - interval '25 hours' WHERE id = $1`,
-      [chat.id],
+    expect(console.error).toHaveBeenCalledWith(
+      'Could not sweep the worktree on spark/broken',
+      expect.any(Error),
     );
-    await t.db.query(
-      `UPDATE conversations SET archived_at = archived_at - interval '25 hours' WHERE id = $1`,
-      [chat.conversationId],
-    );
-    await sweep();
-
-    expect(existsSync(chat.path)).toBe(false);
-  });
-
-  it('saves the work on its branch and removes the worktree once the chat is deleted', async () => {
-    const chat = await archivedChatWithDirtyWorktree();
-    await sweep();
-
-    await t.db.query('DELETE FROM conversations WHERE id = $1', [chat.conversationId]);
-    await sweep();
-
-    expect(existsSync(chat.path)).toBe(false);
-    expect(git(root, 'show', `${chat.branch}:notes.txt`)).toBe('unsaved work');
+    expect(existsSync(notGit)).toBe(true);
+    expect(existsSync(clean.path)).toBe(false);
+    expect(await removedAt(clean)).not.toBeNull();
   });
 });

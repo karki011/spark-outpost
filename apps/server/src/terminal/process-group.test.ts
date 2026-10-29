@@ -1,5 +1,69 @@
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { describe, expect, it } from 'vitest';
-import { commandLabel, descendantsOf, runningCommand, type ProcessRow } from './process-group.ts';
+import {
+  commandLabel,
+  descendantsOf,
+  isAlive,
+  killProcessTree,
+  processKillsSent,
+  processTreeNow,
+  runningCommand,
+  type ProcessRow,
+} from './process-group.ts';
+
+async function treeWithStrayJob(): Promise<{ root: number; job: number; stop: () => void }> {
+  const child = spawn('/bin/sh', ['-c', 'set -m; sleep 300 & echo $!; wait'], {
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+  const [line] = (await once(child.stdout, 'data')) as [Buffer];
+  const root = child.pid!;
+  const job = Number(line.toString().trim());
+  const stop = () => {
+    for (const pid of [root, job]) {
+      try {
+        process.kill(pid, 'SIGKILL');
+      } catch {
+        continue;
+      }
+    }
+  };
+  return { root, job, stop };
+}
+
+async function gone(pid: number): Promise<boolean> {
+  for (let tries = 0; tries < 100 && isAlive(pid); tries += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  return !isAlive(pid);
+}
+
+describe('killing a process tree', () => {
+  it('finds a job in its own process group and signals it with the root', async () => {
+    const tree = await treeWithStrayJob();
+    try {
+      expect(processTreeNow(tree.root)).toContain(tree.job);
+      await killProcessTree(tree.root, 50);
+      expect(await gone(tree.job)).toBe(true);
+      expect(await gone(tree.root)).toBe(true);
+    } finally {
+      tree.stop();
+    }
+  });
+
+  it('reads the process table before signalling, and shutdown waits for that', async () => {
+    const tree = await treeWithStrayJob();
+    try {
+      void killProcessTree(tree.root, 50);
+      expect(isAlive(tree.root)).toBe(true);
+      await processKillsSent();
+      expect(await gone(tree.job)).toBe(true);
+      expect(await gone(tree.root)).toBe(true);
+    } finally {
+      tree.stop();
+    }
+  });
+});
 
 function row(pid: number, ppid: number, args: string, foregroundGroup = 0): ProcessRow {
   return { pid, ppid, foregroundGroup, args };

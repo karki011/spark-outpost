@@ -84,7 +84,7 @@ describe.skipIf(!bin)('Terminal sessions under a real tmux', () => {
     expect(run.output()).toContain('sh=/bin/zsh tp=none');
     expect(tryTmux(host, ['show-environment', '-g']) ?? '').not.toContain('SPARK_TEST_VALUE');
     expect(run.output()).toContain(directory.split('/').at(-1));
-    expect(listSessionIds(host)).toEqual([]);
+    expect(await listSessionIds(host)).toEqual([]);
   });
 
   it('passes typed bytes, a resize and UTF-8 output through unchanged', async () => {
@@ -145,7 +145,7 @@ describe.skipIf(!bin)('Terminal sessions under a real tmux', () => {
     run.pty.kill?.();
     await run.exit;
     await until(() => !isAlive(child) && !isAlive(run.pty.pid), 'the tree to stop');
-    expect(listSessionIds(host)).toEqual([]);
+    expect(await listSessionIds(host)).toEqual([]);
   });
 
   it('keeps running when detached and shows the same screen when adopted', async () => {
@@ -174,7 +174,7 @@ describe.skipIf(!bin)('Terminal sessions under a real tmux', () => {
     first.pty.detach?.();
     await until(() => readPane(host, 'a1')?.dead === true, 'the command to end');
     expect(await start('unused', { adopt: true }).exit).toEqual({ exitCode: 5 });
-    expect(listSessionIds(host)).toEqual([]);
+    expect(await listSessionIds(host)).toEqual([]);
   });
 
   it('refuses to adopt a session that is gone', () => {
@@ -200,9 +200,9 @@ describe.skipIf(!bin)('Terminal sessions under a real tmux', () => {
     await run.exit;
   });
 
-  it('removes sessions that are not Spark terminals', () => {
+  it('removes sessions that are not Spark terminals', async () => {
     tryTmux(host, ['new-session', '-d', '-s', 'stray', '--', '/bin/sleep', '300']);
-    killUnknownSessions(host);
+    await killUnknownSessions(host);
     expect(tryTmux(host, ['list-sessions', '-F', '#{session_name}'])).toBeNull();
   });
 });

@@ -34,12 +34,12 @@ async function recorded(file: string): Promise<z.infer<typeof recordSchema> | nu
 
 export async function endRecordedProcess(
   file: string,
-  kill: (pid: number) => void = killProcessTree,
+  kill: (pid: number) => Promise<void> | void = killProcessTree,
 ): Promise<boolean> {
   const earlier = await recorded(file);
   if (!earlier || !isAlive(earlier.pid)) return false;
   if ((await processStartedAt(earlier.pid)) !== earlier.started) return false;
-  kill(earlier.pid);
+  await kill(earlier.pid);
   while (isAlive(earlier.pid) && (await processStartedAt(earlier.pid)) === earlier.started)
     await new Promise((done) => setTimeout(done, RECHECK_MS));
   return true;

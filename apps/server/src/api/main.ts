@@ -16,6 +16,7 @@ import { migrateOrExit } from '../persistence/migrate-startup.ts';
 import { listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
 import { configuredSecretStore } from '../setup/secrets.ts';
+import { processKillsSent } from '../terminal/process-group.ts';
 import { loginShellSpawner } from '../terminal/pty.ts';
 import { savedPort, savePort } from '../terminal/tmux/stable-port.ts';
 import { chooseTmux, killTmuxServer, tmuxChoiceLine } from '../terminal/tmux/tmux-host.ts';
@@ -382,6 +383,7 @@ const shutdown = async (keepTerminals = false) => {
       () => (keepTerminals ? nativeTerminals.detach() : nativeTerminals.dispose()),
     ],
     ['terminals', () => terminals.killAll()],
+    ['process kills', () => processKillsSent()],
     [
       'tmux',
       () => {
@@ -409,6 +411,7 @@ const shutdown = async (keepTerminals = false) => {
     ['HTTP connections', () => server.closeAllConnections()],
     ['database listener', () => listener.close()],
     ['app event listener', () => appEventListener.close()],
+    ['pending process kills', () => processKillsSent()],
     ['database pool', () => db.end()],
   ]);
   process.exit(0);

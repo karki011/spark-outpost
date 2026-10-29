@@ -4,7 +4,7 @@ import type { Db } from '../persistence/db.ts';
 import { isDigestRun } from '../persistence/digests.ts';
 import { claimNextJob, type Lease } from '../persistence/jobs.ts';
 import { cleanOrphanedCopies } from '../orchestration/solo-copy.ts';
-import { sweepChatWorktrees } from '../projects/chat-worktree-cleanup.ts';
+import { startWorktreeSweeper } from '../projects/chat-worktree-sweep.ts';
 import { runChatTurn } from './chat-turn.ts';
 import type { ChatTurnDeps } from './chat-turn-hooks.ts';
 import { recoverExpiredLeases } from './recovery.ts';
@@ -76,7 +76,7 @@ export function startWorker(given: WorkerOptions): Worker {
 
   const startQueued = async (db: Db) => {
     while (!stopped) {
-      const lease = await claimNextJob(db, options.leaseSeconds);
+      const lease = await sweeper.exclusive(() => claimNextJob(db, options.leaseSeconds));
       if (!lease) return;
       const done = options.activeWork?.begin(`run ${lease.runId}`);
       const task = runLease(options, lease)
@@ -90,6 +90,7 @@ export function startWorker(given: WorkerOptions): Worker {
     }
   };
 
+  const sweeper = startWorktreeSweeper(options.db);
   const live = watchLiveSessions(options.db, options.providers, queueTarget(options), wake);
 
   const loop = (async () => {
@@ -101,7 +102,6 @@ export function startWorker(given: WorkerOptions): Worker {
           try {
             await recoverExpiredLeases(options.db);
             await cleanOrphanedCopies(options.db);
-            await sweepChatWorktrees(options.db);
             await live.sweep();
             await sweepSessions(options.db, options.sessionLimits, live.workdirs());
             await assistantIdle.sweep();
@@ -124,6 +124,7 @@ export function startWorker(given: WorkerOptions): Worker {
       stopped = true;
       wake();
       await loop;
+      await sweeper.stop();
       options.parked?.quit();
       await Promise.allSettled([...active]);
       await live.closeAll();
