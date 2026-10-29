@@ -12,6 +12,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
+| Queue tags               | See who wrote each queued message.                                       |
 | Queue edits              | An edit to a message already sent can be queued.                         |
 | Send now order           | A message the agent can't take queues first.                             |
 | Busy attachments         | Send or queue files while agents work.                                   |
@@ -25,7 +26,6 @@ Earlier releases: **Settings → Updates → Release notes**.
 | Agent-led delegation     | Leads [choose workers and slices](how-spark-works.md#how-work-is-split). |
 | Chat opening             | Drafts stay; failures offer **Try again**.                               |
 | Outpost messages         | Messages go to the displayed lead; **Post note** is explicit.            |
-| Agent TV messaging       | Message members or redirect workers in short windows.                    |
 | Message delivery         | **Sent** confirms receipt; refresh failures cannot trigger retries.      |
 
 New profiles [record Claude Terminal sessions](settings.md#record-terminal-sessions); existing choices stay.

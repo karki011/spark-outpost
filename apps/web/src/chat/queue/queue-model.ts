@@ -24,8 +24,22 @@ export function queueNote(mode: QueueMode, count: number): string {
   return count === 1 ? 'Sends when this turn ends' : 'Send in order when this turn ends';
 }
 
-export function canEdit(item: Pick<QueuedMessage, 'outpostPostId'>): boolean {
-  return !item.outpostPostId;
+type Authored = Pick<QueuedMessage, 'outpostPostId' | 'sparkRuleCardId' | 'origin'>;
+
+export function canEdit(item: Authored): boolean {
+  return !item.outpostPostId && !item.sparkRuleCardId;
+}
+
+const ORIGIN_TAGS: Record<NonNullable<QueuedMessage['origin']>, string> = {
+  assistant: 'Ask Spark',
+  voice: 'Spoken',
+  pages: 'Tabs question',
+};
+
+export function authorTag(item: Authored): string | null {
+  if (item.outpostPostId) return 'Outpost request';
+  if (item.sparkRuleCardId) return 'Retry';
+  return item.origin ? ORIGIN_TAGS[item.origin] : null;
 }
 
 export function movedIds(

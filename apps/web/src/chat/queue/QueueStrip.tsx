@@ -3,7 +3,7 @@ import { useId, useState, type KeyboardEvent } from 'react';
 import type { QueuedMessage } from '@spark-outpost/contracts';
 import { ApiError } from '../../api/client.ts';
 import { ArrowDownIcon, ArrowUpIcon, PenIcon, XIcon } from '../../ui/icons.tsx';
-import { canEdit, queuedCount, queueNote, type QueueMode } from './queue-model.ts';
+import { authorTag, canEdit, queuedCount, queueNote, type QueueMode } from './queue-model.ts';
 import type { ChatQueue } from './use-chat-queue.ts';
 
 interface QueueStripProps {
@@ -120,6 +120,7 @@ interface ItemProps {
 function QueueItem({ item, index, count, queue, editing, onEdit, onSave }: ItemProps) {
   const label = `Queued message ${index + 1}`;
   const editable = canEdit(item);
+  const tag = authorTag(item);
   return (
     <li className="qs-item" aria-label={label}>
       <span className="qs-n" aria-hidden="true">
@@ -131,7 +132,7 @@ function QueueItem({ item, index, count, queue, editing, onEdit, onSave }: ItemP
         <>
           <span className="qs-text" title={item.content}>
             {item.continueRunId && <b className="qs-tag">Continue · </b>}
-            {!editable && <b className="qs-tag">Outpost request · </b>}
+            {tag && <b className="qs-tag">{tag} · </b>}
             {item.content}
             {!!item.attachmentIds?.length && (
               <span className="qs-tag">

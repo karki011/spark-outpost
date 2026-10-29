@@ -9,7 +9,7 @@ import {
   ApprovalInputError,
   shownApprovalsForConversation,
 } from '../src/persistence/approvals.ts';
-import { listQueue } from '../src/persistence/chat-queue.ts';
+import { editQueued, listQueue } from '../src/persistence/chat-queue.ts';
 import {
   useRecommendedRules,
   answerOutsideChange,
@@ -195,11 +195,14 @@ describe('the refused card', () => {
     expect(queue[0]).toMatchObject({ sparkRuleCardId: card.id });
   });
 
-  it('keeps a queued retry its own: Send now waits until the turn ends', async () => {
+  it('keeps a queued retry its own: no edits, and Send now waits until the turn ends', async () => {
     const run = await doRun(t, root);
     const { card } = await refusedCard(run, RELEASE);
     await answerRuleCard(t.db, t.workspaceId, card.id, 'allow_once', target);
     const [retry] = await listQueue(t.db, run.conversationId);
+    await expect(
+      editQueued(t.db, run.conversationId, retry!.id, 'Run something else'),
+    ).rejects.toMatchObject({ status: 409 });
     const steer = sendNow(t.db, run.conversationId, { id: retry!.id }, target);
     await expect(steer).rejects.toMatchObject({
       status: 409,

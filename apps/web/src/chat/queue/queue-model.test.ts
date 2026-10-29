@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { QueuedMessage } from '@spark-outpost/contracts';
-import { canEdit, inOrder, movedIds, queueMode, queueNote, queuedItem } from './queue-model.ts';
+import {
+  authorTag,
+  canEdit,
+  inOrder,
+  movedIds,
+  queueMode,
+  queueNote,
+  queuedItem,
+} from './queue-model.ts';
 
 function item(id: string, position: number): QueuedMessage {
   return { id, content: id, position, continueRunId: null, createdAt: '2026-10-02T10:00:00Z' };
@@ -54,5 +62,17 @@ describe('queue model', () => {
   it('adds a new message after the last one', () => {
     expect(queuedItem('d', 'next', items)).toMatchObject({ id: 'd', content: 'next', position: 4 });
     expect(queuedItem('d', 'first', [])).toMatchObject({ position: 1 });
+  });
+
+  it('names who wrote a queued message, and keeps retries and outpost requests read-only', () => {
+    const own = item('a', 1);
+    const retry = { ...own, sparkRuleCardId: 'card-a' };
+    const fromAsk = { ...own, origin: 'assistant' as const };
+    const fromOutpost = { ...own, outpostPostId: 'post-a' };
+    expect(authorTag(own)).toBeNull();
+    expect(authorTag(retry)).toBe('Retry');
+    expect(authorTag(fromAsk)).toBe('Ask Spark');
+    expect(authorTag(fromOutpost)).toBe('Outpost request');
+    expect([own, retry, fromAsk, fromOutpost].map(canEdit)).toEqual([true, false, true, false]);
   });
 });

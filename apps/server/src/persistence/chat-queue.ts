@@ -168,6 +168,17 @@ async function addInTransaction(
   await rememberRemoteMessage(db, item.id);
 }
 
+function uneditableReason(row: {
+  outpost_post_id: string | null;
+  spark_rule_card_id: string | null;
+}): string {
+  if (row.outpost_post_id) return 'A request from an outpost can’t be edited. Remove it instead.';
+  if (row.spark_rule_card_id) {
+    return 'A retry from a Spark rules card can’t be edited. Remove it instead.';
+  }
+  return 'Keep a message or an attachment.';
+}
+
 export async function editQueued(
   db: Queryable,
   conversationId: string,
@@ -176,23 +187,22 @@ export async function editQueued(
 ): Promise<void> {
   const { rowCount } = await db.query(
     `UPDATE chat_queue SET content = $3, updated_at = now()
-     WHERE conversation_id = $1 AND id = $2 AND outpost_post_id IS NULL
+     WHERE conversation_id = $1 AND id = $2
+       AND outpost_post_id IS NULL AND spark_rule_card_id IS NULL
        AND (length($3) > 0 OR cardinality(attachment_ids) > 0)`,
     [conversationId, id, content],
   );
   if (rowCount === 1) return;
-  const outpostItem = await db.query<{ outpost_post_id: string | null }>(
-    'SELECT outpost_post_id FROM chat_queue WHERE conversation_id = $1 AND id = $2',
+  const kept = await db.query<{
+    outpost_post_id: string | null;
+    spark_rule_card_id: string | null;
+  }>(
+    `SELECT outpost_post_id, spark_rule_card_id FROM chat_queue
+     WHERE conversation_id = $1 AND id = $2`,
     [conversationId, id],
   );
-  if (outpostItem.rowCount === 1) {
-    throw new QueueError(
-      409,
-      outpostItem.rows[0]?.outpost_post_id
-        ? 'A request from an outpost can’t be edited. Remove it instead.'
-        : 'Keep a message or an attachment.',
-    );
-  }
+  const row = kept.rows[0];
+  if (row) throw new QueueError(409, uneditableReason(row));
   throw new QueueError(404, 'That message has already been sent.');
 }
 
