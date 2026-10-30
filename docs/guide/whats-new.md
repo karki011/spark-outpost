@@ -12,9 +12,10 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
+| Turn timeline            | Cards stay [in place](follow-a-turn.md).                                 |
 | Quieter chats            | Controls sit [under the box](start-a-chat.md); finished turns fold.      |
 | Busy attachments         | Send or queue files while agents work.                                   |
-| Tickets interaction      | Browser preloading no longer creates blocking backdrops.                 |
+| Tickets interaction      | Preloading no longer blocks with backdrops.                              |
 | GitHub authentication    | Credential commands follow mode and rules.                               |
 | Compact dictation        | Live words appear in drafts; controls stay put.                          |
 | Meeting reminders        | **Snooze until start**; ended reminders disappear.                       |
@@ -23,10 +24,10 @@ Earlier releases: **Settings → Updates → Release notes**.
 | Outpost questions        | Answered questions clear **Waiting on you**.                             |
 | Agent-led delegation     | Leads [choose workers and slices](how-spark-works.md#how-work-is-split). |
 | Chat opening             | Drafts stay; failures offer **Try again**.                               |
-| Outpost messages         | Messages go to the displayed lead; **Post note** is explicit.            |
+| Outpost messages         | Messages go to the shown lead; **Post note** is explicit.                |
 | Team in the sidebar      | See worker blobs in the sidebar and Agent TV.                            |
-| Agent TV messaging       | Message members or redirect workers in short windows.                    |
-| Calmer text and composer | Tools have readable labels; details stay folded.                         |
-| Message delivery         | **Sent** confirms receipt; refresh failures cannot trigger retries.      |
+| Agent TV messaging       | Message members or redirect workers.                                     |
+| Calmer text and composer | Readable tool labels; details stay folded.                               |
+| Message delivery         | **Sent** confirms receipt; failed refreshes never retry.                 |
 
 New profiles [record Claude Terminal sessions](settings.md#record-terminal-sessions); existing choices stay.
