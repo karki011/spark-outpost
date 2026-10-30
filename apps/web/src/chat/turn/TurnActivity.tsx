@@ -1,9 +1,8 @@
 import type { BackgroundWait, Run, SubagentRow } from '@spark-outpost/contracts';
 import { BackgroundWork } from '../BackgroundWork.tsx';
-import type { CommandView } from '../commands/command-model.ts';
 import { SubagentsLine } from '../subagents/SubagentsLine.tsx';
 import { WorkingLine } from './TurnParts.tsx';
-import { liveLabel } from './live-label.ts';
+import type { LeadStep } from './live-label.ts';
 
 interface TurnActivityProps {
   run: Run;
@@ -11,7 +10,7 @@ interface TurnActivityProps {
   working: boolean;
   waiting: boolean;
   background: BackgroundWait | null;
-  commands: readonly CommandView[];
+  lead: LeadStep;
 }
 
 export function TurnActivity({
@@ -20,7 +19,7 @@ export function TurnActivity({
   working,
   waiting,
   background,
-  commands,
+  lead,
 }: TurnActivityProps) {
   const running = working && !waiting;
   const agents = <SubagentsLine runId={run.id} rows={subagents} live={working} />;
@@ -30,7 +29,7 @@ export function TurnActivity({
       {background ? (
         <BackgroundWork runId={run.id} background={background} />
       ) : (
-        <WorkingLine run={run} doing={liveLabel(subagents, commands)} />
+        <WorkingLine run={run} step={lead} />
       )}
       {agents}
     </>

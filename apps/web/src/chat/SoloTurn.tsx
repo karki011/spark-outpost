@@ -46,6 +46,8 @@ import { ErrorLine, ModelSwitchNote } from './ModelSwitchNote.tsx';
 import { providerName } from './provider-name.ts';
 import { useLiveReport } from './status/status-context.ts';
 import { TurnActivity } from './turn/TurnActivity.tsx';
+import { leadStep } from './turn/live-label.ts';
+import { useReportLeadStep } from '../crew/lead-steps.ts';
 import { TurnCardView } from './turn/TurnCardView.tsx';
 import { turnCards, type TurnCard } from './turn/turn-cards.ts';
 import { useShowAgents } from './subagents/agent-board.ts';
@@ -149,18 +151,6 @@ export function SoloTurn({
   const todo = shownTodo(stream.todo, child?.todo ?? run.todo);
   const doingTodo = working && !waitingText ? currentTodo(todo) : null;
   const stepsRunId = !leads && detail.activity[run.id]?.length ? run.id : streamRunId;
-  useLiveReport(
-    {
-      id: run.id,
-      name: providerName(provider),
-      provider,
-      kind: 'agent',
-      ...(waitingText ? { doing: waitingText } : {}),
-      ...(doingTodo ? { todo: doingTodo } : {}),
-    },
-    working,
-    waitingText ? [] : steps,
-  );
   const persistedText =
     assistantMessage?.content ??
     detail.messages.find((message) => message.role === 'assistant' && message.runId === child?.id)
@@ -192,6 +182,26 @@ export function SoloTurn({
     replyClosedAt,
   });
   const publishing = replies.publishText !== '' || commands.publish.length > 0;
+  const lead = leadStep({
+    subagents,
+    commands: [...commands.reply, ...commands.publish],
+    steps,
+    publishing: stream.replyEnd || publishing ? { since: stream.replyEnd?.at ?? null } : null,
+  });
+  useReportLeadStep(run.id, working && !waiting ? lead : null);
+  useLiveReport(
+    {
+      id: run.id,
+      name: providerName(provider),
+      provider,
+      kind: 'agent',
+      ...(waitingText ? { doing: waitingText } : {}),
+      ...(doingTodo ? { todo: doingTodo } : {}),
+    },
+    working,
+    waitingText ? [] : steps,
+    lead.since,
+  );
   const interrupted = run.status === 'outcome_unknown';
   const shown = child?.modelSwitch || child?.errorDetails ? child : run;
   const error = finished
@@ -361,7 +371,7 @@ export function SoloTurn({
         working={working}
         waiting={waiting}
         background={stream.subagents.background}
-        commands={[...commands.reply, ...commands.publish]}
+        lead={lead}
       />
       {finished && (
         <TurnMeta>

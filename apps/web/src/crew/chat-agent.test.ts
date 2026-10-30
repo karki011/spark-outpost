@@ -34,6 +34,21 @@ describe("the chat's own agent on Agent TV and in the rail", () => {
     expect(crewJob(agent)).toBe('Agent · Sonnet 5 · medium');
   });
 
+  it("names the lead's live step over a stale stored step, cut to fit", () => {
+    const live = run({ status: 'running', finishedAt: null });
+    const stale = [{ name: 'Thinking', done: false }];
+    const publishing = { label: 'Opening pull request', since: 1 };
+    expect(chatAgent(live, stale, false, 0, null, publishing)).toMatchObject({
+      state: 'working',
+      line: 'opening pull request',
+    });
+    const long = { label: `Running ${'pnpm test --filter web '.repeat(4)}`, since: 1 };
+    const line = chatAgent(live, [], false, 0, null, long).line;
+    expect(line.length).toBeLessThanOrEqual(60);
+    expect(line.endsWith('…')).toBe(true);
+    expect(chatAgent(live, [], true, 0, null, publishing).line).toBe('waiting for you');
+  });
+
   it('says it waits on its sub-agents while it has no step of its own', () => {
     const live = run({ status: 'running', finishedAt: null });
     const steps = [{ name: 'Read routes.ts', done: false }];
