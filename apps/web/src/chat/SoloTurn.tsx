@@ -17,7 +17,6 @@ import { ApprovalCard } from './approvals/ApprovalCard.tsx';
 import { decidedFirst, hasPending } from './approvals/approval-events.ts';
 import { BrowserCheckMeta } from '../browser/BrowserCheckMeta.tsx';
 import { turnShots } from '../browser/browser-check.ts';
-import { RailFlags } from './approvals/RailFlags.tsx';
 import { askedBeforeTimeout, isLatestTurn } from './approvals/timed-out.ts';
 import { taskForRuns } from './changes/FilesChanged.tsx';
 import { ChatFiles } from './files/ChatFiles.tsx';
@@ -47,6 +46,8 @@ import { ErrorLine, ModelSwitchNote } from './ModelSwitchNote.tsx';
 import { providerName } from './provider-name.ts';
 import { useLiveReport } from './status/status-context.ts';
 import { TurnActivity } from './turn/TurnActivity.tsx';
+import { TurnCardView } from './turn/TurnCardView.tsx';
+import { turnCards, type TurnCard } from './turn/turn-cards.ts';
 import { useShowAgents } from './subagents/agent-board.ts';
 import { shownSubagents } from './subagents/subagent-view.ts';
 import { runSeconds } from './turns.ts';
@@ -128,6 +129,7 @@ export function SoloTurn({
   const approvals = turnApprovals(run, detail, stream, member?.runId ?? null);
   const waiting = working && hasPending(approvals);
   const cards = decidedFirst(approvals);
+  const conversationId = detail.conversation.id;
   const approvalCard = (approval: Approval) =>
     isCheckpoint(approval) ? (
       <CheckpointCard key={approval.id} approval={approval} />
@@ -221,7 +223,7 @@ export function SoloTurn({
     ),
   );
   const steers = turnSteers(detail, run.id);
-  const parts = turnRowParts({
+  const rowInput = {
     text,
     steps: viewSteps(steps),
     commands: commands.reply,
@@ -229,7 +231,36 @@ export function SoloTurn({
     terminals: terminalParts.reply,
     steers: steerMarks(steers),
     todo: todoEntries.length > 0,
+  };
+  const collapse = useCollapseFinishedTurns();
+  const [foldOpen, setFoldOpen] = useState(false);
+  const foldable = finished && collapse && canFold(turnRowParts(rowInput));
+  const decided =
+    foldable && !foldOpen ? cards.decided : cardsLeft(cards.decided, answers, commandCalls);
+  const timeline = turnCards({
+    approvals: [
+      ...decided,
+      ...checkpoints.filter((approval) => approval !== kept && approval.status !== 'pending'),
+    ],
+    flags: (detail.railFlags ?? []).filter((flag) => flag.turnRunId === run.id),
+    approvalAt: stream.approvalAt,
+    publishFrom: stream.replyEnd?.at ?? (replyClosedAt ? Date.parse(replyClosedAt) : null),
   });
+  const parts = turnRowParts({ ...rowInput, cards: timeline.marks });
+  const cardView = (card: TurnCard) => (
+    <TurnCardView
+      key={card.id}
+      card={card}
+      provider={provider}
+      repo={repo}
+      conversationId={conversationId}
+    />
+  );
+  const cardsAt = (ids: readonly string[]) =>
+    ids.flatMap((id) => {
+      const card = timeline.byId.get(id);
+      return card ? [cardView(card)] : [];
+    });
   const steersAt = (ids: readonly string[], index: number) => (
     <SteerGroup
       messages={steers.filter((message) => ids.includes(message.id))}
@@ -246,14 +277,9 @@ export function SoloTurn({
     waitingText,
     started: steps.length > 0 || text !== '',
   });
-  const collapse = useCollapseFinishedTurns();
-  const [foldOpen, setFoldOpen] = useState(false);
-  const fold =
-    finished && collapse && canFold(parts)
-      ? { open: foldOpen, seconds: runSeconds(run), onToggle: () => setFoldOpen(!foldOpen) }
-      : null;
-  const decided =
-    fold && !fold.open ? cards.decided : cardsLeft(cards.decided, answers, commandCalls);
+  const fold = foldable
+    ? { open: foldOpen, seconds: runSeconds(run), onToggle: () => setFoldOpen(!foldOpen) }
+    : null;
   const usageRun = child?.usage ? child : run;
   const meta = metaLine(run, modelOf(usageRun) ?? modelOf(run));
 
@@ -275,16 +301,15 @@ export function SoloTurn({
           answers,
         }}
         steers={steersAt}
+        cards={cardsAt}
         fold={fold}
       >
         {(part, last) => (
           <Markdown text={part} streaming={last && leads && active && !publishing} />
         )}
       </TurnRows>
-      {decided.map(approvalCard)}
       <ChatFiles files={(detail.chatFiles ?? []).filter((file) => file.runId === run.id)} />
       <ArtifactCards chatId={detail.conversation.id} runId={run.id} pages={detail.artifactPages} />
-      <RailFlags detail={detail} runId={run.id} />
       {finished && (
         <TurnChangesLine
           kept={kept}
@@ -296,11 +321,6 @@ export function SoloTurn({
           conversationId={detail.conversation.id}
         />
       )}
-      {checkpoints
-        .filter((approval) => approval !== kept)
-        .map((approval) => (
-          <CheckpointCard key={approval.id} approval={approval} />
-        ))}
       <PublishResult
         text={replies.publishText}
         commands={commands.publish}
@@ -309,7 +329,13 @@ export function SoloTurn({
         streaming={leads && active}
         answers={answers}
       />
+      {timeline.publish.map(cardView)}
       {cards.pending.map(approvalCard)}
+      {checkpoints
+        .filter((approval) => approval !== kept && approval.status === 'pending')
+        .map((approval) => (
+          <CheckpointCard key={approval.id} approval={approval} />
+        ))}
       <AgreedReplyLine detail={detail} message={assistantMessage} finished={finished} />
       {finished && <AgentTerminalsRunning terminals={terminals} />}
       {run.status === 'cancelled' && (

@@ -17,7 +17,7 @@ import {
   type RunEvent,
   type SubagentRoster,
 } from '@spark-outpost/contracts';
-import { applyApprovalEvent } from './approvals/approval-events.ts';
+import { applyApprovalEvent, requestedApprovalId } from './approvals/approval-events.ts';
 import { applyAgentTerminalEvent } from './commands/agent-terminal-model.ts';
 import { applyCommandEvent, type LiveCommand } from './commands/command-model.ts';
 import {
@@ -204,6 +204,7 @@ export interface RunProjection extends ReplyStream {
   error: string | null;
   lastSeq: number;
   approvals: readonly Approval[];
+  approvalAt: Readonly<Record<string, number>>;
   orchestration: Orchestration | null;
   modelSwitch: ModelSwitch | null;
   commands: readonly LiveCommand[];
@@ -219,6 +220,7 @@ export const initialRunProjection: RunProjection = {
   error: null,
   lastSeq: 0,
   approvals: [],
+  approvalAt: {},
   orchestration: null,
   modelSwitch: null,
   commands: [],
@@ -226,6 +228,15 @@ export const initialRunProjection: RunProjection = {
   subagents: emptySubagentRoster,
   todo: null,
 };
+
+function withApprovalAt(
+  state: RunProjection,
+  event: { name: string; value: unknown },
+): Readonly<Record<string, number>> {
+  const id = requestedApprovalId(event);
+  if (id === null || id in state.approvalAt) return state.approvalAt;
+  return { ...state.approvalAt, [id]: state.text.length };
+}
 
 export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent): RunProjection {
   if (seq <= state.lastSeq) return state;
@@ -246,7 +257,11 @@ export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent
       return event.subagentRunId ? next : withTextDelta(next, event.messageId, event.delta);
     case EventType.TEXT_MESSAGE_END: {
       if (event.subagentRunId) return next;
-      const started = { commands: state.commands.length, terminals: state.terminals.length };
+      const started = {
+        commands: state.commands.length,
+        terminals: state.terminals.length,
+        at: event.timestamp ?? null,
+      };
       return withTextEnd(next, event.messageId, started);
     }
     case EventType.RUN_FINISHED:
@@ -270,6 +285,7 @@ export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent
       return {
         ...next,
         approvals: applyApprovalEvent(state.approvals, event),
+        approvalAt: withApprovalAt(state, event),
         commands: applyCommandEvent(state.commands, event),
         terminals: applyAgentTerminalEvent(state.terminals, event),
       };

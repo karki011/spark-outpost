@@ -46,7 +46,7 @@ describe('a run that streams a second reply', () => {
 
   it('notes how many commands had started when the work reply closed', () => {
     expect(replay(twoPrompts.slice(0, 3)).replyEnd).toBeNull();
-    expect(replay(twoPrompts).replyEnd).toEqual({ commands: 0, terminals: 0 });
+    expect(replay(twoPrompts).replyEnd).toEqual({ commands: 0, terminals: 0, at: null });
   });
 
   it('keeps one reply whole when it is closed and a line is added after', () => {

@@ -19,6 +19,7 @@ interface TurnRowsProps {
   context: RowContext;
   children: (text: string, last: boolean) => ReactNode;
   steers?: (ids: readonly string[], index: number) => ReactNode;
+  cards?: (ids: readonly string[]) => ReactNode;
   fold?: TurnFoldState | null;
 }
 
@@ -26,15 +27,21 @@ interface PartsProps extends Omit<TurnRowsProps, 'fold'> {
   shown?: (index: number) => boolean;
 }
 
-export function TurnRows({ parts, context, children, steers, fold = null }: TurnRowsProps) {
+export function TurnRows({ parts, context, children, steers, cards, fold = null }: TurnRowsProps) {
   const [commands] = useState<CommandUiStore>(() => new Map());
-  const shared = { parts, context, children, ...(steers ? { steers } : {}) };
+  const shared = {
+    parts,
+    context,
+    children,
+    ...(steers ? { steers } : {}),
+    ...(cards ? { cards } : {}),
+  };
   return (
     <CommandUiContext value={commands}>
       {fold ? (
         <>
           <FoldedWork {...shared} fold={fold} />
-          <Parts {...shared} shown={(index) => !foldedPart(parts, index)} />
+          <Parts {...shared} shown={(index) => !foldedPart(parts, index, fold.open)} />
         </>
       ) : (
         <Parts {...shared} />
@@ -58,19 +65,22 @@ function FoldedWork({ fold, ...shared }: PartsProps & { fold: TurnFoldState }) {
         }
       />
       <div id={bodyId} className="turn-fold-body" hidden={!fold.open}>
-        {fold.open && <Parts {...shared} shown={(index) => foldedPart(shared.parts, index)} />}
+        {fold.open && (
+          <Parts {...shared} shown={(index) => foldedPart(shared.parts, index, true)} />
+        )}
       </div>
     </div>
   );
 }
 
-function Parts({ parts, context, children, steers, shown = () => true }: PartsProps) {
-  const lastShown = parts.findLastIndex((part) => part.kind !== 'steers');
+function Parts({ parts, context, children, steers, cards, shown = () => true }: PartsProps) {
+  const lastShown = parts.findLastIndex((part) => part.kind !== 'steers' && part.kind !== 'cards');
   return parts.map((part, index) => {
     if (!shown(index)) return null;
     if (part.kind === 'steers') {
       return <Fragment key={part.key}>{steers?.(part.ids, index)}</Fragment>;
     }
+    if (part.kind === 'cards') return <Fragment key={part.key}>{cards?.(part.ids)}</Fragment>;
     if (part.kind === 'shots') return <BrowserShots key={part.key} shots={part.shots} />;
     if (part.kind === 'terminal') {
       const [only] = part.terminals;
