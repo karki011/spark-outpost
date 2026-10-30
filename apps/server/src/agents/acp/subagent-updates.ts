@@ -50,14 +50,11 @@ function reportOf(reported: Reported | undefined, message: string | null): Subag
 const CODEX_WAIT_TOOL = 'wait';
 const CLAUDE_WAIT_TOOL = 'TaskOutput';
 
-function waitsOn(update: SessionUpdate, working: ReadonlyMap<string, unknown>): boolean {
+function waitsOn(update: SessionUpdate): boolean {
   if (update.sessionUpdate !== 'tool_call') return false;
   const meta = objectFields(update._meta);
   if (objectFields(objectFields(meta.codex).collaboration).tool === CODEX_WAIT_TOOL) return true;
-  if (objectFields(meta.claudeCode).toolName !== CLAUDE_WAIT_TOOL) return false;
-  const taskId = objectFields(update.rawInput).task_id;
-  if (typeof taskId !== 'string' || taskId === '') return false;
-  return [...working.keys()].some((id) => id === taskId || id.startsWith(`${taskId}:generation:`));
+  return objectFields(meta.claudeCode).toolName === CLAUDE_WAIT_TOOL;
 }
 
 function waiting(output: ProviderOutput): ProviderOutput {
@@ -90,7 +87,7 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
     const tool =
       update.sessionUpdate === 'tool_call' || update.sessionUpdate === 'tool_call_update';
     if (!tool) return main.map(update);
-    if (waitsOn(update, working)) waitCalls.add(update.toolCallId);
+    if (waitsOn(update)) waitCalls.add(update.toolCallId);
     const outputs = main.map(update);
     if (!waitCalls.has(update.toolCallId)) return outputs;
     if (update.status === 'completed' || update.status === 'failed') {

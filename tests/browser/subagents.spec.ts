@@ -326,6 +326,21 @@ test('a Claude turn that ends with background work running waits on it instead o
   await expect(turn).toContainText('Stopped before finishing.');
 });
 
+test('a message queued while the agent only waits on background work reaches the agent', async ({
+  page,
+}) => {
+  const input = await ask(page, 'Check the schema #build #backgroundforever');
+  const turn = page.locator('.msg.ai').last();
+  await expect(mood(page)).toHaveText('waiting on 1 background agent', { timeout: 30_000 });
+  await input.fill('Queued while it waits');
+  await input.press('ControlOrMeta+Enter');
+  await expect(turn).toContainText('Queued while it waits', { timeout: 15_000 });
+  await expect(page.locator('.qs-text', { hasText: 'Queued while it waits' })).toHaveCount(0);
+  await expect(mood(page)).toHaveText('waiting on 1 background agent', { timeout: 15_000 });
+  await turn.getByRole('button', { name: 'Stop background tasks' }).click();
+  await expect(turn.locator('.background-work')).toHaveCount(0, { timeout: 30_000 });
+});
+
 test('a Claude turn picks up again on its own when its background work reports', async ({
   page,
 }) => {

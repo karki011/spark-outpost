@@ -9,7 +9,7 @@ import {
   ApprovalInputError,
   shownApprovalsForConversation,
 } from '../src/persistence/approvals.ts';
-import { listQueue } from '../src/persistence/chat-queue.ts';
+import { editQueued, listQueue } from '../src/persistence/chat-queue.ts';
 import {
   useRecommendedRules,
   answerOutsideChange,
@@ -23,6 +23,7 @@ import { acceptRulesBaseline } from '../src/spark-rules/rules-store.ts';
 import { createApprovalGate } from '../src/workflow/approval-gate.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import { publishGrant } from '../src/workflow/publish-context.ts';
+import { sendNow } from '../src/workflow/queue-drain.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
 import { answerRuleCard } from '../src/workflow/spark-rule-cards.ts';
 import { commandRequest, doRun, recordingAppend, type LinkedRun } from './approval-support.ts';
@@ -192,6 +193,33 @@ describe('the refused card', () => {
     const queue = await listQueue(t.db, run.conversationId);
     expect(queue).toHaveLength(1);
     expect(queue[0]).toMatchObject({ sparkRuleCardId: card.id });
+  });
+
+  it('keeps a queued retry its own: no edits, and Send now waits until the turn ends', async () => {
+    const run = await doRun(t, root);
+    const { card } = await refusedCard(run, RELEASE);
+    await answerRuleCard(t.db, t.workspaceId, card.id, 'allow_once', target);
+    const [retry] = await listQueue(t.db, run.conversationId);
+    await expect(
+      editQueued(t.db, run.conversationId, retry!.id, 'Run something else'),
+    ).rejects.toMatchObject({ status: 409 });
+    const steer = sendNow(t.db, run.conversationId, { id: retry!.id }, target);
+    await expect(steer).rejects.toMatchObject({
+      status: 409,
+      message: 'A retry from a Spark rules card starts when this chat is free.',
+    });
+    expect(await listQueue(t.db, run.conversationId)).toHaveLength(1);
+    const steered = await t.db.query('SELECT 1 FROM member_messages WHERE id = $1', [retry!.id]);
+    expect(steered.rowCount).toBe(0);
+
+    await finish(run.runId);
+    expect(await sendNow(t.db, run.conversationId, { id: retry!.id }, target)).toBe('sent');
+    const retryRun = await retryRunOf(card.id);
+    const { rows } = await t.db.query<{ source: string }>('SELECT source FROM runs WHERE id = $1', [
+      retryRun,
+    ]);
+    expect(rows[0]?.source).toBe('spark_rule');
+    expect((await sparkRulesForRun(t.db, retryRun)).once).toEqual([RELEASE]);
   });
 
   it('Keep refused changes nothing and sends nothing', async () => {

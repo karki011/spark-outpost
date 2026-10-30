@@ -1,13 +1,15 @@
 import type { QueuedMessage, Run } from '@spark-outpost/contracts';
 
-export type QueueMode = 'waiting' | 'paused' | 'held' | 'next';
+export type QueueMode = 'waiting' | 'agent-waits' | 'paused' | 'held' | 'next';
 
 export function queueMode(
-  busy: boolean,
-  runs: readonly Pick<Run, 'status'>[],
+  runningWaitsOn: number | null,
+  runs: readonly Pick<Run, 'status'>[] = [],
   sparkPaused: boolean,
 ): QueueMode {
-  if (busy) return 'waiting';
+  if (runningWaitsOn !== null) {
+    return runningWaitsOn > 0 && !sparkPaused ? 'agent-waits' : 'waiting';
+  }
   if (sparkPaused) return 'held';
   const last = runs.at(-1)?.status;
   return !last || last === 'succeeded' ? 'next' : 'paused';
@@ -24,8 +26,32 @@ export function queueNote(mode: QueueMode, count: number): string {
   return count === 1 ? 'Sends when this turn ends' : 'Send in order when this turn ends';
 }
 
-export function canEdit(item: Pick<QueuedMessage, 'outpostPostId'>): boolean {
-  return !item.outpostPostId;
+type Authored = Pick<QueuedMessage, 'outpostPostId' | 'sparkRuleCardId' | 'origin'>;
+
+export function typedByUser(item: Authored): boolean {
+  return !item.outpostPostId && !item.sparkRuleCardId && !item.origin;
+}
+
+export function stripNote(mode: QueueMode, items: readonly Authored[]): string {
+  if (mode !== 'agent-waits') return queueNote(mode, items.length);
+  if (items.some(typedByUser)) return 'Sends to the agent while it waits';
+  return queueNote('waiting', items.length);
+}
+
+export function canEdit(item: Authored): boolean {
+  return !item.outpostPostId && !item.sparkRuleCardId;
+}
+
+const ORIGIN_TAGS: Record<NonNullable<QueuedMessage['origin']>, string> = {
+  assistant: 'Ask Spark',
+  voice: 'Spoken',
+  pages: 'Tabs question',
+};
+
+export function authorTag(item: Authored): string | null {
+  if (item.outpostPostId) return 'Outpost request';
+  if (item.sparkRuleCardId) return 'Retry';
+  return item.origin ? ORIGIN_TAGS[item.origin] : null;
 }
 
 export function movedIds(

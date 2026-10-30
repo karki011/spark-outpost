@@ -110,18 +110,38 @@ describe('sub-agent updates', () => {
     expect(claudeWait.filter((output) => 'waits' in output)).toHaveLength(1);
   });
 
-  it("counts a check on something that is not a sub-agent as the main agent's own work", () => {
+  it('counts a Claude wait on background work as waiting before its input has streamed in', () => {
     const { spawn, send } = harness();
     spawn('root', 'a');
-    const shell = send('root', {
+    const streamed = send('root', {
       sessionUpdate: 'tool_call',
       toolCallId: 'w3',
       title: 'TaskOutput',
-      status: 'in_progress',
-      rawInput: { task_id: 'shell-9' },
+      status: 'pending',
+      rawInput: {},
       _meta: { claudeCode: { toolName: 'TaskOutput' } },
     });
-    expect(shell.some((output) => 'waits' in output)).toBe(false);
+    expect(streamed.filter((output) => 'waits' in output)).toHaveLength(1);
+    const refined = send('root', {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'w3',
+      rawInput: { task_id: 'shell-9', block: true },
+      _meta: { claudeCode: { toolName: 'TaskOutput' } },
+    });
+    expect(refined.some((output) => output.kind === 'step_started' && !('waits' in output))).toBe(
+      false,
+    );
+    const ended = send('root', {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'w3',
+      status: 'completed',
+    });
+    expect(ended).toContainEqual(expect.objectContaining({ kind: 'step_finished', waits: true }));
+  });
+
+  it("counts other collaboration tools as the main agent's own work", () => {
+    const { spawn, send } = harness();
+    spawn('root', 'a');
     const other = send('root', {
       sessionUpdate: 'tool_call',
       toolCallId: 'w4',

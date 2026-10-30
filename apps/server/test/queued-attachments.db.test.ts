@@ -329,40 +329,6 @@ describe('attachments during an active turn', () => {
     await expect(editQueued(t.db, conversationId, plain, '')).rejects.toThrow('Keep a message');
   });
 
-  it('keeps attachment metadata on continued queued message markers', async () => {
-    const { conversationId, runId, file } = await setup();
-    const id = randomUUID();
-    const source = (
-      await t.db.query<{ id: string }>('SELECT id FROM messages WHERE conversation_id = $1', [
-        conversationId,
-      ])
-    ).rows[0]!;
-    const annotation = {
-      id: randomUUID(),
-      sourceMessageId: source.id,
-      kind: 'quote' as const,
-      quote: 'Work',
-      note: '',
-      anchor: { exact: 'Work', prefix: '', suffix: '', start: 0, end: 4 },
-    };
-    await addToQueue(t.db, conversationId, {
-      id,
-      content: 'Continue with notes',
-      attachmentIds: [file.id],
-      annotations: [annotation],
-      continueRunId: runId,
-    });
-    await t.db.query("UPDATE runs SET status = 'succeeded' WHERE id = $1", [runId]);
-    expect(await drainQueue(t.db, conversationId, target)).toBe('sent');
-    expect(await getMemberMessage(t.db, id)).toMatchObject({
-      status: 'continued',
-      messageId: id,
-      attachmentIds: [file.id],
-      annotations: [annotation],
-    });
-    expect((await attachmentFilesForMessages(t.db, [id])).get(id)?.[0]?.id).toBe(file.id);
-  });
-
   it('rejects missing and already-linked attachments before accepting a queued or immediate draft', async () => {
     const { conversationId, file } = await setup();
     await expect(

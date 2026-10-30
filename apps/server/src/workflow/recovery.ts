@@ -1,6 +1,7 @@
 import { expirePendingApprovals } from '../persistence/approvals.ts';
 import type { Db } from '../persistence/db.ts';
 import { findExpiredLeases, type Lease } from '../persistence/jobs.ts';
+import { markUnreadAfterCrash } from '../persistence/member-messages.ts';
 import { failRunningPieces, skipUnstartedPieces } from '../persistence/pieces.ts';
 import { LeaseLostError, appendRunEvent } from '../persistence/run-events.ts';
 import { runBackgroundWait } from '../persistence/subagents.ts';
@@ -59,6 +60,7 @@ async function markOutcomeUnknown(db: Db, lease: Lease): Promise<boolean> {
       expectExpired: true,
       transition: { status: 'outcome_unknown', error: message },
     });
+    await markUnreadAfterCrash(db, lease.runId);
     return true;
   } catch (error) {
     if (error instanceof LeaseLostError) return false;

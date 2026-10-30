@@ -24,7 +24,7 @@ About 2 minutes.
 
 ## Stop a turn
 
-1. Select **Stop** or press **Esc**; sub-agents and background work stop.
+1. **Stop** or **Esc** also stops sub-agents and background work.
 
 ## Background work
 
@@ -34,19 +34,19 @@ Waits last 30 idle minutes. Resumed turns show **Continued on its own**.
 
 ## Queue messages
 
-Send files without text. Queues survive reloads; drafts do not.
+Send files without text. Queues survive restarts; drafts do not.
 
 1. While a turn runs, **Enter** queues a message.
 2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.
-3. While the agent waits, **Enter** sends now.
-4. Use **Edit**, **Move up**, **Move down**, **Remove** or **Send now** on a queued message.
+3. While the agent only waits on background work, **Enter** sends now; queued messages follow.
+4. Queued messages have **Edit**, **Move up**, **Move down**, **Remove** and **Send now**; **Retry** messages are read-only.
 
 | When                      | Spark                                 |
 | ------------------------- | ------------------------------------- |
 | The turn finishes         | Sends queued messages in order.       |
 | You stop it, or it fails  | Pauses the queue until **Send now**.  |
-| You reload or restart     | Keeps the queue.                      |
 | You stop before it's read | **Send as next message** or **Edit**. |
+| The agent can't take it   | Queues a sent-now message first.      |
 
 ## Delete a running chat
 

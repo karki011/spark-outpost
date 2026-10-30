@@ -35,7 +35,7 @@ export function postedAfterStop(post: string, lastRun: string): string {
     AND ${post}.created_at > ${lastRun}.cancel_requested_at)`;
 }
 
-const POSTED_AFTER_STOP_ITEM = `EXISTS (
+export const POSTED_AFTER_STOP_ITEM = `EXISTS (
   SELECT 1 FROM outpost_posts post
   JOIN LATERAL (
     SELECT r.status, r.cancel_requested_at FROM runs r
@@ -63,7 +63,6 @@ function toQueued(row: QueueRow): QueuedMessage {
 export interface NewQueued {
   id: string;
   content: string;
-  continueRunId?: string | null;
   sparkRuleCardId?: string | null;
   origin?: QueuedMessage['origin'];
   attachmentIds?: readonly string[] | undefined;
@@ -99,19 +98,28 @@ export async function alreadySent(db: Queryable, id: string): Promise<boolean> {
   return rowCount === 1;
 }
 
+export type QueuePlace = 'back' | 'front';
+
+const PLACED_POSITION: Record<QueuePlace, string> = {
+  back: 'COALESCE(MAX(position), 0) + 1',
+  front: 'COALESCE(MIN(position), 1) - 1',
+};
+
 export async function addToQueue(
   db: Db | DbClient,
   conversationId: string,
   item: NewQueued,
+  place: QueuePlace = 'back',
 ): Promise<void> {
-  if ('release' in db) return addInTransaction(db, conversationId, item);
-  return withTransaction(db, (client) => addInTransaction(client, conversationId, item));
+  if ('release' in db) return addInTransaction(db, conversationId, item, place);
+  return withTransaction(db, (client) => addInTransaction(client, conversationId, item, place));
 }
 
 async function addInTransaction(
   db: Queryable,
   conversationId: string,
   item: NewQueued,
+  place: QueuePlace,
 ): Promise<void> {
   const session = await db.query<{ session_type: string }>(
     'SELECT session_type FROM conversations WHERE id = $1 FOR UPDATE',
@@ -139,16 +147,15 @@ async function addInTransaction(
     throw new QueueError(409, `The queue holds ${QUEUE_LIMIT} messages. Send or remove one first.`);
   }
   await db.query(
-    `INSERT INTO chat_queue (id, conversation_id, position, content, continue_run_id,
+    `INSERT INTO chat_queue (id, conversation_id, position, content,
        spark_rule_card_id, origin, attachment_ids, annotations)
-     SELECT $1, $2, COALESCE(MAX(position), 0) + 1, $3, $4, $5, $6, $7, $8
+     SELECT $1, $2, ${PLACED_POSITION[place]}, $3, $4, $5, $6, $7
      FROM chat_queue WHERE conversation_id = $2
      ON CONFLICT (id) DO NOTHING`,
     [
       item.id,
       conversationId,
       item.content,
-      item.continueRunId ?? null,
       item.sparkRuleCardId ?? null,
       item.origin ?? null,
       [...(item.attachmentIds ?? [])],
@@ -159,6 +166,17 @@ async function addInTransaction(
   await rememberRemoteMessage(db, item.id);
 }
 
+function uneditableReason(row: {
+  outpost_post_id: string | null;
+  spark_rule_card_id: string | null;
+}): string {
+  if (row.outpost_post_id) return 'A request from an outpost can’t be edited. Remove it instead.';
+  if (row.spark_rule_card_id) {
+    return 'A retry from a Spark rules card can’t be edited. Remove it instead.';
+  }
+  return 'Keep a message or an attachment.';
+}
+
 export async function editQueued(
   db: Queryable,
   conversationId: string,
@@ -167,37 +185,56 @@ export async function editQueued(
 ): Promise<void> {
   const { rowCount } = await db.query(
     `UPDATE chat_queue SET content = $3, updated_at = now()
-     WHERE conversation_id = $1 AND id = $2 AND outpost_post_id IS NULL
+     WHERE conversation_id = $1 AND id = $2
+       AND outpost_post_id IS NULL AND spark_rule_card_id IS NULL
        AND (length($3) > 0 OR cardinality(attachment_ids) > 0)`,
     [conversationId, id, content],
   );
   if (rowCount === 1) return;
-  const outpostItem = await db.query<{ outpost_post_id: string | null }>(
-    'SELECT outpost_post_id FROM chat_queue WHERE conversation_id = $1 AND id = $2',
+  const kept = await db.query<{
+    outpost_post_id: string | null;
+    spark_rule_card_id: string | null;
+  }>(
+    `SELECT outpost_post_id, spark_rule_card_id FROM chat_queue
+     WHERE conversation_id = $1 AND id = $2`,
     [conversationId, id],
   );
-  if (outpostItem.rowCount === 1) {
-    throw new QueueError(
-      409,
-      outpostItem.rows[0]?.outpost_post_id
-        ? 'A request from an outpost can’t be edited. Remove it instead.'
-        : 'Keep a message or an attachment.',
-    );
-  }
+  const row = kept.rows[0];
+  if (row) throw new QueueError(409, uneditableReason(row));
   throw new QueueError(404, 'That message has already been sent.');
 }
 
+function sameIds(current: readonly string[], wanted: readonly string[]): boolean {
+  const unique = new Set(wanted);
+  return (
+    unique.size === wanted.length &&
+    current.length === wanted.length &&
+    current.every((id) => unique.has(id))
+  );
+}
+
 export async function reorderQueue(
-  db: Queryable,
+  db: Db,
   conversationId: string,
   ids: readonly string[],
 ): Promise<void> {
-  await db.query(
-    `UPDATE chat_queue q SET position = ordered.position, updated_at = now()
-     FROM unnest($2::uuid[]) WITH ORDINALITY AS ordered(id, position)
-     WHERE q.conversation_id = $1 AND q.id = ordered.id`,
-    [conversationId, ids],
-  );
+  await withTransaction(db, async (client) => {
+    await client.query('SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE', [conversationId]);
+    const { rows } = await client.query<{ id: string }>(
+      'SELECT id FROM chat_queue WHERE conversation_id = $1',
+      [conversationId],
+    );
+    const current = rows.map((row) => row.id);
+    if (!sameIds(current, ids)) {
+      throw new QueueError(409, 'The queue changed while you moved a message. Try again.');
+    }
+    await client.query(
+      `UPDATE chat_queue q SET position = ordered.position, updated_at = now()
+       FROM unnest($2::uuid[]) WITH ORDINALITY AS ordered(id, position)
+       WHERE q.conversation_id = $1 AND q.id = ordered.id`,
+      [conversationId, ids],
+    );
+  });
 }
 
 export async function takeQueued(

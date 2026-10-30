@@ -119,7 +119,7 @@ describe('a crew turn stored by an earlier version', { timeout: 30_000 }, () => 
     expect(await rowCounts()).toEqual(before);
   });
 
-  it('has no route that lists or changes the pieces of a stored turn', async () => {
+  it('has no route that lists, changes or messages the pieces of a stored turn', async () => {
     const turn = await storedCrewTurn();
     const { rows } = await t.db.query<{ task_id: string }>(
       'SELECT task_id FROM runs WHERE id = $1',
@@ -140,8 +140,7 @@ describe('a crew turn stored by an earlier version', { timeout: 30_000 }, () => 
 
     expect(list.status).toBe(404);
     expect(steer.status).toBe(404);
-    expect(message.status).toBe(409);
-    expect(message.body.error).toBe('Bolt has finished. Send your message in the chat instead.');
+    expect(message.status).toBe(404);
   });
 });
 

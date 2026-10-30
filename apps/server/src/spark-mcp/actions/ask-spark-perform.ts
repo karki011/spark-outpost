@@ -1,13 +1,13 @@
 import { ANSWERED_BY_ASK_SPARK, type AskSparkAction } from '@spark-outpost/contracts';
 import { sparkToolsOffered } from '../../agents/acp/spark-tools.ts';
 import { decideApproval } from '../../persistence/approvals.ts';
-import { addToQueue, takeQueued } from '../../persistence/chat-queue.ts';
+import { addToQueue, alreadySent, takeQueued } from '../../persistence/chat-queue.ts';
 import { createConversation } from '../../persistence/conversations.ts';
 import type { Db } from '../../persistence/db.ts';
 import { newId } from '../../persistence/ids.ts';
 import { startTicket } from '../../tickets/start.ts';
 import { archiveChat } from '../../workflow/archive-chat.ts';
-import { chatTarget, drainQueue } from '../../workflow/queue-drain.ts';
+import { chatTarget, drainQueue, type DrainOutcome } from '../../workflow/queue-drain.ts';
 import { changeSparkPause } from '../../workflow/spark-pause-change.ts';
 import { stopRun } from '../../workflow/stop-run.ts';
 import { ticketDepsFor } from '../deps.ts';
@@ -42,18 +42,42 @@ export async function chatFacts(
   return { title: row.title, terminal: row.session_type === 'terminal', archived: row.archived };
 }
 
-export async function sendAsAssistant(
-  db: Db,
-  conversationId: string,
-  content: string,
-): Promise<void> {
+type Delivery = 'sent' | 'behind' | 'stopped' | 'held' | 'archived';
+
+const DELIVERED: Record<DrainOutcome, Delivery> = {
+  sent: 'behind',
+  busy: 'behind',
+  paused: 'stopped',
+  held: 'held',
+  archived: 'archived',
+  empty: 'behind',
+};
+
+async function sendAsAssistant(db: Db, conversationId: string, content: string): Promise<Delivery> {
   const id = newId();
   await addToQueue(db, conversationId, { id, content, origin: 'assistant' });
+  let outcome: DrainOutcome;
   try {
-    await drainQueue(db, conversationId, chatTarget(db));
+    outcome = await drainQueue(db, conversationId, chatTarget(db));
   } catch (error) {
     await takeQueued(db, conversationId, id);
     throw error;
+  }
+  return (await alreadySent(db, id)) ? 'sent' : DELIVERED[outcome];
+}
+
+function deliveryLine(delivery: Delivery, title: string): string {
+  switch (delivery) {
+    case 'sent':
+      return `Sent the message to “${title}”.`;
+    case 'behind':
+      return `Queued the message for “${title}” behind the running turn.`;
+    case 'stopped':
+      return `Queued the message for “${title}”. Waiting: the last turn stopped.`;
+    case 'held':
+      return `Queued the message for “${title}”. Held while Spark is paused.`;
+    case 'archived':
+      return `Queued the message for “${title}”. Held while the chat is archived.`;
   }
 }
 
@@ -110,9 +134,9 @@ async function sendMessage(context: SparkToolContext, action: AskSparkAction): P
   const chatId = required(action.conversationId, 'chat');
   const chat = await chatFacts(deps.db, scope.workspaceId, chatId);
   if (chat.archived) throw new SparkToolError(ASK_SPARK_REFUSALS.archived);
-  await sendAsAssistant(deps.db, chatId, required(action.text, 'message'));
+  const delivery = await sendAsAssistant(deps.db, chatId, required(action.text, 'message'));
   return {
-    message: `Sent the message to “${chat.title}”.`,
+    message: deliveryLine(delivery, chat.title),
     url: null,
     output: { conversationId: chatId },
   };
