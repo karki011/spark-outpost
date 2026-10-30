@@ -12,12 +12,13 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
-| Queue while waiting      | Queued messages reach an agent waiting on background work.               |
+| Terminal                 | Opens faster.                                                            |
+| Queue while waiting      | Agents waiting on background work get queued messages.                   |
 | Queue strip              | Tags show authors; late edits and untaken messages stay queued.          |
 | Quieter chats            | Controls sit [under the box](start-a-chat.md); finished turns fold.      |
 | Mac stays awake          | [Remote control](use-your-phone.md) keeps it awake.                      |
-| Busy attachments         | Send or queue files while agents work.                                   |
-| Tickets interaction      | Browser preloading no longer creates blocking backdrops.                 |
+| Busy attachments         | Attach files while agents work.                                          |
+| Tickets interaction      | Browser preloading no longer blocks with backdrops.                      |
 | GitHub authentication    | Credential commands follow mode and rules.                               |
 | Compact dictation        | Live words appear in drafts; controls stay put.                          |
 | Meeting reminders        | **Snooze until start**; ended reminders disappear.                       |

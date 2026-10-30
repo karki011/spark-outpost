@@ -8,6 +8,7 @@ import { AGENT_TAB_WORDS } from './command-tabs.ts';
 import { CommandTab } from './CommandTab.tsx';
 import { DockResizer } from './DockResizer.tsx';
 import { useDockHeight } from './dock-height.ts';
+import { useTerminalIdlePreload } from './idle-preload.ts';
 import {
   attachedShell,
   chatOf,
@@ -95,8 +96,9 @@ function DockTab({
   );
 }
 
-export function TerminalDock({ chatId }: { chatId: string }) {
+export function TerminalDock({ chatId, preload = false }: { chatId: string; preload?: boolean }) {
   const shells = useChatShells(chatId);
+  useTerminalIdlePreload(preload);
   return (
     <>
       {shells.tabs.map(

@@ -437,7 +437,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             </>
           )}
           {!remote && !terminalSession && !terminalDraft && (
-            <TerminalDock chatId={conversationId} />
+            <TerminalDock chatId={conversationId} preload={repos.length > 0} />
           )}
           <DropOverlay visible={drop.dragging} />
         </main>
