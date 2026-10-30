@@ -112,13 +112,13 @@ export function processTreeNow(root: number): number[] {
   return descendantsOf(root, processTableNow());
 }
 
-function signalTree(
-  table: readonly ProcessRow[],
+export function killProcessTree(
   root: number,
-  graceMs: number,
-  first: NodeJS.Signals,
-  seenEarlier: readonly number[],
+  graceMs = 1500,
+  first: NodeJS.Signals = 'SIGHUP',
+  seenEarlier: readonly number[] = [],
 ): void {
+  const table = processTableNow();
   const orphaned = seenEarlier.filter((pid) => isAlive(pid));
   const roots = [root, ...orphaned];
   const targets = [...new Set(roots.flatMap((pid) => [pid, ...descendantsOf(pid, table)]))];
@@ -128,21 +128,4 @@ function signalTree(
     for (const pid of targets) if (isAlive(pid)) signal(pid, 'SIGKILL');
   }, graceMs);
   escalate.unref();
-}
-
-export function killProcessTree(
-  root: number,
-  graceMs = 1500,
-  first: NodeJS.Signals = 'SIGHUP',
-  seenEarlier: readonly number[] = [],
-): void {
-  signalTree(processTableNow(), root, graceMs, first, seenEarlier);
-}
-
-export async function killProcessTreeSoon(
-  root: number,
-  graceMs = 1500,
-  first: NodeJS.Signals = 'SIGHUP',
-): Promise<void> {
-  signalTree(await processTable(), root, graceMs, first, []);
 }
