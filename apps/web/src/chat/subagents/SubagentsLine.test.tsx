@@ -68,6 +68,25 @@ describe('SubagentsLine', () => {
     expect(screen.getByRole('status').textContent).toBe('3 agents · 1 done');
   });
 
+  it('folds into one chip once every worker is done and keeps the row while one runs', () => {
+    const builders = ['a', 'b', 'c'].map((id) => ({ ...row(id, 'done'), name: `Builder ${id}` }));
+    const { container, rerender } = render(<SubagentsLine runId="run-1" rows={builders} live />);
+    expect(container.querySelector('.sl-done')?.textContent).toBe('3 builders done');
+    expect(container.querySelectorAll('.sl-worker')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'View agents' })).toBeTruthy();
+
+    rerender(<SubagentsLine runId="run-1" rows={[...builders.slice(1), row('d', 'done')]} live />);
+    expect(container.querySelector('.sl-done')?.textContent).toBe('3 agents done');
+
+    rerender(<SubagentsLine runId="run-1" rows={[...builders, row('d', 'failed')]} live />);
+    expect(container.querySelector('.sl-done')).toBeNull();
+    rerender(<SubagentsLine runId="run-1" rows={[...builders, row('d', 'working')]} live />);
+    expect(container.querySelectorAll('.sl-worker')).toHaveLength(4);
+
+    rerender(<SubagentsLine runId="run-1" rows={builders.slice(0, 1)} live />);
+    expect(container.querySelector('.sl-done')?.textContent).toBe('1 builder done');
+  });
+
   it('opens the agents in the side panel', () => {
     const open = vi.fn();
     render(
