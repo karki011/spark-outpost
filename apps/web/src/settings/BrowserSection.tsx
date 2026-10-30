@@ -11,10 +11,6 @@ export const SIGN_OUT_ALL_LABEL = 'Sign out of everything';
 
 const SITES_KEY = ['browser-sites'] as const;
 
-export function browserSettingsAvailable(): boolean {
-  return desktopBrowser() !== null;
-}
-
 function SignedInSites() {
   const queryClient = useQueryClient();
   const browser = desktopBrowser();

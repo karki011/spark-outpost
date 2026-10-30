@@ -30,10 +30,6 @@ const SWITCH_INFO = {
   ],
 };
 
-export function macControlAvailable(): boolean {
-  return desktopMacControl() !== null;
-}
-
 function Permission({ status }: { status: MacControlStatus | undefined }) {
   if (!status) return null;
   if (status.trusted) {

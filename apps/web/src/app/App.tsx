@@ -30,16 +30,13 @@ import { OnScreenChat, onScreenChatId } from '../conversations/on-screen.ts';
 import { isDocLinkOpen, leaveDocs, useDocLinks } from '../docs/doc-route.ts';
 import { DocsSkeleton } from '../docs/DocsSkeleton.tsx';
 import { Home } from '../home/Home.tsx';
-import { Onboarding } from '../onboarding/Onboarding.tsx';
 import { OutpostHost } from '../outposts/OutpostHost.tsx';
 import { ResetHost } from '../reset/ResetHost.tsx';
 import { SessionPaletteHost } from '../sessions/SessionPaletteHost.tsx';
-import { SettingsDialog } from '../settings/SettingsDialog.tsx';
 import { useSettingsState } from '../settings/use-settings-state.ts';
 import { useAppMenu } from '../desktop/use-app-menu.ts';
-import { SHOW_ISLAND_LABEL } from '../settings/DesktopCompanionSetting.tsx';
+import { LEVEL_LABEL } from '../settings/setting-labels.ts';
 import { requestSettingFocus } from '../settings/setting-focus.ts';
-import { LEVEL_LABEL } from '../spark/LevelSetting.tsx';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { FreezeWhileHidden } from '../ui/FreezeWhileHidden.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
@@ -60,9 +57,12 @@ import { useFirstContent } from './first-content.ts';
 import {
   Analytics,
   BrowserView,
+  Onboarding,
   OutpostView,
   Phone,
+  preloadSettings,
   preloadView,
+  SettingsDialog,
   Tickets,
   Today,
 } from './lazy-views.tsx';
@@ -73,7 +73,6 @@ import { readHomeDraftId, saveHomeDraftId } from '../home/home-draft.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
 import { DefaultLevelNotice } from '../spark/DefaultLevelNotice.tsx';
 import { PasskeyOffer } from '../phone/PasskeyOffer.tsx';
-import { openTeammateSheet } from '../teammates/teammate-store.ts';
 import { useAttentionTitle } from './use-attention-title.ts';
 import { useAlertingChats } from '../attention/use-attention.ts';
 import { useAttentionReport } from '../desktop/use-attention-report.ts';
@@ -83,6 +82,7 @@ import { useCloseSeenNotifications } from '../phone/close-seen-notifications.ts'
 import { useNotificationChats } from '../phone/use-notification-chats.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { startIdleMotion } from './idle-motion.ts';
+import { useDesktopSettingsOpener } from './use-desktop-settings-opener.ts';
 import '../ui/controls.css';
 import { openTodayEvent, useTodayOpener } from '../calendar/today-request.ts';
 import { browserViewAvailable, useBrowserViewOpener } from '../browser-view/view-store.ts';
@@ -225,34 +225,7 @@ function ChatShell({ entering }: { entering: boolean }) {
   useBrowserViewOpener(showBrowserView);
   useSlackPresence(remote);
   useNotificationChats(remote, openChat);
-  useEffect(
-    () =>
-      sparkDesktop()?.onOpenSettings?.((target) => {
-        if (target === 'sparks') {
-          setSettings('sparks');
-          return;
-        }
-        if (target === 'connectors') {
-          setSettings('tools');
-          return;
-        }
-        if (target === 'spark-new') {
-          openTeammateSheet({ kind: 'create' });
-          return;
-        }
-        if (target.startsWith('today:')) {
-          openTodayEvent(target.slice('today:'.length));
-          return;
-        }
-        if (target.startsWith('spark-edit:')) {
-          openTeammateSheet({ kind: 'edit', id: target.slice('spark-edit:'.length) });
-          return;
-        }
-        requestSettingFocus(SHOW_ISLAND_LABEL);
-        setSettings('notifications');
-      }),
-    [setSettings],
-  );
+  useDesktopSettingsOpener(setSettings);
 
   const openAtCard = (chat: ConversationSummary) => {
     openChat(chat.id);
@@ -294,6 +267,7 @@ function ChatShell({ entering }: { entering: boolean }) {
             ticketNotices={ticketNotices}
             mood={mood}
             onIntent={preloadView}
+            onSettingsIntent={preloadSettings}
             onView={(next) => {
               setView(next);
               if (next === 'chats' && layout.collapsed && !layout.narrow) layout.reveal();
@@ -432,16 +406,17 @@ function ChatShell({ entering }: { entering: boolean }) {
           <TeammateHost />
           <AnimatePresence>
             {settings && (
-              <SettingsDialog
-                key="settings"
-                section={settings}
-                onSection={setSettings}
-                onClose={() => setSettings(null)}
-                onOpenChat={(id) => {
-                  setSettings(null);
-                  openChat(id);
-                }}
-              />
+              <Suspense key="settings" fallback={null}>
+                <SettingsDialog
+                  section={settings}
+                  onSection={setSettings}
+                  onClose={() => setSettings(null)}
+                  onOpenChat={(id) => {
+                    setSettings(null);
+                    openChat(id);
+                  }}
+                />
+              </Suspense>
             )}
           </AnimatePresence>
         </div>
@@ -487,7 +462,9 @@ export function App() {
           <ChatShell entering={entering} />
         </DocsReachable>
       ) : (
-        <Onboarding onFinished={handleOnboardingFinished} />
+        <Suspense fallback={<div className="app" aria-hidden="true" />}>
+          <Onboarding onFinished={handleOnboardingFinished} />
+        </Suspense>
       )}
       {connection.lost && <ReconnectBanner />}
       {!connection.lost && setup.data.profile.onboardingCompleted && <PauseBanner />}
