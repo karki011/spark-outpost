@@ -21,9 +21,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 | Quieter chats            | Controls sit [under the box](start-a-chat.md); finished turns fold.      |
 | Mac stays awake          | [Remote control](use-your-phone.md) keeps it awake.                      |
 | Busy attachments         | Attach files while agents work.                                          |
-| Tickets interaction      | Preloading no longer blocks with backdrops.                              |
 | GitHub authentication    | Credential commands follow mode and rules.                               |
-| Compact dictation        | Live words appear in drafts; controls stay put.                          |
 | Meeting reminders        | **Snooze until start**; ended reminders disappear.                       |
 | Adjustable Island height | Adjust in **Settings → Notifications**.                                  |
 | Code Mode on by default  | Combine reads; [turn off in Settings](settings.md#code-mode).            |
