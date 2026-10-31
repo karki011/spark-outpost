@@ -52,7 +52,9 @@ async function releaseIdle(
   exclusive: Exclusive,
 ): Promise<void> {
   await exclusive(async () => {
-    if (record.conversationId && (await chatHasOpenRun(db, record.conversationId))) return;
+    const chat = record.conversationId;
+    if (chat && (await chatHasOpenRun(db, chat))) return;
+    if (chat && reason === 'archived' && !(await archivedOrDeleted(db, chat))) return;
     await releaseChatWorktree(db, record, reason);
   });
 }

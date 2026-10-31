@@ -113,6 +113,20 @@ describe('sweeping chat worktrees', () => {
     expect(await removedAt(record)).toBeNull();
   });
 
+  it('leaves a worktree alone when its chat is restored before the release', async () => {
+    const record = await chatWithWorktree('restored');
+    await archive(record);
+    const restores: Exclusive = async (work) => {
+      await t.db.query('UPDATE conversations SET archived_at = NULL WHERE id = $1', [
+        record.conversationId,
+      ]);
+      return work();
+    };
+    await sweep(restores);
+    expect(existsSync(record.path)).toBe(true);
+    expect(await removedAt(record)).toBeNull();
+  });
+
   it('keeps sweeping the other worktrees when one fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const notGit = await mkdtemp(join(base, 'not-git-'));
