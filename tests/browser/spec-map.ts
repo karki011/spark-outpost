@@ -61,6 +61,7 @@ export const SPEC_GROUPS = {
     'quote-to-chat',
     'responsive-chat',
     'result-block',
+    'run-stream',
     'secret-warning',
     'send-or-queue',
     'slash-commands',
