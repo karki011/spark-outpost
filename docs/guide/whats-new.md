@@ -12,6 +12,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
+| Status dots              | Rest when Spark idles.                                                   |
 | Turn timeline            | Cards stay [in place](follow-a-turn.md).                                 |
 | Terminal                 | Opens faster.                                                            |
 | Queue while waiting      | Agents waiting on background work get queued messages.                   |
@@ -23,7 +24,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 | GitHub authentication    | Credential commands follow mode and rules.                               |
 | Compact dictation        | Live words appear in drafts; controls stay put.                          |
 | Meeting reminders        | **Snooze until start**; ended reminders disappear.                       |
-| Adjustable Island height | Slide higher or lower in **Settings → Notifications**.                   |
+| Adjustable Island height | Adjust in **Settings → Notifications**.                                  |
 | Code Mode on by default  | Combine reads; [turn off in Settings](settings.md#code-mode).            |
 | Outpost questions        | Answered questions clear **Waiting on you**.                             |
 | Agent-led delegation     | Leads [choose workers and slices](how-spark-works.md#how-work-is-split). |

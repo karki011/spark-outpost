@@ -26,6 +26,7 @@ interface RailProps {
   mood: ScoutMood;
   onView: (view: AppView) => void;
   onIntent: (view: AppView) => void;
+  onSettingsIntent: () => void;
   onSettings: () => void;
   onProfile: () => void;
 }
@@ -188,6 +189,7 @@ export function Rail({
   mood,
   onView,
   onIntent,
+  onSettingsIntent,
   onSettings,
   onProfile,
 }: RailProps) {
@@ -240,6 +242,8 @@ export function Rail({
         className="rail-logo"
         aria-label={`Your profile, ${name}`}
         title={name}
+        onPointerEnter={onSettingsIntent}
+        onFocus={onSettingsIntent}
         onClick={onProfile}
       >
         <UserBlob
@@ -326,7 +330,13 @@ export function Rail({
             {REMOTE_ICON}
             Remote
           </button>
-          <button type="button" className="rail-btn" onClick={onSettings}>
+          <button
+            type="button"
+            className="rail-btn"
+            onPointerEnter={onSettingsIntent}
+            onFocus={onSettingsIntent}
+            onClick={onSettings}
+          >
             {SETTINGS_ICON}
             Settings
           </button>

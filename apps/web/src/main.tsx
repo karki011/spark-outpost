@@ -2,10 +2,10 @@ import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ignoreAnimationIterationListeners } from './app/animation-events.ts';
-import { App } from './app/App.tsx';
 import { reportCspViolationsInDev } from './app/csp-violations.ts';
 import { markConnectionRestored, reportRequestError } from './app/connection/connection-store.ts';
 import { configureLiveQueries } from './app/live/use-app-events.ts';
+import { configureChatRetention } from './app/chat-retention.ts';
 import { markScrollbarStyle } from './app/scrollbars.ts';
 import { startTouchViewport } from './app/touch-viewport.ts';
 import { warmTerminalFont } from './terminal/terminal-font.ts';
@@ -57,6 +57,11 @@ const island = window.location.pathname === '/island';
 const settingsWindow = window.location.pathname === '/settings' && 'sparkDesktop' in window;
 const meetingAlert = window.location.pathname === '/meeting-alert';
 const macIndicator = window.location.pathname === '/mac-indicator';
+const mainWindow = !island && !settingsWindow && !meetingAlert && !macIndicator;
+const loadApp = () => import('./app/App.tsx').then((module) => ({ default: module.App }));
+const appLoading = mainWindow ? loadApp() : null;
+if (mainWindow) configureChatRetention(queryClient);
+const App = lazy(() => appLoading ?? loadApp());
 
 function Root() {
   if (island) {
@@ -87,7 +92,11 @@ function Root() {
       </Suspense>
     );
   }
-  return <App />;
+  return (
+    <Suspense fallback={<div className="app" aria-hidden="true" />}>
+      <App />
+    </Suspense>
+  );
 }
 
 createRoot(document.getElementById('root')!).render(

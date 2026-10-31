@@ -10,6 +10,7 @@ import './island-skin.css';
 import './island-bubble.css';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { setMotionMode } from '../app/idle-motion.ts';
+import { usePageHidden } from '../ui/use-page-hidden.ts';
 import { leaveAsGhost } from './home-motion.ts';
 import { viewWidth, type IslandView } from './island-model.ts';
 import { useViewportWidth } from './island-parts.tsx';
@@ -109,7 +110,8 @@ export function IslandShell({ islandRef, ...props }: IslandShellProps & ShellRef
   const hanging = peeking && props.calendarLine !== null;
   const wings = wingsFor(props);
   const resting = (quiet || view.kind === 'now') && !props.hover;
-  useEffect(() => setMotionMode(resting ? 'paused' : 'live'), [resting]);
+  const hidden = usePageHidden();
+  useEffect(() => setMotionMode(resting || hidden ? 'paused' : 'live'), [resting, hidden]);
   const reducedRef = useRef(props.reduced);
   useEffect(() => {
     reducedRef.current = props.reduced;
@@ -156,7 +158,12 @@ export function IslandShell({ islandRef, ...props }: IslandShellProps & ShellRef
   ].filter(Boolean);
 
   return (
-    <div className="isl-root" data-rm={props.reduced || undefined} data-rest={resting || undefined}>
+    <div
+      className="isl-root"
+      data-rm={props.reduced || undefined}
+      data-rest={resting || undefined}
+      data-hidden={hidden || undefined}
+    >
       <div className="sr-only" aria-live="polite">
         {props.announcement}
       </div>

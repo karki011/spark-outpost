@@ -18,6 +18,7 @@ export const PERF_SPECS = [
   'island-perf',
   'live-diff-perf',
   'project-map-perf',
+  'rest-cost-perf',
   'screen-tour-perf',
 ] as const;
 

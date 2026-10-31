@@ -13,8 +13,8 @@ import { Keys } from '../ui/Keys.tsx';
 import { ISLAND_HEIGHT_LABEL, IslandHeightSetting } from './IslandHeightSetting.tsx';
 import { ISLAND_SIZE_LABEL, IslandSizeSetting } from './IslandSizeSetting.tsx';
 import { SettingRow } from './SettingRow.tsx';
+import { SHOW_ISLAND_LABEL } from './setting-labels.ts';
 
-export const SHOW_ISLAND_LABEL = 'Show Spark Island';
 const CHIMES = 'Island chimes';
 const AUTO_EXPAND = 'Open requests by themselves';
 const HIDE_IN_SHARE = 'Hide in screen sharing';

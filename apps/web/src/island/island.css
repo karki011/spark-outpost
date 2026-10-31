@@ -380,3 +380,9 @@
     transform: rotate(10deg);
   }
 }
+
+.isl-root[data-hidden] *,
+.isl-root[data-hidden] *::before,
+.isl-root[data-hidden] *::after {
+  animation-play-state: paused !important;
+}
