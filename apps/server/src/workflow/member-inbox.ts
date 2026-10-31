@@ -41,7 +41,7 @@ interface InboxOptions {
 export function messagePrompt(messages: readonly Pick<MemberMessage, 'body'>[]): string {
   const bodies = messages.map((message) => message.body.trim());
   const shown = bodies.length === 1 ? bodies[0]! : bodies.map((body) => `- ${body}`).join('\n');
-  return `${MESSAGE_HEADING}\n${shown}\n\nThe user sent this to you directly while you work. Act on it before anything else, then reply with what you changed.`;
+  return `${MESSAGE_HEADING}\n${shown}\n\nThe user sent this to you directly while you work. Act on it first, then finish what you were doing and reply with both.`;
 }
 
 export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
