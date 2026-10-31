@@ -81,6 +81,7 @@ import { useSlackPresence } from '../slack/use-slack-presence.ts';
 import { useCloseSeenNotifications } from '../phone/close-seen-notifications.ts';
 import { useNotificationChats } from '../phone/use-notification-chats.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
+import { useChatRetention } from './chat-retention.ts';
 import { startIdleMotion } from './idle-motion.ts';
 import { useDesktopSettingsOpener } from './use-desktop-settings-opener.ts';
 import '../ui/controls.css';
@@ -242,6 +243,7 @@ function ChatShell({ entering }: { entering: boolean }) {
     settingsOpen: settings !== null,
     activeId,
   });
+  useChatRetention(activeId);
   const viewedHere = useChatViewed(onScreenId);
   useMarkSeen(viewedHere ? onScreenId : null, chats);
   useCloseSeenNotifications(remote, chats, viewedHere ? onScreenId : null);
