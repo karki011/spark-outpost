@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
 
 interface OlderChatsMoreProps {
   loading: boolean;
@@ -16,9 +17,10 @@ export function OlderChatsMore({ loading, onMore }: OlderChatsMoreProps) {
     observer.observe(element);
     return () => observer.disconnect();
   }, [loading, onMore]);
+  if (loading) return <LoadingBlob size="sm" line="Finding older chats…" />;
   return (
-    <button ref={button} type="button" className="older-chats" disabled={loading} onClick={onMore}>
-      {loading ? 'Loading older chats…' : 'Show older chats'}
+    <button ref={button} type="button" className="older-chats" onClick={onMore}>
+      Show older chats
     </button>
   );
 }

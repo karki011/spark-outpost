@@ -12,7 +12,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
-| Long chat lists          | Past 500 chats, scroll to the end of the list to load older ones.        |
+| Long chat lists          | Scroll to load chats past 500.                                           |
 | Busy attachments         | Send or queue files while agents work.                                   |
 | Tickets interaction      | Browser preloading no longer creates blocking backdrops.                 |
 | GitHub authentication    | Credential commands follow mode and rules.                               |
@@ -27,6 +27,5 @@ Earlier releases: **Settings → Updates → Release notes**.
 | Team in the sidebar      | See worker blobs in the sidebar and Agent TV.                            |
 | Agent TV messaging       | Message members or redirect workers in short windows.                    |
 | Calmer text and composer | Tools have readable labels; details stay folded.                         |
-| Message delivery         | **Sent** confirms receipt; refresh failures cannot trigger retries.      |
 
 New profiles [record Claude Terminal sessions](settings.md#record-terminal-sessions); existing choices stay.
