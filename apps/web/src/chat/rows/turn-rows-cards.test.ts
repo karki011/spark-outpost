@@ -93,6 +93,20 @@ describe('turn rows with cards', () => {
     ]);
   });
 
+  it('never splits a sentence the agent was still writing when the card arrived', () => {
+    const parts = turnRowParts({
+      text: '**Step 3: Asking you to pick a colour**\n\nStep 4.',
+      steps: [],
+      commands: [],
+      cards: [{ id: 'asked', time: 9000, textOffset: 30 }],
+    });
+    expect(shape(parts)).toEqual([
+      'text:**Step 3: Asking you to pick a colour**',
+      'cards:asked',
+      'text:Step 4.',
+    ]);
+  });
+
   it('keeps cards out of a closed fold and in place inside an open one', () => {
     const parts = turnRowParts({
       text,

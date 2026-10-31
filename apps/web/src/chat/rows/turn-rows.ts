@@ -13,6 +13,7 @@ import { cardAt, type CardMark } from './card-place.ts';
 import { REFUSED_VERB, stepActivity } from '../status/step-activity.ts';
 
 const THINKING = 'Thinking';
+const SENTENCE_END = /[.!?:]\s*$/;
 const WEB_STEP = /^(?:Fetched |Searched the web$)/;
 const WEB_SEARCHED = 'Searched the web';
 
@@ -244,6 +245,10 @@ function paragraphEnd(text: string, at: number): number {
   return outsideFence(text, end === -1 ? text.length : end);
 }
 
+function sentenceSafe(text: string, at: number): number {
+  return SENTENCE_END.test(text.slice(0, at)) ? at : paragraphEnd(text, at);
+}
+
 function steerPlace(text: string, steer: SteerMark): { at: number; wroteAfter: boolean } {
   if (!steer.anchor) return { at: text.length, wroteAfter: false };
   const anchor = placeAt(text, steer.anchor);
@@ -304,7 +309,7 @@ function placedItems(input: TurnRowInput): Placed[] {
     })),
   ];
   const offsetAt = (textOffset: number) =>
-    placeAt(text, { textOffset, textBefore: null, textHeld: null });
+    sentenceSafe(text, placeAt(text, { textOffset, textBefore: null, textHeld: null }));
   const timedItems = placed.map((item) => ({ ...item, until: placedUntil(item) }));
   placed.push(
     ...cards.map((card): Placed => ({
