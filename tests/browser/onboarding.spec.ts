@@ -148,11 +148,9 @@ test('Meet Spark sets the personality, and the blob reacts', async ({ page }) =>
     .poll(async () => (await (await page.request.get('/api/setup')).json()).profile.personality)
     .toBe('playful');
 
-  const profile = (await (await page.request.get('/api/setup')).json()).profile;
-  expect(profile).toMatchObject({
-    displayName: 'Sam Rivera',
-    personality: 'playful',
-  });
+  await expect
+    .poll(async () => (await (await page.request.get('/api/setup')).json()).profile.displayName)
+    .toBe('Sam Rivera');
   await continueButton(page).click();
   await expect(dialog(page).getByRole('heading', { name: 'Pick a look' })).toBeVisible();
 });
