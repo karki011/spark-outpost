@@ -58,7 +58,15 @@ export function ProjectFolders({
     [conversationId, setOpen, anchorRef],
   );
 
-  const apply = (request: RepoChange) => change.mutate(request);
+  const apply = (request: RepoChange) => {
+    change.mutate(request, {
+      onSuccess: () => {
+        if (request.type !== 'add') return;
+        setOpen(false);
+        anchorRef.current?.focus();
+      },
+    });
+  };
   const adder = useAddFolder({
     onAdded: (project) => apply({ type: 'add', projectId: project.id }),
   });
