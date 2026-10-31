@@ -90,6 +90,7 @@ export function tvCast(
     current?.waitingOn ?? 0,
     current?.background ?? null,
     live.get(run.id) ?? null,
+    current?.step ?? null,
   );
   return { run, lead, sparks, subagents: detail.subagents?.[run.id] ?? [] };
 }

@@ -28,13 +28,14 @@ function agentState(
   steps: readonly ActivityStep[],
   asking: boolean,
   live: LeadStep | null,
+  current: string | null,
 ): CrewState {
   if (timedOut(run.error)) return 'stopped';
   const state = runState(run.status);
   if (state !== 'working') return state;
   if (asking) return 'waiting';
   if (live) return live.label === 'Thinking' ? 'thinking' : 'working';
-  return steps.length > 0 ? 'working' : 'thinking';
+  return steps.length > 0 || current ? 'working' : 'thinking';
 }
 
 function agentLine(
@@ -44,14 +45,15 @@ function agentLine(
   waitingOn: number,
   background: BackgroundWait | null,
   live: LeadStep | null,
+  current: string | null,
 ): string {
   if (timedOut(run.error)) return WAITED_LABEL;
   const settled = SETTLED_LINES[state];
   if (settled) return settled;
   if (waitingOn > 0) return waitLabel(waitingOn, background).toLowerCase();
   if (live) return leadLine(live);
-  const open = steps.findLast((step) => !step.done);
-  return open ? stepLine(open.name) : 'thinking';
+  const open = steps.findLast((step) => !step.done)?.name ?? current;
+  return open ? stepLine(open) : 'thinking';
 }
 
 export function modelOf(run: Run): string | null {
@@ -72,8 +74,9 @@ export function chatAgent(
   waitingOn = 0,
   background: BackgroundWait | null = null,
   live: LeadStep | null = null,
+  current: string | null = null,
 ): CrewAgent {
-  const state = agentState(run, steps, asking, live);
+  const state = agentState(run, steps, asking, live, current);
   return {
     id: run.id,
     role: CHAT_AGENT_ROLE,
@@ -82,7 +85,7 @@ export function chatAgent(
     model: modelOf(run),
     effort: run.effort,
     state,
-    line: agentLine(run, state, steps, waitingOn, background, live),
+    line: agentLine(run, state, steps, waitingOn, background, live, current),
     tokens: run.usage?.tokens?.total ?? null,
     costUsd: run.usage?.costUsd ?? null,
     costSource: run.usage?.costSource ?? null,
