@@ -39,6 +39,7 @@ const settings: AgentSettings = { method: 'cli', model: null, modelLabel: null, 
 interface Watch {
   onOutput?: (output: ProviderOutput, controller: AbortController) => void;
   steering?: SteerRequests;
+  inbox?: { take(): Promise<ProviderMessage | null> };
   provider?: typeof claude;
 }
 
@@ -51,6 +52,7 @@ async function collect(prompt: string, watch: Watch = {}) {
     settings,
     signal: controller.signal,
     ...(watch.steering ? { steering: watch.steering } : {}),
+    ...(watch.inbox ? { inbox: watch.inbox } : {}),
   })) {
     outputs.push(output);
     watch.onOutput?.(output, controller);
@@ -180,6 +182,24 @@ describe(
             void delay(30)
               .then(() => offer('Any news?'))
               .then(() => controller.abort());
+          },
+        });
+        expect(sent).toEqual(['later']);
+        expect(replyText(outputs)).not.toContain('Any news?');
+      });
+
+      it('keeps a message held while the end of the follow-up checks the queue', async () => {
+        const sent: SteerOutcome[] = [];
+        const { steering, offer } = steeringInto(sent);
+        let claims = 0;
+        const outputs = await collect('#ownfollowup', {
+          steering,
+          inbox: {
+            take: async () => {
+              claims += 1;
+              if (claims === 2) await offer('Any news?');
+              return null;
+            },
           },
         });
         expect(sent).toEqual(['later']);

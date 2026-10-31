@@ -208,7 +208,6 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
     if (count && (count.agents + count.tasks > 0 || sleeping)) report(count);
     if (!worked || !endsAgentCycle(message.update)) continue;
     push(loop.tokens.addCycle(loop.requests.take(), mapper.takeSubagentTokens()));
-    inbox.hold(false);
     const next = await nextMessage(loop.turn, 'end_turn', signal);
     if (next) {
       endWriteUp();
@@ -220,6 +219,7 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
       stopWaiting();
       return 'end_turn';
     }
+    inbox.hold(false);
     worked = false;
   }
 }
