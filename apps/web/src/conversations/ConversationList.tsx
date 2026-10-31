@@ -396,7 +396,7 @@ export const ConversationList = memo(function ConversationList({
                 />
               )}
               {older.hasMore && !searching && (
-                <OlderChatsMore loading={older.loading} onMore={older.more} />
+                <OlderChatsMore loading={older.loading} failed={older.failed} onMore={older.more} />
               )}
             </div>
           </div>

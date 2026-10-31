@@ -1,5 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useInfiniteQuery, type InfiniteData, type QueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  type InfiniteData,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { CHAT_LIST_PAGE, type ConversationSummary } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 
@@ -9,7 +14,7 @@ type ListChange = (list: ConversationSummary[] | undefined) => ConversationSumma
 const NO_CHATS: ConversationSummary[] = [];
 
 export function patchOlderChats(client: QueryClient, change: ListChange): void {
-  client.setQueryData<Pages>(queryKeys.olderConversations, (data) =>
+  client.setQueriesData<Pages>({ queryKey: queryKeys.olderConversations }, (data) =>
     data ? { ...data, pages: data.pages.map((page) => change(page) ?? page) } : data,
   );
 }
@@ -31,26 +36,32 @@ export function mergeChatPages(
 export function useOlderChats(data: ConversationSummary[] | undefined) {
   const head = data ?? NO_CHATS;
   const [asked, setAsked] = useState(false);
-  const full = head.length >= CHAT_LIST_PAGE;
+  const [full, setFull] = useState(false);
+  if (!full && head.length >= CHAT_LIST_PAGE) setFull(true);
+  const cursor = head.at(-1)?.id ?? '';
   const query = useInfiniteQuery({
-    queryKey: queryKeys.olderConversations,
+    queryKey: [...queryKeys.olderConversations, cursor],
     queryFn: ({ pageParam }) => api.listConversationsAfter(pageParam),
-    initialPageParam: head.at(-1)?.id ?? '',
+    initialPageParam: cursor,
+    placeholderData: keepPreviousData,
     getNextPageParam: (last) => (last.length >= CHAT_LIST_PAGE ? last.at(-1)?.id : undefined),
-    enabled: asked && full,
+    enabled: asked && full && cursor !== '',
   });
   const pages = query.data?.pages;
   const chats = useMemo(() => (pages ? mergeChatPages(head, pages) : head), [head, pages]);
-  const { fetchNextPage } = query;
+  const { fetchNextPage, refetch } = query;
   const started = pages !== undefined;
+  const failedFirst = !started && query.isError;
   const more = useCallback(() => {
     if (started) void fetchNextPage();
+    else if (failedFirst) void refetch();
     else setAsked(true);
-  }, [started, fetchNextPage]);
+  }, [started, failedFirst, fetchNextPage, refetch]);
   return {
     chats,
     hasMore: full && (!started || query.hasNextPage),
     loading: query.isFetching,
+    failed: query.isError,
     more,
   };
 }
