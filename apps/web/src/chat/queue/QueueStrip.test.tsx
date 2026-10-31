@@ -61,6 +61,22 @@ it('keeps an edit that lost the race with the queue, so it can be queued again',
   expect(screen.queryByRole('textbox', { name: 'Unsaved edit' })).toBeNull();
 });
 
+it('says why a kept edit could not be queued again and keeps it', async () => {
+  const sent = new ApiError(404, 'That message has already been sent.');
+  const queue = chatQueue({
+    edit: vi.fn().mockRejectedValue(sent),
+    add: vi.fn().mockRejectedValue(new ApiError(409, 'The queue holds 50 messages.')),
+  });
+  const view = render(<QueueStrip queue={queue} mode="waiting" />);
+  fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Save' })));
+  view.rerender(<QueueStrip queue={{ ...queue, items: [] }} mode="waiting" />);
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Queue' })));
+  const alerts = screen.getAllByRole('alert').map((alert) => alert.textContent);
+  expect(alerts).toContain('The queue holds 50 messages.');
+  expect(screen.getByRole('textbox', { name: 'Unsaved edit' })).toBeTruthy();
+});
+
 it('keeps no copy of an edit that failed for another reason', async () => {
   const queue = chatQueue({ edit: vi.fn().mockRejectedValue(new ApiError(0, 'Offline')) });
   render(<QueueStrip queue={queue} mode="waiting" />);

@@ -79,9 +79,12 @@ function StrandedEdit({
   onDone: () => void;
 }) {
   const [text, setText] = useState(content);
+  const [failure, setFailure] = useState<string | null>(null);
   const requeue = () => {
     const kept = text.trim();
-    if (kept) void queue.add(kept).then(onDone, () => undefined);
+    if (!kept) return;
+    setFailure(null);
+    void queue.add(kept).then(onDone, (error: Error) => setFailure(error.message));
   };
   return (
     <div className="qs-stranded">
@@ -103,6 +106,11 @@ function StrandedEdit({
           Discard
         </button>
       </span>
+      {failure && (
+        <p className="qs-error" role="alert">
+          {failure}
+        </p>
+      )}
     </div>
   );
 }
