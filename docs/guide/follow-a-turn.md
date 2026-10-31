@@ -57,7 +57,7 @@ Send files without text. Queues survive restarts; drafts don't survive a reload.
 
 ## After a turn
 
-Steps fold under **Worked for …**; select to open.
+Steps fold under **Worked for …**; steered replies don't.
 
 | Under a reply                    | Use it to                                                   |
 | -------------------------------- | ----------------------------------------------------------- |

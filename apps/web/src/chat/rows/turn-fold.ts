@@ -6,11 +6,17 @@ function answerIndex(parts: readonly TurnRowPart[]): number {
   return parts.findLastIndex((part) => part.kind === 'text');
 }
 
+function answersSteer(parts: readonly TurnRowPart[], index: number): boolean {
+  const firstSteer = parts.findIndex((part) => part.kind === 'steers');
+  return firstSteer >= 0 && index > firstSteer;
+}
+
 export function foldedPart(parts: readonly TurnRowPart[], index: number, open = false): boolean {
   const part = parts[index];
   if (part?.kind === 'rows') return true;
   if (part?.kind === 'cards') return open && index < answerIndex(parts);
-  return part?.kind === 'text' && index !== answerIndex(parts);
+  if (part?.kind !== 'text' || index === answerIndex(parts)) return false;
+  return !answersSteer(parts, index);
 }
 
 export function canFold(parts: readonly TurnRowPart[]): boolean {

@@ -22,9 +22,29 @@ describe('turn fold', () => {
     text('t3', 'Added Export CSV to the toolbar.'),
   ];
 
-  it('folds step rows and in-between notes and keeps the answer and steers out', () => {
+  it('folds step rows and notes before a steer and keeps the answer and steers out', () => {
     const folded = parts.map((_, index) => foldedPart(parts, index));
-    expect(folded).toEqual([true, true, false, true, true, false]);
+    expect(folded).toEqual([true, true, false, false, true, false]);
+  });
+
+  it('keeps every reply after a steered message out of the fold', () => {
+    const steered: TurnRowPart[] = [
+      { kind: 'steers', key: 's1', ids: ['m1'], wroteAfter: true },
+      text('t1', 'SECOND-ONE'),
+      rows('r1', [done('Read `a.ts`')]),
+      { kind: 'steers', key: 's2', ids: ['m2'], wroteAfter: true },
+      text('t2', 'THIRD-TWO'),
+      rows('r2', [done('Read `b.ts`')]),
+      text('t3', 'FIRST-DONE'),
+    ];
+    const shown = steered.filter((_, index) => !foldedPart(steered, index));
+    expect(shown.map((part) => part.key)).toEqual(['s1', 't1', 's2', 't2', 't3']);
+  });
+
+  it('folds in-between notes in a turn nobody steered', () => {
+    const plain = parts.filter((part) => part.kind !== 'steers');
+    const folded = plain.map((_, index) => foldedPart(plain, index));
+    expect(folded).toEqual([true, true, true, true, false]);
   });
 
   it('sums the steps of every group, counting a file once', () => {

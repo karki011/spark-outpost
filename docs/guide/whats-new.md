@@ -16,7 +16,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 | Long chat lists          | Scroll to load chats past 500.                                           |
 | Status dots              | Rest when Spark idles; closed panels stay still.                         |
 | Sub-agent status         | Stays running until background work ends.                                |
-| Turn timeline            | Cards stay [in place](follow-a-turn.md).                                 |
+| Turn timeline            | Cards stay [in place](follow-a-turn.md); steered replies stay unfolded.  |
 | Queue while waiting      | Agents waiting on background work get queued messages.                   |
 | Queue strip              | Tags show authors; late edits and untaken messages stay queued.          |
 | Quieter chats            | Controls sit [under the box](start-a-chat.md); finished turns fold.      |
@@ -28,6 +28,5 @@ Earlier releases: **Settings → Updates → Release notes**.
 | Agent-led delegation     | Leads [choose workers and slices](how-spark-works.md#how-work-is-split). |
 | Chat opening             | Drafts stay; failures offer **Try again**.                               |
 | Outpost messages         | Messages go to the shown lead; **Post note** is explicit.                |
-| Message delivery         | **Sent** confirms receipt; failed refreshes never retry.                 |
 
 New profiles [record Claude Terminal sessions](settings.md#record-terminal-sessions); existing choices stay.
