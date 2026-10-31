@@ -10,6 +10,7 @@ import './island-skin.css';
 import './island-bubble.css';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { setMotionMode } from '../app/idle-motion.ts';
+import { useIdleAfter } from '../ui/use-idle-after.ts';
 import { usePageHidden } from '../ui/use-page-hidden.ts';
 import { leaveAsGhost } from './home-motion.ts';
 import { viewWidth, type IslandView } from './island-model.ts';
@@ -71,6 +72,8 @@ function viewKey(view: IslandView): string {
   }
 }
 
+const REST_AFTER_IDLE_MS = 10_000;
+
 export function IslandShell({ islandRef, ...props }: IslandShellProps & ShellRefs) {
   const { view, geometry, size } = props;
   const height = useIslandHeight();
@@ -111,7 +114,9 @@ export function IslandShell({ islandRef, ...props }: IslandShellProps & ShellRef
   const wings = wingsFor(props);
   const resting = (quiet || view.kind === 'now') && !props.hover;
   const hidden = usePageHidden();
-  useEffect(() => setMotionMode(resting || hidden ? 'paused' : 'live'), [resting, hidden]);
+  const idle = useIdleAfter(REST_AFTER_IDLE_MS);
+  const motion = resting || hidden ? 'paused' : idle ? 'rest' : 'live';
+  useEffect(() => setMotionMode(motion), [motion]);
   const reducedRef = useRef(props.reduced);
   useEffect(() => {
     reducedRef.current = props.reduced;

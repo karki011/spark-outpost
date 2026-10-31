@@ -126,6 +126,17 @@ export async function hideWindow(page: Page, { blur }: { blur: boolean }): Promi
   }, blur);
 }
 
+export async function showWindow(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'visible',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+}
+
 export async function scriptsLoaded(page: Page): Promise<{ files: number; kb: number }> {
   return page.evaluate(() => {
     const scripts = performance

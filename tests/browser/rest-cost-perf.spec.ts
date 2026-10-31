@@ -10,6 +10,7 @@ import {
   restCostOver,
   runningAnimations,
   scriptsLoaded,
+  showWindow,
 } from './rest-cost.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { seedTourChats } from './tour-seed.ts';
@@ -110,6 +111,30 @@ test('the app and Spark Island stay quiet at rest and while hidden', async ({ pa
   expect.soft(islandHidden!.framesPerSecond).toBeLessThan(1);
   expect.soft(Object.keys(islandHidden!.runningAnimations)).toEqual([]);
   expect.soft(Object.keys(islandResting!.runningAnimations)).toEqual([]);
+});
+
+test('Spark Island goes back to rest after being hidden and shown', async ({ page }) => {
+  test.setTimeout(90_000);
+  await resetTestDatabase({ onboarded: true });
+  await fakeHomeDesktop(page);
+  await openIsland(page);
+  await page.mouse.move(640, 600);
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect.poll(() => motion(page)).toBe('paused');
+
+  await openHome(page);
+  await expect.poll(() => motion(page)).toBe('live');
+  await hideWindow(page, { blur: false });
+  await expect.poll(() => motion(page)).toBe('paused');
+  await showWindow(page);
+  await expect.poll(() => motion(page)).toBe('live');
+  await expect.poll(() => motion(page), { timeout: 20_000 }).toBe('rest');
+  expect(
+    Object.keys(await runningAnimations(page)).filter((name) => /^(sc-|blob-)/.test(name)),
+  ).toEqual([]);
+
+  await page.mouse.move(640, 300);
+  await expect.poll(() => motion(page)).toBe('live');
 });
 
 test('opening and leaving 20 chats keeps the heap near where it started', async ({ page }) => {
