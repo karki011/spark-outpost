@@ -43,6 +43,10 @@ describe('remote policy', () => {
     expect(remoteDecision('GET', `/api/runs/${ID}/events`, ALL_ON).kind).toBe('refuse');
   });
 
+  it('keeps the merged Terminal poll on the Mac whatever the switches say', () => {
+    expect(remoteDecision('GET', '/api/terminal-live', ALL_ON).kind).toBe('refuse');
+  });
+
   it('lets a paired device read the inbox and mark its items, with the switches off', () => {
     expect(remoteDecision('GET', '/api/attention', ALL_OFF).kind).toBe('allow');
     for (const mark of ['read', 'set-aside', 'dismiss']) {

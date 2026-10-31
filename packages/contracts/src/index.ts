@@ -40,6 +40,7 @@ export * from './project-clone.ts';
 export * from './roles.ts';
 export * from './run-events.ts';
 export * from './run-stream.ts';
+export * from './terminal-live.ts';
 export * from './subagent-report.ts';
 export * from './subagents.ts';
 export * from './runs.ts';

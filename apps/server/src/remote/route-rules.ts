@@ -224,6 +224,7 @@ GET /api/terminal/sessions/:id/busy
 POST /api/terminal/sessions
 POST /api/terminal/sessions/:id/attach
 GET /api/conversations/:id/terminal/usage
+GET /api/terminal-live
 GET /api/conversations/:id/terminal/start
 POST /api/conversations/:id/terminal
 POST /api/conversations/:id/terminal/images
