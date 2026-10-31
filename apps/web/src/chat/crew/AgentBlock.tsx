@@ -13,7 +13,6 @@ import { CrewBlob } from '../../crew/CrewBlob.tsx';
 import { modelLabel, roleLabel, usageParts, type CrewAgent } from '../../crew/crew-model.ts';
 import { memberReplyText } from '../../crew/member-reply.ts';
 import { ChevronIcon } from '../../ui/icons.tsx';
-import type { TurnState } from '../WorkLog.tsx';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
 import { decidedFirst } from '../approvals/approval-events.ts';
 import { EffortMeter } from '../composer/EffortMeter.tsx';
@@ -22,12 +21,14 @@ import { turnAgentTerminals } from '../commands/agent-terminal-model.ts';
 import { AgentTerminalsRunning } from '../commands/AgentTerminalRow.tsx';
 import { shownCommands, type LiveCommand } from '../commands/command-model.ts';
 import { useChatAgentTerminals } from '../commands/use-agent-terminals.ts';
-import { TurnReply } from '../commands/TurnReply.tsx';
+import type { CommandAnswers } from '../commands/command-answers.ts';
+import { TurnRows } from '../rows/TurnRows.tsx';
+import { turnRowParts } from '../rows/turn-rows.ts';
+import { turnCards } from '../turn/turn-cards.ts';
 import { ErrorLine, ModelSwitchNote, type TimedOutFacts } from '../ModelSwitchNote.tsx';
-import { shownSteps, shownText, streamLeads, type RunStep } from '../run-projection.ts';
+import { shownSteps, shownText, streamLeads, viewSteps, type RunStep } from '../run-projection.ts';
 import { useLiveHead, useLiveReport } from '../status/status-context.ts';
 import { useRunStream } from '../use-run-stream.ts';
-import { WorkLog } from '../WorkLog.tsx';
 import { blockStatus, type BlockStatus } from './block-status.ts';
 import { shownApprovals } from './crew-items.ts';
 import { CrewName } from './CrewHint.tsx';
@@ -56,17 +57,6 @@ function HeadMeta({ agent }: { agent: CrewAgent }) {
     </span>
   );
 }
-
-const TURN_STATES: Record<CrewAgent['state'], TurnState> = {
-  inactive: 'stopped',
-  thinking: 'working',
-  working: 'working',
-  waiting: 'waiting',
-  done: 'done',
-  failed: 'failed',
-  stopped: 'stopped',
-  queued: 'working',
-};
 
 function AgentFace({ agent, size }: { agent: CrewAgent; size: number }) {
   if (agent.spark) {
@@ -126,11 +116,14 @@ interface BodyProps {
 const NO_COMMANDS: readonly CommandRun[] = [];
 const NO_STREAMED: readonly LiveCommand[] = [];
 const NO_STARTED: readonly AgentTerminalStarted[] = [];
+const NO_PLACES: Readonly<Record<string, number>> = {};
+const NO_ANSWERS: CommandAnswers = new Map();
 
 interface StreamedProps {
   liveId?: string | null;
   streamed?: readonly LiveCommand[];
   started?: readonly AgentTerminalStarted[];
+  approvalAt?: Readonly<Record<string, number>>;
 }
 
 function AgentBody({
@@ -145,6 +138,7 @@ function AgentBody({
   commands = NO_COMMANDS,
   streamed = NO_STREAMED,
   started = NO_STARTED,
+  approvalAt = NO_PLACES,
   error,
   errorDetails = null,
   modelSwitch = null,
@@ -170,6 +164,20 @@ function AgentBody({
       repo={repo}
     />
   );
+  const timeline = turnCards({
+    approvals: cards.decided,
+    flags: [],
+    approvalAt,
+    publishFrom: null,
+  });
+  const parts = turnRowParts({
+    text,
+    steps: viewSteps(steps),
+    commands: shownCommands(commands, streamed, agent.id),
+    shots,
+    terminals,
+    cards: timeline.marks,
+  });
   const status = blockStatus(
     agent,
     { steps, waiting: cards.pending.length > 0, started: Boolean(text) },
@@ -179,19 +187,27 @@ function AgentBody({
     <>
       <AgentHead agent={agent} anchor={anchor} status={status} liveId={liveId} />
       <div id={bodyId}>
-        <WorkLog steps={[...steps]} state={TURN_STATES[status.state]} runId={agent.id} />
-        {cards.decided.map(approvalCard)}
-        <TurnReply
-          text={text}
-          shots={shots}
-          commands={shownCommands(commands, streamed, agent.id)}
-          terminals={terminals}
-          waiting={cards.pending.length > 0}
+        <TurnRows
+          parts={parts}
+          context={{
+            runId: agent.id,
+            working: busy,
+            waiting: cards.pending.length > 0,
+            changes: null,
+            todo: null,
+            answers: NO_ANSWERS,
+          }}
+          cards={(ids) =>
+            ids.flatMap((id) => {
+              const card = timeline.byId.get(id);
+              return card?.kind === 'approval' ? [approvalCard(card.approval)] : [];
+            })
+          }
         >
           {(part, last) => (
             <MemberReplyText role={agent.role} text={part} streaming={last && busy} />
           )}
-        </TurnReply>
+        </TurnRows>
         {cards.pending.map(approvalCard)}
         {!busy && <AgentTerminalsRunning terminals={terminals} />}
         <ModelSwitchNote change={modelSwitch} />
@@ -215,6 +231,7 @@ function StreamedBody({ live, ...stored }: BodyProps & { live: boolean }) {
       steps={steps}
       streamed={stream.commands}
       started={stream.terminals}
+      approvalAt={stream.approvalAt}
       text={shownText(stream, stored.text, !live)}
       error={leads ? stream.error : (stored.error ?? stream.error)}
       modelSwitch={stored.modelSwitch ?? stream.modelSwitch}

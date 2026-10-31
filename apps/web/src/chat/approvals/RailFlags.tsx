@@ -113,18 +113,6 @@ export function FlagLine({ flag, conversationId }: { flag: RailFlag; conversatio
   );
 }
 
-export function RailFlags({ detail, runId }: { detail: ConversationDetail; runId: string }) {
-  const flags = (detail.railFlags ?? []).filter((flag) => flag.turnRunId === runId);
-  if (flags.length === 0) return null;
-  return (
-    <>
-      {flags.map((flag) => (
-        <FlagLine key={flag.id} flag={flag} conversationId={detail.conversation.id} />
-      ))}
-    </>
-  );
-}
-
 export function OpenRailFlags({ detail }: { detail: ConversationDetail }) {
   const flags = (detail.railFlags ?? []).filter((flag) => flag.status === 'open');
   if (flags.length === 0) return null;
