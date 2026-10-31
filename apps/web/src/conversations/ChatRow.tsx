@@ -267,7 +267,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
             {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}
             {autoArchived && <span className="sr-only">, {autoArchived}</span>}
           </span>
-          {faceless && blob && (
+          {blob && (
             <span className="row-state" data-state={blob} aria-hidden="true">
               {BLOB_LABELS[blob]}
             </span>

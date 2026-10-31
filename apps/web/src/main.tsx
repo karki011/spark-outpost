@@ -16,6 +16,7 @@ import './brand/blob-motion.css';
 import './app/base.css';
 import './app/reduced-motion.css';
 import './app/idle-motion.css';
+import './ui/mac-targets.css';
 import './ui/touch.css';
 
 const queryClient = new QueryClient({

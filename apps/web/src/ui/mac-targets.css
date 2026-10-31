@@ -1,0 +1,17 @@
+:root
+  :is(.icon-btn, .rgrip, .rmenu, .pgrip, .crail-toggle, .chip-x, .wp-tab, .work-tab, .chat-tab) {
+  min-width: 28px;
+  min-height: 28px;
+}
+:root
+  :is(
+    .rail-clock,
+    .crail-row,
+    .crail-tasks-count,
+    .run-usage,
+    button.ac-name,
+    .flag-line-details,
+    input[type='search']
+  ) {
+  min-height: 28px;
+}
