@@ -1,11 +1,14 @@
-:root
-  :is(.icon-btn, .rgrip, .rmenu, .pgrip, .crail-toggle, .chip-x, .wp-tab, .work-tab, .chat-tab) {
+:root :is(.icon-btn, .rgrip, .rmenu, .pgrip, .crail-toggle, .chip-x, .info-tip, .feed-x) {
   min-width: 28px;
   min-height: 28px;
 }
 :root
   :is(
     .rail-clock,
+    .hlink,
+    .qa,
+    .seg > button,
+    summary,
     .crail-row,
     .crail-tasks-count,
     .run-usage,
