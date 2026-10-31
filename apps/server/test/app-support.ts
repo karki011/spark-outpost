@@ -28,6 +28,7 @@ export interface TestAppOptions {
   agentRuntime?: AppOptions['agentRuntime'];
   probeCapabilities?: AppOptions['probeCapabilities'];
   appEvents?: AppEventFeed;
+  hub?: RunEventHub;
   outposts?: OutpostDelivery;
   port?: number;
   githubApiUrl?: string;
@@ -66,7 +67,7 @@ export function testAppOptions(t: TestDb, options: TestAppOptions = {}): AppOpti
   const port = options.port ?? PORT;
   return {
     db: t.db,
-    hub: new RunEventHub(),
+    hub: options.hub ?? new RunEventHub(),
     workspaceId: t.workspaceId,
     ...(options.fixedRunProvider === null
       ? {}

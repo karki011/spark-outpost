@@ -2,6 +2,7 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { parseRunStreamFrame } from '@spark-outpost/contracts';
 import { saveAttachment } from '../src/persistence/attachments.ts';
 import { insertBrowserShot } from '../src/persistence/browser-screenshots.ts';
 import { getRun } from '../src/persistence/runs.ts';
@@ -50,8 +51,9 @@ afterEach(async () => {
 function eventTypesIn(sse: string): string[] {
   return sse
     .split('\n\n')
-    .filter((frame) => frame.startsWith('id: '))
-    .map((frame) => (JSON.parse(frame.split('\n')[1]!.slice(6)) as { type: string }).type);
+    .filter((frame) => frame.startsWith('data: '))
+    .map((frame) => parseRunStreamFrame(frame.slice(6)))
+    .flatMap((frame) => (frame && 'event' in frame ? [frame.event.type] : []));
 }
 
 describe('a paired phone on a chat started on the Mac', () => {
@@ -76,11 +78,11 @@ describe('a paired phone on a chat started on the Mac', () => {
     const detail = await phone.get(`/api/conversations/${conversationId}`).expect(200);
     expect(JSON.stringify(detail.body)).toContain('Hello from the Mac');
 
-    const stream = await phone.get(`/api/runs/${firstRun}/events`).expect(200);
+    const stream = await phone.get(`/api/run-events?runs=${firstRun}:0`).expect(200);
     const types = eventTypesIn(stream.text);
     expect(types[0]).toBe('RUN_STARTED');
     expect(types.at(-1)).toBe('RUN_FINISHED');
-    const resumed = await phone.get(`/api/runs/${firstRun}/events`).set('Last-Event-ID', '3');
+    const resumed = await phone.get(`/api/run-events?runs=${firstRun}:3`);
     expect(eventTypesIn(resumed.text)).toEqual(types.slice(3));
 
     const sent = await phone

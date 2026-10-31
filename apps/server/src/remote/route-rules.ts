@@ -117,7 +117,7 @@ GET /api/conversations
 GET /api/conversations/:id
 GET /api/conversations/:id/annotations
 GET /api/runs/:id
-GET /api/runs/:id/events
+GET /api/run-events
 GET /api/runs/:id/reasoning/:messageId
 GET /api/runs/:id/commands/:commandId/output
 GET /api/runs/:id/orchestration

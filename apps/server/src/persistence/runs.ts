@@ -34,13 +34,15 @@ export async function requestCancel(db: Queryable, id: string): Promise<Run | nu
   return getRun(db, id);
 }
 
+export const RUN_EVENTS_PAGE = 1000;
+
 export async function listRunEventsAfter(
   db: Queryable,
   runId: string,
   afterSeq: number,
 ): Promise<StoredRunEvent[]> {
   const { rows } = await db.query<{ seq: number; payload: StoredRunEvent['event'] }>(
-    'SELECT seq, payload FROM run_events WHERE run_id = $1 AND seq > $2 ORDER BY seq LIMIT 1000',
+    `SELECT seq, payload FROM run_events WHERE run_id = $1 AND seq > $2 ORDER BY seq LIMIT ${RUN_EVENTS_PAGE}`,
     [runId, afterSeq],
   );
   return rows.map((row) => ({ seq: row.seq, event: row.payload }));

@@ -32,7 +32,7 @@ import { ConversationMissingError } from '../persistence/chat-settings.ts';
 import { InvalidDefaultError } from '../persistence/setup.ts';
 import { TerminalLimitError } from '../terminal/sessions.ts';
 import type { RunEventHub } from './run-event-hub.ts';
-import { streamRunEvents } from './run-stream.ts';
+import { streamRuns } from './run-stream.ts';
 import { AttachmentError } from '../persistence/attachment-content.ts';
 import { FolderError } from '../projects/folders.ts';
 import { ProjectNotFoundError } from '../projects/projects.ts';
@@ -203,8 +203,8 @@ export function apiRoutes(deps: RouteDeps): Router {
     res.json(thought);
   });
 
-  router.get('/runs/:id/events', async (req, res) => {
-    await streamRunEvents(db, hub, paramId(req), req, res);
+  router.get('/run-events', async (req, res) => {
+    await streamRuns(db, hub, req, res);
   });
 
   return router;
