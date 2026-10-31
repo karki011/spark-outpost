@@ -84,7 +84,7 @@ export function RailFlagCard({ flag, conversationId }: { flag: RailFlag; convers
   );
 }
 
-function FlagLine({ flag, conversationId }: { flag: RailFlag; conversationId: string }) {
+export function FlagLine({ flag, conversationId }: { flag: RailFlag; conversationId: string }) {
   const [open, setOpen] = useState(false);
   const cardId = useId();
   const settled = flag.status !== 'open';

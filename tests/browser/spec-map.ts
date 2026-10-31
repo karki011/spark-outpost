@@ -71,6 +71,7 @@ export const SPEC_GROUPS = {
     'thinking-step',
     'titles',
     'turn-fold',
+    'turn-timeline',
     'work-panel',
   ],
   approvals: [

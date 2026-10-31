@@ -36,6 +36,12 @@ export function applyApprovalEvent(
   return approvals;
 }
 
+export function requestedApprovalId(event: ApprovalEvent): string | null {
+  if (event.name !== APPROVAL_REQUESTED) return null;
+  const parsed = approvalSchema.safeParse(event.value);
+  return parsed.success ? parsed.data.id : null;
+}
+
 export function decidedFirst<T extends Pick<Approval, 'status'>>(
   approvals: readonly T[],
 ): { decided: T[]; pending: T[] } {

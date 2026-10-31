@@ -12,13 +12,14 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
+| Turn timeline            | Cards stay [in place](follow-a-turn.md).                                 |
 | Terminal                 | Opens faster.                                                            |
 | Queue while waiting      | Agents waiting on background work get queued messages.                   |
 | Queue strip              | Tags show authors; late edits and untaken messages stay queued.          |
 | Quieter chats            | Controls sit [under the box](start-a-chat.md); finished turns fold.      |
 | Mac stays awake          | [Remote control](use-your-phone.md) keeps it awake.                      |
 | Busy attachments         | Attach files while agents work.                                          |
-| Tickets interaction      | Browser preloading no longer blocks with backdrops.                      |
+| Tickets interaction      | Preloading no longer blocks with backdrops.                              |
 | GitHub authentication    | Credential commands follow mode and rules.                               |
 | Compact dictation        | Live words appear in drafts; controls stay put.                          |
 | Meeting reminders        | **Snooze until start**; ended reminders disappear.                       |
@@ -27,7 +28,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 | Outpost questions        | Answered questions clear **Waiting on you**.                             |
 | Agent-led delegation     | Leads [choose workers and slices](how-spark-works.md#how-work-is-split). |
 | Chat opening             | Drafts stay; failures offer **Try again**.                               |
-| Outpost messages         | Messages go to the displayed lead; **Post note** is explicit.            |
-| Message delivery         | **Sent** confirms receipt; refresh failures cannot trigger retries.      |
+| Outpost messages         | Messages go to the shown lead; **Post note** is explicit.                |
+| Message delivery         | **Sent** confirms receipt; failed refreshes never retry.                 |
 
 New profiles [record Claude Terminal sessions](settings.md#record-terminal-sessions); existing choices stay.

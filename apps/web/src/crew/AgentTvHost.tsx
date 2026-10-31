@@ -7,6 +7,7 @@ import { closeAgentTv, useAgentTv } from './agent-tv-store.ts';
 import { AgentTv } from './AgentTv.tsx';
 import { agentAnchor, approvalAnchor, castAgents, tvCast } from './conversation-crew.ts';
 import { busyCount } from './crew-model.ts';
+import { useLeadSteps } from './lead-steps.ts';
 import { scrollToAnchor } from './scroll-to-anchor.ts';
 import { tvListRows } from './tv-list.ts';
 import { pendingAsks } from './tv-scene.ts';
@@ -33,7 +34,7 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
     queryFn: () => outpostsApi.get(outpostId!),
     enabled: outpostId !== undefined,
   });
-  const cast = tvCast(source);
+  const cast = tvCast(source, useLeadSteps());
   const members = castAgents(cast);
   const elsewhere = sourceId !== null && sourceId !== activeId;
   const asking = members.some((agent) => agent.state === 'waiting');

@@ -4,7 +4,7 @@ import type { SubagentRow } from '@spark-outpost/contracts';
 import { ChatFace } from '../../brand/ChatFace.tsx';
 import { workerIdentity, workerPresentation, workerRole } from '../../crew/worker-identity.ts';
 import { AgentCards } from './AgentCards.tsx';
-import { agentCounts, agentsLine } from './agent-cards.ts';
+import { agentCounts, agentsLine, allDoneLine } from './agent-cards.ts';
 
 export const OpenAgentsContext = createContext<((runId: string) => void) | null>(null);
 
@@ -32,6 +32,19 @@ function Workers({ rows, live }: { rows: readonly SubagentRow[]; live: boolean }
   );
 }
 
+function AllDone({ rows, text }: { rows: readonly SubagentRow[]; text: string }) {
+  return (
+    <p
+      className="sl-worker sl-done"
+      data-state="done"
+      title={rows.map((row) => row.name).join(' · ')}
+    >
+      <ChatFace chatId={workerIdentity(rows[0]!.id)} size="row" state="done" />
+      <span className="sl-name">{text}</span>
+    </p>
+  );
+}
+
 interface SubagentsLineProps {
   runId: string;
   rows: readonly SubagentRow[];
@@ -45,10 +58,11 @@ export function SubagentsLine({ runId, rows, live }: SubagentsLineProps) {
   if (rows.length === 0) return null;
   const counts = agentCounts(rows);
   const text = agentsLine(live ? counts : { ...counts, working: 0 });
+  const done = allDoneLine(rows);
   return (
     <div className="sl">
       <div className="sl-line">
-        <Workers rows={rows} live={live} />
+        {done ? <AllDone rows={rows} text={done} /> : <Workers rows={rows} live={live} />}
         <span className="sl-text sr-only" role="status">
           {text}
         </span>

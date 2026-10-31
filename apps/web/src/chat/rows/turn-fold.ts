@@ -6,9 +6,10 @@ function answerIndex(parts: readonly TurnRowPart[]): number {
   return parts.findLastIndex((part) => part.kind === 'text');
 }
 
-export function foldedPart(parts: readonly TurnRowPart[], index: number): boolean {
+export function foldedPart(parts: readonly TurnRowPart[], index: number, open = false): boolean {
   const part = parts[index];
   if (part?.kind === 'rows') return true;
+  if (part?.kind === 'cards') return open && index < answerIndex(parts);
   return part?.kind === 'text' && index !== answerIndex(parts);
 }
 

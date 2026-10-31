@@ -31,7 +31,7 @@ it('shows individual workers below the running status and opens Work', () => {
         working
         waiting={false}
         background={null}
-        commands={[]}
+        lead={{ label: 'Running 2 agents', since: null }}
       />
     </OpenAgentsContext>,
   );
@@ -51,10 +51,14 @@ it('keeps details accessible while the lead continues after its workers finish',
       working
       waiting={false}
       background={null}
-      commands={[]}
+      lead={{ label: 'Opening pull request', since: Date.now() - 42_000 }}
     />,
   );
-  expect(screen.getByText('Working')).toBeTruthy();
+  const line = document.querySelector('.turn-working')!;
+  expect(line.querySelector('.turn-working-now')!.textContent).toMatch(
+    /^Opening pull request · 4[23]s$/,
+  );
+  expect(line.querySelector('.turn-working-turn')!.textContent).toMatch(/^ · Turn \d/);
   expect(screen.queryByText(/writing up/i)).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'View agents' }));
   expect(
@@ -74,7 +78,7 @@ it.each([
         working
         waiting={false}
         background={background}
-        commands={[]}
+        lead={{ label: 'Thinking', since: null }}
       />
     </QueryClientProvider>,
   );
@@ -98,7 +102,7 @@ it.each([true, false])(
         working={waiting}
         waiting={waiting}
         background={null}
-        commands={[]}
+        lead={{ label: 'Thinking', since: null }}
       />,
     );
     expect(container.querySelector('.turn-working')).toBeNull();
