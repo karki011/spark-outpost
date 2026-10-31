@@ -306,6 +306,7 @@ test('keeps keyboard focus inside the dialog and offers cloning from the empty M
     await page.keyboard.press('Tab');
     expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   }
+  await expect(dialog.getByRole('button', { name: 'Clone', exact: true })).toBeEnabled();
   await address.press('Enter');
   await expect(page.getByRole('heading', { name: 'Your code, as a night sky' })).toHaveCount(0, {
     timeout: 20_000,
