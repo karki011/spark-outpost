@@ -104,8 +104,14 @@ it('a run write sends a NOTIFY carrying only ids and kinds', async () => {
       return found.some((event) => event.kind === 'step') ? found : null;
     });
     expect(mine).toContainEqual({ kind: 'run', conversationId, runId: lease.runId });
-    expect(mine).toContainEqual({ kind: 'step', conversationId, runId: lease.runId });
-    for (const event of mine)
+    expect(mine).toContainEqual({
+      kind: 'step',
+      conversationId,
+      runId: lease.runId,
+      phase: 'started',
+      step: 'Reading the code',
+    });
+    for (const event of mine.filter((item) => item.kind !== 'step'))
       expect(Object.keys(event).sort()).toEqual(['conversationId', 'kind', 'runId']);
   } finally {
     await raw.close();

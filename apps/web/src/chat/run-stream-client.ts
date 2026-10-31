@@ -57,6 +57,11 @@ export class RunStreamClient {
     };
   }
 
+  watching(runId: string): boolean {
+    const watched = this.runs.get(runId);
+    return watched ? [...watched.watchers].some((watcher) => !watcher.done) : false;
+  }
+
   private plan(): void {
     if (this.planned) return;
     this.planned = true;

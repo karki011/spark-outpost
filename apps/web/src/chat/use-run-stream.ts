@@ -35,7 +35,7 @@ function refreshAfter(queryClient: QueryClient, conversationId: string, event: R
   }
 }
 
-function runStreamClient(queryClient: QueryClient): RunStreamClient {
+export function runStreamClient(queryClient: QueryClient): RunStreamClient {
   let client = clients.get(queryClient);
   if (!client) {
     client = new RunStreamClient((conversationId, event) =>
