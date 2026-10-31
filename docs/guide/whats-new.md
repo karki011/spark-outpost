@@ -12,23 +12,18 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
-| Steered turns            | A message sent during follow-up work waits for it, then the turn ends.   |
-| Spark Island             | Rests again after being hidden and shown.                                |
-| Chat rows                | Show their status as a word beside the dot.                              |
+| Steered turns            | No longer hang after background work.                                    |
 | Long chat lists          | Scroll to load chats past 500.                                           |
 | Status dots              | Rest when Spark idles.                                                   |
 | Turn timeline            | Cards stay [in place](follow-a-turn.md).                                 |
-| Terminal                 | Opens faster.                                                            |
 | Queue while waiting      | Agents waiting on background work get queued messages.                   |
 | Queue strip              | Tags show authors; late edits and untaken messages stay queued.          |
 | Quieter chats            | Controls sit [under the box](start-a-chat.md); finished turns fold.      |
 | Mac stays awake          | [Remote control](use-your-phone.md) keeps it awake.                      |
 | Busy attachments         | Attach files while agents work.                                          |
 | GitHub authentication    | Credential commands follow mode and rules.                               |
-| Meeting reminders        | **Snooze until start**; ended reminders disappear.                       |
 | Adjustable Island height | Adjust in **Settings → Notifications**.                                  |
 | Code Mode on by default  | Combine reads; [turn off in Settings](settings.md#code-mode).            |
-| Outpost questions        | Answered questions clear **Waiting on you**.                             |
 | Agent-led delegation     | Leads [choose workers and slices](how-spark-works.md#how-work-is-split). |
 | Chat opening             | Drafts stay; failures offer **Try again**.                               |
 | Outpost messages         | Messages go to the shown lead; **Post note** is explicit.                |
