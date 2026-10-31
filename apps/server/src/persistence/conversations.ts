@@ -1,5 +1,6 @@
 import { promptCacheFor } from './prompt-cache.ts';
 import {
+  CHAT_LIST_PAGE,
   PERMISSION_DO,
   UNTITLED_CONVERSATION,
   titleFromMessage,
@@ -34,7 +35,7 @@ import { listBrowserShots } from './browser-screenshots.ts';
 import { listCommands } from './run-commands.ts';
 import { listRailFlags } from './rail-flags.ts';
 import { newId } from './ids.ts';
-import { CHAT_LIST_LIMIT, LISTED_CHAT, searchConversations } from './conversation-search.ts';
+import { LISTED_CHAT, searchConversations } from './conversation-search.ts';
 import { summaryQuery } from './summary-query.ts';
 import { taskForNewRun } from './tasks.ts';
 import { listQueue } from './chat-queue.ts';
@@ -85,6 +86,9 @@ export async function ensureLocalWorkspace(db: Queryable): Promise<string> {
   return rows[0]!.id;
 }
 
+const CHAT_LIST_ORDER = `ORDER BY c.pinned_at DESC NULLS LAST, c.updated_at DESC, c.id DESC
+  LIMIT ${CHAT_LIST_PAGE}`;
+
 export async function listConversations(
   db: Queryable,
   workspaceId: string,
@@ -93,9 +97,25 @@ export async function listConversations(
   const text = search.trim();
   if (text !== '') return searchConversations(db, workspaceId, text);
   const { rows } = await db.query<ConversationSummaryRow>(
-    `${summaryQuery} WHERE ${LISTED_CHAT}
-     ORDER BY c.pinned_at DESC NULLS LAST, c.updated_at DESC LIMIT ${CHAT_LIST_LIMIT}`,
+    `${summaryQuery} WHERE ${LISTED_CHAT} ${CHAT_LIST_ORDER}`,
     [workspaceId],
+  );
+  return withChatBranches(db, await withNativeTerminals(db, rows.map(toConversationSummary)));
+}
+
+export async function listConversationsAfter(
+  db: Queryable,
+  workspaceId: string,
+  afterId: string,
+): Promise<ConversationSummary[]> {
+  const { rows } = await db.query<ConversationSummaryRow>(
+    `${summaryQuery} WHERE ${LISTED_CHAT}
+       AND (COALESCE(c.pinned_at, '-infinity'), c.updated_at, c.id) < (
+         SELECT COALESCE(a.pinned_at, '-infinity'), a.updated_at, a.id
+         FROM conversations a WHERE a.id = $2
+       )
+     ${CHAT_LIST_ORDER}`,
+    [workspaceId, afterId],
   );
   return withChatBranches(db, await withNativeTerminals(db, rows.map(toConversationSummary)));
 }

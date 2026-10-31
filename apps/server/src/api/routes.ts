@@ -1,4 +1,5 @@
 import { remoteDeviceOf } from '../remote/principal.ts';
+import { z } from 'zod';
 import { Router } from 'express';
 import {
   CONVERSATION_SEARCH_MAX_LENGTH,
@@ -14,6 +15,7 @@ import {
   createConversation,
   getConversationDetail,
   listConversations,
+  listConversationsAfter,
   sendUserMessage,
 } from '../persistence/conversations.ts';
 import { AnnotationError, listAnnotations } from '../persistence/annotations.ts';
@@ -90,6 +92,12 @@ export function apiRoutes(deps: RouteDeps): Router {
     const search = typeof req.query.q === 'string' ? req.query.q : '';
     if (search.length > CONVERSATION_SEARCH_MAX_LENGTH) {
       throw new BadRequestError('Search for a shorter phrase.');
+    }
+    if (req.query.after !== undefined) {
+      const after = z.uuid().safeParse(req.query.after);
+      if (!after.success) throw new BadRequestError('Name the last chat with its id.');
+      res.json(await listConversationsAfter(db, workspaceId, after.data));
+      return;
     }
     res.json(await listConversations(db, workspaceId, search));
   });

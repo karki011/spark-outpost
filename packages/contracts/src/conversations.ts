@@ -40,6 +40,8 @@ export function shownChatTitle(title: string): string {
   return title.trim() || UNTITLED_CONVERSATION;
 }
 
+export const CHAT_LIST_PAGE = 500;
+
 export const messageSchema = z.object({
   id: z.uuid(),
   conversationId: z.uuid(),
