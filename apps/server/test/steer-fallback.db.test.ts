@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { EventType, SUBAGENTS_ACTIVITY, type RunEvent } from '@spark-outpost/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { addToQueue, listQueue } from '../src/persistence/chat-queue.ts';
-import { getMemberMessage } from '../src/persistence/member-messages.ts';
+import { getMemberMessage, markUnreadAfterCrash } from '../src/persistence/member-messages.ts';
 import { handQueueToWaitingTurn } from '../src/persistence/queue-handoff.ts';
 import { setSparkPaused } from '../src/persistence/spark-pause.ts';
 import { claimNextJob } from '../src/persistence/jobs.ts';
@@ -89,6 +89,61 @@ describe('queued messages while the agent only waits', () => {
     } finally {
       await inbox.dispose();
     }
+  });
+
+  it('keeps a message queued while the agent says later, and delivers it once', async () => {
+    const { conversationId, runId } = await waitingTurn();
+    const id = randomUUID();
+    await sendNow(t.db, conversationId, { id, content: 'Steer' }, target);
+    const announced: unknown[] = [];
+    const inbox = openMemberInbox(t.db, {
+      conversationId,
+      runId,
+      topRunId: runId,
+      pollMs: 10,
+      append: async (event) => {
+        announced.push(event);
+        return null;
+      },
+    });
+    const outcomes: Array<boolean | 'later'> = ['later', 'later', true];
+    const delivered: unknown[] = [];
+    inbox.attach(async (message) => {
+      const outcome = outcomes.shift() ?? false;
+      if (outcome === true) delivered.push(message);
+      return outcome;
+    });
+    try {
+      await expect.poll(() => delivered.length).toBe(1);
+      await expect.poll(() => announced.length).toBe(1);
+      expect(await getMemberMessage(t.db, id)).toMatchObject({ status: 'delivered' });
+      expect(outcomes).toEqual([]);
+    } finally {
+      await inbox.dispose();
+    }
+  });
+
+  it('marks a held message missed on Stop and leaves it queued across a crash', async () => {
+    const { conversationId, runId } = await waitingTurn();
+    const id = randomUUID();
+    await sendNow(t.db, conversationId, { id, content: 'Steer' }, target);
+    const inbox = openMemberInbox(t.db, {
+      conversationId,
+      runId,
+      topRunId: runId,
+      pollMs: 10,
+      append: async () => null,
+    });
+    let asked = 0;
+    inbox.attach(async () => {
+      asked += 1;
+      return 'later';
+    });
+    await expect.poll(() => asked).toBeGreaterThan(1);
+    await markUnreadAfterCrash(t.db, runId);
+    expect(await getMemberMessage(t.db, id)).toMatchObject({ status: expect.any(String) });
+    await inbox.dispose(true);
+    expect(await getMemberMessage(t.db, id)).toMatchObject({ status: 'missed' });
   });
 
   it('keeps them queued while the agent works or Spark is paused', async () => {

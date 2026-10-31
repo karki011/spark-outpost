@@ -24,7 +24,10 @@ import {
 import { commandTurn, reportContext } from './fake-acp-context.ts';
 import {
   BACKGROUND_TRIGGER,
+  CYCLE_TRIGGER,
   HANDBACK_TRIGGER,
+  ownFollowUpTurn,
+  promptWouldFold,
   LATER_TRIGGER,
   backgroundTurn,
   handbackTurn,
@@ -256,6 +259,7 @@ async function turn(
   if (text.includes('#orphan ')) return orphanedCommandTurn(client, sessionId, text, signal);
   if (text.includes(BACKGROUND_TRIGGER)) return backgroundTurn(client, sessionId, text, say);
   if (text.includes(SLEEP_TRIGGER)) return sleepTurn(client, sessionId, text, say);
+  if (text.includes(CYCLE_TRIGGER)) return ownFollowUpTurn(client, sessionId, say);
   if (text.includes(HANDBACK_TRIGGER)) return handbackTurn(client, sessionId, text, say);
   if (text.includes(LATER_TRIGGER)) return laterTurn(client, sessionId, text, say, sessionCwd);
   if (text.includes('#heldtitle')) return heldTitleTurn(say);
@@ -462,6 +466,10 @@ acp
     try {
       recordMethod('session/prompt');
       recordPrompt(ctx.params.sessionId, text.join(''));
+      if (promptWouldFold())
+        await new Promise((_, reject) => {
+          controller.signal.addEventListener('abort', () => reject(new Error('stopped')));
+        });
       const sessionId = ctx.params.sessionId;
       const refused = await rejectedTurn(text.join(''), config.model ?? '', (update) =>
         ctx.client.notify(acp.methods.client.session.update, { sessionId, update }),

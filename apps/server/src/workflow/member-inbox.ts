@@ -14,7 +14,12 @@ import { runWaitingOn } from '../persistence/subagents.ts';
 import { requestCancel } from '../persistence/runs.ts';
 import { shotAnchor } from '../persistence/browser-screenshots.ts';
 import { queuedAttachmentFiles } from '../persistence/attachments.ts';
-import type { ProviderMessage, SteerRequests, TurnInbox } from '../providers/provider.ts';
+import type {
+  ProviderMessage,
+  SteerOutcome,
+  SteerRequests,
+  TurnInbox,
+} from '../providers/provider.ts';
 import type { Append } from './agent-turn.ts';
 import { runEvents } from './run-events.ts';
 
@@ -45,7 +50,7 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     const reply = options.replySoFar?.();
     return reply ? shotAnchor(reply.shown, reply.held) : null;
   };
-  let send: ((text: ProviderMessage) => Promise<boolean>) | null = null;
+  let send: ((text: ProviderMessage) => Promise<SteerOutcome>) | null = null;
   let busy = false;
   let done = false;
   const handedBack = new Set<string>();
@@ -140,7 +145,16 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
       if (send) {
         const message = await prompt(claimed);
         if (message === null) return;
-        if (await send(message)) {
+        const outcome = await send(message);
+        if (outcome === 'later') {
+          await setMemberMessageStatus(
+            db,
+            claimed.map((item) => item.id),
+            'queued',
+          );
+          return;
+        }
+        if (outcome) {
           await announce(claimed, 'delivered');
           return;
         }

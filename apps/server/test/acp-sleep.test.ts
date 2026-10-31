@@ -82,7 +82,7 @@ describe('ACP provider when a Claude agent schedules a wakeup', { timeout: 20_00
   });
 
   it('answers a message sent during the sleep and goes back to sleep', async () => {
-    let send: ((text: string) => Promise<boolean>) | null = null;
+    let send: ((text: string) => Promise<boolean | 'later'>) | null = null;
     const steering: SteerRequests = {
       attach(sender) {
         send = sender;

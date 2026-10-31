@@ -66,6 +66,62 @@ async function reportLater(client: acp.AgentContext, rootId: string): Promise<vo
   await cycleEnd(client, rootId);
 }
 
+export const CYCLE_TRIGGER = '#ownfollowup';
+let followUpRunning = false;
+
+export function promptWouldFold(): boolean {
+  return followUpRunning;
+}
+
+async function followUpCycle(client: acp.AgentContext, rootId: string): Promise<void> {
+  const send = sender(client);
+  await delay(100);
+  followUpRunning = true;
+  await send(rootId, {
+    sessionUpdate: 'tool_call',
+    toolCallId: 'followup-1',
+    title: 'sleep',
+    kind: 'execute',
+    status: 'in_progress',
+  });
+  await delay(LATER_MS);
+  await send(rootId, {
+    sessionUpdate: 'tool_call_update',
+    toolCallId: 'followup-1',
+    status: 'completed',
+  });
+  await send(rootId, {
+    sessionUpdate: 'agent_message_chunk',
+    messageId: 'm-followup',
+    content: { type: 'text', text: 'FIRST-DONE.' },
+  });
+  await cycleEnd(client, rootId);
+  followUpRunning = false;
+}
+
+export async function ownFollowUpTurn(
+  client: acp.AgentContext,
+  rootId: string,
+  say: Say,
+): Promise<acp.StopReason> {
+  const send = sender(client);
+  await send(rootId, {
+    sessionUpdate: 'subagent_spawned',
+    subagentSessionId: 'own-1',
+    name: 'Helper',
+    task: 'Help',
+    capabilities: {},
+  });
+  await send(rootId, {
+    sessionUpdate: 'subagent_state_update',
+    subagentSessionId: 'own-1',
+    state: 'completed',
+  });
+  await say('Started. ');
+  void followUpCycle(client, rootId);
+  return 'end_turn';
+}
+
 export const LATER_TRIGGER = '#later';
 export const HANDBACK_TRIGGER = '#handback';
 

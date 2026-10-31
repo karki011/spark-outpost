@@ -52,8 +52,10 @@ export interface ModeRequests {
 
 export type ProviderMessage = string | { text: string; attachments: readonly TurnAttachment[] };
 
+export type SteerOutcome = boolean | 'later';
+
 export interface SteerRequests {
-  attach(send: (text: ProviderMessage) => Promise<boolean>): () => void;
+  attach(send: (text: ProviderMessage) => Promise<SteerOutcome>): () => void;
 }
 
 export interface TurnInbox {

@@ -3,7 +3,7 @@ import type { ProviderMessage, SteerRequests } from '../../providers/provider.ts
 import { createIdleInbox, deliveringWhenIdle } from './idle-inbox.ts';
 
 function listener() {
-  let send: ((text: ProviderMessage) => Promise<boolean>) | null = null;
+  let send: ((text: ProviderMessage) => Promise<boolean | 'later'>) | null = null;
   const steering: SteerRequests = {
     attach(sender) {
       send = sender;

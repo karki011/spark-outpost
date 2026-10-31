@@ -1,8 +1,10 @@
-import type { ProviderMessage, SteerRequests } from '../../providers/provider.ts';
+import type { ProviderMessage, SteerOutcome, SteerRequests } from '../../providers/provider.ts';
 
 export interface IdleInbox {
   open(): void;
   close(): void;
+  hold(held: boolean): void;
+  deliver(text: ProviderMessage): SteerOutcome;
   offer(text: ProviderMessage): boolean;
   arrived(): Promise<void>;
   take(): ProviderMessage | null;
@@ -11,6 +13,7 @@ export interface IdleInbox {
 export function createIdleInbox(listening?: SteerRequests): IdleInbox {
   const waiting: ProviderMessage[] = [];
   let accepting = false;
+  let holding = false;
   let wake: (() => void) | null = null;
   let stopListening: () => void = () => undefined;
   const offer = (text: ProviderMessage) => {
@@ -20,16 +23,23 @@ export function createIdleInbox(listening?: SteerRequests): IdleInbox {
     wake = null;
     return true;
   };
+  const deliver = (text: ProviderMessage): SteerOutcome =>
+    accepting && holding ? 'later' : offer(text);
   return {
     open() {
       accepting = true;
-      stopListening = listening?.attach(async (text) => offer(text)) ?? stopListening;
+      stopListening = listening?.attach(async (text) => deliver(text)) ?? stopListening;
     },
     close() {
       accepting = false;
+      holding = false;
       stopListening();
       stopListening = () => undefined;
     },
+    hold(held) {
+      holding = held;
+    },
+    deliver,
     offer,
     arrived() {
       if (waiting.length > 0) return Promise.resolve();
@@ -49,6 +59,6 @@ export function deliveringWhenIdle(
 ): SteerRequests | undefined {
   if (!steering) return undefined;
   return {
-    attach: (send) => steering.attach(async (text) => inbox.offer(text) || send(text)),
+    attach: (send) => steering.attach(async (text) => inbox.deliver(text) || send(text)),
   };
 }
