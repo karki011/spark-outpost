@@ -141,7 +141,7 @@ describe('queued messages while the agent only waits', () => {
     });
     await expect.poll(() => asked).toBeGreaterThan(1);
     await markUnreadAfterCrash(t.db, runId);
-    expect(await getMemberMessage(t.db, id)).toMatchObject({ status: expect.any(String) });
+    await expect.poll(async () => (await getMemberMessage(t.db, id))?.status).toBe('queued');
     await inbox.dispose(true);
     expect(await getMemberMessage(t.db, id)).toMatchObject({ status: 'missed' });
   });
