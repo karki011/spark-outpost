@@ -223,6 +223,7 @@ test.describe('a finished change', () => {
     expect(new Set(rights).size).toBe(1);
     if (RAIL_SHOTS) await work.screenshot({ path: path.join(RAIL_SHOTS, 'cost-by-agent-340.png') });
     await page.setViewportSize({ width: 390, height: 800 });
+    await page.getByRole('button', { name: 'Show work panel' }).click();
     await expect.poll(() => overlappingCells(page)).toEqual([]);
     await page.setViewportSize({ width: 1400, height: 900 });
 
