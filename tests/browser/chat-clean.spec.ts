@@ -99,7 +99,7 @@ test('a running turn has one status, with steps in plain words', async ({ page }
   await expect(page.locator('.thread')).not.toContainText('medium effort');
   await expect(page.locator('.thread .dots')).toHaveCount(0);
   const working = page.locator('.turn-working');
-  await expect(working).toContainText('Working');
+  await expect(working).toContainText('Checking pull requests');
   await expect(working).toContainText('Esc to stop');
   await expect(status(page)).toHaveCount(0);
   await expect(page.locator('.cstatus').getByRole('status')).toHaveText(

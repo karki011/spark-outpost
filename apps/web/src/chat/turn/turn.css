@@ -203,3 +203,13 @@
   color: var(--faint);
   font-variant-numeric: tabular-nums;
 }
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .turn-working {
+    flex-wrap: wrap;
+  }
+
+  .turn-working-now {
+    flex: 1 1 calc(100% - 32px);
+  }
+}
