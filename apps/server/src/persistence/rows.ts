@@ -259,7 +259,9 @@ function latestAgents(row: ConversationSummaryRow): { working: number; total: nu
 function latestStep(row: ConversationSummaryRow): string | null {
   const wait = latestWait(row);
   const agents = latestAgents(row);
-  if (wait && agents.working > 0) return agentsWorkingLabel(agents.working, agents.total);
+  if (wait && agents.working > 0 && !wait.background) {
+    return agentsWorkingLabel(agents.working, agents.total);
+  }
   if (wait) return waitingOnLabel(wait.waitingOn, wait.background);
   return row.latest_run_step === null ? null : friendlyStep(row.latest_run_step);
 }

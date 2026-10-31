@@ -15,6 +15,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 | Steered turns            | No longer hang after background work.                                    |
 | Long chat lists          | Scroll to load chats past 500.                                           |
 | Status dots              | Rest when Spark idles; closed panels stay still.                         |
+| Sub-agent status         | Stays running until background work ends.                                |
 | Turn timeline            | Cards stay [in place](follow-a-turn.md).                                 |
 | Queue while waiting      | Agents waiting on background work get queued messages.                   |
 | Queue strip              | Tags show authors; late edits and untaken messages stay queued.          |

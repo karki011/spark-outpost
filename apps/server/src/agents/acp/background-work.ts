@@ -28,7 +28,7 @@ export function endsAgentCycle(update: SessionUpdate): boolean {
   return originSchema.safeParse(objectFields(update._meta)[ORIGIN_KEY]).success;
 }
 
-function startedTaskId(update: SessionUpdate): string | null {
+export function startedTaskId(update: SessionUpdate): string | null {
   if (update.sessionUpdate !== 'tool_call_update') return null;
   const response = objectFields(objectFields(objectFields(update._meta).claudeCode).toolResponse);
   const id = response.backgroundTaskId ?? response.taskId;

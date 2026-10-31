@@ -98,7 +98,6 @@ describe('a Claude chat whose turn ends with background work running', { timeout
     const events = await storedEvents(t.db, runId);
     expect(backgroundWaits(events)).toEqual([
       { waitingOn: 1 },
-      { waitingOn: 0 },
       { waitingOn: 1, background: { agents: 1, tasks: 0, names: ['Schema'] } },
       { waitingOn: 0 },
     ]);

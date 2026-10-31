@@ -110,6 +110,69 @@ describe('sub-agent updates', () => {
     expect(claudeWait.filter((output) => 'waits' in output)).toHaveLength(1);
   });
 
+  describe('a sub-agent that ends while a shell it started still runs', () => {
+    const startShell = (send: ReturnType<typeof harness>['send']) => {
+      send('root', { sessionUpdate: 'async_task_spawned', asyncTaskId: 't1', name: 'sleep 60' });
+      send('a', {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'b1',
+        status: 'completed',
+        _meta: { claudeCode: { toolResponse: { backgroundTaskId: 't1' } } },
+      });
+    };
+    const finished = (outputs: readonly ProviderOutput[]) =>
+      outputs.filter((output) => output.kind === 'subagent_finished');
+
+    it('stays running until the shell ends', () => {
+      const { spawn, end, send } = harness();
+      spawn('root', 'a');
+      startShell(send);
+      expect(finished(end('root', 'a'))).toEqual([]);
+      const ended = send('root', {
+        sessionUpdate: 'async_task_state_update',
+        asyncTaskId: 't1',
+        state: 'completed',
+      });
+      expect(finished(ended)).toEqual([{ kind: 'subagent_finished', id: 'a', state: 'done' }]);
+    });
+
+    it('finishes before the generation that the shell wakes', () => {
+      const { spawn, end, send } = harness();
+      spawn('root', 'a');
+      startShell(send);
+      end('root', 'a');
+      const woken = spawn('root', 'a:generation:2');
+      expect(woken.map((output) => output.kind).slice(0, 2)).toEqual([
+        'subagent_finished',
+        'subagent_started',
+      ]);
+    });
+
+    it('is stopped with the turn when the shell never ends', () => {
+      const { mapper, spawn, end, send } = harness();
+      spawn('root', 'a');
+      startShell(send);
+      end('root', 'a');
+      expect(finished(mapper.finish(true))).toEqual([
+        { kind: 'subagent_finished', id: 'a', state: 'cancelled' },
+      ]);
+    });
+
+    it('finishes at once when its shell already ended', () => {
+      const { spawn, end, send } = harness();
+      spawn('root', 'a');
+      startShell(send);
+      send('root', {
+        sessionUpdate: 'async_task_state_update',
+        asyncTaskId: 't1',
+        state: 'completed',
+      });
+      expect(finished(end('root', 'a'))).toEqual([
+        { kind: 'subagent_finished', id: 'a', state: 'done' },
+      ]);
+    });
+  });
+
   it('counts a Claude wait on background work as waiting before its input has streamed in', () => {
     const { spawn, send } = harness();
     spawn('root', 'a');
