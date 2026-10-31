@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -168,10 +168,10 @@ describe.skipIf(!bin)('Terminal sessions under a real tmux', () => {
   });
 
   it('reports the exit status of a command that ended while detached', async () => {
-    const first = start('IFS= read -r l; exit 5');
-    await until(() => readPane(host, 'a1') !== null, 'the session');
-    first.pty.write('\r');
+    const first = start('echo up; while [ ! -e go ]; do sleep 0.05; done; exit 5');
+    await until(() => first.output().includes('up'), 'the command to start');
     first.pty.detach?.();
+    writeFileSync(join(directory, 'go'), '');
     await until(() => readPane(host, 'a1')?.dead === true, 'the command to end');
     expect(await start('unused', { adopt: true }).exit).toEqual({ exitCode: 5 });
     expect(await listSessionIds(host)).toEqual([]);
