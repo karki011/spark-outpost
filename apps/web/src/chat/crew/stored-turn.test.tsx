@@ -136,6 +136,34 @@ describe('a stored crew turn', () => {
     expect(view.container.querySelector('.crew-summary')?.textContent).toBe(CLOSING_REPLY);
   });
 
+  it('places a flag by its time, before the blocks that came after it', () => {
+    const base = crewTurn('succeeded');
+    const flag = {
+      id: 'flag-1',
+      runId: base.run.id,
+      turnRunId: base.run.id,
+      conversationId: base.detail.conversation.id,
+      rail: 'sent_out' as const,
+      title: 'Claude sent data out',
+      paths: [],
+      inside: false,
+      originals: [],
+      status: 'open' as const,
+      createdAt: '2000-01-01T00:00:00.000Z',
+    };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(
+      <QueryClientProvider client={client}>
+        <CrewTurn {...base} detail={{ ...base.detail, railFlags: [flag] }} repo={null} />
+      </QueryClientProvider>,
+    );
+    const line = view.container.querySelector('.flag-line')!;
+    const firstAgent = view.container.querySelector('.agent-block:not(.jev), .agent-group')!;
+    expect(
+      line.compareDocumentPosition(firstAgent) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('keeps a card the user already answered', () => {
     const { view } = show('succeeded');
     fireEvent.click(within(parallel('Worked')).getByRole('button', { name: /Bolt/ }));

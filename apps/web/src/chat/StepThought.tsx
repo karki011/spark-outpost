@@ -1,34 +1,9 @@
-import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { reasoningTextSchema } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { thoughtText } from './thought-text.ts';
-
-interface ThoughtToggleProps {
-  open: boolean;
-  controls: string;
-  onToggle(): void;
-  children: ReactNode;
-}
-
-export function ThoughtToggle({ open, controls, onToggle, children }: ThoughtToggleProps) {
-  return (
-    <button
-      type="button"
-      className="step-thought-toggle"
-      aria-expanded={open}
-      aria-controls={controls}
-      onClick={onToggle}
-    >
-      <span>{children}</span>
-      <svg className="thought-chev" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
-        <path d="M4.5 3 7.5 6l-3 3" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      </svg>
-    </button>
-  );
-}
 
 interface StepThoughtProps {
   id: string;
