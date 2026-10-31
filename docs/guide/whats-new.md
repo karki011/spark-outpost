@@ -12,6 +12,9 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
+| Steered turns            | A message sent during follow-up work waits for it, then the turn ends.   |
+| Spark Island             | Rests again after being hidden and shown.                                |
+| Chat rows                | Show their status as a word beside the dot.                              |
 | Long chat lists          | Scroll to load chats past 500.                                           |
 | Status dots              | Rest when Spark idles.                                                   |
 | Turn timeline            | Cards stay [in place](follow-a-turn.md).                                 |
