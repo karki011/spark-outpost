@@ -1,3 +1,3 @@
 # Unreleased changes
 
-Changes through 0.1.0-beta.36 are recorded in [the changelog](../apps/desktop/CHANGELOG.md). Add new changes here before the next release.
+Changes through 0.1.0-beta.37 are recorded in [the changelog](../apps/desktop/CHANGELOG.md). Add new changes here before the next release.
