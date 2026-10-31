@@ -4,6 +4,16 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.37
+
+- A quieter composer: project, branch, session and mode move under the box. Finished turns fold under one row, with a setting to turn that off; replies after a steered message stay visible.
+- Answered cards, action results and flags stay where they happened and scroll up with the turn. Only a card still waiting on you stays near the composer.
+- The Working line and Agent TV show the lead's current step and how long it has run, with the turn total beside it. Finished workers fold into one chip, and sub-agents show as working until their background work really ends.
+- Fix a turn that stayed on Thinking after a steered message landed in the agent's own follow-up. Queued messages now reach an agent that is only waiting on background work, and queue, Send now and steer edge cases are more reliable.
+- One shared live stream per window keeps connections free, so the Terminal dock opens quickly even with several helpers running. Live updates need fewer requests, and chats past the first 500 load as you scroll.
+- Spark uses less CPU and memory at rest: Settings and onboarding load when opened, Spark Island rests when hidden, and chats you left are dropped from memory.
+- Small Mac controls reach 28px, inline code reaches 12px, and unread rows carry a word as well as a dot.
+
 ## 0.1.0-beta.36
 
 - Send or queue screenshots and files while an agent works, including attachment-only messages. Background work continues, queued files survive reloads, and failed sends keep the draft and attachments for retry.

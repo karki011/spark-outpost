@@ -176,6 +176,7 @@ test('Open from the island lands on that day with the meeting selected and in vi
 }) => {
   await fakeMainDesktop(page);
   await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
   const tomorrow = apiNow() + DAY;
   const demo = await eventKeyOf(page, 'Demo day', tomorrow, tomorrow + DAY);
   await openFromIsland(page, `today:${demo}`);

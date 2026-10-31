@@ -8,6 +8,7 @@ import type {
 } from '@spark-outpost/contracts';
 import { topLevelRuns } from '../chat/turns.ts';
 import { chatAgent } from './chat-agent.ts';
+import type { LeadSteps } from './lead-steps.ts';
 import type { CrewAgent } from './crew-model.ts';
 import { crewAgents, runAgent } from './crew-projection.ts';
 
@@ -64,7 +65,10 @@ export interface TvCast {
   subagents: readonly SubagentRow[];
 }
 
-export function tvCast(detail: ConversationDetail | undefined): TvCast | null {
+export function tvCast(
+  detail: ConversationDetail | undefined,
+  live: LeadSteps = new Map(),
+): TvCast | null {
   const run = detail ? topLevelRuns(detail).at(-1) : undefined;
   if (!detail || !run) return null;
   const orchestration = detail.orchestrations?.[run.id];
@@ -85,6 +89,8 @@ export function tvCast(detail: ConversationDetail | undefined): TvCast | null {
     asking,
     current?.waitingOn ?? 0,
     current?.background ?? null,
+    live.get(run.id) ?? null,
+    current?.step ?? null,
   );
   return { run, lead, sparks, subagents: detail.subagents?.[run.id] ?? [] };
 }

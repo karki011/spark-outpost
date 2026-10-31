@@ -1,9 +1,9 @@
-import { nativeTerminalUsageSchema } from '@spark-outpost/contracts';
-import { request } from '../../api/client.ts';
+import { loadTerminalLive, usageOf } from '../terminal-live.ts';
+
+export const terminalUsageKey = (conversationId: string) =>
+  ['native-terminal', conversationId, 'usage'] as const;
 
 export const terminalUsageQuery = (conversationId: string) => ({
-  queryKey: ['native-terminal', conversationId, 'usage'] as const,
-  queryFn: () =>
-    request(nativeTerminalUsageSchema, `/conversations/${conversationId}/terminal/usage`),
-  refetchInterval: 2000,
+  queryKey: terminalUsageKey(conversationId),
+  queryFn: async () => usageOf(await loadTerminalLive(conversationId)),
 });

@@ -16,6 +16,7 @@ import { migrateOrExit } from '../persistence/migrate-startup.ts';
 import { listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
 import { configuredSecretStore } from '../setup/secrets.ts';
+import { processKillsSent } from '../terminal/process-group.ts';
 import { loginShellSpawner } from '../terminal/pty.ts';
 import { savedPort, savePort } from '../terminal/tmux/stable-port.ts';
 import { chooseTmux, killTmuxServer, tmuxChoiceLine } from '../terminal/tmux/tmux-host.ts';
@@ -57,7 +58,8 @@ import { CALENDAR_WRITTEN_CHANNEL, agentCalendarHosts } from '../calendar/agent/
 import { generateVapidKeys, webPushSend } from '../remote/push-send.ts';
 import { slackSignInConfig } from '../slack/sign-in-config.ts';
 import { startSlackSocket } from '../slack/socket.ts';
-import { pruneOldRows } from './startup-prune.ts';
+import { armShutdownWatchdog, runShutdownSteps } from './shutdown-steps.ts';
+import { schedulePrune, type PruneSchedule } from './startup-prune.ts';
 import { cloneJobsFor } from './project-clone-routes.ts';
 import { connectDesktopBrowser } from '../browser/host-client.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
@@ -348,9 +350,10 @@ const morningBrief = config.MORNING_BRIEF
     )
   : null;
 
+let pruneSchedule: PruneSchedule | null = null;
 const server = app.listen(config.API_PORT, config.API_HOST, () => {
   console.log(`API listening on http://${config.API_HOST}:${config.API_PORT}`);
-  void pruneOldRows({
+  pruneSchedule = schedulePrune({
     db,
     workspaceId,
     auditRetentionDays: config.AUDIT_RETENTION_DAYS,
@@ -372,32 +375,45 @@ let stopping = false;
 const shutdown = async (keepTerminals = false) => {
   if (stopping) return;
   stopping = true;
-  clones.stopAll();
-  if (keepTerminals) await nativeTerminals.detach();
-  else await nativeTerminals.dispose();
-  terminals.killAll();
-  if (terminalTmux.host && !keepTerminals) killTmuxServer(terminalTmux.host);
-  await nativeMcp.close();
-  await artifactPages?.close();
-  await nativeApprovalListener.close();
-  await calendarWrittenListener.close();
-  await previews.stopAll('shutdown').catch(() => undefined);
-  await agentTerminals.stopAll().catch(() => undefined);
-  stopLagMonitor();
-  outcomeSweep.stop();
-  archiveSweep?.stop();
-  morningBrief?.stop();
-  slackSocket.stop();
-  await slackNotifier.stop();
-  calendarTicker?.stop();
-  googleCalendar?.stop();
-  await pushNotifier.stop();
-  await outposts.close();
-  server.close();
-  server.closeAllConnections();
-  await listener.close();
-  await appEventListener.close();
-  await db.end();
+  armShutdownWatchdog((code) => process.exit(code));
+  await runShutdownSteps([
+    ['clones', () => clones.stopAll()],
+    [
+      'Terminal sessions',
+      () => (keepTerminals ? nativeTerminals.detach() : nativeTerminals.dispose()),
+    ],
+    ['terminals', () => terminals.killAll()],
+    ['process kills', () => processKillsSent()],
+    [
+      'tmux',
+      () => {
+        if (terminalTmux.host && !keepTerminals) killTmuxServer(terminalTmux.host);
+      },
+    ],
+    ['native MCP', () => nativeMcp.close()],
+    ['artifact pages', () => artifactPages?.close()],
+    ['approval listener', () => nativeApprovalListener.close()],
+    ['calendar listener', () => calendarWrittenListener.close()],
+    ['previews', () => previews.stopAll('shutdown')],
+    ['agent terminals', () => agentTerminals.stopAll()],
+    ['lag monitor', () => stopLagMonitor()],
+    ['outcome sweep', () => outcomeSweep.stop()],
+    ['archive sweep', () => archiveSweep?.stop()],
+    ['prune schedule', () => pruneSchedule?.stop()],
+    ['morning brief', () => morningBrief?.stop()],
+    ['Slack socket', () => slackSocket.stop()],
+    ['Slack notifier', () => slackNotifier.stop()],
+    ['calendar ticker', () => calendarTicker?.stop()],
+    ['Google Calendar', () => googleCalendar?.stop()],
+    ['push notifier', () => pushNotifier.stop()],
+    ['outposts', () => outposts.close()],
+    ['HTTP server', () => server.close()],
+    ['HTTP connections', () => server.closeAllConnections()],
+    ['database listener', () => listener.close()],
+    ['app event listener', () => appEventListener.close()],
+    ['pending process kills', () => processKillsSent()],
+    ['database pool', () => db.end()],
+  ]);
   process.exit(0);
 };
 process.once('SIGINT', () => void shutdown());

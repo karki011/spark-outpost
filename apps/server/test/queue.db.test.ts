@@ -2,6 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
 import { claimNextJob } from '../src/persistence/jobs.ts';
+import {
+  claimMemberMessages,
+  getMemberMessage,
+  insertMemberMessage,
+} from '../src/persistence/member-messages.ts';
 import { LeaseLostError, appendRunEvent } from '../src/persistence/run-events.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { recoverExpiredLeases } from '../src/workflow/recovery.ts';
@@ -90,5 +95,37 @@ describe('job queue', () => {
 
     expect((await eventTypes(t.db, runId!)).slice(-2)).toEqual(['TOOL_CALL_START', 'RUN_ERROR']);
     await expectConformantRun(t.db, runId!);
+  });
+
+  it('marks a message taken from the inbox but never acted on as missed after a crash', async () => {
+    const [runId] = await queueRuns(1);
+    const lease = (await claimNextJob(t.db, 30))!;
+    await appendRunEvent(t.db, lease, runEvents.started({ runId: runId!, threadId: 'thread' }));
+    const { rows } = await t.db.query<{ conversation_id: string }>(
+      'SELECT conversation_id FROM runs WHERE id = $1',
+      [runId],
+    );
+    const conversationId = rows[0]!.conversation_id;
+    const steer = async () => {
+      const id = randomUUID();
+      await insertMemberMessage(t.db, {
+        id,
+        conversationId,
+        runId: runId!,
+        body: 'Now',
+        urgency: 'now',
+      });
+      await claimMemberMessages(t.db, runId!, runId!, true);
+      return id;
+    };
+    const acted = await steer();
+    await appendRunEvent(t.db, lease, runEvents.stepStarted('Acting on it'));
+    const unread = await steer();
+    await expireLease(lease.jobId);
+
+    expect(await recoverExpiredLeases(t.db)).toBe(1);
+
+    expect((await getMemberMessage(t.db, acted))?.status).toBe('delivered');
+    expect((await getMemberMessage(t.db, unread))?.status).toBe('missed');
   });
 });

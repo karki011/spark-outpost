@@ -1,11 +1,13 @@
 import type { TerminalEndReason, TerminalHint } from '@spark-outpost/contracts';
-import type { TerminalTicket } from './terminal-api.ts';
+import { deleteTerminalSession, type TerminalTicket } from './terminal-api.ts';
 import type * as Xterm from './xterm-terminal.ts';
 import type { LinkOpener } from './link-pointer.ts';
 import type { SelectionActions, SelectionHandler } from './selection/follow-selection.ts';
 
 export interface TerminalHandlers<T extends TerminalTicket> {
   onOpen(created: T): void;
+  startEarly?: boolean;
+  onCreated?(created: T): void;
   preserveSession?: boolean;
   readOnly?: boolean;
   onDisconnected?(): void;
@@ -54,6 +56,15 @@ function showSkeleton(element: HTMLElement): HTMLElement {
   return skeleton;
 }
 
+function forget<T extends TerminalTicket>(pending: Promise<T>, handlers: TerminalHandlers<T>) {
+  void pending.then(
+    (created) => {
+      if (!handlers.preserveSession) void deleteTerminalSession(created.id).catch(() => undefined);
+    },
+    () => undefined,
+  );
+}
+
 export function openTerminal<T extends TerminalTicket>(
   start: () => Promise<T>,
   element: HTMLElement,
@@ -61,21 +72,39 @@ export function openTerminal<T extends TerminalTicket>(
 ): TerminalConnection {
   let opened: TerminalConnection | null = null;
   let disposed = false;
+  let failed = false;
+  let handedOver = false;
   let waiting: ((connection: TerminalConnection) => void)[] = [];
   const skeleton = showSkeleton(element);
+  const pending = handlers.startEarly ? start() : null;
+  pending?.then(
+    (created) => {
+      if (!disposed && !failed) handlers.onCreated?.(created);
+    },
+    () => undefined,
+  );
+  const handOver = pending
+    ? () => {
+        handedOver = true;
+        return pending;
+      }
+    : start;
 
   preloadTerminal().then(
     (xterm) => {
       skeleton.remove();
       if (disposed) return;
-      const connection = xterm.openXterm(start, element, handlers);
+      const connection = xterm.openXterm(handOver, element, handlers);
       opened = connection;
       for (const call of waiting) call(connection);
       waiting = [];
     },
     () => {
       skeleton.remove();
-      if (!disposed) handlers.onError(LOAD_FAILED);
+      if (disposed) return;
+      failed = true;
+      if (pending) forget(pending, handlers);
+      handlers.onError(LOAD_FAILED);
     },
   );
 
@@ -98,6 +127,7 @@ export function openTerminal<T extends TerminalTicket>(
       waiting = [];
       skeleton.remove();
       opened?.dispose();
+      if (pending && !handedOver && !failed) forget(pending, handlers);
     },
   };
 }

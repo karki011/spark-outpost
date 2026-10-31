@@ -33,20 +33,6 @@ export const memberMessageSchema = z.object({
 });
 export type MemberMessage = z.infer<typeof memberMessageSchema>;
 
-export const memberMessageRequestSchema = z.object({
-  id: z.uuid(),
-  text: z.string().trim().min(1),
-  continue: z.boolean().default(false),
-});
-export type MemberMessageRequest = z.infer<typeof memberMessageRequestSchema>;
-
-export const memberMessageResponseSchema = z.object({
-  message: memberMessageSchema.nullable(),
-  queued: z.boolean(),
-  reply: z.string(),
-});
-export type MemberMessageResponse = z.infer<typeof memberMessageResponseSchema>;
-
 export const queuedMessageSchema = z.object({
   id: z.uuid(),
   content: z.string(),

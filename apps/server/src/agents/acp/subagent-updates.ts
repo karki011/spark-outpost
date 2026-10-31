@@ -1,6 +1,7 @@
 import { firstGenerationId, friendlyStep } from '@spark-outpost/contracts';
 import type { ProviderOutput, SubagentReported } from '../../providers/provider.ts';
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import { startedTaskId } from './background-work.ts';
 import { objectFields } from './object-fields.ts';
 import { createUpdateMapper, type UpdateMapper } from './session-updates.ts';
 import { withToolCalls } from './tool-call-outputs.ts';
@@ -9,6 +10,8 @@ import type { Reported } from './subagent-report.ts';
 import { shownTask, subagentMark } from './subagent-stream.ts';
 
 export const SPAWN_STEP = friendlyStep('Agent');
+
+type EndState = Extract<ProviderOutput, { kind: 'subagent_finished' }>['state'];
 
 function attribute(output: ProviderOutput, subagent: string): ProviderOutput {
   switch (output.kind) {
@@ -50,14 +53,11 @@ function reportOf(reported: Reported | undefined, message: string | null): Subag
 const CODEX_WAIT_TOOL = 'wait';
 const CLAUDE_WAIT_TOOL = 'TaskOutput';
 
-function waitsOn(update: SessionUpdate, working: ReadonlyMap<string, unknown>): boolean {
+function waitsOn(update: SessionUpdate): boolean {
   if (update.sessionUpdate !== 'tool_call') return false;
   const meta = objectFields(update._meta);
   if (objectFields(objectFields(meta.codex).collaboration).tool === CODEX_WAIT_TOOL) return true;
-  if (objectFields(meta.claudeCode).toolName !== CLAUDE_WAIT_TOOL) return false;
-  const taskId = objectFields(update.rawInput).task_id;
-  if (typeof taskId !== 'string' || taskId === '') return false;
-  return [...working.keys()].some((id) => id === taskId || id.startsWith(`${taskId}:generation:`));
+  return objectFields(meta.claudeCode).toolName === CLAUDE_WAIT_TOOL;
 }
 
 function waiting(output: ProviderOutput): ProviderOutput {
@@ -73,6 +73,27 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
   const tokens = new Map<string, number>();
   const taken = new Map<string, number>();
   const delivered = new Set<string>();
+  const liveTasks = new Set<string>();
+  const taskOwners = new Map<string, string>();
+  const heldEnds = new Map<string, EndState>();
+
+  const ownsLiveTask = (id: string): boolean => {
+    const owner = firstGenerationId(id);
+    return [...liveTasks].some((task) => taskOwners.get(task) === owner);
+  };
+
+  const finishedHeld = (
+    shouldFinish: (id: string) => boolean,
+    state: (held: EndState) => EndState = (held) => held,
+  ): ProviderOutput[] => {
+    const outputs: ProviderOutput[] = [];
+    for (const [id, held] of heldEnds) {
+      if (!shouldFinish(id)) continue;
+      heldEnds.delete(id);
+      outputs.push({ kind: 'subagent_finished', id, state: state(held) });
+    }
+    return outputs;
+  };
 
   const reporting = (
     id: string,
@@ -90,7 +111,7 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
     const tool =
       update.sessionUpdate === 'tool_call' || update.sessionUpdate === 'tool_call_update';
     if (!tool) return main.map(update);
-    if (waitsOn(update, working)) waitCalls.add(update.toolCallId);
+    if (waitsOn(update)) waitCalls.add(update.toolCallId);
     const outputs = main.map(update);
     if (!waitCalls.has(update.toolCallId)) return outputs;
     if (update.status === 'completed' || update.status === 'failed') {
@@ -111,32 +132,48 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
     map(update) {
       const mark = subagentMark(update);
       if (!mark) return mainOutputs(update);
+      if (mark.event === 'task') {
+        if (!mark.ended) {
+          liveTasks.add(mark.id);
+          return [];
+        }
+        liveTasks.delete(mark.id);
+        return finishedHeld((id) => !ownsLiveTask(id));
+      }
       if (mark.event === 'spawned') {
         if (seen.has(mark.id)) return [];
         seen.add(mark.id);
+        const resumedAgent = firstGenerationId(mark.id);
+        const ending = finishedHeld((id) => firstGenerationId(id) === resumedAgent);
         working.set(mark.id, { mapper: childMapper(), activity: createSubagentActivity() });
         const { id, name } = mark;
         const task = shownTask(mark.task, name);
         names.set(id, name);
         const parentId = mark.parentId !== null && seen.has(mark.parentId) ? mark.parentId : null;
         const started: ProviderOutput = { kind: 'subagent_started', id, parentId, name, task };
-        if (parentId !== null) return [started];
+        if (parentId !== null) return [...ending, started];
         const spawning = main
           .clientAction(SPAWN_STEP)
           .map((output) =>
             'name' in output && output.name === SPAWN_STEP ? attribute(output, id) : output,
           );
-        return [started, ...spawning];
+        return [...ending, started, ...spawning];
       }
       if (mark.event === 'ended') {
         const ending = working.get(mark.id);
         if (!ending) return seen.has(mark.id) ? reporting(mark.id, mark.reported, null) : [];
-        return [
+        const closing = [
           ...close(mark.id, false),
           ...reporting(mark.id, mark.reported, ending.activity.lastMessage()),
-          { kind: 'subagent_finished', id: mark.id, state: mark.state },
         ];
+        if (!ownsLiveTask(mark.id)) {
+          return [...closing, { kind: 'subagent_finished', id: mark.id, state: mark.state }];
+        }
+        heldEnds.set(mark.id, mark.state);
+        return closing;
       }
+      const startedTask = startedTaskId(update);
+      if (startedTask) taskOwners.set(startedTask, firstGenerationId(mark.id));
       const child = working.get(mark.id);
       if (!child) return [];
       const done = child.activity.see(update);
@@ -164,7 +201,11 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
     didWork: () => main.didWork() || seen.size > 0,
     finish(cancelled = false) {
       const children = [...working.keys()].flatMap((id) => close(id, cancelled));
-      return [...children, ...main.finish(cancelled)];
+      const held = finishedHeld(
+        () => true,
+        (state) => (cancelled ? 'cancelled' : state),
+      );
+      return [...children, ...held, ...main.finish(cancelled)];
     },
   };
 }

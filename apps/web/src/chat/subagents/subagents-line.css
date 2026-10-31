@@ -58,3 +58,17 @@
 .sl-cards {
   margin-top: 8px;
 }
+
+.sl-done {
+  margin: 0;
+}
+
+.sl-view {
+  min-height: 28px;
+}
+
+@media (pointer: coarse) {
+  .sl-view {
+    min-height: 44px;
+  }
+}

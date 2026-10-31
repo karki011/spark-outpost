@@ -9,6 +9,7 @@ import {
   type PrWatch,
 } from '@spark-outpost/contracts';
 import { castAgents, isSparkLed, tvCast } from '../../crew/conversation-crew.ts';
+import type { LeadSteps } from '../../crew/lead-steps.ts';
 import { isBusy, modelLabel, roleLabel, type CrewAgent } from '../../crew/crew-model.ts';
 import { crewAgents } from '../../crew/crew-projection.ts';
 import { turnState } from '../../crew/tv-list.ts';
@@ -204,8 +205,12 @@ interface RailCrewView {
   list: CrewAgent[];
 }
 
-export function railCrew(detail: ConversationDetail, running: boolean): RailCrewView {
-  const cast = tvCast(detail);
+export function railCrew(
+  detail: ConversationDetail,
+  running: boolean,
+  live: LeadSteps = new Map(),
+): RailCrewView {
+  const cast = tvCast(detail, live);
   if (!cast) return { stage: [], list: [] };
   const stored = detail.orchestrations?.[cast.run.id];
   if (stored && !isSparkLed(stored)) {

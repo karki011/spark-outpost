@@ -296,35 +296,6 @@
   flex-wrap: wrap;
 }
 
-.step-thought-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: inherit;
-  font-size: inherit;
-  margin: 0 -4px;
-  padding: 0 4px;
-  border-radius: 4px;
-}
-
-.step-thought-toggle:hover {
-  color: var(--text);
-}
-
-.thought-chev {
-  transition: transform 0.2s var(--out);
-}
-
-.step-thought-toggle[aria-expanded='true'] .thought-chev {
-  transform: rotate(90deg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .thought-chev {
-    transition: none;
-  }
-}
-
 .step-thought {
   flex-basis: 100%;
   max-height: 14rem;

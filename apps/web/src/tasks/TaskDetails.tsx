@@ -204,7 +204,7 @@ export function TaskDetails({
         )}
         {current === 'steps' && <TerminalSteps conversationId={conversationId} />}
         {current === 'cost' && terminal && <TerminalCost conversationId={conversationId} />}
-        {!NO_DETAIL.has(current) && !detail.data && (
+        {open && !NO_DETAIL.has(current) && !detail.data && (
           <div className="wsec">
             <QueryWait query={detail} what={`the ${tabNames[current].toLowerCase()}`}>
               <Skeleton label={`Opening ${tabNames[current]}`} shape={PANE_SHAPES[current]} />

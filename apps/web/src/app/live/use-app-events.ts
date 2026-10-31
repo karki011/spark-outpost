@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { parseAppEvent, type AppEvent } from '@spark-outpost/contracts';
+import { runStreamClient } from '../../chat/use-run-stream.ts';
 import { LIVE_ROOTS, isLiveQueryKey, isStepEvent, mergeInvalidations } from './app-event-keys.ts';
+import { patchRunStep } from './step-patch.ts';
 
 const LIVE_STALE_MS = 5 * 60_000;
 const FALLBACK_POLL_MS = 60_000;
@@ -48,7 +50,9 @@ export function useAppEvents(): { paused: boolean } {
       const events = [...pending, ...steps];
       pending = [];
       steps = [];
-      for (const invalidation of mergeInvalidations(events)) {
+      const stream = runStreamClient(queryClient);
+      for (const event of events) patchRunStep(queryClient, event);
+      for (const invalidation of mergeInvalidations(events, (runId) => stream.watching(runId))) {
         void queryClient.invalidateQueries(invalidation);
       }
     };

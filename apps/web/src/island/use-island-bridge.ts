@@ -141,6 +141,10 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       hovering.current = on;
       latest.current.onHover(on);
     };
+    const leaveWhenHidden = () => {
+      if (document.visibilityState === 'hidden') setHover(false);
+    };
+    document.addEventListener('visibilitychange', leaveWhenHidden);
     let lastProbe = -Infinity;
     let probeFrame = 0;
     let trailing: { x: number; y: number } | null = null;
@@ -270,6 +274,7 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       clearTimeout(settleTimer);
       clearTimeout(quietTimer);
       offPointer?.();
+      document.removeEventListener('visibilitychange', leaveWhenHidden);
       window.removeEventListener('dragenter', onDragIn);
       window.removeEventListener('drop', onDragOut);
       document.documentElement.removeEventListener('dragleave', onDragOut);

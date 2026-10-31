@@ -91,11 +91,11 @@ export function turnSteers(detail: ConversationDetail, runId: string): MemberMes
   );
 }
 
-export function steerSlots(
+export function steerSlots<Item extends { createdAt: string }>(
   blockTimes: readonly (string | null)[],
-  messages: readonly MemberMessage[],
-): Map<number, MemberMessage[]> {
-  const slots = new Map<number, MemberMessage[]>();
+  messages: readonly Item[],
+): Map<number, Item[]> {
+  const slots = new Map<number, Item[]>();
   for (const message of messages) {
     const at = Date.parse(message.createdAt);
     const slot = blockTimes.findLastIndex((time) => time !== null && Date.parse(time) <= at);

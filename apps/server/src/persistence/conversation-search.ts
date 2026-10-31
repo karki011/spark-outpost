@@ -1,4 +1,8 @@
-import type { ConversationSummary, SearchMatch } from '@spark-outpost/contracts';
+import {
+  CHAT_LIST_PAGE,
+  type ConversationSummary,
+  type SearchMatch,
+} from '@spark-outpost/contracts';
 import { withChatBranches } from './chat-worktrees.ts';
 import type { Queryable } from './db.ts';
 import { containsPattern } from './like-pattern.ts';
@@ -7,7 +11,6 @@ import { toConversationSummary, type ConversationSummaryRow } from './rows.ts';
 import { matchSnippet, prefixQuery, searchWords } from './search-snippet.ts';
 import { summaryQuery } from './summary-query.ts';
 
-export const CHAT_LIST_LIMIT = 500;
 const SNIPPET_SOURCE_CHARS = 100_000;
 
 export const LISTED_CHAT = `c.workspace_id = $1 AND c.kind = 'chat'
@@ -62,7 +65,7 @@ function hitsQuery(match: typeof WORDS_MATCH): string {
       WHERE ${LISTED_CHAT}
         AND (b.id IS NOT NULL OR c.title ILIKE $3 OR ${match.title})
       ORDER BY place
-      LIMIT ${CHAT_LIST_LIMIT}
+      LIMIT ${CHAT_LIST_PAGE}
     )
     SELECT k.id, k.message_id, left(m.content, ${SNIPPET_SOURCE_CHARS}) AS content,
       COALESCE(k.run_id, (SELECT r.id FROM runs r

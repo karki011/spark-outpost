@@ -118,6 +118,10 @@ export function createAppParts(options: AppOptions) {
       requireLaunchToken(options.apiToken),
     ]),
   );
+  const web = options.webRoot
+    ? webApp(options.webRoot, appContentSecurityPolicy(artifactOrigin(options.port)))
+    : null;
+  if (web) app.use(web.files);
   app.use('/api', attachmentRoutes(options));
   app.use('/api', chatFileRoutes(options));
   app.use('/api', artifactRoutes(options));
@@ -180,9 +184,7 @@ export function createAppParts(options: AppOptions) {
       },
     }),
   );
-  if (options.webRoot) {
-    app.use(webApp(options.webRoot, appContentSecurityPolicy(artifactOrigin(options.port))));
-  }
+  if (web) app.use(web.page);
   app.use((_req, res) => {
     res.status(404).json({ error: 'Not found.' });
   });

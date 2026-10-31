@@ -8,6 +8,7 @@ import { Spinner } from '../rows/Rows.tsx';
 import { useLiveHead } from '../status/status-context.ts';
 import { clockText } from '../status/status-text.ts';
 import { useNow } from '../status/use-status-line.ts';
+import type { LeadStep } from './live-label.ts';
 
 export function agentChanged(run: Run, previous: Run | null): boolean {
   if (!previous) return false;
@@ -29,28 +30,27 @@ export function AgentMark({ provider, model }: { provider: string; model: string
   );
 }
 
-export function WorkingLine({
-  run,
-  doing = 'Working',
-  children,
-}: {
-  run: Run;
-  doing?: string;
-  children?: ReactNode;
-}) {
+function sinceText(now: number, since: number | null): string | null {
+  return since !== null && Number.isFinite(since) ? clockText(Math.max(0, now - since)) : null;
+}
+
+export function WorkingLine({ run, step }: { run: Run; step: LeadStep }) {
   const headRef = useLiveHead(run.id);
   const now = useNow(true);
-  const since = Date.parse(run.startedAt ?? run.createdAt);
+  const stepClock = sinceText(now, step.since);
+  const turnClock = sinceText(now, Date.parse(run.startedAt ?? run.createdAt));
   const tokens = run.usage?.tokens?.total ?? null;
   return (
     <div className="turn-working" ref={headRef}>
       <Spinner />
-      <b>{doing}</b>
-      <span className="turn-working-meta">
-        {Number.isFinite(since) && <> · {clockText(Math.max(0, now - since))}</>}
+      <span className="turn-working-now">
+        <b>{step.label}</b>
+        {stepClock && <span className="turn-working-meta"> · {stepClock}</span>}
+      </span>
+      <span className="turn-working-turn">
+        {turnClock && <> · Turn {turnClock}</>}
         {tokens !== null && tokens > 0 && <> · {formatTokens(tokens)} tokens</>}
       </span>
-      {children}
       <span className="turn-working-stop">
         <kbd>Esc</kbd> to stop
       </span>

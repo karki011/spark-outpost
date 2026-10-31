@@ -1,3 +1,4 @@
+import { setTimeout as delay } from 'node:timers/promises';
 import { describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
@@ -5,6 +6,7 @@ import type {
   AgentSettings,
   ProviderMessage,
   ProviderOutput,
+  SteerOutcome,
   SteerRequests,
 } from '../src/providers/provider.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
@@ -37,6 +39,7 @@ const settings: AgentSettings = { method: 'cli', model: null, modelLabel: null, 
 interface Watch {
   onOutput?: (output: ProviderOutput, controller: AbortController) => void;
   steering?: SteerRequests;
+  inbox?: { take(): Promise<ProviderMessage | null> };
   provider?: typeof claude;
 }
 
@@ -49,6 +52,7 @@ async function collect(prompt: string, watch: Watch = {}) {
     settings,
     signal: controller.signal,
     ...(watch.steering ? { steering: watch.steering } : {}),
+    ...(watch.inbox ? { inbox: watch.inbox } : {}),
   })) {
     outputs.push(output);
     watch.onOutput?.(output, controller);
@@ -130,11 +134,105 @@ describe(
       );
     });
 
+    describe('a message sent while the agent runs its own follow-up after the prompt ended', () => {
+      function steeringInto(sent: SteerOutcome[]) {
+        let send: ((text: ProviderMessage) => Promise<SteerOutcome>) | null = null;
+        const steering: SteerRequests = {
+          attach(sender) {
+            send = sender;
+            return () => {
+              send = null;
+            };
+          },
+        };
+        const offer = async (text: string) => {
+          const outcome = (await send?.(text)) ?? false;
+          sent.push(outcome);
+          return outcome;
+        };
+        return { steering, offer };
+      }
+
+      it('holds the message until the follow-up ends and keeps the follow-up reply', async () => {
+        const sent: SteerOutcome[] = [];
+        const { steering, offer } = steeringInto(sent);
+        const outputs = await collect('#ownfollowup', {
+          steering,
+          onOutput: (output) => {
+            if (output.kind !== 'tool_started') return;
+            void delay(30).then(() => offer('Any news?'));
+          },
+        });
+        expect(sent).toEqual(['later']);
+        expect(replyText(outputs)).toBe('Started. \n\nFIRST-DONE.');
+      });
+
+      it('finishes on its own when nothing is sent', async () => {
+        const outputs = await collect('#ownfollowup');
+        expect(replyText(outputs)).toBe('Started. \n\nFIRST-DONE.');
+      });
+
+      it('stops while the message is held, and the message never reaches the agent', async () => {
+        const sent: SteerOutcome[] = [];
+        const { steering, offer } = steeringInto(sent);
+        const outputs = await collect('#ownfollowup', {
+          steering,
+          onOutput: (output, controller) => {
+            if (output.kind !== 'tool_started') return;
+            void delay(30)
+              .then(() => offer('Any news?'))
+              .then(() => controller.abort());
+          },
+        });
+        expect(sent).toEqual(['later']);
+        expect(replyText(outputs)).not.toContain('Any news?');
+      });
+
+      it('keeps a message held while the end of the follow-up checks the queue', async () => {
+        const sent: SteerOutcome[] = [];
+        const { steering, offer } = steeringInto(sent);
+        let claims = 0;
+        const outputs = await collect('#ownfollowup', {
+          steering,
+          inbox: {
+            take: async () => {
+              claims += 1;
+              if (claims === 2) await offer('Any news?');
+              return null;
+            },
+          },
+        });
+        expect(sent).toEqual(['later']);
+        expect(replyText(outputs)).not.toContain('Any news?');
+      });
+
+      it('sends a message claimed from the inbox at the end of the follow-up', async () => {
+        const waiting = ['Queued while it ran'];
+        let claims = 0;
+        const outputs: ProviderOutput[] = [];
+        for await (const output of claude.run({
+          prompt: '#ownfollowup',
+          history: [],
+          settings,
+          signal: new AbortController().signal,
+          inbox: {
+            take: async () => {
+              claims += 1;
+              return claims === 1 ? null : (waiting.shift() ?? null);
+            },
+          },
+        })) {
+          outputs.push(output);
+        }
+        expect(replyText(outputs)).toContain('prompt=Queued while it ran');
+      });
+    });
+
     it.each([false, true])(
       'sends a message during background work with attachments=%s',
       async (rich) => {
-        let send: ((text: ProviderMessage) => Promise<boolean>) | null = null;
-        const delivered: boolean[] = [];
+        let send: ((text: ProviderMessage) => Promise<boolean | 'later'>) | null = null;
+        const delivered: SteerOutcome[] = [];
         const steering: SteerRequests = {
           attach(sender) {
             send = sender;

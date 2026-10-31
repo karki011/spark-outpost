@@ -9,9 +9,11 @@ import { anchorIndex, outsideFence, type TextAnchor } from '../../browser/shot-o
 import type { AgentTerminalView } from '../commands/agent-terminal-model.ts';
 import type { CommandView } from '../commands/command-model.ts';
 import type { StepStatus, StepTimes, StepView } from '../run-projection.ts';
+import { cardAt, type CardMark } from './card-place.ts';
 import { REFUSED_VERB, stepActivity } from '../status/step-activity.ts';
 
 const THINKING = 'Thinking';
+const SENTENCE_END = /[.!?:]\s*$/;
 const WEB_STEP = /^(?:Fetched |Searched the web$)/;
 const WEB_SEARCHED = 'Searched the web';
 
@@ -66,7 +68,8 @@ export type TurnRowPart =
   | { kind: 'shots'; key: string; shots: BrowserShot[] }
   | { kind: 'terminal'; key: string; terminals: AgentTerminalView[] }
   | { kind: 'rows'; key: string; rows: Row[] }
-  | { kind: 'steers'; key: string; ids: string[]; wroteAfter: boolean };
+  | { kind: 'steers'; key: string; ids: string[]; wroteAfter: boolean }
+  | { kind: 'cards'; key: string; ids: string[] };
 
 export interface SteerMark {
   id: string;
@@ -81,6 +84,7 @@ export interface TurnRowInput {
   shots?: readonly BrowserShot[];
   terminals?: readonly AgentTerminalView[];
   steers?: readonly SteerMark[];
+  cards?: readonly CardMark[];
   todo?: boolean;
 }
 
@@ -88,7 +92,8 @@ type Placed =
   | { kind: 'item'; at: number; time: number | null; item: RowItem }
   | { kind: 'shot'; at: number; time: number | null; shot: BrowserShot }
   | { kind: 'terminal'; at: number; time: number | null; terminal: AgentTerminalView }
-  | { kind: 'steer'; at: number; time: number | null; id: string; wroteAfter: boolean };
+  | { kind: 'steer'; at: number; time: number | null; id: string; wroteAfter: boolean }
+  | { kind: 'card'; at: number; time: number | null; id: string };
 
 const DONE_VERBS: Record<'read' | 'search' | 'edit', [done: string, open: string]> = {
   read: ['Read', 'Reading'],
@@ -240,6 +245,10 @@ function paragraphEnd(text: string, at: number): number {
   return outsideFence(text, end === -1 ? text.length : end);
 }
 
+function sentenceSafe(text: string, at: number): number {
+  return SENTENCE_END.test(text.slice(0, at)) ? at : paragraphEnd(text, at);
+}
+
 function steerPlace(text: string, steer: SteerMark): { at: number; wroteAfter: boolean } {
   if (!steer.anchor) return { at: text.length, wroteAfter: false };
   const anchor = placeAt(text, steer.anchor);
@@ -247,8 +256,26 @@ function steerPlace(text: string, steer: SteerMark): { at: number; wroteAfter: b
   return { at, wroteAfter: text.slice(anchor, at).trim() !== '' };
 }
 
+function itemUntil(item: RowItem): number | null {
+  if (item.kind === 'command') {
+    if (item.command.status === 'running') return Number.POSITIVE_INFINITY;
+    return item.command.finishedAt ? Date.parse(item.command.finishedAt) : null;
+  }
+  if (item.kind === 'thought') {
+    return item.step.status === 'open' ? Number.POSITIVE_INFINITY : (item.step.finishedAt ?? null);
+  }
+  if (item.kind === 'tool') {
+    return item.status === 'open' ? Number.POSITIVE_INFINITY : (item.finishedAt ?? null);
+  }
+  return null;
+}
+
+function placedUntil(placed: Placed): number | null {
+  return placed.kind === 'item' ? itemUntil(placed.item) : null;
+}
+
 function placedItems(input: TurnRowInput): Placed[] {
-  const { text, steps, commands, shots = [], terminals = [], steers = [] } = input;
+  const { text, steps, commands, shots = [], terminals = [], steers = [], cards = [] } = input;
   const items = stepItems(steps, commands.length > 0);
   const stepsByKey = new Map(steps.map((step, index) => [`step-${index}`, step]));
   const placed: Placed[] = [
@@ -281,6 +308,17 @@ function placedItems(input: TurnRowInput): Placed[] {
       id: steer.id,
     })),
   ];
+  const offsetAt = (textOffset: number) =>
+    sentenceSafe(text, placeAt(text, { textOffset, textBefore: null, textHeld: null }));
+  const timedItems = placed.map((item) => ({ ...item, until: placedUntil(item) }));
+  placed.push(
+    ...cards.map((card): Placed => ({
+      kind: 'card',
+      at: cardAt(text, card, timedItems, offsetAt),
+      time: card.time,
+      id: card.id,
+    })),
+  );
   return placed.sort(
     (left, right) =>
       left.at - right.at ||
@@ -368,6 +406,12 @@ export function turnRowParts(input: TurnRowInput): TurnRowPart[] {
       continue;
     }
     flushRows();
+    if (placed.kind === 'card') {
+      const last = parts.at(-1);
+      if (last?.kind === 'cards') last.ids.push(placed.id);
+      else parts.push({ kind: 'cards', key: `cards-${placed.id}`, ids: [placed.id] });
+      continue;
+    }
     if (placed.kind === 'steer') {
       const last = parts.at(-1);
       if (last?.kind === 'steers' && last.wroteAfter === placed.wroteAfter) {

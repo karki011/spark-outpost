@@ -44,7 +44,10 @@ export function folderExists(folder: string): Promise<boolean> {
   );
 }
 
-export function spawnInLoginShell(shell: string, kill: (pid: number) => void = killProcessTree) {
+export function spawnInLoginShell(
+  shell: string,
+  kill: (pid: number) => void = (pid) => void killProcessTree(pid),
+) {
   return ({ command, cwd, env }: PreviewSpawn): PreviewProcess => {
     const pty = spawnNodePty(shell, ['-ilc', command], {
       name: 'xterm-256color',

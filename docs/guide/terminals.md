@@ -12,7 +12,7 @@ Open an AI terminal. About 1 minute.
 
 ## Start a Terminal session
 
-1. Select **New chat**, then **Terminal** above the message box.
+1. Select **New chat**, then **Chat** → **Terminal** below the box.
 2. Select **Choose project**, then a project or **Add folder…**.
 3. Beside **Start terminal**, pick **Claude Code** or **Codex** and permissions.
 4. Describe the work; press **Enter**.

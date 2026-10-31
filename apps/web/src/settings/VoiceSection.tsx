@@ -48,10 +48,6 @@ function hiddenRows(on: boolean, fn: boolean): readonly string[] | undefined {
   return fn ? undefined : SHOWN_WITH_FN;
 }
 
-export function voiceAvailable(): boolean {
-  return desktopSpeech() !== null;
-}
-
 function Pill({ ok, text }: { ok: boolean; text: string }) {
   if (!ok) return <span className="fda-pill">{text}</span>;
   return (

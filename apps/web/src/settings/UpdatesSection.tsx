@@ -26,10 +26,6 @@ const CHECK = 'Check for updates';
 
 export const UPDATE_ROWS = [CHANNEL, AUTO_DOWNLOAD, CHECK];
 
-export function updatesAvailable(): boolean {
-  return Boolean(sparkDesktop()?.updates);
-}
-
 function phaseText(status: UpdateStatus): string {
   const version = status.availableVersion;
   if (status.waitingForRuns) return `${version} is ready. ${WAITING_FOR_RUNS}`;

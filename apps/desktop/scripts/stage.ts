@@ -56,7 +56,7 @@ async function deploy(
 }
 
 async function stageRuntime(runtimeDir: string, arch: MacArch): Promise<void> {
-  await deploy('@spark-outpost/desktop', arch, runtimeDir, ['src', 'scripts', 'build']);
+  await deploy('@spark-outpost/desktop', arch, runtimeDir, ['src', 'scripts', 'build', 'release']);
   await pruneRuntime(runtimeDir);
   const postgres = postgresNativeDir(runtimeDir, arch);
   await prunePostgres(postgres);

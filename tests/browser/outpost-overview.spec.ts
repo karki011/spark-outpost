@@ -30,6 +30,15 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function expectAccessible(page: Page): Promise<void> {
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every(
+        (animation) =>
+          animation.effect?.getComputedTiming().iterations === Infinity ||
+          animation.playState !== 'running',
+      ),
+  );
   const results = await new AxeBuilder({ page })
     .include('.main.op')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])

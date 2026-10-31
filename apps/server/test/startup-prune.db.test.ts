@@ -76,7 +76,7 @@ describe('pruning old rows after the API starts', () => {
       report: (message, error) => reported.push(`${message}: ${(error as Error).message}`),
     });
     restore();
-    expect(reported).toEqual(['Could not prune empty chats at startup: disk is full']);
+    expect(reported).toEqual(['Could not prune empty chats: disk is full']);
     expect(await ids('conversations')).toEqual([stale]);
     expect(await ids('attachments')).toEqual([]);
   });

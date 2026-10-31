@@ -83,14 +83,6 @@ function parseProcessTable(output: string): ProcessRow[] {
   return rows;
 }
 
-function processTableNow(): ProcessRow[] {
-  try {
-    return parseProcessTable(execFileSync('/bin/ps', PS_ARGS, { encoding: 'utf8' }));
-  } catch {
-    return [];
-  }
-}
-
 export async function processTable(): Promise<ProcessRow[]> {
   try {
     const { stdout } = await execFileAsync('/bin/ps', PS_ARGS, { encoding: 'utf8' });
@@ -109,16 +101,41 @@ function signal(pid: number, name: NodeJS.Signals) {
 }
 
 export function processTreeNow(root: number): number[] {
-  return descendantsOf(root, processTableNow());
+  try {
+    return descendantsOf(
+      root,
+      parseProcessTable(execFileSync('/bin/ps', PS_ARGS, { encoding: 'utf8' })),
+    );
+  } catch {
+    return [];
+  }
 }
+
+const killsInFlight = new Set<Promise<void>>();
 
 export function killProcessTree(
   root: number,
   graceMs = 1500,
   first: NodeJS.Signals = 'SIGHUP',
   seenEarlier: readonly number[] = [],
-): void {
-  const table = processTableNow();
+): Promise<void> {
+  const killing = signalTree(root, graceMs, first, seenEarlier);
+  killsInFlight.add(killing);
+  void killing.finally(() => killsInFlight.delete(killing));
+  return killing;
+}
+
+export async function processKillsSent(): Promise<void> {
+  await Promise.all([...killsInFlight]);
+}
+
+async function signalTree(
+  root: number,
+  graceMs: number,
+  first: NodeJS.Signals,
+  seenEarlier: readonly number[],
+): Promise<void> {
+  const table = await processTable();
   const orphaned = seenEarlier.filter((pid) => isAlive(pid));
   const roots = [root, ...orphaned];
   const targets = [...new Set(roots.flatMap((pid) => [pid, ...descendantsOf(pid, table)]))];

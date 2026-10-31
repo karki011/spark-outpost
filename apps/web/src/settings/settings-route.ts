@@ -4,7 +4,7 @@ import {
   parseProviderRoute,
   providerRouteHash,
 } from '../providers/provider-route.ts';
-import { availableSections, type SettingsSection } from './settings-sections.tsx';
+import { SETTINGS_SECTION_IDS, sectionAvailable, type SettingsSection } from './section-ids.ts';
 
 const PREFIX = '#/settings/';
 
@@ -12,7 +12,9 @@ export function parseSettingsRoute(hash: string): SettingsSection | null {
   if (parseProviderRoute(hash)) return 'ai';
   if (!hash.startsWith(PREFIX)) return null;
   const id = hash.slice(PREFIX.length).replace(/\/$/, '');
-  return availableSections().find((entry) => entry.id === id)?.id ?? null;
+  return (
+    SETTINGS_SECTION_IDS.find((section) => section === id && sectionAvailable(section)) ?? null
+  );
 }
 
 export function settingsRouteHash(section: SettingsSection): string {

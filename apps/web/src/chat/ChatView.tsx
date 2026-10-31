@@ -75,7 +75,8 @@ import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { sessionView } from './session-view.ts';
 import { NativeTerminalWorkspace } from '../terminal/NativeTerminalWorkspace.tsx';
 import { TerminalComposer } from '../terminal/TerminalComposer.tsx';
-import { SessionTypePicker, type SessionChoice } from '../terminal/SessionTypePicker.tsx';
+import { SessionTypeChip } from '../terminal/SessionTypeChip.tsx';
+import type { SessionChoice } from '../terminal/SessionTypePicker.tsx';
 import { ChatTeammate } from '../teammates/ChatTeammate.tsx';
 import { AssistantReadOnly } from '../settings/assistant/AssistantReadOnly.tsx';
 
@@ -237,11 +238,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   };
   const terminalDraft = newSession && sessionChoice.sessionType === 'terminal' && !remote;
   const sessionPicker = newSession ? (
-    <SessionTypePicker
-      value={sessionChoice}
-      onChange={chooseSession}
-      disabled={terminalLaunching}
-    />
+    <SessionTypeChip value={sessionChoice} onChange={chooseSession} disabled={terminalLaunching} />
   ) : null;
   const panelRoots = useMemo(
     () => [
@@ -386,7 +383,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               />
               <QueueStrip
                 queue={queue}
-                mode={queueMode(running !== null, detail.data?.runs ?? NO_RUNS, sparkPaused)}
+                mode={queueMode(running ? waitingOn : null, detail.data?.runs, sparkPaused)}
               />
               <Composer
                 conversationId={conversationId}
@@ -435,12 +432,12 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 agentName={providerName(
                   commands.data?.provider ?? detail.data?.settings.provider ?? '',
                 )}
-                contextLead={sessionPicker}
+                sessionChip={sessionPicker}
               />
             </>
           )}
           {!remote && !terminalSession && !terminalDraft && (
-            <TerminalDock chatId={conversationId} />
+            <TerminalDock chatId={conversationId} preload={repos.length > 0} />
           )}
           <DropOverlay visible={drop.dragging} />
         </main>

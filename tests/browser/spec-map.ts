@@ -18,6 +18,7 @@ export const PERF_SPECS = [
   'island-perf',
   'live-diff-perf',
   'project-map-perf',
+  'rest-cost-perf',
   'screen-tour-perf',
 ] as const;
 
@@ -58,9 +59,11 @@ export const SPEC_GROUPS = {
     'phone-context-bar',
     'prompt-cache',
     'queue-strip',
+    'quiet-composer',
     'quote-to-chat',
     'responsive-chat',
     'result-block',
+    'run-stream',
     'secret-warning',
     'send-or-queue',
     'slash-commands',
@@ -69,6 +72,8 @@ export const SPEC_GROUPS = {
     'stream-scroll',
     'thinking-step',
     'titles',
+    'turn-fold',
+    'turn-timeline',
     'work-panel',
   ],
   approvals: [
@@ -117,6 +122,7 @@ export const SPEC_GROUPS = {
     'terminal-remote',
     'terminal-font',
     'terminal-select',
+    'terminal-fast-open',
     'command-terminal',
     'command-tab',
     'agent-terminal',

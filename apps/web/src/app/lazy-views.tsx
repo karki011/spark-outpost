@@ -34,3 +34,18 @@ const VIEW_LOADERS: Partial<Record<AppView, () => Promise<unknown>>> = {
 export function preloadView(view: AppView): void {
   void VIEW_LOADERS[view]?.().catch(() => undefined);
 }
+
+const loadSettings = () =>
+  import('../settings/SettingsDialog.tsx').then((module) => ({
+    default: module.SettingsDialog,
+  }));
+
+export const SettingsDialog = lazy(loadSettings);
+
+export function preloadSettings(): void {
+  void loadSettings().catch(() => undefined);
+}
+
+export const Onboarding = lazy(() =>
+  import('../onboarding/Onboarding.tsx').then((module) => ({ default: module.Onboarding })),
+);

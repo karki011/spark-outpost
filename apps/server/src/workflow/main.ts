@@ -34,6 +34,7 @@ import { connectDesktopCalendar } from '../calendar/host-client.ts';
 import { parseAppEvent } from '@spark-outpost/contracts';
 import { TaskWakes } from '../a2a/task-wakes.ts';
 import { stackGit } from '../outposts/stack-git.ts';
+import { processKillsSent } from '../terminal/process-group.ts';
 
 const config = loadConfig();
 const chatFolders = chatFoldersBase(sparkDataDir(config), config.BRANCH_PREFIX);
@@ -173,6 +174,7 @@ const shutdown = async () => {
   await flushBufferedText();
   await sparkActions.stop();
   await sparkTools.close();
+  await processKillsSent();
   await db.end();
   process.exit(0);
 };

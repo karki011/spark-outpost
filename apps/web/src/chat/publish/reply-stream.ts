@@ -1,6 +1,7 @@
 export interface ReplyEnd {
   commands: number;
   terminals: number;
+  at: number | null;
 }
 
 export interface ReplyStream {

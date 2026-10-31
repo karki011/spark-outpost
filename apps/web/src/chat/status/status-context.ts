@@ -28,6 +28,7 @@ export function useLiveReport(
   { id, name, provider, kind, doing, todo }: Worker,
   working: boolean,
   steps: readonly RunStep[],
+  startedAt: number | null = null,
 ): void {
   const store = use(StatusContext);
   const step = working ? openStep(steps) : null;
@@ -39,10 +40,11 @@ export function useLiveReport(
       kind,
       working,
       step,
+      ...(step && startedAt !== null ? { startedAt } : {}),
       ...(doing ? { doing } : {}),
       ...(todo ? { todo } : {}),
     });
-  }, [store, id, name, provider, kind, doing, todo, working, step]);
+  }, [store, id, name, provider, kind, doing, todo, working, step, startedAt]);
   useEffect(() => () => store?.forget(id), [store, id]);
 }
 

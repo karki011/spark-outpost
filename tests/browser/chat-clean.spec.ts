@@ -99,7 +99,7 @@ test('a running turn has one status, with steps in plain words', async ({ page }
   await expect(page.locator('.thread')).not.toContainText('medium effort');
   await expect(page.locator('.thread .dots')).toHaveCount(0);
   const working = page.locator('.turn-working');
-  await expect(working).toContainText('Working');
+  await expect(working).toContainText('Checking pull requests');
   await expect(working).toContainText('Esc to stop');
   await expect(status(page)).toHaveCount(0);
   await expect(page.locator('.cstatus').getByRole('status')).toHaveText(
@@ -133,7 +133,7 @@ test('a finished answer keeps one quiet meta row and no plan or Jev lines', asyn
   await expect(page.locator('.todo-card, .todo-line')).toHaveCount(0);
   await expect(page.locator('.turn-meta .run-usage')).toContainText('61');
   await expect(
-    page.locator('.comp-bar').getByRole('button', { name: 'Choose project' }),
+    page.locator('.comp-foot').getByRole('button', { name: 'Choose project' }),
   ).toBeVisible();
 
   const column = (await page.locator('.col').boundingBox())!;

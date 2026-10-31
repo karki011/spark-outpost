@@ -19,7 +19,7 @@ import { BrowserShots } from '../../browser/BrowserShots.tsx';
 import { turnShots } from '../../browser/browser-check.ts';
 import { ShotReply } from '../../browser/ShotReply.tsx';
 import { runCommands } from '../commands/command-model.ts';
-import { RailFlags } from '../approvals/RailFlags.tsx';
+import { FlagLine } from '../approvals/RailFlags.tsx';
 import { RevertRun } from '../approvals/RevertRun.tsx';
 import { askedBeforeTimeout, isLatestTurn, timedOut } from '../approvals/timed-out.ts';
 import { TimedOutNote } from '../approvals/TimedOutNote.tsx';
@@ -93,6 +93,14 @@ export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
   const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals, run.id));
   const last = lastAgentIndex(items);
   const steers = steerSlots(items.map(itemStartedAt), turnSteers(detail, run.id));
+  const flags = steerSlots(
+    items.map(itemStartedAt),
+    (detail.railFlags ?? []).filter((flag) => flag.turnRunId === run.id),
+  );
+  const flagsAfter = (index: number) =>
+    (flags.get(index) ?? []).map((flag) => (
+      <FlagLine key={flag.id} flag={flag} conversationId={detail.conversation.id} />
+    ));
   const steeredAfter = (index: number) =>
     (steers.get(index) ?? []).flatMap((message) => [
       <SteeredMessage key={message.id} message={message} detail={detail} run={run} crew />,
@@ -202,8 +210,13 @@ export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
           status={jevStatus}
         />
       </div>
+      {flagsAfter(-1)}
       {steeredAfter(-1)}
-      {items.flatMap((item, index) => [itemBlock(item, index), ...steeredAfter(index)])}
+      {items.flatMap((item, index) => [
+        itemBlock(item, index),
+        ...flagsAfter(index),
+        ...steeredAfter(index),
+      ])}
       {summary && (
         <div className="msg ai crew-summary">
           <ShotReply text={summary} shots={otherShots}>
@@ -225,7 +238,6 @@ export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
             />
           )
         : orchestration.error && <p className="error-line">{orchestration.error}</p>}
-      <RailFlags detail={detail} runId={run.id} />
       {!summary && <BrowserShots shots={otherShots} />}
       <PlanSavedLine detail={detail} runId={run.id} />
       <AgreedReplyLine

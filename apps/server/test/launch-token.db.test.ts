@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -59,6 +62,24 @@ describe('launch token', () => {
       .expect(403);
   });
 
+  it('guards the built page and its files like the API', async () => {
+    const webRoot = mkdtempSync(path.join(tmpdir(), 'spark-launch-web-'));
+    writeFileSync(path.join(webRoot, 'index.html'), '<title>Spark Outpost app</title>');
+    writeFileSync(path.join(webRoot, 'app.js'), 'window.app = true;');
+    const web = createTestApp(t, { webRoot });
+    for (const file of ['/app.js', '/', '/settings']) {
+      await request(web).get(file).set('Host', HOST).expect(401);
+      await request(web).get(file).set(withToken('wrong')).expect(401);
+      await request(web)
+        .get(file)
+        .set({ ...LOCAL_HEADERS, Host: 'evil.example:4318' })
+        .expect(403);
+      const served = await request(web).get(file).set(LOCAL_HEADERS).expect(200);
+      expect(served.headers['content-security-policy']).toContain("script-src 'self'");
+    }
+    expect((await request(web).get('/app.js').set(LOCAL_HEADERS)).text).toBe('window.app = true;');
+  });
+
   it('requires the token for uploads and the run stream', async () => {
     await request(app)
       .post('/api/attachments')
@@ -68,7 +89,7 @@ describe('launch token', () => {
       .set('Content-Type', 'text/plain')
       .send('hello')
       .expect(401);
-    await request(app).get(`/api/runs/${randomUUID()}/events`).set('Host', HOST).expect(401);
+    await request(app).get(`/api/run-events?runs=${randomUUID()}:0`).set('Host', HOST).expect(401);
   });
 
   it('opens the app event stream only with the token', async () => {

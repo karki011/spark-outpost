@@ -10,7 +10,7 @@ import { UsageSection } from '../usage/UsageSection.tsx';
 import { ProfileSection } from '../spark/ProfileSection.tsx';
 import { ASSISTANT_ROWS, SparkAssistantSection } from './assistant/SparkAssistantSection.tsx';
 import { NAME_LABEL, PERSONALITY_LABEL } from '../spark/SparkSettings.tsx';
-import { LEVEL_LABEL } from '../spark/LevelSetting.tsx';
+import { LEVEL_LABEL } from './setting-labels.ts';
 import { COMPACT_LABEL, WARN_LABEL } from '../spark/CompactionSettings.tsx';
 import { INSTRUCTIONS_LABEL } from '../spark/AgentInstructionsSetting.tsx';
 import { MORNING_BRIEF_LABEL } from '../spark/MorningBriefSetting.tsx';
@@ -20,19 +20,15 @@ import { HelpSection, helpRows } from '../help/HelpSection.tsx';
 import { AUTO_CONTINUE_LABEL } from './AutoContinueSetting.tsx';
 import { ARCHIVE_INACTIVE_LABEL } from './ArchiveInactiveSetting.tsx';
 import { CODE_MODE_LABEL } from './CodeModeSetting.tsx';
+import { COLLAPSE_TURNS_LABEL } from './CollapseTurnsSetting.tsx';
 import { BUSY_ENTER_LABEL } from './BusyEnterSetting.tsx';
-import {
-  BrowserSection,
-  SIGNED_IN_SITES_LABEL,
-  SIGN_OUT_ALL_LABEL,
-  browserSettingsAvailable,
-} from './BrowserSection.tsx';
+import { BrowserSection, SIGNED_IN_SITES_LABEL, SIGN_OUT_ALL_LABEL } from './BrowserSection.tsx';
 import { CLEAR_HISTORY_LABEL } from './BrowserHistorySetting.tsx';
 import { SEARCH_ENGINE_LABEL } from './BrowserSearchSetting.tsx';
 import { ChatsSection } from './ChatsSection.tsx';
 import { COMPANION_LABEL } from './CompanionSetting.tsx';
 import { islandRows } from './DesktopCompanionSetting.tsx';
-import { MAC_CONTROL_LABEL, MacControlSection, macControlAvailable } from './MacControlSection.tsx';
+import { MAC_CONTROL_LABEL, MacControlSection } from './MacControlSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
 import { NotificationsSection } from './NotificationsSection.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
@@ -40,10 +36,11 @@ import { PULL_REQUEST_ROWS, PullRequestsSection } from './PullRequestSettings.ts
 import { SPARK_RULES_ROWS } from './spark-rules/rule-rows.ts';
 import { SparkRulesSection } from './spark-rules/SparkRulesSection.tsx';
 import { TERMINAL_RECORD_LABEL } from './TerminalRecordSetting.tsx';
-import { UPDATE_ROWS, UpdatesSection, updatesAvailable } from './UpdatesSection.tsx';
-import { VOICE_ROWS, VoiceSection, voiceAvailable } from './VoiceSection.tsx';
+import { UPDATE_ROWS, UpdatesSection } from './UpdatesSection.tsx';
+import { VOICE_ROWS, VoiceSection } from './VoiceSection.tsx';
 import { WIDE_WINDOW_LABEL } from './WideWindowSetting.tsx';
 import * as icons from './settings-icons.tsx';
+import { sectionAvailable, type SettingsSection } from './section-ids.ts';
 
 export const SETTINGS_GROUPS = [
   { id: 'general', title: 'General' },
@@ -67,13 +64,12 @@ export interface SettingsClient {
   calendar: boolean;
 }
 
-interface SectionEntry {
-  id: string;
+export interface SettingsSectionEntry {
+  id: SettingsSection;
   group: SettingsGroup;
   label: string;
   icon: ReactNode;
   remoteSwitch?: RemoteSwitch;
-  available?: () => boolean;
   rows?: (client: SettingsClient) => readonly string[];
   render: (props: SectionBodyProps) => ReactNode;
 }
@@ -125,7 +121,6 @@ export const SETTINGS_SECTIONS = [
     group: 'general',
     label: 'Voice',
     icon: icons.VOICE_ICON,
-    available: voiceAvailable,
     rows: () => VOICE_ROWS,
     render: () => <VoiceSection />,
   },
@@ -194,6 +189,7 @@ export const SETTINGS_SECTIONS = [
       COMPACT_LABEL,
       BUSY_ENTER_LABEL,
       WIDE_WINDOW_LABEL,
+      COLLAPSE_TURNS_LABEL,
       ARCHIVE_INACTIVE_LABEL,
       CODE_MODE_LABEL,
       INSTRUCTIONS_LABEL,
@@ -244,7 +240,6 @@ export const SETTINGS_SECTIONS = [
     group: 'mac',
     label: 'Mac control',
     icon: icons.MAC_CONTROL_ICON,
-    available: macControlAvailable,
     rows: () => [MAC_CONTROL_LABEL],
     render: ({ setup }) => setup && <MacControlSection profile={setup.profile} />,
   },
@@ -253,7 +248,6 @@ export const SETTINGS_SECTIONS = [
     group: 'mac',
     label: 'Browser pane',
     icon: icons.BROWSER_ICON,
-    available: browserSettingsAvailable,
     rows: () => [
       SIGNED_IN_SITES_LABEL,
       SIGN_OUT_ALL_LABEL,
@@ -282,7 +276,6 @@ export const SETTINGS_SECTIONS = [
     group: 'app',
     label: 'Updates',
     icon: icons.UPDATES_ICON,
-    available: updatesAvailable,
     rows: () => UPDATE_ROWS,
     render: () => <UpdatesSection />,
   },
@@ -303,16 +296,14 @@ export const SETTINGS_SECTIONS = [
     rows: () => [KEEP_KEYS_LABEL],
     render: () => <ResetSection />,
   },
-] as const satisfies readonly SectionEntry[];
+] as const satisfies readonly SettingsSectionEntry[];
 
-export type SettingsSection = (typeof SETTINGS_SECTIONS)[number]['id'];
-
-export type SettingsSectionEntry = SectionEntry & { id: SettingsSection };
+export type { SettingsSection };
 
 const ALL_SECTIONS: readonly SettingsSectionEntry[] = SETTINGS_SECTIONS;
 
 export function availableSections(): SettingsSectionEntry[] {
-  return ALL_SECTIONS.filter((entry) => entry.available?.() ?? true);
+  return ALL_SECTIONS.filter((entry) => sectionAvailable(entry.id));
 }
 
 export function groupTitle(group: SettingsGroup): string {

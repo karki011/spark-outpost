@@ -144,7 +144,7 @@ describe('ChatRow', () => {
     cleanup();
     renderRow('lead', finished, false, null, { relation: 'Lead of 2 sub-chats' });
     expect(document.querySelector('.row-open .st')).toBeTruthy();
-    expect(document.querySelector('.row-state')).toBeNull();
+    expect(document.querySelector('.row-state')?.textContent).toBe('Done');
   });
 
   it('names the blob of a chat that finished since it was seen', () => {

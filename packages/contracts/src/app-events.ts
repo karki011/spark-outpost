@@ -5,6 +5,7 @@ export const appEventKindSchema = z.enum([
   'seen',
   'run',
   'step',
+  'usage',
   'subagent',
   'approval',
   'orchestration',
@@ -32,6 +33,8 @@ export const appEventSchema = z.object({
   runId: z.uuid().nullable(),
   mapId: z.uuid().optional(),
   outpostId: z.uuid().optional(),
+  phase: z.enum(['started', 'finished']).optional(),
+  step: z.string().optional(),
 });
 export type AppEvent = z.infer<typeof appEventSchema>;
 

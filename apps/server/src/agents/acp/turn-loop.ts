@@ -195,8 +195,10 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
     }
     await loop.see(message.update);
     background?.see(message.update);
-    if (subagentMark(message.update)?.event === 'ended') handedBack = true;
+    const mark = subagentMark(message.update);
+    if (mark?.event === 'ended') handedBack = true;
     if (!waiting) continue;
+    if (!mark && startsAgentCycle(message.update)) inbox.hold(true);
     if (!worked && startsAgentCycle(message.update)) {
       worked = true;
       background?.cycleStarted();
@@ -206,10 +208,18 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
     if (count && (count.agents + count.tasks > 0 || sleeping)) report(count);
     if (!worked || !endsAgentCycle(message.update)) continue;
     push(loop.tokens.addCycle(loop.requests.take(), mapper.takeSubagentTokens()));
+    const next = await nextMessage(loop.turn, 'end_turn', signal);
+    if (next) {
+      endWriteUp();
+      stopWaiting();
+      sendPrompt(next);
+      continue;
+    }
     if (!background?.busy()) {
       stopWaiting();
       return 'end_turn';
     }
+    inbox.hold(false);
     worked = false;
   }
 }

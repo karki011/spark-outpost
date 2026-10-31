@@ -9,11 +9,11 @@ test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
 });
 
-async function sendPlannedTask(page: Page) {
+async function sendPlannedTask(page: Page, tags = '') {
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
-  await input.fill('Fix the date divider #plan');
+  await input.fill(`Fix the date divider #plan${tags}`);
   await input.press('Enter');
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 20_000 });
 }
@@ -137,7 +137,7 @@ test('the audit view summarises, times, lists, and exports a session @packaged',
 
 test('the audit view opens from the cost ring and fills a phone screen', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
-  await sendPlannedTask(page);
+  await sendPlannedTask(page, ' #ctx62');
   await seedAuditLog();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();

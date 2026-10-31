@@ -42,10 +42,13 @@ const cached: Record<string, QueryKey> = {
   terminalRemoteB: ['terminal-remote', B],
 };
 
-async function invalidatedBy(...events: AppEvent[]): Promise<string[]> {
+async function invalidatedWhile(
+  streamed: (runId: string) => boolean,
+  ...events: AppEvent[]
+): Promise<string[]> {
   const client = new QueryClient();
   for (const key of Object.values(cached)) client.setQueryData(key, 'cached');
-  for (const invalidation of mergeInvalidations(events)) {
+  for (const invalidation of mergeInvalidations(events, streamed)) {
     await client.invalidateQueries(invalidation);
   }
   return Object.entries(cached)
@@ -53,6 +56,8 @@ async function invalidatedBy(...events: AppEvent[]): Promise<string[]> {
     .map(([name]) => name)
     .sort();
 }
+
+const invalidatedBy = (...events: AppEvent[]) => invalidatedWhile(() => false, ...events);
 
 const event = (kind: AppEvent['kind'], conversationId: string | null = A): AppEvent => ({
   kind,
@@ -130,6 +135,32 @@ describe('app event invalidation', () => {
       'list',
       'terminalRemoteA',
     ]);
+  });
+
+  it('a step whose name came with it leaves the sidebar and attention to the patch', async () => {
+    const started: AppEvent = { ...event('step'), runId: RUN, phase: 'started', step: 'Reading' };
+    const finished: AppEvent = { ...event('step'), runId: RUN, phase: 'finished' };
+    expect(await invalidatedBy(started)).toEqual(['auditA', 'detailA', 'terminalRemoteA']);
+    expect(await invalidatedBy(finished)).toEqual([
+      'auditA',
+      'changesA',
+      'detailA',
+      'terminalRemoteA',
+    ]);
+  });
+
+  it('a step of a run this window streams refetches no open chat', async () => {
+    const started: AppEvent = { ...event('step'), runId: RUN, phase: 'started', step: 'Reading' };
+    expect(await invalidatedWhile((runId) => runId === RUN, started)).toEqual([
+      'auditA',
+      'terminalRemoteA',
+    ]);
+    expect(await invalidatedWhile(() => false, started)).toContain('detailA');
+  });
+
+  it('a new usage reading refreshes the open chat even while its run is streamed', async () => {
+    const reading: AppEvent = { ...event('usage'), runId: RUN };
+    expect(await invalidatedWhile((runId) => runId === RUN, reading)).toEqual(['detailA']);
   });
 
   it('a sub-agent starting or ending refreshes the sidebar row and the open chat, outside the step lane', async () => {

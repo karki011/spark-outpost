@@ -12,6 +12,7 @@ import { hasUnsentWork } from '../chat/composer/unsent-work.ts';
 import { projectsApi } from '../api/projects.ts';
 import { movedProjectIds } from './sidebar-groups.ts';
 import { copyChatLink } from './use-copy-chat-link.tsx';
+import { patchOlderChats } from './use-older-chats.ts';
 import type { Toaster } from './use-toast.ts';
 
 const SEARCH_ROOT = ['conversation-search'] as const;
@@ -22,6 +23,7 @@ function patchSummaries(client: QueryClient, id: string, patch: SummaryPatch): v
   const apply = (list: ConversationSummary[] | undefined) =>
     list?.map((chat) => (chat.id === id ? { ...chat, ...patch } : chat));
   client.setQueryData<ConversationSummary[]>(queryKeys.conversations, apply);
+  patchOlderChats(client, apply);
   client.setQueriesData<ConversationSummary[]>({ queryKey: SEARCH_ROOT }, apply);
   client.setQueryData<ConversationDetail>(queryKeys.conversation(id), (detail) =>
     detail ? { ...detail, conversation: { ...detail.conversation, ...patch } } : detail,
@@ -31,6 +33,7 @@ function patchSummaries(client: QueryClient, id: string, patch: SummaryPatch): v
 function dropSummary(client: QueryClient, id: string): void {
   const apply = (list: ConversationSummary[] | undefined) => list?.filter((chat) => chat.id !== id);
   client.setQueryData<ConversationSummary[]>(queryKeys.conversations, apply);
+  patchOlderChats(client, apply);
   client.setQueriesData<ConversationSummary[]>({ queryKey: SEARCH_ROOT }, apply);
   client.removeQueries({ queryKey: queryKeys.conversation(id), exact: true });
 }

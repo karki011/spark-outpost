@@ -163,6 +163,7 @@ export const profileSchema = z.object({
   terminalRecordLikeChat: z.boolean().default(true),
   macControl: z.boolean().default(false),
   codeMode: z.boolean().default(true),
+  collapseFinishedTurns: z.boolean().default(true),
   codeModeUnavailable: z.boolean().optional(),
 });
 export type Profile = z.infer<typeof profileSchema>;
@@ -210,6 +211,7 @@ export const updateProfileRequestSchema = z
     terminalRecordLikeChat: z.boolean(),
     macControl: z.boolean(),
     codeMode: z.boolean(),
+    collapseFinishedTurns: z.boolean(),
   })
   .partial();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

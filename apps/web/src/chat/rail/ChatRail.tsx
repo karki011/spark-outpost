@@ -29,6 +29,7 @@ import { RailToggleIcon } from './RailIcons.tsx';
 import { RailSummary } from './RailSummary.tsx';
 import { RailTodo } from './RailTodo.tsx';
 import { RailTv } from './RailTv.tsx';
+import { useLeadSteps } from '../../crew/lead-steps.ts';
 import { latestFollowing, railCrew, railRows, type RailAction } from './rail-model.ts';
 import { useRoomInThread } from './use-rail-layout.ts';
 
@@ -125,7 +126,7 @@ function OpenRail({
     following: latestFollowing(detail),
   });
   const openTodo = useCallback(() => onTab('todo'), [onTab]);
-  const crew = railCrew(detail, running);
+  const crew = railCrew(detail, running, useLeadSteps());
 
   const act = (action: RailAction) => {
     if (action.kind === 'project') requestProjectMenu(conversationId);

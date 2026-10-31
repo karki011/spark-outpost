@@ -6,6 +6,8 @@ import type { Db } from '../persistence/db.ts';
 import { pruneSlackLog } from '../persistence/slack.ts';
 import { pruneRemoteAudit } from '../remote/store.ts';
 
+const PRUNE_EVERY_MS = 60 * 60 * 1000;
+
 export interface StartupPrune {
   db: Db;
   workspaceId: string;
@@ -28,6 +30,38 @@ export async function pruneOldRows(options: StartupPrune): Promise<void> {
   if (chatFolders)
     steps.push(['folders of removed chats', () => pruneChatFolders(db, chatFolders)]);
   for (const [name, prune] of steps) {
-    await prune().catch((error: unknown) => report(`Could not prune ${name} at startup`, error));
+    await prune().catch((error: unknown) => report(`Could not prune ${name}`, error));
   }
+}
+
+export interface PruneSchedule {
+  stop(): void;
+}
+
+export function schedulePrune(
+  options: StartupPrune,
+  everyMs = PRUNE_EVERY_MS,
+  prune: (options: StartupPrune) => Promise<void> = pruneOldRows,
+): PruneSchedule {
+  const report = options.report ?? ((message, error) => console.error(message, error));
+  let running = false;
+  const tick = async () => {
+    if (running) return;
+    running = true;
+    try {
+      await prune(options);
+    } catch (error) {
+      report('Could not prune old rows', error);
+    } finally {
+      running = false;
+    }
+  };
+  void tick();
+  const timer = setInterval(() => void tick(), everyMs);
+  timer.unref();
+  return {
+    stop() {
+      clearInterval(timer);
+    },
+  };
 }

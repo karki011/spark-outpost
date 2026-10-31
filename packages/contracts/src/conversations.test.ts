@@ -8,7 +8,6 @@ import {
   titleFromMessage,
 } from './conversations.ts';
 import { queueAddRequestSchema, queueEditRequestSchema } from './chat-queue.ts';
-import { memberMessageRequestSchema } from './crew-messages.ts';
 
 const LONG = 'x'.repeat(100_000);
 const ID = '00000000-0000-4000-8000-000000000001';
@@ -21,10 +20,6 @@ describe('message text a user sends', () => {
   it('has no length limit in the queue', () => {
     expect(queueAddRequestSchema.parse({ id: ID, content: LONG }).content).toHaveLength(100_000);
     expect(queueEditRequestSchema.parse({ content: LONG }).content).toHaveLength(100_000);
-  });
-
-  it('has no length limit when it goes to a running turn', () => {
-    expect(memberMessageRequestSchema.parse({ id: ID, text: LONG }).text).toHaveLength(100_000);
   });
 
   it('still needs some text or a file', () => {

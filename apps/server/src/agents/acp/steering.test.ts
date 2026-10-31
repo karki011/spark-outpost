@@ -22,7 +22,7 @@ describe('ACP steering', () => {
         return Promise.resolve({ outcome: 'injected' });
       },
     } as unknown as Pick<acp.ClientContext, 'request'>;
-    let send: ((text: ProviderMessage) => Promise<boolean>) | null = null;
+    let send: ((text: ProviderMessage) => Promise<boolean | 'later'>) | null = null;
     const steering = {
       attach: (sender: (text: ProviderMessage) => Promise<boolean>) => {
         send = sender;
@@ -53,7 +53,7 @@ describe('ACP steering', () => {
         return Promise.resolve({ outcome: 'injected' });
       },
     } as unknown as Pick<acp.ClientContext, 'request'>;
-    let send: ((message: ProviderMessage) => Promise<boolean>) | null = null;
+    let send: ((message: ProviderMessage) => Promise<boolean | 'later'>) | null = null;
     const capabilities = init({ steering: { supported: true } });
     capabilities.agentCapabilities = { promptCapabilities: { image: true, embeddedContext: true } };
     attachSteering(ctx, capabilities, 's1', {

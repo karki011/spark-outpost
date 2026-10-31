@@ -19,6 +19,30 @@ async function openMenu(page: Page, title: string) {
   return page.getByRole('menu', { name: `Options for ${title}` });
 }
 
+test('scrolling the sidebar reaches a chat past the first 500', async ({ page }) => {
+  test.setTimeout(180_000);
+  const count = 520;
+  await seedChats(
+    Array.from({ length: count }, (_, index) => ({
+      title: `Seeded chat ${index + 1}`,
+      run: { status: 'succeeded' as const },
+    })),
+  );
+  await page.goto('/');
+  await openChats(page);
+  await expect(titles(page).first()).toBeVisible();
+  await expect
+    .poll(
+      async () => {
+        const more = sidebar(page).locator('.older-chats');
+        if (await more.count()) await more.scrollIntoViewIfNeeded();
+        return titles(page).count();
+      },
+      { timeout: 60_000, intervals: [500] },
+    )
+    .toBeGreaterThan(500);
+});
+
 test('New chat sits at the bottom of the sidebar and has a shortcut', async ({ page }) => {
   await seedChats([{ title: 'Old chat' }]);
   await openChats(page);

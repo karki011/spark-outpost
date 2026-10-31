@@ -1,0 +1,20 @@
+:root :is(.icon-btn, .rgrip, .rmenu, .pgrip, .crail-toggle, .chip-x, .info-tip, .feed-x) {
+  min-width: 28px;
+  min-height: 28px;
+}
+:root
+  :is(
+    .rail-clock,
+    .hlink,
+    .qa,
+    .seg > button,
+    summary,
+    .crail-row,
+    .crail-tasks-count,
+    .run-usage,
+    button.ac-name,
+    .flag-line-details,
+    input[type='search']
+  ) {
+  min-height: 28px;
+}

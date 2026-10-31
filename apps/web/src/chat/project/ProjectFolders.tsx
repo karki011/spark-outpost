@@ -58,7 +58,15 @@ export function ProjectFolders({
     [conversationId, setOpen, anchorRef],
   );
 
-  const apply = (request: RepoChange) => change.mutate(request);
+  const apply = (request: RepoChange) => {
+    change.mutate(request, {
+      onSuccess: () => {
+        if (request.type !== 'add') return;
+        setOpen(false);
+        anchorRef.current?.focus();
+      },
+    });
+  };
   const adder = useAddFolder({
     onAdded: (project) => apply({ type: 'add', projectId: project.id }),
   });
@@ -79,6 +87,7 @@ export function ProjectFolders({
         type="button"
         className={primary ? 'ctx-repo' : 'ctx-repo unset'}
         aria-label={primary ? `Project folders: ${names.join(', ')}` : 'Choose project'}
+        aria-description={primary ? undefined : PICK_PROJECT_HINT}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={menuId}

@@ -1,4 +1,5 @@
 import { friendlyStep, subagentUsageParts, type SubagentRow } from '@spark-outpost/contracts';
+import { workerRole } from '../../crew/worker-identity.ts';
 import { subagentDurationMs } from './subagent-view.ts';
 
 export interface AgentCounts {
@@ -34,6 +35,14 @@ export function agentsLine(counts: AgentCounts): string {
   return [`Waiting on ${agents(counts.working)}`, ...ended, 'writing up when all finish'].join(
     ' · ',
   );
+}
+
+export function allDoneLine(rows: readonly Pick<SubagentRow, 'state' | 'name'>[]): string | null {
+  if (rows.length === 0 || rows.some((row) => row.state !== 'done')) return null;
+  const roles = new Set(rows.map((row) => workerRole(row.name)));
+  const [role] = roles;
+  const noun = roles.size === 1 && role ? role.toLowerCase() : 'agent';
+  return `${rows.length} ${noun}${rows.length === 1 ? '' : 's'} done`;
 }
 
 const PURPOSE_MIN_CHARS = 24;

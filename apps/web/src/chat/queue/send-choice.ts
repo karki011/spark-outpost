@@ -58,10 +58,13 @@ export function busyHint(
   return `Enter to ${SEND_CHOICES[preferred].hint} · ${modifiedEnter(mac)} to ${SEND_CHOICES[other].hint}`;
 }
 
-const WAITING_NOW_NOTE = 'Reaches the agent while it waits, or joins the queue';
+const WAITING_NOTES: Record<BusyEnterAction, string> = {
+  now: 'Reaches the agent while it waits, or joins the queue',
+  queue: 'Reaches the agent in order while it waits, or when this turn ends',
+};
 
 export function choiceNote(action: BusyEnterAction, waiting: boolean): string {
-  return waiting && action === 'now' ? WAITING_NOW_NOTE : SEND_CHOICES[action].note;
+  return waiting ? WAITING_NOTES[action] : SEND_CHOICES[action].note;
 }
 
 export function choiceTitle(

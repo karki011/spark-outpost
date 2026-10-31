@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { isSecretEnvName } from '../../setup/environment.ts';
 import { killProcessTree } from '../process-group.ts';
 import type { StartObserver } from '../start-timing.ts';
-import { tmux, tryTmux, type TmuxHost } from './tmux-host.ts';
+import { tmux, tryTmux, tryTmuxAsync, type TmuxHost } from './tmux-host.ts';
 
 const PREFIX = 'spark-';
 const SESSION_ID = /^[a-zA-Z0-9_-]{1,100}$/;
@@ -78,8 +78,21 @@ export function paneQuery(paneId: string): string {
   return `display-message -p -t ${paneId} '${PANE_FORMAT}'`;
 }
 
+const paneArgs = (sessionId: string) => [
+  'display-message',
+  '-p',
+  '-t',
+  target(sessionId),
+  PANE_FORMAT,
+];
+
 export function readPane(host: TmuxHost, sessionId: string): TmuxPane | null {
-  const line = tryTmux(host, ['display-message', '-p', '-t', target(sessionId), PANE_FORMAT]);
+  const line = tryTmux(host, paneArgs(sessionId));
+  return line ? parsePane(line) : null;
+}
+
+export async function readPaneAsync(host: TmuxHost, sessionId: string): Promise<TmuxPane | null> {
+  const line = await tryTmuxAsync(host, paneArgs(sessionId));
   return line ? parsePane(line) : null;
 }
 
@@ -126,18 +139,22 @@ export function createSession(host: TmuxHost, start: TmuxStart): TmuxPane {
   return pane;
 }
 
-export function killSession(host: TmuxHost, sessionId: string, pid: number | null): void {
-  if (pid !== null) killProcessTree(pid);
-  tryTmux(host, ['kill-session', '-t', `=${sessionName(sessionId)}`]);
+export async function killSession(
+  host: TmuxHost,
+  sessionId: string,
+  pid: number | null,
+): Promise<void> {
+  if (pid !== null) await killProcessTree(pid);
+  await tryTmuxAsync(host, ['kill-session', '-t', `=${sessionName(sessionId)}`]);
 }
 
-export function killSessionTree(host: TmuxHost, sessionId: string): void {
-  const pane = readPane(host, sessionId);
-  killSession(host, sessionId, pane && !pane.dead ? pane.pid : null);
+export async function killSessionTree(host: TmuxHost, sessionId: string): Promise<void> {
+  const pane = await readPaneAsync(host, sessionId);
+  await killSession(host, sessionId, pane && !pane.dead ? pane.pid : null);
 }
 
-export function listSessionIds(host: TmuxHost): string[] {
-  const output = tryTmux(host, ['list-sessions', '-F', '#{session_name}']);
+export async function listSessionIds(host: TmuxHost): Promise<string[]> {
+  const output = await tryTmuxAsync(host, ['list-sessions', '-F', '#{session_name}']);
   if (!output) return [];
   return output
     .split('\n')
@@ -145,9 +162,9 @@ export function listSessionIds(host: TmuxHost): string[] {
     .map((name) => name.slice(PREFIX.length));
 }
 
-export function killUnknownSessions(host: TmuxHost): void {
-  const output = tryTmux(host, ['list-sessions', '-F', '#{session_name}']);
+export async function killUnknownSessions(host: TmuxHost): Promise<void> {
+  const output = await tryTmuxAsync(host, ['list-sessions', '-F', '#{session_name}']);
   for (const name of (output ?? '').split('\n').filter(Boolean)) {
-    if (!name.startsWith(PREFIX)) tryTmux(host, ['kill-session', '-t', `=${name}`]);
+    if (!name.startsWith(PREFIX)) await tryTmuxAsync(host, ['kill-session', '-t', `=${name}`]);
   }
 }

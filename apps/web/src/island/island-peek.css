@@ -173,6 +173,7 @@
   fill: var(--scout-eye);
 }
 
+:root[data-motion='rest'] .isl-root .scout:not(.working) *,
 .isl-root[data-rest] .scout:not(.working) * {
   animation-play-state: paused;
 }

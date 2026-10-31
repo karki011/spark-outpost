@@ -46,7 +46,7 @@ Limits: the user installs Tailscale on the Mac and the phone and enables HTTPS c
 | T1  | Done. Remote gateway: devices and pairing, cookie sessions, allowlist, switches, audit, per-client focus  | A paired fake device can read a chat and answer a card; blocked routes return 403; local traffic is unchanged |
 | T2  | Done. Tailscale: detect, turn Serve on and off, accept the Serve hostname, the Phone page with the QR     | With a fake Tailscale CLI, turning it on yields an address and a QR; turning it off closes remote access      |
 | T3  | Part done (manifest, service worker, layout pass, Mac-only parts hidden). Left: asleep and offline states | The full flow passes in a phone-sized browser through a local HTTPS proxy standing in for Serve               |
-| T4  | Part done (needs-you notifications, guide pages). Left: finished and failed, keep-awake, real-phone test  | A card on the Mac reaches a real phone on the tailnet and is answered from it                                 |
+| T4  | Part done (needs-you notifications, guide pages, keep-awake). Left: finished and failed, real-phone test  | A card on the Mac reaches a real phone on the tailnet and is answered from it                                 |
 
 The relay version follows and replaces only the reach, sign-in transport and encryption parts.
 
@@ -450,6 +450,8 @@ Every remote request is audited with the device id. The Mac shows a "phone conne
 ### Keeping the Mac awake
 
 While phone access is on and a run is active or a phone is connected, Spark holds a power assertion. A closed lid on battery still sleeps the Mac; the phone then shows "Your Mac is asleep or offline" with the last-seen time.
+
+Built: the Mac app checks every 30 seconds (`apps/desktop/src/keep-awake.ts`). Remote control is on when a Serve hostname is saved (`GET /api/remote/access`); a run is active when `GET /api/runs/active` counts one, which includes a turn sleeping until a wakeup and a working Terminal session turn; a phone is connected when `GET /api/remote/devices` shows a device with an open stream. While all that holds, Electron's `prevent-app-suspension` blocker is held; it is released when it no longer holds, when the API can't be read and on quit. The "Your Mac is asleep or offline" state is not built yet.
 
 ## Phases for the relay version
 

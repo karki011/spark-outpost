@@ -84,7 +84,7 @@ export function RailFlagCard({ flag, conversationId }: { flag: RailFlag; convers
   );
 }
 
-function FlagLine({ flag, conversationId }: { flag: RailFlag; conversationId: string }) {
+export function FlagLine({ flag, conversationId }: { flag: RailFlag; conversationId: string }) {
   const [open, setOpen] = useState(false);
   const cardId = useId();
   const settled = flag.status !== 'open';
@@ -109,18 +109,6 @@ function FlagLine({ flag, conversationId }: { flag: RailFlag; conversationId: st
       <div id={cardId} hidden={!open}>
         {open && <RailFlagCard flag={flag} conversationId={conversationId} />}
       </div>
-    </>
-  );
-}
-
-export function RailFlags({ detail, runId }: { detail: ConversationDetail; runId: string }) {
-  const flags = (detail.railFlags ?? []).filter((flag) => flag.turnRunId === runId);
-  if (flags.length === 0) return null;
-  return (
-    <>
-      {flags.map((flag) => (
-        <FlagLine key={flag.id} flag={flag} conversationId={detail.conversation.id} />
-      ))}
     </>
   );
 }

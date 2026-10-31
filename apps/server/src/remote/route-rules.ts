@@ -104,7 +104,6 @@ POST /api/conversations/:id/queue/send-now
 PUT /api/conversations/:id/queue/order
 POST /api/conversations/:id/steers/:itemId/resend
 DELETE /api/conversations/:id/steers/:itemId
-POST /api/runs/:id/messages
 GET /api/outposts
 GET /api/outposts/:id
 GET /api/conversations/:id/outpost-drafts
@@ -117,7 +116,7 @@ GET /api/conversations
 GET /api/conversations/:id
 GET /api/conversations/:id/annotations
 GET /api/runs/:id
-GET /api/runs/:id/events
+GET /api/run-events
 GET /api/runs/:id/reasoning/:messageId
 GET /api/runs/:id/commands/:commandId/output
 GET /api/runs/:id/orchestration
@@ -224,6 +223,7 @@ GET /api/terminal/sessions/:id/busy
 POST /api/terminal/sessions
 POST /api/terminal/sessions/:id/attach
 GET /api/conversations/:id/terminal/usage
+GET /api/terminal-live
 GET /api/conversations/:id/terminal/start
 POST /api/conversations/:id/terminal
 POST /api/conversations/:id/terminal/images
