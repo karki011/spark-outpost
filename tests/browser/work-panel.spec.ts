@@ -176,6 +176,31 @@ test.describe('a finished change', () => {
 
   test.afterEach(() => repo.remove());
 
+  test('a closed work panel shows no loading motion and loads when opened', async ({ page }) => {
+    await projectChat(page, repo, 'Full auto');
+    await send(page, `${BUILD_REQUEST} #build`);
+    await turnDone(page, 30_000);
+    const header = page.getByRole('main').locator('.head');
+    await header.getByRole('button', { name: 'Hide work panel' }).click();
+    await page.reload();
+    await expect(page.locator('.msg.ai')).toBeVisible({ timeout: 20_000 });
+
+    const aside = page.locator('#work-panel');
+    await expect(aside).toBeHidden();
+    const running = () =>
+      aside.evaluate(
+        (element) =>
+          element.getAnimations({ subtree: true }).filter((item) => item.playState === 'running')
+            .length,
+      );
+    await expect.poll(running).toBe(0);
+    await expect(aside.locator('.skel, .loadretry')).toHaveCount(0);
+
+    await header.getByRole('button', { name: 'Show work panel' }).click();
+    await expect(aside.getByRole('tab', { name: 'Links' })).toBeVisible();
+    await expect(aside.locator('.skel, .loadretry')).toHaveCount(0);
+  });
+
   test('the kept record lists the changed files and Cost shows the agent', async ({ page }) => {
     test.setTimeout(90_000);
     await projectChat(page, repo, 'Full auto');
