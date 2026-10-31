@@ -3,7 +3,7 @@ import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { chatMenuButton } from './header-menu.ts';
 
-type LazyPart = 'Analytics' | 'Tickets' | 'xterm-terminal' | 'DayCalendarGrid';
+type LazyPart = 'Analytics' | 'Tickets' | 'xterm-terminal' | 'DayCalendarGrid' | 'SettingsPanes';
 
 const partUrl = (part: LazyPart) => new RegExp(`/${part}(-[\\w-]+\\.js|\\.tsx?)(\\?.*)?$`);
 
@@ -62,6 +62,34 @@ test('Analytics and Tickets show their outline until their code arrives @package
     .getByRole('button', { name: /^Analytics/ })
     .click();
   await expect(page.getByRole('tab', { name: 'Overview' })).toBeVisible();
+});
+
+test('Settings loads only when opened, then takes focus and closes with Escape @packaged', async ({
+  page,
+}) => {
+  const asked: string[] = [];
+  page.on('request', (request) => {
+    if (partUrl('SettingsPanes').test(request.url())) asked.push(request.url());
+  });
+  await page.goto('/');
+  await expect(rail(page)).toBeVisible();
+  await page.mouse.move(700, 450);
+  expect(asked).toEqual([]);
+
+  const release = await hold(page, 'SettingsPanes');
+  const settings = rail(page).getByRole('button', { name: 'Settings' });
+  await settings.hover();
+  await expect.poll(() => asked.length).toBeGreaterThan(0);
+  await settings.click();
+  await expect(rail(page)).toBeVisible();
+  release();
+  const dialog = page.getByRole('dialog').last();
+  await expect(dialog).toBeVisible();
+  await expect
+    .poll(() => dialog.evaluate((node) => node.contains(document.activeElement)))
+    .toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
 });
 
 test('the calendar keeps its size and focus while its code arrives @packaged', async ({ page }) => {
