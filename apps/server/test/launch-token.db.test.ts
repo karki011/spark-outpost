@@ -89,7 +89,7 @@ describe('launch token', () => {
       .set('Content-Type', 'text/plain')
       .send('hello')
       .expect(401);
-    await request(app).get(`/api/runs/${randomUUID()}/events`).set('Host', HOST).expect(401);
+    await request(app).get(`/api/run-events?runs=${randomUUID()}:0`).set('Host', HOST).expect(401);
   });
 
   it('opens the app event stream only with the token', async () => {

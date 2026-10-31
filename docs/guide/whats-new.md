@@ -12,6 +12,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
+| Long chat lists          | Scroll to load chats past 500.                                           |
 | Status dots              | Rest when Spark idles.                                                   |
 | Turn timeline            | Cards stay [in place](follow-a-turn.md).                                 |
 | Terminal                 | Opens faster.                                                            |

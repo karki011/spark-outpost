@@ -451,3 +451,16 @@
     opacity: 1;
   }
 }
+
+.older-chats {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin-block: 8px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}

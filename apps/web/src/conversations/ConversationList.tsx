@@ -29,6 +29,8 @@ import { ChatRow } from './ChatRow.tsx';
 import { ChatRows } from './ChatRows.tsx';
 import { SidebarDndContext } from './SidebarDnd.tsx';
 import { HistoryChats } from './HistoryChats.tsx';
+import { OlderChatsMore } from './OlderChatsMore.tsx';
+import { useOlderChats } from './use-older-chats.ts';
 import { ProjectMenu } from './ProjectMenu.tsx';
 import {
   membersByOutpost,
@@ -110,7 +112,8 @@ export const ConversationList = memo(function ConversationList({
   const listRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const all = conversations.data ?? [];
+  const older = useOlderChats(conversations.data);
+  const all = older.chats;
   const alerting = useAlertingChats();
   const actions = useChatActions({
     toaster,
@@ -391,6 +394,9 @@ export const ConversationList = memo(function ConversationList({
                   folds={folds}
                   renderRow={renderRow}
                 />
+              )}
+              {older.hasMore && !searching && (
+                <OlderChatsMore loading={older.loading} onMore={older.more} />
               )}
             </div>
           </div>
