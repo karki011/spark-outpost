@@ -14,6 +14,14 @@ import { remoteDeviceOf } from '../remote/principal.ts';
 import { NativeRuntimeError } from './native-control.ts';
 import type { NativeRuntime } from './native-runtime.ts';
 
+function logUnexpected(chat: string, result: PromiseSettledResult<unknown>): void {
+  if (result.status === 'fulfilled') return;
+  const { reason } = result;
+  if (reason instanceof NativeRuntimeError && reason.status === 404) return;
+  const message = reason instanceof Error ? reason.message : String(reason);
+  console.error(`Could not read Terminal state for chat ${chat}: ${message}`);
+}
+
 async function terminalLive(
   runtime: NativeRuntime,
   chats: readonly string[],
@@ -21,6 +29,8 @@ async function terminalLive(
   const entries = await Promise.all(
     chats.map(async (chat) => {
       const [session, usage] = await Promise.allSettled([runtime.get(chat), runtime.usage(chat)]);
+      logUnexpected(chat, session);
+      logUnexpected(chat, usage);
       return [
         chat,
         {
