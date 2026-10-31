@@ -140,6 +140,8 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
       ];
     case 'step':
       return stepInvalidations(event, streamed);
+    case 'usage':
+      return conversationScoped(event, false);
     case 'subagent':
       return [list, ...conversationScoped(event, true)];
     case 'approval':

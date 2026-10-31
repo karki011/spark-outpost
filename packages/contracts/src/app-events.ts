@@ -5,6 +5,7 @@ export const appEventKindSchema = z.enum([
   'seen',
   'run',
   'step',
+  'usage',
   'subagent',
   'approval',
   'orchestration',

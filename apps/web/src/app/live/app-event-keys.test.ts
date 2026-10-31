@@ -158,6 +158,11 @@ describe('app event invalidation', () => {
     expect(await invalidatedWhile(() => false, started)).toContain('detailA');
   });
 
+  it('a new usage reading refreshes the open chat even while its run is streamed', async () => {
+    const reading: AppEvent = { ...event('usage'), runId: RUN };
+    expect(await invalidatedWhile((runId) => runId === RUN, reading)).toEqual(['detailA']);
+  });
+
   it('a sub-agent starting or ending refreshes the sidebar row and the open chat, outside the step lane', async () => {
     expect(await invalidatedBy(event('subagent'))).toEqual(['auditA', 'detailA', 'list']);
     expect(isStepEvent(event('subagent'))).toBe(false);
