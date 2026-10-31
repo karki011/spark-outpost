@@ -85,14 +85,15 @@ test('the app and Spark Island stay quiet at rest and while hidden', async ({ pa
   const [appResting, islandResting] = await restCostOver([page, islandPage], WINDOW_MS);
   await openHome(islandPage);
   const homeOpen = await runningAnimations(islandPage);
-  await hideWindow(page);
-  await hideWindow(islandPage);
+  await hideWindow(page, { blur: true });
+  await hideWindow(islandPage, { blur: false });
+  await expect(island(islandPage)).toHaveAttribute('data-view', 'panel');
   await page.waitForTimeout(1_000);
   const [appHidden, islandHidden] = await restCostOver([page, islandPage], WINDOW_MS);
 
   const summary = {
     windowSeconds: WINDOW_MS / 1000,
-    hiddenBy: 'document.hidden override, visibilitychange and blur (JS response only)',
+    hiddenBy: 'document.hidden override and visibilitychange, JS response only',
     app: { resting: appResting, hidden: appHidden, scripts: await scriptsLoaded(page) },
     island: {
       resting: islandResting,
@@ -145,4 +146,20 @@ test('opening and leaving 20 chats keeps the heap near where it started', async 
   writeReport('chat-heap', summary);
   test.info().annotations.push({ type: 'chat heap', description: JSON.stringify(summary) });
   expect(summary.growthMb).toBeLessThan(20);
+
+  const transcriptRequests: string[] = [];
+  page.on('request', (request) => {
+    if (/\/api\/conversations\/[0-9a-f-]{36}$/.test(request.url())) {
+      transcriptRequests.push(request.url());
+    }
+  });
+  await mainNav(page, 'Chats').click();
+  await chats.getByText(titles[CHATS - 2]!, { exact: true }).click();
+  await expect(page.locator('.thread section[aria-label="Turn"]')).toHaveCount(TURNS);
+  await chats.getByText(titles[0]!, { exact: true }).click();
+  await expect(page.locator('.thread section[aria-label="Turn"]')).toHaveCount(TURNS, {
+    timeout: 30_000,
+  });
+  await expect(page.locator('.thread')).toContainText('Chat 0, turn 0.0');
+  expect(transcriptRequests.length).toBeGreaterThan(0);
 });

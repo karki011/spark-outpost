@@ -114,16 +114,16 @@ export async function restCostOver(pages: readonly Page[], ms: number): Promise<
   );
 }
 
-export async function hideWindow(page: Page): Promise<void> {
-  await page.evaluate(() => {
+export async function hideWindow(page: Page, { blur }: { blur: boolean }): Promise<void> {
+  await page.evaluate((blurred) => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
       get: () => 'hidden',
     });
-    window.dispatchEvent(new Event('blur'));
+    if (blurred) window.dispatchEvent(new Event('blur'));
     document.dispatchEvent(new Event('visibilitychange'));
-  });
+  }, blur);
 }
 
 export async function scriptsLoaded(page: Page): Promise<{ files: number; kb: number }> {
