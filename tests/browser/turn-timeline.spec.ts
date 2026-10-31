@@ -49,17 +49,18 @@ async function timeline(page: Page): Promise<string[]> {
     .locator('.msg.ai')
     .last()
     .evaluate((turn) =>
-      [...turn.querySelectorAll('.trows, .flag-line, [role="group"][aria-labelledby]')].flatMap(
-        (element) => {
-          if (element.classList.contains('trows')) return ['steps'];
-          if (element.classList.contains('flag-line')) return ['flag'];
-          const labelId = element.getAttribute('aria-labelledby') ?? '';
-          const name = document.getElementById(labelId)?.textContent ?? '';
-          if (/^Edit .+\?$/.test(name)) return ['edit card'];
-          if (/^Run .+\?$/.test(name)) return ['run card'];
-          return [];
-        },
-      ),
+      [
+        ...turn.querySelectorAll('.trows, .flag-line, .md, [role="group"][aria-labelledby]'),
+      ].flatMap((element) => {
+        if (element.classList.contains('trows')) return ['steps'];
+        if (element.classList.contains('flag-line')) return ['flag'];
+        if (element.classList.contains('md')) return ['reply'];
+        const labelId = element.getAttribute('aria-labelledby') ?? '';
+        const name = document.getElementById(labelId)?.textContent ?? '';
+        if (/^Edit .+\?$/.test(name)) return ['edit card'];
+        if (/^Run .+\?$/.test(name)) return ['run card'];
+        return [];
+      }),
     );
 }
 
@@ -112,13 +113,24 @@ test('answered cards and flags keep their place in time and a waiting card stays
     .first()
     .click();
   await turnDone(page);
-  expect((await timeline(page)).slice(0, 4)).toEqual(['steps', 'edit card', 'flag', 'steps']);
+  expect(await timeline(page)).toEqual([
+    'steps',
+    'edit card',
+    'flag',
+    'steps',
+    'run card',
+    'reply',
+  ]);
   await page.reload();
   await expect(page.locator('.flag-line')).toContainText(FLAG_TITLE);
-  const order = await timeline(page);
-  expect(order.slice(0, 4)).toEqual(['steps', 'edit card', 'flag', 'steps']);
-  expect(order).toContain('run card');
-  expect(order.indexOf('run card')).toBeGreaterThan(order.indexOf('flag'));
+  expect(await timeline(page)).toEqual([
+    'steps',
+    'edit card',
+    'flag',
+    'steps',
+    'run card',
+    'reply',
+  ]);
   await shot(page, 'timeline-done');
 });
 

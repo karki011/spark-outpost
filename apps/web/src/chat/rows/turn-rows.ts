@@ -251,6 +251,24 @@ function steerPlace(text: string, steer: SteerMark): { at: number; wroteAfter: b
   return { at, wroteAfter: text.slice(anchor, at).trim() !== '' };
 }
 
+function itemUntil(item: RowItem): number | null {
+  if (item.kind === 'command') {
+    if (item.command.status === 'running') return Number.POSITIVE_INFINITY;
+    return item.command.finishedAt ? Date.parse(item.command.finishedAt) : null;
+  }
+  if (item.kind === 'thought') {
+    return item.step.status === 'open' ? Number.POSITIVE_INFINITY : (item.step.finishedAt ?? null);
+  }
+  if (item.kind === 'tool') {
+    return item.status === 'open' ? Number.POSITIVE_INFINITY : (item.finishedAt ?? null);
+  }
+  return null;
+}
+
+function placedUntil(placed: Placed): number | null {
+  return placed.kind === 'item' ? itemUntil(placed.item) : null;
+}
+
 function placedItems(input: TurnRowInput): Placed[] {
   const { text, steps, commands, shots = [], terminals = [], steers = [], cards = [] } = input;
   const items = stepItems(steps, commands.length > 0);
@@ -287,10 +305,11 @@ function placedItems(input: TurnRowInput): Placed[] {
   ];
   const offsetAt = (textOffset: number) =>
     placeAt(text, { textOffset, textBefore: null, textHeld: null });
+  const timedItems = placed.map((item) => ({ ...item, until: placedUntil(item) }));
   placed.push(
     ...cards.map((card): Placed => ({
       kind: 'card',
-      at: cardAt(text, card, placed, offsetAt),
+      at: cardAt(text, card, timedItems, offsetAt),
       time: card.time,
       id: card.id,
     })),

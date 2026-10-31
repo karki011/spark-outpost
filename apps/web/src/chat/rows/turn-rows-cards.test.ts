@@ -51,6 +51,33 @@ describe('turn rows with cards', () => {
     expect(shape(parts)).toEqual(['rows', `text:${text}`, 'cards:late']);
   });
 
+  it('keeps a card raised during a step above the text written after that step', () => {
+    const parts = turnRowParts({
+      text,
+      steps: [step('Read `a.ts`', 1000, 0)],
+      commands: [],
+      cards: [{ id: 'asked', time: 1005 }],
+    });
+    expect(shape(parts)).toEqual(['rows', 'cards:asked', `text:${text}`]);
+  });
+
+  it('keeps a card raised during a step that is still open with that step', () => {
+    const open: StepView = { name: 'Run tests', status: 'open', startedAt: 1000, textOffset: 20 };
+    const parts = turnRowParts({
+      text,
+      steps: [step('Read `a.ts`', 500, 0), open],
+      commands: [],
+      cards: [{ id: 'asked', time: 9000 }],
+    });
+    expect(shape(parts)).toEqual([
+      'rows',
+      'text:Creating the ticket.',
+      'rows',
+      'cards:asked',
+      'text:Done, opening the pull request.',
+    ]);
+  });
+
   it('uses the text written when the card arrived over its time', () => {
     const parts = turnRowParts({
       text,
