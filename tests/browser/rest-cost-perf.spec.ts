@@ -2,9 +2,15 @@ import { randomUUID } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 import type { ConversationDetail, Message } from '../../packages/contracts/src/conversations.ts';
 import { resetTestDatabase } from './database.ts';
-import { fakeHomeDesktop, island, openIsland } from './island-home-desktop.ts';
+import { fakeHomeDesktop, island, openHome, openIsland } from './island-home-desktop.ts';
 import { PRODUCTION, settledMetrics, writeReport } from './perf-probe.ts';
-import { countCallbacks, hideWindow, restCostOver, scriptsLoaded } from './rest-cost.ts';
+import {
+  countCallbacks,
+  hideWindow,
+  restCostOver,
+  runningAnimations,
+  scriptsLoaded,
+} from './rest-cost.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { seedTourChats } from './tour-seed.ts';
 
@@ -77,6 +83,8 @@ test('the app and Spark Island stay quiet at rest and while hidden', async ({ pa
   await expect.poll(() => motion(page), { timeout: 15_000 }).not.toBe('live');
 
   const [appResting, islandResting] = await restCostOver([page, islandPage], WINDOW_MS);
+  await openHome(islandPage);
+  const homeOpen = await runningAnimations(islandPage);
   await hideWindow(page);
   await hideWindow(islandPage);
   await page.waitForTimeout(1_000);
@@ -88,7 +96,8 @@ test('the app and Spark Island stay quiet at rest and while hidden', async ({ pa
     app: { resting: appResting, hidden: appHidden, scripts: await scriptsLoaded(page) },
     island: {
       resting: islandResting,
-      hidden: islandHidden,
+      homeOpenAnimations: homeOpen,
+      hiddenWithHomeOpen: islandHidden,
       scripts: await scriptsLoaded(islandPage),
       settledHeapMb: (await settledMetrics(islandPage)).heapMb,
     },
