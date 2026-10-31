@@ -44,16 +44,34 @@ async function flagAfterEditCard(): Promise<string> {
   return conversationId;
 }
 
+async function steerAfterFlag(conversationId: string): Promise<void> {
+  await sql(
+    `INSERT INTO member_messages
+       (id, conversation_id, run_id, body, urgency, status, delivered_run_id, delivered_at,
+        delivered_text_offset, created_at)
+     SELECT gen_random_uuid(), $1::uuid, f.run_id, 'Also keep it short', 'now', 'delivered', f.run_id,
+       f.created_at + interval '1 millisecond', 0, f.created_at + interval '1 millisecond'
+     FROM rail_flags f WHERE f.conversation_id = $1::uuid`,
+    [conversationId],
+  );
+  await notifyChanged('conversation', conversationId);
+}
+
 async function timeline(page: Page): Promise<string[]> {
   return page
     .locator('.msg.ai')
     .last()
     .evaluate((turn) =>
       [
-        ...turn.querySelectorAll('.trows, .flag-line, .md, [role="group"][aria-labelledby]'),
+        ...turn.querySelectorAll(
+          '.trows, .flag-line, .md, .steer-item, [role="group"][aria-labelledby]',
+        ),
       ].flatMap((element) => {
+        if (element.classList.contains('steer-group')) return ['steer'];
         if (element.classList.contains('trows')) return ['steps'];
         if (element.classList.contains('flag-line')) return ['flag'];
+        if (element.closest('.steer-item'))
+          return element.classList.contains('steer-item') ? ['steer'] : [];
         if (element.classList.contains('md')) return ['reply'];
         const labelId = element.getAttribute('aria-labelledby') ?? '';
         const name = document.getElementById(labelId)?.textContent ?? '';
@@ -155,4 +173,59 @@ test('a closed fold keeps answered cards and flags outside it', async ({ page })
   await expect(fold).toHaveAttribute('aria-expanded', 'true');
   await expect(turn.locator('.flag-line')).toHaveCount(1);
   await expect(card(page, /^Edit .+\?$/)).toHaveCount(1);
+});
+
+test('a steered message and a new turn leave answered cards and flags where they were', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await resetTestDatabase({ onboarded: true });
+  await linkedChat(page, repo);
+  await page.getByRole('button', { name: /^Model and effort/ }).click();
+  await pickPermission(page, 'Ask before edits');
+  await page.keyboard.press('Escape');
+  await send(page, 'Add a line to the notes #edit #approve');
+  await allowEdit(page);
+
+  const run = card(page, /^Run .+\?$/);
+  await expect(run.getByRole('button', { name: /^Allow/ })).toBeVisible();
+  const conversationId = await flagAfterEditCard();
+  await steerAfterFlag(conversationId);
+  await expect(page.locator('.steer-item')).toContainText('Also keep it short');
+  const steered = ['steps', 'edit card', 'flag', 'steer', 'steps', 'run card'];
+  await expect.poll(() => timeline(page)).toEqual(steered);
+
+  await run
+    .getByRole('button', { name: /^Allow/ })
+    .first()
+    .click();
+  await turnDone(page);
+  const finished = [...steered, 'reply'];
+  expect(await timeline(page)).toEqual(finished);
+
+  const oldTurn = page.locator('.msg.ai').last();
+  const flagBefore = await oldTurn.locator('.flag-line').boundingBox();
+  await send(page, 'One more thing');
+  await expect(page.locator('.msg.ai')).toHaveCount(2);
+  await turnDone(page);
+  const turns = page.locator('.msg.ai');
+  await expect(turns.first().locator('.flag-line')).toHaveCount(1);
+  await expect(turns.first().locator('.steer-item')).toHaveCount(1);
+  await expect(turns.last().locator('.flag-line')).toHaveCount(0);
+  await expect(turns.last().locator('.appr')).toHaveCount(0);
+  const flagAfter = await turns.first().locator('.flag-line').boundingBox();
+  expect(flagAfter?.y ?? 0).toBeLessThan(flagBefore?.y ?? 0);
+  const asked = page.locator('.msg.user, .msg.me').last();
+  const askedBox = await asked.boundingBox();
+  expect(flagAfter?.y ?? 0).toBeLessThan(askedBox?.y ?? 0);
+
+  await page.reload();
+  await expect(page.locator('.msg.ai')).toHaveCount(2);
+  await expect(page.locator('.msg.ai').first().locator('.flag-line')).toHaveCount(1);
+  expect(
+    await page
+      .locator('.msg.ai')
+      .first()
+      .evaluate((turn) => Boolean(turn.querySelector('.steer-item'))),
+  ).toBe(true);
 });
