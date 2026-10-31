@@ -15,13 +15,17 @@ export function AskedList({ approval }: { approval: CheckpointApproval }) {
   const sent = sentAnswers(questions, note);
   const answered = approval.decisionOptionId === CHECKPOINT_OPTION.answer;
   const guessed = approval.payload.form ? answered : !answered || note !== null;
+  const inHeading = questions.length === 1;
+  const hasLine = (index: number) =>
+    !inHeading || sent.answers[index] || (guessed && questions[index]?.default);
+  if (!questions.some((_, index) => hasLine(index))) return null;
   return (
     <ol className="ck-asked">
       {questions.map((question, index) => {
         const answer = sent.answers[index];
         return (
           <li key={question.question}>
-            {question.question} {answer && <b>→ {answer}</b>}
+            {!inHeading && question.question} {answer && <b>→ {answer}</b>}
             {!answer && guessed && question.default && <span>Best guess: {question.default}</span>}
           </li>
         );

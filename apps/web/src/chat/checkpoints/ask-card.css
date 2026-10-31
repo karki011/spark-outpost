@@ -11,7 +11,7 @@
   min-height: 0;
   margin: 6px -4px 0;
   padding: 2px 4px;
-  overflow-y: auto;
+  overflow: hidden auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   font-size: 14px;
