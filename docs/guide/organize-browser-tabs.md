@@ -13,16 +13,16 @@ About 2 minutes. Mac app only.
 1. Select **New Space** and name it.
 2. Switch with an icon or **⌃1**–**⌃9**.
 
-Each Space has its own **Pinned** and **Today**. A Space is no security boundary: a profile's Spaces share its sign-ins. Spaces never cross **Personal** and **Work**.
+Each Space has its own **Pinned** and **Today**. A Space is no security boundary: a profile's Spaces share its sign-ins. They never cross **Personal** and **Work**.
 
 ## Group pinned tabs
 
 Select **New folder** beside **Pinned**, then drag pinned tabs onto it or use **More**, which also moves tabs between Spaces.
 
-**Back to pinned address** returns a pinned tab that wandered off.
+**Back to pinned address** returns a wandered pinned tab.
 
 ## Get archived tabs back
 
-A **Today** tab not shown for 12 hours moves to **Archived** unless pinned, a favorite, playing sound or showing. Reopen from **Archived** or **⌘T**. Set the time in **Settings → Browser pane**.
+A **Today** tab not shown for 12 hours moves to **Archived** unless pinned, a favorite, playing sound or showing. Reopen there or with **⌘T**; set the time in **Settings → Browser pane**.
 
 **Next:** [Use the browser](use-the-browser.md)
