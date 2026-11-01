@@ -184,6 +184,7 @@
 .bv-folder-chev {
   display: inline-flex;
   flex-shrink: 0;
+  transform: rotate(90deg);
 }
 
 .bv-folder-chev svg {
@@ -192,7 +193,7 @@
 }
 
 .bv-folder-chev.shut {
-  transform: rotate(-90deg);
+  transform: none;
 }
 
 .bv-folder-count {
