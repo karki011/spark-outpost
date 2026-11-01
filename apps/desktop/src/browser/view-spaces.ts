@@ -46,6 +46,7 @@ export class ViewSpaces {
   snapshot(profile: BrowserProfile) {
     const ids = this.panes()
       .tabsOf(profile)
+      .filter((tab) => !tab.peek)
       .map((tab) => tab.id);
     return layoutSnapshot(this.layout(profile), ids);
   }
@@ -162,7 +163,7 @@ export class ViewSpaces {
   settle(profile: BrowserProfile): boolean {
     const layout = this.layout(profile);
     const panes = this.panes();
-    const tabs = panes.tabsOf(profile);
+    const tabs = panes.tabsOf(profile).filter((tab) => !tab.peek);
     this.settlePlaces(layout, tabs);
     const active = tabs.find((tab) => tab.active);
     if (active && this.meta(layout, active).spaceId === layout.currentSpaceId) {
@@ -193,7 +194,7 @@ export class ViewSpaces {
     if (!setting.on) return;
     const layout = this.layout(profile);
     const panes = this.panes();
-    const tabs = panes.tabsOf(profile);
+    const tabs = panes.tabsOf(profile).filter((tab) => !tab.peek);
     const now = this.now();
     const facts = tabs.map((tab): ArchiveFacts => {
       const meta = this.meta(layout, tab);

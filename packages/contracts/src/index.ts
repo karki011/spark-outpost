@@ -118,6 +118,7 @@ export * from './browser-keys.ts';
 export * from './browser-storage.ts';
 export * from './browser-tab-basics.ts';
 export * from './browser-spaces.ts';
+export * from './browser-split.ts';
 export * from './browser-view.ts';
 export * from './mac-control.ts';
 export * from './mac-control-bridge.ts';

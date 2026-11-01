@@ -159,6 +159,7 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
   browserView: {
     state: (profile: string) => ipcRenderer.invoke(IPC.browserViewState, profile),
     place: (placement: unknown) => ipcRenderer.invoke(IPC.browserViewPlace, placement),
+    placeSlot: (slot: unknown) => ipcRenderer.invoke(IPC.browserViewPlaceSlot, slot),
     command: (profile: string, command: unknown) =>
       ipcRenderer.invoke(IPC.browserViewCommand, profile, command),
     start: (profile: string) => ipcRenderer.invoke(IPC.browserViewStart, profile),

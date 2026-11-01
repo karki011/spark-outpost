@@ -66,13 +66,13 @@ export async function withDesktopBrowser(page: Page) {
         profile: string,
         tabs: Record<string, unknown>[],
         favorites: Record<string, unknown>[] = [],
-        layout?: Record<string, unknown>,
+        extra: Record<string, unknown> = {},
       ) => {
         const state = {
           profile,
           tabs: tabs.map((item, index) => tab(`v${index + 1}`, item)),
           favorites,
-          ...(layout ? { layout } : {}),
+          ...extra,
         };
         viewStates.set(profile, state);
         viewStateListeners.forEach((listener) => listener(state));
@@ -95,6 +95,8 @@ export async function withDesktopBrowser(page: Page) {
           state: async (profile: string) => viewStates.get(profile) ?? null,
           place: async (placement: unknown) =>
             calls.push({ kind: 'view-place', payload: placement }),
+          placeSlot: async (slot: unknown) =>
+            calls.push({ kind: 'view-place-slot', payload: slot }),
           command: async (profile: string, command: unknown) => {
             calls.push({ kind: 'view-command', payload: { profile, command } });
             return true;

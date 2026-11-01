@@ -12,6 +12,7 @@ import {
   browserLayoutCommandOptions,
   browserViewLayoutSchema,
 } from './browser-spaces.ts';
+import { SPLIT_RATIO_MAX, SPLIT_RATIO_MIN, browserViewSplitSchema } from './browser-split.ts';
 
 export const BROWSER_VIEW_TABS_MAX = 40;
 export const BROWSER_FAVORITES_MAX = 16;
@@ -25,6 +26,14 @@ export const browserViewPlacementSchema = z.object({
   covered: z.boolean(),
 });
 export type BrowserViewPlacement = z.infer<typeof browserViewPlacementSchema>;
+
+export const browserViewSlotSchema = z.object({
+  profile: browserProfileSchema,
+  tabId: z.string().min(1).max(40),
+  bounds: browserBoundsSchema.nullable(),
+  covered: z.boolean(),
+});
+export type BrowserViewSlot = z.infer<typeof browserViewSlotSchema>;
 
 export const browserFavoriteSchema = z.object({
   id: z.string().min(1).max(40),
@@ -48,6 +57,8 @@ export const browserViewStateSchema = z.object({
   tabs: z.array(browserPaneTabSchema).max(BROWSER_VIEW_TABS_MAX),
   favorites: z.array(browserFavoriteSchema).max(BROWSER_FAVORITES_MAX).default([]),
   layout: browserViewLayoutSchema.default(EMPTY_BROWSER_LAYOUT),
+  split: browserViewSplitSchema.nullable().default(null),
+  peek: browserPaneTabSchema.nullable().default(null),
 });
 
 export const browserViewCommandSchema = z.discriminatedUnion('command', [
@@ -56,6 +67,14 @@ export const browserViewCommandSchema = z.discriminatedUnion('command', [
   z.object({ command: z.literal('remove_favorite'), id: z.string().min(1).max(40) }),
   z.object({ command: z.literal('open_favorite'), id: z.string().min(1).max(40) }),
   ...browserLayoutCommandOptions,
+  z.object({ command: z.literal('split_with'), tabId: z.string().min(1).max(40).nullable() }),
+  z.object({ command: z.literal('split_leave') }),
+  z.object({
+    command: z.literal('split_ratio'),
+    ratio: z.number().min(SPLIT_RATIO_MIN).max(SPLIT_RATIO_MAX),
+  }),
+  z.object({ command: z.literal('peek_close') }),
+  z.object({ command: z.literal('peek_promote') }),
 ]);
 export type BrowserViewCommand = z.infer<typeof browserViewCommandSchema>;
 
@@ -90,6 +109,7 @@ export type BrowserViewFound = z.infer<typeof browserViewFoundSchema>;
 export const browserViewSnapshotSchema = z.object({
   profile: browserProfileSchema,
   image: z.string().max(8_000_000).nullable(),
+  tabId: z.string().min(1).max(40).optional(),
 });
 export type BrowserViewSnapshot = z.infer<typeof browserViewSnapshotSchema>;
 

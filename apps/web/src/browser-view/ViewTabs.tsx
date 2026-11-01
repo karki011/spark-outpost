@@ -1,5 +1,12 @@
 import type { KeyboardEvent, LiHTMLAttributes, ReactNode } from 'react';
-import type { BrowserPaneTab, BrowserProfile, BrowserViewLayout } from '@spark-outpost/contracts';
+import {
+  splitHolds,
+  type BrowserPaneTab,
+  type BrowserProfile,
+  type BrowserViewLayout,
+  type BrowserViewSplit,
+} from '@spark-outpost/contracts';
+import { SplitViewIcon } from '../browser/BrowserIcons.tsx';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { PinIcon, PlusIcon, SpinnerIcon, UnpinIcon } from '../ui/icons.tsx';
 import { Keys } from '../ui/Keys.tsx';
@@ -15,12 +22,14 @@ interface ViewTabsProps {
   profile: BrowserProfile;
   tabs: readonly BrowserPaneTab[];
   layout: BrowserViewLayout;
+  split: BrowserViewSplit | null;
   onNewTab(): void;
 }
 
 interface TabListProps {
   profile: BrowserProfile;
   tabs: readonly BrowserPaneTab[];
+  split: BrowserViewSplit | null;
   label: string;
   rowExtras?: (tab: BrowserPaneTab) => ReactNode;
   rowProps?: (tab: BrowserPaneTab) => LiHTMLAttributes<HTMLLIElement>;
@@ -41,7 +50,7 @@ function nextIndex(key: string, current: number, count: number): number | null {
   return null;
 }
 
-export function TabList({ profile, tabs, label, rowExtras, rowProps }: TabListProps) {
+export function TabList({ profile, tabs, split, label, rowExtras, rowProps }: TabListProps) {
   const focusableId = tabs.find((tab) => tab.active)?.id ?? tabs[0]?.id ?? null;
   const select = (tab: BrowserPaneTab) =>
     sendViewCommand(profile, { command: 'select', tabId: tab.id });
@@ -94,6 +103,12 @@ export function TabList({ profile, tabs, label, rowExtras, rowProps }: TabListPr
                   {tab.loading ? <SpinnerIcon /> : initialOf(title)}
                 </span>
                 <span className="bv-tab-title">{title}</span>
+                {splitHolds(split, tab.id) && (
+                  <span className="bv-tab-split">
+                    <SplitViewIcon />
+                    Split
+                  </span>
+                )}
               </button>
               <TabAudio
                 tab={tab}
@@ -134,11 +149,11 @@ export function TabList({ profile, tabs, label, rowExtras, rowProps }: TabListPr
   );
 }
 
-export function ViewTabs({ profile, tabs, layout, onNewTab }: ViewTabsProps) {
+export function ViewTabs({ profile, tabs, layout, split, onNewTab }: ViewTabsProps) {
   const today = tabs.filter((tab) => !tab.pinned);
   return (
     <>
-      <ViewPinned profile={profile} tabs={tabs} layout={layout} />
+      <ViewPinned profile={profile} tabs={tabs} layout={layout} split={split} />
       <section className="bv-section" aria-labelledby="bv-today">
         <h2 id="bv-today" className="bv-heading">
           Today
@@ -156,6 +171,7 @@ export function ViewTabs({ profile, tabs, layout, onNewTab }: ViewTabsProps) {
         <TabList
           profile={profile}
           tabs={today}
+          split={split}
           label="Tabs"
           rowExtras={(tab) => <ViewTabActions profile={profile} tab={tab} layout={layout} />}
         />

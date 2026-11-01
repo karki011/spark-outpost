@@ -13,7 +13,7 @@ About 2 minutes. Mac only.
 1. Select **… → Browser**, or press **⌘⇧B**.
 2. Type an address, like `localhost:5173`; press **Enter**.
 
-Chat links open here. [Keys](keyboard-shortcuts.md#browser-pane-mac-app).
+[Keys](keyboard-shortcuts.md#browser-pane-mac-app).
 
 ## Test a page width
 

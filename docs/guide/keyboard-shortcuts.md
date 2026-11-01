@@ -52,6 +52,8 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **⌥⌘A**                   | Browser view: Ask Spark about your tabs |
 | **⌘T** / **⌘L**           | Browser view: the command bar           |
 | **⌃1**–**⌃9**             | Browser view: Space N                   |
+| **⇧**-click a link        | Browser view: Peek                      |
+| **⇧⌥**-click a link       | Browser view: Split view                |
 
 ## Cards
 

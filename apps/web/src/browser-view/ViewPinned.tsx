@@ -4,6 +4,7 @@ import type {
   BrowserProfile,
   BrowserTabFolder,
   BrowserViewLayout,
+  BrowserViewSplit,
 } from '@spark-outpost/contracts';
 import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
 import { ChevronIcon, DotsIcon, FolderIcon, PlusIcon } from '../ui/icons.tsx';
@@ -19,6 +20,7 @@ interface ViewPinnedProps {
   profile: BrowserProfile;
   tabs: readonly BrowserPaneTab[];
   layout: BrowserViewLayout;
+  split: BrowserViewSplit | null;
 }
 
 function useDropTab(profile: BrowserProfile, folderId: string | null) {
@@ -109,12 +111,14 @@ function FolderGroup({
   profile,
   folder,
   tabs,
+  split,
   rowExtras,
   rowProps,
 }: {
   profile: BrowserProfile;
   folder: BrowserTabFolder;
   tabs: readonly BrowserPaneTab[];
+  split: BrowserViewSplit | null;
   rowExtras(tab: BrowserPaneTab): React.ReactNode;
   rowProps(tab: BrowserPaneTab): React.LiHTMLAttributes<HTMLLIElement>;
 }) {
@@ -165,6 +169,7 @@ function FolderGroup({
         <TabList
           profile={profile}
           tabs={tabs}
+          split={split}
           label={`Tabs in ${folder.name}`}
           rowExtras={rowExtras}
           rowProps={rowProps}
@@ -174,7 +179,7 @@ function FolderGroup({
   );
 }
 
-export function ViewPinned({ profile, tabs, layout }: ViewPinnedProps) {
+export function ViewPinned({ profile, tabs, layout, split }: ViewPinnedProps) {
   const [naming, setNaming] = useState<{ tabId: string | null } | null>(null);
   const addButton = useRef<HTMLButtonElement>(null);
   const looseDrop = useDropTab(profile, null);
@@ -236,6 +241,7 @@ export function ViewPinned({ profile, tabs, layout }: ViewPinnedProps) {
           profile={profile}
           folder={folder}
           tabs={inFolder}
+          split={split}
           rowExtras={rowExtras}
           rowProps={rowProps}
         />
@@ -243,6 +249,7 @@ export function ViewPinned({ profile, tabs, layout }: ViewPinnedProps) {
       <TabList
         profile={profile}
         tabs={groups.loose}
+        split={split}
         label="Pinned tabs"
         rowExtras={rowExtras}
         rowProps={rowProps}

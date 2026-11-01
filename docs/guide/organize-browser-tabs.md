@@ -13,7 +13,7 @@ About 2 minutes. Mac app only.
 1. Select **New Space** and name it.
 2. Switch with an icon or **⌃1**–**⌃9**.
 
-Each Space has its own **Pinned** and **Today**. A Space is no security boundary: a profile's Spaces share its sign-ins. They never cross **Personal** and **Work**.
+Each Space has its own **Pinned** and **Today**. Spaces share their profile's sign-ins: no security boundary.
 
 ## Group pinned tabs
 

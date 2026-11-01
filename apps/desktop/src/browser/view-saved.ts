@@ -12,6 +12,8 @@ import {
   DEFAULT_SEARCH_ENGINE,
   browserArchiveSettingSchema,
   browserArchivedTabSchema,
+  SPLIT_RATIO_MAX,
+  SPLIT_RATIO_MIN,
   browserFavoriteSchema,
   browserOrigin,
   browserSearchEngineSchema,
@@ -55,6 +57,13 @@ const savedTabSchema = z.object({
   folderId: savedIdSchema.nullable().optional().catch(undefined),
   pinnedUrl: z.string().min(1).max(BROWSER_URL_MAX).nullable().optional().catch(undefined),
   shownAt: z.number().int().min(0).optional().catch(undefined),
+  split: z
+    .object({
+      side: z.enum(['left', 'right']),
+      ratio: z.number().min(SPLIT_RATIO_MIN).max(SPLIT_RATIO_MAX),
+    })
+    .optional()
+    .catch(undefined),
 });
 export type SavedTab = z.infer<typeof savedTabSchema>;
 

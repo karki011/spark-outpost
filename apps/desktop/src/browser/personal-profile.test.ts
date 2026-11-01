@@ -154,6 +154,27 @@ describe('the Personal profile', () => {
     }
   });
 
+  it('keeps a Peek of a Personal tab from every agent request', async () => {
+    const tab = await personalTab();
+    (tab.contents() as unknown as FakeContents).emit(
+      'before-mouse-event',
+      {},
+      { type: 'mouseDown' },
+    );
+    (tab.contents() as unknown as FakeContents).windowOpen(
+      'https://bank.example.com/peek',
+      'new-window',
+    );
+    const peek = view.panes.tabsOf('personal').find((candidate) => candidate.peek)!;
+    expect(peek).toBeDefined();
+    for (const op of ['read', 'screenshot', 'logs', 'evaluate'] as const) {
+      await expect(runBrowserOp(chats, REQUESTS[op](peek.id), signal)).rejects.toMatchObject({
+        code: 'no_tab',
+      });
+    }
+    expect(chats.tabsOf(CHAT).some((candidate) => candidate.id === peek.id)).toBe(false);
+  });
+
   it('refuses a request that names a profile instead of a chat', () => {
     for (const chatId of ['personal', 'work']) {
       expect(browserHostRequestSchema.safeParse({ op: 'tabs', chatId, runId: null }).success).toBe(
