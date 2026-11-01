@@ -13,6 +13,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
 | Selecting on a page      | Glides; ⇧ click picks several.                                           |
+| Tab basics               | [Mute, zoom, move, print](use-the-browser.md).                           |
 | Steered turns            | No longer hang after background work.                                    |
 | Long chat lists          | Scroll to load chats past 500.                                           |
 | Status dots              | Rest when Spark idles; closed panels stay still.                         |
@@ -28,6 +29,5 @@ Earlier releases: **Settings → Updates → Release notes**.
 | Code Mode on by default  | Combine reads; [turn off in Settings](settings.md#code-mode).            |
 | Agent-led delegation     | Leads [choose workers and slices](how-spark-works.md#how-work-is-split). |
 | Chat opening             | Drafts stay; failures offer **Try again**.                               |
-| Outpost messages         | Messages go to the shown lead; **Post note** is explicit.                |
 
 New profiles [record Claude Terminal sessions](settings.md#record-terminal-sessions); existing choices stay.

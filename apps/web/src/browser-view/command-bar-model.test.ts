@@ -22,6 +22,9 @@ function tab(id: string, title: string, url: string, active = false): BrowserPan
     picking: false,
     lastAction: null,
     error: null,
+    audible: false,
+    muted: false,
+    zoom: 1,
   };
 }
 

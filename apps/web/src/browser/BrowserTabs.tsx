@@ -5,14 +5,17 @@ import { PinIcon, PlusIcon, SpinnerIcon, UnpinIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { closeBrowserTab, sendBrowserCommand } from './browser-store.ts';
 import { PANE_KEYS } from './pane-shortcuts.ts';
+import { TabAudio } from './TabAudio.tsx';
 import { tabLabel } from './tab-label.ts';
+import { useTabOrder } from './use-tab-order.ts';
 
 interface BrowserTabsProps {
   chatId: string;
   tabs: readonly BrowserPaneTab[];
 }
 
-const tabElementId = (tab: BrowserPaneTab) => `bp-tab-${tab.id}`;
+const elementId = (id: string) => `bp-tab-${id}`;
+const tabElementId = (tab: BrowserPaneTab) => elementId(tab.id);
 
 function nextIndex(key: string, current: number, count: number): number | null {
   if (key === 'ArrowRight') return (current + 1) % count;
@@ -26,14 +29,19 @@ function PageTab({
   chatId,
   tab,
   focusable,
+  order,
 }: {
   chatId: string;
   tab: BrowserPaneTab;
   focusable: boolean;
+  order: ReturnType<typeof useTabOrder>;
 }) {
   const label = tabLabel(tab);
   return (
-    <div className={tab.active ? 'bp-tab on' : 'bp-tab'}>
+    <div
+      className={`${tab.active ? 'bp-tab on' : 'bp-tab'} ${order.dropClass(tab.id)}`}
+      data-tab-item={tab.id}
+    >
       <button
         type="button"
         role="tab"
@@ -43,6 +51,8 @@ function PageTab({
         aria-controls="bp-view"
         tabIndex={focusable ? 0 : -1}
         title={tab.url || label}
+        aria-keyshortcuts="Shift+ArrowLeft Shift+ArrowRight"
+        {...order.handlers(tab.id)}
         onClick={() => sendBrowserCommand(chatId, { command: 'select', tabId: tab.id })}
       >
         {tab.loading && (
@@ -55,6 +65,11 @@ function PageTab({
         )}
         <span className="bp-tab-title">{label}</span>
       </button>
+      <TabAudio
+        tab={tab}
+        label={label}
+        onMute={(muted) => sendBrowserCommand(chatId, { command: 'mute', tabId: tab.id, muted })}
+      />
       {tab.owner === 'agent' && (
         <button
           type="button"
@@ -95,9 +110,18 @@ export function BrowserTabs({ chatId, tabs }: BrowserTabsProps) {
       ?.parentElement?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [activeId, tabs.length]);
 
+  const order = useTabOrder({
+    ids: tabs.map((tab) => tab.id),
+    axis: 'x',
+    elementId,
+    labelOf: (id) => tabLabel(tabs.find((tab) => tab.id === id)!),
+    move: (tabId, before) => sendBrowserCommand(chatId, { command: 'move', tabId, before }),
+  });
+
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!(event.target instanceof HTMLElement) || event.target.role !== 'tab') return;
     const current = tabs.findIndex((tab) => tabElementId(tab) === (event.target as HTMLElement).id);
+    if (tabs[current] && order.keyMove(event, tabs[current].id)) return;
     const index = tabs.length > 0 ? nextIndex(event.key, current, tabs.length) : null;
     if (index === null) return;
     event.preventDefault();
@@ -108,14 +132,20 @@ export function BrowserTabs({ chatId, tabs }: BrowserTabsProps) {
 
   return (
     <>
-      <div className="bp-tabs" onKeyDown={onKeyDown}>
+      <div className="bp-tabs" data-tab-list="" onKeyDown={onKeyDown}>
         <div
           role="tablist"
           aria-label="Browser tabs"
           aria-owns={tabs.map(tabElementId).join(' ') || undefined}
         />
         {tabs.map((tab) => (
-          <PageTab key={tab.id} chatId={chatId} tab={tab} focusable={tab.id === focusableId} />
+          <PageTab
+            key={tab.id}
+            chatId={chatId}
+            tab={tab}
+            focusable={tab.id === focusableId}
+            order={order}
+          />
         ))}
       </div>
       <button
@@ -130,7 +160,7 @@ export function BrowserTabs({ chatId, tabs }: BrowserTabsProps) {
       </button>
       {newTip.tooltip}
       <span className="sr-only" role="status">
-        {active?.loading ? 'Page is opening' : ''}
+        {active?.loading ? 'Page is opening' : order.moved}
       </span>
     </>
   );

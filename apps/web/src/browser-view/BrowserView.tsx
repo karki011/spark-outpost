@@ -28,6 +28,7 @@ import {
   runPaneShortcut,
   type PaneCommands,
 } from '../browser/pane-shortcuts.ts';
+import { PageTools, ZoomBadge } from '../browser/PageTools.tsx';
 import { tabLabel } from '../browser/tab-label.ts';
 import { ToolButton } from '../browser/ToolButton.tsx';
 import { useNativePlacement, type PlaceView } from '../browser/use-view-placement.ts';
@@ -55,6 +56,7 @@ function viewCommands(profile: BrowserProfile): PaneCommands {
   return {
     send: (command) => sendViewCommand(profile, command),
     close: (tabId) => sendViewCommand(profile, { command: 'close', tabId }),
+    ask: async (command) => desktopBrowserView()?.command(profile, command),
   };
 }
 
@@ -240,6 +242,7 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
           <ProfileBadge profile={profile} />
           <PageHost url={tab?.url ?? ''} />
           <span className="bv-title">{tab && tab.url !== '' ? tabLabel(tab) : ''}</span>
+          <ZoomBadge tab={tab} commands={commands} />
           <button
             type="button"
             className="btn bv-hand"
@@ -271,6 +274,7 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
             }}
             onProblem={setProblem}
           />
+          <PageTools tab={tab} commands={commands} onNotice={setProblem} />
           <ToolButton
             label="Open developer tools (⌥⌘I)"
             disabled={blank}

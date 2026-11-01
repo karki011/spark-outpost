@@ -7,7 +7,9 @@ import {
   BROWSER_VIEW_TABS_MAX,
   DEFAULT_SEARCH_ENGINE,
   browserFavoriteSchema,
+  browserOrigin,
   browserSearchEngineSchema,
+  browserZoomSchema,
   classifyBrowserUrl,
   type BrowserFavorite,
   type BrowserProfile,
@@ -15,6 +17,7 @@ import {
 } from '@spark-outpost/contracts';
 
 const FILE_NAME = 'browser-view.json';
+const ZOOMS_MAX = 500;
 
 const savedTabSchema = z.object({
   url: z.string().min(1).max(BROWSER_URL_MAX),
@@ -27,6 +30,7 @@ export type SavedTab = z.infer<typeof savedTabSchema>;
 const savedProfileSchema = z.object({
   tabs: z.array(savedTabSchema).max(BROWSER_VIEW_TABS_MAX),
   favorites: z.array(browserFavoriteSchema).max(BROWSER_FAVORITES_MAX),
+  zooms: z.record(z.string().max(300), browserZoomSchema).catch({}).default({}),
 });
 export type SavedProfile = z.infer<typeof savedProfileSchema>;
 
@@ -39,7 +43,7 @@ const savedViewSchema = z.object({
 });
 export type SavedView = z.infer<typeof savedViewSchema>;
 
-const EMPTY_PROFILE: SavedProfile = { tabs: [], favorites: [] };
+const EMPTY_PROFILE: SavedProfile = { tabs: [], favorites: [], zooms: {} };
 
 export function emptySavedView(): SavedView {
   return {
@@ -54,6 +58,11 @@ function webAddress(url: string): boolean {
   return kind === 'local' || kind === 'external';
 }
 
+function keptZooms(zooms: Record<string, number>): Record<string, number> {
+  const kept = Object.entries(zooms).filter(([origin]) => browserOrigin(origin) === origin);
+  return Object.fromEntries(kept.slice(-ZOOMS_MAX));
+}
+
 export function parseSavedView(text: string): SavedView {
   try {
     const parsed = savedViewSchema.safeParse(JSON.parse(text));
@@ -61,6 +70,7 @@ export function parseSavedView(text: string): SavedView {
     const clean = (profile: SavedProfile): SavedProfile => ({
       tabs: profile.tabs.filter((tab) => webAddress(tab.url)),
       favorites: profile.favorites.filter((favorite) => webAddress(favorite.url)),
+      zooms: keptZooms(profile.zooms),
     });
     return {
       version: 1,
@@ -85,6 +95,7 @@ export interface SavedViewStore {
   setFavorites(profile: BrowserProfile, favorites: readonly BrowserFavorite[]): void;
   searchEngine(): BrowserSearchEngine;
   setSearchEngine(engine: BrowserSearchEngine): void;
+  setZoom(profile: BrowserProfile, origin: string, zoom: number): void;
 }
 
 export async function loadSavedView(
@@ -115,6 +126,13 @@ export async function loadSavedView(
     setTabs: (profile, tabs) => change(profile, { tabs: keptTabs(tabs) }),
     setFavorites: (profile, favorites) =>
       change(profile, { favorites: favorites.slice(0, BROWSER_FAVORITES_MAX) }),
+    setZoom: (profile, origin, zoom) => {
+      const others = Object.entries(saved.profiles[profile].zooms).filter(
+        ([known]) => known !== origin,
+      );
+      const kept = zoom === 1 ? others : [...others, [origin, zoom] as const];
+      change(profile, { zooms: keptZooms(Object.fromEntries(kept)) });
+    },
     searchEngine: () => saved.searchEngine,
     setSearchEngine: (engine) => {
       saved = { ...saved, searchEngine: engine };

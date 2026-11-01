@@ -143,6 +143,9 @@ export class FakeContents extends EventEmitter {
   destroyed = false;
   focused = false;
   blocksUnload = false;
+  audioMuted = false;
+  zoomFactor = 1;
+  printed = 0;
   private opener: ((details: { url: string }) => { action: string }) | null = null;
   private readonly cdpListeners = new Set<CdpListener>();
   readonly navigationHistory = {
@@ -167,6 +170,22 @@ export class FakeContents extends EventEmitter {
 
   getURL(): string {
     return this.url;
+  }
+
+  setAudioMuted(muted: boolean): void {
+    this.audioMuted = muted;
+  }
+
+  getZoomFactor(): number {
+    return this.zoomFactor;
+  }
+
+  setZoomFactor(zoom: number): void {
+    this.zoomFactor = zoom;
+  }
+
+  print(): void {
+    this.printed += 1;
   }
 
   cdpEmit(method: string, params: Record<string, unknown> = {}): void {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { browserZoomSchema, browserZoomStepSchema } from './browser-tab-basics.ts';
 import { attachmentSchema } from './attachments.ts';
 
 export const BROWSER_AGENT_TABS_MAX = 5;
@@ -123,6 +124,9 @@ export const browserPaneTabSchema = browserTabSchema.extend({
   picking: z.boolean(),
   lastAction: z.string().max(200).nullable(),
   error: z.string().max(300).nullable(),
+  audible: z.boolean().default(false),
+  muted: z.boolean().default(false),
+  zoom: browserZoomSchema.default(1),
 });
 export type BrowserPaneTab = z.infer<typeof browserPaneTabSchema>;
 
@@ -169,6 +173,11 @@ export const browserCommandSchema = z.discriminatedUnion('command', [
   z.object({ command: z.literal('close'), tabId: z.string() }),
   z.object({ command: z.literal('reopen') }),
   z.object({ command: z.literal('copy_url'), tabId: z.string() }),
+  z.object({ command: z.literal('mute'), tabId: z.string(), muted: z.boolean() }),
+  z.object({ command: z.literal('zoom'), tabId: z.string(), step: browserZoomStepSchema }),
+  z.object({ command: z.literal('move'), tabId: z.string(), before: z.string().nullable() }),
+  z.object({ command: z.literal('print'), tabId: z.string() }),
+  z.object({ command: z.literal('pip'), tabId: z.string() }),
   z.object({
     command: z.literal('find'),
     tabId: z.string(),

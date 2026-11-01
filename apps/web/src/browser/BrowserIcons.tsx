@@ -18,6 +18,15 @@ function Icon({ children }: { children: ReactNode }) {
   );
 }
 
+export function ZoomIcon() {
+  return (
+    <Icon>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4M11 8v6M8 11h6" />
+    </Icon>
+  );
+}
+
 export function GlobeIcon() {
   return (
     <Icon>

@@ -39,6 +39,9 @@ export async function withDesktopBrowser(page: Page) {
       picking: false,
       lastAction: null,
       error: null,
+      audible: false,
+      muted: false,
+      zoom: 1,
       ...change,
     });
     const viewStates = new Map<string, unknown>();
