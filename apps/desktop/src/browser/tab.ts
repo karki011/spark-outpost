@@ -14,7 +14,7 @@ import {
   type BrowserPaneTab,
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
-import { chordOf, paneShortcutOf } from './tab-keys.ts';
+import { paneShortcutOf } from './tab-keys.ts';
 import { attachCdp, type Cdp } from './cdp.ts';
 import type { InputMarks } from './clipboard-permission.ts';
 import { shiftedLinkClick } from './link-gesture.ts';

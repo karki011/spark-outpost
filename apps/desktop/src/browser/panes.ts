@@ -17,7 +17,6 @@ import {
   type BrowserPlacement,
   type BrowserShortcut,
   type BrowserTabOwner,
-  type ShortcutChord,
 } from '@spark-outpost/contracts';
 import { CLIPBOARD_WRITE, pagePermissionAllowed, type InputMarks } from './clipboard-permission.ts';
 import type { PageZooms } from './page-zoom.ts';
