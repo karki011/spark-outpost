@@ -21,7 +21,7 @@ Drag the pane's edge, or pick a **Page width**.
 
 ## Handle a tab
 
-**Page tools** (**…**): zoom, kept per site; **Mute Tab**; **Picture in Picture**; **Print…**. Drag tabs to move, or **Shift** and arrows.
+**Page tools** (**…**): zoom, kept per site; **Mute Tab**; **Picture in Picture**; **Print…**. Drag tabs, or **Shift** and arrows.
 
 ## Let the agent look and browse
 
@@ -55,6 +55,6 @@ Right-click highlighted text: **Add to chat** or **Ask about this** (**⌘⇧A**
 1. In **Settings** → **Projects**, select **Add** beside **Saved sign-ins**: label, site, **Other sign-in sites**, test account.
 2. Ask the agent to sign in; allow the card once per chat.
 
-Spark fills only approved sites. For another HTTPS site, choose **Add this site** in **Settings → Projects → Saved sign-ins**, then retry. SSO or MFA needs you.
+Spark fills only approved sites. For another HTTPS site, choose **Add this site** in **Settings → Projects → Saved sign-ins**, then retry. External HTTP sites cannot be approved. SSO or MFA needs you.
 
 **Next:** [Make a Spark](sparks.md)

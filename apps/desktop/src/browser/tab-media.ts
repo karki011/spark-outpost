@@ -3,6 +3,7 @@ import type { WebContents } from 'electron';
 export interface TabMediaHooks {
   changed(): void;
   zoomOf(url: string): number;
+  shown(): boolean;
 }
 
 const ZOOM_EPSILON = 0.001;
@@ -24,7 +25,9 @@ export class TabMedia {
       this.audible = event.audible;
       this.hooks.changed();
     });
-    contents.on('did-navigate', () => this.syncZoom());
+    contents.on('did-navigate', () => {
+      if (this.hooks.shown()) this.syncZoom();
+    });
   }
 
   detach(): void {

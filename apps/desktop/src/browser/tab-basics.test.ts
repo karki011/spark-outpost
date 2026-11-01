@@ -90,7 +90,19 @@ describe('page zoom', () => {
     const other = await openTab(panes, NEWS);
     expect(other.paneTab().zoom).toBe(1);
     const again = await openTab(panes, 'https://docs.example.com/other');
+    again.shown = true;
+    contentsOf(again).emit('did-navigate', {}, 'https://docs.example.com/other', 200);
     expect(contentsOf(again).zoomFactor).toBe(1.1);
+  });
+
+  it('leaves the zoom alone when a tab off screen navigates, so the showing tab keeps it', async () => {
+    const panes = makePanes();
+    const hidden = await openTab(panes, 'http://localhost:5173/');
+    const before = contentsOf(hidden).zoomFactor;
+    contentsOf(hidden).zoomFactor = 1.5;
+    contentsOf(hidden).emit('did-navigate', {}, 'http://localhost:5173/', 200);
+    expect(contentsOf(hidden).zoomFactor).toBe(1.5);
+    expect(before).toBe(1);
   });
 
   it('puts the factor back when a tab shows after another port moved the host', async () => {

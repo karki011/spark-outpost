@@ -136,7 +136,11 @@ export class PaneTab {
     this.url = init.url;
     this.title = init.title ?? '';
     this.hooks = hooks;
-    this.media = new TabMedia({ changed: hooks.changed, zoomOf: hooks.zoomOf });
+    this.media = new TabMedia({
+      changed: hooks.changed,
+      zoomOf: hooks.zoomOf,
+      shown: () => this.shown,
+    });
   }
 
   currentUrl(): string {

@@ -28,6 +28,5 @@ Earlier releases: **Settings → Updates → Release notes**.
 | Code Mode on by default  | Combine reads; [turn off in Settings](settings.md#code-mode).            |
 | Agent-led delegation     | Leads [choose workers and slices](how-spark-works.md#how-work-is-split). |
 | Chat opening             | Drafts stay; failures offer **Try again**.                               |
-| Outpost messages         | Messages go to the shown lead; **Post note** is explicit.                |
 
 New profiles [record Claude Terminal sessions](settings.md#record-terminal-sessions); existing choices stay.
