@@ -11,6 +11,7 @@ import {
   browserShortcut,
   classifyBrowserUrl,
   type BrowserShortcut,
+  type ShortcutChord,
   type BrowserHandoff,
   type BrowserPaneTab,
   type BrowserTabOwner,
@@ -37,6 +38,7 @@ export interface TabHooks {
   contextMenu(tab: PaneTab, params: ContextMenuParams): void;
   addShortcut(tab: PaneTab): void;
   paneShortcut(tab: PaneTab, shortcut: BrowserShortcut): void;
+  pageKey?(tab: PaneTab, chord: ShortcutChord): boolean;
   found(tab: PaneTab, active: number, matches: number): void;
   devtoolsSession(): Session;
   zoomOf(url: string): number;
@@ -79,18 +81,19 @@ const MENU_SHORTCUTS: ReadonlySet<BrowserShortcut> = new Set([
   'print',
 ]);
 
+function chordOf(input: Input): ShortcutChord {
+  return {
+    code: input.code,
+    meta: input.meta,
+    ctrl: input.control,
+    shift: input.shift,
+    alt: input.alt,
+    composing: input.isComposing,
+  };
+}
+
 function paneShortcutOf(input: Input): BrowserShortcut | null {
-  const shortcut = browserShortcut(
-    {
-      code: input.code,
-      meta: input.meta,
-      ctrl: input.control,
-      shift: input.shift,
-      alt: input.alt,
-      composing: input.isComposing,
-    },
-    process.platform === 'darwin',
-  );
+  const shortcut = browserShortcut(chordOf(input), process.platform === 'darwin');
   return shortcut && !MENU_SHORTCUTS.has(shortcut) ? shortcut : null;
 }
 
@@ -330,6 +333,10 @@ export class PaneTab {
     });
     contents.on('before-input-event', (event, input) => {
       if (input.type === 'keyDown') this.userUsed();
+      if (input.type === 'keyDown' && this.hooks.pageKey?.(this, chordOf(input))) {
+        event.preventDefault();
+        return;
+      }
       const shortcut =
         input.type === 'keyDown' && this.agentBusy === 0 ? paneShortcutOf(input) : null;
       if (shortcut) {

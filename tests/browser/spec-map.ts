@@ -111,6 +111,7 @@ export const SPEC_GROUPS = {
     'browser-view-ask',
     'browser-view-command-bar',
     'browser-view-downloads',
+    'browser-view-spaces',
     'chat-links',
     'chat-terminal',
     'native-terminal',

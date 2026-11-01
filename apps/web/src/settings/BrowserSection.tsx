@@ -4,6 +4,7 @@ import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { DocLink } from '../ui/DocLink.tsx';
 import { BrowserHistorySetting } from './BrowserHistorySetting.tsx';
+import { BrowserArchiveSetting } from './BrowserArchiveSetting.tsx';
 import { BrowserSearchSetting } from './BrowserSearchSetting.tsx';
 
 export const SIGNED_IN_SITES_LABEL = 'Signed-in sites';
@@ -70,6 +71,7 @@ export function BrowserSection() {
       </p>
       <SignedInSites />
       <BrowserSearchSetting />
+      <BrowserArchiveSetting />
       <BrowserHistorySetting />
     </>
   );

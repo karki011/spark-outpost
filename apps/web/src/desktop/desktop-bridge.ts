@@ -88,6 +88,8 @@ export interface DesktopBrowserView {
   state(profile: BrowserProfile): Promise<unknown>;
   place(placement: BrowserViewPlacement): Promise<unknown>;
   command(profile: BrowserProfile, command: BrowserViewCommand): Promise<unknown>;
+  archive(): Promise<unknown>;
+  setArchive(setting: unknown): Promise<unknown>;
   start(profile: BrowserProfile): Promise<unknown>;
   handToChat(request: BrowserHandToChat): Promise<unknown>;
   fromChat(request: BrowserToView): Promise<unknown>;

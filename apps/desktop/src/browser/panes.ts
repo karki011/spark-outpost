@@ -11,6 +11,7 @@ import {
   type BrowserPlacement,
   type BrowserShortcut,
   type BrowserTabOwner,
+  type ShortcutChord,
 } from '@spark-outpost/contracts';
 import { CLIPBOARD_WRITE, pagePermissionAllowed, type InputMarks } from './clipboard-permission.ts';
 import type { PageZooms } from './page-zoom.ts';
@@ -29,6 +30,7 @@ export interface PanesOptions {
   addShortcut(tab: PaneTab): void;
   paneShortcut(tab: PaneTab, shortcut: BrowserShortcut): void;
   found(tab: PaneTab, active: number, matches: number): void;
+  pageKey?(tab: PaneTab, chord: ShortcutChord): boolean;
   log(line: string): void;
   idleMs?: number;
   tabsMax?: number;
@@ -176,6 +178,7 @@ export class BrowserPanes {
         contextMenu: (owner, params) => this.options.contextMenu(owner, params),
         addShortcut: (owner) => this.options.addShortcut(owner),
         paneShortcut: (owner, shortcut) => this.options.paneShortcut(owner, shortcut),
+        pageKey: (owner, chord) => this.options.pageKey?.(owner, chord) ?? false,
         found: (owner, active, matches) => this.options.found(owner, active, matches),
         devtoolsSession: () =>
           devtoolsSession({ blockedPorts: this.options.blockedPorts, log: this.options.log }),

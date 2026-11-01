@@ -7,6 +7,11 @@ import {
   parseBrowserUrl,
 } from './browser.ts';
 import { BROWSER_SHORTCUTS } from './browser-keys.ts';
+import {
+  EMPTY_BROWSER_LAYOUT,
+  browserLayoutCommandOptions,
+  browserViewLayoutSchema,
+} from './browser-spaces.ts';
 
 export const BROWSER_VIEW_TABS_MAX = 40;
 export const BROWSER_FAVORITES_MAX = 16;
@@ -42,6 +47,7 @@ export const browserViewStateSchema = z.object({
   profile: browserProfileSchema,
   tabs: z.array(browserPaneTabSchema).max(BROWSER_VIEW_TABS_MAX),
   favorites: z.array(browserFavoriteSchema).max(BROWSER_FAVORITES_MAX).default([]),
+  layout: browserViewLayoutSchema.default(EMPTY_BROWSER_LAYOUT),
 });
 
 export const browserViewCommandSchema = z.discriminatedUnion('command', [
@@ -49,6 +55,7 @@ export const browserViewCommandSchema = z.discriminatedUnion('command', [
   z.object({ command: z.literal('add_favorite'), tabId: z.string() }),
   z.object({ command: z.literal('remove_favorite'), id: z.string().min(1).max(40) }),
   z.object({ command: z.literal('open_favorite'), id: z.string().min(1).max(40) }),
+  ...browserLayoutCommandOptions,
 ]);
 export type BrowserViewCommand = z.infer<typeof browserViewCommandSchema>;
 

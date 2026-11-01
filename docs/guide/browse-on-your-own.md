@@ -45,4 +45,4 @@ The last row searches the web with **DuckDuckGo**. Only choosing that row sends 
 
 A file saves only after your own click; Spark asks where. One an agent or page started is cancelled; **Downloads** lists both.
 
-**Next:** [Use the browser](use-the-browser.md)
+**Next:** [Organize browser tabs](organize-browser-tabs.md)

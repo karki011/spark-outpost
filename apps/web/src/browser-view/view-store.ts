@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import {
+  EMPTY_BROWSER_LAYOUT,
   browserProfileSchema,
   browserViewSnapshotSchema,
   browserViewStateSchema,
@@ -7,18 +8,25 @@ import {
   type BrowserPaneTab,
   type BrowserProfile,
   type BrowserViewCommand,
+  type BrowserViewLayout,
 } from '@spark-outpost/contracts';
 import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
 
 export interface ProfileTabs {
   tabs: readonly BrowserPaneTab[];
   favorites: readonly BrowserFavorite[];
+  layout: BrowserViewLayout;
   snapshot: string | null;
 }
 
 export type TransferResult = { ok: true } | { ok: false; reason: string };
 
-const EMPTY: ProfileTabs = { tabs: [], favorites: [], snapshot: null };
+const EMPTY: ProfileTabs = {
+  tabs: [],
+  favorites: [],
+  layout: EMPTY_BROWSER_LAYOUT,
+  snapshot: null,
+};
 const viewOpeners = new Set<() => void>();
 const PROFILE_KEY = 'spark-outpost.browser-view.profile';
 
@@ -50,7 +58,11 @@ function update(profile: BrowserProfile, change: Partial<ProfileTabs>): void {
 export function acceptViewState(raw: unknown): void {
   const state = browserViewStateSchema.safeParse(raw);
   if (!state.success) return;
-  update(state.data.profile, { tabs: state.data.tabs, favorites: state.data.favorites });
+  update(state.data.profile, {
+    tabs: state.data.tabs,
+    favorites: state.data.favorites,
+    layout: state.data.layout,
+  });
 }
 
 function connect(): void {

@@ -122,7 +122,9 @@ describe('the saved Browser view', () => {
       pinned: true,
     });
     await settle();
-    expect(profiles.personal.tabs).toEqual([{ url: DOCS, title: '', pinned: true, active: true }]);
+    expect(profiles.personal.tabs).toMatchObject([
+      { url: DOCS, title: '', pinned: true, active: true, pinnedUrl: DOCS },
+    ]);
     expect(profiles.work.tabs).toEqual([work]);
   });
 });
