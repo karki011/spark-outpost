@@ -48,6 +48,8 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **⌘⇧O**                   | Browser view: chat about the page       |
 | **⌥⌘A**                   | Browser view: Ask Spark about your tabs |
 | **⌘T** / **⌘L**           | Browser view: the command bar           |
+| **⇧**-click a link        | Browser view: Peek                      |
+| **⇧⌥**-click a link       | Browser view: Split view                |
 
 ## Cards
 

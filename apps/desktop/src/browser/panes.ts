@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import type { BrowserWindow, ContextMenuParams, WebContents, WebContentsView } from 'electron';
+import type {
+  BrowserWindow,
+  ContextMenuParams,
+  Input,
+  WebContents,
+  WebContentsView,
+} from 'electron';
 import {
   BROWSER_TABS_MAX,
   browserOrigin,
@@ -34,6 +40,10 @@ export interface PanesOptions {
   guards?: SessionGuards;
   visited?(tab: PaneTab, url: string, sameDocument: boolean): void;
   titled?(tab: PaneTab, title: string): void;
+  shiftedLink?(opener: PaneTab, url: string): boolean;
+  slotBounds?(tab: PaneTab): BrowserBounds | null | undefined;
+  tabUsed?(tab: PaneTab): void;
+  pageKey?(tab: PaneTab, input: Input): boolean;
 }
 
 export interface ChatHome {
@@ -146,7 +156,13 @@ export class BrowserPanes {
 
   createTab(
     chatId: string,
-    init: { owner: BrowserTabOwner; runId: string | null; url: string; title?: string },
+    init: {
+      owner: BrowserTabOwner;
+      runId: string | null;
+      url: string;
+      title?: string;
+      peek?: boolean;
+    },
     home?: ChatHome,
   ): PaneTab | null {
     const pane = this.chat(chatId, home);
@@ -161,7 +177,7 @@ export class BrowserPanes {
             this.options.guards ?? this.ownGuards(),
           ),
         changed: () => this.changed(pane),
-        popup: (url, opener) => this.openPopup(pane, url, opener),
+        popup: (url, opener, shifted) => this.openPopup(pane, url, opener, shifted),
         viewCreated: (view) => this.attach(view, tab),
         viewClosed: (view) => this.detach(view, tab),
         gone: (owner) => this.close(chatId, owner.id),
@@ -176,10 +192,12 @@ export class BrowserPanes {
         found: (owner, active, matches) => this.options.found(owner, active, matches),
         devtoolsSession: () =>
           devtoolsSession({ blockedPorts: this.options.blockedPorts, log: this.options.log }),
+        used: (owner) => this.options.tabUsed?.(owner),
+        pageKey: (owner, input) => this.options.pageKey?.(owner, input) ?? false,
       },
     );
     pane.tabs.push(tab);
-    if (!pane.tabs.some((other) => other.active)) tab.active = true;
+    if (!tab.peek && !pane.tabs.some((other) => other.active)) tab.active = true;
     this.changed(pane);
     return tab;
   }
@@ -193,14 +211,15 @@ export class BrowserPanes {
     this.scheduleIdle(pane);
   }
 
-  private openPopup(pane: ChatPane, url: string, opener: PaneTab): void {
+  private openPopup(pane: ChatPane, url: string, opener: PaneTab, shifted: boolean): void {
+    if (shifted && this.options.shiftedLink?.(opener, url)) return;
     const tab = this.createTab(pane.chatId, {
       owner: opener.owner,
       runId: opener.runId,
       url: BLANK,
     });
     if (!tab) return;
-    if (opener.active) this.select(pane.chatId, tab.id);
+    if (opener.active || opener.peek) this.select(pane.chatId, tab.id);
     void tab
       .load(url)
       .then(() => this.layout())
@@ -262,7 +281,8 @@ export class BrowserPanes {
     const tab = pane?.tabs.find((candidate) => candidate.id === tabId);
     if (!pane || !tab) return;
     pane.tabs = pane.tabs.filter((candidate) => candidate !== tab);
-    if (tab.active && pane.tabs.length > 0) pane.tabs.at(-1)!.active = true;
+    const next = pane.tabs.filter((candidate) => !candidate.peek).at(-1);
+    if (tab.active && next) next.active = true;
     this.changed(pane);
     try {
       tab.close();
@@ -360,14 +380,25 @@ export class BrowserPanes {
     if (active && !active.view() && active.currentUrl() !== BLANK) await active.wake();
   }
 
+  wakeShowing(chatId: string): void {
+    const pane = this.chats.get(chatId);
+    if (pane && this.shown(chatId)) void this.wakeActive(pane).catch(() => undefined);
+  }
+
+  async capture(tab: PaneTab): Promise<string | null> {
+    const view = tab.view();
+    if (!view || view.webContents.isDestroyed()) return null;
+    const image = await view.webContents.capturePage();
+    if (image.isEmpty()) return null;
+    return `data:image/jpeg;base64,${image.toJPEG(SNAPSHOT_QUALITY).toString('base64')}`;
+  }
+
   private async sendSnapshot(pane: ChatPane): Promise<void> {
-    const view = pane.tabs.find((tab) => tab.active)?.view();
-    if (!view || view.webContents.isDestroyed()) return;
+    const active = pane.tabs.find((tab) => tab.active);
+    if (!active?.view() || active.view()!.webContents.isDestroyed()) return;
     try {
-      const image = await view.webContents.capturePage();
-      if (image.isEmpty()) return;
-      const jpeg = image.toJPEG(SNAPSHOT_QUALITY).toString('base64');
-      this.options.snapshot(pane.chatId, `data:image/jpeg;base64,${jpeg}`);
+      const image = await this.capture(active);
+      if (image) this.options.snapshot(pane.chatId, image);
     } catch {
       this.options.snapshot(pane.chatId, null);
     }
@@ -390,16 +421,13 @@ export class BrowserPanes {
       for (const tab of pane.tabs) {
         const view = tab.view();
         if (!view) continue;
+        const slot = this.options.slotBounds?.(tab);
+        const showsActive =
+          placement?.chatId === pane.chatId && !placement.covered && tab.active && !tab.peek;
+        const bounds = slot !== undefined ? slot : showsActive ? placement.bounds : null;
         const visible =
-          placement !== null &&
-          placement.chatId === pane.chatId &&
-          placement.bounds !== null &&
-          placement.bounds.width > 0 &&
-          placement.bounds.height > 0 &&
-          !placement.covered &&
-          tab.active &&
-          tab.currentUrl() !== BLANK;
-        if (visible) view.setBounds(this.zoomed(placement.bounds!));
+          bounds !== null && bounds.width > 0 && bounds.height > 0 && tab.currentUrl() !== BLANK;
+        if (visible) view.setBounds(this.zoomed(bounds));
         view.setVisible(visible);
         tab.shown = visible;
       }

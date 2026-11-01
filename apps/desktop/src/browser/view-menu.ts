@@ -9,6 +9,8 @@ export interface ViewMenuFacts {
 
 export type ViewMenuItem =
   | { kind: 'open_link'; label: string; url: string }
+  | { kind: 'peek_link'; label: string; url: string }
+  | { kind: 'split_link'; label: string; url: string }
   | { kind: 'link_chat'; label: string; url: string }
   | { kind: 'selection_chat'; label: string; text: string }
   | { kind: 'copy_link'; label: string; url: string }
@@ -27,6 +29,8 @@ export function viewMenuItems(facts: ViewMenuFacts): ViewMenuItem[] {
   const link = webLink(facts.linkURL);
   if (link) {
     items.push({ kind: 'open_link', label: 'Open link in new tab', url: link });
+    items.push({ kind: 'peek_link', label: 'Open link in Peek', url: link });
+    items.push({ kind: 'split_link', label: 'Open link in split view', url: link });
     items.push({ kind: 'link_chat', label: 'Open link in new chat', url: link });
     items.push({ kind: 'copy_link', label: 'Copy link', url: link });
   }

@@ -7,6 +7,7 @@ import {
   type BrowserPaneTab,
   type BrowserProfile,
   type BrowserViewCommand,
+  type BrowserViewSplit,
 } from '@spark-outpost/contracts';
 import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
 
@@ -14,11 +15,21 @@ export interface ProfileTabs {
   tabs: readonly BrowserPaneTab[];
   favorites: readonly BrowserFavorite[];
   snapshot: string | null;
+  split: BrowserViewSplit | null;
+  peek: BrowserPaneTab | null;
+  slotImages: Readonly<Record<string, string>>;
 }
 
 export type TransferResult = { ok: true } | { ok: false; reason: string };
 
-const EMPTY: ProfileTabs = { tabs: [], favorites: [], snapshot: null };
+const EMPTY: ProfileTabs = {
+  tabs: [],
+  favorites: [],
+  snapshot: null,
+  split: null,
+  peek: null,
+  slotImages: {},
+};
 const viewOpeners = new Set<() => void>();
 const PROFILE_KEY = 'spark-outpost.browser-view.profile';
 
@@ -50,7 +61,15 @@ function update(profile: BrowserProfile, change: Partial<ProfileTabs>): void {
 export function acceptViewState(raw: unknown): void {
   const state = browserViewStateSchema.safeParse(raw);
   if (!state.success) return;
-  update(state.data.profile, { tabs: state.data.tabs, favorites: state.data.favorites });
+  const { profile, tabs, favorites, split, peek } = state.data;
+  update(profile, { tabs, favorites, split, peek });
+}
+
+function withSlotImage(profile: BrowserProfile, tabId: string, image: string | null) {
+  const images = { ...profiles.get(profile)?.slotImages };
+  if (image === null) delete images[tabId];
+  else images[tabId] = image;
+  return images;
 }
 
 function connect(): void {
@@ -60,7 +79,10 @@ function connect(): void {
   view.onState(acceptViewState);
   view.onSnapshot((raw) => {
     const snapshot = browserViewSnapshotSchema.safeParse(raw);
-    if (snapshot.success) update(snapshot.data.profile, { snapshot: snapshot.data.image });
+    if (!snapshot.success) return;
+    const { profile, image, tabId } = snapshot.data;
+    if (tabId === undefined) update(profile, { snapshot: image });
+    else update(profile, { slotImages: withSlotImage(profile, tabId, image) });
   });
 }
 

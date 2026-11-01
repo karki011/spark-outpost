@@ -143,7 +143,9 @@ export class FakeContents extends EventEmitter {
   destroyed = false;
   focused = false;
   blocksUnload = false;
-  private opener: ((details: { url: string }) => { action: string }) | null = null;
+  private opener:
+    | ((details: { url: string; disposition: string; features: string }) => { action: string })
+    | null = null;
   private readonly cdpListeners = new Set<CdpListener>();
   readonly navigationHistory = {
     canGoBack: () => false,
@@ -202,12 +204,16 @@ export class FakeContents extends EventEmitter {
 
   focus(): void {}
 
-  setWindowOpenHandler(handler: (details: { url: string }) => { action: string }): void {
+  setWindowOpenHandler(
+    handler: (details: { url: string; disposition: string; features: string }) => {
+      action: string;
+    },
+  ): void {
     this.opener = handler;
   }
 
-  windowOpen(url: string): string {
-    return this.opener?.({ url }).action ?? 'allow';
+  windowOpen(url: string, disposition = 'foreground-tab', features = ''): string {
+    return this.opener?.({ url, disposition, features }).action ?? 'allow';
   }
 
   private fetch(first: string): { url: string; failed: string | null } {
@@ -259,6 +265,7 @@ export class FakeContents extends EventEmitter {
 export class FakeView {
   readonly webContents: FakeContents;
   visible = false;
+  bounds: { x: number; y: number; width: number; height: number } | null = null;
 
   constructor(options: { webPreferences: { session: FakeSession } }) {
     this.webContents = new FakeContents(options.webPreferences.session);
@@ -267,7 +274,9 @@ export class FakeView {
 
   setBorderRadius(): void {}
 
-  setBounds(): void {}
+  setBounds(bounds: { x: number; y: number; width: number; height: number }): void {
+    this.bounds = bounds;
+  }
 
   setVisible(visible: boolean): void {
     this.visible = visible;

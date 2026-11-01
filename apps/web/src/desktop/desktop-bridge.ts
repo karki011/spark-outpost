@@ -8,6 +8,7 @@ import type {
   BrowserProfile,
   BrowserSearchEngine,
   BrowserViewPlacement,
+  BrowserViewSlot,
   BrowserHandToChat,
   BrowserToView,
   BrowserViewCommand,
@@ -87,6 +88,7 @@ export interface DesktopBrowser {
 export interface DesktopBrowserView {
   state(profile: BrowserProfile): Promise<unknown>;
   place(placement: BrowserViewPlacement): Promise<unknown>;
+  placeSlot(slot: BrowserViewSlot): Promise<unknown>;
   command(profile: BrowserProfile, command: BrowserViewCommand): Promise<unknown>;
   start(profile: BrowserProfile): Promise<unknown>;
   handToChat(request: BrowserHandToChat): Promise<unknown>;

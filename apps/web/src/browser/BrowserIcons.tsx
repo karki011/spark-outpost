@@ -92,3 +92,20 @@ export function PageWidthIcon() {
     </Icon>
   );
 }
+
+export function SplitViewIcon() {
+  return (
+    <Icon>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M12 5v14" />
+    </Icon>
+  );
+}
+
+export function ShowingIcon() {
+  return (
+    <Icon>
+      <circle cx="12" cy="12" r="4" fill="currentColor" />
+    </Icon>
+  );
+}

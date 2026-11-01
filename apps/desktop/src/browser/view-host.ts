@@ -16,6 +16,7 @@ import {
   browserSearchEngineSchema,
   browserViewCommandSchema,
   browserViewPlacementSchema,
+  browserViewSlotSchema,
   type BrowserCommand,
   type BrowserProfile,
   type BrowserViewCommand,
@@ -32,10 +33,11 @@ import { runPaneCommand } from './pane-command.ts';
 import { BrowserPanes } from './panes.ts';
 import { profilePartition, type SessionGuards } from './sessions.ts';
 import type { PaneTab } from './tab.ts';
+import { isArrangeCommand, startViewArrange } from './view-arrange.ts';
 import { viewMenuItems, type ViewMenuItem } from './view-menu.ts';
 import { readViewPageText } from './view-page-text.ts';
 import { viewHistory, type HistorySink } from './view-history.ts';
-import type { SavedViewStore } from './view-saved.ts';
+import type { SavedTab, SavedViewStore } from './view-saved.ts';
 
 export interface ViewHostOptions {
   window(): BrowserWindow | null;
@@ -60,6 +62,7 @@ export interface BrowserViewHost {
 const CHANNELS = [
   IPC.browserViewState,
   IPC.browserViewPlace,
+  IPC.browserViewPlaceSlot,
   IPC.browserViewCommand,
   IPC.browserViewStart,
   IPC.browserViewPageText,
@@ -73,17 +76,29 @@ function profileOf(tab: PaneTab): BrowserProfile {
 
 export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost {
   const restored = new Set<BrowserProfile>();
+  const arrange = startViewArrange({
+    panes: () => panes,
+    snapshot: (profile, tabId, image) => {
+      const snapshot: BrowserViewSnapshot = { profile, image, tabId };
+      options.send(IPC.browserViewSnapshot, snapshot);
+    },
+    log: options.log,
+  });
+  const listed = (profile: BrowserProfile) => panes.tabsOf(profile).filter((tab) => !tab.peek);
   const state = (profile: BrowserProfile): BrowserViewState => ({
     profile,
-    tabs: panes.tabsOf(profile).map((tab) => tab.paneTab()),
+    tabs: listed(profile).map((tab) => tab.paneTab()),
     favorites: options.saved.get(profile).favorites,
+    ...arrange.state(profile),
   });
   const changed = (profile: BrowserProfile) => {
-    const tabs = panes.tabsOf(profile).map((tab) => ({
+    arrange.settle(profile);
+    const tabs = listed(profile).map((tab) => ({
       url: tab.currentUrl(),
       title: tab.currentTitle(),
       pinned: tab.pinned,
       active: tab.active,
+      split: arrange.mark(profile, tab.id),
     }));
     if (restored.has(profile)) options.saved.setTabs(profile, tabs);
     options.send(IPC.browserViewStateChanged, state(profile));
@@ -91,6 +106,7 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
   const restore = (profile: BrowserProfile) => {
     if (restored.has(profile)) return;
     restored.add(profile);
+    const made: { id: string; split: SavedTab['split'] }[] = [];
     for (const saved of options.saved.get(profile).tabs) {
       const tab = panes.createTab(profile, {
         owner: 'user',
@@ -101,7 +117,9 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
       if (!tab) break;
       tab.pinned = saved.pinned;
       if (saved.active) panes.select(profile, tab.id);
+      made.push({ id: tab.id, split: saved.split });
     }
+    arrange.restore(profile, made);
   };
   const favorite = (profile: BrowserProfile, action: BrowserViewCommand) => {
     const favorites = options.saved.get(profile).favorites;
@@ -123,7 +141,7 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
   const openFavorite = async (profile: BrowserProfile, id: string) => {
     const item = options.saved.get(profile).favorites.find((candidate) => candidate.id === id);
     if (!item) return;
-    const open = panes.tabsOf(profile).find((tab) => sameFavoritePage(tab.currentUrl(), item.url));
+    const open = listed(profile).find((tab) => sameFavoritePage(tab.currentUrl(), item.url));
     if (open) panes.select(profile, open.id);
     else await command(profile, { command: 'new_tab', url: item.url });
   };
@@ -136,6 +154,8 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     runPaneCommand(panes, profile, action, { tabsMax: BROWSER_VIEW_TABS_MAX });
   const viewCommand = async (profile: BrowserProfile, raw: unknown) => {
     const action = browserViewCommandSchema.parse(raw);
+    if (isArrangeCommand(action)) return arrange.command(profile, action);
+    if (action.command === 'select' && arrange.isPeek(profile, action.tabId)) return;
     if (action.command === 'open_favorite') return openFavorite(profile, action.id);
     if (action.command === 'add_favorite' || action.command === 'remove_favorite') {
       return favorite(profile, action);
@@ -163,6 +183,10 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
           options.send(IPC.browserViewIntent, intent);
         },
       };
+    }
+    if (item.kind === 'peek_link' || item.kind === 'split_link') {
+      const gesture = item.kind === 'peek_link' ? 'peek' : 'split';
+      return { label: item.label, click: () => void arrange.openLink(tab, item.url, gesture) };
     }
     const open = { command: 'new_tab', url: item.url } as const;
     return { label: item.label, click: () => void command(profileOf(tab), open) };
@@ -197,6 +221,10 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     guards: options.guards,
     visited: (tab, url) => history.visited(tab, url, ''),
     titled: (tab, title) => history.titled(tab, title),
+    shiftedLink: (opener, url) => arrange.shiftedLink(opener, url),
+    slotBounds: (tab) => arrange.slotBounds(tab),
+    tabUsed: (tab) => arrange.tabUsed(tab),
+    pageKey: (tab, input) => arrange.pageKey(tab, input),
   });
 
   ipcMain.handle(
@@ -207,6 +235,7 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     IPC.browserViewPlace,
     options.guarded(async (_event, raw) => {
       const placement = browserViewPlacementSchema.parse(raw);
+      arrange.watchChrome(options.window()?.webContents ?? null);
       await panes.place({
         chatId: placement.profile,
         projectId: null,
@@ -215,6 +244,13 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
         covered: placement.covered,
         sendsTo: 'chat',
       });
+      return true;
+    }),
+  );
+  ipcMain.handle(
+    IPC.browserViewPlaceSlot,
+    options.guarded(async (_event, raw) => {
+      await arrange.placeSlot(browserViewSlotSchema.parse(raw));
       return true;
     }),
   );

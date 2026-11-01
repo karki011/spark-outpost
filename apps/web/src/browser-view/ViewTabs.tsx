@@ -1,5 +1,11 @@
 import type { KeyboardEvent } from 'react';
-import type { BrowserPaneTab, BrowserProfile } from '@spark-outpost/contracts';
+import {
+  splitHolds,
+  type BrowserPaneTab,
+  type BrowserProfile,
+  type BrowserViewSplit,
+} from '@spark-outpost/contracts';
+import { SplitViewIcon } from '../browser/BrowserIcons.tsx';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { PinIcon, PlusIcon, SpinnerIcon, UnpinIcon } from '../ui/icons.tsx';
 import { Keys } from '../ui/Keys.tsx';
@@ -10,6 +16,7 @@ import { sendViewCommand } from './view-store.ts';
 interface ViewTabsProps {
   profile: BrowserProfile;
   tabs: readonly BrowserPaneTab[];
+  split: BrowserViewSplit | null;
   onNewTab(): void;
 }
 
@@ -27,7 +34,12 @@ function nextIndex(key: string, current: number, count: number): number | null {
   return null;
 }
 
-function TabList({ profile, tabs, label }: Omit<ViewTabsProps, 'onNewTab'> & { label: string }) {
+function TabList({
+  profile,
+  tabs,
+  split,
+  label,
+}: Omit<ViewTabsProps, 'onNewTab'> & { label: string }) {
   const focusableId = tabs.find((tab) => tab.active)?.id ?? tabs[0]?.id ?? null;
   const select = (tab: BrowserPaneTab) =>
     sendViewCommand(profile, { command: 'select', tabId: tab.id });
@@ -63,6 +75,12 @@ function TabList({ profile, tabs, label }: Omit<ViewTabsProps, 'onNewTab'> & { l
                 {tab.loading ? <SpinnerIcon /> : initialOf(title)}
               </span>
               <span className="bv-tab-title">{title}</span>
+              {splitHolds(split, tab.id) && (
+                <span className="bv-tab-split">
+                  <SplitViewIcon />
+                  Split
+                </span>
+              )}
             </button>
             <button
               type="button"
@@ -91,7 +109,7 @@ function TabList({ profile, tabs, label }: Omit<ViewTabsProps, 'onNewTab'> & { l
   );
 }
 
-export function ViewTabs({ profile, tabs, onNewTab }: ViewTabsProps) {
+export function ViewTabs({ profile, tabs, split, onNewTab }: ViewTabsProps) {
   const pinned = tabs.filter((tab) => tab.pinned);
   const today = tabs.filter((tab) => !tab.pinned);
   return (
@@ -101,7 +119,7 @@ export function ViewTabs({ profile, tabs, onNewTab }: ViewTabsProps) {
           <h2 id="bv-pinned" className="bv-heading">
             Pinned
           </h2>
-          <TabList profile={profile} tabs={pinned} label="Pinned tabs" />
+          <TabList profile={profile} tabs={pinned} split={split} label="Pinned tabs" />
         </section>
       )}
       <section className="bv-section" aria-labelledby="bv-today">
@@ -118,7 +136,7 @@ export function ViewTabs({ profile, tabs, onNewTab }: ViewTabsProps) {
           <span>New tab</span>
           <Keys keys={PANE_KEYS.newTab.shown} />
         </button>
-        <TabList profile={profile} tabs={today} label="Tabs" />
+        <TabList profile={profile} tabs={today} split={split} label="Tabs" />
       </section>
     </>
   );

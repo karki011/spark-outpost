@@ -116,6 +116,7 @@ export * from './browser-network.ts';
 export * from './browser-devtools.ts';
 export * from './browser-keys.ts';
 export * from './browser-storage.ts';
+export * from './browser-split.ts';
 export * from './browser-view.ts';
 export * from './mac-control.ts';
 export * from './mac-control-bridge.ts';

@@ -6,6 +6,8 @@ import {
   BROWSER_URL_MAX,
   BROWSER_VIEW_TABS_MAX,
   DEFAULT_SEARCH_ENGINE,
+  SPLIT_RATIO_MAX,
+  SPLIT_RATIO_MIN,
   browserFavoriteSchema,
   browserSearchEngineSchema,
   classifyBrowserUrl,
@@ -21,6 +23,13 @@ const savedTabSchema = z.object({
   title: z.string().max(300),
   pinned: z.boolean(),
   active: z.boolean(),
+  split: z
+    .object({
+      side: z.enum(['left', 'right']),
+      ratio: z.number().min(SPLIT_RATIO_MIN).max(SPLIT_RATIO_MAX),
+    })
+    .optional()
+    .catch(undefined),
 });
 export type SavedTab = z.infer<typeof savedTabSchema>;
 

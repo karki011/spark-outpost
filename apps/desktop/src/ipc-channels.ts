@@ -94,6 +94,7 @@ export const IPC = {
   browserPageCopyAllowed: 'browser:page-copy-allowed',
   browserViewState: 'browser-view:state',
   browserViewPlace: 'browser-view:place',
+  browserViewPlaceSlot: 'browser-view:place-slot',
   browserViewCommand: 'browser-view:command',
   browserViewStart: 'browser-view:start',
   browserViewStateChanged: 'browser-view:state-changed',
