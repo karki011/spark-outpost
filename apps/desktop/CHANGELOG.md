@@ -4,6 +4,15 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.38
+
+- Select on a page is rebuilt: the highlight glides between elements, ⇧ click picks several, ↑ and ↓ move to the parent and back, a drag picks a region and the wheel still scrolls. A pick on a very large page takes about half a second instead of nearly three.
+- Select also works after scrolling, and in the Browser view, where picks land in the new-chat dock. A pick from Personal goes as text only.
+- Browser tabs get Mute with a Playing or Muted label, page zoom kept per site, drag to reorder, Print and Picture in Picture, in chats and the Browser view.
+- The Browser view gets split view and Peek: show two tabs side by side, or Shift-click a link to preview it over the page.
+- The Browser view gets Spaces, folders for pinned tabs, Back to pinned address and auto-archive after 12 hours, with an Archived list and a setting to change or turn it off.
+- Clearing all browser history also clears saved page zooms.
+
 ## 0.1.0-beta.37
 
 - A quieter composer: project, branch, session and mode move under the box. Finished turns fold under one row, with a setting to turn that off; replies after a steered message stay visible.
