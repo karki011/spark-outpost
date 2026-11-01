@@ -45,6 +45,7 @@ export async function withDesktopBrowser(page: Page) {
     let downloadList: unknown[] = [];
     const downloadListeners = new Set<(list: unknown) => void>();
     let searchEngine = 'duckduckgo';
+    let archiveSetting = { on: true, afterMinutes: 720 };
     Object.assign(window, {
       browserCalls: calls,
       browserPush: (chatId: string, tabs: Record<string, unknown>[]) => {
@@ -62,11 +63,13 @@ export async function withDesktopBrowser(page: Page) {
         profile: string,
         tabs: Record<string, unknown>[],
         favorites: Record<string, unknown>[] = [],
+        layout?: Record<string, unknown>,
       ) => {
         const state = {
           profile,
           tabs: tabs.map((item, index) => tab(`v${index + 1}`, item)),
           favorites,
+          ...(layout ? { layout } : {}),
         };
         viewStates.set(profile, state);
         viewStateListeners.forEach((listener) => listener(state));
@@ -113,6 +116,12 @@ export async function withDesktopBrowser(page: Page) {
           onDownloads: (listener: (list: unknown) => void) => {
             downloadListeners.add(listener);
             return () => downloadListeners.delete(listener);
+          },
+          archive: async () => archiveSetting,
+          setArchive: async (setting: { on: boolean; afterMinutes: number }) => {
+            calls.push({ kind: 'view-archive', payload: setting });
+            archiveSetting = setting;
+            return archiveSetting;
           },
           searchEngine: async () => searchEngine,
           setSearchEngine: async (engine: string) => {

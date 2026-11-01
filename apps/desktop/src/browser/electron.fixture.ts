@@ -143,6 +143,7 @@ export class FakeContents extends EventEmitter {
   destroyed = false;
   focused = false;
   blocksUnload = false;
+  audible = false;
   private opener: ((details: { url: string }) => { action: string }) | null = null;
   private readonly cdpListeners = new Set<CdpListener>();
   readonly navigationHistory = {
@@ -171,6 +172,10 @@ export class FakeContents extends EventEmitter {
 
   cdpEmit(method: string, params: Record<string, unknown> = {}): void {
     for (const listener of this.cdpListeners) listener(method, params);
+  }
+
+  isCurrentlyAudible(): boolean {
+    return this.audible;
   }
 
   isDestroyed(): boolean {

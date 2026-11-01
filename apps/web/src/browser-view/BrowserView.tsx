@@ -1,5 +1,6 @@
 import '../browser/browser-pane.css';
 import './browser-view.css';
+import './browser-spaces.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   browserViewShortcutEventSchema,
@@ -40,8 +41,11 @@ import { HandToChat } from './HandToChat.tsx';
 import { PageChatDock, type DockRequest } from './PageChatDock.tsx';
 import type { PageRef } from './page-chat.ts';
 import { pageRef, usePageIntents } from './page-intents.ts';
+import { chromeSpaceIndex, tabsInCurrentSpace } from './spaces-model.ts';
+import { ViewArchived } from './ViewArchived.tsx';
 import { ViewFavorites } from './ViewFavorites.tsx';
 import { ViewDownloads } from './ViewDownloads.tsx';
+import { ViewSpaces } from './ViewSpaces.tsx';
 import { ViewTabs } from './ViewTabs.tsx';
 import {
   acceptViewState,
@@ -116,7 +120,8 @@ interface BrowserViewProps {
 
 export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
   const profile = useChosenProfile();
-  const { tabs, favorites, snapshot } = useProfileTabs(profile);
+  const { tabs: allTabs, favorites, layout, snapshot } = useProfileTabs(profile);
+  const tabs = tabsInCurrentSpace(allTabs, layout);
   const [problem, setProblem] = useState<string | null>(null);
   const tab = tabs.find((candidate) => candidate.active) ?? null;
   const viewRef = useRef<HTMLDivElement>(null);
@@ -150,7 +155,7 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
     setDock(null);
     setAsking({ key: Date.now(), first: shownPage() });
   };
-  usePageIntents(profile, tabs, (page, intent) =>
+  usePageIntents(profile, allTabs, (page, intent) =>
     openDock({ page, selection: intent.selection, link: intent.link }),
   );
   const [bar, setBar] = useState<BarMode | null>(null);
@@ -188,6 +193,14 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
       ref={root}
       className="bv"
       onKeyDown={(event) => {
+        const spaceIndex = chromeSpaceIndex(event, MAC);
+        if (spaceIndex !== null) {
+          const space = layout.spaces[spaceIndex];
+          event.preventDefault();
+          event.stopPropagation();
+          if (space) sendViewCommand(profile, { command: 'space_switch', id: space.id });
+          return;
+        }
         const shortcut = chromeShortcut(event);
         if (!shortcut) return;
         event.preventDefault();
@@ -232,7 +245,9 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
         <p className="bv-note">{profileNote(profile)}</p>
         <AddressBar key={tabKey} commands={commands} tab={tab} placeholder="Type a web address" />
         <ViewFavorites profile={profile} favorites={favorites} tab={tab} />
-        <ViewTabs profile={profile} tabs={tabs} onNewTab={() => setBar('new')} />
+        <ViewSpaces profile={profile} layout={layout} />
+        <ViewTabs profile={profile} tabs={tabs} layout={layout} onNewTab={() => setBar('new')} />
+        <ViewArchived profile={profile} layout={layout} />
         <ViewDownloads />
       </nav>
       <main className="page bv-page" id="bv-page" aria-label={tab ? tabLabel(tab) : 'Browser'}>
@@ -316,8 +331,10 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
           profile={profile}
           mode={bar}
           tab={tab}
-          tabs={tabs}
+          tabs={allTabs}
           favorites={favorites}
+          archived={layout.archived}
+          onOpenArchived={(id) => sendViewCommand(profile, { command: 'archived_open', id })}
           onSelectTab={(tabId) => sendViewCommand(profile, { command: 'select', tabId })}
           onOpen={(url, newTab) =>
             sendViewCommand(

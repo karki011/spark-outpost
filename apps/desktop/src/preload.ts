@@ -168,6 +168,8 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
       ipcRenderer.invoke(IPC.browserViewPageText, profile, tabId),
     searchEngine: () => ipcRenderer.invoke(IPC.browserViewSearchEngine),
     setSearchEngine: (engine: string) => ipcRenderer.invoke(IPC.browserViewSetSearchEngine, engine),
+    archive: () => ipcRenderer.invoke(IPC.browserViewArchive),
+    setArchive: (setting: unknown) => ipcRenderer.invoke(IPC.browserViewSetArchive, setting),
     onIntent: (callback: (intent: unknown) => void) => listen(IPC.browserViewIntent, callback),
     onState: (callback: (state: unknown) => void) => listen(IPC.browserViewStateChanged, callback),
     onSnapshot: (callback: (snapshot: unknown) => void) =>

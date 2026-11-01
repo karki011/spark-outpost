@@ -108,6 +108,8 @@ export const IPC = {
   browserDownloadAct: 'browser-downloads:act',
   browserViewSearchEngine: 'browser-view:search-engine',
   browserViewSetSearchEngine: 'browser-view:set-search-engine',
+  browserViewArchive: 'browser-view:archive',
+  browserViewSetArchive: 'browser-view:set-archive',
   browserToView: 'browser:to-view',
   macControlStatus: 'mac-control:status',
   macControlPrompt: 'mac-control:prompt',

@@ -24,6 +24,7 @@ import { COLLAPSE_TURNS_LABEL } from './CollapseTurnsSetting.tsx';
 import { BUSY_ENTER_LABEL } from './BusyEnterSetting.tsx';
 import { BrowserSection, SIGNED_IN_SITES_LABEL, SIGN_OUT_ALL_LABEL } from './BrowserSection.tsx';
 import { CLEAR_HISTORY_LABEL } from './BrowserHistorySetting.tsx';
+import { ARCHIVE_LABEL } from './BrowserArchiveSetting.tsx';
 import { SEARCH_ENGINE_LABEL } from './BrowserSearchSetting.tsx';
 import { ChatsSection } from './ChatsSection.tsx';
 import { COMPANION_LABEL } from './CompanionSetting.tsx';
@@ -252,6 +253,7 @@ export const SETTINGS_SECTIONS = [
       SIGNED_IN_SITES_LABEL,
       SIGN_OUT_ALL_LABEL,
       SEARCH_ENGINE_LABEL,
+      ARCHIVE_LABEL,
       CLEAR_HISTORY_LABEL,
     ],
     render: () => <BrowserSection />,

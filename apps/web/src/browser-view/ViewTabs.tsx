@@ -1,16 +1,27 @@
-import type { KeyboardEvent } from 'react';
-import type { BrowserPaneTab, BrowserProfile } from '@spark-outpost/contracts';
+import type { KeyboardEvent, LiHTMLAttributes, ReactNode } from 'react';
+import type { BrowserPaneTab, BrowserProfile, BrowserViewLayout } from '@spark-outpost/contracts';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { PinIcon, PlusIcon, SpinnerIcon, UnpinIcon } from '../ui/icons.tsx';
 import { Keys } from '../ui/Keys.tsx';
 import { PANE_KEYS } from '../browser/pane-shortcuts.ts';
 import { tabLabel } from '../browser/tab-label.ts';
+import { ViewPinned } from './ViewPinned.tsx';
+import { ViewTabActions } from './ViewTabMenu.tsx';
 import { sendViewCommand } from './view-store.ts';
 
 interface ViewTabsProps {
   profile: BrowserProfile;
   tabs: readonly BrowserPaneTab[];
+  layout: BrowserViewLayout;
   onNewTab(): void;
+}
+
+interface TabListProps {
+  profile: BrowserProfile;
+  tabs: readonly BrowserPaneTab[];
+  label: string;
+  rowExtras?: (tab: BrowserPaneTab) => ReactNode;
+  rowProps?: (tab: BrowserPaneTab) => LiHTMLAttributes<HTMLLIElement>;
 }
 
 const tabElementId = (tab: BrowserPaneTab) => `bv-tab-${tab.id}`;
@@ -27,7 +38,7 @@ function nextIndex(key: string, current: number, count: number): number | null {
   return null;
 }
 
-function TabList({ profile, tabs, label }: Omit<ViewTabsProps, 'onNewTab'> & { label: string }) {
+export function TabList({ profile, tabs, label, rowExtras, rowProps }: TabListProps) {
   const focusableId = tabs.find((tab) => tab.active)?.id ?? tabs[0]?.id ?? null;
   const select = (tab: BrowserPaneTab) =>
     sendViewCommand(profile, { command: 'select', tabId: tab.id });
@@ -48,7 +59,7 @@ function TabList({ profile, tabs, label }: Omit<ViewTabsProps, 'onNewTab'> & { l
       {tabs.map((tab) => {
         const title = tabLabel(tab);
         return (
-          <li key={tab.id} className={tab.active ? 'bv-tab on' : 'bv-tab'}>
+          <li key={tab.id} className={tab.active ? 'bv-tab on' : 'bv-tab'} {...rowProps?.(tab)}>
             <button
               type="button"
               id={tabElementId(tab)}
@@ -64,6 +75,7 @@ function TabList({ profile, tabs, label }: Omit<ViewTabsProps, 'onNewTab'> & { l
               </span>
               <span className="bv-tab-title">{title}</span>
             </button>
+            {rowExtras?.(tab)}
             <button
               type="button"
               className="icon-btn bv-tab-x"
@@ -91,19 +103,11 @@ function TabList({ profile, tabs, label }: Omit<ViewTabsProps, 'onNewTab'> & { l
   );
 }
 
-export function ViewTabs({ profile, tabs, onNewTab }: ViewTabsProps) {
-  const pinned = tabs.filter((tab) => tab.pinned);
+export function ViewTabs({ profile, tabs, layout, onNewTab }: ViewTabsProps) {
   const today = tabs.filter((tab) => !tab.pinned);
   return (
     <>
-      {pinned.length > 0 && (
-        <section className="bv-section" aria-labelledby="bv-pinned">
-          <h2 id="bv-pinned" className="bv-heading">
-            Pinned
-          </h2>
-          <TabList profile={profile} tabs={pinned} label="Pinned tabs" />
-        </section>
-      )}
+      <ViewPinned profile={profile} tabs={tabs} layout={layout} />
       <section className="bv-section" aria-labelledby="bv-today">
         <h2 id="bv-today" className="bv-heading">
           Today
@@ -118,7 +122,12 @@ export function ViewTabs({ profile, tabs, onNewTab }: ViewTabsProps) {
           <span>New tab</span>
           <Keys keys={PANE_KEYS.newTab.shown} />
         </button>
-        <TabList profile={profile} tabs={today} label="Tabs" />
+        <TabList
+          profile={profile}
+          tabs={today}
+          label="Tabs"
+          rowExtras={(tab) => <ViewTabActions profile={profile} tab={tab} layout={layout} />}
+        />
       </section>
     </>
   );
