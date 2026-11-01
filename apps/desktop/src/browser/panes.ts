@@ -311,6 +311,13 @@ export class BrowserPanes {
     this.options.log(line);
   }
 
+  syncZooms(): void {
+    for (const pane of this.chats.values()) {
+      for (const tab of pane.tabs) if (tab.shown) tab.media.syncZoom();
+    }
+    this.noteAll();
+  }
+
   noteAll(): void {
     for (const pane of this.chats.values()) this.changed(pane);
   }

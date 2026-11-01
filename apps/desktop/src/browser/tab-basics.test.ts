@@ -79,6 +79,18 @@ describe('mute', () => {
 });
 
 describe('page zoom', () => {
+  it('puts a showing page back to 100% when saved zooms are cleared', async () => {
+    const saved = memorySaved();
+    const panes = makePanes(saved);
+    const tab = await openTab(panes, DOCS);
+    await run(panes, tab, { command: 'zoom', step: 'in' });
+    tab.shown = true;
+    saved.store.clearZooms('work');
+    panes.syncZooms();
+    expect(contentsOf(tab).zoomFactor).toBe(1);
+    expect(tab.paneTab().zoom).toBe(1);
+  });
+
   it('steps, remembers by origin, and applies on the next load there', async () => {
     const saved = memorySaved();
     const panes = makePanes(saved);

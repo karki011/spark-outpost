@@ -81,6 +81,41 @@ describe('auto-archive', () => {
     expect(tabsToArchive([showing, older, newer], [], 12 * HOUR, 20 * HOUR)).toEqual(['old']);
   });
 
+  it('never archives a side of a split, on the timer or at launch', async () => {
+    const clock = testClock();
+    const memory = memorySaved();
+    const browser = startTestBrowser(memory.store, clock);
+    await invoke('browser-view:start', 'work');
+    await send('work', { command: 'new_tab', url: NEWS });
+    await send('work', { command: 'new_tab', url: DOCS });
+    const tabs = browser.view.panes.tabsOf('work');
+    const news = tabs.find((tab) => tab.currentUrl() === NEWS)!;
+    await send('work', { command: 'split_with', tabId: news.id });
+    clock.time += 13 * HOUR;
+    clock.tick();
+    expect(browser.view.panes.tab('work', news.id)).toBeTruthy();
+
+    const restored = memorySaved({
+      work: {
+        favorites: [],
+        tabs: [
+          { url: DOCS, title: 'Docs', pinned: false, active: true },
+          {
+            url: NEWS,
+            title: 'News',
+            pinned: false,
+            active: false,
+            shownAt: 0,
+            split: { side: 'right', ratio: 0.5 },
+          },
+        ],
+      },
+    });
+    const later = startTestBrowser(restored.store, testClock());
+    await invoke('browser-view:start', 'work');
+    expect(later.view.panes.tabsOf('work').map((tab) => tab.currentUrl())).toContain(NEWS);
+  });
+
   it('moves a tab to Archived on the timer, reopens it, and keeps the list per profile', async () => {
     const clock = testClock();
     const memory = memorySaved();

@@ -32,6 +32,7 @@ export class ViewSpaces {
     private readonly panes: () => BrowserPanes,
     private readonly saved: SavedViewStore,
     private readonly now: () => number,
+    private readonly inSplit: (profile: BrowserProfile, tabId: string) => boolean,
   ) {}
 
   layout(profile: BrowserProfile): ProfileLayout {
@@ -81,7 +82,7 @@ export class ViewSpaces {
         shownAt: meta.shownAt,
         audible: false,
         busy: false,
-        showing: tab.active,
+        showing: tab.active || tab.split !== undefined,
       };
     });
     const due = new Set(
@@ -206,7 +207,7 @@ export class ViewSpaces {
         shownAt: meta.shownAt,
         audible: tab.contents()?.isCurrentlyAudible() ?? false,
         busy: tab.handoff !== null || tab.picking || tab.agentBusy > 0,
-        showing: tab.active,
+        showing: tab.active || tab.shown || this.inSplit(profile, tab.id),
       };
     });
     const due = tabsToArchive(

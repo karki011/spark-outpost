@@ -80,6 +80,23 @@ async function place(tab: PaneTab, bounds: typeof LEFT | null, covered = false) 
 }
 
 describe('split view', () => {
+  it('ends the split when one side moves to another Space, keeping both tabs', async () => {
+    const { first, second } = await twoTabs();
+    await command({ command: 'split_with', tabId: second.id });
+    const home = (await stateOf()) as unknown as { layout: { currentSpaceId: string } };
+    await command({ command: 'space_create', name: 'Other', icon: 'book', color: 'accent' });
+    const made = (await stateOf()) as unknown as { layout: { currentSpaceId: string } };
+    await command({ command: 'space_switch', id: home.layout.currentSpaceId });
+    await command({
+      command: 'tab_to_space',
+      tabId: second.id,
+      spaceId: made.layout.currentSpaceId,
+    });
+    expect((await stateOf()).split).toBeNull();
+    expect(view.panes.tab('work', first.id)).toBeTruthy();
+    expect(view.panes.tab('work', second.id)).toBeTruthy();
+  });
+
   it('shows both tabs at their own bounds and marks both on screen', async () => {
     const { first, second } = await twoTabs();
     await invoke('browser-view:place', { profile: 'work', bounds: LEFT, covered: false });

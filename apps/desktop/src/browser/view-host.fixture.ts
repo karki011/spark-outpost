@@ -54,7 +54,9 @@ export function memorySaved(
     setFavorites: (profile, favorites: readonly BrowserFavorite[]) => {
       profiles[profile] = { ...profiles[profile], favorites: [...favorites] };
     },
-    clearZooms: () => undefined,
+    clearZooms: (profile) => {
+      profiles[profile] = { ...profiles[profile], zooms: {} };
+    },
     setZoom: (profile, origin, zoom) => {
       const zooms = { ...profiles[profile].zooms, [origin]: zoom };
       profiles[profile] = { ...profiles[profile], zooms };

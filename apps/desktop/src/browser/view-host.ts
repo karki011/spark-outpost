@@ -29,6 +29,7 @@ import {
   type BrowserViewSnapshot,
   type BrowserViewState,
   sameFavoritePage,
+  splitHolds,
 } from '@spark-outpost/contracts';
 import { IPC } from '../ipc-channels.ts';
 import { runPaneCommand } from './pane-command.ts';
@@ -60,6 +61,7 @@ export interface ViewHostOptions {
   guards: SessionGuards;
   saved: SavedViewStore;
   zooms(profile: BrowserProfile): PageZooms;
+  zoomsCleared?(): void;
   send(channel: string, payload: unknown): void;
   guarded<T>(
     run: (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<T> | T,
@@ -97,7 +99,12 @@ function profileOf(tab: PaneTab): BrowserProfile {
 
 export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost {
   const restored = new Set<BrowserProfile>();
-  const spaces = new ViewSpaces(() => panes, options.saved, options.now ?? Date.now);
+  const spaces = new ViewSpaces(
+    () => panes,
+    options.saved,
+    options.now ?? Date.now,
+    (profile, tabId) => splitHolds(arrange.state(profile).split, tabId),
+  );
   const arrange = startViewArrange({
     panes: () => panes,
     snapshot: (profile, tabId, image) => {
@@ -203,6 +210,12 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     if (action.command === 'select' && arrange.isPeek(profile, action.tabId)) return;
     if (isLayoutCommand(action)) {
       panes.keepFocus(profile, () => {
+        if (
+          action.command === 'tab_to_space' &&
+          splitHolds(arrange.state(profile).split, action.tabId)
+        ) {
+          arrange.command(profile, { command: 'split_leave' });
+        }
         applyLayoutCommand(spaces.layout(profile), action);
         changed(profile);
       });
@@ -357,6 +370,8 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     IPC.browserViewClearZooms,
     options.guarded((_event, raw) => {
       options.saved.clearZooms(browserProfileSchema.parse(raw));
+      options.zoomsCleared?.();
+      panes.syncZooms();
       return true;
     }),
   );

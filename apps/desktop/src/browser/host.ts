@@ -205,6 +205,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     saved,
     zooms: (profile) =>
       profile === 'work' ? workZooms : savedPageZooms(saved, profile, zoomChanged),
+    zoomsCleared: () => panes.syncZooms(),
     send,
     guarded,
     log: options.log,
