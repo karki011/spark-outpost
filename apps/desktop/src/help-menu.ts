@@ -2,13 +2,7 @@ import type { BaseWindow, MenuItemConstructorOptions } from 'electron';
 import { formatMenu } from './format-menu.ts';
 
 export type MenuPaneShortcut =
-  | 'close_tab'
-  | 'reload'
-  | 'hard_reload'
-  | 'zoom_in'
-  | 'zoom_out'
-  | 'zoom_reset'
-  | 'print';
+  'close_tab' | 'reload' | 'hard_reload' | 'zoom_in' | 'zoom_out' | 'zoom_reset' | 'print';
 
 export interface HelpActions {
   dev: boolean;

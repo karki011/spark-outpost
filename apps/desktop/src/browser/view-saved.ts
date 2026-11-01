@@ -127,8 +127,11 @@ export async function loadSavedView(
     setFavorites: (profile, favorites) =>
       change(profile, { favorites: favorites.slice(0, BROWSER_FAVORITES_MAX) }),
     setZoom: (profile, origin, zoom) => {
-      const { [origin]: _old, ...others } = saved.profiles[profile].zooms;
-      change(profile, { zooms: keptZooms(zoom === 1 ? others : { ...others, [origin]: zoom }) });
+      const others = Object.entries(saved.profiles[profile].zooms).filter(
+        ([known]) => known !== origin,
+      );
+      const kept = zoom === 1 ? others : [...others, [origin, zoom] as const];
+      change(profile, { zooms: keptZooms(Object.fromEntries(kept)) });
     },
     searchEngine: () => saved.searchEngine,
     setSearchEngine: (engine) => {

@@ -6,7 +6,7 @@ order: 227
 summary: Open a page in the chat's Browser pane, let the agent look, browse and click, and point at what you mean.
 ---
 
-Browse with agents. About 2 minutes. Mac only.
+About 2 minutes. Mac only.
 
 ## Open a page
 
@@ -17,7 +17,11 @@ Chat links open here. [Keys](keyboard-shortcuts.md#browser-pane-mac-app).
 
 ## Test a page width
 
-Drag the pane's edge from a 320 px page to nearly full width. **Page width** sets presets. Arrows on the edge step 10 px, **Shift** 50.
+Drag the pane's edge, or pick a **Page width**.
+
+## Handle a tab
+
+**Page tools** (**…**): zoom, kept per site; **Mute Tab**; **Picture in Picture**; **Print…**. Drag tabs to move, or **Shift** and arrows.
 
 ## Let the agent look and browse
 
@@ -37,7 +41,7 @@ Websites follow the [agent mode](agent-mode.md); your own tab always asks. Page 
 1. In **Settings** → **Projects**, select **Set up** beside **Preview**, enter the command and address; save.
 2. In the pane, select **Start preview**.
 
-It runs between turns; agents can't change it.
+Agents can't change it.
 
 ## Point at something
 
@@ -51,6 +55,6 @@ Right-click highlighted text: **Add to chat** or **Ask about this** (**⌘⇧A**
 1. In **Settings** → **Projects**, select **Add** beside **Saved sign-ins**: label, site, **Other sign-in sites**, test account.
 2. Ask the agent to sign in; allow the card once per chat.
 
-Spark fills only approved sites. For eligible HTTPS sites, open **Settings → Projects → Saved sign-ins**, choose **Add this site**, then retry. External HTTP sites cannot be approved. SSO or MFA needs you.
+Spark fills only approved sites. For another HTTPS site, choose **Add this site** in **Settings → Projects → Saved sign-ins**, then retry. SSO or MFA needs you.
 
 **Next:** [Make a Spark](sparks.md)

@@ -54,8 +54,9 @@
   box-shadow: 0 2px 0 var(--accent);
 }
 
-.page-tools .keys {
-  flex-shrink: 0;
+.page-tools button > .keys {
+  display: inline-flex;
+  flex: 0 0 auto;
 }
 
 .page-tools button:disabled {
