@@ -29,6 +29,7 @@ import {
 } from '@spark-outpost/contracts';
 import { IPC } from '../ipc-channels.ts';
 import { runPaneCommand } from './pane-command.ts';
+import { pickRunner } from './pick-runner.ts';
 import type { PageZooms } from './page-zoom.ts';
 import { BrowserPanes } from './panes.ts';
 import { profilePartition, type SessionGuards } from './sessions.ts';
@@ -67,6 +68,7 @@ const CHANNELS = [
   IPC.browserViewPageText,
   IPC.browserViewSearchEngine,
   IPC.browserViewSetSearchEngine,
+  IPC.browserViewClearZooms,
 ];
 
 function profileOf(tab: PaneTab): BrowserProfile {
@@ -134,8 +136,18 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     const event: BrowserViewShortcutEvent = { profile: profileOf(tab), shortcut: pressed };
     options.send(IPC.browserViewShortcut, event);
   };
+  const picker = pickRunner({
+    panes: () => panes,
+    window: options.window,
+    picked: (pick) => options.send(IPC.browserViewPicked, pick),
+    keepsImage: (tab) => profileOf(tab) !== 'personal',
+  });
   const command = (profile: BrowserProfile, action: BrowserCommand) =>
-    runPaneCommand(panes, profile, action, { tabsMax: BROWSER_VIEW_TABS_MAX });
+    runPaneCommand(panes, profile, action, {
+      tabsMax: BROWSER_VIEW_TABS_MAX,
+      pick: picker.pick,
+      closed: (tab) => void picker.stop(tab).catch(() => undefined),
+    });
   const viewCommand = async (profile: BrowserProfile, raw: unknown) => {
     const action = browserViewCommandSchema.parse(raw);
     if (action.command === 'open_favorite') return openFavorite(profile, action.id);
@@ -243,6 +255,13 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     options.guarded((_event, raw) => {
       options.saved.setSearchEngine(browserSearchEngineSchema.parse(raw));
       return options.saved.searchEngine();
+    }),
+  );
+  ipcMain.handle(
+    IPC.browserViewClearZooms,
+    options.guarded((_event, raw) => {
+      options.saved.clearZooms(browserProfileSchema.parse(raw));
+      return true;
     }),
   );
   ipcMain.handle(

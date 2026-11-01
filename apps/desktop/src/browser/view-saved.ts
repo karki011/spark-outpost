@@ -96,6 +96,7 @@ export interface SavedViewStore {
   searchEngine(): BrowserSearchEngine;
   setSearchEngine(engine: BrowserSearchEngine): void;
   setZoom(profile: BrowserProfile, origin: string, zoom: number): void;
+  clearZooms(profile: BrowserProfile): void;
 }
 
 export async function loadSavedView(
@@ -133,6 +134,7 @@ export async function loadSavedView(
       const kept = zoom === 1 ? others : [...others, [origin, zoom] as const];
       change(profile, { zooms: keptZooms(Object.fromEntries(kept)) });
     },
+    clearZooms: (profile) => change(profile, { zooms: {} }),
     searchEngine: () => saved.searchEngine,
     setSearchEngine: (engine) => {
       saved = { ...saved, searchEngine: engine };

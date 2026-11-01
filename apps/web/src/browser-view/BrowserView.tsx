@@ -40,7 +40,8 @@ import type { BarAction, BarMode } from './command-bar-model.ts';
 import { HandToChat } from './HandToChat.tsx';
 import { PageChatDock, type DockRequest } from './PageChatDock.tsx';
 import type { PageRef } from './page-chat.ts';
-import { pageRef, usePageIntents } from './page-intents.ts';
+import { pageRef, usePageIntents, usePagePicks } from './page-intents.ts';
+import { ViewSelect } from './ViewSelect.tsx';
 import { ViewFavorites } from './ViewFavorites.tsx';
 import { ViewDownloads } from './ViewDownloads.tsx';
 import { ViewTabs } from './ViewTabs.tsx';
@@ -146,12 +147,27 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
     tab && tab.url !== '' && tab.error === null ? pageRef(profile, tab) : null;
   const openDock = (change: Partial<DockRequest> = {}) => {
     setAsking(null);
-    setDock({ key: Date.now(), page: shownPage(), selection: null, link: null, ...change });
+    setDock({
+      key: Date.now(),
+      page: shownPage(),
+      selection: null,
+      link: null,
+      picks: [],
+      ...change,
+    });
   };
   const openAsk = () => {
     setDock(null);
     setAsking({ key: Date.now(), first: shownPage() });
   };
+  usePagePicks(profile, (pick) => {
+    setAsking(null);
+    setDock((open) =>
+      open
+        ? { ...open, picks: [...open.picks, pick] }
+        : { key: Date.now(), page: null, selection: null, link: null, picks: [pick] },
+    );
+  });
   usePageIntents(profile, tabs, (page, intent) =>
     openDock({ page, selection: intent.selection, link: intent.link }),
   );
@@ -241,7 +257,13 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
         <div className="bv-bar">
           <ProfileBadge profile={profile} />
           <PageHost url={tab?.url ?? ''} />
-          <span className="bv-title">{tab && tab.url !== '' ? tabLabel(tab) : ''}</span>
+          {tab?.picking ? (
+            <span className="bv-title" role="status">
+              Click to select, ⇧ click for more, ↑↓ parent or child, drag a box. Esc finishes.
+            </span>
+          ) : (
+            <span className="bv-title">{tab && tab.url !== '' ? tabLabel(tab) : ''}</span>
+          )}
           <ZoomBadge tab={tab} commands={commands} />
           <button
             type="button"
@@ -274,6 +296,7 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
             }}
             onProblem={setProblem}
           />
+          <ViewSelect profile={profile} tab={tab} disabled={blank} />
           <PageTools tab={tab} commands={commands} onNotice={setProblem} />
           <ToolButton
             label="Open developer tools (⌥⌘I)"
@@ -311,6 +334,9 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
             setDock(null);
             onOpenChat(chatId);
           }}
+          onRemovePick={(pick) =>
+            setDock((open) => open && { ...open, picks: open.picks.filter((p) => p !== pick) })
+          }
           onClose={() => setDock(null)}
         />
       )}

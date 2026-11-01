@@ -92,6 +92,8 @@ export interface DesktopBrowserView {
   handToChat(request: BrowserHandToChat): Promise<unknown>;
   fromChat(request: BrowserToView): Promise<unknown>;
   pageText(profile: BrowserProfile, tabId: string): Promise<unknown>;
+  clearZooms(profile: BrowserProfile): Promise<unknown>;
+  onPicked(callback: (pick: unknown) => void): Unsubscribe;
   downloads(): Promise<unknown>;
   downloadAct(request: BrowserDownloadAction): Promise<unknown>;
   onDownloads(callback: (list: unknown) => void): Unsubscribe;

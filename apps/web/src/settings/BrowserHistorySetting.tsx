@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { BrowserHistoryRange, BrowserProfile } from '@spark-outpost/contracts';
 import { browserHistoryApi, browserHistoryKey } from '../api/browser-history.ts';
+import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { countLabel } from '../ui/count-label.ts';
 
@@ -28,13 +29,21 @@ function profileOf(id: string): BrowserProfile | null {
   return id === 'personal' || id === 'work' ? id : null;
 }
 
+function clearSavedZooms(profile: 'both' | BrowserProfile): void {
+  const profiles: BrowserProfile[] = profile === 'both' ? ['personal', 'work'] : [profile];
+  for (const each of profiles) void desktopBrowserView()?.clearZooms(each);
+}
+
 export function BrowserHistorySetting() {
   const queryClient = useQueryClient();
   const [range, setRange] = useState<BrowserHistoryRange>('hour');
   const [profile, setProfile] = useState<'both' | BrowserProfile>('both');
   const clear = useMutation({
     mutationFn: () => browserHistoryApi.clear({ profile: profileOf(profile), range }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: browserHistoryKey }),
+    onSuccess: () => {
+      if (range === 'all') clearSavedZooms(profile);
+      return queryClient.invalidateQueries({ queryKey: browserHistoryKey });
+    },
   });
   return (
     <div className="set-sites" role="group" aria-label={CLEAR_HISTORY_LABEL}>

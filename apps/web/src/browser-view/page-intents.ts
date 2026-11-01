@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import {
+  browserPickSchema,
   browserViewIntentSchema,
   type BrowserPaneTab,
+  type BrowserPick,
   type BrowserProfile,
   type BrowserViewIntent,
 } from '@spark-outpost/contracts';
@@ -31,6 +33,21 @@ export function usePageIntents(
       const tab = latest.current.tabs.find((candidate) => candidate.id === intent.data.tabId);
       const page = tab && intent.data.link === null ? pageRef(profile, tab) : null;
       latest.current.open(page, intent.data);
+    });
+  }, [profile]);
+}
+
+export function usePagePicks(profile: BrowserProfile, add: (pick: BrowserPick) => void): void {
+  const latest = useRef(add);
+  useEffect(() => {
+    latest.current = add;
+  });
+  useEffect(() => {
+    const view = desktopBrowserView();
+    if (!view) return;
+    return view.onPicked((raw) => {
+      const pick = browserPickSchema.safeParse(raw);
+      if (pick.success && pick.data.chatId === profile) latest.current(pick.data);
     });
   }, [profile]);
 }

@@ -103,6 +103,8 @@ export const IPC = {
   browserViewHand: 'browser-view:hand',
   browserViewIntent: 'browser-view:intent',
   browserViewPageText: 'browser-view:page-text',
+  browserViewPicked: 'browser-view:picked',
+  browserViewClearZooms: 'browser-view:clear-zooms',
   browserDownloads: 'browser-downloads:list',
   browserDownloadsChanged: 'browser-downloads:changed',
   browserDownloadAct: 'browser-downloads:act',

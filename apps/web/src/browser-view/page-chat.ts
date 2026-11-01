@@ -1,12 +1,13 @@
 import {
   browserPageTextSchema,
   type BrowserPageText,
+  type BrowserPick,
   type BrowserProfile,
   type InvolvementLevel,
 } from '@spark-outpost/contracts';
 import { uploadAttachment } from '../api/attachments.ts';
 import { api, newDraftId } from '../api/client.ts';
-import { evidence, pageLines } from '../browser/pick-files.ts';
+import { evidence, pageLines, pickFiles } from '../browser/pick-files.ts';
 import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
 
 export interface PageRef {
@@ -20,6 +21,7 @@ export interface PageChatStart {
   page: PageRef | null;
   withPageText: boolean;
   selection: string | null;
+  picks: readonly BrowserPick[];
   text: string;
   projectId: string | null;
   level: InvolvementLevel;
@@ -57,8 +59,9 @@ export async function startPageChat(start: PageChatStart): Promise<string> {
     const note = selectionNote(start.page, start.selection);
     files.push(new File([note], 'selected-text.txt', { type: 'text/plain' }));
   }
+  files.push(...start.picks.flatMap(pickFiles));
   const uploaded = await Promise.all(
-    files.map((file) => uploadAttachment(file, { mediaType: 'text/plain' })),
+    files.map((file) => uploadAttachment(file, { mediaType: file.type })),
   );
   const chatId = newDraftId();
   await api.updateChatSettings(chatId, {
