@@ -401,6 +401,8 @@ export class BrowserPanes {
           tab.currentUrl() !== BLANK;
         if (visible) view.setBounds(this.zoomed(placement.bounds!));
         view.setVisible(visible);
+        if (visible) tab.pickOverlay?.setBounds(this.zoomed(placement.bounds!));
+        tab.pickOverlay?.setVisible(visible);
         tab.shown = visible;
       }
     }

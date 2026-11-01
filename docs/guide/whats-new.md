@@ -12,6 +12,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed             | What to do                                                               |
 | ------------------------ | ------------------------------------------------------------------------ |
+| Selecting on a page      | Glides; ⇧ click picks several.                                           |
 | Steered turns            | No longer hang after background work.                                    |
 | Long chat lists          | Scroll to load chats past 500.                                           |
 | Status dots              | Rest when Spark idles; closed panels stay still.                         |

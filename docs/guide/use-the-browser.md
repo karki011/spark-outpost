@@ -6,7 +6,7 @@ order: 227
 summary: Open a page in the chat's Browser pane, let the agent look, browse and click, and point at what you mean.
 ---
 
-Browse with agents. About 2 minutes. Mac only.
+About 2 minutes. Mac only.
 
 ## Open a page
 
@@ -37,11 +37,11 @@ Websites follow the [agent mode](agent-mode.md); your own tab always asks. Page 
 1. In **Settings** → **Projects**, select **Set up** beside **Preview**, enter the command and address; save.
 2. In the pane, select **Start preview**.
 
-It runs between turns; agents can't change it.
+It runs between turns.
 
 ## Point at something
 
-1. Select **Select an element for the chat** and click it, or **Select a region for the chat** and drag a box.
+1. Select **Select an element for the chat** and click it, or **Select a region for the chat** and drag a box. **⇧** click picks several; **Esc** finishes.
 2. Send the **Selected:** chip.
 
 Right-click highlighted text: **Add to chat** or **Ask about this** (**⌘⇧A**).

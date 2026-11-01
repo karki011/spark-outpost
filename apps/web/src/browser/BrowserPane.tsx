@@ -237,7 +237,7 @@ export function BrowserPane({
         )}
         {tab?.picking ? (
           <p className="bp-picking" role="status">
-            Click or drag a box. Esc cancels.
+            Click to select, ⇧ click for more, ↑↓ parent or child, drag a box. Esc finishes.
           </p>
         ) : (
           <AddressBar key={tabKey} commands={chatPaneCommands(chatId)} tab={tab} />

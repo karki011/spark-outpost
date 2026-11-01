@@ -27,7 +27,8 @@ import { connectWorkerBridge, type BridgePort, type WorkerBridge } from './bridg
 import { startDownloadsHost, type DownloadsHost } from './downloads-host.ts';
 import { runPaneCommand } from './pane-command.ts';
 import { BrowserPanes } from './panes.ts';
-import { startPick, type PickSession } from './picker.ts';
+import { openPickOverlay } from './pick-overlay.ts';
+import { startPick, type PickSession } from './pick-session.ts';
 import { loadRecentOrigins } from './recent-origins.ts';
 import {
   readPageSelection,
@@ -178,26 +179,36 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
   const pick = async (tab: PaneTab, mode: 'element' | 'region' | 'off') => {
     await stopPick(tab);
     if (mode === 'off') return;
+    const window = options.window();
+    if (!window) return;
     const { cdp, view } = await tab.wake();
+    const { view: overlay, surface } = await openPickOverlay(window, view, view.getBounds());
+    tab.pickOverlay = overlay;
     tab.picking = true;
     panes.noteChange(tab.chatId);
-    view.webContents.focus();
+    panes.layout();
+    overlay.webContents.focus();
     const session = await startPick(
       cdp,
+      surface,
       mode,
-      (picked) => {
-        picks.delete(tab.id);
-        tab.picking = false;
-        panes.noteChange(tab.chatId);
-        if (!picked) return;
-        const result: BrowserPick = {
-          chatId: tab.chatId,
-          url: tab.currentUrl().slice(0, 4096),
-          title: tab.currentTitle().slice(0, 300),
-          ...picked,
-        };
-        send(IPC.browserPicked, result);
-        options.window()?.webContents.focus();
+      {
+        picked: (picked) => {
+          const result: BrowserPick = {
+            chatId: tab.chatId,
+            url: tab.currentUrl().slice(0, 4096),
+            title: tab.currentTitle().slice(0, 300),
+            ...picked,
+          };
+          send(IPC.browserPicked, result);
+        },
+        ended: () => {
+          picks.delete(tab.id);
+          tab.pickOverlay = null;
+          tab.picking = false;
+          panes.noteChange(tab.chatId);
+          options.window()?.webContents.focus();
+        },
       },
       tab.filled,
     );

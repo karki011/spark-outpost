@@ -106,6 +106,7 @@ export class PaneTab {
   active = false;
   shown = false;
   picking = false;
+  pickOverlay: WebContentsView | null = null;
   driving = false;
   lastAction: string | null = null;
   lastUsed = Date.now();
