@@ -9,7 +9,13 @@ const PNG_MAX_BYTES = 3_500_000;
 const JPEG_QUALITY = 82;
 
 interface LayoutMetrics {
-  cssVisualViewport: { pageX: number; pageY: number; clientWidth: number; clientHeight: number };
+  cssVisualViewport: {
+    pageX: number;
+    pageY: number;
+    clientWidth: number;
+    clientHeight: number;
+    zoom?: number;
+  };
   cssContentSize: { width: number; height: number };
 }
 
@@ -55,6 +61,7 @@ function encoded(image: NativeImage): Pick<Shot, 'data' | 'mediaType'> {
 export async function capturePage(cdp: Cdp, request: ShotRequest): Promise<Shot> {
   const metrics = await cdp.send<LayoutMetrics>('Page.getLayoutMetrics');
   const viewport = metrics.cssVisualViewport;
+  const pageZoom = viewport.zoom ?? 1;
   const scroll = { x: viewport.pageX, y: viewport.pageY };
   const visible = { x: 0, y: 0, width: viewport.clientWidth, height: viewport.clientHeight };
   const whole = {
@@ -71,10 +78,10 @@ export async function capturePage(cdp: Cdp, request: ShotRequest): Promise<Shot>
     format: 'png',
     captureBeyondViewport: true,
     clip: {
-      x: area.x + scroll.x,
-      y: area.y + scroll.y,
-      width: area.width,
-      height: area.height,
+      x: (area.x + scroll.x) * pageZoom,
+      y: (area.y + scroll.y) * pageZoom,
+      width: area.width * pageZoom,
+      height: area.height * pageZoom,
       scale: 1,
     },
   });

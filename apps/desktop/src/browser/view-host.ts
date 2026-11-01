@@ -29,6 +29,7 @@ import {
 } from '@spark-outpost/contracts';
 import { IPC } from '../ipc-channels.ts';
 import { runPaneCommand } from './pane-command.ts';
+import type { PageZooms } from './page-zoom.ts';
 import { BrowserPanes } from './panes.ts';
 import { profilePartition, type SessionGuards } from './sessions.ts';
 import type { PaneTab } from './tab.ts';
@@ -42,6 +43,7 @@ export interface ViewHostOptions {
   blockedPorts(): ReadonlySet<number>;
   guards: SessionGuards;
   saved: SavedViewStore;
+  zooms(profile: BrowserProfile): PageZooms;
   send(channel: string, payload: unknown): void;
   guarded<T>(
     run: (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<T> | T,
@@ -197,6 +199,7 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     guards: options.guards,
     visited: (tab, url) => history.visited(tab, url, ''),
     titled: (tab, title) => history.titled(tab, title),
+    pageZooms: (key) => options.zooms(browserProfileSchema.parse(key)),
   });
 
   ipcMain.handle(

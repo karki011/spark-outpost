@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 
 import { createPortal } from 'react-dom';
 import { PanelResizer } from '../ui/PanelResizer.tsx';
 import type { PanelWidthLimits } from '../ui/panel-width.ts';
-import { usePaneRoom } from './pane-room.ts';
+import { pageScale, usePaneRoom } from './pane-room.ts';
 import { PANE_BIG_STEP, PANE_STEP, pageWidth, paneRange, shownPaneWidth } from './pane-width.ts';
 
 const READOUT_MS = 1200;
@@ -61,7 +61,10 @@ export function PaneResizer({ label, page, width, limits, onWidth }: PaneResizer
   });
   const shown = shownPaneWidth(width ?? limits.fallback, range);
   const [readout, showPage] = useReadout(handle);
-  const pageOf = (pane: number) => pageWidth(pane, inset, zoom);
+  const pageOf = (pane: number) => {
+    const panel = handle.current?.closest<HTMLElement>('.wp');
+    return pageWidth(pane, inset, panel ? pageScale(panel, zoom) : zoom);
+  };
   const changed = useRef(width);
 
   useEffect(() => {

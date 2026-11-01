@@ -17,6 +17,11 @@ function appZoom(): number {
   return zoom !== undefined && Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
 }
 
+export function pageScale(panel: HTMLElement, zoom: number): number {
+  const page = panel.querySelector<HTMLElement>('#bp-view');
+  return zoom / (Number(page?.dataset.pageZoom) || 1);
+}
+
 function pageInset(panel: HTMLElement): number {
   const inner = panel.querySelector<HTMLElement>(':scope > .wp-in');
   const page = panel.querySelector<HTMLElement>('#bp-view');

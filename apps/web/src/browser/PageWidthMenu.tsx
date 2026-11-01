@@ -6,7 +6,7 @@ import { useMenuPosition } from '../ui/use-menu-position.ts';
 import { usePopover } from '../ui/use-popover.ts';
 import { holdTransitions, releaseAfterPaint } from '../ui/width-drag.ts';
 import { PageWidthIcon } from './BrowserIcons.tsx';
-import { measurePane, type PaneMeasure } from './pane-room.ts';
+import { measurePane, pageScale, type PaneMeasure } from './pane-room.ts';
 import {
   PAGE_WIDTH_PRESETS,
   pageWidth,
@@ -32,7 +32,8 @@ interface Opened extends PaneMeasure {
 function measured(anchor: HTMLElement): Opened | null {
   const pane = anchor.closest<HTMLElement>('.wp');
   if (!pane) return null;
-  const measure = measurePane(pane);
+  const room = measurePane(pane);
+  const measure = { ...room, zoom: pageScale(pane, room.zoom) };
   const shown = shownPaneWidth(pane.getBoundingClientRect().width, measure.range);
   return { ...measure, page: pageWidth(shown, measure.inset, measure.zoom), pane, anchor };
 }
@@ -73,7 +74,7 @@ export function PageWidthMenu({ setWidth, onNotice }: PageWidthMenuProps) {
     const { pane, anchor } = opened;
     anchor.focus();
     const { range, inset, zoom } = measurePane(pane);
-    const fit = presetPaneWidth(page, inset, range, zoom);
+    const fit = presetPaneWidth(page, inset, range, pageScale(pane, zoom));
     if (!fit.ok) {
       onNotice(presetNotice(page as number, fit.widest));
       return;

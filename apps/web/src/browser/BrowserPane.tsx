@@ -35,6 +35,7 @@ import {
   runPaneShortcut,
   usePageShortcuts,
 } from './pane-shortcuts.ts';
+import { PageTools, ZoomBadge } from './PageTools.tsx';
 import { PageWidthMenu } from './PageWidthMenu.tsx';
 import { PreviewBadge, PreviewStart } from './PreviewControls.tsx';
 import { tabLabel } from './tab-label.ts';
@@ -117,6 +118,7 @@ export function BrowserPane({
   setWidth = null,
 }: BrowserPaneProps) {
   const { chatId } = home;
+  const commands = chatPaneCommands(chatId);
   const browser = useChatBrowser(chatId);
   const view = useRef<HTMLDivElement>(null);
   const section = useRef<HTMLElement>(null);
@@ -144,7 +146,7 @@ export function BrowserPane({
     copiedUrl: () => setCopied((count) => count + 1),
   };
   const runShortcut = (shortcut: Parameters<typeof runPaneShortcut>[2]) =>
-    runPaneShortcut(chatPaneCommands(chatId), browser.tabs, shortcut, shortcutUi);
+    runPaneShortcut(commands, browser.tabs, shortcut, shortcutUi);
   usePageShortcuts(chatId, runShortcut, shown);
   const shortcutAt = useRef(0);
   const tabKey = `${tab?.id ?? ''}:${tab?.url ?? ''}`;
@@ -240,8 +242,9 @@ export function BrowserPane({
             Click or drag a box. Esc cancels.
           </p>
         ) : (
-          <AddressBar key={tabKey} commands={chatPaneCommands(chatId)} tab={tab} />
+          <AddressBar key={tabKey} commands={commands} tab={tab} />
         )}
+        <ZoomBadge tab={tab} commands={commands} />
         <ToolButton
           label={tab?.picking ? 'Stop selecting' : `Select an element for ${destination}`}
           disabled={blank}
@@ -264,6 +267,11 @@ export function BrowserPane({
         >
           <DevtoolsIcon />
         </ToolButton>
+        <PageTools
+          tab={tab}
+          commands={commands}
+          onNotice={(notice) => setPaneNotice(chatId, notice)}
+        />
         {setWidth && (
           <PageWidthMenu setWidth={setWidth} onNotice={(notice) => setPaneNotice(chatId, notice)} />
         )}
@@ -331,7 +339,7 @@ export function BrowserPane({
         <PreviewBadge chatId={chatId} />
       </div>
       {tab?.handoff && <HandoffBanner key={tab.handoff.approvalId} handoff={tab.handoff} />}
-      <div className="bp-view" id="bp-view" ref={view}>
+      <div className="bp-view" id="bp-view" data-page-zoom={tab?.zoom ?? 1} ref={view}>
         {blank && <StartPage chatId={chatId} tab={tab} />}
         {!blank && browser.snapshot && (
           <img className="bp-snapshot" src={browser.snapshot} alt="" />

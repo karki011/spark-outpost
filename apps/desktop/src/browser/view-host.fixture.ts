@@ -5,6 +5,7 @@ import {
   type BrowserSearchEngine,
 } from '@spark-outpost/contracts';
 import { ipc } from './electron-ipc.fixture.ts';
+import { savedPageZooms } from './page-zoom.ts';
 import { BrowserPanes } from './panes.ts';
 import { BROWSER_PARTITION } from './request-guard.ts';
 import type { SessionGuards } from './sessions.ts';
@@ -28,8 +29,8 @@ export const panesOptions = {
 
 export function memorySaved(start: Partial<Record<BrowserProfile, SavedProfile>> = {}) {
   const profiles: Record<BrowserProfile, SavedProfile> = {
-    personal: start.personal ?? { tabs: [], favorites: [] },
-    work: start.work ?? { tabs: [], favorites: [] },
+    personal: start.personal ?? { tabs: [], favorites: [], zooms: {} },
+    work: start.work ?? { tabs: [], favorites: [], zooms: {} },
   };
   let engine: BrowserSearchEngine = DEFAULT_SEARCH_ENGINE;
   const store: SavedViewStore = {
@@ -39,6 +40,10 @@ export function memorySaved(start: Partial<Record<BrowserProfile, SavedProfile>>
     },
     setFavorites: (profile, favorites: readonly BrowserFavorite[]) => {
       profiles[profile] = { ...profiles[profile], favorites: [...favorites] };
+    },
+    setZoom: (profile, origin, zoom) => {
+      const zooms = { ...profiles[profile].zooms, [origin]: zoom };
+      profiles[profile] = { ...profiles[profile], zooms };
     },
     searchEngine: () => engine,
     setSearchEngine: (next) => {
@@ -70,6 +75,7 @@ export function startTestBrowser(saved: SavedViewStore = memorySaved().store): T
     blockedPorts: () => new Set([32682]),
     guards,
     saved,
+    zooms: (profile) => savedPageZooms(saved, profile, () => undefined),
     send: (channel, payload) => sent.push({ channel, payload }),
     guarded:
       (run) =>

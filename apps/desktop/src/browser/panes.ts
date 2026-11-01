@@ -4,6 +4,7 @@ import {
   BROWSER_TABS_MAX,
   browserOrigin,
   classifyBrowserUrl,
+  movedTabs,
   type BrowserBounds,
   type BrowserClosedTab,
   type BrowserPaneState,
@@ -12,6 +13,7 @@ import {
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
 import { CLIPBOARD_WRITE, pagePermissionAllowed, type InputMarks } from './clipboard-permission.ts';
+import type { PageZooms } from './page-zoom.ts';
 import { BROWSER_PARTITION, requestAllowed, type GuardFacts } from './request-guard.ts';
 import type { SendsTo } from './selection-menu.ts';
 import { browserSession, devtoolsSession, type SessionGuards } from './sessions.ts';
@@ -34,6 +36,7 @@ export interface PanesOptions {
   guards?: SessionGuards;
   visited?(tab: PaneTab, url: string, sameDocument: boolean): void;
   titled?(tab: PaneTab, title: string): void;
+  pageZooms?(key: string): PageZooms;
 }
 
 export interface ChatHome {
@@ -176,6 +179,7 @@ export class BrowserPanes {
         found: (owner, active, matches) => this.options.found(owner, active, matches),
         devtoolsSession: () =>
           devtoolsSession({ blockedPorts: this.options.blockedPorts, log: this.options.log }),
+        zoomOf: (url) => this.options.pageZooms?.(chatId).of(url) ?? 1,
       },
     );
     pane.tabs.push(tab);
@@ -270,6 +274,25 @@ export class BrowserPanes {
       this.options.log(`Could not close a browser tab cleanly: ${(error as Error).message}`);
     }
     this.layout();
+  }
+
+  move(chatId: string, tabId: string, before: string | null): void {
+    const pane = this.chats.get(chatId);
+    if (!pane) return;
+    pane.tabs = movedTabs(pane.tabs, tabId, before);
+    this.changed(pane);
+  }
+
+  pageZooms(chatId: string): PageZooms | null {
+    return this.options.pageZooms?.(chatId) ?? null;
+  }
+
+  logLine(line: string): void {
+    this.options.log(line);
+  }
+
+  noteAll(): void {
+    for (const pane of this.chats.values()) this.changed(pane);
   }
 
   resync(chatId: string): void {
@@ -400,6 +423,7 @@ export class BrowserPanes {
           tab.active &&
           tab.currentUrl() !== BLANK;
         if (visible) view.setBounds(this.zoomed(placement.bounds!));
+        if (visible && !tab.shown) tab.media.syncZoom();
         view.setVisible(visible);
         tab.shown = visible;
       }

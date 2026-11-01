@@ -1,0 +1,64 @@
+.tab-audio,
+.bp-zoom {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+  min-height: 28px;
+  min-width: 28px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.tab-audio:hover,
+.bp-zoom:hover,
+.tab-audio[aria-pressed='true'] {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.tab-audio svg,
+.bp-zoom svg {
+  width: 14px;
+  height: 14px;
+}
+
+.bp-tab:has(.tab-audio) {
+  max-width: 280px;
+}
+
+.bp-tab-main,
+.bv-tab-main {
+  touch-action: none;
+}
+
+.tab-drag {
+  opacity: 0.6;
+}
+
+.bp-tab.tab-drop-before {
+  box-shadow: -2px 0 0 var(--accent);
+}
+
+.bp-tab.tab-drop-after {
+  box-shadow: 2px 0 0 var(--accent);
+}
+
+.bv-tab.tab-drop-before {
+  box-shadow: 0 -2px 0 var(--accent);
+}
+
+.bv-tab.tab-drop-after {
+  box-shadow: 0 2px 0 var(--accent);
+}
+
+.page-tools .keys {
+  flex-shrink: 0;
+}
+
+.page-tools button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}

@@ -21,6 +21,7 @@ import { capturePageLogs, type PageLogs } from './page-capture.ts';
 import { RefMap, tabRefNumbers } from './ref-map.ts';
 import { navigationAllowed } from './request-guard.ts';
 import { isAddShortcut, isDevtoolsShortcut } from './selection-menu.ts';
+import { TabMedia } from './tab-media.ts';
 import type { TabFacts } from './tab-rules.ts';
 
 export interface TabHooks {
@@ -38,6 +39,7 @@ export interface TabHooks {
   paneShortcut(tab: PaneTab, shortcut: BrowserShortcut): void;
   found(tab: PaneTab, active: number, matches: number): void;
   devtoolsSession(): Session;
+  zoomOf(url: string): number;
 }
 
 export interface TabInit {
@@ -71,6 +73,10 @@ const MENU_SHORTCUTS: ReadonlySet<BrowserShortcut> = new Set([
   'close_tab',
   'reload',
   'hard_reload',
+  'zoom_in',
+  'zoom_out',
+  'zoom_reset',
+  'print',
 ]);
 
 function paneShortcutOf(input: Input): BrowserShortcut | null {
@@ -93,6 +99,7 @@ export class PaneTab {
   readonly chatId: string;
   readonly refs = new RefMap(tabRefNumbers);
   readonly filled = new Set<number>();
+  readonly media: TabMedia;
   owner: BrowserTabOwner;
   runId: string | null;
   pinned = false;
@@ -129,6 +136,7 @@ export class PaneTab {
     this.url = init.url;
     this.title = init.title ?? '';
     this.hooks = hooks;
+    this.media = new TabMedia({ changed: hooks.changed, zoomOf: hooks.zoomOf });
   }
 
   currentUrl(): string {
@@ -230,6 +238,9 @@ export class PaneTab {
       picking: this.picking,
       lastAction: this.lastAction,
       error: this.error,
+      audible: this.media.audible,
+      muted: this.media.muted,
+      zoom: this.hooks.zoomOf(url),
     };
   }
 
@@ -331,6 +342,7 @@ export class PaneTab {
       this.hooks.addShortcut(this);
     });
     contents.on('render-process-gone', () => this.note({ error: 'The page stopped working.' }));
+    this.media.attach(contents);
     const cdp = attachCdp(contents);
     const logs = await capturePageLogs(cdp);
     await cdp.send('Page.enable');
@@ -439,6 +451,7 @@ export class PaneTab {
     if (!live) return;
     this.url = this.currentUrl();
     this.closeDevtools();
+    this.media.detach();
     this.live = null;
     this.shown = false;
     this.loading = false;

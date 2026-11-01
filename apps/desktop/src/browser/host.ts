@@ -26,6 +26,7 @@ import { runBrowserOp } from './agent-ops.ts';
 import { connectWorkerBridge, type BridgePort, type WorkerBridge } from './bridge.ts';
 import { startDownloadsHost, type DownloadsHost } from './downloads-host.ts';
 import { runPaneCommand } from './pane-command.ts';
+import { savedPageZooms } from './page-zoom.ts';
 import { BrowserPanes } from './panes.ts';
 import { startPick, type PickSession } from './picker.ts';
 import { loadRecentOrigins } from './recent-origins.ts';
@@ -113,9 +114,15 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
         panes.tabOfContents(contents) ?? view?.panes.tabOfContents(contents) ?? null,
       ) ?? false,
   };
+  const zoomChanged = () => {
+    panes.noteAll();
+    view?.panes.noteAll();
+  };
+  const workZooms = savedPageZooms(saved, 'work', zoomChanged);
   const panes: BrowserPanes = new BrowserPanes({
     window: options.window,
     partition: () => BROWSER_PARTITION,
+    pageZooms: () => workZooms,
     guards,
     blockedPorts: () => blocked,
     stateChanged: (state) => send(IPC.browserStateChanged, state),
@@ -228,6 +235,8 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     blockedPorts: () => blocked,
     guards,
     saved,
+    zooms: (profile) =>
+      profile === 'work' ? workZooms : savedPageZooms(saved, profile, zoomChanged),
     send,
     guarded,
     log: options.log,

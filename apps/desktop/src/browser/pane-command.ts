@@ -1,6 +1,12 @@
 import { clipboard } from 'electron';
-import { addressToUrl, type BrowserClosedTab, type BrowserCommand } from '@spark-outpost/contracts';
+import {
+  addressToUrl,
+  type BrowserClosedTab,
+  type BrowserCommand,
+  type BrowserPipResult,
+} from '@spark-outpost/contracts';
 import type { BrowserPanes } from './panes.ts';
+import { isTabBasic, runTabBasic } from './tab-basics.ts';
 import type { PaneTab } from './tab.ts';
 
 export interface PaneCommandHooks {
@@ -27,7 +33,7 @@ export async function runPaneCommand(
   key: string,
   action: BrowserCommand,
   hooks: PaneCommandHooks,
-): Promise<BrowserClosedTab | undefined> {
+): Promise<BrowserClosedTab | BrowserPipResult | undefined> {
   if (action.command === 'new_tab') {
     const url = action.url ? addressToUrl(action.url) : null;
     const tab = panes.createTab(key, { owner: 'user', runId: null, url: 'about:blank' });
@@ -47,6 +53,7 @@ export async function runPaneCommand(
     panes.resync(key);
     return;
   }
+  if (isTabBasic(action)) return runTabBasic(panes, key, tab, action);
   if (action.command === 'navigate') await navigate(panes, key, tab, action.url);
   else if (action.command === 'select') panes.keepFocus(key, () => panes.select(key, tab.id));
   else if (action.command === 'close') {

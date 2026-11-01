@@ -6,6 +6,7 @@ import {
   type BrowserCommand,
   type BrowserPaneTab,
   type BrowserShortcut,
+  type BrowserZoomStep,
 } from '@spark-outpost/contracts';
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 import type { ShortcutKeys } from '../ui/Keys.tsx';
@@ -32,17 +33,23 @@ export const PANE_KEYS = {
   reload: paneKeys('R'),
   newTab: paneKeys('T'),
   close: paneKeys('W'),
+  zoomIn: paneKeys('+'),
+  zoomOut: paneKeys('-'),
+  zoomReset: paneKeys('0'),
+  print: paneKeys('P'),
 };
 
 export interface PaneCommands {
   send(command: BrowserCommand): void;
   close(tabId: string): void;
+  ask(command: BrowserCommand): Promise<unknown>;
 }
 
 export function chatPaneCommands(chatId: string): PaneCommands {
   return {
     send: (command) => sendBrowserCommand(chatId, command),
     close: (tabId) => void closeBrowserTab(chatId, tabId),
+    ask: async (command) => desktopBrowser()?.command(chatId, command),
   };
 }
 
@@ -61,6 +68,12 @@ const HISTORY: Partial<Record<BrowserShortcut, 'reload' | 'hard_reload' | 'back'
   forward: 'forward',
 };
 
+const ZOOM: Partial<Record<BrowserShortcut, BrowserZoomStep>> = {
+  zoom_in: 'in',
+  zoom_out: 'out',
+  zoom_reset: 'reset',
+};
+
 export function runPaneShortcut(
   commands: PaneCommands,
   tabs: readonly BrowserPaneTab[],
@@ -71,6 +84,7 @@ export function runPaneShortcut(
   const tab = tabs[current] ?? null;
   const page = tab !== null && tab.url !== '';
   const history = HISTORY[shortcut];
+  const step = ZOOM[shortcut];
   if (shortcut === 'new_tab') commands.send({ command: 'new_tab', url: null });
   else if (shortcut === 'reopen_tab') commands.send({ command: 'reopen' });
   else if (shortcut === 'focus_address') ui.focusAddress();
@@ -86,6 +100,10 @@ export function runPaneShortcut(
     if (page && tab.error === null) ui.openFind();
   } else if (history) {
     if (page) commands.send({ command: history, tabId: tab.id });
+  } else if (step) {
+    if (page) commands.send({ command: 'zoom', tabId: tab.id, step });
+  } else if (shortcut === 'print') {
+    if (page && !tab.driving) commands.send({ command: 'print', tabId: tab.id });
   } else {
     const index = shortcutTabIndex(shortcut, current, tabs.length);
     const target = index === null ? null : tabs[index];

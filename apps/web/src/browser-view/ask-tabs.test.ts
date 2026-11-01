@@ -20,6 +20,9 @@ function tab(id: string, title: string, url: string): BrowserPaneTab {
     picking: false,
     lastAction: null,
     error: null,
+    audible: false,
+    muted: false,
+    zoom: 1,
   };
 }
 
