@@ -25,6 +25,7 @@ export interface ShotRequest {
   maxWidth?: number;
   filled?: ReadonlySet<number>;
   sensitive?: ReadonlySet<number>;
+  showing?: boolean;
 }
 
 export interface Shot {
@@ -91,7 +92,7 @@ export async function capturePage(cdp: Cdp, request: ShotRequest): Promise<Shot>
   }
   const { data } = await cdp.send<{ data: string }>('Page.captureScreenshot', {
     format: 'png',
-    captureBeyondViewport: !inside(area, visible),
+    captureBeyondViewport: !(request.showing && inside(area, visible)),
     clip: {
       x: (area.x + scroll.x) * pageZoom,
       y: (area.y + scroll.y) * pageZoom,

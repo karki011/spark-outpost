@@ -15,6 +15,7 @@ const PICK_IMAGE_WIDTH = 960;
 const REGION_HTML_MAX = 300;
 const SAMPLES_PER_SIDE = 4;
 const CROP_PADDING = 8;
+const SHOWING_CAPTURE_MS = 1500;
 const STYLE_NAMES = [
   'display',
   'position',
@@ -111,13 +112,23 @@ function padded(box: BrowserBox): BrowserBox {
   return { x, y, width: box.width + CROP_PADDING * 2, height: box.height + CROP_PADDING * 2 };
 }
 
+function settled<T>(work: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([work, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
+}
+
 async function cropped(
   cdp: Cdp,
   box: BrowserBox,
   sensitive: ReadonlySet<number>,
 ): Promise<string | null> {
+  const request = { box, maxWidth: PICK_IMAGE_WIDTH, sensitive };
   try {
-    const shot = await capturePage(cdp, { box, maxWidth: PICK_IMAGE_WIDTH, sensitive });
+    const shot =
+      (await settled(
+        capturePage(cdp, { ...request, showing: true }).catch(() => null),
+        SHOWING_CAPTURE_MS,
+        null,
+      )) ?? (await capturePage(cdp, request));
     return `data:${shot.mediaType};base64,${shot.data.toString('base64')}`;
   } catch {
     return null;

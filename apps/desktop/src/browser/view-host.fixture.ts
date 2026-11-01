@@ -41,6 +41,7 @@ export function memorySaved(start: Partial<Record<BrowserProfile, SavedProfile>>
     setFavorites: (profile, favorites: readonly BrowserFavorite[]) => {
       profiles[profile] = { ...profiles[profile], favorites: [...favorites] };
     },
+    clearZooms: () => undefined,
     setZoom: (profile, origin, zoom) => {
       const zooms = { ...profiles[profile].zooms, [origin]: zoom };
       profiles[profile] = { ...profiles[profile], zooms };
