@@ -146,7 +146,7 @@ export async function withDesktopBrowser(page: Page) {
             };
           },
           clearZooms: async (profile: string) => {
-            calls.push({ kind: 'view-clear-zooms', profile });
+            calls.push({ kind: 'view-clear-zooms', payload: profile });
             return true;
           },
           onPicked: (listener: (pick: unknown) => void) => {
