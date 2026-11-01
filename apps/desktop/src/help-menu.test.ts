@@ -60,6 +60,7 @@ describe('Close Window, Reload and Force Reload', () => {
     label?: string;
     accelerator?: string;
     registerAccelerator?: boolean;
+    visible?: boolean;
     click?: (...args: unknown[]) => void;
   };
   const items = (paneShortcut: (shortcut: string) => boolean) => {
@@ -69,6 +70,7 @@ describe('Close Window, Reload and Force Reload', () => {
   const fakeWindow = (did: string[]) => ({
     close: () => did.push('close'),
     webContents: {
+      zoomLevel: 1,
       reload: () => did.push('reload'),
       reloadIgnoringCache: () => did.push('hard_reload'),
     },
@@ -89,6 +91,34 @@ describe('Close Window, Reload and Force Reload', () => {
     expect(did).toEqual([]);
   });
 
+  it('zoom and print the focused page, and otherwise zoom the app and print nothing', () => {
+    const labels = ['Zoom In', 'Zoom Out', 'Actual Size', 'Print…'];
+    const asked: string[] = [];
+    const pane = items((shortcut) => {
+      asked.push(shortcut);
+      return true;
+    });
+    const window = fakeWindow([]);
+    for (const label of labels) press(pane, label, window);
+    expect(asked).toEqual(['zoom_in', 'zoom_out', 'zoom_reset', 'print']);
+    expect(window.webContents.zoomLevel).toBe(1);
+
+    const app = items(() => false);
+    press(app, 'Zoom In', window);
+    expect(window.webContents.zoomLevel).toBe(1.5);
+    press(app, 'Zoom Out', window);
+    press(app, 'Zoom Out', window);
+    expect(window.webContents.zoomLevel).toBe(0.5);
+    press(app, 'Actual Size', window);
+    expect(window.webContents.zoomLevel).toBe(0);
+    expect(() => press(app, 'Print…', window)).not.toThrow();
+  });
+
+  it('take Command-equals as Zoom In too, without a second menu row', () => {
+    const hidden = items(() => false).filter((item) => item.accelerator === 'CommandOrControl+=');
+    expect(hidden.map((item) => [item.label, item.visible])).toEqual([['Zoom In', false]]);
+  });
+
   it('act on the window otherwise, with the usual keys', () => {
     const did: string[] = [];
     const all = items(() => false);
@@ -99,8 +129,13 @@ describe('Close Window, Reload and Force Reload', () => {
     expect(registered.map((item) => item.accelerator)).toEqual([
       'CommandOrControl+,',
       'CommandOrControl+W',
+      'CommandOrControl+P',
       'CommandOrControl+R',
       'Shift+CommandOrControl+R',
+      'CommandOrControl+0',
+      'CommandOrControl+Plus',
+      'CommandOrControl+=',
+      'CommandOrControl+-',
     ]);
   });
 });
@@ -154,9 +189,10 @@ describe('the View menu', () => {
       'Reload',
       'Force Reload',
       'separator',
-      'resetZoom',
-      'zoomIn',
-      'zoomOut',
+      'Actual Size',
+      'Zoom In',
+      'Zoom In',
+      'Zoom Out',
     ]);
   });
 });

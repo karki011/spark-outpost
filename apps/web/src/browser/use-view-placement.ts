@@ -27,7 +27,7 @@ export function recheckNativePlacement(): void {
   window.dispatchEvent(new Event(RECHECK_EVENT));
 }
 const SETTLE_MS = 320;
-const DRAG_HANDLES = '[role="separator"]';
+const DRAG_HANDLES = '[role="separator"]:not([data-live-drag])';
 
 function boundsOf(element: HTMLElement): BrowserBounds | null {
   if (!element.isConnected || !element.checkVisibility({ visibilityProperty: true })) return null;

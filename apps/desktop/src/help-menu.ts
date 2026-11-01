@@ -1,7 +1,8 @@
 import type { BaseWindow, MenuItemConstructorOptions } from 'electron';
 import { formatMenu } from './format-menu.ts';
 
-export type MenuPaneShortcut = 'close_tab' | 'reload' | 'hard_reload';
+export type MenuPaneShortcut =
+  'close_tab' | 'reload' | 'hard_reload' | 'zoom_in' | 'zoom_out' | 'zoom_reset' | 'print';
 
 export interface HelpActions {
   dev: boolean;
@@ -16,10 +17,17 @@ export interface HelpActions {
 
 type WindowAction = (window: BaseWindow) => void;
 
+const ZOOM_LEVEL_STEP = 0.5;
+
 function windowContents(window: BaseWindow) {
   return 'webContents' in window
-    ? (window.webContents as { reload(): void; reloadIgnoringCache(): void })
+    ? (window.webContents as { reload(): void; reloadIgnoringCache(): void; zoomLevel: number })
     : null;
+}
+
+function changeZoom(window: BaseWindow, change: (level: number) => number): void {
+  const contents = windowContents(window);
+  if (contents) contents.zoomLevel = change(contents.zoomLevel);
 }
 
 function paneFirst(
@@ -56,6 +64,34 @@ function developerItems(actions: HelpActions): MenuItemConstructorOptions[] {
   return actions.dev ? [{ role: 'toggleDevTools' }] : [];
 }
 
+function zoomItems(actions: HelpActions): MenuItemConstructorOptions[] {
+  const zoomIn = paneFirst(actions, 'zoom_in', (window) =>
+    changeZoom(window, (level) => level + ZOOM_LEVEL_STEP),
+  );
+  return [
+    {
+      label: 'Actual Size',
+      accelerator: 'CommandOrControl+0',
+      click: paneFirst(actions, 'zoom_reset', (window) => changeZoom(window, () => 0)),
+    },
+    { label: 'Zoom In', accelerator: 'CommandOrControl+Plus', click: zoomIn },
+    {
+      label: 'Zoom In',
+      accelerator: 'CommandOrControl+=',
+      visible: false,
+      acceleratorWorksWhenHidden: true,
+      click: zoomIn,
+    },
+    {
+      label: 'Zoom Out',
+      accelerator: 'CommandOrControl+-',
+      click: paneFirst(actions, 'zoom_out', (window) =>
+        changeZoom(window, (level) => level - ZOOM_LEVEL_STEP),
+      ),
+    },
+  ];
+}
+
 export function appMenuTemplate(actions: HelpActions): MenuItemConstructorOptions[] {
   return [
     appMenu(actions),
@@ -66,6 +102,12 @@ export function appMenuTemplate(actions: HelpActions): MenuItemConstructorOption
           label: 'Close Window',
           accelerator: 'CommandOrControl+W',
           click: paneFirst(actions, 'close_tab', (window) => window.close()),
+        },
+        { type: 'separator' },
+        {
+          label: 'Print…',
+          accelerator: 'CommandOrControl+P',
+          click: paneFirst(actions, 'print', () => undefined),
         },
       ],
     },
@@ -95,9 +137,7 @@ export function appMenuTemplate(actions: HelpActions): MenuItemConstructorOption
         },
         ...developerItems(actions),
         { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
+        ...zoomItems(actions),
       ],
     },
     { role: 'windowMenu' },

@@ -20,6 +20,9 @@ function tab(id: string, change: Partial<BrowserPaneTab> = {}): BrowserPaneTab {
     picking: false,
     lastAction: null,
     error: null,
+    audible: false,
+    muted: false,
+    zoom: 1,
     ...change,
   };
 }

@@ -1,6 +1,7 @@
 import './page-chat-dock.css';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import type { InvolvementLevel } from '@spark-outpost/contracts';
+import type { BrowserPick, InvolvementLevel } from '@spark-outpost/contracts';
+import { pickLabel, pickText } from '../browser/pick-files.ts';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { DockChip } from './DockChip.tsx';
@@ -15,11 +16,13 @@ export interface DockRequest {
   page: PageRef | null;
   selection: string | null;
   link: string | null;
+  picks: readonly BrowserPick[];
 }
 
 interface PageChatDockProps {
   request: DockRequest;
   onOpenChat(chatId: string): void;
+  onRemovePick(pick: BrowserPick): void;
   onClose(): void;
 }
 
@@ -28,7 +31,7 @@ const LEVELS: { id: InvolvementLevel; label: string; description: string }[] = [
   { id: 'full-auto', label: 'Full auto → PR', description: 'Keeps changes, then opens a PR' },
 ];
 
-export function PageChatDock({ request, onOpenChat, onClose }: PageChatDockProps) {
+export function PageChatDock({ request, onOpenChat, onRemovePick, onClose }: PageChatDockProps) {
   const projects = useProjects();
   const ids = useId();
   const input = useRef<HTMLTextAreaElement>(null);
@@ -56,6 +59,7 @@ export function PageChatDock({ request, onOpenChat, onClose }: PageChatDockProps
         page,
         withPageText,
         selection,
+        picks: request.picks,
         text: text.trim(),
         projectId: projectId || null,
         level,
@@ -107,7 +111,7 @@ export function PageChatDock({ request, onOpenChat, onClose }: PageChatDockProps
               void send();
             }}
           >
-            {((page && withPageText) || selection) && (
+            {((page && withPageText) || selection || request.picks.length > 0) && (
               <ul className="pcd-chips" aria-label="Attached">
                 {page && withPageText && (
                   <DockChip
@@ -131,6 +135,21 @@ export function PageChatDock({ request, onOpenChat, onClose }: PageChatDockProps
                     }}
                   />
                 )}
+                {request.picks.map((pick, index) => {
+                  const label = pickLabel(pickText(pick)) ?? 'Selected';
+                  return (
+                    <DockChip
+                      key={index}
+                      label={label}
+                      detail={pick.image ? 'note and picture' : 'note'}
+                      removeLabel={`Remove ${label}`}
+                      onRemove={() => {
+                        onRemovePick(pick);
+                        input.current?.focus();
+                      }}
+                    />
+                  );
+                })}
               </ul>
             )}
             <textarea

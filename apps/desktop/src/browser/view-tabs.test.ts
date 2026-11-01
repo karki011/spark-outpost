@@ -87,6 +87,7 @@ describe('the saved Browser view', () => {
           { url: NEWS, title: 'News', pinned: false, active: true },
         ],
         favorites: [],
+        zooms: {},
       },
     });
     const { view } = startTestBrowser(store);
@@ -106,7 +107,7 @@ describe('the saved Browser view', () => {
 
   it('saves what the user opens, and leaves a profile not yet shown alone', async () => {
     const work = { url: NEWS, title: 'News', pinned: false, active: true };
-    const { store, profiles } = memorySaved({ work: { tabs: [work], favorites: [] } });
+    const { store, profiles } = memorySaved({ work: { tabs: [work], favorites: [], zooms: {} } });
     const { view } = startTestBrowser(store);
     await invoke('browser-view:start', 'personal');
     const [tab] = view.panes.tabsOf('personal');
@@ -121,7 +122,9 @@ describe('the saved Browser view', () => {
       pinned: true,
     });
     await settle();
-    expect(profiles.personal.tabs).toEqual([{ url: DOCS, title: '', pinned: true, active: true }]);
+    expect(profiles.personal.tabs).toMatchObject([
+      { url: DOCS, title: '', pinned: true, active: true, pinnedUrl: DOCS },
+    ]);
     expect(profiles.work.tabs).toEqual([work]);
   });
 });

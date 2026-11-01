@@ -21,14 +21,25 @@ export async function pushView(
   tabs: unknown[],
   favorites: unknown[] = [],
   profile: 'personal' | 'work' = 'personal',
+  extra: Record<string, unknown> = {},
 ) {
   await page.evaluate(
-    ([tabsArg, favoritesArg, profileArg]) =>
+    ([tabsArg, favoritesArg, profileArg, extraArg]) =>
       (
         window as unknown as {
-          browserViewPush: (p: string, t: unknown[], f: unknown[]) => void;
+          browserViewPush: (
+            p: string,
+            t: unknown[],
+            f: unknown[],
+            e: Record<string, unknown>,
+          ) => void;
         }
-      ).browserViewPush(profileArg as string, tabsArg as unknown[], favoritesArg as unknown[]),
-    [tabs, favorites, profile] as const,
+      ).browserViewPush(
+        profileArg as string,
+        tabsArg as unknown[],
+        favoritesArg as unknown[],
+        extraArg as Record<string, unknown>,
+      ),
+    [tabs, favorites, profile, extra] as const,
   );
 }

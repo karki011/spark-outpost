@@ -1,11 +1,16 @@
 import '../sessions/session-palette.css';
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import type { BrowserFavorite, BrowserPaneTab, BrowserProfile } from '@spark-outpost/contracts';
+import type {
+  BrowserArchivedTab,
+  BrowserFavorite,
+  BrowserPaneTab,
+  BrowserProfile,
+} from '@spark-outpost/contracts';
 import { browserHistoryApi, browserHistoryKey } from '../api/browser-history.ts';
 import { recheckNativePlacement } from '../browser/use-view-placement.ts';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
-import { ClockIcon, SearchIcon, SparkleIcon, XIcon } from '../ui/icons.tsx';
+import { ArchiveIcon, ClockIcon, SearchIcon, SparkleIcon, XIcon } from '../ui/icons.tsx';
 import { GlobeIcon } from '../browser/BrowserIcons.tsx';
 import { Keys, type ShortcutKeys } from '../ui/Keys.tsx';
 import { MAC } from '../ui/shortcuts.ts';
@@ -27,6 +32,7 @@ const GROUP_ICONS: Record<BarGroup, ReactNode> = {
   tabs: <GlobeIcon />,
   favorites: <GlobeIcon />,
   history: <ClockIcon />,
+  archived: <ArchiveIcon />,
   search: <SearchIcon />,
   actions: <SparkleIcon />,
 };
@@ -37,6 +43,8 @@ export interface CommandBarProps {
   tab: BrowserPaneTab | null;
   tabs: readonly BrowserPaneTab[];
   favorites: readonly BrowserFavorite[];
+  archived: readonly BrowserArchivedTab[];
+  onOpenArchived(id: string): void;
   onSelectTab(tabId: string): void;
   onOpen(url: string, newTab: boolean): void;
   onAction(action: BarAction): void;
@@ -84,6 +92,7 @@ export function CommandBar(props: CommandBarProps) {
     tabs: props.tabs,
     favorites: props.favorites,
     history: history.data ?? [],
+    archived: props.archived,
     page: tab !== null && tab.url !== '' && tab.error === null,
     search,
   });
@@ -106,6 +115,7 @@ export function CommandBar(props: CommandBarProps) {
     const target = row.target;
     if (target.kind === 'tab' && newTab) props.onOpen(target.url, true);
     else if (target.kind === 'tab') props.onSelectTab(target.tabId);
+    else if (target.kind === 'archived') props.onOpenArchived(target.id);
     else if (target.kind === 'open') props.onOpen(target.url, newTab || mode === 'new' || !tab);
     else props.onAction(target.action);
   };

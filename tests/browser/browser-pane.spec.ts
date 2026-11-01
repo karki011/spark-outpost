@@ -366,7 +366,7 @@ test('the header is one row of tabs with New tab next to them', async ({ page })
   await push([
     { title: 'My app', url: 'http://localhost:5173/', active: true, picking: true, loading: true },
   ]);
-  await expect(pane.getByRole('status').filter({ hasText: 'Esc cancels' })).toBeVisible();
+  await expect(pane.getByRole('status').filter({ hasText: 'Esc finishes' })).toBeVisible();
   await expect(pane.getByLabel('Address')).toHaveCount(0);
   await expect(pane.getByRole('status').filter({ hasText: 'Page is opening' })).toBeAttached();
   await expect.poll(placed).toEqual([0, 0, 0, 0]);

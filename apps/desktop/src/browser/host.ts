@@ -15,7 +15,6 @@ import {
   browserSignOutSchema,
   browserPlacementSchema,
   type BrowserCommand,
-  type BrowserPick,
   type BrowserFound,
   type BrowserSelectedText,
   type BrowserShortcut,
@@ -26,8 +25,9 @@ import { runBrowserOp } from './agent-ops.ts';
 import { connectWorkerBridge, type BridgePort, type WorkerBridge } from './bridge.ts';
 import { startDownloadsHost, type DownloadsHost } from './downloads-host.ts';
 import { runPaneCommand } from './pane-command.ts';
+import { savedPageZooms } from './page-zoom.ts';
 import { BrowserPanes } from './panes.ts';
-import { startPick, type PickSession } from './picker.ts';
+import { pickRunner } from './pick-runner.ts';
 import { loadRecentOrigins } from './recent-origins.ts';
 import {
   readPageSelection,
@@ -89,7 +89,6 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
   await removeRetiredPartitions(options.userData, options.log);
   const origins = await loadRecentOrigins(options.userData, options.log);
   const saved = await loadSavedView(options.userData, options.log);
-  const picks = new Map<string, PickSession>();
   const send = (channel: string, payload: unknown) => {
     const window = options.window();
     if (window && !window.isDestroyed()) window.webContents.send(channel, payload);
@@ -113,9 +112,15 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
         panes.tabOfContents(contents) ?? view?.panes.tabOfContents(contents) ?? null,
       ) ?? false,
   };
+  const zoomChanged = () => {
+    panes.noteAll();
+    view?.panes.noteAll();
+  };
+  const workZooms = savedPageZooms(saved, 'work', zoomChanged);
   const panes: BrowserPanes = new BrowserPanes({
     window: options.window,
     partition: () => BROWSER_PARTITION,
+    pageZooms: () => workZooms,
     guards,
     blockedPorts: () => blocked,
     stateChanged: (state) => send(IPC.browserStateChanged, state),
@@ -167,48 +172,18 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     }
   };
 
-  const stopPick = async (tab: PaneTab) => {
-    const session = picks.get(tab.id);
-    picks.delete(tab.id);
-    tab.picking = false;
-    await session?.cancel();
-    panes.noteChange(tab.chatId);
-  };
-
-  const pick = async (tab: PaneTab, mode: 'element' | 'region' | 'off') => {
-    await stopPick(tab);
-    if (mode === 'off') return;
-    const { cdp, view } = await tab.wake();
-    tab.picking = true;
-    panes.noteChange(tab.chatId);
-    view.webContents.focus();
-    const session = await startPick(
-      cdp,
-      mode,
-      (picked) => {
-        picks.delete(tab.id);
-        tab.picking = false;
-        panes.noteChange(tab.chatId);
-        if (!picked) return;
-        const result: BrowserPick = {
-          chatId: tab.chatId,
-          url: tab.currentUrl().slice(0, 4096),
-          title: tab.currentTitle().slice(0, 300),
-          ...picked,
-        };
-        send(IPC.browserPicked, result);
-        options.window()?.webContents.focus();
-      },
-      tab.filled,
-    );
-    picks.set(tab.id, session);
-  };
+  const picker = pickRunner({
+    panes: () => panes,
+    window: options.window,
+    picked: (pick) => send(IPC.browserPicked, pick),
+    keepsImage: () => true,
+  });
 
   const command = (chatId: string, action: BrowserCommand) =>
     runPaneCommand(panes, chatId, action, {
       tabsMax: BROWSER_TABS_MAX,
-      pick,
-      closed: (tab) => void stopPick(tab).catch(() => undefined),
+      pick: picker.pick,
+      closed: (tab) => void picker.stop(tab).catch(() => undefined),
     });
 
   const guarded =
@@ -228,6 +203,9 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     blockedPorts: () => blocked,
     guards,
     saved,
+    zooms: (profile) =>
+      profile === 'work' ? workZooms : savedPageZooms(saved, profile, zoomChanged),
+    zoomsCleared: () => panes.syncZooms(),
     send,
     guarded,
     log: options.log,

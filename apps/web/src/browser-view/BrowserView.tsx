@@ -1,10 +1,11 @@
 import '../browser/browser-pane.css';
 import './browser-view.css';
+import './browser-spaces.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   browserViewShortcutEventSchema,
   parseBrowserUrl,
-  type BrowserPaneTab,
+  splitHolds,
   type BrowserProfile,
   type BrowserShortcut,
   type ConversationSummary,
@@ -28,9 +29,14 @@ import {
   runPaneShortcut,
   type PaneCommands,
 } from '../browser/pane-shortcuts.ts';
+import { PageTools, ZoomBadge } from '../browser/PageTools.tsx';
 import { tabLabel } from '../browser/tab-label.ts';
 import { ToolButton } from '../browser/ToolButton.tsx';
-import { useNativePlacement, type PlaceView } from '../browser/use-view-placement.ts';
+import {
+  recheckNativePlacement,
+  useNativePlacement,
+  type PlaceView,
+} from '../browser/use-view-placement.ts';
 import { ProfileBadge, ProfileSwitch, profileNote } from './ProfileSwitch.tsx';
 import { setBrowserPaneOpen } from '../browser/pane-open.ts';
 import { AskTabsDock } from './AskTabsDock.tsx';
@@ -39,9 +45,15 @@ import type { BarAction, BarMode } from './command-bar-model.ts';
 import { HandToChat } from './HandToChat.tsx';
 import { PageChatDock, type DockRequest } from './PageChatDock.tsx';
 import type { PageRef } from './page-chat.ts';
-import { pageRef, usePageIntents } from './page-intents.ts';
+import { pageRef, usePageIntents, usePagePicks } from './page-intents.ts';
+import { ViewSelect } from './ViewSelect.tsx';
+import { chromeSpaceIndex, tabsInCurrentSpace } from './spaces-model.ts';
+import { ViewArchived } from './ViewArchived.tsx';
+import { SplitButton } from './SplitButton.tsx';
+import { PeekPanel, SplitStage, StartPage } from './ViewStage.tsx';
 import { ViewFavorites } from './ViewFavorites.tsx';
 import { ViewDownloads } from './ViewDownloads.tsx';
+import { ViewSpaces } from './ViewSpaces.tsx';
 import { ViewTabs } from './ViewTabs.tsx';
 import {
   acceptViewState,
@@ -55,6 +67,7 @@ function viewCommands(profile: BrowserProfile): PaneCommands {
   return {
     send: (command) => sendViewCommand(profile, command),
     close: (tabId) => sendViewCommand(profile, { command: 'close', tabId }),
+    ask: async (command) => desktopBrowserView()?.command(profile, command),
   };
 }
 
@@ -71,28 +84,6 @@ function useViewShortcuts(profile: BrowserProfile, run: (shortcut: BrowserShortc
       if (event.success && event.data.profile === profile) latest.current(event.data.shortcut);
     });
   }, [profile]);
-}
-
-function StartPage({ profile, tab }: { profile: BrowserProfile; tab: BrowserPaneTab | null }) {
-  if (tab?.error) {
-    return (
-      <div className="bp-start" role="status">
-        <b>This page didn’t load</b>
-        <p>{tab.error}</p>
-      </div>
-    );
-  }
-  return (
-    <div className="bp-start">
-      <b>{profile === 'personal' ? 'Personal browser' : 'Work browser'}</b>
-      <p>Type a web address on the left to open a page.</p>
-      <p>
-        {profile === 'personal'
-          ? 'No agent, Ask Spark or paired device can open or act in these tabs, and your sign-ins here stay out of every chat. Ask Spark reads a tab’s text only when you @-mention it in a question.'
-          : 'Work shares its sign-ins with every chat’s agent, so you can sign in for them or check what they see. Agents still can’t see these tabs until you hand one to a chat.'}
-      </p>
-    </div>
-  );
 }
 
 function PageHost({ url }: { url: string }) {
@@ -116,9 +107,20 @@ interface BrowserViewProps {
 
 export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
   const profile = useChosenProfile();
-  const { tabs, favorites, snapshot } = useProfileTabs(profile);
+  const {
+    tabs: allTabs,
+    favorites,
+    layout,
+    snapshot,
+    split,
+    peek,
+    slotImages,
+  } = useProfileTabs(profile);
+  const tabs = tabsInCurrentSpace(allTabs, layout);
   const [problem, setProblem] = useState<string | null>(null);
-  const tab = tabs.find((candidate) => candidate.active) ?? null;
+  const shown = tabs.find((candidate) => candidate.active) ?? null;
+  const tab = peek ?? shown;
+  const splitShown = split !== null && splitHolds(split, shown?.id ?? null);
   const viewRef = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const commands = viewCommands(profile);
@@ -144,13 +146,28 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
     tab && tab.url !== '' && tab.error === null ? pageRef(profile, tab) : null;
   const openDock = (change: Partial<DockRequest> = {}) => {
     setAsking(null);
-    setDock({ key: Date.now(), page: shownPage(), selection: null, link: null, ...change });
+    setDock({
+      key: Date.now(),
+      page: shownPage(),
+      selection: null,
+      link: null,
+      picks: [],
+      ...change,
+    });
   };
   const openAsk = () => {
     setDock(null);
     setAsking({ key: Date.now(), first: shownPage() });
   };
-  usePageIntents(profile, tabs, (page, intent) =>
+  usePagePicks(profile, (pick) => {
+    setAsking(null);
+    setDock((open) =>
+      open
+        ? { ...open, picks: [...open.picks, pick] }
+        : { key: Date.now(), page: null, selection: null, link: null, picks: [pick] },
+    );
+  });
+  usePageIntents(profile, allTabs, (page, intent) =>
     openDock({ page, selection: intent.selection, link: intent.link }),
   );
   const [bar, setBar] = useState<BarMode | null>(null);
@@ -159,7 +176,8 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
       setBar(shortcut === 'new_tab' ? 'new' : 'here');
       return;
     }
-    runPaneShortcut(commands, tabs, shortcut, {
+    const keyTabs = peek ? [{ ...peek, active: true }] : tabs;
+    runPaneShortcut(commands, keyTabs, shortcut, {
       focusAddress,
       openFind: () => undefined,
       copiedUrl: () => undefined,
@@ -168,11 +186,19 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
     });
   };
   useViewShortcuts(profile, runShortcut);
+  useEffect(recheckNativePlacement, [peek?.id, splitShown, shown?.id]);
+  const askingForPage = useRef(false);
+  useEffect(() => {
+    if (!askingForPage.current || shown?.url !== '') return;
+    askingForPage.current = false;
+    setBar('here');
+  }, [shown?.id, shown?.url]);
 
   const act = (command: 'back' | 'forward' | 'reload' | 'stop') => {
     if (tab) sendViewCommand(profile, { command, tabId: tab.id });
   };
   const blank = !tab || tab.url === '' || tab.error !== null;
+  const shownBlank = !shown || shown.url === '' || shown.error !== null;
   const outside = defaultBrowserUrl(tab?.url ?? null, window.location.origin);
   const barAction = (action: BarAction) => {
     if (action === 'ask_spark') openAsk();
@@ -188,6 +214,14 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
       ref={root}
       className="bv"
       onKeyDown={(event) => {
+        const spaceIndex = chromeSpaceIndex(event, MAC);
+        if (spaceIndex !== null) {
+          const space = layout.spaces[spaceIndex];
+          event.preventDefault();
+          event.stopPropagation();
+          if (space) sendViewCommand(profile, { command: 'space_switch', id: space.id });
+          return;
+        }
         const shortcut = chromeShortcut(event);
         if (!shortcut) return;
         event.preventDefault();
@@ -232,14 +266,29 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
         <p className="bv-note">{profileNote(profile)}</p>
         <AddressBar key={tabKey} commands={commands} tab={tab} placeholder="Type a web address" />
         <ViewFavorites profile={profile} favorites={favorites} tab={tab} />
-        <ViewTabs profile={profile} tabs={tabs} onNewTab={() => setBar('new')} />
+        <ViewSpaces profile={profile} layout={layout} />
+        <ViewTabs
+          profile={profile}
+          tabs={tabs}
+          layout={layout}
+          split={split}
+          onNewTab={() => setBar('new')}
+        />
+        <ViewArchived profile={profile} layout={layout} />
         <ViewDownloads />
       </nav>
       <main className="page bv-page" id="bv-page" aria-label={tab ? tabLabel(tab) : 'Browser'}>
         <div className="bv-bar">
           <ProfileBadge profile={profile} />
           <PageHost url={tab?.url ?? ''} />
-          <span className="bv-title">{tab && tab.url !== '' ? tabLabel(tab) : ''}</span>
+          {tab?.picking ? (
+            <span className="bv-title" role="status">
+              Click to select, ⇧ click for more, ↑↓ parent or child, drag a box. Esc finishes.
+            </span>
+          ) : (
+            <span className="bv-title">{tab && tab.url !== '' ? tabLabel(tab) : ''}</span>
+          )}
+          <ZoomBadge tab={tab} commands={commands} />
           <button
             type="button"
             className="btn bv-hand"
@@ -271,6 +320,18 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
             }}
             onProblem={setProblem}
           />
+          <ViewSelect profile={profile} tab={tab} disabled={blank} />
+          <PageTools tab={tab} commands={commands} onNotice={setProblem} />
+          <SplitButton
+            profile={profile}
+            tabs={tabs}
+            shown={shown}
+            inSplit={splitShown}
+            disabled={peek !== null || shown === null}
+            onNewPage={() => {
+              askingForPage.current = true;
+            }}
+          />
           <ToolButton
             label="Open developer tools (⌥⌘I)"
             disabled={blank}
@@ -294,9 +355,18 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
             </button>
           </p>
         )}
-        <div className="bp-view bv-view" ref={viewRef}>
-          {blank && <StartPage profile={profile} tab={tab} />}
-          {!blank && snapshot && <img className="bp-snapshot" src={snapshot} alt="" />}
+        <div className="bv-stage">
+          <div className="bp-view bv-view" ref={viewRef}>
+            {splitShown ? (
+              <SplitStage profile={profile} split={split} tabs={tabs} images={slotImages} />
+            ) : (
+              <>
+                {shownBlank && <StartPage profile={profile} tab={shown} />}
+                {!shownBlank && snapshot && <img className="bp-snapshot" src={snapshot} alt="" />}
+              </>
+            )}
+          </div>
+          {peek && <PeekPanel profile={profile} tab={peek} image={slotImages[peek.id] ?? null} />}
         </div>
       </main>
       {dock && (
@@ -307,6 +377,9 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
             setDock(null);
             onOpenChat(chatId);
           }}
+          onRemovePick={(pick) =>
+            setDock((open) => open && { ...open, picks: open.picks.filter((p) => p !== pick) })
+          }
           onClose={() => setDock(null)}
         />
       )}
@@ -316,8 +389,10 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
           profile={profile}
           mode={bar}
           tab={tab}
-          tabs={tabs}
+          tabs={allTabs}
           favorites={favorites}
+          archived={layout.archived}
+          onOpenArchived={(id) => sendViewCommand(profile, { command: 'archived_open', id })}
           onSelectTab={(tabId) => sendViewCommand(profile, { command: 'select', tabId })}
           onOpen={(url, newTab) =>
             sendViewCommand(

@@ -8,26 +8,28 @@ import {
 } from 'electron';
 import {
   browserPlaceOf,
-  browserShortcut,
   classifyBrowserUrl,
   type BrowserShortcut,
   type BrowserHandoff,
   type BrowserPaneTab,
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
+import { paneShortcutOf } from './tab-keys.ts';
 import { attachCdp, type Cdp } from './cdp.ts';
 import type { InputMarks } from './clipboard-permission.ts';
+import { shiftedLinkClick } from './link-gesture.ts';
 import { capturePageLogs, type PageLogs } from './page-capture.ts';
 import { RefMap, tabRefNumbers } from './ref-map.ts';
 import { navigationAllowed } from './request-guard.ts';
 import { isAddShortcut, isDevtoolsShortcut } from './selection-menu.ts';
+import { TabMedia } from './tab-media.ts';
 import type { TabFacts } from './tab-rules.ts';
 
 export interface TabHooks {
   session(): Session;
   allowed(url: string): boolean;
   changed(): void;
-  popup(url: string, opener: PaneTab): void;
+  popup(url: string, opener: PaneTab, shifted: boolean): void;
   viewCreated(view: WebContentsView): void;
   viewClosed(view: WebContentsView): void;
   gone(tab: PaneTab): void;
@@ -38,6 +40,9 @@ export interface TabHooks {
   paneShortcut(tab: PaneTab, shortcut: BrowserShortcut): void;
   found(tab: PaneTab, active: number, matches: number): void;
   devtoolsSession(): Session;
+  zoomOf(url: string): number;
+  used?(tab: PaneTab): void;
+  pageKey?(tab: PaneTab, input: Input): boolean;
 }
 
 export interface TabInit {
@@ -47,6 +52,7 @@ export interface TabInit {
   runId: string | null;
   url: string;
   title?: string;
+  peek?: boolean;
 }
 
 export interface LiveTab {
@@ -67,36 +73,17 @@ export class TabClosedError extends Error {
   }
 }
 
-const MENU_SHORTCUTS: ReadonlySet<BrowserShortcut> = new Set([
-  'close_tab',
-  'reload',
-  'hard_reload',
-]);
-
-function paneShortcutOf(input: Input): BrowserShortcut | null {
-  const shortcut = browserShortcut(
-    {
-      code: input.code,
-      meta: input.meta,
-      ctrl: input.control,
-      shift: input.shift,
-      alt: input.alt,
-      composing: input.isComposing,
-    },
-    process.platform === 'darwin',
-  );
-  return shortcut && !MENU_SHORTCUTS.has(shortcut) ? shortcut : null;
-}
-
 export class PaneTab {
   readonly id: string;
   readonly chatId: string;
   readonly refs = new RefMap(tabRefNumbers);
   readonly filled = new Set<number>();
+  readonly media: TabMedia;
   owner: BrowserTabOwner;
   runId: string | null;
   pinned = false;
   kept = false;
+  peek = false;
   handoff: BrowserHandoff | null = null;
   handoffRun: string | null = null;
   agentBusy = 0;
@@ -106,6 +93,7 @@ export class PaneTab {
   active = false;
   shown = false;
   picking = false;
+  pickOverlay: WebContentsView | null = null;
   driving = false;
   lastAction: string | null = null;
   lastUsed = Date.now();
@@ -120,6 +108,7 @@ export class PaneTab {
   private readonly hooks: TabHooks;
   private devtools: BrowserWindow | null = null;
   private closed = false;
+  private lastClickAt: number | null = null;
 
   constructor(init: TabInit, hooks: TabHooks) {
     this.id = init.id;
@@ -128,7 +117,13 @@ export class PaneTab {
     this.runId = init.runId;
     this.url = init.url;
     this.title = init.title ?? '';
+    this.peek = init.peek ?? false;
     this.hooks = hooks;
+    this.media = new TabMedia({
+      changed: hooks.changed,
+      zoomOf: hooks.zoomOf,
+      shown: () => this.shown,
+    });
   }
 
   currentUrl(): string {
@@ -230,6 +225,9 @@ export class PaneTab {
       picking: this.picking,
       lastAction: this.lastAction,
       error: this.error,
+      audible: this.media.audible,
+      muted: this.media.muted,
+      zoom: this.hooks.zoomOf(url),
     };
   }
 
@@ -269,8 +267,12 @@ export class PaneTab {
     view.setVisible(false);
     const contents = view.webContents;
     await contents.loadURL(BLANK);
-    contents.setWindowOpenHandler(({ url }) => {
-      if (classifyBrowserUrl(url) !== 'blocked') this.hooks.popup(url, this);
+    contents.setWindowOpenHandler((details) => {
+      const shifted =
+        this.agentBusy === 0 && shiftedLinkClick(details, this.lastClickAt, Date.now());
+      if (classifyBrowserUrl(details.url) !== 'blocked') {
+        this.hooks.popup(details.url, this, shifted);
+      }
       return { action: 'deny' };
     });
     contents.on('will-navigate', (event, url) => this.steer(event, url, false));
@@ -311,9 +313,15 @@ export class PaneTab {
     contents.on('context-menu', (_event, params) => this.hooks.contextMenu(this, params));
     contents.on('before-mouse-event', (_event, mouse) => {
       if (mouse.type === 'mouseDown') this.userUsed();
+      if (mouse.type === 'mouseDown' || mouse.type === 'mouseUp') this.lastClickAt = Date.now();
     });
     contents.on('before-input-event', (event, input) => {
       if (input.type === 'keyDown') this.userUsed();
+      if (input.type === 'keyDown' && input.key === 'Enter') this.lastClickAt = Date.now();
+      if (this.hooks.pageKey?.(this, input)) {
+        event.preventDefault();
+        return;
+      }
       const shortcut =
         input.type === 'keyDown' && this.agentBusy === 0 ? paneShortcutOf(input) : null;
       if (shortcut) {
@@ -331,6 +339,7 @@ export class PaneTab {
       this.hooks.addShortcut(this);
     });
     contents.on('render-process-gone', () => this.note({ error: 'The page stopped working.' }));
+    this.media.attach(contents);
     const cdp = attachCdp(contents);
     const logs = await capturePageLogs(cdp);
     await cdp.send('Page.enable');
@@ -347,6 +356,7 @@ export class PaneTab {
   }
 
   private userUsed(): void {
+    this.hooks.used?.(this);
     if (this.agentBusy === 0) this.userInputAt = Date.now();
     if (this.owner !== 'agent' || this.agentBusy > 0 || this.kept) return;
     this.kept = true;
@@ -439,6 +449,7 @@ export class PaneTab {
     if (!live) return;
     this.url = this.currentUrl();
     this.closeDevtools();
+    this.media.detach();
     this.live = null;
     this.shown = false;
     this.loading = false;

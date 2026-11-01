@@ -24,6 +24,10 @@ export const BROWSER_SHORTCUTS = [
   'find',
   'new_chat',
   'ask_spark',
+  'zoom_in',
+  'zoom_out',
+  'zoom_reset',
+  'print',
 ] as const;
 export type BrowserShortcut = (typeof BROWSER_SHORTCUTS)[number];
 
@@ -67,6 +71,13 @@ const PLAIN: Record<string, BrowserShortcut> = {
   Digit7: 'tab_7',
   Digit8: 'tab_8',
   Digit9: 'last_tab',
+  Digit0: 'zoom_reset',
+  Numpad0: 'zoom_reset',
+  Equal: 'zoom_in',
+  NumpadAdd: 'zoom_in',
+  Minus: 'zoom_out',
+  NumpadSubtract: 'zoom_out',
+  KeyP: 'print',
 };
 
 const SHIFTED: Record<string, BrowserShortcut> = {
@@ -74,6 +85,7 @@ const SHIFTED: Record<string, BrowserShortcut> = {
   KeyT: 'reopen_tab',
   KeyR: 'hard_reload',
   KeyO: 'new_chat',
+  Equal: 'zoom_in',
 };
 
 const OPTIONED: Record<string, BrowserShortcut> = {

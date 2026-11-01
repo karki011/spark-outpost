@@ -12,10 +12,13 @@ import {
   BROWSER_FAVORITES_MAX,
   BROWSER_FOCUS_SHORTCUTS,
   BROWSER_VIEW_TABS_MAX,
+  browserArchiveSettingSchema,
   browserProfileSchema,
   browserSearchEngineSchema,
+  browserSpaceKey,
   browserViewCommandSchema,
   browserViewPlacementSchema,
+  browserViewSlotSchema,
   type BrowserCommand,
   type BrowserProfile,
   type BrowserViewCommand,
@@ -26,28 +29,47 @@ import {
   type BrowserViewSnapshot,
   type BrowserViewState,
   sameFavoritePage,
+  splitHolds,
 } from '@spark-outpost/contracts';
 import { IPC } from '../ipc-channels.ts';
 import { runPaneCommand } from './pane-command.ts';
+import { pickRunner } from './pick-runner.ts';
+import type { PageZooms } from './page-zoom.ts';
 import { BrowserPanes } from './panes.ts';
 import { profilePartition, type SessionGuards } from './sessions.ts';
+import { chordOf } from './tab-keys.ts';
 import type { PaneTab } from './tab.ts';
+import { isArrangeCommand, startViewArrange } from './view-arrange.ts';
 import { viewMenuItems, type ViewMenuItem } from './view-menu.ts';
 import { readViewPageText } from './view-page-text.ts';
 import { viewHistory, type HistorySink } from './view-history.ts';
-import type { SavedViewStore } from './view-saved.ts';
+import { applyLayoutCommand, isLayoutCommand } from './view-layout.ts';
+import type { SavedTab, SavedViewStore } from './view-saved.ts';
+import { ViewSpaces } from './view-spaces.ts';
+
+const SWEEP_MS = 60_000;
+
+function everyMinute(run: () => void): () => void {
+  const timer = setInterval(run, SWEEP_MS);
+  timer.unref();
+  return () => clearInterval(timer);
+}
 
 export interface ViewHostOptions {
   window(): BrowserWindow | null;
   blockedPorts(): ReadonlySet<number>;
   guards: SessionGuards;
   saved: SavedViewStore;
+  zooms(profile: BrowserProfile): PageZooms;
+  zoomsCleared?(): void;
   send(channel: string, payload: unknown): void;
   guarded<T>(
     run: (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<T> | T,
   ): (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<T | null>;
   log(line: string): void;
   history?: HistorySink | undefined;
+  now?: () => number;
+  sweepEvery?: (run: () => void) => () => void;
 }
 
 export interface BrowserViewHost {
@@ -60,11 +82,15 @@ export interface BrowserViewHost {
 const CHANNELS = [
   IPC.browserViewState,
   IPC.browserViewPlace,
+  IPC.browserViewPlaceSlot,
   IPC.browserViewCommand,
   IPC.browserViewStart,
   IPC.browserViewPageText,
   IPC.browserViewSearchEngine,
   IPC.browserViewSetSearchEngine,
+  IPC.browserViewClearZooms,
+  IPC.browserViewArchive,
+  IPC.browserViewSetArchive,
 ];
 
 function profileOf(tab: PaneTab): BrowserProfile {
@@ -73,25 +99,46 @@ function profileOf(tab: PaneTab): BrowserProfile {
 
 export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost {
   const restored = new Set<BrowserProfile>();
+  const spaces = new ViewSpaces(
+    () => panes,
+    options.saved,
+    options.now ?? Date.now,
+    (profile, tabId) => splitHolds(arrange.state(profile).split, tabId),
+  );
+  const arrange = startViewArrange({
+    panes: () => panes,
+    snapshot: (profile, tabId, image) => {
+      const snapshot: BrowserViewSnapshot = { profile, image, tabId };
+      options.send(IPC.browserViewSnapshot, snapshot);
+    },
+    log: options.log,
+  });
+  const listed = (profile: BrowserProfile) => panes.tabsOf(profile).filter((tab) => !tab.peek);
   const state = (profile: BrowserProfile): BrowserViewState => ({
     profile,
-    tabs: panes.tabsOf(profile).map((tab) => tab.paneTab()),
+    tabs: listed(profile).map((tab) => tab.paneTab()),
     favorites: options.saved.get(profile).favorites,
+    layout: spaces.snapshot(profile),
+    ...arrange.state(profile),
   });
   const changed = (profile: BrowserProfile) => {
-    const tabs = panes.tabsOf(profile).map((tab) => ({
-      url: tab.currentUrl(),
-      title: tab.currentTitle(),
-      pinned: tab.pinned,
-      active: tab.active,
-    }));
-    if (restored.has(profile)) options.saved.setTabs(profile, tabs);
+    arrange.settle(profile);
+    if (spaces.settle(profile)) return;
+    if (restored.has(profile)) {
+      const tabs = listed(profile).map((tab) => ({
+        ...spaces.savedTab(profile, tab),
+        split: arrange.mark(profile, tab.id),
+      }));
+      options.saved.setTabs(profile, tabs);
+      spaces.persist(profile);
+    }
     options.send(IPC.browserViewStateChanged, state(profile));
   };
   const restore = (profile: BrowserProfile) => {
     if (restored.has(profile)) return;
     restored.add(profile);
-    for (const saved of options.saved.get(profile).tabs) {
+    const made: { id: string; split: SavedTab['split'] }[] = [];
+    for (const saved of spaces.restoredTabs(profile)) {
       const tab = panes.createTab(profile, {
         owner: 'user',
         runId: null,
@@ -100,8 +147,12 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
       });
       if (!tab) break;
       tab.pinned = saved.pinned;
+      spaces.adopt(profile, tab, saved);
       if (saved.active) panes.select(profile, tab.id);
+      made.push({ id: tab.id, split: saved.split });
     }
+    arrange.restore(profile, made);
+    changed(profile);
   };
   const favorite = (profile: BrowserProfile, action: BrowserViewCommand) => {
     const favorites = options.saved.get(profile).favorites;
@@ -123,19 +174,66 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
   const openFavorite = async (profile: BrowserProfile, id: string) => {
     const item = options.saved.get(profile).favorites.find((candidate) => candidate.id === id);
     if (!item) return;
-    const open = panes.tabsOf(profile).find((tab) => sameFavoritePage(tab.currentUrl(), item.url));
-    if (open) panes.select(profile, open.id);
-    else await command(profile, { command: 'new_tab', url: item.url });
+    const open = listed(profile).find((tab) => sameFavoritePage(tab.currentUrl(), item.url));
+    if (open) {
+      spaces.followTab(profile, open.id);
+      panes.select(profile, open.id);
+    } else await command(profile, { command: 'new_tab', url: item.url });
   };
   const shortcut = (tab: PaneTab, pressed: BrowserShortcut) => {
     if (BROWSER_FOCUS_SHORTCUTS.has(pressed)) options.window()?.webContents.focus();
     const event: BrowserViewShortcutEvent = { profile: profileOf(tab), shortcut: pressed };
     options.send(IPC.browserViewShortcut, event);
   };
+  const picker = pickRunner({
+    panes: () => panes,
+    window: options.window,
+    picked: (pick) => options.send(IPC.browserViewPicked, pick),
+    keepsImage: (tab) => profileOf(tab) !== 'personal',
+  });
   const command = (profile: BrowserProfile, action: BrowserCommand) =>
-    runPaneCommand(panes, profile, action, { tabsMax: BROWSER_VIEW_TABS_MAX });
+    runPaneCommand(panes, profile, action, {
+      tabsMax: BROWSER_VIEW_TABS_MAX,
+      pick: picker.pick,
+      closed: (tab) => void picker.stop(tab).catch(() => undefined),
+    });
   const viewCommand = async (profile: BrowserProfile, raw: unknown) => {
     const action = browserViewCommandSchema.parse(raw);
+    restore(profile);
+    spaces.settle(profile);
+    const result = await runViewCommand(profile, action);
+    spaces.settle(profile);
+    return result;
+  };
+  const runViewCommand = async (profile: BrowserProfile, action: BrowserViewCommand) => {
+    if (isArrangeCommand(action)) return arrange.command(profile, action);
+    if (action.command === 'select' && arrange.isPeek(profile, action.tabId)) return;
+    if (isLayoutCommand(action)) {
+      panes.keepFocus(profile, () => {
+        if (
+          action.command === 'tab_to_space' &&
+          splitHolds(arrange.state(profile).split, action.tabId)
+        ) {
+          arrange.command(profile, { command: 'split_leave' });
+        }
+        applyLayoutCommand(spaces.layout(profile), action);
+        changed(profile);
+      });
+      return;
+    }
+    if (action.command === 'pinned_home') {
+      const pinnedUrl = spaces.layout(profile).metas.get(action.tabId)?.pinnedUrl;
+      if (pinnedUrl)
+        await command(profile, { command: 'navigate', tabId: action.tabId, url: pinnedUrl });
+      return;
+    }
+    if (action.command === 'archived_open') {
+      if (panes.tabsOf(profile).length >= BROWSER_VIEW_TABS_MAX) return;
+      const url = spaces.takeArchived(profile, action.id);
+      if (url) await command(profile, { command: 'new_tab', url });
+      return;
+    }
+    if (action.command === 'select') spaces.followTab(profile, action.tabId);
     if (action.command === 'open_favorite') return openFavorite(profile, action.id);
     if (action.command === 'add_favorite' || action.command === 'remove_favorite') {
       return favorite(profile, action);
@@ -164,6 +262,10 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
         },
       };
     }
+    if (item.kind === 'peek_link' || item.kind === 'split_link') {
+      const gesture = item.kind === 'peek_link' ? 'peek' : 'split';
+      return { label: item.label, click: () => void arrange.openLink(tab, item.url, gesture) };
+    }
     const open = { command: 'new_tab', url: item.url } as const;
     return { label: item.label, click: () => void command(profileOf(tab), open) };
   };
@@ -187,6 +289,16 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     contextMenu,
     addShortcut: () => undefined,
     paneShortcut: shortcut,
+    pageKey: (tab, input) => {
+      if (arrange.pageKey(tab, input)) return true;
+      if (input.type !== 'keyDown') return false;
+      const index = browserSpaceKey(chordOf(input), process.platform === 'darwin');
+      if (index === null) return false;
+      const profile = profileOf(tab);
+      const space = spaces.layout(profile).spaces[index];
+      if (space) void viewCommand(profile, { command: 'space_switch', id: space.id });
+      return true;
+    },
     found: (tab, active, matches) => {
       const result: BrowserViewFound = { profile: profileOf(tab), tabId: tab.id, active, matches };
       options.send(IPC.browserViewFound, result);
@@ -197,6 +309,10 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     guards: options.guards,
     visited: (tab, url) => history.visited(tab, url, ''),
     titled: (tab, title) => history.titled(tab, title),
+    pageZooms: (key) => options.zooms(browserProfileSchema.parse(key)),
+    shiftedLink: (opener, url) => arrange.shiftedLink(opener, url),
+    slotBounds: (tab) => arrange.slotBounds(tab),
+    tabUsed: (tab) => arrange.tabUsed(tab),
   });
 
   ipcMain.handle(
@@ -207,6 +323,7 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     IPC.browserViewPlace,
     options.guarded(async (_event, raw) => {
       const placement = browserViewPlacementSchema.parse(raw);
+      arrange.watchChrome(options.window()?.webContents ?? null);
       await panes.place({
         chatId: placement.profile,
         projectId: null,
@@ -215,6 +332,13 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
         covered: placement.covered,
         sendsTo: 'chat',
       });
+      return true;
+    }),
+  );
+  ipcMain.handle(
+    IPC.browserViewPlaceSlot,
+    options.guarded(async (_event, raw) => {
+      await arrange.placeSlot(browserViewSlotSchema.parse(raw));
       return true;
     }),
   );
@@ -243,6 +367,26 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     }),
   );
   ipcMain.handle(
+    IPC.browserViewClearZooms,
+    options.guarded((_event, raw) => {
+      options.saved.clearZooms(browserProfileSchema.parse(raw));
+      options.zoomsCleared?.();
+      panes.syncZooms();
+      return true;
+    }),
+  );
+  ipcMain.handle(
+    IPC.browserViewArchive,
+    options.guarded(() => options.saved.archive()),
+  );
+  ipcMain.handle(
+    IPC.browserViewSetArchive,
+    options.guarded((_event, raw) => {
+      options.saved.setArchive(browserArchiveSettingSchema.parse(raw));
+      return options.saved.archive();
+    }),
+  );
+  ipcMain.handle(
     IPC.browserViewStart,
     options.guarded(async (_event, raw) => {
       const profile = browserProfileSchema.parse(raw);
@@ -254,6 +398,14 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     }),
   );
 
+  const sweepAll = () => {
+    for (const profile of restored) {
+      spaces.sweep(profile);
+      changed(profile);
+    }
+  };
+  const stopSweeping = (options.sweepEvery ?? everyMinute)(sweepAll);
+
   return {
     panes,
     shortcut,
@@ -264,6 +416,7 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
       return true;
     },
     dispose() {
+      stopSweeping();
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);
       panes.dispose();
     },

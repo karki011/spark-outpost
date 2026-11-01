@@ -18,6 +18,15 @@ function Icon({ children }: { children: ReactNode }) {
   );
 }
 
+export function ZoomIcon() {
+  return (
+    <Icon>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4M11 8v6M8 11h6" />
+    </Icon>
+  );
+}
+
 export function GlobeIcon() {
   return (
     <Icon>
@@ -89,6 +98,23 @@ export function PageWidthIcon() {
     <Icon>
       <rect x="3" y="5" width="18" height="14" rx="2" />
       <path d="M7 12h10M9.5 9.5 7 12l2.5 2.5M14.5 9.5 17 12l-2.5 2.5" />
+    </Icon>
+  );
+}
+
+export function SplitViewIcon() {
+  return (
+    <Icon>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M12 5v14" />
+    </Icon>
+  );
+}
+
+export function ShowingIcon() {
+  return (
+    <Icon>
+      <circle cx="12" cy="12" r="4" fill="currentColor" />
     </Icon>
   );
 }

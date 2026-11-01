@@ -39,12 +39,17 @@ export async function withDesktopBrowser(page: Page) {
       picking: false,
       lastAction: null,
       error: null,
+      audible: false,
+      muted: false,
+      zoom: 1,
       ...change,
     });
     const viewStates = new Map<string, unknown>();
+    const viewPickListeners = new Set<(pick: unknown) => void>();
     let downloadList: unknown[] = [];
     const downloadListeners = new Set<(list: unknown) => void>();
     let searchEngine = 'duckduckgo';
+    let archiveSetting = { on: true, afterMinutes: 720 };
     Object.assign(window, {
       browserCalls: calls,
       browserPush: (chatId: string, tabs: Record<string, unknown>[]) => {
@@ -54,6 +59,7 @@ export async function withDesktopBrowser(page: Page) {
       browserSnapshot: (chatId: string, image: string | null) =>
         snapshotListeners.forEach((listener) => listener({ chatId, image })),
       browserPick: (pick: unknown) => pickListeners.forEach((listener) => listener(pick)),
+      browserViewPick: (pick: unknown) => viewPickListeners.forEach((listener) => listener(pick)),
       browserSelectedText: (selected: unknown) =>
         textListeners.forEach((listener) => listener(selected)),
       browserShortcut: (event: unknown) => shortcutListeners.forEach((listener) => listener(event)),
@@ -62,11 +68,13 @@ export async function withDesktopBrowser(page: Page) {
         profile: string,
         tabs: Record<string, unknown>[],
         favorites: Record<string, unknown>[] = [],
+        extra: Record<string, unknown> = {},
       ) => {
         const state = {
           profile,
           tabs: tabs.map((item, index) => tab(`v${index + 1}`, item)),
           favorites,
+          ...extra,
         };
         viewStates.set(profile, state);
         viewStateListeners.forEach((listener) => listener(state));
@@ -89,6 +97,8 @@ export async function withDesktopBrowser(page: Page) {
           state: async (profile: string) => viewStates.get(profile) ?? null,
           place: async (placement: unknown) =>
             calls.push({ kind: 'view-place', payload: placement }),
+          placeSlot: async (slot: unknown) =>
+            calls.push({ kind: 'view-place-slot', payload: slot }),
           command: async (profile: string, command: unknown) => {
             calls.push({ kind: 'view-command', payload: { profile, command } });
             return true;
@@ -114,6 +124,12 @@ export async function withDesktopBrowser(page: Page) {
             downloadListeners.add(listener);
             return () => downloadListeners.delete(listener);
           },
+          archive: async () => archiveSetting,
+          setArchive: async (setting: { on: boolean; afterMinutes: number }) => {
+            calls.push({ kind: 'view-archive', payload: setting });
+            archiveSetting = setting;
+            return archiveSetting;
+          },
           searchEngine: async () => searchEngine,
           setSearchEngine: async (engine: string) => {
             calls.push({ kind: 'view-search-engine', payload: engine });
@@ -128,6 +144,14 @@ export async function withDesktopBrowser(page: Page) {
               text: 'Promote the preview to production with acme deploy --prod.',
               main: true,
             };
+          },
+          clearZooms: async (profile: string) => {
+            calls.push({ kind: 'view-clear-zooms', payload: profile });
+            return true;
+          },
+          onPicked: (listener: (pick: unknown) => void) => {
+            viewPickListeners.add(listener);
+            return () => viewPickListeners.delete(listener);
           },
           onIntent: (listener: (intent: unknown) => void) => {
             viewIntentListeners.add(listener);

@@ -151,3 +151,50 @@ test('a pasted key holds the chat until the user deals with it', async ({ page }
   await expect(input).toBeFocused();
   await expect(dock(page)).toBeVisible();
 });
+
+function pushPick(page: Page, chatId: 'personal' | 'work', image: string | null) {
+  return page.evaluate(
+    (pick) =>
+      (window as unknown as { browserViewPick: (p: unknown) => void }).browserViewPick(pick),
+    {
+      chatId,
+      kind: 'element',
+      url: DOCS,
+      title: 'Deploying your app',
+      box: { x: 1, y: 2, width: 30, height: 40 },
+      elements: [
+        {
+          role: 'button',
+          name: 'Deploy',
+          html: '<button>Deploy</button>',
+          styles: {},
+          box: { x: 1, y: 2, width: 30, height: 40 },
+        },
+      ],
+      image,
+    },
+  );
+}
+
+test('Select starts in the page bar and each pick lands in the new-chat dock', async ({ page }) => {
+  await openWithPage(page);
+  await page.getByRole('button', { name: 'Select an element for a new chat' }).click();
+  await expect
+    .poll(async () => (await calls(page, 'view-command')).at(-1))
+    .toMatchObject({ profile: 'personal', command: { command: 'pick', mode: 'element' } });
+  await pushPick(page, 'personal', null);
+  const attached = dock(page).getByRole('list', { name: 'Attached' });
+  await expect(attached.getByText('Selected: Deploy button')).toBeVisible();
+  await expect(attached.getByText('note', { exact: true })).toBeVisible();
+  await pushPick(page, 'personal', null);
+  await expect(attached.getByRole('listitem')).toHaveCount(2);
+  await attached.getByRole('button', { name: 'Remove Selected: Deploy button' }).first().click();
+  await expect(attached.getByRole('listitem')).toHaveCount(1);
+  await expect(dock(page).getByRole('textbox', { name: 'Message' })).toBeFocused();
+});
+
+test('a pick from the other profile does not land in this dock', async ({ page }) => {
+  await openWithPage(page);
+  await pushPick(page, 'work', null);
+  await expect(dock(page)).toHaveCount(0);
+});

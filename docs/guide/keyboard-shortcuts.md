@@ -45,9 +45,15 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **⌘R** / **⌘⇧R**          | Reload / hard reload                    |
 | **⌘[** / **⌘]**           | Back / forward                          |
 | **⌘F**                    | Find in page                            |
+| **⌘+** / **⌘−** / **⌘0**  | Zoom in, out, reset                     |
+| **⌘P**                    | Print                                   |
+| Arrows / **⇧** arrows     | Pane edge: 10 / 50 px                   |
 | **⌘⇧O**                   | Browser view: chat about the page       |
 | **⌥⌘A**                   | Browser view: Ask Spark about your tabs |
 | **⌘T** / **⌘L**           | Browser view: the command bar           |
+| **⌃1**–**⌃9**             | Browser view: Space N                   |
+| **⇧**-click a link        | Browser view: Peek                      |
+| **⇧⌥**-click a link       | Browser view: Split view                |
 
 ## Cards
 

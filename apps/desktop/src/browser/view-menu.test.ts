@@ -7,6 +7,8 @@ describe('the Browser view page menu', () => {
   it('offers a web link in a new tab and its copy', () => {
     expect(viewMenuItems({ ...none, linkURL: 'https://example.com/a' })).toEqual([
       { kind: 'open_link', label: 'Open link in new tab', url: 'https://example.com/a' },
+      { kind: 'peek_link', label: 'Open link in Peek', url: 'https://example.com/a' },
+      { kind: 'split_link', label: 'Open link in split view', url: 'https://example.com/a' },
       { kind: 'link_chat', label: 'Open link in new chat', url: 'https://example.com/a' },
       { kind: 'copy_link', label: 'Copy link', url: 'https://example.com/a' },
     ]);
@@ -33,6 +35,8 @@ describe('the Browser view page menu', () => {
       viewMenuItems({ ...none, selectionText: 'hello', linkURL: 'https://example.com' }),
     ).toEqual([
       { kind: 'open_link', label: 'Open link in new tab', url: 'https://example.com' },
+      { kind: 'peek_link', label: 'Open link in Peek', url: 'https://example.com' },
+      { kind: 'split_link', label: 'Open link in split view', url: 'https://example.com' },
       { kind: 'link_chat', label: 'Open link in new chat', url: 'https://example.com' },
       { kind: 'copy_link', label: 'Copy link', url: 'https://example.com' },
       { kind: 'separator' },

@@ -3,6 +3,7 @@ import {
   addressToUrl,
   historyUrl,
   searchUrl,
+  type BrowserArchivedTab,
   type BrowserFavorite,
   type BrowserHistoryEntry,
   type BrowserPaneTab,
@@ -12,11 +13,13 @@ import { tabLabel } from '../browser/tab-label.ts';
 
 export type BarMode = 'new' | 'here';
 export type BarAction = 'ask_spark' | 'new_chat' | 'copy_link' | 'default_browser';
-export type BarGroup = 'address' | 'tabs' | 'favorites' | 'history' | 'actions' | 'search';
+export type BarGroup =
+  'address' | 'tabs' | 'favorites' | 'history' | 'archived' | 'actions' | 'search';
 
 export type BarTarget =
   | { kind: 'tab'; tabId: string; url: string }
   | { kind: 'open'; url: string }
+  | { kind: 'archived'; id: string }
   | { kind: 'action'; action: BarAction };
 
 export interface BarRow {
@@ -32,6 +35,7 @@ export interface BarInput {
   tabs: readonly BrowserPaneTab[];
   favorites: readonly BrowserFavorite[];
   history: readonly BrowserHistoryEntry[];
+  archived?: readonly BrowserArchivedTab[];
   page: boolean;
   search: BrowserSearchEngine | null;
 }
@@ -41,6 +45,7 @@ export const GROUP_TITLES: Record<BarGroup, string> = {
   tabs: 'Open tabs',
   favorites: 'Favorites',
   history: 'History',
+  archived: 'Archived',
   search: 'Search the web',
   actions: 'Actions',
 };
@@ -122,6 +127,18 @@ export function barRows(input: BarInput, now = Date.now()): BarRow[] {
       target: { kind: 'open', url: entry.url },
     });
   }
+  const archived = (input.archived ?? []).filter((entry) =>
+    matches(wanted, entry.title, entry.url),
+  );
+  for (const entry of archived.slice(0, PER_GROUP)) {
+    rows.push({
+      key: `archived:${entry.id}`,
+      group: 'archived',
+      title: entry.title || host(entry.url),
+      detail: `${host(entry.url)} · archived ${ago(new Date(entry.archivedAt).toISOString(), now)}`,
+      target: { kind: 'archived', id: entry.id },
+    });
+  }
   for (const item of ACTIONS) {
     if (item.page && !input.page) continue;
     if (!matches(wanted, item.title)) continue;
@@ -148,7 +165,15 @@ export function barRows(input: BarInput, now = Date.now()): BarRow[] {
 }
 
 export function barSections(rows: readonly BarRow[]) {
-  const groups: BarGroup[] = ['address', 'tabs', 'favorites', 'history', 'actions', 'search'];
+  const groups: BarGroup[] = [
+    'address',
+    'tabs',
+    'favorites',
+    'history',
+    'archived',
+    'actions',
+    'search',
+  ];
   let index = 0;
   return groups
     .map((group) => ({

@@ -11,12 +11,11 @@ import type { AxNode } from './outline.ts';
 import { boxOf, sensitiveBackendIds } from './page-read.ts';
 import { capturePage } from './page-tools.ts';
 
-export type PickMode = 'element' | 'region';
-
 const PICK_IMAGE_WIDTH = 960;
 const REGION_HTML_MAX = 300;
 const SAMPLES_PER_SIDE = 4;
 const CROP_PADDING = 8;
+const SHOWING_CAPTURE_MS = 1500;
 const STYLE_NAMES = [
   'display',
   'position',
@@ -35,15 +34,6 @@ const STYLE_NAMES = [
   'opacity',
   'z-index',
 ];
-
-const HIGHLIGHT = {
-  showInfo: true,
-  showStyles: false,
-  contentColor: { r: 111, g: 168, b: 220, a: 0.45 },
-  paddingColor: { r: 147, g: 196, b: 125, a: 0.35 },
-  borderColor: { r: 255, g: 229, b: 153, a: 0.5 },
-  marginColor: { r: 246, g: 178, b: 107, a: 0.35 },
-};
 
 function axText(value: { value?: unknown } | undefined): string {
   return typeof value?.value === 'string' ? value.value.replace(/\s+/g, ' ').trim() : '';
@@ -73,16 +63,13 @@ async function roleAndName(cdp: Cdp, backendNodeId: number) {
 
 async function computedStyles(cdp: Cdp, backendNodeId: number): Promise<Record<string, string>> {
   try {
-    await cdp.send('DOM.getDocument', { depth: 0 });
     const { nodeIds } = await cdp.send<{ nodeIds: number[] }>(
       'DOM.pushNodesByBackendIdsToFrontend',
       { backendNodeIds: [backendNodeId] },
     );
-    await cdp.send('CSS.enable');
     const { computedStyle } = await cdp.send<{
       computedStyle: { name: string; value: string }[];
     }>('CSS.getComputedStyleForNode', { nodeId: nodeIds[0] });
-    await cdp.send('CSS.disable');
     const wanted = new Set(STYLE_NAMES);
     return Object.fromEntries(
       computedStyle
@@ -125,41 +112,62 @@ function padded(box: BrowserBox): BrowserBox {
   return { x, y, width: box.width + CROP_PADDING * 2, height: box.height + CROP_PADDING * 2 };
 }
 
+function settled<T>(work: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([work, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
+}
+
 async function cropped(
   cdp: Cdp,
   box: BrowserBox,
-  filled: ReadonlySet<number>,
+  sensitive: ReadonlySet<number>,
 ): Promise<string | null> {
+  const request = { box, maxWidth: PICK_IMAGE_WIDTH, sensitive };
   try {
-    const shot = await capturePage(cdp, { box, maxWidth: PICK_IMAGE_WIDTH, filled });
+    const shot =
+      (await settled(
+        capturePage(cdp, { ...request, showing: true }).catch(() => null),
+        SHOWING_CAPTURE_MS,
+        null,
+      )) ?? (await capturePage(cdp, request));
     return `data:${shot.mediaType};base64,${shot.data.toString('base64')}`;
   } catch {
     return null;
   }
 }
 
+export async function pageScroll(cdp: Cdp): Promise<{ x: number; y: number }> {
+  const { cssVisualViewport } = await cdp.send<{
+    cssVisualViewport: { pageX: number; pageY: number };
+  }>('Page.getLayoutMetrics');
+  return { x: cssVisualViewport.pageX, y: cssVisualViewport.pageY };
+}
+
 async function nodesInside(cdp: Cdp, box: BrowserBox): Promise<number[]> {
-  const found = new Set<number>();
+  const scroll = await pageScroll(cdp);
+  const samples: Promise<{ backendNodeId: number } | null>[] = [];
   for (let row = 0; row < SAMPLES_PER_SIDE; row += 1) {
     for (let column = 0; column < SAMPLES_PER_SIDE; column += 1) {
-      const x = Math.round(box.x + (box.width * (column + 0.5)) / SAMPLES_PER_SIDE);
-      const y = Math.round(box.y + (box.height * (row + 0.5)) / SAMPLES_PER_SIDE);
-      const hit = await cdp
-        .send<{ backendNodeId: number }>('DOM.getNodeForLocation', {
-          x,
-          y,
-          ignorePointerEventsNone: true,
-        })
-        .catch(() => null);
-      if (hit) found.add(hit.backendNodeId);
+      const x = Math.round(scroll.x + box.x + (box.width * (column + 0.5)) / SAMPLES_PER_SIDE);
+      const y = Math.round(scroll.y + box.y + (box.height * (row + 0.5)) / SAMPLES_PER_SIDE);
+      samples.push(
+        cdp
+          .send<{ backendNodeId: number }>('DOM.getNodeForLocation', {
+            x,
+            y,
+            ignorePointerEventsNone: true,
+          })
+          .catch(() => null),
+      );
     }
   }
+  const hits = await Promise.all(samples);
+  const found = new Set(hits.flatMap((hit) => (hit ? [hit.backendNodeId] : [])));
   return [...found].slice(0, BROWSER_PICK_ELEMENTS_MAX);
 }
 
 export type PickFacts = Pick<BrowserPick, 'kind' | 'box' | 'elements' | 'image'>;
 
-async function pickedElement(
+export async function pickedElement(
   cdp: Cdp,
   backendNodeId: number,
   filled: ReadonlySet<number>,
@@ -175,11 +183,11 @@ async function pickedElement(
     kind: 'element',
     box: element.box,
     elements: [element],
-    image: await cropped(cdp, padded(element.box), filled),
+    image: await cropped(cdp, padded(element.box), sensitive),
   };
 }
 
-async function pickedRegion(
+export async function pickedRegion(
   cdp: Cdp,
   box: BrowserBox,
   filled: ReadonlySet<number>,
@@ -194,47 +202,5 @@ async function pickedRegion(
     });
     if (element) elements.push(element);
   }
-  return { kind: 'region', box, elements, image: await cropped(cdp, box, filled) };
-}
-
-export interface PickSession {
-  cancel(): Promise<void>;
-}
-
-export async function startPick(
-  cdp: Cdp,
-  mode: PickMode,
-  done: (picked: PickFacts | null) => void,
-  filled: ReadonlySet<number> = new Set(),
-): Promise<PickSession> {
-  let finished = false;
-  const stopListening = cdp.listen((method, params) => {
-    if (finished) return;
-    if (method === 'Overlay.inspectNodeRequested') {
-      void finish(() => pickedElement(cdp, Number(params.backendNodeId), filled));
-    }
-    if (method === 'Overlay.screenshotRequested') {
-      const viewport = params.viewport as BrowserBox;
-      void finish(() => pickedRegion(cdp, viewport, filled));
-    }
-    if (method === 'Overlay.inspectModeCanceled') void finish(async () => null);
-  });
-  const leave = async () => {
-    stopListening();
-    await cdp.send('Overlay.setInspectMode', { mode: 'none', highlightConfig: {} }).catch(() => {});
-    await cdp.send('Overlay.disable').catch(() => {});
-  };
-  const finish = async (gather: () => Promise<PickFacts | null>) => {
-    if (finished) return;
-    finished = true;
-    await leave();
-    done(await gather().catch(() => null));
-  };
-  await cdp.send('DOM.enable');
-  await cdp.send('Overlay.enable');
-  await cdp.send('Overlay.setInspectMode', {
-    mode: mode === 'element' ? 'searchForNode' : 'captureAreaScreenshot',
-    highlightConfig: HIGHLIGHT,
-  });
-  return { cancel: () => finish(async () => null) };
+  return { kind: 'region', box, elements, image: await cropped(cdp, box, sensitive) };
 }

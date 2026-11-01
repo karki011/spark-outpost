@@ -159,6 +159,7 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
   browserView: {
     state: (profile: string) => ipcRenderer.invoke(IPC.browserViewState, profile),
     place: (placement: unknown) => ipcRenderer.invoke(IPC.browserViewPlace, placement),
+    placeSlot: (slot: unknown) => ipcRenderer.invoke(IPC.browserViewPlaceSlot, slot),
     command: (profile: string, command: unknown) =>
       ipcRenderer.invoke(IPC.browserViewCommand, profile, command),
     start: (profile: string) => ipcRenderer.invoke(IPC.browserViewStart, profile),
@@ -166,8 +167,12 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     fromChat: (request: unknown) => ipcRenderer.invoke(IPC.browserToView, request),
     pageText: (profile: string, tabId: string) =>
       ipcRenderer.invoke(IPC.browserViewPageText, profile, tabId),
+    clearZooms: (profile: string) => ipcRenderer.invoke(IPC.browserViewClearZooms, profile),
+    onPicked: (callback: (pick: unknown) => void) => listen(IPC.browserViewPicked, callback),
     searchEngine: () => ipcRenderer.invoke(IPC.browserViewSearchEngine),
     setSearchEngine: (engine: string) => ipcRenderer.invoke(IPC.browserViewSetSearchEngine, engine),
+    archive: () => ipcRenderer.invoke(IPC.browserViewArchive),
+    setArchive: (setting: unknown) => ipcRenderer.invoke(IPC.browserViewSetArchive, setting),
     onIntent: (callback: (intent: unknown) => void) => listen(IPC.browserViewIntent, callback),
     onState: (callback: (state: unknown) => void) => listen(IPC.browserViewStateChanged, callback),
     onSnapshot: (callback: (snapshot: unknown) => void) =>

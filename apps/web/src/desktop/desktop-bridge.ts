@@ -8,6 +8,7 @@ import type {
   BrowserProfile,
   BrowserSearchEngine,
   BrowserViewPlacement,
+  BrowserViewSlot,
   BrowserHandToChat,
   BrowserToView,
   BrowserViewCommand,
@@ -87,11 +88,16 @@ export interface DesktopBrowser {
 export interface DesktopBrowserView {
   state(profile: BrowserProfile): Promise<unknown>;
   place(placement: BrowserViewPlacement): Promise<unknown>;
+  placeSlot(slot: BrowserViewSlot): Promise<unknown>;
   command(profile: BrowserProfile, command: BrowserViewCommand): Promise<unknown>;
+  archive(): Promise<unknown>;
+  setArchive(setting: unknown): Promise<unknown>;
   start(profile: BrowserProfile): Promise<unknown>;
   handToChat(request: BrowserHandToChat): Promise<unknown>;
   fromChat(request: BrowserToView): Promise<unknown>;
   pageText(profile: BrowserProfile, tabId: string): Promise<unknown>;
+  clearZooms(profile: BrowserProfile): Promise<unknown>;
+  onPicked(callback: (pick: unknown) => void): Unsubscribe;
   downloads(): Promise<unknown>;
   downloadAct(request: BrowserDownloadAction): Promise<unknown>;
   onDownloads(callback: (list: unknown) => void): Unsubscribe;
