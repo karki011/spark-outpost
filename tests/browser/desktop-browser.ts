@@ -45,6 +45,7 @@ export async function withDesktopBrowser(page: Page) {
       ...change,
     });
     const viewStates = new Map<string, unknown>();
+    const viewPickListeners = new Set<(pick: unknown) => void>();
     let downloadList: unknown[] = [];
     const downloadListeners = new Set<(list: unknown) => void>();
     let searchEngine = 'duckduckgo';
@@ -58,6 +59,7 @@ export async function withDesktopBrowser(page: Page) {
       browserSnapshot: (chatId: string, image: string | null) =>
         snapshotListeners.forEach((listener) => listener({ chatId, image })),
       browserPick: (pick: unknown) => pickListeners.forEach((listener) => listener(pick)),
+      browserViewPick: (pick: unknown) => viewPickListeners.forEach((listener) => listener(pick)),
       browserSelectedText: (selected: unknown) =>
         textListeners.forEach((listener) => listener(selected)),
       browserShortcut: (event: unknown) => shortcutListeners.forEach((listener) => listener(event)),
@@ -142,6 +144,14 @@ export async function withDesktopBrowser(page: Page) {
               text: 'Promote the preview to production with acme deploy --prod.',
               main: true,
             };
+          },
+          clearZooms: async (profile: string) => {
+            calls.push({ kind: 'view-clear-zooms', profile });
+            return true;
+          },
+          onPicked: (listener: (pick: unknown) => void) => {
+            viewPickListeners.add(listener);
+            return () => viewPickListeners.delete(listener);
           },
           onIntent: (listener: (intent: unknown) => void) => {
             viewIntentListeners.add(listener);

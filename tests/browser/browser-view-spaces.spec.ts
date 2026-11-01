@@ -33,7 +33,7 @@ const TABS = [
 
 async function open(page: Parameters<typeof openBrowserView>[0]) {
   const side = await openBrowserView(page);
-  await pushView(page, TABS, [], 'personal', LAYOUT);
+  await pushView(page, TABS, [], 'personal', { layout: LAYOUT });
   return side;
 }
 
@@ -54,7 +54,7 @@ test('Spaces switch by control, arrow and ⌃N, showing only their own tabs', as
   await page.keyboard.press('ArrowRight');
   await expect.poll(() => lastCommand(page)).toEqual({ command: 'space_switch', id: 's2' });
 
-  await pushView(page, TABS, [], 'personal', { ...LAYOUT, currentSpaceId: 's2' });
+  await pushView(page, TABS, [], 'personal', { layout: { ...LAYOUT, currentSpaceId: 's2' } });
   await expect(side.getByRole('button', { name: 'Other Space tab', exact: true })).toBeVisible();
   await expect(side.getByRole('button', { name: 'Today tab', exact: true })).toHaveCount(0);
   await expect(page.getByRole('main').getByText('Type a web address on the left')).toBeVisible();
