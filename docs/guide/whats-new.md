@@ -13,5 +13,6 @@ Earlier releases: **Settings → Updates → Release notes**.
 | What changed     | What to do                                                          |
 | ---------------- | ------------------------------------------------------------------- |
 | Browser Spaces   | [Sort tabs](organize-browser-tabs.md) into Spaces and folders.      |
-| Tab auto-archive | Unshown **Today** tabs move to **Archived** after 12 hours.         |
+| Tab auto-archive | Unshown **Today** tabs move to **Archived**.                        |
 | Quieter chats    | Controls sit [under the box](start-a-chat.md); finished turns fold. |
+| Mac stays awake  | [Remote control](use-your-phone.md) keeps it awake.                 |

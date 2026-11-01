@@ -17,7 +17,7 @@ Each Space has its own **Pinned** and **Today**. A Space is no security boundary
 
 ## Group pinned tabs
 
-Select **New folder** beside **Pinned**, then drag pinned tabs onto it or use **More**, which also moves a tab to another Space.
+Select **New folder** beside **Pinned**, then drag pinned tabs onto it or use **More**, which also moves tabs between Spaces.
 
 **Back to pinned address** returns a pinned tab that wandered off.
 
