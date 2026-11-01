@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  boxHolds,
   latestOnly,
   parentElementOf,
   stepGesture,
@@ -64,6 +65,16 @@ describe('stepGesture', () => {
       kind: 'none',
     });
     expect(run('element', [pointer('up', 1, 1)])).toEqual([{ kind: 'none' }]);
+  });
+});
+
+describe('boxHolds', () => {
+  const outer = { x: 0, y: 0, width: 100, height: 100 };
+
+  it('is true for a box inside or equal, and false for one that sticks out', () => {
+    expect(boxHolds(outer, { x: 10, y: 10, width: 20, height: 20 })).toBe(true);
+    expect(boxHolds(outer, outer)).toBe(true);
+    expect(boxHolds(outer, { x: 90, y: 10, width: 20, height: 20 })).toBe(false);
   });
 });
 

@@ -78,6 +78,15 @@ export function stepGesture(
   };
 }
 
+export function boxHolds(outer: BrowserBox, inner: BrowserBox): boolean {
+  return (
+    outer.x <= inner.x &&
+    outer.y <= inner.y &&
+    outer.x + outer.width >= inner.x + inner.width &&
+    outer.y + outer.height >= inner.y + inner.height
+  );
+}
+
 export interface TreeNode {
   backendNodeId: number;
   nodeName: string;

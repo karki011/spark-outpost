@@ -2,6 +2,7 @@ import type { BrowserBox } from '@spark-outpost/contracts';
 import type { Cdp } from './cdp.ts';
 import { boxOf } from './page-read.ts';
 import {
+  boxHolds,
   latestOnly,
   parentElementOf,
   stepGesture,
@@ -13,6 +14,9 @@ import type { PickSurface } from './pick-overlay.ts';
 import { pageScroll, pickedElement, pickedRegion, type PickFacts } from './picker.ts';
 
 const TAG_MAX = 40;
+const WIDEN_DELAY_MS = 140;
+const REFRESH_MS = 200;
+const LINGER_MS = 350;
 
 export interface PickSession {
   cancel(): Promise<void>;
@@ -45,10 +49,40 @@ export async function startPick(
   let current: { id: number; box: BrowserBox } | null = null;
   let lastPoint: { x: number; y: number } | null = null;
   const below: number[] = [];
+  const picked = new Set<number>();
+  let widening: ReturnType<typeof setTimeout> | null = null;
+  let refreshing = false;
+
+  const stopWidening = () => {
+    if (widening) clearTimeout(widening);
+    widening = null;
+  };
+
+  const drawMarks = async () => {
+    const boxes = await Promise.all([...picked].map((id) => boxOf(cdp, id)));
+    if (ended) return;
+    surface.unmark();
+    const zoom = surface.zoom();
+    for (const box of boxes) if (box) surface.mark(scaled(box, zoom));
+  };
+
+  const refresh = async () => {
+    if (refreshing || ended || gathering) return;
+    refreshing = true;
+    try {
+      await drawMarks();
+      if (current && !gesture) await show(current.id);
+    } finally {
+      refreshing = false;
+    }
+  };
+  const refreshTimer = setInterval(() => void refresh().catch(() => undefined), REFRESH_MS);
 
   const leave = async () => {
     if (ended) return;
     ended = true;
+    clearInterval(refreshTimer);
+    stopWidening();
     surface.close();
     if (mode === 'element') await cdp.send('CSS.disable').catch(() => undefined);
     callbacks.ended();
@@ -78,16 +112,29 @@ export async function startPick(
       })
       .catch(() => null);
     if (!hit) {
+      stopWidening();
       current = null;
       surface.clear();
       return;
     }
     if (hit.backendNodeId === current?.id) return;
     below.length = 0;
-    await show(hit.backendNodeId);
+    stopWidening();
+    const from = current;
+    const next = hit.backendNodeId;
+    const box = from ? await boxOf(cdp, next) : null;
+    if (from && box && boxHolds(box, from.box)) {
+      widening = setTimeout(() => void show(next).catch(() => undefined), WIDEN_DELAY_MS);
+      return;
+    }
+    await show(next);
   });
 
-  const gather = async (read: () => Promise<PickFacts | null>, keep: boolean) => {
+  const gather = async (
+    read: () => Promise<PickFacts | null>,
+    keep: boolean,
+    chosenId: number | null,
+  ) => {
     gathering = true;
     surface.busy();
     const facts = await read().catch(() => null);
@@ -95,18 +142,23 @@ export async function startPick(
     if (ended) return;
     if (facts) callbacks.picked(facts);
     if (!keep) {
+      surface.clear();
+      if (facts) surface.mark(scaled(facts.box, surface.zoom()));
+      if (facts) await new Promise((resolve) => setTimeout(resolve, LINGER_MS));
       await leave();
       return;
     }
-    if (facts) surface.mark(scaled(facts.box, surface.zoom()));
+    if (facts && chosenId !== null) picked.add(chosenId);
+    await drawMarks();
     surface.clear();
     current = null;
   };
 
   const chooseCurrent = (keep: boolean) => {
     const chosen = current;
-    if (!chosen || gathering) return;
-    void gather(() => pickedElement(cdp, chosen.id, filled), keep);
+    if (!chosen || gathering || picked.has(chosen.id)) return;
+    stopWidening();
+    void gather(() => pickedElement(cdp, chosen.id, filled), keep, chosen.id);
   };
 
   const toParent = latestOnly(async () => {
@@ -135,7 +187,7 @@ export async function startPick(
       if (gathering) return;
       const box = scaled(action.box, 1 / surface.zoom());
       if (box.width >= 1 && box.height >= 1) {
-        void gather(() => pickedRegion(cdp, box, filled), action.keep);
+        void gather(() => pickedRegion(cdp, box, filled), action.keep, null);
       }
     }
   });
@@ -153,7 +205,6 @@ export async function startPick(
 
   surface.onWheel((wheel) => {
     if (ended) return;
-    surface.unmark();
     const zoom = surface.zoom();
     void cdp
       .send('Input.dispatchMouseEvent', {
@@ -165,6 +216,7 @@ export async function startPick(
       })
       .then(() => {
         current = null;
+        void drawMarks().catch(() => undefined);
         if (lastPoint && mode === 'element') hover(lastPoint);
       })
       .catch(() => undefined);
