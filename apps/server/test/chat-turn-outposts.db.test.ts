@@ -227,6 +227,7 @@ describe('a chat turn started by an outpost request', { timeout: 60_000 }, () =>
       },
     ]);
     const turn = await chatWithTurn(t);
+    await finished(turn.runId);
     await t.db.query('UPDATE runs SET conversation_id = $2 WHERE id = $1', [turn.runId, api]);
     await carry(t, opening!.id, turn.runId);
     await reply(t, turn.runId, 'The endpoint is in.');
@@ -247,9 +248,9 @@ describe('a chat turn started by an outpost request', { timeout: 60_000 }, () =>
       level: 'full-auto',
     });
     const draftId = await settledStory(lead);
-    await queueWrapUps(t.db);
     await expect
       .poll(async () => {
+        await queueWrapUps(t.db);
         const { rows } = await t.db.query<{ reported_at: Date | null }>(
           'SELECT reported_at FROM outpost_drafts WHERE id = $1',
           [draftId],

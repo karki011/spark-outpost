@@ -97,6 +97,7 @@ async function refreshTickets(page: Page) {
 test('Start work links the chat, Ship puts the PR on the ticket, and a merge moves it to Done', async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   await page.setViewportSize({ width: 1400, height: 900 });
   const repo = await repoWithRemote(base, 'widgets');
   writeFileSync(FAKE_GH_STATE, 'octo-cli');

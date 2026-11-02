@@ -44,7 +44,8 @@ export function NotGitDialog({ project, problem, inline, onDone }: NotGitDialogP
   useEffect(() => {
     if (inline) return;
     const keepFocus = (event: FocusEvent) => {
-      if (!panelRef.current?.contains(event.target as Node)) doneRef.current?.focus();
+      if (panelRef.current?.contains(event.target as Node)) return;
+      (doneRef.current?.disabled ? panelRef.current : doneRef.current)?.focus();
     };
     document.addEventListener('focusin', keepFocus);
     return () => document.removeEventListener('focusin', keepFocus);
@@ -65,6 +66,7 @@ export function NotGitDialog({ project, problem, inline, onDone }: NotGitDialogP
   const panel = (
     <div
       ref={panelRef}
+      tabIndex={-1}
       className={inline ? 'fdlg inline notgit' : 'fdlg notgit'}
       role="dialog"
       aria-modal={inline ? undefined : true}
