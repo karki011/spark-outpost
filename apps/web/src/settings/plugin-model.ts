@@ -224,7 +224,7 @@ function runsSentences(plugin: UserPlugin): string[] {
 }
 
 function findingsSentences(plugin: UserPlugin): string[] {
-  if (plugin.scan.status === 'pending') return ['Spark is still checking it.'];
+  if (isChecking(plugin)) return ['Spark is still checking it.'];
   const flagged = plugin.scan.findings.filter(
     (finding) => finding.source === 'check' && finding.severity === 'flagged',
   ).length;

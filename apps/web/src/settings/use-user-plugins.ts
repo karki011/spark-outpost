@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UserPlugin } from '@spark-outpost/contracts';
-import { ApiError } from '../api/client.ts';
 import { userPluginsApi, userPluginsKey } from '../api/user-plugins.ts';
 import { filterPlugins, isChecking, sortPlugins } from './plugin-model.ts';
 
 const CHECKING_POLL_MS = 2_000;
-const CHANGED_MESSAGE = 'The plugin or its check changed. Look again before turning it on.';
 
 export function useUserPlugins() {
   return useQuery({
@@ -28,11 +26,7 @@ export function usePluginSwitch(plugin: UserPlugin) {
       }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: userPluginsKey }),
   });
-  const error = mutation.error
-    ? mutation.error instanceof ApiError && mutation.error.status === 409
-      ? CHANGED_MESSAGE
-      : mutation.error.message
-    : null;
+  const error = mutation.error ? mutation.error.message : null;
   return {
     busy: mutation.isPending,
     error,

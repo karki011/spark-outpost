@@ -11,8 +11,8 @@ import { usePluginSwitch } from './use-user-plugins.ts';
 function rowHint(plugin: UserPlugin, error: string | null): string | null {
   if (error) return error;
   if (!plugin.loadable) return plugin.unloadableReason ?? 'This plugin can’t load in chats.';
-  if (plugin.changed) return 'Plugin updated — check again';
-  if (plugin.scan.status === 'pending') return 'Spark is checking this plugin.';
+  if (plugin.changed) return 'Changed since you turned it on — check again';
+  if (isChecking(plugin)) return 'Spark is checking this plugin.';
   return null;
 }
 
@@ -72,8 +72,7 @@ export function PluginRow({ plugin, open, onToggle }: PluginRowProps) {
   const toggle = usePluginSwitch(plugin);
   const hint = rowHint(plugin, toggle.error);
   const checked = isOn(plugin);
-  const disabled =
-    toggle.busy || !plugin.loadable || (!checked && plugin.scan.status === 'pending');
+  const disabled = toggle.busy || !plugin.loadable || (!checked && isChecking(plugin));
   const change = (on: boolean) => {
     if (on && needsConfirm(plugin)) {
       setConfirming(true);
