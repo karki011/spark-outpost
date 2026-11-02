@@ -158,6 +158,10 @@ describe("an agent's own sub-agents in a chat turn", { timeout: 40_000 }, () => 
       const run = await latestRun(conversationId);
       return run?.step === '2 of 2 agents working' && run.waitingOn === 2;
     }, 20_000);
+    await eventually(async () => {
+      const detail = await getConversationDetail(t.db, conversationId);
+      return detail?.subagents?.[runId]?.[0]?.step === 'Read routes.ts';
+    }, 20_000);
     const live = await getConversationDetail(t.db, conversationId);
     expect(live?.subagents?.[runId]).toEqual([
       expect.objectContaining({ id: 'sub-1', state: 'working', step: 'Read routes.ts' }),

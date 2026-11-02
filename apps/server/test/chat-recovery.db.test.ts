@@ -109,11 +109,15 @@ describe(
       await untilStatus(t, old.builderRunId, 'outcome_unknown');
 
       expect(before.error).toBe(OUTCOME_UNKNOWN_MESSAGE);
-      const stored = await currentPieceList(t.db, old.taskId);
-      expect(stored!.pieces.map((entry) => [entry.key, entry.status, entry.note])).toEqual([
-        ['P1', 'failed', PIECE_OUTCOME_UNKNOWN],
-        ['P2', 'skipped', PIECE_NOT_STARTED],
-      ]);
+      await expect
+        .poll(async () => {
+          const stored = await currentPieceList(t.db, old.taskId);
+          return stored!.pieces.map((entry) => [entry.key, entry.status, entry.note]);
+        })
+        .toEqual([
+          ['P1', 'failed', PIECE_OUTCOME_UNKNOWN],
+          ['P2', 'skipped', PIECE_NOT_STARTED],
+        ]);
       expect(await loadOrchestration(t.db, old.runId)).not.toBeNull();
 
       const runId = await sendMessage(t, conversationId, 'Are you there?', { permission: 'do' });

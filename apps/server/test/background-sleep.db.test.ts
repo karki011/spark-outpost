@@ -87,7 +87,7 @@ async function runCount(conversationId: string) {
 
 describe('a Claude chat whose agent sleeps until a wakeup', { timeout: 40_000 }, () => {
   it('shows when it wakes, holds the turn open, and records what it does once awake', async () => {
-    begin({ sleepMs: 1_500 });
+    begin({ sleepMs: 8_000 });
     const { conversationId, runId } = await send('#sleep');
     const sleeping = await asleep(conversationId);
     expect(sleeping).toMatchObject({ status: 'running', waitingOn: 1 });

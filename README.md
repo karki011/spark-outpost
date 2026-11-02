@@ -127,9 +127,9 @@ Google and Mac calendars beside your chats, with one-click Join. Before a meetin
 </td>
 <td width="50%" valign="top">
 
-### Atlassian, ServiceNow, Slack, GitHub, Linear
+### Connect your tools
 
-Start a chat from a ticket, let agents read and update Jira, Confluence and ServiceNow, and keep tickets in step with pull requests.
+Connect GitHub, Jira and Confluence, ServiceNow, Linear, Slack and your calendars, or add your own MCP server. Start a chat from a ticket, let agents read and update your tools, and keep tickets in step with pull requests.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/guide/images/tickets-start-dark.png">

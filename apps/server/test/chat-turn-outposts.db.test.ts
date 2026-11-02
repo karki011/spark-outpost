@@ -247,7 +247,16 @@ describe('a chat turn started by an outpost request', { timeout: 60_000 }, () =>
       level: 'full-auto',
     });
     const draftId = await settledStory(lead);
-    expect(await queueWrapUps(t.db)).toBe(1);
+    await queueWrapUps(t.db);
+    await expect
+      .poll(async () => {
+        const { rows } = await t.db.query<{ reported_at: Date | null }>(
+          'SELECT reported_at FROM outpost_drafts WHERE id = $1',
+          [draftId],
+        );
+        return rows[0]?.reported_at != null;
+      })
+      .toBe(true);
     await accept(t, draftId);
     expect(await drainQueue(t.db, lead, chatTarget(t.db))).toBe('sent');
     const runId = (await postRunId(t.db, draftId))!;
