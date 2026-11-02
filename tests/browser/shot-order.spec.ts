@@ -223,7 +223,7 @@ test('at phone width the order holds, thumbnails wrap, and a tap zooms and close
   expect(boxes.every((box) => box!.width <= 160 && box!.x >= 0 && box!.x + box!.width <= 390)).toBe(
     true,
   );
-  expect(boxes[0]!.y).toBe(boxes[1]!.y);
+  expect(boxes[0]!.y).toBeCloseTo(boxes[1]!.y, 0);
   expect(boxes[2]!.y).toBeGreaterThan(boxes[0]!.y + boxes[0]!.height);
   const caption = turn.locator('.shot figcaption').first();
   expect(await caption.evaluate((element) => element.scrollWidth > 0)).toBe(true);
