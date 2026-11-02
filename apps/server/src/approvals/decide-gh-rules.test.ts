@@ -65,7 +65,7 @@ function chat(posture: ModePosture, command: string, sparkRules: SparkRuleContex
 }
 
 describe('Run a workflow', () => {
-  const commands = ['gh workflow run cd-alfa.yml', 'gh run rerun 4411', 'gh run cancel 4411'];
+  const commands = ['gh workflow run cd-staging.yml', 'gh run rerun 4411', 'gh run cancel 4411'];
 
   it.each(commands)('follows the mode when set to follow it: %s', (command) => {
     for (const posture of AT_ONCE) {
@@ -200,7 +200,7 @@ describe('Other commands', () => {
 });
 
 describe('Allow once', () => {
-  const command = 'gh workflow run cd-alfa.yml';
+  const command = 'gh workflow run cd-staging.yml';
   const once: SparkRuleContext = { ...DEFAULT_RULE_CONTEXT, once: [command] };
 
   it('lets just that exact command follow the mode', () => {

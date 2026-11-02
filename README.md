@@ -67,6 +67,22 @@ Each chat gets its own branch in a worktree. **Full auto → PR** opens the pull
 <tr>
 <td width="50%" valign="top">
 
+### Make your own Spark
+
+Give a teammate a name, a face and a role, with its own chat, default provider, model and mode, and standing instructions. Talk to it directly, or type `@` in any chat to hand it one job, which it does read-only. Approvals and protected paths never change. [Make a Spark](docs/guide/sparks.md)
+
+</td>
+<td width="50%" valign="top">
+
+### Ask Spark and Spark Island
+
+Scout rests at the top of your screen with what needs you: answer a request, see working chats, or ask Spark about any of them. It asks before acting unless you switch it to **Act**. [Use Spark Island](docs/guide/desktop-companion.md)
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
 ### Browser pane with developer tools
 
 Agents open pages in the chat's Browser pane, click and type there, and read the console, network log and page performance. One profile serves every chat, so agents are signed in where you are, and page content is treated as untrusted. Use **Select** to point an agent at elements on the page. [Use the browser](docs/guide/use-the-browser.md)
@@ -95,9 +111,9 @@ Let an agent read another Mac app and press its buttons and menus, after you all
 </td>
 <td width="50%" valign="top">
 
-### Ask Spark and Spark Island
+### Voice
 
-Scout rests at the top of your screen with what needs you: answer a request, see working chats, or ask Spark about any of them. It asks before acting unless you switch it to **Act**. [Use Spark Island](docs/guide/desktop-companion.md)
+Push to talk, off until you turn it on. Dictate a message or speak a command; speech becomes text on your Mac, and nothing is sent until you confirm it. [Talk to Spark](docs/guide/voice.md)
 
 </td>
 </tr>
@@ -125,21 +141,12 @@ Start a chat from a ticket, let agents read and update Jira, Confluence and Serv
 <tr>
 <td width="50%" valign="top">
 
-### Voice
-
-Push to talk, off until you turn it on. Dictate a message or speak a command; speech becomes text on your Mac, and nothing is sent until you confirm it. [Talk to Spark](docs/guide/voice.md)
-
-</td>
-<td width="50%" valign="top">
-
 ### From your phone
 
 Pair a phone or another computer over Tailscale (never Funnel) to follow chats, answer approvals you allow and get a push when a chat needs you. [Use your phone](docs/guide/use-your-phone.md)
 
 </td>
-</tr>
-<tr>
-<td colspan="2" valign="top">
+<td width="50%" valign="top">
 
 ### Local-first, stated honestly
 

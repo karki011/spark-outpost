@@ -22,7 +22,7 @@ test.beforeEach(async () => {
 });
 
 test('API key hints and a rejected key explain what to fix', async ({ page }) => {
-  await enterName(page, 'Hazel');
+  await enterName(page, 'Ada');
   const key = await openApiKeyTab(page);
   const verify = claudeCard(page).getByRole('button', { name: 'Verify key' });
 
@@ -50,7 +50,7 @@ test('a missing CLI opens a terminal with the install command and checks again a
   page,
 }) => {
   uninstallFakeClaude();
-  await enterName(page, 'Hazel');
+  await enterName(page, 'Ada');
   const claude = screen(page, 'claude');
   await openTile(page, 'claude');
   await claude.getByRole('button', { name: 'Detect and verify' }).click();
@@ -88,7 +88,7 @@ test('a missing CLI opens a terminal with the install command and checks again a
 
 test('API key mode needs the claude CLI and offers the same install step', async ({ page }) => {
   uninstallFakeClaude();
-  await enterName(page, 'Hazel');
+  await enterName(page, 'Ada');
   const claude = claudeCard(page);
   const key = await openApiKeyTab(page);
   await expect(claude).toContainText('API key mode also needs the claude CLI installed.');
@@ -109,7 +109,7 @@ test('API key mode needs the claude CLI and offers the same install step', async
 test('an installed but logged-out CLI goes straight to login and connects by itself', async ({
   page,
 }) => {
-  await enterName(page, 'Hazel');
+  await enterName(page, 'Ada');
   const codex = screen(page, 'codex');
   await openTile(page, 'codex');
   await codex.getByRole('button', { name: 'Detect and verify' }).click();
@@ -139,7 +139,7 @@ test('an installed but logged-out CLI goes straight to login and connects by its
 test('the only provider can be disconnected, and setup resumes at the provider step', async ({
   page,
 }) => {
-  await enterName(page, 'Hazel');
+  await enterName(page, 'Ada');
   const key = await openApiKeyTab(page);
   await key.fill(CLAUDE_KEY);
   await key.press('Enter');
@@ -166,7 +166,7 @@ test('the only provider can be disconnected, and setup resumes at the provider s
 });
 
 test('provider tiles open a configure screen and close back to the same tile', async ({ page }) => {
-  await enterName(page, 'Hazel');
+  await enterName(page, 'Ada');
   const tiles = dialog(page).locator('.ptile');
   await expect(tiles).toHaveCount(4);
   await expect(
@@ -193,7 +193,7 @@ test('provider tiles open a configure screen and close back to the same tile', a
 });
 
 test('Jev connects with an API key as the advisor and does not unlock chats', async ({ page }) => {
-  await enterName(page, 'Hazel');
+  await enterName(page, 'Ada');
   const jev = screen(page, 'jev');
   await expect(dialog(page).getByRole('heading', { name: 'Advisor' })).toBeVisible();
   await openTile(page, 'jev');
@@ -223,7 +223,7 @@ test('Jev connects with an API key as the advisor and does not unlock chats', as
 });
 
 test('a connected provider says what was checked and can send a test message', async ({ page }) => {
-  await enterName(page, 'Hazel');
+  await enterName(page, 'Ada');
   const key = await openApiKeyTab(page);
   await key.fill(CLAUDE_KEY);
   await key.press('Enter');

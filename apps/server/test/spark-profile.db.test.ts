@@ -43,14 +43,14 @@ describe('the Spark migration', () => {
 
   it('gives existing profiles Friendly', async () => {
     const workspaceId = await ensureLocalWorkspace(db);
-    await db.query(`INSERT INTO profiles (workspace_id, display_name) VALUES ($1, 'Hazel')`, [
+    await db.query(`INSERT INTO profiles (workspace_id, display_name) VALUES ($1, 'Ada')`, [
       workspaceId,
     ]);
 
     await runMigrations(db);
 
     const { profile } = await getSetupState(db, workspaceId);
-    expect(profile).toMatchObject({ displayName: 'Hazel', personality: 'friendly' });
+    expect(profile).toMatchObject({ displayName: 'Ada', personality: 'friendly' });
     await expect(
       db.query(`UPDATE profiles SET personality = 'grumpy' WHERE workspace_id = $1`, [workspaceId]),
     ).rejects.toThrow();
@@ -92,12 +92,12 @@ describe('Spark preferences', () => {
     expect(loaded.profile).not.toHaveProperty('shipFailingChecks');
     expect(loaded).not.toHaveProperty('parallelBuilders');
     const { body: saved } = await send('patch', '/api/profile', {
-      displayName: 'Hazel',
+      displayName: 'Ada',
       sparkEnabled: true,
       jevDiffs: true,
       shipFailingChecks: true,
     }).expect(200);
-    expect(saved.profile.displayName).toBe('Hazel');
+    expect(saved.profile.displayName).toBe('Ada');
     const { rows } = await t.db.query(
       'SELECT spark_enabled, jev_diffs, ship_failing_checks FROM profiles WHERE workspace_id = $1',
       [t.workspaceId],
@@ -109,7 +109,7 @@ describe('Spark preferences', () => {
     const { send } = localClient(createTestApp(t));
     const { body } = await send('patch', '/api/profile', { wideWindow: 'panel' }).expect(200);
     expect(body.profile.wideWindow).toBe('panel');
-    const kept = await send('patch', '/api/profile', { displayName: 'Hazel' }).expect(200);
+    const kept = await send('patch', '/api/profile', { displayName: 'Ada' }).expect(200);
     expect(kept.body.profile.wideWindow).toBe('panel');
     await send('patch', '/api/profile', { wideWindow: 'sideways' }).expect(400);
   });
@@ -119,7 +119,7 @@ describe('Spark preferences', () => {
     expect((await get('/api/setup').expect(200)).body.profile.busyEnter).toBe('queue');
     const { body } = await send('patch', '/api/profile', { busyEnter: 'now' }).expect(200);
     expect(body.profile.busyEnter).toBe('now');
-    const kept = await send('patch', '/api/profile', { displayName: 'Hazel' }).expect(200);
+    const kept = await send('patch', '/api/profile', { displayName: 'Ada' }).expect(200);
     expect(kept.body.profile.busyEnter).toBe('now');
     await send('patch', '/api/profile', { busyEnter: 'later' }).expect(400);
   });

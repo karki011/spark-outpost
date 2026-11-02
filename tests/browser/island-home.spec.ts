@@ -154,7 +154,7 @@ test('a plan that needs typing offers Open chat instead of Allow', async ({ page
       approval: {
         kind: 'other',
         title: 'Review the plan',
-        plan: 'Deploy #353 to alfa now, or wait for review?',
+        plan: 'Deploy #353 to staging now, or wait for review?',
       },
     },
   ]);

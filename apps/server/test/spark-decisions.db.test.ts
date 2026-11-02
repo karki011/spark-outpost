@@ -37,9 +37,7 @@ describe('the Spark decisions migration', () => {
     await oldConnection(db, local, 'claude', 'do', 'full-auto');
     await oldConnection(db, local, 'codex', 'ask', 'full-auto');
     await oldConnection(db, local, 'zai', 'do', 'balanced');
-    await db.query(`INSERT INTO profiles (workspace_id, display_name) VALUES ($1, 'Hazel')`, [
-      local,
-    ]);
+    await db.query(`INSERT INTO profiles (workspace_id, display_name) VALUES ($1, 'Ada')`, [local]);
     const tied = await otherWorkspace(db);
     await oldConnection(db, tied, 'claude', 'do', 'balanced');
     await oldConnection(db, tied, 'codex', 'do', 'hands-off');
@@ -67,7 +65,7 @@ describe('the Spark decisions migration', () => {
     );
     expect(rows).toEqual([]);
     expect((await getSetupState(db, local)).profile).toMatchObject({
-      displayName: 'Hazel',
+      displayName: 'Ada',
       defaultLevel: 'full-auto',
       morningBrief: true,
       morningBriefTime: '07:00',

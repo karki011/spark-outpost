@@ -156,7 +156,7 @@ describe('the island home', () => {
     const onOpenChat = show(bundle, cal);
     const focus = screen.getByRole('article', { name: 'orders-web-app needs you' });
     expect(focus.textContent).toContain('wants to run a command');
-    expect(focus.textContent).toContain('gh workflow run cd-alfa.yml');
+    expect(focus.textContent).toContain('gh workflow run cd-staging.yml');
     expect(screen.getByRole('region', { name: 'Next meeting' }).textContent).toContain(
       'Standup in 8 min',
     );

@@ -52,11 +52,11 @@ test('the name saves from Spark settings and Spark greets you by first name', as
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   const spark = page.getByRole('dialog', { name: 'Profile & personality' });
-  await spark.getByLabel('What should Spark call you?', { exact: true }).fill('Hazel Moss');
-  await expect(spark.locator('.spark-preview')).toContainText('Hi Hazel 👋');
+  await spark.getByLabel('What should Spark call you?', { exact: true }).fill('Ada Moss');
+  await expect(spark.locator('.spark-preview')).toContainText('Hi Ada 👋');
   await expect(page.getByText('Changes save automatically.')).toBeVisible();
   const profile = page.getByRole('navigation', { name: 'Main' }).getByRole('button', {
-    name: 'Your profile, Hazel Moss',
+    name: 'Your profile, Ada Moss',
   });
   await expect(profile).toBeVisible();
   await page.reload();

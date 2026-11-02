@@ -253,7 +253,7 @@ function Preview() {
                   Order Insights reports
                 </button>
                 <p>⌄ orders-data-access</p>
-                <span className="preview-muted">Remove Dimension Workload</span>
+                <span className="preview-muted">Remove Order Workload</span>
               </aside>
             )}
             <main className="main preview-main">

@@ -50,9 +50,9 @@ export function approval(overrides: Partial<Approval> = {}): Approval {
     runId: RUN_A,
     toolCallId: 'call_1',
     kind: 'execute',
-    title: 'gh workflow run cd-alfa.yml',
+    title: 'gh workflow run cd-staging.yml',
     payload: {
-      command: 'gh workflow run cd-alfa.yml',
+      command: 'gh workflow run cd-staging.yml',
       cwd: '/work',
       paths: [],
       diffs: [],

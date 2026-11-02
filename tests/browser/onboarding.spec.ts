@@ -39,7 +39,7 @@ async function columnCount(page: Page) {
 test('first run goes through name, provider, defaults, and done, then opens the app', async ({
   page,
 }) => {
-  await enterName(page, 'Hazel Morgan');
+  await enterName(page, 'Ada Morgan');
   await expect(continueButton(page)).toBeDisabled();
   await expect(dialog(page)).toContainText('Connect at least one provider to continue.');
 
@@ -106,8 +106,8 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   for (const [index, name] of names.entries()) await expect(tools.nth(index)).toContainText(name);
   await expect(dialog(page).locator('.cx-card button.pc-head')).toHaveCount(names.length);
 
-  await continueFromTools(page, "You're all set, Hazel");
-  await expect(dialog(page).getByRole('heading', { name: "You're all set, Hazel" })).toBeVisible();
+  await continueFromTools(page, "You're all set, Ada");
+  await expect(dialog(page).getByRole('heading', { name: "You're all set, Ada" })).toBeVisible();
   await expect(dialog(page)).toContainText('Claude via API key');
   await expect(dialog(page)).toContainText(
     'Claude Sonnet 5, high effort, Accept edits · Full auto → PR',
@@ -158,7 +158,7 @@ test('Meet Spark sets the personality, and the blob reacts', async ({ page }) =>
 test('the look step follows the system, pairs tints and remembers the choice', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/');
-  await nameField(page).fill('Hazel');
+  await nameField(page).fill('Ada');
   await continueButton(page).click();
   const previewBackground = (skin: string) =>
     dialog(page)
@@ -250,7 +250,7 @@ test('each step centres its column in the panel and the footer lines up with it'
     expect(Math.abs(footer.x - pane.x)).toBeLessThan(2);
     expect(Math.abs(footer.width - pane.width)).toBeLessThan(2);
   };
-  await nameField(page).fill('Hazel');
+  await nameField(page).fill('Ada');
   await expectCentred();
   await continueButton(page).click();
   await expect(dialog(page).getByRole('heading', { name: 'Pick a look' })).toBeVisible();
@@ -259,7 +259,7 @@ test('each step centres its column in the panel and the footer lines up with it'
 });
 
 test('the Mac access step explains Full Disk Access and can be skipped', async ({ page }) => {
-  await enterName(page, 'Hazel Morgan');
+  await enterName(page, 'Ada Morgan');
   const key = await openApiKeyTab(page);
   await key.fill(CLAUDE_KEY);
   await key.press('Enter');
@@ -282,5 +282,5 @@ test('the Mac access step explains Full Disk Access and can be skipped', async (
   await shot(page, 'onboarding-mac-access', 'dark');
 
   await continueButton(page).click();
-  await expect(dialog(page).getByRole('heading', { name: "You're all set, Hazel" })).toBeVisible();
+  await expect(dialog(page).getByRole('heading', { name: "You're all set, Ada" })).toBeVisible();
 });

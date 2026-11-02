@@ -208,7 +208,7 @@ const VOLUME_TITLES = [
   'We need to be able to determine across an organization whether or not Collector is installed everywhere and working as expected',
   'Design system: light-mode warning token is too low-contrast for text',
   'Telemetry page should keep search and sort when returning from a stream detail page',
-  'Dimension Workload page: count hierarchy on the classification card, and the mean label while the meter is under review',
+  'Order Workload page: count hierarchy on the classification card, and the mean label while the meter is under review',
   'Host in github page',
   'Explorer Results: rename the Change summary toggle to Aggregate',
   'Five permissions on the role screen have no description, and a customer read MCP Settings as controlling MCP access',

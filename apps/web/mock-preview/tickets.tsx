@@ -13,11 +13,11 @@ const tickets = [
   },
   {
     key: 'CP-50096',
-    title: 'Remove Dimension Workload from roles view',
+    title: 'Remove Order Workload from roles view',
     status: 'In review',
     pr: '#512',
   },
-  { key: 'CP-50285', title: 'Denser layout for CZNext', status: 'In review', pr: '#69' },
+  { key: 'CP-50285', title: 'Denser layout for the new app', status: 'In review', pr: '#69' },
   {
     key: 'CP-49859',
     title: 'Estimated tags on built-in reports',

@@ -18,7 +18,7 @@ describe('what a card says', () => {
   it('names the command or the file, and hides secrets', () => {
     expect(cardLine(card('approval'))).toEqual({
       verb: 'Run',
-      code: 'gh workflow run cd-alfa.yml',
+      code: 'gh workflow run cd-staging.yml',
       text: null,
     });
     const edit = card('approval', {
