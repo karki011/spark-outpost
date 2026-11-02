@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PluginFinding, UserPlugin, UserPluginsResponse } from '@spark-outpost/contracts';
+import { loadUserPlugins as loadPluginLaunches } from '../src/agent-config/user-plugins/launch.ts';
 import { buildReviewPrompt } from '../src/agent-config/user-plugins/review-prompt.ts';
 import {
   parseReviewReply,
@@ -273,6 +274,28 @@ describe('agent review of user plugins', () => {
     await enable(egm).expect(200);
     await list();
     expect(prompts.filter((turn) => turn.prompt.includes('Plugin: "egm"'))).toHaveLength(1);
+  });
+
+  it('stops loading a plugin turned on before a later review found something, until it is confirmed', async () => {
+    await connectClaude();
+    replies.egm = 'Not JSON.';
+    startModel();
+    await list();
+    await enable(await reviewed('egm@google')).expect(200);
+    expect(await loadPluginLaunches(t.db, t.workspaceId, config)).toHaveLength(1);
+
+    replies.egm = JSON.stringify({ findings: [agentFinding('flagged')] });
+    await reviewAgain('egm@google').expect(200);
+    const egm = await eventually(async () => {
+      const plugin = await find('egm@google');
+      return plugin.scan.agentReview === 'done' && plugin;
+    });
+    expect(egm).toMatchObject({ enabled: true, changed: true, scan: { status: 'flagged' } });
+    expect(await loadPluginLaunches(t.db, t.workspaceId, config)).toEqual([]);
+
+    await enable(egm, true).expect(200);
+    expect((await find('egm@google')).changed).toBe(false);
+    expect(await loadPluginLaunches(t.db, t.workspaceId, config)).toHaveLength(1);
   });
 
   it('reviews with Claude when the brief uses Codex', async () => {

@@ -129,6 +129,7 @@ const LISTED_TITLES = {
   'inline-shell': 'Runs shell commands when it loads',
   'frontmatter-hooks': 'Starts its own hooks or MCP servers',
   symlink: 'Links to other files',
+  unscanned: "Has a file Spark can't read",
 } as const;
 
 function review(
@@ -215,6 +216,16 @@ function listedItems(found: PluginFiles, parsed: ParsedPlugin): PluginFinding[] 
     ...found.symlinks.map((path) =>
       review('symlink', path, null, "A link to another file. Spark doesn't copy it."),
     ),
+    ...parsed.definitionFiles
+      .filter((path) => byPath.get(path)?.text === null)
+      .map((path) =>
+        review(
+          'unscanned',
+          path,
+          null,
+          "Too large or not text, so Spark's checks and the agent review can't read it, but Claude loads it.",
+        ),
+      ),
   ];
 }
 

@@ -1,3 +1,4 @@
+import type { PluginFinding } from '@spark-outpost/contracts';
 import { withTransaction, type Db, type Queryable } from '../../persistence/db.ts';
 import { audit } from '../store.ts';
 import type { ScannedPlugin } from './scan.ts';
@@ -5,6 +6,19 @@ import type { ScannedPlugin } from './scan.ts';
 export interface PluginChoice {
   enabled: boolean;
   fingerprint: string | null;
+  confirmedFindings: string[];
+}
+
+export function findingKey(finding: PluginFinding): string {
+  return `${finding.severity} ${finding.rule} ${finding.file}`;
+}
+
+function confirmedFindingsOf(snapshot: unknown): string[] {
+  if (typeof snapshot !== 'object' || snapshot === null) return [];
+  const findings = (snapshot as { findings?: unknown }).findings;
+  return Array.isArray(findings)
+    ? findings.filter((item): item is string => typeof item === 'string')
+    : [];
 }
 
 export async function pluginChoices(
@@ -15,11 +29,20 @@ export async function pluginChoices(
     plugin_key: string;
     enabled: boolean;
     fingerprint: string | null;
-  }>('SELECT plugin_key, enabled, fingerprint FROM user_plugin_trust WHERE workspace_id = $1', [
-    workspaceId,
-  ]);
+    snapshot: unknown;
+  }>(
+    'SELECT plugin_key, enabled, fingerprint, snapshot FROM user_plugin_trust WHERE workspace_id = $1',
+    [workspaceId],
+  );
   return new Map(
-    rows.map((row) => [row.plugin_key, { enabled: row.enabled, fingerprint: row.fingerprint }]),
+    rows.map((row) => [
+      row.plugin_key,
+      {
+        enabled: row.enabled,
+        fingerprint: row.fingerprint,
+        confirmedFindings: confirmedFindingsOf(row.snapshot),
+      },
+    ]),
   );
 }
 
@@ -35,9 +58,7 @@ function snapshotOf(plugin: ScannedPlugin) {
       fingerprint: server.fingerprint,
     })),
     status: plugin.status,
-    findings: plugin.findings.map(
-      (finding) => `${finding.severity} ${finding.rule} ${finding.file}`,
-    ),
+    findings: plugin.findings.map(findingKey),
   };
 }
 
