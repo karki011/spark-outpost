@@ -36,6 +36,11 @@ function located(path: string): string {
   return join(real(existing)[0] ?? existing, ...missing);
 }
 
+/**
+ * Resolves a scratch path using its nearest resolvable ancestor and returns it
+ * if it is a strict descendant of an available system temp root. Throws if it
+ * is not a strict descendant of any such root.
+ */
 export function assertScratchPath(path: string): string {
   const place = located(path);
   if (!tempRoots().some((root) => place !== root && isInside(root, place))) {

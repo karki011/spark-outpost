@@ -6,6 +6,14 @@ export interface OutputQuiet {
   settled(): Promise<void>;
 }
 
+/**
+ * Tracks consumption of an async source and provides a way to wait for a pause
+ * in that consumption. `tracked` yields the source's values and propagates its
+ * errors. `settled` polls until no value is being handled and at least `quietMs`
+ * milliseconds have elapsed since the last value was handled, or until the
+ * `longestMs` deadline is reached. It waits at least one polling interval, so
+ * the deadline is not a strict upper bound.
+ */
 export function createOutputQuiet(quietMs = QUIET_MS, longestMs = LONGEST_WAIT_MS): OutputQuiet {
   let handling = false;
   let lastAt = 0;
