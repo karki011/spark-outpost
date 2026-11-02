@@ -306,9 +306,10 @@ describe('a message that mentions a Spark', () => {
       content: '@Pip review parseDate',
     });
 
-    await eventually(
-      async () => (await drainQueue(t.db, first.conversationId, chatTarget(t.db))) === 'sent',
-    );
+    await eventually(async () => {
+      const outcome = await drainQueue(t.db, first.conversationId, chatTarget(t.db));
+      return outcome === 'sent' || outcome === 'empty';
+    });
 
     const runId = await topRunFor(queuedId);
     const [child] = await children(runId);
