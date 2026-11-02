@@ -3,6 +3,7 @@ import { appendFile, mkdir, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { commitWorkingTree, git, headCommit } from './snapshot.ts';
+import { sendInput } from './child-input.ts';
 
 const run = promisify(execFile);
 const MAX_BUFFER = 64 * 1024 * 1024;
@@ -132,7 +133,7 @@ export async function applyTree(
       { maxBuffer: MAX_BUFFER },
       (error) => (error ? reject(error) : resolve()),
     );
-    child.stdin?.end(patch);
+    sendInput(child, patch);
   });
 }
 

@@ -10,6 +10,7 @@ import {
   seedSnapshotIndex,
   snapshotIndexPath,
 } from './snapshot-index.ts';
+import { sendInput } from './child-input.ts';
 
 const run = promisify(execFile);
 const GIT_TIMEOUT_MS = 60_000;
@@ -177,7 +178,7 @@ function hashLinkText(root: string, text: string): Promise<string> {
       { timeout: GIT_TIMEOUT_MS, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } },
       (error, stdout) => (error ? reject(error) : resolve(stdout.trim())),
     );
-    child.stdin?.end(text);
+    sendInput(child, text);
   });
 }
 

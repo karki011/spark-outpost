@@ -6,6 +6,7 @@ import {
   type RunChange,
 } from '@spark-outpost/contracts';
 import { git } from './snapshot.ts';
+import { sendInput } from './child-input.ts';
 
 export interface FileContents {
   before: Buffer | null;
@@ -115,7 +116,7 @@ function objectSizes(root: string, shas: readonly string[]): Promise<Map<string,
       }
       resolve(sizes);
     });
-    child.stdin.end(`${shas.join('\n')}\n`);
+    sendInput(child, `${shas.join('\n')}\n`);
   });
 }
 

@@ -3,6 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { HARNESS_AUTHOR, git } from './snapshot.ts';
+import { sendInput } from './child-input.ts';
 
 export interface PieceFiles {
   key: string;
@@ -38,7 +39,7 @@ function feed(root: string, args: string[], input: string, env: NodeJS.ProcessEn
       { env: { ...process.env, ...env, GIT_TERMINAL_PROMPT: '0' } },
       (error) => (error ? reject(error) : resolve()),
     );
-    child.stdin?.end(input);
+    sendInput(child, input);
   });
 }
 
