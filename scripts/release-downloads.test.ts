@@ -82,8 +82,8 @@ describe('release downloads', () => {
     expect(updated.startsWith('# Title\n\n')).toBe(true);
     expect(updated.endsWith(`${README_END}\n\nRest.\n`)).toBe(true);
     expect(updated).not.toContain('old');
-    expect(updated).toContain(`<a href="${feed}/Spark-Outpost-0.1.0-beta.3-arm64.dmg">`);
-    expect(updated).toContain(`<a href="${feed}/Spark-Outpost-0.1.0-beta.3-x64.dmg">`);
+    expect(updated).toContain(`<a href="${feed}/Spark-Outpost-latest-arm64.dmg">`);
+    expect(updated).toContain(`<a href="${feed}/Spark-Outpost-latest-x64.dmg">`);
     expect(updated).toContain('[0.1.0-beta.3](releases/0.1.0-beta.3.md)');
     expect(updated).toContain('[All versions](releases/README.md)');
     expect(replaceReadmeSection(updated, renderReadmeSection(latest))).toBe(updated);
