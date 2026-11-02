@@ -50,10 +50,23 @@ function escaped(text: string, note: string): SlashPrompt {
   return { kind: 'escaped', text: `${SLASH_ESCAPE_NOTE}\n\n${text}`, note };
 }
 
+function command(text: string, shown: string, agentName: string): SlashPrompt {
+  return { kind: 'command', text: text.trimStart(), note: `Sent ${shown} to ${agentName}` };
+}
+
+function namesCommand(known: readonly string[], name: string): boolean {
+  const typed = commandKey(name);
+  return known.some((entry) => {
+    const key = commandKey(entry);
+    return typed === key || typed.endsWith(`:${key}`);
+  });
+}
+
 export function slashPrompt(
   text: string,
   agentName: string,
   advertised: readonly string[] | null,
+  firstTurnCommands: readonly string[] = [],
 ): SlashPrompt {
   const name = slashName(text);
   if (name === null) return { kind: 'text', text, note: null };
@@ -61,11 +74,12 @@ export function slashPrompt(
   const blocked = name ? blockedReason(name) : null;
   if (blocked) return escaped(text, `Blocked ${shown} as a command (${blocked}); sent as text`);
   if (advertised === null) {
+    if (name && namesCommand(firstTurnCommands, name)) return command(text, shown, agentName);
     return escaped(text, `Sent ${shown} as text; commands only run in a continued session`);
   }
   const offered = new Set(advertised.map(commandKey));
   if (!name || !offered.has(commandKey(name))) {
     return escaped(text, `Sent ${shown} as text; it isn't a command ${agentName} offered`);
   }
-  return { kind: 'command', text: text.trimStart(), note: `Sent ${shown} to ${agentName}` };
+  return command(text, shown, agentName);
 }

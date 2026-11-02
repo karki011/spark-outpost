@@ -103,7 +103,7 @@ Idle Claude chats show a badge on the context ring; Terminal sessions say **Cach
 
 ## Limits
 
-Turns have no time, tool-call or cost cap. A ring above **Pause** shows Claude plan use and resets once a window reaches 70%.
+A ring above **Pause** shows Claude plan use and resets once a window reaches 70%.
 
 | Limit                                | Value                                    |
 | ------------------------------------ | ---------------------------------------- |

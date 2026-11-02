@@ -7,6 +7,7 @@ import {
   isAtlassianAction,
   isCalendarAction,
   isServiceNowAction,
+  pluginsEditAuditFacts,
   rulesEditAuditFacts,
   serviceNowAuditFacts,
   SPARK_ACTION_OPTION,
@@ -77,7 +78,9 @@ async function quietly(work: Promise<unknown>): Promise<void> {
 
 function cardTitle(action: SparkAction): string {
   if (action.action === 'ask_spark') return action.summary;
-  if (action.action === 'rules_edit') return sparkActionQuestion(action);
+  if (action.action === 'rules_edit' || action.action === 'plugins_edit') {
+    return sparkActionQuestion(action);
+  }
   const question = sparkActionQuestion(action);
   if (
     action.action === 'browser_sign_in' ||
@@ -207,6 +210,7 @@ export function auditedAction(action: SparkAction): unknown {
     return serviceNowAuditFacts(action);
   }
   if (action.action === 'rules_edit') return rulesEditAuditFacts(action);
+  if (action.action === 'plugins_edit') return pluginsEditAuditFacts(action);
   return action;
 }
 

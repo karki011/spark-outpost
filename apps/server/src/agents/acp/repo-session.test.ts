@@ -114,6 +114,7 @@ describe('Claude session meta from repo config', () => {
     expect(skill).toContain('name: "zebra"');
     expect(skill).not.toContain('allowed-tools');
     expect(skill).not.toContain('hooks:');
+    expect(skill).not.toContain('\u200b');
     expect(skill).toContain(
       `Other files for this skill are in ${join(root, '.claude/skills/zebra')}.`,
     );

@@ -12,7 +12,7 @@ Adjust Spark Island and answer agents. About 2 minutes.
 
 1. Open **Settings → Notifications**, **Spark Island**.
 2. Switch **Show Spark Island** on or off.
-3. Pick a **Spark Island size**. Slide **Spark Island height** higher or lower; **Reset** restores it.
+3. Pick a **Spark Island size**. Slide **Spark Island height**; **Reset** restores it.
 4. **Island chimes** sound for new requests.
 5. **Hide in screen sharing** keeps it out of shares; some apps may still show it.
 6. **Show in menu bar** adds Spark's icon. Otherwise, right-click the Dock icon to toggle Island.

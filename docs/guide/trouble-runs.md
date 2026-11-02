@@ -10,7 +10,7 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 
 - **You see:** a chat not moving.
 - **Why:** it usually waits for you or runs a long command.
-- **Fix:** read the end of the turn: a card waits there, or **Working** runs on. **⌘⇧Y** jumps to a card.
+- **Fix:** read the end of the turn: a card waits there, or **Working** runs on.
 - **Still stuck:** **Stop**, then send a new message.
 
 ## A run stopped with the app
@@ -22,7 +22,7 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 ## A card expired
 
 - **You see:** **Expired** on an approval card; the turn says "waited for you".
-- **Why:** unanswered for 30 minutes, it was declined.
+- **Why:** unanswered for 30 minutes.
 - **Fix:** **Try again** under the turn.
 - **Still stuck:** [allow the command](answer-approvals.md#let-a-command-run-without-asking) for the project.
 

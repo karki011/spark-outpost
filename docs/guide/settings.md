@@ -25,7 +25,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | Section          | Holds                                                                | More                                                   |
 | ---------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
 | **AI providers** | Claude, Codex, Z.ai, and Jev under **Advisor**.                      | [Providers](providers-and-models.md)                   |
-| **Models**       | Each model; open one for cost and benchmarks.                        | [Models](providers-and-models.md#read-the-model-cards) |
+| **Models**       | Open a model for cost and benchmarks.                                | [Models](providers-and-models.md#read-the-model-cards) |
 | **Crew**         | Named Sparks.                                                        | [Sparks](sparks.md)                                    |
 | **Usage**        | Tokens and cost per reply, by provider; **~** marks Codex estimates. | [Jev](jev.md#what-it-costs)                            |
 
@@ -47,12 +47,13 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | **Archive inactive chats**                   | **After 2 days**       | [Chat list](statuses-and-limits.md#chat-list)          |
 | **Code Mode**                                | On                     | [Below](#code-mode)                                    |
 | **Record Terminal sessions like chats**      | On                     | [Below](#record-terminal-sessions)                     |
+| **Plugins**                                  | Off                    | [Plugins](use-claude-plugins.md)                       |
 
-**Custom instructions**: text or a UTF-8 file from your Mac, up to 16 KB; then **Save instructions**.
+**Custom instructions**: text or a UTF-8 file, up to 16 KB; then **Save instructions**.
 
 ### Code Mode
 
-Agents can combine supported reads locally; direct tools stay available. Turn off for direct tools only on the next turn; pending combined reads stop. Terminal sessions are unchanged. An installation override can disable it.
+Agents can combine supported reads locally, beside direct tools. Off means direct tools only from the next turn; pending combined reads stop. Terminal sessions are unchanged. An installation override can disable it.
 
 ### Record Terminal sessions
 
@@ -83,7 +84,7 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 
 ## Mac
 
-**Mac control** (Mac app): **Let agents control other Mac apps** and the Accessibility permission ([Mac control](mac-control.md)).
+**Mac control** (Mac app): **Let agents control other Mac apps** and Accessibility permission ([Mac control](mac-control.md)).
 
 **Browser pane** (Mac app): signed-in sites, **Sign out of everything**, **Search engine**, **Archive tabs not shown for**, **Clear browser history**.
 

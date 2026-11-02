@@ -130,7 +130,8 @@ export function holdsToConfirm(payload: ApprovalPayload): boolean {
   return (
     payload.forcePush !== undefined ||
     payload.gitControl !== undefined ||
-    payload.secretSend !== undefined
+    payload.secretSend !== undefined ||
+    (payload.sparkAction?.action === 'plugins_edit' && payload.sparkAction.hold)
   );
 }
 

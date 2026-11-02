@@ -48,7 +48,7 @@ Records keep their own states; **Resolved** is in review. **Show** on the Servic
 
 ## Follow it to a pull request
 
-When you ship, Spark links the PR on the ticket and moves it if allowed.
+When you ship, Spark [updates the ticket](tickets-and-github.md#keep-tickets-in-sync-with-pull-requests).
 
 **Open chat** on a ticket's row returns to its chat.
 

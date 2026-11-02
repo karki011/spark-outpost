@@ -41,7 +41,7 @@ A listed file can still show as a dot on the Map. Its contents are never read.
 
 ## Keep keys out of chats
 
-Chat text is sent to the agent's provider and saved with the chat. Paste keys only into the key field in **Settings → AI providers**.
+Chat text is sent to the agent's provider and saved with the chat.
 
 When a message seems to hold a secret, Spark holds it and shows "Paste API keys in Settings → AI providers instead."
 
@@ -50,6 +50,6 @@ When a message seems to hold a secret, Spark holds it and shows "Paste API keys 
 
 Spark checks for API keys and tokens (`sk-…`, `ghp_…`, `AKIA…`, JWTs), private key blocks, and `KEY=value` lines with a long random value.
 
-If you send anyway, the provider and the saved chat get the message as written. The audit log stores it redacted.
+If you send anyway, it's sent and saved as written; the audit log stores it redacted.
 
 **Next:** [Use the Map](map.md)

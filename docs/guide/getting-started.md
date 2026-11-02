@@ -6,9 +6,9 @@ order: 110
 summary: Go from first launch to your first chat in about five minutes.
 ---
 
-You'll go from first launch to your first chat. About 5 minutes.
+From first launch to your first chat. About 5 minutes.
 
-Only your name and one provider are required. Change the rest later in **Settings**.
+Only your name and one provider are required. Change the rest in **Settings**.
 
 ## Meet Spark and pick a look
 
@@ -23,7 +23,7 @@ Only your name and one provider are required. Change the rest later in **Setting
 
 1. [Connect an AI provider](connect-a-provider.md): Claude, Codex or Z.ai.
 2. On **Tools**, check the **Git** card. If Git is missing, select **Install Xcode Command Line Tools**, then **Check again**.
-3. Optionally connect **GitHub**, **Atlassian** or **Linear**, then select **Continue**.
+3. Optionally connect **GitHub**, **Atlassian** or **Linear**, then **Continue**.
 
 ![The Bring in your tools step with Git found](images/getting-started-tools-light.png)
 
@@ -32,7 +32,7 @@ Spark needs Git to change code. The Mac app adds an optional **Mac access** step
 ## Send your first message
 
 1. On **You're all set**, select **Open Spark Outpost**.
-2. Select **Chats** in the rail, then **New chat** (**⌘⇧O**).
+2. Select **New chat** (**⌘⇧O**).
 3. Select **Choose project** and pick a folder.
 4. Type a small task, such as `Add a dark mode toggle to the dashboard`, and press **Enter**.
 

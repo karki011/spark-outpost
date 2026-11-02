@@ -69,8 +69,7 @@ import type { SweepLimits } from '../persistence/provider-sessions.ts';
 import { repoScanner } from '../agent-config/discovery.ts';
 import { loadRepoLaunch } from '../agent-config/launch.ts';
 import { commandAllowlistFromRules } from '../agent-config/allow-rules.ts';
-import { conversationProjectIds } from '../agent-config/store.ts';
-import { loadUserMcp } from '../mcp/launch.ts';
+import { loadTurnExtensions } from './turn-extensions.ts';
 import { withMoveNote } from './project-move.ts';
 import { ASSISTANT_PREAMBLE } from '../companion/assistant.ts';
 import { startAssistantTurn, type AssistantTurn } from '../companion/assistant-turn.ts';
@@ -308,13 +307,7 @@ export async function runAgentTurn(
     const recordSpend = spendRecorder(deps.db, lease.runId, input.provider, session);
     const recordRequest = (request: RequestUsage) =>
       recordRequestUsage(deps.db, lease.runId, request, new Date());
-    const userMcp = input.assistant
-      ? []
-      : await loadUserMcp(
-          deps.db,
-          input.identity.threadId,
-          await conversationProjectIds(deps.db, input.identity.threadId),
-        ).catch(() => []);
+    const { userMcp, userPlugins } = await loadTurnExtensions(deps.db, input);
     const spark = {
       ...(await sparkPreferences(deps.db, input.workspaceId)),
       teammate: await sessionBrief(deps.db, input),
@@ -370,6 +363,7 @@ export async function runAgentTurn(
         ...(session ? { session: session.target } : {}),
         ...liveTurn(input, session),
         ...(repo.length > 0 ? { repo } : {}),
+        ...(userPlugins.length > 0 ? { userPlugins } : {}),
         ...(userMcp.length > 0 ? { userMcp } : {}),
         spark,
         sparkScope: {

@@ -52,7 +52,7 @@ export interface RulesSession {
 interface SessionRow {
   provider: string;
   agent_mode: string | null;
-  modes: { id?: unknown; name?: unknown }[] | null;
+  modes: { id?: unknown; label?: unknown }[] | null;
   session_row: string | null;
   source: string | null;
   from_user: boolean | null;
@@ -62,7 +62,7 @@ const USER_SOURCES: ReadonlySet<string> = new Set(['ui', 'queue', 'e2e']);
 
 function modeNameOf(modes: SessionRow['modes'], mode: string | null): string {
   const found = (modes ?? []).find((option) => option.id === mode);
-  return typeof found?.name === 'string' ? found.name : (mode ?? 'its default mode');
+  return typeof found?.label === 'string' ? found.label : (mode ?? 'its default mode');
 }
 
 function typedByUser(row: SessionRow): boolean {

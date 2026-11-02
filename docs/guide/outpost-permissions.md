@@ -16,9 +16,9 @@ A request runs under the receiving chat's own agent mode and autonomy. Only word
 | You type `@api fix it and open a PR` in the outpost. | The chat pushes its branch and opens its pull request.       | Your message, as if typed in that chat.   |
 | The receiving chat is on **Full auto → PR**.         | It opens its pull request for work that any request started. | You chose that setting for that chat.     |
 
-The first case covers every request [an agent sends](outpost-asks.md), a [story](outpost-stories.md)'s first messages even after you edit them, Spark's wrap-up and Spark actions such as tickets and Slack: text you didn't write never asks for them.
+The first case covers every request [an agent sends](outpost-asks.md), a [story](outpost-stories.md)'s first messages even after you edit them, Spark's wrap-up and Spark actions such as tickets and Slack.
 
-**Auto** works like the third case. The request reads **Waiting on you** while that chat shows an approval card.
+**Auto** works like the third case.
 
 ## What a request can't change
 

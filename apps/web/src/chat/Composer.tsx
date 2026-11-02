@@ -32,6 +32,7 @@ import { SlashMenu } from './composer/SlashMenu.tsx';
 import { ChatMcpPanel } from './composer/ChatMcpPanel.tsx';
 import { usePickerCommand } from './composer/use-picker-command.ts';
 import { useSlash } from './composer/use-slash.ts';
+import { usePluginCommands } from './composer/use-plugin-commands.ts';
 import { useDraftRequests } from './composer/use-draft-requests.ts';
 import { useUnsentWork } from './composer/unsent-work.ts';
 import { PlusMenu } from './composer/PlusMenu.tsx';
@@ -88,7 +89,7 @@ export function Composer({
   onAudit,
   onStartFresh,
   agentCommands = NO_COMMANDS,
-  agentName = 'Agent',
+  agentName: givenAgentName,
   autoFocus = true,
   sessionChip = null,
   quotes,
@@ -122,6 +123,8 @@ export function Composer({
   });
   const [mcpOpen, setMcpOpen] = useState(false);
   const provider = settings?.provider ?? null;
+  const providerLabel = providers.find((entry) => entry.id === provider)?.name;
+  const agentName = givenAgentName ?? providerLabel ?? 'Agent';
   const capabilities = useQuery({
     ...capabilitiesQuery(provider ?? 'claude'),
     staleTime: CAPABILITIES_STALE_MS,
@@ -130,7 +133,7 @@ export function Composer({
   const picker = usePickerCommand({
     conversationId,
     capabilities: capabilities.data,
-    agentName: providers.find((entry) => entry.id === provider)?.name ?? 'This agent',
+    agentName: providerLabel ?? 'This agent',
     notify: attachments.notify,
   });
   const canStartFresh = onStartFresh !== undefined;
@@ -138,17 +141,19 @@ export function Composer({
   const efforts = capabilities.data?.efforts;
   const agentConfig = useAgentConfig(repos[0]?.id ?? null);
   const skills = agentConfig.data?.settings.skills ? agentConfig.data.skills : NO_SKILLS;
+  const pluginCommands = usePluginCommands(provider);
   const slashContext = useMemo(
     () => ({
       agentName,
       skills,
+      pluginCommands,
       effortHint: effortHint(efforts ?? []),
       hidden: new Set<ClientCommandName>([
         ...(canStartFresh ? [] : (['fresh'] as const)),
         ...(hasSettings ? [] : (['model', 'effort'] as const)),
       ]),
     }),
-    [agentName, skills, efforts, canStartFresh, hasSettings],
+    [agentName, skills, pluginCommands, efforts, canStartFresh, hasSettings],
   );
   const runCommand = (command: ClientCommandName, args = '') =>
     runClientCommand(

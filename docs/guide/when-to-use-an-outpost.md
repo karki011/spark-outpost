@@ -10,23 +10,21 @@ An outpost groups independently messaged chats across repositories or branches. 
 
 ## Outpost or one chat
 
-| Use        | When                                                                                | You get                                                                            |
-| ---------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| One chat   | The work lives in one project. The lead delegates implementation to its sub-agents. | One branch and one pull request.                                                   |
-| An outpost | The work spans repos or roles, such as frontend, API and docs.                      | Each chat keeps its own project, agent, mode, branch and pull request. You direct. |
+| Use        | When                                                           | You get                                                                            |
+| ---------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| One chat   | The work lives in one project.                                 | One branch and one pull request.                                                   |
+| An outpost | The work spans repos or roles, such as frontend, API and docs. | Each chat keeps its own project, agent, mode, branch and pull request. You direct. |
 
 ## An example
 
-Example: **Usage by user**, with frontend, API and docs chats.
+**Usage by user**, with frontend, API and docs chats.
 
 | You post                                      | What happens                                                |
 | --------------------------------------------- | ----------------------------------------------------------- |
 | `@api add GET /usage and open a PR`           | The API chat builds on its branch and opens a pull request. |
-| `@fe build the page against the new endpoint` | The frontend chat builds in its repo, under its own mode.   |
+| `@fe build the page against the new endpoint` | The frontend chat builds in its repo.                       |
 | `@docs describe the page`                     | The docs chat writes the page in the docs repo.             |
 | **Post note**: `The response is paged.`       | A note: it starts no work and stays in the thread.          |
-
-Each answer lands under its request with its branch and PR.
 
 Only members can be asked; agents can [ask each other](outpost-asks.md), and a chat can [start or propose a story](outpost-stories.md) of sub-tasks.
 

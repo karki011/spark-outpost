@@ -6,7 +6,7 @@ order: 228
 summary: Make a named teammate with a face, a role, its own chat, defaults and standing instructions, then talk to it or hand it one job with @.
 ---
 
-You'll make a named teammate, chat with it and hand it jobs. About 2 minutes.
+Make a named teammate, chat with it and hand it jobs. About 2 minutes.
 
 ## Make one
 

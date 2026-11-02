@@ -18,6 +18,7 @@ import type {
   TokenUsage,
 } from '@spark-outpost/contracts';
 import type { RepoLaunch } from '../agent-config/launch.ts';
+import type { UserPluginLaunch } from '../agent-config/user-plugins/launch.ts';
 import type { UserMcpLaunch } from '../mcp/launch.ts';
 import type { SparkScope } from '../spark-mcp/deps.ts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
@@ -116,6 +117,7 @@ export interface ProviderTurn {
   preamble?: string;
   turnPreamble?: string;
   repo?: RepoLaunch;
+  userPlugins?: readonly UserPluginLaunch[];
   userMcp?: readonly UserMcpLaunch[];
   spark?: SparkSessionPrefs;
   sparkScope?: SparkScope;

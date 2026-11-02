@@ -3,6 +3,7 @@ import {
   commandKey,
   type AgentCommand,
   type RepoDefinition,
+  type UserPlugin,
 } from '@spark-outpost/contracts';
 
 const CLIENT_COMMAND_NAMES = ['fresh', 'model', 'effort', 'plan', 'review', 'mcp'] as const;
@@ -22,6 +23,7 @@ export interface SlashContext {
   effortHint?: string | null;
   hidden?: ReadonlySet<ClientCommandName>;
   skills?: readonly RepoDefinition[];
+  pluginCommands?: readonly string[];
 }
 
 type ClientItem = Omit<SlashItem, 'source'> & { name: ClientCommandName };
@@ -120,6 +122,30 @@ function skillItems(agent: readonly AgentCommand[], context: SlashContext): Slas
   });
 }
 
+export function loadedPluginCommands(plugins: readonly UserPlugin[]): string[] {
+  return plugins
+    .filter((plugin) => plugin.enabled && !plugin.changed && plugin.loadable)
+    .flatMap((plugin) => plugin.commandNames);
+}
+
+function pluginItem(name: string, agentName: string): SlashItem {
+  const plugin = name.slice(0, name.indexOf(':'));
+  return {
+    name,
+    description: `From the ${plugin} plugin`,
+    hint: null,
+    detail: `Runs in ${agentName}'s session with the ${plugin} plugin you turned on in Settings.`,
+    source: 'agent',
+  };
+}
+
+function pluginItems(agent: readonly AgentCommand[], context: SlashContext): SlashItem[] {
+  const advertised = new Set(agent.map((command) => commandKey(command.name)));
+  return [...new Set(context.pluginCommands ?? [])]
+    .filter((name) => !advertised.has(commandKey(name)) && blockedReason(name) === null)
+    .map((name) => pluginItem(name, context.agentName));
+}
+
 export interface SlashQuery {
   query: string;
   end: number;
@@ -140,7 +166,7 @@ export function slashItems(agent: readonly AgentCommand[], context: SlashContext
     .filter((command) => !CLIENT_NAMES.has(commandKey(command.name)))
     .filter((command) => blockedReason(command.name) === null)
     .map((command) => agentItem(command, context.agentName));
-  return [...client, ...skillItems(agent, context), ...agentItems];
+  return [...client, ...skillItems(agent, context), ...agentItems, ...pluginItems(agent, context)];
 }
 
 export function filterSlashItems(items: readonly SlashItem[], query: string): SlashItem[] {

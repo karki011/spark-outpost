@@ -6,7 +6,7 @@ order: 214
 summary: Set Spark autonomy for a chat or for every new chat - keep changes automatically, or keep them and open a pull request.
 ---
 
-You'll choose what Spark does with finished work. About 1 minute.
+Choose what Spark does with finished work. About 1 minute.
 
 ## For one chat
 
@@ -29,7 +29,6 @@ Open **Settings → Chats & autonomy** and change **How much Spark does alone**.
 
 ## What doesn't change
 
-- **Revert to before this run** always undoes a run.
 - Nothing ever merges. **Full auto → PR** pushes only the chat's own branch.
 - Approval cards and [protected paths](protected-paths.md) still wait for you.
 - To review each step, pick an [agent mode](agent-mode.md#pick-the-agents-mode) that asks, such as **Manual**.

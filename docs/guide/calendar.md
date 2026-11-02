@@ -35,7 +35,7 @@ With VoiceOver or keyboard navigation, the card takes focus; **⌃⌥⌘M** focu
 1. On the Calendar card, **Let agents read my calendar** is on by default.
 2. Turn on **Agents can edit** per calendar; Google asks first.
 
-Agents follow their [mode](spark-tools.md#when-actions-ask-first). In **Accept edits**, a vague request shows a card. Guest events and shared calendars always ask.
+Agents follow their [mode](spark-tools.md#when-actions-ask-first). Guest events and shared calendars always ask.
 
 [Ask Spark](companion-quick-chat.md#let-ask-spark-act) uses these switches too, and snoozes, dismisses or joins meetings without them.
 

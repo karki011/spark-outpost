@@ -33,7 +33,10 @@ async function audit(
   action: SparkAction,
   result: SparkResult,
 ): Promise<void> {
-  const lean = isCalendarAction(action.action) || isAtlassianAction(action.action);
+  const lean =
+    isCalendarAction(action.action) ||
+    isAtlassianAction(action.action) ||
+    action.action === 'plugins_edit';
   const payload = lean
     ? redactValue({ action: auditedAction(action), outcome: result.state, url: result.url })
     : redactValue({ action, outcome: result.state, result });

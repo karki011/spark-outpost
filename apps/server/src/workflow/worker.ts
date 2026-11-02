@@ -1,3 +1,5 @@
+import { executePluginReview } from '../agent-config/user-plugins/review.ts';
+import { isPluginReviewRun } from '../agent-config/user-plugins/review-store.ts';
 import type { ActiveWork } from '../diagnostics/event-loop-lag.ts';
 import { executeDigest } from '../digest/execute.ts';
 import type { Db } from '../persistence/db.ts';
@@ -30,6 +32,7 @@ export interface Worker {
 }
 
 async function runLease(options: WorkerOptions, lease: Lease): Promise<void> {
+  if (await isPluginReviewRun(options.db, lease.runId)) return executePluginReview(options, lease);
   if (await isDigestRun(options.db, lease.runId)) return executeDigest(options, lease);
   await runChatTurn(options, lease);
   await sendNextQueued(options, lease.runId);

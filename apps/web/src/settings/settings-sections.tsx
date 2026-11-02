@@ -20,6 +20,7 @@ import { HelpSection, helpRows } from '../help/HelpSection.tsx';
 import { AUTO_CONTINUE_LABEL } from './AutoContinueSetting.tsx';
 import { ARCHIVE_INACTIVE_LABEL } from './ArchiveInactiveSetting.tsx';
 import { CODE_MODE_LABEL } from './CodeModeSetting.tsx';
+import { PLUGINS_LABEL } from './PluginsSettings.tsx';
 import { COLLAPSE_TURNS_LABEL } from './CollapseTurnsSetting.tsx';
 import { BUSY_ENTER_LABEL } from './BusyEnterSetting.tsx';
 import { BrowserSection, SIGNED_IN_SITES_LABEL, SIGN_OUT_ALL_LABEL } from './BrowserSection.tsx';
@@ -195,6 +196,7 @@ export const SETTINGS_SECTIONS = [
       CODE_MODE_LABEL,
       INSTRUCTIONS_LABEL,
       TERMINAL_RECORD_LABEL,
+      PLUGINS_LABEL,
     ],
     render: ({ setup }) => setup && <ChatsSection profile={setup.profile} />,
   },

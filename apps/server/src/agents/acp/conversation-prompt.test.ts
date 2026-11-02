@@ -3,6 +3,8 @@ import type { TurnAttachment } from '../../providers/provider.ts';
 import {
   CHAT_ONLY_NOTE,
   CHAT_TOOLS_NOTE,
+  commandFirstBlocks,
+  commandPreamble,
   contextSteps,
   conversationBlocks,
   conversationPrompt,
@@ -188,5 +190,37 @@ describe('conversation prompt', () => {
       'Recalled 1 earlier message',
       'Left out 1 older message to fit the context',
     ]);
+  });
+});
+
+describe('command-first prompt', () => {
+  const full = { image: true, embeddedContext: true };
+
+  it('ends with the command alone, after the preamble and the files', () => {
+    const blocks = commandFirstBlocks([], 'Spark preamble', '/egm:egm-review design.md', {
+      attachments: [text('notes.md', 'hello'), image],
+      support: full,
+    });
+    expect(blocks.at(-1)).toEqual({ type: 'text', text: '/egm:egm-review design.md' });
+    expect(blocks[0]).toEqual({
+      type: 'text',
+      text: `${CHAT_ONLY_NOTE}\n\nSpark preamble\n\n${'Attached file notes.md:'}\n\`\`\`\nhello\n\`\`\`\n\n[Attached image: shot.png]`,
+    });
+    expect(blocks.some((block) => block.type === 'resource')).toBe(false);
+    expect(blocks.filter((block) => block.type === 'image')).toHaveLength(1);
+  });
+
+  it('keeps earlier messages ahead of the command', () => {
+    const blocks = commandFirstBlocks([{ role: 'user', content: 'earlier' }], '', '/deploy', {});
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0]?.type === 'text' && blocks[0].text).toContain('User: earlier');
+    expect(blocks[1]).toEqual({ type: 'text', text: '/deploy' });
+  });
+
+  it('puts the preamble, the outpost note and the title request before the command', () => {
+    expect(commandPreamble({ preamble: 'P', turnPreamble: 'T', askTitle: true } as never)).toMatch(
+      /^P\n\nT\n\n/,
+    );
+    expect(commandPreamble({} as never)).toBe('');
   });
 });

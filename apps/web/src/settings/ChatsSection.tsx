@@ -7,6 +7,7 @@ import { ArchiveInactiveSetting } from './ArchiveInactiveSetting.tsx';
 import { AutoContinueSetting } from './AutoContinueSetting.tsx';
 import { CodeModeSetting } from './CodeModeSetting.tsx';
 import { CollapseTurnsSetting } from './CollapseTurnsSetting.tsx';
+import { PluginsSettings } from './PluginsSettings.tsx';
 import { BusyEnterSetting } from './BusyEnterSetting.tsx';
 import { TerminalRecordSetting } from './TerminalRecordSetting.tsx';
 import { WideWindowSetting } from './WideWindowSetting.tsx';
@@ -36,6 +37,7 @@ export function ChatsSection({ profile }: { profile: Profile }) {
         <AgentInstructionsSetting profile={profile} />
         <TerminalRecordSetting enabled={profile.terminalRecordLikeChat} />
       </section>
+      <PluginsSettings />
     </>
   );
 }

@@ -5,6 +5,7 @@ import {
   effortHint,
   filterSlashItems,
   findSlashQuery,
+  loadedPluginCommands,
   parseSlash,
   planPrompt,
   reviewPrompt,
@@ -169,5 +170,52 @@ describe('repo skills', () => {
     expect(skillCommand(parseSlash('/compact'), items)).toBeNull();
     expect(skillCommand(parseSlash('hello'), items)).toBeNull();
     expect(typedCommandNote(parseSlash('/ship'), items, 'Codex')).toBeNull();
+  });
+});
+
+describe('user plugin commands', () => {
+  const base = {
+    marketplace: 'm',
+    version: null,
+    description: '',
+    skills: 0,
+    commands: 0,
+    agents: 0,
+    hooks: [],
+    mcpServers: [],
+    loadable: true,
+    unloadableReason: null,
+    fingerprint: 'fp',
+    scan: { status: 'clean' as const, findings: [], agentReview: 'off' as const },
+    changed: false,
+  };
+  const plugins = [
+    { ...base, key: 'egm@egm', name: 'egm', enabled: true, commandNames: ['egm:egm-review'] },
+    { ...base, key: 'off@m', name: 'off', enabled: false, commandNames: ['off:x'] },
+    { ...base, key: 'new@m', name: 'new', enabled: true, changed: true, commandNames: ['new:y'] },
+    { ...base, key: 'login@m', name: 'login', enabled: true, commandNames: ['login:logout'] },
+  ];
+
+  it('offers the commands of plugins that load, before the session lists them', () => {
+    const pluginCommands = loadedPluginCommands(plugins);
+    expect(pluginCommands).toEqual(['egm:egm-review', 'login:logout']);
+    const items = slashItems([], { agentName: 'Claude', pluginCommands });
+    expect(items.filter((item) => item.name.includes(':'))).toEqual([
+      expect.objectContaining({
+        name: 'egm:egm-review',
+        description: 'From the egm plugin',
+        source: 'agent',
+      }),
+    ]);
+    expect(typedCommandNote(parseSlash('/egm:egm-review'), items, 'Claude')).toBeNull();
+    expect(skillCommand(parseSlash('/egm:egm-review spec.md'), items)).toBeNull();
+  });
+
+  it('lists a plugin command once when the live session advertises it too', () => {
+    const live = [{ name: 'egm:egm-review', description: 'Review a design', hint: null }];
+    const items = slashItems(live, { agentName: 'Claude', pluginCommands: ['egm:egm-review'] });
+    expect(items.filter((item) => item.name === 'egm:egm-review')).toEqual([
+      expect.objectContaining({ description: 'Review a design' }),
+    ]);
   });
 });

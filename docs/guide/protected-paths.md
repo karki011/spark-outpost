@@ -52,7 +52,7 @@ Rules go in `permissions.allow`, `ask` or `deny`; deny wins, then ask. Unlisted 
 
 Fixed: Spark's ports, the [always refused](#what-is-always-refused) list and the Mac control, Browser pane, Calendar and web address rules.
 
-**Settings → Spark rules** (Mac) sets each rule in your file; **Use recommended rules** adds the table's choices. Company rules are locked. A refusal shows a [card](cards.md#around-the-result).
+**Settings → Spark rules** (Mac) sets each rule in your file; **Use recommended rules** adds the table's choices. A refusal shows a [card](cards.md#around-the-result).
 
 `spark_rules_edit` asks on the Mac. **Allow for this session**: one file, that chat, your turns, same agent and mode. Outside edits wait for **Review**.
 

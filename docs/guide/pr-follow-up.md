@@ -27,10 +27,10 @@ To approve each push, turn on **Ask before pushing and replying** in **Settings 
 | -------------------------------------- | ------------------------------------ |
 | Failing checks from the PR's own CI    | Fixes them                           |
 | Comments from people with write access | Fixes, answers, or hands them to you |
-| Anyone else's comments, bots included  | Shows them, never acts               |
+| Anyone else's comments, bots included  | Shows them as **Not acted on**       |
 | A disagreement                         | Always goes to you                   |
 
-Items from bots or people without write access say **Not acted on**. An item closes by itself when its thread is resolved, its check passes or the same reviewer reviews again. Your own replies on a thread are never gathered.
+An item closes by itself when its thread is resolved, its check passes or the same reviewer reviews again. Your own replies on a thread are never gathered.
 
 ## Limits
 

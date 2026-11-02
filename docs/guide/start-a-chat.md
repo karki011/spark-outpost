@@ -52,7 +52,7 @@ Paste a link from **Chat actions → Copy chat link** into another chat; the age
 
 Group chats in an [outpost](outposts.md).
 
-> **Tip:** Select **Talk to…** or type `@` to work with a [Spark](sparks.md).
+> **Tip:** Bring in a [Spark](sparks.md) teammate.
 
 ## Jump between sessions
 

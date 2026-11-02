@@ -223,7 +223,7 @@ export function claudeSessionMeta(
         disallowedTools: deny,
         settingSources: [],
         ...(plugins.length > 0
-          ? { plugins: plugins.map((path) => ({ type: 'local', path })) }
+          ? { plugins: plugins.map((path) => ({ type: 'local', path, skipMcpDiscovery: true })) }
           : {}),
         allowDangerouslySkipPermissions: allowBypass,
         settings: {
@@ -232,7 +232,7 @@ export function claudeSessionMeta(
             ? { env: repo.redirects.env }
             : {}),
           ...(repo?.hooks ? { hooks: repo.hooks } : { disableAllHooks: true }),
-          disableSkillShellExecution: true,
+          disableSkillShellExecution: repo?.skillShell !== true,
           disableClaudeAiConnectors: true,
           plansDirectory: PLANS_DIR,
           permissions: {

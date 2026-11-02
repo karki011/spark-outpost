@@ -6,7 +6,7 @@ order: 212
 summary: Pick a model, set how hard the agent thinks, and choose what it may do without asking in one chat.
 ---
 
-You'll choose the model, effort and permissions for one chat. About 1 minute.
+Choose the model, effort and permissions for one chat. About 1 minute.
 
 ## Pick a model
 
@@ -36,8 +36,8 @@ The agent picks models for its sub-agents.
 
 What each mode allows: [Agent modes](modes-and-levels.md#agent-modes). A read-only mode never changes files: switch modes, then ask.
 
-> **Important:** No mode switches off the [protected paths](protected-paths.md). Modes that never ask are recorded as [ran without review](approvals.md#actions-that-ran-without-review).
+> **Important:** No mode switches off the [protected paths](protected-paths.md).
 
-These choices apply to this chat. For new chats, see [Change defaults](providers-and-models.md#change-defaults-or-the-default-provider).
+These choices apply to this chat only.
 
 **Next:** [Choose how much Spark does alone](spark-autonomy.md)

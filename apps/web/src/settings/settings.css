@@ -288,7 +288,8 @@
   gap: 8px;
   margin: 0 0 12px;
 }
-.set-projects-bar {
+.set-projects-bar,
+.set-list-bar {
   position: sticky;
   top: -12px;
   z-index: 2;
@@ -299,11 +300,13 @@
   padding: 8px 0;
   background: var(--panel);
 }
-.set-projects-bar .inp {
+.set-projects-bar .inp,
+.set-list-bar .inp {
   flex: 1;
   min-width: 0;
 }
-.set-projects-bar .set-hint {
+.set-projects-bar .set-hint,
+.set-list-bar .set-hint {
   flex-shrink: 0;
   margin: 0;
   font-variant-numeric: tabular-nums;

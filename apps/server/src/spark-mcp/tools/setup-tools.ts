@@ -9,6 +9,8 @@ import {
   type SlackConnection,
 } from '@spark-outpost/contracts';
 import { conversationProjectIds } from '../../agent-config/store.ts';
+import { loadUserPlugins } from '../../agent-config/user-plugins/choice.ts';
+import { runFromDevice } from '../../remote/run-mark.ts';
 import { effectiveFor } from '../../mcp/effective.ts';
 import { enablementsFor, listUserMcp } from '../../mcp/store.ts';
 import { getAttentionSettings } from '../../persistence/attention-settings.ts';
@@ -170,12 +172,34 @@ async function connectors(context: SparkToolContext) {
   };
 }
 
-async function settings({ deps, scope }: SparkToolContext) {
-  const [setup, attention, chatDefaults, fullDiskAccess] = await Promise.all([
+async function claudePlugins({ deps, scope }: SparkToolContext) {
+  if (scope.runId && (await runFromDevice(deps.db, scope.runId))) return 'Shown on the Mac only.';
+  const { plugins, choices } = await loadUserPlugins(deps.db, scope.workspaceId, false);
+  return plugins.map(({ plugin, agentReview }) => {
+    const choice = choices.get(plugin.installed.key);
+    const changed = choice?.enabled === true && choice.fingerprint !== plugin.fingerprint;
+    return {
+      key: plugin.installed.key,
+      name: plugin.parsed.name ?? plugin.installed.name,
+      version: plugin.installed.version,
+      on: choice?.enabled === true && !changed,
+      changedSinceTurnedOn: changed,
+      loadable: plugin.unloadableReason === null,
+      status: plugin.status,
+      findings: plugin.findings.length,
+      agentReview,
+    };
+  });
+}
+
+async function settings(context: SparkToolContext) {
+  const { deps, scope } = context;
+  const [setup, attention, chatDefaults, fullDiskAccess, plugins] = await Promise.all([
     getSetupState(deps.db, scope.workspaceId),
     getAttentionSettings(deps.db, scope.workspaceId),
     draftChatSettings(deps.db, scope.workspaceId),
     fullDiskAccessStatus(),
+    claudePlugins(context),
   ]);
   const { profile } = setup;
   return {
@@ -210,6 +234,7 @@ async function settings({ deps, scope }: SparkToolContext) {
       autonomy: chatDefaults.level ? autonomyLabel(chatDefaults.level) : null,
     },
     ticketAttention: attention,
+    claudePlugins: plugins,
   };
 }
 
@@ -234,7 +259,7 @@ export const setupTools = [
     name: 'spark_settings',
     title: 'Spark settings',
     description:
-      'Non-secret Settings → Spark values: default autonomy level (Automatic, Full auto → PR) and what each means, personality, auto-continue wait, context compaction thresholds (warn, compact, automatic on or off), morning brief time, whether the desktop app sends its anonymous daily heartbeat and whether it has macOS Full Disk Access (Settings → Help), new-chat defaults and ticket attention rules. Per-project Builders at once and Where Spark works are in spark_projects.',
+      'Non-secret Settings → Spark values: default autonomy level (Automatic, Full auto → PR) and what each means, personality, auto-continue wait, context compaction thresholds (warn, compact, automatic on or off), morning brief time, whether the desktop app sends its anonymous daily heartbeat and whether it has macOS Full Disk Access (Settings → Help), new-chat defaults, ticket attention rules and Claude Code plugins. Per-project Builders at once and Where Spark works are in spark_projects.',
     input: {},
     run: (_args, context) => settings(context),
   }),

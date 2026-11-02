@@ -28,7 +28,7 @@ Access renews itself; if it ends, select **Sign in again**. Sign-in needs github
 2. Atlassian: **Site URL**, **Email**, **API token**. Linear: **API key**. ServiceNow: **Instance** (`acme`), then a **Username** with a **Password** or **API key**; with SSO, ask your admin for a key.
 3. Select **Save and check**.
 
-Each product or record type has a switch (**Changes**: read only) and says when out of reach.
+Each product or record type has a switch and says when out of reach.
 
 Keys stay in your keychain. To stop, select **Disconnect** (or **···** → **Disconnect…**). ServiceNow's **···** also has **Check connection** and **Open instance**.
 

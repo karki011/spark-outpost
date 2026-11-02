@@ -79,4 +79,18 @@ describe('slashPrompt', () => {
       note: 'Sent /compact as text; commands only run in a continued session',
     });
   });
+
+  it('sends a plugin or repo command as a command in a session that was not continued', () => {
+    const known = ['egm:egm-review', 'egm:egm-draft', 'deploy'];
+    expect(slashPrompt('/EGM:egm-review design.md', 'Claude', null, known)).toEqual({
+      kind: 'command',
+      text: '/EGM:egm-review design.md',
+      note: 'Sent /EGM:egm-review to Claude',
+    });
+    expect(slashPrompt('/deploy now', 'Claude', null, known).kind).toBe('command');
+    expect(slashPrompt('/repo:deploy now', 'Claude', null, known).kind).toBe('command');
+    for (const text of ['/compact', '/egm:unknown', '/logout']) {
+      expect(slashPrompt(text, 'Claude', null, known).kind).toBe('escaped');
+    }
+  });
 });

@@ -1,5 +1,6 @@
 export * from './advice.ts';
 export * from './agent-config.ts';
+export * from './user-plugins.ts';
 export * from './mcp.ts';
 export * from './spark-mcp-actions.ts';
 export * from './annotations.ts';
@@ -47,6 +48,7 @@ export * from './runs.ts';
 export * from './setup.ts';
 export * from './spark-rules.ts';
 export * from './spark-rules-edit.ts';
+export * from './spark-plugins-edit.ts';
 export * from './spark.ts';
 export * from './tasks.ts';
 export * from './terminal.ts';

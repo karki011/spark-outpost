@@ -8,7 +8,7 @@ summary: Run commands beside a chat, or work with Claude Code or Codex in a Term
 
 Open an AI terminal. About 1 minute.
 
-> **Important:** Terminal sessions follow the provider’s mode, without Spark’s approval cards or [path protection](protected-paths.md). [Recording](settings.md#record-terminal-sessions) adds details and audit for Claude with Spark’s mod; new profiles default on, existing choices stay. Codex keeps metadata only.
+> **Important:** Terminal sessions follow the provider’s mode, without Spark’s approval cards or [path protection](protected-paths.md). [Recording](settings.md#record-terminal-sessions) covers Claude with Spark’s mod; Codex keeps metadata only.
 
 ## Start a Terminal session
 

@@ -20,8 +20,6 @@ About 2 minutes.
 8. **Message** opens that chat’s composer; Outposts show handles.
 9. **Ask lead to redirect** drafts in that chat.
 
-**⌘⇧Y** jumps to the waiting card.
-
 **Open in terminal** shows failed output in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
@@ -36,7 +34,7 @@ Waits last 30 idle minutes; resumed turns show **Continued on its own**.
 
 ## Queue messages
 
-Send files without text. Queues survive restarts; drafts don't survive a reload.
+Send files without text. Queues survive restarts; drafts don't.
 
 1. While a turn runs, **Enter** queues a message.
 2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.

@@ -16,7 +16,7 @@ Use Spark from another device; work stays on the Mac. About 5 minutes. Needs Tai
 
 **Devices** renames or revokes a device, passkeys included; **Remove old entry** clears a duplicate. **What paired devices can do** holds the switches. On a phone, **More** holds Remote control and Settings; Mac-only tools are hidden.
 
-Creating, deleting or changing an [outpost](outposts.md) stays on the Mac; a proposed story's **Start** works here, as proposed.
+See what [outposts](outposts.md) allow here.
 
 **Link a new folder or clone a repo** also allows **New folder**.
 

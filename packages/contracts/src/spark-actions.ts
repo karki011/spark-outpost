@@ -16,6 +16,11 @@ import {
 import { SLACK_POST_TEXT_MAX, slackChannelIdSchema } from './slack.ts';
 import { rulesEditActionSchema, rulesEditLabels, rulesEditQuestion } from './spark-rules-edit.ts';
 import {
+  pluginsEditActionSchema,
+  pluginsEditLabels,
+  pluginsEditQuestion,
+} from './spark-plugins-edit.ts';
+import {
   calendarEditActionSchema,
   calendarEditQuestion,
   calendarReadActionSchema,
@@ -235,6 +240,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   askSparkActionSchema,
   publishArtifactActionSchema,
   rulesEditActionSchema,
+  pluginsEditActionSchema,
 ]);
 export type SparkAction = z.infer<typeof sparkActionSchema>;
 export type SparkActionName = SparkAction['action'];
@@ -289,6 +295,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   ask_spark: [],
   publish_artifact: [],
   rules_edit: [],
+  plugins_edit: [],
 };
 
 export function editableFields(action: SparkActionName): readonly (keyof SparkActionEdits)[] {
@@ -413,6 +420,7 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
   ...askSparkLabels,
   ...publishArtifactLabels,
   ...rulesEditLabels,
+  ...pluginsEditLabels,
 };
 
 const SLACK_POST_AS_YOU_QUESTION = 'Post this to Slack as you?';
@@ -426,6 +434,7 @@ export function sparkActionQuestion(action: SparkAction): string {
   if (action.action === 'mac_press') return `Press ${action.what} in ${action.app}?`;
   if (action.action === 'calendar_edit') return calendarEditQuestion(action);
   if (action.action === 'rules_edit') return rulesEditQuestion(action);
+  if (action.action === 'plugins_edit') return pluginsEditQuestion(action);
   return (
     atlassianQuestion(action) ??
     serviceNowQuestion(action) ??

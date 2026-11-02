@@ -36,31 +36,36 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 
 ## Browser pane, Mac app
 
-| Keys                      | Action                                  |
-| ------------------------- | --------------------------------------- |
-| **⌘T** / **⌘W** / **⌘⇧T** | New, close, reopen a tab                |
-| **⌘1**–**⌘8** / **⌘9**    | Tab N / last tab                        |
-| **⌃Tab** / **⌃⇧Tab**      | Next / previous tab                     |
-| **⌘L** / **⌘⇧C**          | Address bar / copy it                   |
-| **⌘R** / **⌘⇧R**          | Reload / hard reload                    |
-| **⌘[** / **⌘]**           | Back / forward                          |
-| **⌘F**                    | Find in page                            |
-| **⌘+** / **⌘−** / **⌘0**  | Zoom in, out, reset                     |
-| **⌘P**                    | Print                                   |
-| Arrows / **⇧** arrows     | Pane edge: 10 / 50 px                   |
-| **⌘⇧O**                   | Browser view: chat about the page       |
-| **⌥⌘A**                   | Browser view: Ask Spark about your tabs |
-| **⌘T** / **⌘L**           | Browser view: the command bar           |
-| **⌃1**–**⌃9**             | Browser view: Space N                   |
-| **⇧**-click a link        | Browser view: Peek                      |
-| **⇧⌥**-click a link       | Browser view: Split view                |
+| Keys                      | Action                   |
+| ------------------------- | ------------------------ |
+| **⌘T** / **⌘W** / **⌘⇧T** | New, close, reopen a tab |
+| **⌘1**–**⌘8** / **⌘9**    | Tab N / last tab         |
+| **⌃Tab** / **⌃⇧Tab**      | Next / previous tab      |
+| **⌘L** / **⌘⇧C**          | Address bar / copy it    |
+| **⌘R** / **⌘⇧R**          | Reload / hard reload     |
+| **⌘[** / **⌘]**           | Back / forward           |
+| **⌘F**                    | Find in page             |
+| **⌘+** / **⌘−** / **⌘0**  | Zoom in, out, reset      |
+| **⌘P**                    | Print                    |
+| Arrows / **⇧** arrows     | Pane edge: 10 / 50 px    |
+
+### Browser view
+
+| Keys                | Action                    |
+| ------------------- | ------------------------- |
+| **⌘⇧O**             | Chat about the page       |
+| **⌥⌘A**             | Ask Spark about your tabs |
+| **⌘T** / **⌘L**     | Command bar               |
+| **⌃1**–**⌃9**       | Space N                   |
+| **⇧**-click a link  | Peek                      |
+| **⇧⌥**-click a link | Split view                |
 
 ## Cards
 
 | Keys               | Action                                    |
 | ------------------ | ----------------------------------------- |
 | **Tab**, **Enter** | Move between a card's buttons, choose one |
-| Hold **Space**     | Hold-to-confirm buttons, for 1.5 seconds  |
+| Hold **Space**     | Hold-to-confirm buttons                   |
 
 ## Changes drawer
 
@@ -68,7 +73,6 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | ---------------------- | ---------------------------- |
 | **↑** **↓**, **Enter** | Move between files, open one |
 | **⌘F**                 | Search in the diff           |
-| **Esc**                | Close the drawer             |
 
 ## Map
 

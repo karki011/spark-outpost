@@ -6,7 +6,7 @@ order: 517
 summary: How an agent in an outpost asks another member, leaves a note or reads the thread, where you see it, and why such a request is never your message.
 ---
 
-In an outpost an agent can ask another member directly for work or an answer. The request is the agent's, never yours, and runs under the receiving chat's mode and autonomy.
+In an outpost an agent can ask another member directly for work or an answer. The request is the agent's, never yours.
 
 ## What an agent can do
 

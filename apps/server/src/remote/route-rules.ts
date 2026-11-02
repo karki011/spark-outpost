@@ -169,6 +169,9 @@ POST /api/tickets/:source/:key/transition
 `;
 
 const NEVER = `
+GET /api/user-plugins
+PUT /api/user-plugins/:key
+POST /api/user-plugins/:key/review
 POST /api/browser-history
 GET /api/browser-history
 POST /api/browser-history/clear

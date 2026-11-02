@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import {
   ARTIFACT_KIND_LABELS,
   editableFields,
+  holdsToConfirm,
   serviceNowAsksAlways,
   sparkActionQuestion,
   ticketSourceNames,
@@ -33,6 +34,12 @@ import { TeammateFacts } from '../../teammates/TeammateFacts.tsx';
 import { useRemoteClient } from '../../phone/use-remote-client.ts';
 import { draftOf, editsOf, Fields } from './SparkActionFields.tsx';
 import { RULES_ON_THE_MAC, RulesEditFacts, rulesByline, rulesNote } from './RulesEditFacts.tsx';
+import {
+  PLUGINS_ON_THE_MAC,
+  PluginEditFacts,
+  pluginsByline,
+  pluginsNote,
+} from './PluginEditFacts.tsx';
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -148,6 +155,8 @@ function Facts({ action }: { action: SparkAction }) {
       return <OutpostStartFacts action={action} />;
     case 'rules_edit':
       return <RulesEditFacts action={action} />;
+    case 'plugins_edit':
+      return <PluginEditFacts action={action} />;
     case 'publish_artifact':
       return (
         <dl className="sac-facts">
@@ -174,7 +183,8 @@ function byline(action: SparkAction, agent: string, secretFiles?: readonly strin
     atlassianByline(action, agent) ??
     serviceNowByline(action, agent) ??
     outpostStartByline(action, agent) ??
-    rulesByline(action);
+    rulesByline(action) ??
+    pluginsByline(action);
   if (mac) return mac;
   if (action.action === 'pr_follow_up') {
     return 'Spark fixed the PR feedback in this chat. Confirm to push and reply on GitHub.';
@@ -191,7 +201,8 @@ function confirmNote(action: SparkAction, secretFiles?: readonly string[]): stri
     atlassianNote(action) ??
     serviceNowNote(action) ??
     outpostStartNote(action) ??
-    rulesNote(action);
+    rulesNote(action) ??
+    pluginsNote(action);
   if (mac) return mac;
   if (action.action === 'pr_follow_up') {
     return 'Nothing is pushed or posted until you confirm. Uncheck anything to leave it out; a fix reply needs the push.';
@@ -207,6 +218,17 @@ function takeover(action: SparkAction): string | null {
     return null;
   }
   return `${action.ticket.key} is assigned to ${action.currentAssignee}. Confirming takes it over.`;
+}
+
+function holdLabel(action: SparkAction): string {
+  if (action.action !== 'plugins_edit') return 'Hold to allow once';
+  return action.enabled ? 'Hold to turn on' : 'Hold to turn off';
+}
+
+function macOnlyNote(action: SparkAction): string | null {
+  if (action.action === 'rules_edit') return RULES_ON_THE_MAC;
+  if (action.action === 'plugins_edit') return PLUGINS_ON_THE_MAC;
+  return null;
 }
 
 export function SparkActionCard({
@@ -247,14 +269,26 @@ export function SparkActionCard({
   }, [requested]);
   const warning = takeover(action);
   const secretFiles = approval.payload.secretSend;
-  const holdOption = secretFiles ? approval.options.find(isAllow) : undefined;
+  const holdOption = holdsToConfirm(approval.payload) ? approval.options.find(isAllow) : undefined;
   const blankTitle = editableFields(action.action).includes('title') && !draft.title.trim();
   const { remote } = useRemoteClient();
-  const onTheMac = remote && action.action === 'rules_edit';
+  const onTheMac = remote ? macOnlyNote(action) : null;
   const shown = approval.options.filter((option) => option !== holdOption);
   const primary = shown.find(isAllow);
   const buttonClass = (option: ApprovalOption) =>
     option === primary ? 'btn primary sm' : isAllow(option) ? 'btn line sm' : 'btn ghost sm deny';
+  const answerButtons = shown.map((option) => (
+    <button
+      key={option.optionId}
+      ref={option === primary ? confirmRef : undefined}
+      type="button"
+      className={buttonClass(option)}
+      disabled={decide.isPending || (isAllow(option) && blankTitle)}
+      onClick={() => decide.mutate(option.optionId)}
+    >
+      {option.name}
+    </button>
+  ));
   return (
     <div
       className={callerSees ? 'appr sac sac-caller' : 'appr sac'}
@@ -284,32 +318,27 @@ export function SparkActionCard({
       {warning && <p className="appr-reason">{warning}</p>}
       <ObservedNote observed={approval.payload.observed} />
       <p className="sac-note">{confirmNote(action, secretFiles)}</p>
-      {holdOption && (
-        <HoldToConfirm
-          label="Hold to allow once"
-          hint="Press and hold for 1.5 seconds, with the mouse or Space."
-          holdingHint="Keep holding. Let go now to cancel."
-          releasedHint="Released early. Nothing was sent."
-          disabled={decide.isPending}
-          onConfirm={() => decide.mutate(holdOption.optionId)}
-        />
-      )}
       {onTheMac ? (
-        <p className="appr-reason">{RULES_ON_THE_MAC}</p>
+        <p className="appr-reason">{onTheMac}</p>
       ) : (
         <div className="appr-acts">
-          {shown.map((option) => (
-            <button
-              key={option.optionId}
-              ref={option === primary ? confirmRef : undefined}
-              type="button"
-              className={buttonClass(option)}
-              disabled={decide.isPending || (isAllow(option) && blankTitle)}
-              onClick={() => decide.mutate(option.optionId)}
-            >
-              {option.name}
-            </button>
-          ))}
+          {holdOption ? (
+            <HoldToConfirm
+              label={holdLabel(action)}
+              hint="Hold 1.5 seconds, with the mouse or Space."
+              holdingHint="Keep holding. Let go now to cancel."
+              releasedHint={
+                action.action === 'plugins_edit'
+                  ? 'Released early. Nothing changed.'
+                  : 'Released early. Nothing was sent.'
+              }
+              disabled={decide.isPending}
+              onConfirm={() => decide.mutate(holdOption.optionId)}
+              adornment={answerButtons}
+            />
+          ) : (
+            answerButtons
+          )}
         </div>
       )}
       {decide.isError && (

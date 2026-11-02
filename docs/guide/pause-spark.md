@@ -6,12 +6,12 @@ order: 234
 summary: Hold the work Spark starts on its own, keep what is running, and resume it later.
 ---
 
-You'll stop Spark starting work by itself while you step away. About 1 minute.
+Stop Spark starting work by itself while you step away. About 1 minute.
 
 1. Select **Pause** in the left bar, above **Remote**. On a phone, open **More**, then **Pause Spark**.
-2. A line at the top reads **Spark is paused**. To go on, select **Resume** there or in the left bar.
+2. **Spark is paused** shows at the top; select **Resume** there or in the left bar.
 
-Pausing never stops a running turn, and Spark stays paused after a restart.
+Spark stays paused after a restart.
 
 | Held until you resume                                          | Still runs                                                                                                                  |
 | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |

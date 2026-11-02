@@ -41,7 +41,7 @@ Changes apply to chats that haven't picked their own. **Per chat** effort keeps 
 
 ## Connect Jev
 
-[Jev](jev.md) is an optional advisor from TypeSafe. Without it, Spark's own rules do the same jobs.
+[Jev](jev.md) is optional; without it, Spark's own rules do its jobs.
 
 1. Get an API key from the **TypeSafe console**.
 2. In **Settings → AI providers**, select the **Jev** tile under **Advisor**.

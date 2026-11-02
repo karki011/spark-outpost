@@ -108,6 +108,7 @@ describe('what a Spark tools session can use', () => {
       servicenow: false,
       ticket_create: false,
       rules_edit: false,
+      plugins_edit: false,
       howTo: {},
     });
   });
@@ -121,6 +122,29 @@ describe('what a Spark tools session can use', () => {
     const spoken = await sparkAvailability(deps(), turn);
     expect(spoken.rules_edit).toBe(false);
     expect(spoken.howTo?.rules_edit).toContain('never for a spoken message');
+  });
+
+  it('offers spark_plugins_edit only to a typed chat turn on the Mac', async () => {
+    const chat = await startChat(t, 'Turn the warp plugin on');
+    const turn = { ...scopeOf(chat.conversationId), runId: chat.runId };
+    expect((await sparkAvailability(deps(), turn)).plugins_edit).toBe(true);
+    expect((await sparkAvailability(deps(), { ...turn, assistant: true })).plugins_edit).toBe(
+      false,
+    );
+    await t.db.query("UPDATE runs SET source = 'voice' WHERE id = $1", [chat.runId]);
+    const spoken = await sparkAvailability(deps(), turn);
+    expect(spoken.plugins_edit).toBe(false);
+    expect(spoken.howTo?.plugins_edit).toContain('never for a spoken message');
+    await t.db.query("UPDATE runs SET source = 'ui' WHERE id = $1", [chat.runId]);
+    const device = randomUUID();
+    await t.db.query(
+      `INSERT INTO remote_devices (id, workspace_id, name, token_hash) VALUES ($1, $2, 'Phone', $3)`,
+      [device, t.workspaceId, 'a'.repeat(64)],
+    );
+    await t.db.query('UPDATE runs SET remote_device_id = $2 WHERE id = $1', [chat.runId, device]);
+    const remote = await sparkAvailability(deps(), turn);
+    expect(remote.plugins_edit).toBe(false);
+    expect(remote.howTo?.plugins_edit).toContain('paired device');
   });
 
   it('offers the outpost tools to a turn of a chat that is in an outpost', async () => {

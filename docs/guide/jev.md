@@ -22,12 +22,12 @@ Jev never answers a chat, edits files, runs code, answers an approval card, loos
 
 ## What Jev reads
 
-| Sent                                                                               | Never sent                      |
-| ---------------------------------------------------------------------------------- | ------------------------------- |
-| Pull request comments and check names, for [PR feedback](pr-follow-up.md)          | Keys and tokens                 |
-| Short facts about a chat's latest turn, for its island update                      | Tool output                     |
-| Some file contents for the Map. See [what Jev reads there](map.md#what-jev-reads). | Your full chat history          |
-|                                                                                    | Secret and `.sparkignore` files |
+| Sent                                                                      | Never sent                      |
+| ------------------------------------------------------------------------- | ------------------------------- |
+| Pull request comments and check names, for [PR feedback](pr-follow-up.md) | Keys and tokens                 |
+| Short facts about a chat's latest turn, for its island update             | Tool output                     |
+| Some file contents for [the Map](map.md#what-jev-reads)                   | Your full chat history          |
+|                                                                           | Secret and `.sparkignore` files |
 
 Everything is redacted first. TypeSafe doesn't train on it. Your requests and diffs are no longer sent.
 
