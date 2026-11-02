@@ -39,6 +39,10 @@ export function dmgUrl(version: string, arch: Arch): string {
   return `${FEED_URL}/Spark-Outpost-${version}-${arch}.dmg`;
 }
 
+export function latestDmgUrl(arch: Arch): string {
+  return `${FEED_URL}/Spark-Outpost-latest-${arch}.dmg`;
+}
+
 export function releaseDate(page: string | undefined): string | undefined {
   return page ? DATE_LINE.exec(page)?.[1] : undefined;
 }
@@ -84,9 +88,9 @@ export function renderIndex(releases: Release[], dates: Map<string, string | und
   ].join('\n');
 }
 
-function downloadButton(version: string, arch: Arch, label: string, color: string): string {
+function downloadButton(arch: Arch, label: string, color: string): string {
   const badge = `https://img.shields.io/badge/Download_for_Mac-${label.replaceAll(' ', '_')}-${color}?style=for-the-badge&logo=apple&logoColor=white`;
-  return `<a href="${dmgUrl(version, arch)}"><img alt="Download for Mac, ${label}" src="${badge}"></a>`;
+  return `<a href="${latestDmgUrl(arch)}"><img alt="Download for Mac, ${label}" src="${badge}"></a>`;
 }
 
 export function renderReadmeSection(latest: Release): string {
@@ -94,7 +98,7 @@ export function renderReadmeSection(latest: Release): string {
   return [
     README_START,
     '',
-    `${downloadButton(version, 'arm64', 'Apple silicon', '2bb39a')} ${downloadButton(version, 'x64', 'Intel', '555555')}`,
+    `${downloadButton('arm64', 'Apple silicon', '2bb39a')} ${downloadButton('x64', 'Intel', '555555')}`,
     '',
     `Free beta · [${version}](releases/${version}.md) · macOS 12+ (Mac control needs 14) · [All versions](releases/README.md)`,
     '',
